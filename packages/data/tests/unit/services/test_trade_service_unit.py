@@ -351,6 +351,44 @@ class TestUpdateIntentStatus:
         assert result is not None
         assert result.status == "cancelled"
 
+    def test_update_status_with_transition_guard(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """expected_current 匹配时应成功更新并返回 True."""
+        svc = TradeService(sqlite_client)
+        svc.init_schema()
+
+        svc.save_intent(_make_intent(status="pending"))
+        updated = svc.update_intent_status(
+            "INT-001",
+            "filled",
+            expected_current=("pending", "partially_filled"),
+        )
+
+        assert updated is True
+        result = svc.get_intent("INT-001")
+        assert result is not None
+        assert result.status == "filled"
+
+    def test_update_status_conflicting_transition_skips(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """expected_current 不匹配时应跳过更新并返回 False."""
+        svc = TradeService(sqlite_client)
+        svc.init_schema()
+
+        svc.save_intent(_make_intent(status="cancelled"))
+        updated = svc.update_intent_status(
+            "INT-001",
+            "filled",
+            expected_current=("pending", "partially_filled"),
+        )
+
+        assert updated is False
+        result = svc.get_intent("INT-001")
+        assert result is not None
+        assert result.status == "cancelled"
+
 
 # ===========================================================================
 # Test: Fill CRUD

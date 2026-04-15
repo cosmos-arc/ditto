@@ -230,3 +230,104 @@ class TestBadRequestError:
         from ditto_interfaces.api.errors import APIError, BadRequestError
 
         assert issubclass(BadRequestError, APIError)
+
+
+@pytest.mark.unit
+class TestRaiseBusinessError:
+    """测试 raise_business_error 映射函数."""
+
+    def test_not_found_maps_to_404(self) -> None:
+        """消息包含 'not found' → NotFoundError (404)."""
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
+
+        with pytest.raises(NotFoundError) as exc_info:
+            raise_business_error(ValueError("Run not found: missing"))
+        assert "not found" in exc_info.value.message.lower()
+        assert exc_info.value.__cause__ is not None
+
+    def test_not_found_case_insensitive(self) -> None:
+        """'Not Found' 大小写不敏感匹配."""
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
+
+        with pytest.raises(NotFoundError):
+            raise_business_error(ValueError("Strategy Not Found: abc"))
+
+    def test_conflict_keywords_matched(self) -> None:
+        """conflict_keywords 匹配时 → ConflictError (409)."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError) as exc_info:
+            raise_business_error(
+                ValueError("Invalid transition"),
+                conflict_keywords=("transition",),
+            )
+        assert "transition" in exc_info.value.message.lower()
+
+    def test_conflict_keyword_conflict(self) -> None:
+        """conflict_keywords='conflict' 匹配 → ConflictError."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError):
+            raise_business_error(
+                ValueError("Version conflict detected"),
+                conflict_keywords=("conflict",),
+            )
+
+    def test_default_is_bad_request(self) -> None:
+        """无匹配关键词 → BadRequestError (400)."""
+        from ditto_interfaces.api.errors import BadRequestError, raise_business_error
+
+        with pytest.raises(BadRequestError) as exc_info:
+            raise_business_error(ValueError("Something went wrong"))
+        assert exc_info.value.message == "Something went wrong"
+
+    def test_default_conflict_true(self) -> None:
+        """default_conflict=True → ConflictError 兜底."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError):
+            raise_business_error(
+                ValueError("Cannot cancel run in 'completed' status"),
+                default_conflict=True,
+            )
+
+    def test_default_conflict_not_found_takes_priority(self) -> None:
+        """'not found' 优先于 default_conflict=True."""
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
+
+        with pytest.raises(NotFoundError):
+            raise_business_error(
+                ValueError("Run not found: missing"),
+                default_conflict=True,
+            )
+
+    def test_conflict_keywords_priority_over_default_conflict(self) -> None:
+        """conflict_keywords 匹配优先于 default_conflict 兜底."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError) as exc_info:
+            raise_business_error(
+                ValueError("Invalid transition"),
+                conflict_keywords=("transition",),
+                default_conflict=True,
+            )
+        assert "transition" in exc_info.value.message.lower()
+
+    def test_exception_chain_preserved(self) -> None:
+        """from exc 链式异常保留."""
+        from ditto_interfaces.api.errors import BadRequestError, raise_business_error
+
+        original = ValueError("bad input")
+        with pytest.raises(BadRequestError) as exc_info:
+            raise_business_error(original)
+        assert exc_info.value.__cause__ is original
+
+    def test_empty_conflict_keywords_no_match(self) -> None:
+        """conflict_keywords=() 时不会匹配任何关键词."""
+        from ditto_interfaces.api.errors import BadRequestError, raise_business_error
+
+        with pytest.raises(BadRequestError):
+            raise_business_error(
+                ValueError("transition error"),
+                conflict_keywords=(),
+            )

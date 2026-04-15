@@ -210,7 +210,7 @@ pixi run -e dev arch-check       # 分层依赖检查
 - **V1 Sprint Phase 2** — 人工执行闭环 (done)
 - **V1 Sprint 修复** — 8 项偏差修复: Position UPSERT/T+1 日历/基准 NAV/Comparison API/Signal API/分页/乐观锁/settlement_date (done)
 - **V1 Sprint Enhancement** — Regime 识别 + 因子增强回测 + Universe 管理 + 自定义费率 + 回测 artifact + 可复现性验证 (done)
-- **V1 Sprint Phase 3** — Run Lineage / Replayability（规划中）
+- **V1 Sprint Phase 3** — Run Lineage / Replayability（done）
 - **Phase 3** — 实盘接入：BrokerAdapter / 纸面交易（规划中）
 - **Phase 4** — App 层提取：CQRS 编排 + DI builders + engine 独立包 (done)
 - **Phase 5** — ML 增强：因子权重学习 / 多策略组合（远期规划）

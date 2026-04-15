@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Never
+from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -29,7 +29,7 @@ from ditto_app.query.strategy import StrategyQueryFacade
 from fastapi import APIRouter, Depends
 
 from ditto_interfaces.api.deps import paginate, pagination_params
-from ditto_interfaces.api.errors import BadRequestError, ConflictError, NotFoundError
+from ditto_interfaces.api.errors import NotFoundError, raise_business_error
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
@@ -42,16 +42,6 @@ from ditto_interfaces.models.strategy import (
 )
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
-
-
-def _raise_strategy_error(exc: ValueError) -> Never:
-    """将 Strategy handler 的 ValueError 映射为对应的 APIError 并抛出."""
-    msg = str(exc)
-    if "not found" in msg.lower():
-        raise NotFoundError(msg) from exc
-    if "conflict" in msg.lower():
-        raise ConflictError(msg) from exc
-    raise BadRequestError(msg) from exc
 
 
 def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
@@ -127,7 +117,7 @@ async def update_strategy(
     try:
         info = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        _raise_strategy_error(exc)
+        raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=to_strategy_response(info))
 
 
@@ -146,5 +136,5 @@ async def publish_strategy(
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        _raise_strategy_error(exc)
+        raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=result)

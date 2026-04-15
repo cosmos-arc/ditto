@@ -229,58 +229,45 @@ class TestBuildFlowParams:
         assert params["parameter_overrides"] == ("key1=val1", "key2=val2")
 
 
-class TestRaiseBacktestError:
-    """Tests for _raise_backtest_error — 统一错误映射 (F21)."""
+class TestRaiseBusinessErrorBacktest:
+    """Tests for raise_business_error — backtest 路由使用 default_conflict=True."""
 
     def test_not_found_raises_404(self) -> None:
         """'not found' 错误映射为 404."""
-        from ditto_interfaces.api.errors import NotFoundError
-        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
 
         exc = ValueError("Run not found: missing")
         with pytest.raises(NotFoundError) as exc_info:
-            _raise_backtest_error(exc)
+            raise_business_error(exc, default_conflict=True)
         assert exc_info.value.status_code == 404
 
-    def test_status_conflict_raises_409(self) -> None:
-        """状态冲突错误映射为 409."""
-        from ditto_interfaces.api.errors import ConflictError
-        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
-
-        exc = ValueError("Cannot cancel run in 'completed' status")
-        with pytest.raises(ConflictError) as exc_info:
-            _raise_backtest_error(exc)
-        assert exc_info.value.status_code == 409
-
     def test_generic_error_raises_409(self) -> None:
-        """非 not found 错误默认映射为 409."""
-        from ditto_interfaces.api.errors import ConflictError
-        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
+        """非 not found 错误默认映射为 409（backtest 特有行为）。"""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
 
         exc = ValueError("Some other error")
         with pytest.raises(ConflictError) as exc_info:
-            _raise_backtest_error(exc)
+            raise_business_error(exc, default_conflict=True)
         assert exc_info.value.status_code == 409
 
     def test_case_insensitive_matching(self) -> None:
         """大小写不敏感匹配 'Not Found'."""
-        from ditto_interfaces.api.errors import NotFoundError
-        from ditto_interfaces.api.routes.backtest import _raise_backtest_error
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
 
         exc = ValueError("Run Not Found: xyz")
         with pytest.raises(NotFoundError) as exc_info:
-            _raise_backtest_error(exc)
+            raise_business_error(exc, default_conflict=True)
         assert exc_info.value.status_code == 404
 
 
-class TestRunInProcess:
-    """Tests for _run_in_process bypasses Prefect engine."""
+class TestRunBacktestFlow:
+    """Tests for _run_backtest_flow bypasses Prefect engine."""
 
     def test_calls_flow_fn_not_flow_object(self) -> None:
-        """_run_in_process 应通过 .fn 调用 raw function，避免触发 Prefect engine."""
+        """_run_backtest_flow 应通过 .fn 调用 raw function，避免触发 Prefect engine."""
         from unittest.mock import MagicMock, patch
 
-        from ditto_interfaces.api.routes.backtest import _run_in_process
+        from ditto_interfaces.api.routes.backtest import _run_backtest_flow
 
         mock_fn = MagicMock(return_value=None)
         mock_flow = MagicMock()
@@ -298,7 +285,7 @@ class TestRunInProcess:
             "ditto_interfaces.api.routes.backtest.run_backtest_flow",
             mock_flow,
         ):
-            _run_in_process(params)
+            _run_backtest_flow(params)
 
         # 应调用 .fn 而非直接调用 flow 对象
         mock_fn.assert_called_once_with(**params)
@@ -309,7 +296,7 @@ class TestRunInProcess:
         """on_failure 回调应收到包含实际异常信息的字符串，而非泛化消息."""
         from unittest.mock import MagicMock, patch
 
-        from ditto_interfaces.api.routes.backtest import _run_in_process
+        from ditto_interfaces.api.routes.backtest import _run_backtest_flow
 
         original_error = RuntimeError("strategy compilation failed: bad alpha expr")
         mock_fn = MagicMock(side_effect=original_error)
@@ -328,7 +315,7 @@ class TestRunInProcess:
             "ditto_interfaces.api.routes.backtest.run_backtest_flow",
             mock_flow,
         ):
-            _run_in_process(params, on_failure=failure_callback)
+            _run_backtest_flow(params, on_failure=failure_callback)
 
         # on_failure 应被调用，且消息包含实际异常文本
         failure_callback.assert_called_once()

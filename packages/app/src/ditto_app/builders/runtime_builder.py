@@ -161,26 +161,10 @@ class StrategyRuntimeBuilder:
             scorer=self._deserialize_scorer(payload.get("scorer")),
             selector=self._deserialize_selector(payload.get("selector")),
             execution=self._deserialize_execution(payload.get("execution")),
-            constraints=tuple(
-                self._deserialize_constraint(item, index=index)
-                for index, item in enumerate(
-                    as_sequence(
-                        payload.get("constraints"),
-                        field_name="constraints",
-                    )
-                )
-            ),
+            constraints=self._deserialize_constraints(payload),
             benchmark=read_optional_str(payload.get("benchmark")),
             params=as_object_dict(payload.get("params"), field_name="params"),
-            param_constraints=tuple(
-                self._deserialize_param_constraint(item, index=index)
-                for index, item in enumerate(
-                    as_sequence(
-                        payload.get("param_constraints"),
-                        field_name="param_constraints",
-                    )
-                )
-            ),
+            param_constraints=self._deserialize_param_constraints(payload),
             tags=as_str_tuple(payload.get("tags"), field_name="tags") or record.tags,
             signal_expressions=as_str_tuple(
                 payload.get("signal_expressions"),
@@ -192,6 +176,32 @@ class StrategyRuntimeBuilder:
             ),
         )
         return self._inject_template_constraints(spec)
+
+    def _deserialize_constraints(
+        self, payload: dict[str, object]
+    ) -> tuple[ConstraintSpec, ...]:
+        """从 payload 中反序列化约束列表。"""
+        raw_items = as_sequence(
+            payload.get("constraints"),
+            field_name="constraints",
+        )
+        return tuple(
+            self._deserialize_constraint(item, index=index)
+            for index, item in enumerate(raw_items)
+        )
+
+    def _deserialize_param_constraints(
+        self, payload: dict[str, object]
+    ) -> tuple[ParamConstraint, ...]:
+        """从 payload 中反序列化参数约束列表。"""
+        raw_items = as_sequence(
+            payload.get("param_constraints"),
+            field_name="param_constraints",
+        )
+        return tuple(
+            self._deserialize_param_constraint(item, index=index)
+            for index, item in enumerate(raw_items)
+        )
 
     def _deserialize_scorer(self, raw_value: object) -> ScorerSpec:
         """恢复评分器配置。"""

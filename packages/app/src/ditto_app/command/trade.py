@@ -112,7 +112,11 @@ class RecordFillHandler:
         new_status = self._determine_fill_status(
             intent_record.quantity, command.intent_id, intent_record.strategy_id
         )
-        self._service.update_intent_status(command.intent_id, new_status)
+        self._service.update_intent_status(
+            command.intent_id,
+            new_status,
+            expected_current=("pending", "partially_filled"),
+        )
 
         # 5. Recompute positions
         self._recompute_positions(intent_record.strategy_id, command.trade_date)
@@ -184,16 +188,23 @@ class RecordFillHandler:
         intent_id: str,
         strategy_id: str,
     ) -> Literal["filled", "partially_filled"]:
-        """判断完全成交还是部分成交（累积同 intent 所有 fill）。"""
+        """
+        判断完全成交还是部分成交（累积同 intent 所有 fill）。
+
+        当 intent_quantity 为 None（未指定目标数量）时，始终返回
+        partially_filled，由调用方通过 UpdateIntentStatusHandler 显式标记终态。
+        """
         fills = self._service.list_fills(strategy_id=strategy_id, intent_id=intent_id)
         cumulative_qty = sum(f.quantity for f in fills)
-        if intent_quantity is None or cumulative_qty >= intent_quantity:
+        if intent_quantity is not None and cumulative_qty >= intent_quantity:
             return "filled"
         return "partially_filled"
 
     def _recompute_positions(self, strategy_id: str, snapshot_date: str) -> None:
         """重新聚合持仓并持久化."""
-        fill_records = self._service.list_fills(strategy_id=strategy_id)
+        fill_records = self._service.list_fills(
+            strategy_id=strategy_id, end_date=snapshot_date
+        )
         fills = [record_to_fill(r) for r in fill_records]
 
         snapshots = self._tracker.compute_positions(
@@ -233,5 +244,20 @@ class UpdateIntentStatusHandler:
             )
             raise ValueError(msg)
 
-        self._service.update_intent_status(command.intent_id, command.status)
+        # SQL 层状态前置条件：仅当当前状态在允许转换集合内时才更新
+        expected = _VALID_TRANSITIONS.get(intent.status, set())
+        # 幂等：status == status 时也允许（expected 可能为空集，此时用当前状态）
+        if command.status == intent.status:
+            expected = (intent.status,)
+        updated = self._service.update_intent_status(
+            command.intent_id,
+            command.status,
+            expected_current=tuple(expected) if expected else None,
+        )
+        if not updated:
+            msg = (
+                f"Concurrent status conflict: intent {command.intent_id} "
+                f"was updated by another request"
+            )
+            raise ValueError(msg)
         return True

@@ -99,6 +99,6 @@ async def get_dq_summary() -> APIResponse[DQSummaryResponse]:
     """
     获取 DQ 检查摘要.
 
-    V1: 返回空列表，Sprint 5 接入 QualityPatrolService 后填充实际数据。
+    V1 占位: 返回空列表，待接入 QualityPatrolService 后填充实际数据。
     """
     return APIResponse(data=DQSummaryResponse(datasets=[]))

@@ -1,8 +1,8 @@
 """
 DecisionFrame 列名常量与运行时 schema 校验.
 
-FrameCol 定义 DecisionFrame 的列名约定，validate_frame 在 debug 模式下
-校验必需列是否存在，release 模式下为零开销 no-op。
+FrameCol 定义 DecisionFrame 的列名约定，validate_frame 无条件校验
+必需列是否存在。
 """
 
 from __future__ import annotations
@@ -34,15 +34,14 @@ def validate_frame(frame: pl.DataFrame, required: tuple[str, ...]) -> None:
     """
     校验 DecisionFrame 是否包含必需列.
 
-    debug 模式（默认）下执行校验，缺少列时抛出 AssertionError。
-    release 模式（``python -O``）下为 no-op，零性能开销。
+    无条件执行校验，缺少列时抛出 ValueError。
 
     Args:
         frame: 待校验的 DataFrame。
         required: 必需列名元组。
 
     Raises:
-        ValueError: 缺少必需列时.
+        ValueError: 缺少必需列时。
 
     """
     missing = set(required) - set(frame.columns)

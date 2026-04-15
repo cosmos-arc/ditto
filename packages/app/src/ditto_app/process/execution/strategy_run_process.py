@@ -229,11 +229,7 @@ class StrategyRunService:
     @staticmethod
     def _validate_params(spec: StrategySpec) -> None:
         """校验 spec 参数，不合法时抛出 ValueError。"""
-        errors = validate_spec_params(spec)
-        if errors:
-            raise ValueError(
-                f"策略参数校验失败 [{spec.strategy_id}]: {'; '.join(errors)}"
-            )
+        validate_spec_params(spec)
 
     # -- internal persistence ------------------------------------------------
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Literal, NamedTuple, cast
 
@@ -473,56 +474,72 @@ class IngestionCoordinator:
 
     def _run_post_ingest_hooks(self, dataset: str, trade_date: str) -> None:
         """执行摄取后的副作用：游标更新、冻结点创建。"""
-        # 更新摄入游标
-        if self._ingestion_cursor_service is not None:
-            try:
-                self._ingestion_cursor_service.update_cursor(
-                    dataset=dataset,
-                    source=self._source_name,
-                    last_success=trade_date,
-                    last_attempted=trade_date,
-                )
-            except (ValueError, KeyError, TypeError, OSError) as e:
-                logger.warning(
-                    "cursor_update_failed",
-                    event="cursor_update_error",
-                    dataset=dataset,
-                    trade_date=trade_date,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
-            except Exception:
-                logger.exception(
-                    "cursor_update_failed_unexpected",
-                    event="cursor_update_error",
-                    dataset=dataset,
-                    trade_date=trade_date,
-                )
+        self._update_ingestion_cursor(dataset, trade_date)
+        self._create_freeze_point(dataset, trade_date)
 
-        # 创建冻结点（轻量级版本追踪）
-        if self._freeze_service is not None:
-            try:
-                self._freeze_service.create_freeze(
-                    freeze_id=f"{dataset}_{trade_date}",
-                    description=f"Auto-freeze: {dataset} @ {trade_date}",
-                    datasets=[dataset],
-                )
-            except (ValueError, KeyError, TypeError, OSError) as e:
-                logger.warning(
-                    "freeze_create_failed",
-                    event="freeze_create_error",
-                    dataset=dataset,
-                    trade_date=trade_date,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
-            except Exception:
-                logger.exception(
-                    "freeze_create_failed_unexpected",
-                    event="freeze_create_error",
-                    dataset=dataset,
-                    trade_date=trade_date,
-                )
+    @staticmethod
+    def _safe_side_effect(
+        action: Callable[[], object],
+        *,
+        log_tag: str,
+        event: str,
+        dataset: str,
+        trade_date: str,
+    ) -> None:
+        """执行副作用操作，失败仅记录警告，不影响主流程。"""
+        try:
+            action()
+        except (ValueError, KeyError, TypeError, OSError) as e:
+            logger.warning(
+                log_tag,
+                event=event,
+                dataset=dataset,
+                trade_date=trade_date,
+                error_type=type(e).__name__,
+                error=str(e),
+            )
+        except Exception:
+            logger.exception(
+                f"{log_tag}_unexpected",
+                event=event,
+                dataset=dataset,
+                trade_date=trade_date,
+            )
+
+    def _update_ingestion_cursor(self, dataset: str, trade_date: str) -> None:
+        """更新摄入游标（失败仅记录警告，不影响主流程）。"""
+        if self._ingestion_cursor_service is None:
+            return
+        svc = self._ingestion_cursor_service
+        self._safe_side_effect(
+            lambda: svc.update_cursor(
+                dataset=dataset,
+                source=self._source_name,
+                last_success=trade_date,
+                last_attempted=trade_date,
+            ),
+            log_tag="cursor_update_failed",
+            event="cursor_update_error",
+            dataset=dataset,
+            trade_date=trade_date,
+        )
+
+    def _create_freeze_point(self, dataset: str, trade_date: str) -> None:
+        """创建冻结点 — 轻量级版本追踪（失败仅记录警告，不影响主流程）。"""
+        if self._freeze_service is None:
+            return
+        svc = self._freeze_service
+        self._safe_side_effect(
+            lambda: svc.create_freeze(
+                freeze_id=f"{dataset}_{trade_date}",
+                description=f"Auto-freeze: {dataset} @ {trade_date}",
+                datasets=[dataset],
+            ),
+            log_tag="freeze_create_failed",
+            event="freeze_create_error",
+            dataset=dataset,
+            trade_date=trade_date,
+        )
 
     def ingest_range(
         self,

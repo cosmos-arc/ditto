@@ -437,6 +437,36 @@ class TestArtifactPersistence:
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
         "ditto_app.process.execution.backtest_process.write_backtest_artifacts",
+        return_value={},
+    )
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_persist_artifact_empty_map_no_error(
+        self,
+        mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """artifacts_map 为空时应直接返回，不崩溃也不保存空记录."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-001"
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_artifact = MagicMock()
+        config = _make_service_config(strategy_id="momentum-etf", run_id="run-001")
+        service = _make_minimal_service(
+            config=config,
+            artifact_service=mock_artifact,
+        )
+        service.run()
+
+        mock_write_artifacts.assert_called_once()
+        mock_artifact.save_artifact.assert_not_called()
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch(
+        "ditto_app.process.execution.backtest_process.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/test/run-001/backtest_report.json"),
         },
@@ -1157,14 +1187,58 @@ class TestRunServiceLifecycle:
         )
         service.run()
 
-        mock_run_svc.create_run.assert_called_once_with(
-            run_id="lifecycle-001",
-            strategy_id="momentum-etf",
-            strategy_version="",
-            mode="backtest",
-            parent_run_id="",
-        )
+        mock_run_svc.create_run.assert_called_once()
+        call_kwargs = mock_run_svc.create_run.call_args[1]
+        assert call_kwargs["run_id"] == "lifecycle-001"
+        assert call_kwargs["strategy_id"] == "momentum-etf"
+        assert call_kwargs["strategy_version"] == ""
+        assert call_kwargs["mode"] == "backtest"
+        assert call_kwargs["parent_run_id"] == ""
+        assert "config_json" in call_kwargs
         mock_run_svc.mark_running.assert_called_once_with("lifecycle-001")
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_app.process.execution.backtest_process.build_report")
+    def test_run_creates_record_with_config_json_content(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """create_run 时 config_json 应包含完整配置关键字段."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None
+        config = _make_service_config(
+            run_id="config-json-001",
+            start_date="2026-01-15",
+            end_date="2026-06-30",
+            initial_cash=2_000_000.0,
+            benchmark_id="idx-000300",
+        )
+        options = BacktestServiceOptions(run_service=mock_run_svc)
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+        service.run()
+
+        call_kwargs = mock_run_svc.create_run.call_args[1]
+        import orjson
+
+        config_data = orjson.loads(call_kwargs["config_json"])
+        assert config_data["start_date"] == "2026-01-15"
+        assert config_data["end_date"] == "2026-06-30"
+        assert config_data["initial_cash"] == 2_000_000.0
+        assert config_data["benchmark_id"] == "idx-000300"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_app.process.execution.backtest_process.build_report")

@@ -133,9 +133,19 @@ ditto_interfaces/
 | Prefix | Tag | 模块 | 说明 |
 |--------|-----|------|------|
 | `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 |
-| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） |
+| `/capital` | capital | `api/routes/capital.py` | Capital 域查询 |
+| `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询 |
+| `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询 |
+| `/fx` | fx | `api/routes/fx.py` | 外汇数据查询 |
+| `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 |
+| `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询 |
+| `/market` | market | `api/routes/market.py` | 行情数据查询 |
+| `/metadata` | metadata | `api/routes/metadata.py` | 元数据查询 |
+| `/source` | source | `api/routes/source.py` | Source 数据查询 |
 | `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 |
+| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） |
 | `/universes` | universes | `api/routes/universe.py` | Universe 管理 |
+| `/api/v1` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） |
 
 ## Prefect 规范
 

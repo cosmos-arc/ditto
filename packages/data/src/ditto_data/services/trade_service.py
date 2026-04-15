@@ -65,6 +65,11 @@ _LIST_INTENTS_BASE = "SELECT * FROM trade_intents WHERE strategy_id = ?"
 
 _UPDATE_INTENT_STATUS = "UPDATE trade_intents SET status = ? WHERE intent_id = ?"
 
+_UPDATE_INTENT_STATUS_TRANSITION = (
+    "UPDATE trade_intents SET status = ? "
+    "WHERE intent_id = ? AND status IN ({placeholders})"
+)
+
 # ---------------------------------------------------------------------------
 # SQL: execution_fills
 # ---------------------------------------------------------------------------
@@ -307,17 +312,38 @@ class TradeService:
         rows = self._client.fetchall(sql, params)
         return [self._row_to_intent(row) for row in rows]
 
-    def update_intent_status(self, intent_id: str, status: str) -> None:
+    def update_intent_status(
+        self,
+        intent_id: str,
+        status: str,
+        *,
+        expected_current: tuple[str, ...] | None = None,
+    ) -> bool:
         """
         更新交易意图状态.
 
         Args:
             intent_id: 意图唯一标识.
             status: 新状态.
+            expected_current: 期望的当前状态集合。传入时使用带状态前置
+                条件的 SQL 防止 TOCTOU 竞态，仅当当前状态在集合内时
+                才执行更新。
+
+        Returns:
+            True 表示更新成功，False 表示因状态前置条件不满足而跳过。
 
         """
-        self._client.execute(_UPDATE_INTENT_STATUS, (status, intent_id))
+        if expected_current is None:
+            self._client.execute(_UPDATE_INTENT_STATUS, (status, intent_id))
+            self._client.commit()
+            return True
+
+        placeholders = ", ".join("?" for _ in expected_current)
+        sql = _UPDATE_INTENT_STATUS_TRANSITION.format(placeholders=placeholders)
+        params: list[Any] = [status, intent_id, *expected_current]
+        cursor = self._client.execute(sql, params)
         self._client.commit()
+        return cursor.rowcount > 0
 
     # ------------------------------------------------------------------
     # Fill CRUD

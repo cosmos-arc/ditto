@@ -22,20 +22,20 @@ _DEFAULT_SLIPPAGE_BPS: float = 1.0
 class RunResponse(BaseModel):
     """运行记录响应."""
 
-    run_id: str
-    strategy_id: str
-    strategy_version: str = ""
-    mode: str = "backtest"
-    status: str
-    started_at: str = ""
-    completed_at: str = ""
-    error_message: str = ""
-    parent_run_id: str = ""
-    benchmark_return: float | None = None
-    progress_pct: float = 0.0
-    current_step: str = ""
-    completed_days: int = 0
-    total_days: int = 0
+    run_id: str = Field(description="运行唯一标识")
+    strategy_id: str = Field(description="策略 ID")
+    strategy_version: str = Field(default="", description="策略版本号")
+    mode: str = Field(default="backtest", description="运行模式")
+    status: str = Field(description="运行状态")
+    started_at: str = Field(default="", description="开始时间 (ISO 8601)")
+    completed_at: str = Field(default="", description="完成时间 (ISO 8601)")
+    error_message: str = Field(default="", description="错误信息")
+    parent_run_id: str = Field(default="", description="父运行 ID (重试场景)")
+    benchmark_return: float | None = Field(default=None, description="基准收益率 (%)")
+    progress_pct: float = Field(default=0.0, description="运行进度百分比")
+    current_step: str = Field(default="", description="当前步骤描述")
+    completed_days: int = Field(default=0, description="已完成交易日数")
+    total_days: int = Field(default=0, description="总交易日数")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -56,15 +56,15 @@ class RunsQueryParams(BaseModel):
 class TradeResponse(BaseModel):
     """成交记录响应."""
 
-    trade_date: str = ""
-    instrument_id: int = 0
-    direction: str = ""
-    entry_date: str = ""
-    exit_date: str = ""
-    entry_price: float = 0.0
-    exit_price: float = 0.0
-    quantity: float = 0.0
-    pnl: float = 0.0
+    trade_date: str = Field(default="", description="成交日期 (YYYY-MM-DD)")
+    instrument_id: int = Field(default=0, description="标的 ID")
+    direction: str = Field(default="", description="交易方向 (buy/sell)")
+    entry_date: str = Field(default="", description="建仓日期 (YYYY-MM-DD)")
+    exit_date: str = Field(default="", description="平仓日期 (YYYY-MM-DD)")
+    entry_price: float = Field(default=0.0, description="建仓价格")
+    exit_price: float = Field(default=0.0, description="平仓价格")
+    quantity: float = Field(default=0.0, description="成交数量")
+    pnl: float = Field(default=0.0, description="盈亏金额")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -72,13 +72,13 @@ class TradeResponse(BaseModel):
 class AuditRecordResponse(BaseModel):
     """审计记录响应."""
 
-    id: int = 0
-    run_id: str = ""
-    trade_date: str = ""
-    record_type: str = ""
-    instrument_id: int | None = None
-    payload: dict[str, Any] = {}
-    created_at: str = ""
+    id: int = Field(default=0, description="记录 ID")
+    run_id: str = Field(default="", description="运行 ID")
+    trade_date: str = Field(default="", description="交易日期 (YYYY-MM-DD)")
+    record_type: str = Field(default="", description="审计记录类型")
+    instrument_id: int | None = Field(default=None, description="标的 ID")
+    payload: dict[str, Any] = Field(default_factory=dict, description="审计载荷内容")
+    created_at: str = Field(default="", description="创建时间 (ISO 8601)")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -108,10 +108,10 @@ def to_audit_record_response(row: dict[str, Any]) -> AuditRecordResponse:
 class BenchmarkNavResponse(BaseModel):
     """基准 NAV 序列响应."""
 
-    run_id: str
-    dates: list[str] = []
-    navs: list[float] = []
-    benchmark_return: float | None = None
+    run_id: str = Field(description="运行 ID")
+    dates: list[str] = Field(default_factory=list, description="日期序列 (YYYY-MM-DD)")
+    navs: list[float] = Field(default_factory=list, description="净值序列")
+    benchmark_return: float | None = Field(default=None, description="基准收益率(%)")
 
     model_config = ConfigDict(strict=True, extra="ignore")
 

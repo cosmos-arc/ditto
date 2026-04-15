@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import orjson
 import polars as pl
 from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_data.models.strategy_audit import (
@@ -31,6 +32,7 @@ from ditto_engine.backtest.engine import (
     EngineLoop,
     EngineMode,
     EngineOptions,
+    EngineResult,
 )
 from ditto_engine.backtest.manifest import RunManifest
 from ditto_engine.backtest.statistics import (
@@ -199,12 +201,24 @@ class BacktestService:
         if run_svc is not None:
             existing = run_svc.get_run(run_id)
             if existing is None:
+                config_json = orjson.dumps(
+                    {
+                        "start_date": self._config.start_date,
+                        "end_date": self._config.end_date,
+                        "initial_cash": self._config.initial_cash,
+                        "benchmark_id": self._config.benchmark_id,
+                        "parameter_overrides": list(self._config.parameter_overrides),
+                        "rebalance_freq": self._config.rebalance_freq,
+                        "execution_delay": self._config.execution_delay,
+                    },
+                ).decode()
                 run_svc.create_run(
                     run_id=run_id,
                     strategy_id=self._config.strategy_id,
                     strategy_version=self._config.strategy_version,
-                    mode="backtest",
+                    mode=EngineMode.BACKTEST.value,
                     parent_run_id=self._config.parent_run_id,
+                    config_json=config_json,
                 )
             run_svc.mark_running(run_id)
 
@@ -216,11 +230,33 @@ class BacktestService:
 
     def _execute_backtest(self, run_id: str) -> BacktestReport:
         """执行回测核心逻辑。"""
-        # 创建审计收集器
         collector = ExecutionAuditCollector()
+        engine_config = self._build_engine_config(run_id)
+        options = self._build_engine_options(run_id, collector)
 
-        # 构建 EngineConfig
-        engine_config = EngineConfig(
+        # 构造并运行 EngineLoop
+        engine_loop = EngineLoop(
+            config=engine_config,
+            pipeline=self._pipeline,
+            planner=self._planner,
+            brokerage=self._brokerage,
+            pre_trade_check=self._pre_trade_check,
+            data_feed=self._data_feed,
+            options=options,
+        )
+        engine_result = engine_loop.run()
+
+        # 构建 BacktestReport
+        report = build_report(collector, run_id=run_id)
+
+        # 持久化 + 更新状态
+        self._post_process(run_id, report, engine_result)
+
+        return report
+
+    def _build_engine_config(self, run_id: str) -> EngineConfig:
+        """从服务配置构建 EngineConfig。"""
+        return EngineConfig(
             start_date=self._config.start_date,
             end_date=self._config.end_date,
             initial_cash=self._config.initial_cash,
@@ -235,6 +271,12 @@ class BacktestService:
             execution_delay=self._config.execution_delay,
         )
 
+    def _build_engine_options(
+        self,
+        run_id: str,
+        collector: ExecutionAuditCollector,
+    ) -> EngineOptions:
+        """构建 EngineOptions — 含 clock/event_bus/cancel/progress 回调。"""
         # 构造 SimulatedClock — 以回测起始日期为初始时刻
         _start = date.fromisoformat(self._config.start_date)
         clock = SimulatedClock(
@@ -249,7 +291,6 @@ class BacktestService:
             else None
         )
 
-        # 构建 EngineOptions (注入 clock + event_bus + audit_collector)
         run_svc = self._options.run_service
 
         # 协作式取消 — 轮询 run_service.is_cancelled()
@@ -277,7 +318,7 @@ class BacktestService:
 
             on_progress = _report_progress
 
-        options = EngineOptions(
+        return EngineOptions(
             clock=clock,
             event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
@@ -289,35 +330,22 @@ class BacktestService:
             on_progress=on_progress,
         )
 
-        # 构造并运行 EngineLoop
-        engine_loop = EngineLoop(
-            config=engine_config,
-            pipeline=self._pipeline,
-            planner=self._planner,
-            brokerage=self._brokerage,
-            pre_trade_check=self._pre_trade_check,
-            data_feed=self._data_feed,
-            options=options,
-        )
-        engine_result = engine_loop.run()
-
-        # 构建 BacktestReport
-        report = build_report(collector, run_id=run_id)
-
-        # 持久化审计日志
+    def _post_process(
+        self,
+        run_id: str,
+        report: BacktestReport,
+        engine_result: EngineResult,
+    ) -> None:
+        """持久化审计/产物 + 更新运行状态。"""
         self._persist_audit(run_id, report)
-
-        # 持久化策略产物
         self._persist_artifact(run_id, report, manifest=engine_result.manifest)
 
-        # 更新运行状态
+        run_svc = self._options.run_service
         if run_svc is not None:
             if engine_result.cancelled:
                 run_svc.mark_cancelled(run_id)
             else:
                 run_svc.mark_completed(run_id)
-
-        return report
 
     def _build_factor_aware_bundle_builder(
         self,
@@ -514,6 +542,8 @@ class BacktestService:
         )
         # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
         # 从返回值推导实际目录（artifact_dir=None 时内部解析到系统临时目录）
+        if not artifacts_map:
+            return
         resolved_dir = next(iter(artifacts_map.values())).parent
         file_path = str(resolved_dir)
 

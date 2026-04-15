@@ -500,11 +500,13 @@ class AppQueryProvider(Provider):
         self,
         backtest_facade: BacktestQueryFacade,
         actual_facade: PortfolioActualQueryFacade,
+        market_facade: MarketQueryFacade,
     ) -> ComparisonQueryFacade:
         """回测 vs 实际对比查询 facade."""
         return ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=market_facade,
         )
 
     @provide

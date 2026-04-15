@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Never
+from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
@@ -39,7 +39,7 @@ from ditto_app.query.trade import TradeQueryFacade
 from fastapi import APIRouter, Depends, Query
 
 from ditto_interfaces.api.deps import paginate, pagination_params
-from ditto_interfaces.api.errors import BadRequestError, ConflictError, NotFoundError
+from ditto_interfaces.api.errors import NotFoundError, raise_business_error
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
@@ -57,16 +57,6 @@ from ditto_interfaces.models.trade import (
 )
 
 router = APIRouter(prefix="/trade", tags=["trade"])
-
-
-def _raise_trade_error(exc: ValueError) -> Never:
-    """将 Trade 业务 ValueError 映射为对应的 APIError 并抛出."""
-    msg = str(exc).lower()
-    if "not found" in msg:
-        raise NotFoundError(str(exc)) from exc
-    if "transition" in msg:
-        raise ConflictError(str(exc)) from exc
-    raise BadRequestError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +182,7 @@ async def update_intent_status(
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        _raise_trade_error(exc)
+        raise_business_error(exc, conflict_keywords=("transition",))
     return APIResponse(data=result)
 
 
@@ -224,7 +214,7 @@ async def record_fill(
     try:
         fill = await asyncio.to_thread(handler.handle, cmd)
     except ValueError as exc:
-        _raise_trade_error(exc)
+        raise_business_error(exc, conflict_keywords=("transition",))
     return APIResponse(data=to_fill_response(fill))
 
 

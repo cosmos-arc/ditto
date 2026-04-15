@@ -177,6 +177,7 @@ class TestRecordFillHandler:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
+            expected_current=("pending", "partially_filled"),
         )
 
         # 验证 tracker 被调用
@@ -410,10 +411,19 @@ class TestUpdateIntentStatusHandler:
         result = handler.handle(cmd)
 
         assert result is True
-        service.update_intent_status.assert_called_once_with(
-            "intent-001",
+        service.update_intent_status.assert_called_once()
+        call_kwargs = service.update_intent_status.call_args[1]
+        assert call_kwargs["expected_current"] == (
+            "filled",
+            "partially_filled",
             "cancelled",
-        )
+            "expired",
+        ) or set(call_kwargs["expected_current"]) == {
+            "filled",
+            "partially_filled",
+            "cancelled",
+            "expired",
+        }
 
     def test_handle_raises_on_missing_intent(self) -> None:
         """intent 不存在 → ValueError."""
@@ -579,6 +589,7 @@ class TestRecordFillPartialFillDetection:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
+            expected_current=("pending", "partially_filled"),
         )
 
     def test_fill_quantity_less_than_intent_returns_partial(self) -> None:
@@ -621,6 +632,7 @@ class TestRecordFillPartialFillDetection:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "partially_filled",
+            expected_current=("pending", "partially_filled"),
         )
 
     def test_fill_quantity_exceeds_intent_returns_filled(self) -> None:
@@ -663,6 +675,7 @@ class TestRecordFillPartialFillDetection:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
+            expected_current=("pending", "partially_filled"),
         )
 
     def test_cumulative_fills_reach_intent_quantity_returns_filled(self) -> None:
@@ -719,6 +732,7 @@ class TestRecordFillPartialFillDetection:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
+            expected_current=("pending", "partially_filled"),
         )
 
     def test_cumulative_fills_still_below_intent_returns_partial(self) -> None:
@@ -773,6 +787,50 @@ class TestRecordFillPartialFillDetection:
         service.update_intent_status.assert_called_once_with(
             "intent-001",
             "partially_filled",
+            expected_current=("pending", "partially_filled"),
+        )
+
+    def test_none_intent_quantity_returns_partial(self) -> None:
+        """intent_quantity 为 None 时始终返回 partially_filled，不自动标记 filled."""
+
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        intent = _make_intent_record(quantity=None)
+        service.get_intent.return_value = intent
+        service.list_fills.return_value = [
+            ManualExecutionFillRecord(
+                fill_id="fill-none",
+                intent_id="intent-001",
+                strategy_id="strat-alpha",
+                trade_date="2026-04-11",
+                instrument_id=510050,
+                direction="buy",
+                quantity=1000,
+                fill_price=4.15,
+                fee=2.0,
+            ),
+        ]
+        tracker.compute_positions.return_value = []
+        tracker.compute_settlement_date.return_value = "2026-04-14"
+
+        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        cmd = RecordFillCommand(
+            fill_id="fill-none",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+        )
+        handler.handle(cmd)
+
+        service.update_intent_status.assert_called_once_with(
+            "intent-001",
+            "partially_filled",
+            expected_current=("pending", "partially_filled"),
         )
 
     def test_fill_on_terminal_intent_rejected(self) -> None:

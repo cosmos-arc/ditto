@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from collections.abc import Callable
-from typing import Annotated, Any, Never, cast
+from typing import Annotated, Any, cast
 
 import orjson as _orjson
 from dishka import FromComponent
@@ -46,9 +46,8 @@ from loguru import logger
 from ditto_interfaces.api.deps import paginate, pagination_params
 from ditto_interfaces.api.errors import (
     APIError,
-    BadRequestError,
-    ConflictError,
     NotFoundError,
+    raise_business_error,
 )
 from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 from ditto_interfaces.models.backtest import (
@@ -73,14 +72,6 @@ from ditto_interfaces.models.lineage import (
 )
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
-
-
-def _raise_backtest_error(exc: ValueError) -> Never:
-    """将回测业务 ValueError 映射为对应的 APIError 并抛出."""
-    msg = str(exc).lower()
-    if "not found" in msg:
-        raise NotFoundError(str(exc)) from exc
-    raise ConflictError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -157,33 +148,18 @@ def _build_flow_params(
 # V1 使用进程内同步执行，远程 Worker 异步提交待后续迭代实现。
 
 
-def _submit_flow(
+def _run_backtest_flow(
     params: dict[str, object],
     on_failure: Callable[[str, str], None] | None = None,
 ) -> None:
-    """
-    同步提交 flow -- 进程内执行 (V1).
-
-    Args:
-        params: flow 参数.
-        on_failure: 异常回调 (run_id, error_message), 用于标记 RunRecord 为 failed.
-
-    """
-    _run_in_process(params, on_failure)
-
-
-def _run_in_process(
-    params: dict[str, object],
-    on_failure: Callable[[str, str], None] | None = None,
-) -> None:
-    """进程内执行 Prefect flow（开发模式 fallback）。"""
+    """进程内执行回测 flow（V1 同步模式，绕过 Prefect engine）。"""
     run_id = str(params.get("run_id", ""))
     try:
-        _prefect_fn = cast(
+        flow_fn = cast(
             Callable[..., Any],
             getattr(run_backtest_flow, "fn", run_backtest_flow),
         )
-        _prefect_fn(**params)
+        flow_fn(**params)
     except Exception as exc:
         logger.exception("Flow execution failed", extra={"run_id": run_id})
         if on_failure is not None:
@@ -242,14 +218,14 @@ async def trigger_backtest(
     try:
         result = await asyncio.to_thread(handler.handle, command)
     except ValueError as exc:
-        raise BadRequestError(str(exc)) from exc
+        raise_business_error(exc)
 
     # 后台提交 flow（不阻塞响应）
     flow_params = _build_flow_params(command, result)
     on_failure = _make_failure_callback(run_service)
     asyncio.get_running_loop().run_in_executor(
         None,
-        _submit_flow,
+        _run_backtest_flow,
         flow_params,
         on_failure,
     )
@@ -278,7 +254,7 @@ async def cancel_run(
     try:
         await asyncio.to_thread(handler.handle, run_id)
     except ValueError as exc:
-        _raise_backtest_error(exc)
+        raise_business_error(exc, default_conflict=True)
 
     return APIResponse(
         data=CancelRunResponse(run_id=run_id, status=RunStatus.CANCELLED)
@@ -301,7 +277,7 @@ async def retry_run(
     try:
         new_run_id = await asyncio.to_thread(handler.handle, run_id)
     except ValueError as exc:
-        _raise_backtest_error(exc)
+        raise_business_error(exc, default_conflict=True)
 
     # 获取 strategy_id + config_json 用于 flow 提交
     record = await asyncio.to_thread(facade.get_run, new_run_id)
@@ -323,7 +299,7 @@ async def retry_run(
     on_failure = _make_failure_callback(run_service)
     asyncio.get_running_loop().run_in_executor(
         None,
-        _submit_flow,
+        _run_backtest_flow,
         flow_params,
         on_failure,
     )
@@ -466,7 +442,7 @@ async def replay_run(
     except FileNotFoundError as exc:
         raise NotFoundError(str(exc)) from exc
     except ValueError as exc:
-        raise BadRequestError(str(exc)) from exc
+        raise_business_error(exc)
 
     validation = result.validation
     return APIResponse(
