@@ -1,7 +1,5 @@
 """上下文组合包定义."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
@@ -20,6 +18,9 @@ from ditto_app.process.materialization.publication_facade import (
 )
 from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_app.query.research import ResearchDatasetFacade
+from ditto_data.services.strategy.strategy_catalog_service import (
+    StrategyCatalogService,
+)
 from ditto_data.services.strategy.strategy_run_service import StrategyRunWriterProtocol
 from ditto_data.sources import ExchangeTransformers
 
@@ -55,5 +56,6 @@ class StrategyBundle:
     """策略上下文组合包。"""
 
     strategy_facade: StrategyFacade
+    catalog_service: StrategyCatalogService | None = None
     run_service: RunLifecycleService | None = None
     run_writer: StrategyRunWriterProtocol | None = None
