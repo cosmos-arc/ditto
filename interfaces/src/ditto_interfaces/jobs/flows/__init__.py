@@ -3,6 +3,7 @@ Prefect flows for data ingestion.
 
 该模块提供数据摄取的 Prefect Flows：
 - daily_ingestion_flow: 每日增量摄取
+- eod_flow: EOD 编排（摄取 -> 物化 -> 策略）
 - backfill_flow: 全量回补
 - backfill_missing_flow: 回补缺失数据
 - retry_failed_flow: 重试失败任务
@@ -19,6 +20,7 @@ from ditto_interfaces.jobs.flows.backfill import (
     backfill_missing_flow,
 )
 from ditto_interfaces.jobs.flows.daily import daily_ingestion_flow
+from ditto_interfaces.jobs.flows.eod import eod_flow
 from ditto_interfaces.jobs.flows.materialization import (
     certify_publication_flow,
     daily_materialization_flow,
@@ -45,6 +47,7 @@ __all__ = [
     "daily_materialization_flow",
     "daily_repair_flow",
     "deprecate_publication_flow",
+    "eod_flow",
     "promote_publication_flow",
     "repair_from_invalidation_flow",
     "repair_holes_flow",

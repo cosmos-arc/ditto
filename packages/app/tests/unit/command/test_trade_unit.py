@@ -21,15 +21,19 @@ from ditto_data.models.trade import (
 
 def _make_trade_service() -> MagicMock:
     """构建 TradeService mock，包含成交录入所需公开方法."""
-    return MagicMock(
+    mock = MagicMock(
         spec=[
             "get_intent",
+            "find_fill",
             "save_fill",
             "update_intent_status",
             "list_fills",
             "save_position",
         ],
     )
+    # 默认 find_fill 返回 None（无已有记录），幂等测试单独覆盖
+    mock.find_fill.return_value = None
+    return mock
 
 
 def _make_manual_tracker() -> MagicMock:
@@ -63,6 +67,53 @@ def _make_intent_record(**overrides: object) -> TradeIntentRecord:
 
 class TestRecordFillHandler:
     """RecordFillHandler — 录入人工成交."""
+
+    def test_idempotent_returns_existing_fill(self) -> None:
+        """幂等性: 相同 intent_id + trade_date 已有 fill 时直接返回已有记录."""
+        service = _make_trade_service()
+        tracker = _make_manual_tracker()
+
+        # 模拟已有 fill 记录
+        existing_record = ManualExecutionFillRecord(
+            fill_id="fill-existing",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+            fee=5.0,
+        )
+        service.find_fill.return_value = existing_record
+
+        handler = RecordFillHandler(
+            trade_service=service,
+            manual_tracker=tracker,
+        )
+
+        cmd = RecordFillCommand(
+            fill_id="fill-new-duplicate",
+            intent_id="intent-001",
+            strategy_id="strat-alpha",
+            trade_date="2026-04-11",
+            instrument_id=510050,
+            direction="buy",
+            quantity=1000,
+            fill_price=4.15,
+            fee=5.0,
+        )
+
+        result = handler.handle(cmd)
+
+        # 验证返回已有 fill 的 DTO
+        assert isinstance(result, ManualExecutionFill)
+        assert result.fill_id == "fill-existing"
+
+        # 验证无副作用（不保存新 fill、不更新 intent 状态）
+        service.save_fill.assert_not_called()
+        service.update_intent_status.assert_not_called()
+        tracker.compute_positions.assert_not_called()
 
     def test_handle_saves_fill_and_updates_intent(self) -> None:
         """成功录入 → fill 持久化 + intent 状态更新为 filled."""

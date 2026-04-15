@@ -7,6 +7,7 @@ Ditto FastAPI 主应用.
 from __future__ import annotations
 
 # Standard library imports
+import os
 import time
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -179,10 +180,22 @@ app = FastAPI(
 container = make_async_app_container()
 setup_dishka(container=container, app=app)
 
-# 配置CORS
+# 配置 CORS（环境感知）
+_env = get_environment()
+if _env.is_production:
+    _cors_raw = os.environ.get("CORS_ORIGINS", "")
+    if _cors_raw:
+        _cors_origins: list[str] = [
+            o.strip() for o in _cors_raw.split(",") if o.strip()
+        ]
+    else:
+        _cors_origins = ["*"]
+else:
+    _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -204,8 +217,7 @@ app.include_router(trade.router, prefix="/api/v1")
 app.include_router(universe.router, prefix="/api/v1")
 
 # 调试路由： 条件注册（仅非生产环境）
-env = get_environment()
-if not env.is_production:
+if not _env.is_production:
     from ditto_interfaces.api.routes.debug import debug_router
 
     app.include_router(debug_router, prefix="/api/v1", tags=["debug"])

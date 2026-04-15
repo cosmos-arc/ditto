@@ -6,6 +6,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
+from ditto_data.services.strategy.strategy_catalog_service import (
+    StrategyCatalogService,
+)
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
@@ -24,6 +27,7 @@ def create_strategy_bundle() -> Iterator[StrategyBundle]:
     try:
         yield StrategyBundle(
             strategy_facade=container.get(StrategyFacade),
+            catalog_service=container.get(StrategyCatalogService),
             run_service=container.get(StrategyRunLifecycleService),
             run_writer=container.get(StrategyRunWriterProtocol),
         )

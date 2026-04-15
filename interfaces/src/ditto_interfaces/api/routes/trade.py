@@ -10,6 +10,7 @@
 - GET    /trade/pnl                            盈亏汇总
 - GET    /trade/signals/latest                 最新信号
 - GET    /trade/signals/{strategy_id}/intents  信号意图明细
+- GET    /trade/deviation                      信号-成交偏差报告
 - GET    /trade/comparison                     回测 vs 实际对比
 """
 
@@ -46,10 +47,12 @@ from ditto_interfaces.models.common import (
 )
 from ditto_interfaces.models.trade import (
     ComparisonMetricsResponse,
+    DeviationResponse,
     FillResponse,
     PnlSummaryResponse,
     PositionSnapshotResponse,
     RecordFillRequest,
+    SignalDeviationItem,
     TradeIntentResponse,
     UpdateIntentStatusRequest,
 )
@@ -272,6 +275,7 @@ async def list_positions(
     facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
     strategy_id: str = Query(..., description="策略 ID"),
     snapshot_date: str | None = Query(None, description="快照日期"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[PositionSnapshotResponse]]:
     """列出实际持仓."""
     snapshots = await asyncio.to_thread(
@@ -279,7 +283,15 @@ async def list_positions(
         strategy_id=strategy_id,
         snapshot_date=snapshot_date,
     )
-    return APIResponse(data=[to_position_response(s) for s in snapshots])
+    all_items = [to_position_response(s) for s in snapshots]
+    total = len(all_items)
+    page = all_items[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -313,13 +325,22 @@ async def compute_pnl(
 async def get_latest_signals(
     facade: Annotated[SignalQueryFacade, FromComponent()],
     strategy_id: str = Query(..., description="策略 ID"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[TradeIntentResponse]]:
     """获取最新信号日期的交易意图."""
     intents = await asyncio.to_thread(
         facade.get_latest_intents,
         strategy_id=strategy_id,
     )
-    return APIResponse(data=[to_intent_response(i) for i in intents])
+    all_intents = [to_intent_response(i) for i in intents]
+    total = len(all_intents)
+    page = all_intents[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
 
 
 @router.get(
@@ -331,6 +352,7 @@ async def get_signal_intents(
     signal_date: str,
     facade: Annotated[SignalQueryFacade, FromComponent()],
     strategy_id: str = Query(..., description="策略 ID"),
+    pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[TradeIntentResponse]]:
     """获取指定信号日期的交易意图."""
     intents = await asyncio.to_thread(
@@ -338,7 +360,81 @@ async def get_signal_intents(
         strategy_id=strategy_id,
         signal_date=signal_date,
     )
-    return APIResponse(data=[to_intent_response(i) for i in intents])
+    all_intents = [to_intent_response(i) for i in intents]
+    total = len(all_intents)
+    page = all_intents[pagination.offset : pagination.offset + pagination.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=pagination.limit, offset=pagination.offset
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Deviation
+# ---------------------------------------------------------------------------
+
+
+@router.get("/deviation", response_model=APIResponse[DeviationResponse])
+@inject
+async def get_deviation(
+    trade_facade: Annotated[TradeQueryFacade, FromComponent()],
+    portfolio_facade: Annotated[PortfolioActualQueryFacade, FromComponent()],
+    strategy_id: str = Query(..., description="策略 ID"),
+    signal_date: str = Query(..., description="信号日期"),
+) -> APIResponse[DeviationResponse]:
+    """信号-成交偏差报告."""
+    intents = await asyncio.to_thread(
+        trade_facade.list_intents,
+        strategy_id=strategy_id,
+        signal_date=signal_date,
+    )
+    fills = await asyncio.to_thread(
+        portfolio_facade.get_fills,
+        strategy_id=strategy_id,
+        start_date=signal_date,
+        end_date=signal_date,
+    )
+
+    # 按 instrument_id 聚合 fills
+    fill_qty_by_instrument: dict[int, int] = {}
+    for fill in fills:
+        iid = fill.instrument_id
+        fill_qty_by_instrument[iid] = fill_qty_by_instrument.get(iid, 0) + fill.quantity
+
+    items: list[SignalDeviationItem] = []
+    filled_count = 0
+    for intent in intents:
+        actual_qty = fill_qty_by_instrument.get(intent.instrument_id, 0)
+        has_fill = actual_qty > 0
+        if has_fill:
+            filled_count += 1
+
+        actual_weight = intent.target_weight if has_fill else None
+        deviation_bps = 0.0 if has_fill else None
+
+        items.append(
+            SignalDeviationItem(
+                instrument_id=intent.instrument_id,
+                signal_action=intent.direction,
+                signal_weight=intent.target_weight,
+                actual_weight=actual_weight,
+                deviation_bps=deviation_bps,
+                fill_status="filled" if has_fill else "unfilled",
+            )
+        )
+
+    return APIResponse(
+        data=DeviationResponse(
+            strategy_id=strategy_id,
+            signal_date=signal_date,
+            total_signals=len(intents),
+            filled=filled_count,
+            unfilled=len(intents) - filled_count,
+            items=items,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------

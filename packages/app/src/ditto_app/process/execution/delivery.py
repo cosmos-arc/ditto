@@ -1,41 +1,30 @@
 """
 DeliveryRouter — 信号推送路由器.
 
-将 TradeIntent 列表渲染为通知消息，通过 NotificationPort 推送。
+将 TradeIntent 列表渲染为通知上下文，通过 AlertManager 多通道推送。
 实现 SignalDeliveryProtocol，可注入到 SignalSnapshotProcess。
-
-App 层仅定义 NotificationPort Protocol，具体通知实现在 Interfaces 层注入。
 """
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any
 
+from ditto_infra.services.notification import NotificationLevel
 from loguru import logger
 
 from ditto_app.execution_dto import TradeIntent
 
-__all__ = ["DeliveryRouter", "NotificationPort"]
+if TYPE_CHECKING:
+    from ditto_infra.services.notification.manager import AlertManager
 
-
-class NotificationPort(Protocol):
-    """通知发送协议 — App 层定义，Interfaces 层注入适配器."""
-
-    def send(
-        self,
-        template: str,
-        context: dict[str, Any],
-        level: str,
-    ) -> dict[str, bool]:
-        """发送通知，返回各通道成功/失败映射."""
-        ...
+__all__ = ["DeliveryRouter"]
 
 
 class DeliveryRouter:
-    """信号推送路由器 — 将 TradeIntent 渲染为通知消息."""
+    """信号推送路由器 — 将 TradeIntent 渲染为通知消息，通过 AlertManager 推送."""
 
-    def __init__(self, sender: NotificationPort | None = None) -> None:
-        self._sender = sender
+    def __init__(self, alert_manager: AlertManager | None = None) -> None:
+        self._alert_manager = alert_manager
 
     def deliver(
         self,
@@ -46,11 +35,13 @@ class DeliveryRouter:
         """推送信号通知（fire-and-forget）."""
         if not intents:
             return {}
-        if self._sender is None:
+        if self._alert_manager is None:
             return {}
         context = self._build_context(strategy_id, intents, signal_date)
         try:
-            return self._sender.send("signal_delivery", context, "info")
+            return self._alert_manager.send_alert(
+                "signal_trading", context, NotificationLevel.INFO
+            )
         except Exception:
             logger.exception(
                 "Signal delivery failed, strategy_id={}, signal_date={}",
@@ -108,10 +99,12 @@ class DeliveryRouter:
             "buy_count": len(buys),
             "sell_count": len(sells),
             "total_intents": len(intents),
-            "intents": [
+            "actions": [
                 {
                     "instrument_id": i.instrument_id,
-                    "direction": i.direction,
+                    "action": i.direction,
+                    "current_weight": round(i.current_weight, 4),
+                    "target_weight": round(i.target_weight, 4),
                     "delta_weight": round(i.delta_weight, 4),
                 }
                 for i in intents

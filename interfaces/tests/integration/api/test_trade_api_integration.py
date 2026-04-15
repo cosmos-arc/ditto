@@ -615,3 +615,175 @@ class TestBusinessRuleErrors:
             },
         )
         assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Tests: Pagination
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestPositionsPagination:
+    """positions 端点分页."""
+
+    def test_pagination_in_response(
+        self, client: TC, mock_portfolio_facade: MC
+    ) -> None:
+        """positions 响应应包含 pagination 字段."""
+        mock_portfolio_facade.get_position_history.return_value = [_make_position()]
+        resp = client.get("/api/v1/trade/positions", params={"strategy_id": "strat-a"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "pagination" in body
+        assert body["pagination"]["total"] == 1
+        assert body["pagination"]["limit"] == 20
+        assert body["pagination"]["offset"] == 0
+
+    def test_pagination_limit_offset(
+        self, client: TC, mock_portfolio_facade: MC
+    ) -> None:
+        """positions 支持 limit + offset 分页."""
+        positions = [_make_position(snapshot_id=f"snap-{i}") for i in range(5)]
+        mock_portfolio_facade.get_position_history.return_value = positions
+        resp = client.get(
+            "/api/v1/trade/positions",
+            params={"strategy_id": "strat-a", "limit": 2, "offset": 1},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["pagination"]["total"] == 5
+        assert body["pagination"]["limit"] == 2
+        assert body["pagination"]["offset"] == 1
+        assert len(body["data"]) == 2
+
+
+@pytest.mark.integration
+class TestSignalsLatestPagination:
+    """signals/latest 端点分页."""
+
+    def test_pagination_in_response(self, client: TC, mock_signal_facade: MC) -> None:
+        """signals/latest 响应应包含 pagination 字段."""
+        mock_signal_facade.get_latest_intents.return_value = [_make_intent()]
+        resp = client.get(
+            "/api/v1/trade/signals/latest",
+            params={"strategy_id": "strat-a"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "pagination" in body
+        assert body["pagination"]["total"] == 1
+
+
+@pytest.mark.integration
+class TestSignalIntentsPagination:
+    """signals/{date}/intents 端点分页."""
+
+    def test_pagination_in_response(self, client: TC, mock_signal_facade: MC) -> None:
+        """signals/{date}/intents 响应应包含 pagination 字段."""
+        mock_signal_facade.get_intents_by_date.return_value = [_make_intent()]
+        resp = client.get(
+            "/api/v1/trade/signals/2024-01-15/intents",
+            params={"strategy_id": "strat-a"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "pagination" in body
+        assert body["pagination"]["total"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Tests: Deviation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestDeviation:
+    """信号-成交偏差报告."""
+
+    def test_returns_deviation(
+        self, client: TC, mock_trade_facade: MC, mock_portfolio_facade: MC
+    ) -> None:
+        """返回偏差报告 — 部分成交."""
+        mock_trade_facade.list_intents.return_value = [
+            _make_intent(instrument_id=510300, direction="buy", target_weight=0.3),
+            _make_intent(
+                intent_id="int-002",
+                instrument_id=159915,
+                direction="sell",
+                target_weight=0.2,
+            ),
+        ]
+        # 只有 510300 有成交
+        mock_portfolio_facade.get_fills.return_value = [
+            _make_fill(instrument_id=510300, quantity=1000),
+        ]
+        resp = client.get(
+            "/api/v1/trade/deviation",
+            params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["strategy_id"] == "strat-a"
+        assert body["signal_date"] == "2024-01-15"
+        assert body["total_signals"] == 2
+        assert body["filled"] == 1
+        assert body["unfilled"] == 1
+        assert len(body["items"]) == 2
+
+        # 第一个有成交
+        item_0 = body["items"][0]
+        assert item_0["instrument_id"] == 510300
+        assert item_0["fill_status"] == "filled"
+        assert item_0["actual_weight"] == 0.3
+
+        # 第二个无成交
+        item_1 = body["items"][1]
+        assert item_1["instrument_id"] == 159915
+        assert item_1["fill_status"] == "unfilled"
+        assert item_1["actual_weight"] is None
+
+    def test_all_filled(
+        self, client: TC, mock_trade_facade: MC, mock_portfolio_facade: MC
+    ) -> None:
+        """所有信号均已成交."""
+        mock_trade_facade.list_intents.return_value = [
+            _make_intent(instrument_id=510300),
+        ]
+        mock_portfolio_facade.get_fills.return_value = [
+            _make_fill(instrument_id=510300),
+        ]
+        resp = client.get(
+            "/api/v1/trade/deviation",
+            params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["filled"] == 1
+        assert body["unfilled"] == 0
+
+    def test_no_intents(
+        self, client: TC, mock_trade_facade: MC, mock_portfolio_facade: MC
+    ) -> None:
+        """无信号时返回空报告."""
+        mock_trade_facade.list_intents.return_value = []
+        mock_portfolio_facade.get_fills.return_value = []
+        resp = client.get(
+            "/api/v1/trade/deviation",
+            params={"strategy_id": "strat-a", "signal_date": "2024-01-15"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()["data"]
+        assert body["total_signals"] == 0
+        assert body["filled"] == 0
+        assert body["unfilled"] == 0
+        assert body["items"] == []
+
+    def test_missing_required_params(self, client: TC) -> None:
+        """缺少必需参数 → 422."""
+        resp = client.get("/api/v1/trade/deviation", params={"strategy_id": "strat-a"})
+        assert resp.status_code == 422
+
+        resp = client.get(
+            "/api/v1/trade/deviation", params={"signal_date": "2024-01-15"}
+        )
+        assert resp.status_code == 422

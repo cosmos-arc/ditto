@@ -119,12 +119,40 @@ class ComparisonMetricsResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class SignalDeviationItem(BaseModel):
+    """信号-成交偏差项."""
+
+    instrument_id: int
+    signal_action: str
+    signal_weight: float
+    actual_weight: float | None = None
+    deviation_bps: float | None = None
+    fill_status: str = "unfilled"
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DeviationResponse(BaseModel):
+    """信号-成交偏差报告."""
+
+    strategy_id: str
+    signal_date: str
+    total_signals: int
+    filled: int
+    unfilled: int
+    items: list[SignalDeviationItem]
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 __all__ = [
     "ComparisonMetricsResponse",
+    "DeviationResponse",
     "FillResponse",
     "PnlSummaryResponse",
     "PositionSnapshotResponse",
     "RecordFillRequest",
+    "SignalDeviationItem",
     "TradeIntentResponse",
     "UpdateIntentStatusRequest",
 ]

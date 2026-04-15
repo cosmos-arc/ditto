@@ -392,6 +392,62 @@ class TestSaveFill:
         assert svc.get_fill("NONEXISTENT") is None
 
 
+class TestFindFill:
+    """find_fill — 按 intent_id + trade_date 查找成交记录（幂等去重用）。"""
+
+    def test_finds_existing_fill(self, sqlite_client: SQLiteClient) -> None:
+        """存在匹配的 fill 时应返回对应记录."""
+        svc = TradeService(sqlite_client)
+        svc.init_schema()
+
+        fill = _make_fill(intent_id="INT-001", trade_date="2026-04-11")
+        svc.save_fill(fill)
+
+        result = svc.find_fill("INT-001", "2026-04-11")
+        assert result is not None
+        assert result.fill_id == "FILL-001"
+        assert result.intent_id == "INT-001"
+        assert result.trade_date == "2026-04-11"
+
+    def test_returns_none_when_no_match(self, sqlite_client: SQLiteClient) -> None:
+        """无匹配时返回 None."""
+        svc = TradeService(sqlite_client)
+        svc.init_schema()
+
+        fill = _make_fill(intent_id="INT-001", trade_date="2026-04-11")
+        svc.save_fill(fill)
+
+        assert svc.find_fill("INT-001", "2026-04-12") is None
+        assert svc.find_fill("INT-999", "2026-04-11") is None
+
+    def test_returns_first_when_multiple_fills_same_key(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """同 intent_id + trade_date 存在多条时返回第一条（LIMIT 1）."""
+        svc = TradeService(sqlite_client)
+        svc.init_schema()
+
+        svc.save_fill(
+            _make_fill(
+                fill_id="FILL-001",
+                intent_id="INT-001",
+                trade_date="2026-04-11",
+            )
+        )
+        svc.save_fill(
+            _make_fill(
+                fill_id="FILL-002",
+                intent_id="INT-001",
+                trade_date="2026-04-11",
+                quantity=500,
+            )
+        )
+
+        result = svc.find_fill("INT-001", "2026-04-11")
+        assert result is not None
+        assert result.fill_id == "FILL-001"
+
+
 class TestListFills:
     """list_fills 测试."""
 

@@ -106,6 +106,10 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
 _SELECT_FILL_BY_ID = "SELECT * FROM execution_fills WHERE fill_id = ?"
 
+_FIND_FILL_BY_INTENT_AND_DATE = (
+    "SELECT * FROM execution_fills WHERE intent_id = ? AND trade_date = ? LIMIT 1"
+)
+
 _LIST_FILLS_BASE = "SELECT * FROM execution_fills WHERE strategy_id = ?"
 
 # ---------------------------------------------------------------------------
@@ -359,6 +363,25 @@ class TradeService:
 
         """
         row = self._client.fetchone(_SELECT_FILL_BY_ID, (fill_id,))
+        return self._row_to_fill(row) if row else None
+
+    def find_fill(
+        self, intent_id: str, trade_date: str
+    ) -> ManualExecutionFillRecord | None:
+        """
+        按 intent_id + trade_date 查找成交记录（幂等去重用）.
+
+        Args:
+            intent_id: 关联交易意图 ID.
+            trade_date: 成交日期.
+
+        Returns:
+            ManualExecutionFillRecord 或 None.
+
+        """
+        row = self._client.fetchone(
+            _FIND_FILL_BY_INTENT_AND_DATE, (intent_id, trade_date)
+        )
         return self._row_to_fill(row) if row else None
 
     def list_fills(

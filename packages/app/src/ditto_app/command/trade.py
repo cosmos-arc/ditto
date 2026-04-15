@@ -80,12 +80,20 @@ class RecordFillHandler:
         """
         处理成交录入命令.
 
+        0. 幂等性: 检查是否已有相同 intent_id + trade_date 的成交
         1. 验证 intent_id 有效 + 身份校验
         2. 构建 ManualExecutionFill DTO
         3. 映射为 Record 并持久化
         4. 更新 intent 状态（支持部分成交）
         5. 触发 ManualTracker 重新聚合 -> 更新持仓
         """
+        # 0. 幂等性: 检查是否已有相同 intent_id + trade_date 的成交
+        existing_fill_record = self._service.find_fill(
+            command.intent_id, command.trade_date
+        )
+        if existing_fill_record is not None:
+            return record_to_fill(existing_fill_record)
+
         # 1. Validate
         intent_record = self._service.get_intent(command.intent_id)
         self._validate_intent_match(intent_record, command)

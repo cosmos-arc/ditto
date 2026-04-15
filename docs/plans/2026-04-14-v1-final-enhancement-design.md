@@ -755,12 +755,14 @@ Sprint 4: 产品 API 闭环（F5 + F6 + F7）✅ Done
   └─ 生成 OpenAPI 快照（docs/openapi/v1.json，45 个端点）
   验收: 606 unit tests ✅ | pyright 0 errors ✅ | ruff clean ✅ | arch 24 contracts ✅ | 0 "coming soon" 占位 ✅
 
-Sprint 5: 人工执行闭环（F4 + 手工成交增强）
-  ├─ F4: 信号推送重构（复用 infra AlertManager + 新模板）
-  ├─ Webhook + Telegram + ApiOnly 三通道验证
-  ├─ 交易意图/手工成交/持仓/PnL 分页 + 幂等
-  └─ 信号-成交偏差报告（简化版：API 查询）
-  验收: 信号推送三通道可用 + 人工执行 CRUD 可用
+Sprint 5: 人工执行闭环（F4 + 手工成交增强）✅ Done
+  ├─ F4: 信号推送重构（删除 NotificationPort，DeliveryRouter 直接注入 AlertManager）
+  ├─ 新增 signal_trading Jinja2 模板（telegram/webhook/email 三通道）
+  ├─ 启用 NotificationProvider 的 TelegramSender
+  ├─ 交易分页扩展（positions + signals/latest + signals/{date}/intents）
+  ├─ 成交幂等（POST /trade/fills 按 intent_id + trade_date 去重）
+  └─ 新增 GET /trade/deviation 信号-成交偏差报告端点
+  验收: 5366 tests passed ✅ | pyright 0 errors ✅ | ruff clean ✅ | arch 24 contracts ✅
 
 Sprint 6: EOD 运营闭环（F12 + F13 + F11）
   ├─ F12: EOD 编排 Flow（摄取→物化→策略串联）
