@@ -23,26 +23,38 @@ ditto_analytics → ditto_infra ✅（importlinter 允许，但当前源码无�
 ditto_analytics/
 ├── expression/          # 表达式语言（词法分析 → AST → 代码生成 → 编译）
 │   ├── lexer.py       # 词法分析
+│   ├── ast.py         # 抽象语法树定义
 │   ├── parser.py      # 语法分析（AST 生成）
 │   ├── analyzer.py    # 语义分析
 │   ├── codegen.py      # 代码生成
 │   ├── compiler.py    # 编译入口
 │   ├── diagnostics.py # 诊断信息
 │   └── registry.py    # 函数注册表
-├── factors/             # 内置因子库
+├── factors/             # 内置因子库（15 个模块）
 │   ├── spec.py         # FactorSpec 定义
+│   ├── factor_specs.py # 因子规格注册
+│   ├── validate.py     # 因子验证
 │   ├── primitives.py  # 基础因子
 │   ├── technical.py    # 技术因子
 │   ├── fundamental.py  # 基本面因子
-│   └── alpha.py        # Alpha 因子
+│   ├── alpha.py        # Alpha 因子
+│   ├── alternative.py  # 另类因子
+│   ├── growth.py       # 成长因子
+│   ├── liquidity.py    # 流动性因子
+│   ├── momentum.py     # 动量因子
+│   ├── quality.py      # 质量因子
+│   ├── size.py         # 规模因子
+│   ├── value.py        # 价值因子
+│   └── volatility.py   # 波动率因子
 ├── evaluation/          # 因子评估
 │   ├── evaluator.py    # 评估引擎
 │   ├── report.py       # 评估报告
 │   └── metrics/       # 评估指标
-│       ├── ic.py        # IC 系列
+│       ├── _math.py        # 数学工具函数
+│       ├── ic.py           # IC 系列
 │       ├── factor_analysis.py  # 因子分析
-│       ├── portfolio.py  # 组合分析
-│       └── tail_risk.py  # 尾部风险
+│       ├── portfolio.py    # 组合分析
+│       └── tail_risk.py    # 尾部风险
 ├── materialization/     # 物化计划
 │   ├── contracts.py   # 物化契约
 │   ├── models.py       # 物化模型

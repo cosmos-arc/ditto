@@ -13,16 +13,19 @@ Infra 层（原 Foundation）是**横切层**，提供跨所有层的基础设�
 
 ```
 ditto_infra/
-├── foundation/           # 基础模块（原独立 foundation 包）
-│   ├── cache/           # 通用缓存（DataCache）
-│   ├── checksum/        # 校验和计算
-│   ├── concurrency/     # 并发控制（FileLockManager）
-│   ├── config/          # 配置管理（Settings、路径、环境）
-│   ├── db/              # 数据库连接（SQLitePool）
-│   ├── observability/   # 可观测性（日志、追踪、指标）
-│   └── util/            # 通用工具（日期、IO）
-└── services/            # 基础服务
-    └── notification/    # 通知服务（Telegram、Email、Webhook）
+├── foundation/                    # 基础模块（原独立 foundation 包）
+│   ├── cache/                    # 通用缓存（DataCache）
+│   ├── checksum/                 # 校验和计算（file.py）
+│   ├── concurrency/              # 并发控制（FileLockManager）
+│   ├── config/                   # 配置管理（Settings、路径、环境）
+│   │   └── providers/            # 配置提供者（校验、数据根路径）
+│   ├── db/                       # 数据库连接（SQLitePool）
+│   ├── observability/            # 可观测性（日志、追踪、指标、生命周期）
+│   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
+└── services/                     # 基础服务
+    └── notification/             # 通知服务（Telegram、Email、Webhook）
+        ├── channels/             # 通知渠道实现（email、telegram、webhook）
+        └── templates/            # 通知模板（alerts）
 ```
 
 ## 导入规范

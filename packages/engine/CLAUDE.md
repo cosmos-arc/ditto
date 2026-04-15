@@ -13,27 +13,79 @@ Engine 层是 **Domain Layer（领域层）**，包含量化系统的核心业�
 
 ```
 ditto_engine/
-├── accounting/        # 共享账户契约层（Account / CashBook / OrderBook / Position）
-├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
-├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / 内置 Stages / 策略模板）
+├── accounting/        # 共享账户契约层
+│   ├── account.py     # Account / AccountView
+│   ├── buying_power.py # BuyingPowerModel
+│   ├── cash.py        # CashBook
+│   ├── fills.py       # 成交记录
+│   ├── order_book.py  # OrderBook
+│   └── position.py    # Position
+├── execution/         # 执行层
+│   ├── brokerage.py   # BacktestBrokerage
+│   ├── fills.py       # FillOutcome
+│   ├── planner.py     # ExecutionPlanner
+│   ├── rules.py       # 交易规则
+│   ├── targets.py     # 交易目标
+│   ├── trade_builder.py # TradeBuilder
+│   └── reality/       # Reality Model（佣金/滑点/成交/结算）
+│       ├── brokerage.py  # RealityBrokerage
+│       ├── constants.py  # 常量定义
+│       ├── fee.py        # 佣金模型
+│       ├── fill.py       # 成交模拟
+│       ├── market.py     # 市场状态
+│       └── settlement.py # T+1 结算逻辑
+│       └── slippage.py   # 滑点模型
+├── alpha/             # Alpha 决策层
 │   ├── context.py     # 策略运行上下文
+│   ├── frame.py       # DecisionFrame
 │   ├── models.py      # Alpha 领域模型
-│   ├── specs.py       # StrategySpec 定义
 │   ├── pipeline.py    # StrategyPipeline
 │   ├── protocols.py   # DecisionStage Protocol
+│   ├── seeds.py       # 种子/初始化
+│   ├── specs.py       # StrategySpec 定义
 │   ├── validation.py  # 参数校验
-│   ├── builtins/      # 内置 Stages（universe/signal/scoring/filtering/selection/regime）
-│   └── templates/     # 策略模板（etf_rotation/etf_trend_swing/stock_sector_rotation/stock_selection_trend）
-├── backtest/          # 回测引擎（EngineLoop / BacktestTradingOrchestrator / Manifest / Statistics / Audit）
+│   ├── builtins/      # 内置 Stages（8 个）
+│   │   ├── filtering.py       # FilteringStage
+│   │   ├── regime.py          # RegimeStage
+│   │   ├── regime_allocation.py # RegimeAllocationStage
+│   │   ├── regime_scoring.py  # RegimeScoringStage
+│   │   ├── scoring.py         # ScoringStage
+│   │   ├── selection.py       # SelectionStage
+│   │   ├── signal.py          # SignalStage
+│   │   └── universe.py        # UniverseStage
+│   └── templates/     # 策略模板
+│       ├── etf_rotation.py
+│       ├── etf_trend_swing.py
+│       ├── stock_sector_rotation.py
+│       └── stock_selection_trend.py
+├── backtest/          # 回测引擎
 │   ├── engine.py      # EngineLoop 主循环
 │   ├── data_feed.py   # ProviderBackedDataFeed
 │   ├── manifest.py    # RunManifest
+│   ├── replay.py      # 回放控制
 │   ├── statistics.py  # BacktestReport / Statistics
-│   └── audit/         # 执行审计
-│       ├── collector.py  # ExecutionAuditCollector
-│       └── records.py    # 审计记录类型
-├── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
-├── risk/              # 风险管理（PreTrade 检查 / PostTrade Guard / 风险模型）
+│   ├── audit/         # 执行审计
+│   │   ├── collector.py  # ExecutionAuditCollector
+│   │   └── records.py    # 审计记录类型
+│   └── steps/         # Pipeline Steps（10 个）
+│       ├── _input_bundle.py  # InputBundle 构建
+│       ├── audit.py          # 审计 Step
+│       ├── data_fetch.py     # 数据获取 Step
+│       ├── execution.py      # 执行 Step
+│       ├── planning.py       # 规划 Step
+│       ├── pre_trade.py      # PreTrade 检查 Step
+│       ├── risk_scan.py      # 风险扫描 Step
+│       ├── strategy.py       # 策略 Step
+│       └── types.py          # Step 类型定义
+├── portfolio/         # 组合构建
+│   ├── allocation.py  # WeightAllocator / ConstraintChecker
+│   ├── comparison.py  # 组合比较
+│   ├── constraints.py # 约束定义
+│   └── report_views.py # 报告视图
+├── risk/              # 风险管理
+│   ├── _validation.py # 风险校验
+│   ├── post_trade.py  # PostTrade Guard
+│   └── pre_trade.py   # PreTrade 检查
 └── events.py          # 领域事件定义
 ```
 
@@ -50,62 +102,91 @@ ditto_engine/
 
 ### Accounting（共享账户契约层）
 
-**职责**：Position / CashBook / OrderBook / Account / AccountView / BuyingPowerModel
+**职责**：Position / CashBook / OrderBook / Account / AccountView / BuyingPowerModel / 成交记录
 
 **关键点**：
 - 纯数据结构层，frozen dataclass + Protocol
 - Account 是唯一可变对象（内部替换 frozen 引用）
 - AccountView 是只读快照，供上层安全消费
+- BuyingPowerModel（`buying_power.py`）提供购买力计算
+- Cash（`cash.py`）封装现金簿操作
+- Fills（`fills.py`）管理成交记录
 - 详见 v3 设计文档 §3.1-§3.6
 
 ### Execution（执行层）
 
-**职责**：ExecutionPlanner / BacktestBrokerage / TradeBuilder / Reality Model / InstrumentDefinition / FillOutcome
+**职责**：ExecutionPlanner / BacktestBrokerage / TradeBuilder / Reality Model / InstrumentDefinition / FillOutcome / 交易规则 / 交易目标
 
 **关键点**：
 - InstrumentDefinition / TradingRuleSet / FeeSchedule 是 frozen dataclass
 - FillOutcome 是显式联合类型（Filled / NoFill）
 - BacktestBrokerage 实现 T+1 冻结逻辑和批内滚动更新
 - TradeBuilder 支持 FIFO / FlatToFlat 两种匹配方式
-- Reality Model 处理佣金/滑点/成交/结算
+- Rules（`rules.py`）定义交易规则约束
+- Targets（`targets.py`）计算交易目标
+- Fills（`fills.py`）封装成交结果
+- Reality Model（`reality/` 子包）处理佣金/滑点/成交/结算：
+  - `brokerage.py` — RealityBrokerage
+  - `constants.py` — 常量定义
+  - `fee.py` — 佣金模型
+  - `fill.py` — 成交模拟
+  - `market.py` — 市场状态
+  - `settlement.py` — T+1 结算逻辑
+  - `slippage.py` — 滑点模型
 - 详见 v3 设计文档 §4.3, §5.1
 
 ### Alpha（Alpha 决策层）
 
-**职责**：StrategySpec / StrategyRun / StrategyContext / DecisionStage Protocol / StrategyPipeline / 内置 Stages / 策略模板
+**职责**：StrategySpec / StrategyRun / StrategyContext / DecisionFrame / DecisionStage Protocol / StrategyPipeline / 内置 Stages / 策略模板
 
 **关键点**：
 - StrategySpec 是策略的完整语义契约
 - DecisionStage 是 Protocol，Pipeline 通过它分发
 - StrategyPipeline 顺序编排 Stages，纯函数无状态
-- 内置 Stages: Universe / Signal / Scoring / Filtering / Selection / RiskLockFilter / TrendFilter / RegimeStage
+- DecisionFrame（`frame.py`）通过列名约定流转，不做运行时 schema 校验
+- Seeds（`seeds.py`）提供策略种子/初始化
+- 内置 Stages（8 个）: Universe / Signal / Scoring / Filtering / Selection / RiskLockFilter / TrendFilter / RegimeStage / RegimeAllocationStage / RegimeScoringStage
+- `regime_allocation.py` — RegimeAllocationStage（基于 Regime 的资产配置）
+- `regime_scoring.py` — RegimeScoringStage（基于 Regime 的评分）
 - 4 个策略模板: etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend
 - etf_trend_swing 包含 TrailingStopStage（追踪止损，向量化 polars join）
-- DecisionFrame 通过列名约定流转，不做运行时 schema 校验
 - `validation.py` 提供 `validate_spec_params()` 独立参数校验函数
 - 模块路径：`ditto_engine.alpha`
 - 详见 v3 设计文档 §2, §6.1, §9.1
 
 ### Portfolio（组合构建层）
 
-**职责**：WeightAllocator / ConstraintChecker / AllocationStage / ConstraintStage
+**职责**：WeightAllocator / ConstraintChecker / AllocationStage / ConstraintStage / 组合比较 / 报告视图
 
 **关键点**：
 - WeightAllocator Protocol 定义权重分配接口
 - EqualWeightAllocator / ScoreWeightAllocator / InverseVolAllocator 三种内置分配策略
 - ConstraintChecker 按 priority 升序执行约束
-- MaxWeight / MinWeight / MaxPositions 三种内置约束
+- MaxWeight / MinWeight / MaxPositions 三种内置约束（`constraints.py`）
 - AllocationStage / ConstraintStage 是 DecisionStage 适配器
+- Comparison（`comparison.py`）提供组合间比较分析
+- ReportViews（`report_views.py`）提供报告视图生成
 - 详见 v3 设计文档 §2.2, §9.1
 
 ### Backtest（回测引擎）
 
-**职责**：EngineLoop / EngineConfig/ ProviderBackedDataFeed / BacktestReport / RunManifest / PreTrade/ PostTrade/ Statistics / Audit
+**职责**：EngineLoop / EngineConfig / ProviderBackedDataFeed / BacktestReport / RunManifest / PreTrade / PostTrade / Statistics / Audit / Replay / Pipeline Steps
 
 **关键点**：
 - EngineLoop 日历步进回测主循环，逐日推进
 - EngineOptions 可选注入 EventBus，关键点发布域事件（OrderSubmitted / OrderFilled / RiskGuardTriggered）
 - BacktestTradingOrchestrator = EngineLoop（TradingOrchestrator Protocol 的回测实现）
+- Replay（`replay.py`）提供回放控制
+- Steps（`steps/` 子包）封装回测 Pipeline 各阶段（10 个 Step）：
+  - `_input_bundle.py` — InputBundle 构建
+  - `data_fetch.py` — 数据获取
+  - `strategy.py` — 策略执行
+  - `planning.py` — 交易规划
+  - `pre_trade.py` — PreTrade 检查
+  - `execution.py` — 订单执行
+  - `risk_scan.py` — 风险扫描
+  - `audit.py` — 审计收集
+  - `types.py` — Step 类型定义
 - PreTrade 6 条规则：NoShortSell / PriceValidity / LotSize / BuyingPower / Concentration / DailyTurnover
 - PostTrade 4 个 Guard：MaxDrawdown / SingleLoss / Concentration / MarketAnomaly
 - BacktestReport 包含 NAV / 收益 / 回撤 / Sharpe / Calmar / CVaR 等指标
@@ -115,10 +196,13 @@ ditto_engine/
 
 ### Risk（风险管理）
 
-**职责**：风险模型（回撤检测、风险度量）
+**职责**：风险模型（回撤检测、风险度量、风险校验）
 
 **关键点**：
 - 风险计算逻辑在 Engine
+- `_validation.py` 提供风险参数校验
+- PreTrade（`pre_trade.py`）执行交易前风险检查
+- PostTrade（`post_trade.py`）执行交易后风控守卫
 - 告警编排在 App 层
 - 指标存储在 Data 层
 

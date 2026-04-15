@@ -40,7 +40,7 @@
 │ ditto_app    │ │ ditto_    │ │ ditto_    │ │ ditto_data   │
 │ CQRS 编排    │ │ analytics │ │ engine    │ │ 数据访问层    │
 │ query/process│ │ 表达式编译 │ │ 策略/回测  │ │ CQRS + PIT   │
-│ command/     │ │ 因子/研究  │ │ 执行/组合  │ │ 7 域服务     │
+│ command/     │ │ 因子/研究  │ │ 执行/组合  │ │ 13+ 域服务   │
 │ builders     │ │ 物化/评估  │ │ 风控/编排  │ │ 质量引擎     │
 └──────┬───────┘ └─────┬─────┘ └─────┬─────┘ └──────┬───────┘
        │               │             │               │
@@ -81,38 +81,42 @@ ditto/
 ├── packages/
 │   ├── app/                     # 应用编排层（CQRS）
 │   │   └── src/ditto_app/
-│   │       ├── query/           # 查询编排
-│   │       ├── process/         # 流程编排
-│   │       ├── command/         # 命令编排
+│   │       ├── query/           # 查询编排（26 Facade）
+│   │       ├── process/         # 流程编排（ingestion/execution/materialization/quality）
+│   │       ├── command/         # 命令编排（8 Handler）
 │   │       ├── builders/        # DI builders
 │   │       ├── providers.py     # Provider 注册
+│   │       ├── contracts.py     # 共享契约类型
+│   │       ├── execution_dto.py # 执行层 DTO
 │   │       └── config.py
 │   ├── engine/                  # 核心引擎
 │   │   └── src/ditto_engine/
-│   │       ├── alpha/           # Alpha 信号
-│   │       ├── execution/       # 执行层
-│   │       ├── backtest/        # 回测引擎
-│   │       ├── portfolio/       # 组合构建
+│   │       ├── alpha/           # Alpha 信号（Pipeline + 8 Stage + 4 模板）
+│   │       ├── execution/       # 执行层（Brokerage/TradeBuilder/Reality Model）
+│   │       ├── backtest/        # 回测引擎（EngineLoop + Steps + Audit）
+│   │       ├── portfolio/       # 组合构建（Allocator/Constraints/Comparison）
 │   │       ├── accounting/      # 账户核算
-│   │       ├── risk/            # 风控
+│   │       ├── risk/            # 风控（PreTrade/PostTrade）
 │   │       └── events.py
 │   ├── analytics/               # 分析层
 │   │   └── src/ditto_analytics/
-│   │       ├── expression/      # Expression DSL（lexer/parser/codegen/compiler）
-│   │       ├── factors/         # 因子库
-│   │       ├── evaluation/      # 因子评估
+│   │       ├── expression/      # Expression DSL（lexer/parser/ast/codegen/compiler）
+│   │       ├── factors/         # 因子库（15 类因子）
+│   │       ├── evaluation/      # 因子评估（IC/FactorAnalysis/Portfolio/TailRisk）
 │   │       ├── research/        # 研究
 │   │       ├── materialization/ # 物化编排
 │   │       └── compile_cache.py
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
-│   │       ├── services/        # 域服务（6 Facade）
+│   │       ├── services/        # 域服务（13 Facade + audit/derived/metadata/strategy）
 │   │       ├── sources/         # 数据源（Tushare/FRED/TDX）
-│   │       ├── models/          # 数据模型
-│   │       ├── storage/         # 存储引擎
-│   │       ├── runtime/         # 运行时（SQL/PIT/Freeze）
-│   │       ├── quality/         # 数据质量
-│   │       ├── helpers/         # 辅助工具
+│   │       ├── models/          # 数据模型（14 模块）
+│   │       ├── storage/         # 存储引擎（Reader/Writer CQRS）
+│   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
+│   │       ├── quality/         # 数据质量（L1-L4 检查器）
+│   │       ├── helpers/         # 辅助工具（PIT/复权调整）
+│   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/发布安全）
+│   │       ├── providers/       # DataProvider 实现
 │   │       ├── config/          # 数据层配置
 │   │       └── di/              # DI 注册
 │   ├── kernel/                  # 共享内核（零依赖）
@@ -130,7 +134,7 @@ ditto/
 │   └── infra/                   # 基础设施
 │       └── src/ditto_infra/
 │           ├── foundation/      # cache/checksum/concurrency/config/db/observability/util
-│           └── services/        # notification
+│           └── services/        # notification（Telegram/Email/Webhook）
 ├── config/                      # 环境配置
 │   ├── default/
 │   ├── development/

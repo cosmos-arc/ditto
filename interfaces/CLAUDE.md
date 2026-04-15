@@ -25,22 +25,23 @@ ditto_interfaces/
 │   ├── commands/      # 命令实现
 │   │   ├── factory.py # 命令工厂
 │   │   ├── init.py    # 初始化命令
+│   │   ├── ops.py     # 运维命令
 │   │   ├── strategy.py # 策略命令
-│   │   ├── ingest/    # 数据摄入命令
-│   │   ├── backfill/  # 回填命令
-│   │   └── query/     # 查询命令
+│   │   ├── ingest/    # 数据摄入命令（capital/fundamental/macro/market/metadata）
+│   │   ├── backfill/  # 回填命令（capital/fundamental/macro/market/metadata）
+│   │   └── query/     # 查询命令（capital/fundamental/macro/market/metadata）
 │   └── utils/         # CLI 工具（identifier/output/params/validation）
 ├── jobs/              # Prefect 任务
 │   ├── context.py     # 任务上下文
-│   ├── flows/         # Flow 定义
-│   └── tasks/         # Task 实现
-├── models/            # API 数据模型（Pydantic）
-├── services/          # 预留（当前为空，Port 实现已迁入 ditto_app）
+│   ├── flows/         # Flow 定义（backfill/backtest/daily/deploy/eod/materialization/repair/research）
+│   └── tasks/         # Task 实现（aliases/dq_batch/monitoring/t0_meta）
+├── models/            # API 数据模型（Pydantic）（backtest/capital/commodity/fundamental/fx/ingestion/lineage/macro/market/metadata/strategy/trade/universe）
+├── services/          # 已清空（业务逻辑已迁入 ditto_app）
 ├── registry/          # DI 容器（Dishka Composition Root）
 │   ├── container.py   # 容器定义
 │   ├── init_providers.py  # Provider 初始化
 │   ├── contexts/      # DI 上下文（bundle/ingestion/materialization/query/strategy）
-│   └── infra/         # 基础设施配置（config/notification/observability）
+│   └── infra/         # 基础设施配置（config/notification/observability/signal_delivery）
 ├── config/            # 配置加载
 │   └── loader.py      # 环境配置加载器
 ├── middleware.py       # ASGI 中间件
