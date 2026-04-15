@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from fastapi import Query
 
-from ditto_interfaces.models.common import PaginationRequest
+from ditto_interfaces.models.common import (
+    APIResponse,
+    PaginationRequest,
+    PaginationResponse,
+)
 
 
 def pagination_params(
@@ -13,3 +17,15 @@ def pagination_params(
 ) -> PaginationRequest:
     """标准分页参数依赖."""
     return PaginationRequest(limit=limit, offset=offset)
+
+
+def paginate[T](items: list[T], params: PaginationRequest) -> APIResponse[list[T]]:
+    """对列表进行分页，返回包含 pagination 元数据的 APIResponse."""
+    total = len(items)
+    page = items[params.offset : params.offset + params.limit]
+    return APIResponse(
+        data=page,
+        pagination=PaginationResponse(
+            total=total, limit=params.limit, offset=params.offset
+        ),
+    )

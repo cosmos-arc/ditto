@@ -43,7 +43,7 @@ from ditto_kernel.enums import RunStatus
 from fastapi import APIRouter, Depends, Query
 from loguru import logger
 
-from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.deps import paginate, pagination_params
 from ditto_interfaces.api.errors import (
     APIError,
     BadRequestError,
@@ -65,7 +65,6 @@ from ditto_interfaces.models.backtest import (
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
-    PaginationResponse,
 )
 from ditto_interfaces.models.lineage import (
     LineageResponse,
@@ -361,15 +360,7 @@ async def list_runs(
         start_date=start_date,
         end_date=end_date,
     )
-    all_runs = [to_run_response(s) for s in summaries]
-    total = len(all_runs)
-    page = all_runs[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_run_response(s) for s in summaries], pagination)
 
 
 @router.get("/runs/{run_id}", response_model=APIResponse[RunResponse])
@@ -401,22 +392,7 @@ async def get_trades(
         start_date=start_date,
         end_date=end_date,
     )
-    if not records:
-        return APIResponse(
-            data=[],
-            pagination=PaginationResponse(
-                total=0, limit=pagination.limit, offset=pagination.offset
-            ),
-        )
-    all_trades = [to_trade_response(r) for r in records]
-    total = len(all_trades)
-    page = all_trades[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_trade_response(r) for r in records], pagination)
 
 
 @router.get(

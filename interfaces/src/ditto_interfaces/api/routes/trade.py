@@ -38,12 +38,11 @@ from ditto_app.query.signal import SignalQueryFacade
 from ditto_app.query.trade import TradeQueryFacade
 from fastapi import APIRouter, Depends, Query
 
-from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.deps import paginate, pagination_params
 from ditto_interfaces.api.errors import BadRequestError, ConflictError, NotFoundError
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
-    PaginationResponse,
 )
 from ditto_interfaces.models.trade import (
     ComparisonMetricsResponse,
@@ -175,15 +174,7 @@ async def list_intents(
         signal_date=signal_date,
         status=status,
     )
-    all_intents = [to_intent_response(i) for i in intents]
-    total = len(all_intents)
-    page = all_intents[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_intent_response(i) for i in intents], pagination)
 
 
 @router.put("/intents/{intent_id}/status", response_model=APIResponse[bool])
@@ -253,15 +244,7 @@ async def list_fills(
         start_date=start_date,
         end_date=end_date,
     )
-    all_fills = [to_fill_response(f) for f in fills]
-    total = len(all_fills)
-    page = all_fills[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_fill_response(f) for f in fills], pagination)
 
 
 # ---------------------------------------------------------------------------
@@ -283,15 +266,7 @@ async def list_positions(
         strategy_id=strategy_id,
         snapshot_date=snapshot_date,
     )
-    all_items = [to_position_response(s) for s in snapshots]
-    total = len(all_items)
-    page = all_items[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_position_response(s) for s in snapshots], pagination)
 
 
 # ---------------------------------------------------------------------------
@@ -332,15 +307,7 @@ async def get_latest_signals(
         facade.get_latest_intents,
         strategy_id=strategy_id,
     )
-    all_intents = [to_intent_response(i) for i in intents]
-    total = len(all_intents)
-    page = all_intents[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_intent_response(i) for i in intents], pagination)
 
 
 @router.get(
@@ -360,15 +327,7 @@ async def get_signal_intents(
         strategy_id=strategy_id,
         signal_date=signal_date,
     )
-    all_intents = [to_intent_response(i) for i in intents]
-    total = len(all_intents)
-    page = all_intents[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_intent_response(i) for i in intents], pagination)
 
 
 # ---------------------------------------------------------------------------
@@ -385,19 +344,20 @@ async def get_deviation(
     signal_date: str = Query(..., description="信号日期"),
 ) -> APIResponse[DeviationResponse]:
     """信号-成交偏差报告."""
-    intents = await asyncio.to_thread(
-        trade_facade.list_intents,
-        strategy_id=strategy_id,
-        signal_date=signal_date,
-    )
-    fills = await asyncio.to_thread(
-        portfolio_facade.get_fills,
-        strategy_id=strategy_id,
-        start_date=signal_date,
-        end_date=signal_date,
+    intents, fills = await asyncio.gather(
+        asyncio.to_thread(
+            trade_facade.list_intents,
+            strategy_id=strategy_id,
+            signal_date=signal_date,
+        ),
+        asyncio.to_thread(
+            portfolio_facade.get_fills,
+            strategy_id=strategy_id,
+            start_date=signal_date,
+            end_date=signal_date,
+        ),
     )
 
-    # 按 instrument_id 聚合 fills
     fill_qty_by_instrument: dict[int, int] = {}
     for fill in fills:
         iid = fill.instrument_id
@@ -411,16 +371,13 @@ async def get_deviation(
         if has_fill:
             filled_count += 1
 
-        actual_weight = intent.target_weight if has_fill else None
-        deviation_bps = 0.0 if has_fill else None
-
         items.append(
             SignalDeviationItem(
                 instrument_id=intent.instrument_id,
                 signal_action=intent.direction,
                 signal_weight=intent.target_weight,
-                actual_weight=actual_weight,
-                deviation_bps=deviation_bps,
+                actual_weight=intent.target_weight if has_fill else None,
+                deviation_bps=0.0 if has_fill else None,
                 fill_status="filled" if has_fill else "unfilled",
             )
         )

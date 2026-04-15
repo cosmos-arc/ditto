@@ -184,12 +184,9 @@ setup_dishka(container=container, app=app)
 _env = get_environment()
 if _env.is_production:
     _cors_raw = os.environ.get("CORS_ORIGINS", "")
-    if _cors_raw:
-        _cors_origins: list[str] = [
-            o.strip() for o in _cors_raw.split(",") if o.strip()
-        ]
-    else:
-        _cors_origins = ["*"]
+    _cors_origins: list[str] = (
+        [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else []
+    )
 else:
     _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
 

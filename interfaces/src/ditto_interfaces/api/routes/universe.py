@@ -28,12 +28,11 @@ from ditto_app.command.universe import (
 from ditto_app.query.universe import UniverseQueryFacade
 from fastapi import APIRouter, Depends, Query
 
-from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.deps import paginate, pagination_params
 from ditto_interfaces.api.errors import BadRequestError, ForbiddenError, NotFoundError
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
-    PaginationResponse,
 )
 from ditto_interfaces.models.universe import (
     CreateUniverseRequest,
@@ -55,15 +54,7 @@ async def list_universes(
 ) -> APIResponse[list[UniverseResponse]]:
     """列出所有 Universe."""
     rows = await asyncio.to_thread(facade.list_universes, universe_type)
-    all_responses = [to_universe_response(r) for r in rows]
-    total = len(all_responses)
-    page = all_responses[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_universe_response(r) for r in rows], pagination)
 
 
 @router.get("/{universe_id}", response_model=APIResponse[UniverseResponse])

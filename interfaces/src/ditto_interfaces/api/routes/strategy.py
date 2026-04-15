@@ -28,12 +28,11 @@ from ditto_app.contracts import StrategySpecInfo
 from ditto_app.query.strategy import StrategyQueryFacade
 from fastapi import APIRouter, Depends
 
-from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.deps import paginate, pagination_params
 from ditto_interfaces.api.errors import BadRequestError, ConflictError, NotFoundError
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
-    PaginationResponse,
 )
 from ditto_interfaces.models.strategy import (
     CreateStrategyRequest,
@@ -94,15 +93,7 @@ async def list_strategies(
 ) -> APIResponse[list[StrategyResponse]]:
     """列出策略."""
     specs = await asyncio.to_thread(facade.list_specs)
-    all_responses = [to_strategy_response(s) for s in specs]
-    total = len(all_responses)
-    page = all_responses[pagination.offset : pagination.offset + pagination.limit]
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate([to_strategy_response(s) for s in specs], pagination)
 
 
 @router.get("/{strategy_id}", response_model=APIResponse[StrategyResponse])

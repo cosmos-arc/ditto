@@ -7,15 +7,13 @@ DeliveryRouter — 信号推送路由器.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ditto_infra.services.notification import NotificationLevel
+from ditto_infra.services.notification.manager import AlertManager
 from loguru import logger
 
 from ditto_app.execution_dto import TradeIntent
-
-if TYPE_CHECKING:
-    from ditto_infra.services.notification.manager import AlertManager
 
 __all__ = ["DeliveryRouter"]
 

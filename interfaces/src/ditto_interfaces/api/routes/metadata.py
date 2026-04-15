@@ -11,12 +11,11 @@ from ditto_app.query.metadata import MetadataQueryFacade
 from ditto_kernel.enums import AssetClass
 from fastapi import APIRouter, Depends
 
-from ditto_interfaces.api.deps import pagination_params
+from ditto_interfaces.api.deps import paginate, pagination_params
 from ditto_interfaces.api.errors import NotFoundError
 from ditto_interfaces.models.common import (
     APIResponse,
     PaginationRequest,
-    PaginationResponse,
 )
 from ditto_interfaces.models.metadata import (
     Instrument,
@@ -91,13 +90,4 @@ async def list_instruments(
     # 转换为模型列表
     all_instruments = to_instrument_list(df)
 
-    # 应用分页
-    total = len(all_instruments)
-    page = all_instruments[pagination.offset : pagination.offset + pagination.limit]
-
-    return APIResponse(
-        data=page,
-        pagination=PaginationResponse(
-            total=total, limit=pagination.limit, offset=pagination.offset
-        ),
-    )
+    return paginate(all_instruments, pagination)
