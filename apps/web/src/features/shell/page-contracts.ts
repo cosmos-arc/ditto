@@ -44,7 +44,7 @@ export const SHELL_SLOT_MAP: Record<ShellFamily, string[]> = {
 	analytical: ["strip", "main", "activity", "analysis"],
 	catalog: ["toolbar", "main", "detail"],
 	"object-hub": ["meta", "tabs", "main", "bottom"],
-	studio: ["source", "main", "inspector", "logs"],
+	studio: ["source", "main", "inspector", "logs", "modes"],
 	"ops-console": ["health", "main", "detail"],
 	radar: ["strip", "main", "right-rail", "tab-band"],
 };
@@ -78,6 +78,12 @@ export interface PageContract {
 	 * 并给布局根容器加 `pb-(--height-status-bar)` 防止内容被遮挡。
 	 */
 	hasStatusBar?: boolean;
+	/**
+	 * 页面是否支持侧边栏折叠。
+	 * 若为 true，布局组件可响应 `data-sidebar-collapsed` DOM 属性，
+	 * 将 sidebar 区域折叠以获得更大的主内容区。
+	 */
+	sidebarCollapsible?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,6 +109,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		requiredSlots: ["pulse", "main", "sidebar"],
 		requiredStates: [...UNIVERSAL_STATES, "no-alerts", "has-critical"],
 		// home prototype has NO status bar
+		sidebarCollapsible: true,
 	},
 	{
 		route: "/ai",
@@ -113,6 +120,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		requiredSlots: ["pulse", "main", "sidebar"],
 		requiredStates: [...UNIVERSAL_STATES, "no-agents", "has-pending"],
 		hasStatusBar: true,
+		sidebarCollapsible: true,
 	},
 
 	// 02 Analytical Overview Workspace
@@ -136,6 +144,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		requiredSlots: ["strip", "main", "activity", "analysis"],
 		requiredStates: [...UNIVERSAL_STATES],
 		hasStatusBar: true,
+		sidebarCollapsible: true,
 	},
 	{
 		route: "/research",
@@ -212,7 +221,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		prototypeSource: "prototype-backed",
 		prototypeRef:
 			"docs/designs/specs/prototypes/page-strategy-studio.html",
-		requiredSlots: ["source", "main", "inspector"],
+		requiredSlots: ["source", "main", "inspector", "modes"],
 		requiredStates: [...UNIVERSAL_STATES, "no-session", "running"],
 		hasStatusBar: true,
 	},

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { useUIPreferences } from "./use-ui-preferences";
 
 describe("useUIPreferences store", () => {
@@ -7,10 +7,16 @@ describe("useUIPreferences store", () => {
 		useUIPreferences.setState({
 			theme: "dark",
 			density: "default",
+			sidebarCollapsed: false,
 		});
 		// Clean up document attributes
 		document.documentElement.removeAttribute("data-theme");
 		document.documentElement.removeAttribute("data-density");
+		document.documentElement.removeAttribute("data-sidebar-collapsed");
+	});
+
+	afterEach(() => {
+		document.documentElement.removeAttribute("data-sidebar-collapsed");
 	});
 
 	it("defaults to dark theme", () => {
@@ -74,6 +80,40 @@ describe("useUIPreferences store", () => {
 			useUIPreferences.getState().applyThemeToDom();
 			expect(document.documentElement.getAttribute("data-theme")).toBe("light");
 			expect(document.documentElement.getAttribute("data-density")).toBe("comfortable");
+		});
+	});
+
+	describe("sidebarCollapsed", () => {
+		it("defaults to false", () => {
+			expect(useUIPreferences.getState().sidebarCollapsed).toBe(false);
+		});
+
+		it("toggleSidebarCollapsed toggles from false to true", () => {
+			useUIPreferences.getState().toggleSidebarCollapsed();
+			expect(useUIPreferences.getState().sidebarCollapsed).toBe(true);
+		});
+
+		it("toggleSidebarCollapsed toggles from true to false", () => {
+			useUIPreferences.setState({ sidebarCollapsed: true });
+			useUIPreferences.getState().toggleSidebarCollapsed();
+			expect(useUIPreferences.getState().sidebarCollapsed).toBe(false);
+		});
+
+		it("sets data-sidebar-collapsed attribute when true", () => {
+			useUIPreferences.setState({ sidebarCollapsed: true });
+			useUIPreferences.getState().applyThemeToDom();
+			expect(
+				document.documentElement.getAttribute("data-sidebar-collapsed"),
+			).toBe("");
+		});
+
+		it("removes data-sidebar-collapsed attribute when false", () => {
+			document.documentElement.setAttribute("data-sidebar-collapsed", "");
+			useUIPreferences.setState({ sidebarCollapsed: false });
+			useUIPreferences.getState().applyThemeToDom();
+			expect(
+				document.documentElement.getAttribute("data-sidebar-collapsed"),
+			).toBeNull();
 		});
 	});
 });

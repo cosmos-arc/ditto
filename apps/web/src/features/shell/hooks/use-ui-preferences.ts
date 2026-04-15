@@ -7,17 +7,23 @@ export type Density = "dense" | "default" | "comfortable";
 interface UIPreferencesState {
 	readonly theme: Theme;
 	readonly density: Density;
+	readonly sidebarCollapsed: boolean;
 }
 
 interface UIPreferencesActions {
 	readonly setTheme: (theme: Theme) => void;
 	readonly setDensity: (density: Density) => void;
+	readonly toggleSidebarCollapsed: () => void;
 	readonly applyThemeToDom: () => void;
 }
 
 export type UIPreferences = UIPreferencesState & UIPreferencesActions;
 
-function applyAttributesToDom(theme: Theme, density: Density): void {
+function applyAttributesToDom(
+	theme: Theme,
+	density: Density,
+	sidebarCollapsed: boolean,
+): void {
 	const root = document.documentElement;
 
 	if (theme === "dark") {
@@ -31,6 +37,12 @@ function applyAttributesToDom(theme: Theme, density: Density): void {
 	} else {
 		root.setAttribute("data-density", density);
 	}
+
+	if (sidebarCollapsed) {
+		root.setAttribute("data-sidebar-collapsed", "");
+	} else {
+		root.removeAttribute("data-sidebar-collapsed");
+	}
 }
 
 export const useUIPreferences = create<UIPreferences>()(
@@ -39,6 +51,7 @@ export const useUIPreferences = create<UIPreferences>()(
 			(set, get) => ({
 				theme: "dark",
 				density: "default",
+				sidebarCollapsed: false,
 
 				setTheme: (theme: Theme) => {
 					set({ theme });
@@ -48,9 +61,13 @@ export const useUIPreferences = create<UIPreferences>()(
 					set({ density });
 				},
 
+				toggleSidebarCollapsed: () => {
+					set({ sidebarCollapsed: !get().sidebarCollapsed });
+				},
+
 				applyThemeToDom: () => {
-					const { theme, density } = get();
-					applyAttributesToDom(theme, density);
+					const { theme, density, sidebarCollapsed } = get();
+					applyAttributesToDom(theme, density, sidebarCollapsed);
 				},
 			}),
 			{ name: "ditto-ui-prefs" },

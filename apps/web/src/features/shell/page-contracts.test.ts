@@ -320,3 +320,32 @@ describe("Prototype source classification", () => {
 		}
 	});
 });
+/* ------------------------------------------------------------------ */
+/*  8. Sidebar collapsibility                                          */
+/* ------------------------------------------------------------------ */
+
+describe("Sidebar collapsibility", () => {
+	const SIDEBAR_COLLAPSIBLE_ROUTES = ["/", "/ai", "/markets/intelligence"] as const;
+
+	it("Home, AI Overview, and Intelligence have sidebarCollapsible: true", () => {
+		for (const route of SIDEBAR_COLLAPSIBLE_ROUTES) {
+			const contract = PAGE_CONTRACTS.find((c) => c.route === route);
+			expect(
+				contract?.sidebarCollapsible,
+				`${route} should have sidebarCollapsible: true`,
+			).toBe(true);
+		}
+	});
+
+	it("only designated routes have sidebarCollapsible: true", () => {
+		const collapsibleRoutes = PAGE_CONTRACTS.filter(
+			(c) => c.sidebarCollapsible === true,
+		);
+		expect(collapsibleRoutes).toHaveLength(SIDEBAR_COLLAPSIBLE_ROUTES.length);
+		for (const contract of collapsibleRoutes) {
+			expect(
+				(SIDEBAR_COLLAPSIBLE_ROUTES as readonly string[]).includes(contract.route),
+			).toBe(true);
+		}
+	});
+});
