@@ -261,11 +261,46 @@ class TestStrategySpecValidation:
         )
         assert spec.benchmark is None
 
-    def test_benchmark_valid_format(self) -> None:
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("000300.SH", id="hs300"),
+            pytest.param("000905.SH", id="zz500"),
+            pytest.param("000852.SH", id="zz1000"),
+            pytest.param("000016.SH", id="sz50"),
+            pytest.param("399006.SZ", id="cyb"),
+            pytest.param("399673.SZ", id="cyb50"),
+            pytest.param("000688.SH", id="kc50"),
+            pytest.param("000001.SH", id="sz"),
+            pytest.param("399001.SZ", id="szcz"),
+        ],
+    )
+    def test_benchmark_known_index_ok(self, code: str) -> None:
         from ditto_engine.alpha.specs import StrategySpec
 
-        for code in ("000300.SH", "399006.SZ", "510300.SH"):
-            spec = StrategySpec(
+        spec = StrategySpec(
+            strategy_id="id",
+            name="N",
+            template="etf_rotation",
+            universe="u",
+            asset_class="etf",
+            benchmark=code,
+        )
+        assert spec.benchmark == code
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("999999.SH", id="invalid1"),
+            pytest.param("888888.SZ", id="invalid2"),
+            pytest.param("510300.SH", id="etf-not-index"),
+        ],
+    )
+    def test_benchmark_unknown_index_raises(self, code: str) -> None:
+        from ditto_engine.alpha.specs import StrategySpec
+
+        with pytest.raises(ValueError, match="benchmark"):
+            StrategySpec(
                 strategy_id="id",
                 name="N",
                 template="etf_rotation",
@@ -273,7 +308,6 @@ class TestStrategySpecValidation:
                 asset_class="etf",
                 benchmark=code,
             )
-            assert spec.benchmark == code
 
     def test_benchmark_invalid_format_raises(self) -> None:
         from ditto_engine.alpha.specs import StrategySpec
