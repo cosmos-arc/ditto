@@ -31,6 +31,7 @@ _KNOWN_DATASETS = [
     "stock_daily",
     "etf_daily",
     "index_daily",
+    "index_weight",
     "stock_status",
     "adj_factor",
     "fund_adj",

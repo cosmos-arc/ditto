@@ -8,7 +8,7 @@ ComparisonMetrics DTO 和纯计算函数已抽取到 comparison_math.py。
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from loguru import logger
 
@@ -21,9 +21,6 @@ from ditto_app.query.comparison_math import (
 )
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = ["ComparisonQueryFacade"]
 
@@ -163,9 +160,10 @@ def _build_actual_navs(
     if price_query is None:
         # 回退逻辑：无行情数据源时，仅扣除费用生成简化 NAV 序列
         by_date: dict[str, float] = {}
+        cash = initial_cash
         for f in fills:
-            by_date.setdefault(f.trade_date, initial_cash)
-            by_date[f.trade_date] -= f.fee
+            cash -= f.fee
+            by_date[f.trade_date] = cash
         return sorted(by_date.items())
     return _build_actual_navs_full(fills, initial_cash, price_query)
 
