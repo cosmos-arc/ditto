@@ -1,4 +1,4 @@
-"""artifact_writer 单元测试 — Port 层产物序列化。"""
+"""artifact_writer 单元测试 — 产物序列化。"""
 
 from __future__ import annotations
 

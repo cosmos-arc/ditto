@@ -231,7 +231,7 @@ class Domain(StrEnum):
     """
     支持的数据域类型。
 
-    数据域枚举，用于 Port 层 IngestionCoordinator 路由和域级别数据管理。
+    数据域枚举，用于 App 层 IngestionCoordinator 路由和域级别数据管理。
     """
 
     METADATA = "metadata"

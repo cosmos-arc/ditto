@@ -26,11 +26,10 @@ from ditto_data.services.strategy.strategy_artifact_service import (
 )
 from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_engine.backtest.audit import ExecutionAuditCollector
+from ditto_engine.backtest.config import EngineConfig, EngineMode
 from ditto_engine.backtest.data_feed import DataFeed
 from ditto_engine.backtest.engine import (
-    EngineConfig,
     EngineLoop,
-    EngineMode,
     EngineOptions,
     EngineResult,
 )
@@ -90,6 +89,8 @@ class BacktestServiceConfig:
         parameter_overrides: 参数覆盖列表
         rebalance_freq: 调仓频率 (daily / weekly / monthly)
         engine_version: 引擎版本号
+        parent_run_id: 父运行 ID（用于重试/衍生场景）
+        execution_delay: 信号延迟执行天数
 
     """
 
@@ -438,20 +439,19 @@ class BacktestService:
             )
 
         # 追加历史窗口 — 支持 ts_* 时间序列表达式
-        if hasattr(data_feed, "get_history"):
-            history_df = data_feed.get_history(instrument_ids, ctx.date, lookback_days)
-            if not history_df.is_empty():
-                hist_rows = history_df.select(
-                    "instrument_id",
-                    "open",
-                    "high",
-                    "low",
-                    "close",
-                    "volume",
-                    "trade_date",
-                ).to_dicts()
-                for row in hist_rows:
-                    market_rows.append(row)
+        history_df = data_feed.get_history(instrument_ids, ctx.date, lookback_days)
+        if not history_df.is_empty():
+            hist_rows = history_df.select(
+                "instrument_id",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "trade_date",
+            ).to_dicts()
+            for row in hist_rows:
+                market_rows.append(row)
 
         market_data = pl.DataFrame(market_rows)
         if "trade_date" in market_data.columns:
