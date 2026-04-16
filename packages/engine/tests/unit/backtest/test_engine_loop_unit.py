@@ -1016,7 +1016,7 @@ class TestExecutionDelay:
         )
         data_feed = Mock()
         data_feed.trading_days.return_value = DAYS
-        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+        data_feed.get_slice.side_effect = _make_slice
 
         pipeline = Mock()
         if targets is not None:
@@ -1069,7 +1069,7 @@ class TestExecutionDelay:
         assert wired.brokerage.place_order.call_count == 3
 
     def test_delay_1_first_day_no_execution(self) -> None:
-        """execution_delay=1: 首日信号入队，无订单提交 → 3 天只有 2 次执行。"""
+        """execution_delay=1: 首日信号入队延迟，尾部 flush → 3 天 3 次执行。"""
         loop, pipeline, _planner, brokerage = self._make_delay_loop(
             execution_delay=1,
         )
@@ -1077,8 +1077,8 @@ class TestExecutionDelay:
 
         # pipeline 每天都生成信号 (3 天 3 次)
         assert pipeline.run.call_count == 3
-        # 首日信号入队，Day 1 才执行 → place_order 2 次
-        assert brokerage.place_order.call_count == 2
+        # 首日信号入队，Day 1 执行；Day 1 信号 Day 2 执行；Day 2 信号 flush → 3 次
+        assert brokerage.place_order.call_count == 3
 
     def test_delay_1_signal_executed_next_day(self) -> None:
         """execution_delay=1: Day 0 的信号在 Day 1 执行（planner 收到延迟信号）。"""
@@ -1089,8 +1089,20 @@ class TestExecutionDelay:
         )
         loop.run()
 
-        # planner.plan 被调用 2 次 (Day 1 执行 Day 0 信号, Day 2 执行 Day 1 信号)
-        assert planner.plan.call_count == 2
+        # Day 1 执行 Day 0 信号, Day 2 执行 Day 1 信号, flush 执行 Day 2 信号 → 3 次
+        assert planner.plan.call_count == 3
         # 验证 planner 第一次调用收到的是 Day 0 的 target
         first_call_target = planner.plan.call_args_list[0][1]["target"]
         assert first_call_target is targets[0]
+
+    def test_delay_1_trailing_signal_flushed(self) -> None:
+        """execution_delay=1: 回测结束后尾部信号被 flush 执行。"""
+        loop, pipeline, planner, brokerage = self._make_delay_loop(
+            execution_delay=1,
+        )
+        loop.run()
+
+        # 3 天每天生成信号，尾部 flush 确保 Day 2 信号被执行
+        assert pipeline.run.call_count == 3
+        assert brokerage.place_order.call_count == 3
+        assert planner.plan.call_count == 3

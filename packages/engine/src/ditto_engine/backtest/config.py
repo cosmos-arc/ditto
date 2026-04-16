@@ -44,6 +44,7 @@ class EngineConfig:
         parameter_overrides: 参数覆盖列表
         rebalance_freq: 调仓频率 (daily / weekly / monthly)
         engine_version: 引擎版本号 (用于 manifest/diff 追踪)
+        execution_delay: 信号延迟执行天数 (T+N)，尾部信号自动 flush
 
     """
 

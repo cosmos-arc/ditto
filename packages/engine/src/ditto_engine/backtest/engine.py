@@ -353,6 +353,11 @@ class EngineLoop:
                 skipped,
             )
 
+        # flush 延迟信号 -- 回测结束时执行队列中剩余的延迟信号
+        while self._execution_delay > 0 and self._signal_queue:
+            signal = self._signal_queue.popleft()
+            self._execute_delayed_signal(signal)
+
         account_view = self._brokerage.get_account()
 
         # flush 未平仓交易 -- 回测结束时记录剩余开仓交易
@@ -406,6 +411,40 @@ class EngineLoop:
         ):
             return self._signal_queue.popleft()
         return None
+
+    def _execute_delayed_signal(self, signal: TargetPortfolioLike) -> None:
+        """
+        对延迟信号执行 Planning -> PreTrade -> Execution 子链（尾部 flush）。
+
+        跳过 DataFetchStep / RiskScanStep / StrategyStep / AuditStep，
+        仅执行 PlanningStep -> PreTradeStep -> ExecutionStep。
+        """
+        last_date = self._trading_days[-1] if self._trading_days else ""
+        ctx = StepContext(date=last_date, is_rebalance_day=True)
+        ctx.target_portfolio = signal
+
+        # 预填 PlanningStep 所需的 slice_ 和 account_view
+        try:
+            ctx.slice_ = self._data_feed.get_slice(last_date)
+        except Exception:
+            logger.warning("Flush: failed to get slice for {}", last_date)
+            return
+        ctx.account_view = self._brokerage.get_account()
+
+        for step in self._steps:
+            if isinstance(step, (DataFetchStep, RiskScanStep, StrategyStep, AuditStep)):
+                continue
+            if isinstance(step, PlanningStep):
+                ctx.target_portfolio = signal
+                ctx.is_rebalance_day = True
+            result = step.execute(ctx)
+            if not result.success:
+                step_name = type(step).__name__
+                logger.warning("Flush step {} failed", step_name)
+                return
+
+        self._fills.extend(ctx.step_fills)
+        self._orders.extend(ctx.step_orders)
 
     def _step(self, date: str) -> bool:
         """执行单日步骤 -- 通过 Step chain 编排。返回 False 表示某 step 失败。"""
