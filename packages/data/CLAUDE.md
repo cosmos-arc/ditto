@@ -73,7 +73,13 @@ ditto_data/
 │   ├── fundamental_service.py    # 基本面服务
 │   ├── macro_service.py          # 宏观服务
 │   ├── capital_service.py        # 资金服务
-│   ├── trade_service.py          # 交易服务
+│   ├── trade/                    # 交易服务（TradeService 门面 + 3 Writer）
+│   │   ├── __init__.py           # re-export TradeService
+│   │   ├── _sql.py               # 共享 SQL 白名单 + WHERE 子句构建器
+│   │   ├── service.py            # TradeService 门面
+│   │   ├── intents.py            # TradeIntentWriter（intents 表 CRUD）
+│   │   ├── fills.py              # FillWriter（fills 表 CRUD）
+│   │   └── positions.py          # PositionWriter（positions 表 CRUD）
 │   ├── source_service.py         # 数据源服务
 │   ├── derived_catalog_service.py      # 衍生目录服务
 │   ├── derived_shadow_slot_service.py  # 衍生影子槽服务

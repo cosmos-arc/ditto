@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from ditto_data.models.trade import TradeIntentRecord
-from ditto_data.services.trade_service import TradeService
+from ditto_data.services.trade import TradeService
 
 from ditto_app.execution_dto import (
     ManualExecutionFill,

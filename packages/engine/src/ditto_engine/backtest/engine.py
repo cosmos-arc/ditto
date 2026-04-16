@@ -13,13 +13,11 @@ V1 每日循环 (通过 TradingStep chain 编排):
 
 from __future__ import annotations
 
-import hashlib
-import importlib.metadata
 import uuid
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 
 from ditto_kernel.clock import Clock
@@ -34,14 +32,10 @@ from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_engine.backtest.data_feed import DataFeed, Slice
 from ditto_engine.backtest.manifest import (
-    InputRef,
     RuleRefCollector,
     RunManifest,
-    RunMode,
-    hash_config,
-    hash_spec,
-    hash_universe,
 )
+from ditto_engine.backtest.result import build_run_manifest
 from ditto_engine.backtest.statistics import ExecutionAuditCollector
 from ditto_engine.backtest.steps import (
     AuditStep,
@@ -215,17 +209,31 @@ def _require_slice(slice_: Slice | None) -> Slice:
     return slice_
 
 
-def _collect_dependency_versions() -> tuple[str, ...]:
-    """收集当前运行环境的依赖版本（用于可复现性审计）."""
-    packages = ("polars", "ditto-engine")
-    versions: list[str] = []
-    for pkg in sorted(packages):
-        try:
-            ver = importlib.metadata.version(pkg)
-        except importlib.metadata.PackageNotFoundError:
-            ver = "unknown"
-        versions.append(f"{pkg}=={ver}")
-    return tuple(versions)
+def assemble_engine_result(
+    *,
+    run_id: str,
+    start: str,
+    end: str,
+    account_view: AccountView,
+    manifest: RunManifest,
+    fills: list[FillEvent],
+    orders: list[Order],
+    skipped: list[str],
+    cancelled: bool,
+) -> EngineResult:
+    """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
+    return EngineResult(
+        run_id=run_id,
+        period=(start, end),
+        final_nav=account_view.nav,
+        total_trades=len(fills),
+        orders=list(orders),
+        fills=list(fills),
+        account_view=account_view,
+        manifest=manifest,
+        skipped_dates=tuple(skipped),
+        cancelled=cancelled,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -407,76 +415,27 @@ class EngineLoop:
                     self._audit_collector.record_closed_trade(trade)
                     self._recorded_trade_ids.add(trade.trade_id)
 
-        manifest = self._build_manifest(run_id)
-        return self._assemble_result(
-            run_id,
-            start,
-            end,
-            account_view,
-            manifest,
-            skipped,
-            cancelled,
+        manifest = build_run_manifest(
+            run_id=run_id,
+            config=self._config,
+            input_instruments=self._input_instruments,
+            bar_fingerprints=self._bar_fingerprints,
+            rule_refs=self._rule_ref_collector.rule_refs,
+            random_seed=self._random_seed,
+        )
+        return assemble_engine_result(
+            run_id=run_id,
+            start=start,
+            end=end,
+            account_view=account_view,
+            manifest=manifest,
+            fills=self._fills,
+            orders=self._orders,
+            skipped=skipped,
+            cancelled=cancelled,
         )
 
     # -- internals ------------------------------------------------------------
-
-    def _build_manifest(self, run_id: str) -> RunManifest:
-        """构建 RunManifest — 记录运行配置、规则引用、输入依赖等治理字段."""
-        input_refs = tuple(sorted(self._input_instruments))
-        config_hash = hash_config(
-            start_date=self._config.start_date,
-            end_date=self._config.end_date,
-            initial_cash=self._config.initial_cash,
-            strategy_id=self._config.strategy_id,
-            rebalance_freq=self._config.rebalance_freq,
-            engine_version=self._config.engine_version,
-        )
-        spec_hash = hash_spec(
-            strategy_id=self._config.strategy_id,
-            strategy_version=self._config.strategy_version,
-            rebalance_freq=self._config.rebalance_freq,
-        )
-        return RunManifest(
-            run_id=run_id,
-            strategy_id=self._config.strategy_id,
-            strategy_version=self._config.strategy_version,
-            mode=RunMode.BACKTEST,
-            input_refs=input_refs,
-            input_ref_details=self._build_input_ref_details(),
-            parameter_overrides=self._config.parameter_overrides,
-            rule_refs=self._rule_ref_collector.rule_refs,
-            config_hash=config_hash,
-            engine_version=self._config.engine_version,
-            spec_hash=spec_hash,
-            universe_hash=hash_universe(self._input_instruments),
-            dependency_versions=_collect_dependency_versions(),
-            random_seed=self._random_seed,
-            created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        )
-
-    def _assemble_result(
-        self,
-        run_id: str,
-        start: str,
-        end: str,
-        account_view: AccountView,
-        manifest: RunManifest,
-        skipped: list[str],
-        cancelled: bool,
-    ) -> EngineResult:
-        """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
-        return EngineResult(
-            run_id=run_id,
-            period=(start, end),
-            final_nav=account_view.nav,
-            total_trades=len(self._fills),
-            orders=list(self._orders),
-            fills=list(self._fills),
-            account_view=account_view,
-            manifest=manifest,
-            skipped_dates=tuple(skipped),
-            cancelled=cancelled,
-        )
 
     def _build_input_bundle(self, date: str, slice_: Slice) -> StrategyInputBundle:
         """
@@ -491,36 +450,6 @@ class EngineLoop:
             bars=slice_.bars,
             benchmark_close=slice_.benchmark_close,
         )
-
-    def _build_input_ref_details(self) -> tuple[InputRef, ...]:
-        """
-        从 _bar_fingerprints 构建 InputRef 列表.
-
-        对每个 instrument 的 sorted (date, close) 元组列表计算 SHA-256 哈希,
-        生成 InputRef(instrument_id, data_hash, date_range, source).
-        """
-        refs: list[InputRef] = []
-        for iid in sorted(self._bar_fingerprints.keys()):
-            entries = self._bar_fingerprints[iid]
-            sorted_entries = sorted(entries, key=lambda t: t[0])
-            payload = ",".join(f"{d}:{c}" for d, c in sorted_entries)
-            data_hash = (
-                "sha256:"
-                + hashlib.sha256(
-                    payload.encode("utf-8"),
-                ).hexdigest()[:16]
-            )
-            dates = [d for d, _ in sorted_entries]
-            date_range = (dates[0], dates[-1]) if dates else ("", "")
-            refs.append(
-                InputRef(
-                    instrument_id=iid,
-                    data_hash=data_hash,
-                    date_range=date_range,
-                    source="backtest:data_feed",
-                ),
-            )
-        return tuple(refs)
 
     def _dequeue_delayed_signal(self) -> TargetPortfolioLike | None:
         """取出到期的延迟信号。队列中信号数 >= execution_delay 时才有信号到期。"""

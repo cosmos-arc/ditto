@@ -48,7 +48,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
-from ditto_data.services.trade_service import TradeService
+from ditto_data.services.trade import TradeService
 from ditto_infra.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------

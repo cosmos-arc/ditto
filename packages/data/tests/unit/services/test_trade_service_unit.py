@@ -12,7 +12,7 @@ from ditto_data.models.trade import (
     ManualExecutionFillRecord,
     TradeIntentRecord,
 )
-from ditto_data.services.trade_service import (
+from ditto_data.services.trade import (
     TradeService,
 )
 from ditto_data.storage.sqlite_client import SQLiteClient
@@ -742,7 +742,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_signal_date_asc(self) -> None:
         """合法 order_by 'signal_date ASC' 应正常构建 SQL."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         sql, params = _build_where_clause(
             "SELECT * FROM trade_intents WHERE strategy_id = ?",
@@ -755,7 +757,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_signal_date_desc(self) -> None:
         """合法 order_by 'signal_date DESC' 应正常构建 SQL."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         sql, _params = _build_where_clause(
             "SELECT * FROM trade_intents WHERE strategy_id = ?",
@@ -767,7 +771,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_snapshot_date_asc(self) -> None:
         """合法 order_by 'snapshot_date ASC' 应正常构建 SQL."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         sql, _params = _build_where_clause(
             "SELECT * FROM actual_positions WHERE strategy_id = ?",
@@ -779,7 +785,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_snapshot_date_desc(self) -> None:
         """合法 order_by 'snapshot_date DESC' 应正常构建 SQL."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         sql, _params = _build_where_clause(
             "SELECT * FROM actual_positions WHERE strategy_id = ?",
@@ -791,7 +799,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_filter_columns(self) -> None:
         """合法过滤列 'signal_date', 'status', 'snapshot_date' 应正常构建 SQL."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         # signal_date
         sql, _params = _build_where_clause(
@@ -822,7 +832,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_none_filter_values_skipped(self) -> None:
         """None 值过滤条件应被跳过，不触发白名单校验."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         sql, params = _build_where_clause(
             "SELECT * FROM trade_intents WHERE strategy_id = ?",
@@ -835,7 +847,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_order_by_rejects(self) -> None:
         """非法 order_by（含 SQL 注入）应抛出 ValueError."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         with pytest.raises(ValueError, match="order_by"):
             _build_where_clause(
@@ -847,7 +861,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_order_by_rejects_subtle_injection(self) -> None:
         """含子查询的 order_by 应被拒绝."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         with pytest.raises(ValueError, match="order_by"):
             _build_where_clause(
@@ -859,7 +875,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_filter_column_rejects(self) -> None:
         """非法过滤列名应抛出 ValueError."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         with pytest.raises(ValueError, match="不在白名单内"):
             _build_where_clause(
@@ -871,7 +889,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_filter_column_rejects_subtle(self) -> None:
         """非法列名（含 SQL 片段）应被拒绝."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         with pytest.raises(ValueError, match="不在白名单内"):
             _build_where_clause(
@@ -883,7 +903,9 @@ class TestBuildWhereClauseWhitelist:
 
     def test_empty_order_by_rejects(self) -> None:
         """空字符串 order_by 应被拒绝."""
-        from ditto_data.services.trade_service import _build_where_clause
+        from ditto_data.services.trade._sql import (
+            build_where_clause as _build_where_clause,
+        )
 
         with pytest.raises(ValueError, match="order_by"):
             _build_where_clause(
@@ -895,14 +917,14 @@ class TestBuildWhereClauseWhitelist:
 
     def test_allowed_order_by_constants_cover_current_usage(self) -> None:
         """_ALLOWED_ORDER_BY 应覆盖当前所有调用点的 order_by 值."""
-        from ditto_data.services.trade_service import _ALLOWED_ORDER_BY
+        from ditto_data.services.trade._sql import ALLOWED_ORDER_BY as _ALLOWED_ORDER_BY
 
         assert "signal_date ASC" in _ALLOWED_ORDER_BY
         assert "snapshot_date ASC" in _ALLOWED_ORDER_BY
 
     def test_allowed_columns_constants_cover_current_usage(self) -> None:
         """_ALLOWED_COLUMNS 应覆盖当前所有调用点的过滤列名."""
-        from ditto_data.services.trade_service import _ALLOWED_COLUMNS
+        from ditto_data.services.trade._sql import ALLOWED_COLUMNS as _ALLOWED_COLUMNS
 
         assert "signal_date" in _ALLOWED_COLUMNS
         assert "status" in _ALLOWED_COLUMNS

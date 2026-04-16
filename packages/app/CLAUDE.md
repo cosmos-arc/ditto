@@ -46,7 +46,8 @@ ditto_app/
 │   ├── _artifact_utils.py        # 共享 artifact 查找 + 回测指标计算
 │   ├── backtest.py     # 回测统一查询门面（结果/成交/审计）
 │   ├── backtest_trade.py # 回测成交明细查询
-│   ├── comparison.py   # 回测 vs 实际对比查询
+│   ├── comparison.py   # 回测 vs 实际对比查询门面
+│   ├── comparison_math.py # 回测 vs 实际对比纯计算函数
 │   ├── ingestion_status.py # 摄取状态查询
 │   ├── lineage.py      # 运行血统查询
 │   ├── portfolio_actual.py # 实际组合查询（持仓/成交/P&L）

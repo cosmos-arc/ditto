@@ -13,7 +13,8 @@ from ditto_app.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )
-from ditto_app.query.comparison import ComparisonMetrics, compute_comparison_from_raw
+from ditto_app.query.comparison import ComparisonMetrics
+from ditto_app.query.comparison_math import compute_comparison_from_raw
 
 __all__ = ["compute_comparison"]
 

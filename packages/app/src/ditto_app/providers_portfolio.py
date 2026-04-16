@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_data.services.trade_service import TradeService
+from ditto_data.services.trade import TradeService
 
 from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
 from ditto_app.query.signal import SignalQueryFacade

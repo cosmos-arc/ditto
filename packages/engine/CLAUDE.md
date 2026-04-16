@@ -59,10 +59,11 @@ ditto_engine/
 │       ├── stock_sector_rotation.py
 │       └── stock_selection_trend.py
 ├── backtest/          # 回测引擎
-│   ├── engine.py      # EngineLoop 主循环
+│   ├── engine.py      # EngineLoop 主循环 + 配置/结果模型
 │   ├── data_feed.py   # ProviderBackedDataFeed
 │   ├── manifest.py    # RunManifest
 │   ├── replay.py      # 回放控制
+│   ├── result.py      # RunManifest 构建 + EngineResult 组装
 │   ├── statistics.py  # BacktestReport / Statistics
 │   ├── audit/         # 执行审计
 │   │   ├── collector.py  # ExecutionAuditCollector

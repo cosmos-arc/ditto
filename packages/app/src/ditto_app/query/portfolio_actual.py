@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_data.services.trade_service import TradeService
+from ditto_data.services.trade import TradeService
 
 from ditto_app.execution_dto import (
     ActualPositionSnapshot,
