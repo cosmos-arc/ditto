@@ -3,6 +3,23 @@
 
 三个 Writer（TradeIntentWriter / FillWriter / PositionWriter）共用的
 SQL 注入防护与查询构建工具。
+
+范围查询用法::
+
+    # 等值查询（向后兼容）
+    filters = {"status": "pending"}
+
+    # 闭区间范围查询
+    filters = {"trade_date": ("2026-04-10", "2026-04-15")}
+    # → trade_date >= ? AND trade_date <= ?
+
+    # 半开区间（仅有上界）
+    filters = {"trade_date": ("", "2026-04-15")}
+    # → trade_date <= ?
+
+    # 半开区间（仅有下界）
+    filters = {"trade_date": ("2026-04-10", "")}
+    # → trade_date >= ?
 """
 
 from __future__ import annotations
@@ -19,12 +36,16 @@ __all__ = [
 # Whitelist: 防止 SQL 注入
 # ---------------------------------------------------------------------------
 
+_RANGE_TUPLE_LEN = 2
+
 ALLOWED_ORDER_BY: frozenset[str] = frozenset(
     {
         "signal_date ASC",
         "signal_date DESC",
         "snapshot_date ASC",
         "snapshot_date DESC",
+        "trade_date ASC",
+        "trade_date DESC",
     }
 )
 
@@ -33,6 +54,8 @@ ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "signal_date",
         "status",
         "snapshot_date",
+        "trade_date",
+        "intent_id",
     }
 )
 
@@ -40,11 +63,24 @@ ALLOWED_COLUMNS: frozenset[str] = frozenset(
 def build_where_clause(
     base_sql: str,
     strategy_id: str,
-    filters: dict[str, Any],
+    filters: dict[str, str | tuple[str, str] | None],
     order_by: str,
 ) -> tuple[str, list[Any]]:
     """
     构建带 WHERE 子句和排序的完整 SQL.
+
+    支持三种过滤值类型：
+
+    - ``str`` → 等值查询 ``column = ?``
+    - ``tuple[str, str]`` → 范围查询，空字符串元素表示无界：
+      ``("2026-04-10", "2026-04-15")`` → ``column >= ? AND column <= ?``
+      ``("", "2026-04-15")`` → ``column <= ?``（仅有上界）
+      ``("2026-04-10", "")`` → ``column >= ?``（仅有下界）
+    - ``None`` → 跳过该过滤条件
+
+    调用方: TradeIntentWriter.list / FillWriter.list / PositionWriter.list。
+    所有列名和 ORDER BY 子句均通过白名单（ALLOWED_COLUMNS / ALLOWED_ORDER_BY）
+    校验，调用方传入非法值会抛出 ValueError。
 
     Args:
         base_sql: 基础 SELECT 语句（含 WHERE strategy_id = ?）.
@@ -74,7 +110,17 @@ def build_where_clause(
     params: list[Any] = [strategy_id]
 
     for column, value in filters.items():
-        if value is not None:
+        if value is None:
+            continue
+        if isinstance(value, tuple) and len(value) == _RANGE_TUPLE_LEN:
+            low, high = str(value[0]), str(value[1])
+            if low:
+                clauses.append(f"{column} >= ?")
+                params.append(low)
+            if high:
+                clauses.append(f"{column} <= ?")
+                params.append(high)
+        else:
             clauses.append(f"{column} = ?")
             params.append(value)
 

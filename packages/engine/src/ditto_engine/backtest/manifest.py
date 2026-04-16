@@ -1,24 +1,26 @@
 """
-RunManifest / RuleRef / RuleRefCollector / serialize_manifest — 回测运行清单.
-
-Task 1B — RuleRefs + RunManifest (Phase 4 Part 03).
+回测运行清单数据类型与构建函数.
 
 - RunMode(StrEnum): 4 种运行模式
 - RuleRef(frozen): 单条规则引用（instrument + 版本 + 时间锚点）
 - RunManifest(frozen): 一次引擎运行的完整清单
 - RuleRefCollector: 运行期间收集规则引用（first_observed 策略）
+- build_run_manifest: 从引擎运行结果构建 RunManifest
 - serialize_manifest: canonical JSON 序列化（字节级稳定）
 """
 
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 
 import orjson
 from ditto_kernel.identity import InstrumentId
 
+from ditto_engine.backtest.config import EngineConfig
 from ditto_engine.execution.rules import (
     InstrumentDefinition,
     InstrumentRules,
@@ -30,10 +32,13 @@ __all__ = [
     "RuleRefCollector",
     "RunManifest",
     "RunMode",
+    "build_run_manifest",
     "hash_config",
     "hash_spec",
     "serialize_manifest",
 ]
+
+_HASH_TRUNCATE_LEN = 16
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +189,7 @@ def hash_config(
         f"{start_date}|{end_date}|{initial_cash}"
         f"|{strategy_id}|{rebalance_freq}|{engine_version}"
     )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:_HASH_TRUNCATE_LEN]
 
 
 def hash_spec(
@@ -194,13 +199,13 @@ def hash_spec(
 ) -> str:
     """对策略规格关键字段做 SHA-256, 返回前 16 位 hex。"""
     payload = f"{strategy_id}|{strategy_version}|{rebalance_freq}"
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:_HASH_TRUNCATE_LEN]
 
 
 def hash_universe(instrument_ids: set[InstrumentId]) -> str:
     """对 universe (sorted instrument IDs) 做 SHA-256, 返回前 16 位 hex。"""
     payload = ",".join(str(i) for i in sorted(instrument_ids))
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:_HASH_TRUNCATE_LEN]
 
 
 # ---------------------------------------------------------------------------
@@ -315,3 +320,97 @@ def serialize_manifest(manifest: RunManifest) -> str:
         raw,
         option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
     ).decode("utf-8")
+
+
+# ---------------------------------------------------------------------------
+# build_run_manifest
+# ---------------------------------------------------------------------------
+
+
+def build_run_manifest(
+    *,
+    run_id: str,
+    config: EngineConfig,
+    input_instruments: set[InstrumentId],
+    bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
+    rule_refs: tuple[RuleRef, ...],
+    random_seed: int,
+) -> RunManifest:
+    """构建 RunManifest — 记录运行配置、规则引用、输入依赖等治理字段."""
+    input_refs = tuple(sorted(input_instruments))
+    config_hash = hash_config(
+        start_date=config.start_date,
+        end_date=config.end_date,
+        initial_cash=config.initial_cash,
+        strategy_id=config.strategy_id,
+        rebalance_freq=config.rebalance_freq,
+        engine_version=config.engine_version,
+    )
+    spec_hash = hash_spec(
+        strategy_id=config.strategy_id,
+        strategy_version=config.strategy_version,
+        rebalance_freq=config.rebalance_freq,
+    )
+    return RunManifest(
+        run_id=run_id,
+        strategy_id=config.strategy_id,
+        strategy_version=config.strategy_version,
+        mode=RunMode.BACKTEST,
+        input_refs=input_refs,
+        input_ref_details=_build_input_ref_details(bar_fingerprints),
+        parameter_overrides=config.parameter_overrides,
+        rule_refs=rule_refs,
+        config_hash=config_hash,
+        engine_version=config.engine_version,
+        spec_hash=spec_hash,
+        universe_hash=hash_universe(input_instruments),
+        dependency_versions=_collect_dependency_versions(),
+        random_seed=random_seed,
+        created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+
+def _build_input_ref_details(
+    bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
+) -> tuple[InputRef, ...]:
+    """
+    从 bar_fingerprints 构建 InputRef 列表.
+
+    对每个 instrument 的 sorted (date, close) 元组列表计算 SHA-256 哈希,
+    生成 InputRef(instrument_id, data_hash, date_range, source).
+    """
+    refs: list[InputRef] = []
+    for iid in sorted(bar_fingerprints.keys()):
+        entries = bar_fingerprints[iid]
+        sorted_entries = sorted(entries, key=lambda t: t[0])
+        payload = ",".join(f"{d}:{c}" for d, c in sorted_entries)
+        data_hash = (
+            "sha256:"
+            + hashlib.sha256(
+                payload.encode("utf-8"),
+            ).hexdigest()[:_HASH_TRUNCATE_LEN]
+        )
+        dates = [d for d, _ in sorted_entries]
+        date_range = (dates[0], dates[-1]) if dates else ("", "")
+        refs.append(
+            InputRef(
+                instrument_id=iid,
+                data_hash=data_hash,
+                date_range=date_range,
+                source="backtest:data_feed",
+            ),
+        )
+    return tuple(refs)
+
+
+def _collect_dependency_versions() -> tuple[str, ...]:
+    """收集当前运行环境的依赖版本（用于可复现性审计）."""
+    packages = ("polars", "ditto-engine")
+    versions: list[str] = []
+    for pkg in sorted(packages):
+        try:
+            ver = importlib.metadata.version(pkg)
+        except importlib.metadata.PackageNotFoundError:
+            ver = "unknown"
+        versions.append(f"{pkg}=={ver}")
+    return tuple(versions)

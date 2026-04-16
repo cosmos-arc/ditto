@@ -9,19 +9,17 @@ from __future__ import annotations
 from ditto_engine.backtest.statistics import BacktestReport
 
 from ditto_app.config import DEFAULT_INITIAL_CASH
-from ditto_app.execution_dto import (
-    ActualPositionSnapshot,
-    ManualExecutionFill,
+from ditto_app.execution_dto import ManualExecutionFill
+from ditto_app.query.comparison_math import (
+    ComparisonMetrics,
+    compute_comparison_from_raw,
 )
-from ditto_app.query.comparison import ComparisonMetrics
-from ditto_app.query.comparison_math import compute_comparison_from_raw
 
 __all__ = ["compute_comparison"]
 
 
 def compute_comparison(
     backtest_report: BacktestReport,
-    actual_snapshots: list[ActualPositionSnapshot],
     actual_fills: list[ManualExecutionFill],
     actual_navs: list[tuple[str, float]],
     initial_cash: float = DEFAULT_INITIAL_CASH,
@@ -31,7 +29,6 @@ def compute_comparison(
 
     Args:
         backtest_report: 回测报告（含 alpha_stats, nav_series）.
-        actual_snapshots: 实际持仓快照列表.
         actual_fills: 实际成交记录列表.
         actual_navs: 实际 NAV 序列 [(date, nav), ...].
         initial_cash: 初始资金（用于基点计算）.

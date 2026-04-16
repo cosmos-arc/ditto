@@ -346,7 +346,7 @@ class TestSignalIntentsByDate:
 @pytest.mark.integration
 class TestComparison:
     def test_returns_metrics(self, client: TC, mock_comparison_facade: MC) -> None:
-        from ditto_app.query.comparison import ComparisonMetrics
+        from ditto_app.query.comparison_math import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=0.15,

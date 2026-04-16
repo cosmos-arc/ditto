@@ -5,7 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from ditto_data.models.trade import ManualExecutionFillRecord
+from ditto_data.services.trade._sql import build_where_clause
 from ditto_data.storage.sqlite_client import SQLiteClient
+
+__all__ = [
+    "FILLS_DDL",
+    "FillWriter",
+]
 
 # ---------------------------------------------------------------------------
 # SQL: execution_fills
@@ -110,28 +116,30 @@ class FillWriter:
         intent_id: str | None = None,
         end_date: str | None = None,
     ) -> list[ManualExecutionFillRecord]:
-        """按条件查询成交记录列表."""
-        clauses: list[str] = []
-        params: list[Any] = [strategy_id]
+        """
+        按条件查询成交记录列表.
+
+        日期过滤逻辑（通过 build_where_clause 构建）：
+          - 仅 trade_date → 精确匹配
+          - 仅 end_date → trade_date <= end_date（半开区间）
+          - 两者均提供 → trade_date >= trade_date AND trade_date <= end_date（闭区间）
+          - 注意：若 end_date < trade_date，查询结果为空（合法但无意义）
+        """
+        filters: dict[str, str | tuple[str, str] | None] = {}
 
         if trade_date is not None and end_date is not None:
-            clauses.append("trade_date >= ?")
-            params.append(trade_date)
-            clauses.append("trade_date <= ?")
-            params.append(end_date)
+            filters["trade_date"] = (trade_date, end_date)
         elif trade_date is not None:
-            clauses.append("trade_date = ?")
-            params.append(trade_date)
+            filters["trade_date"] = trade_date
         elif end_date is not None:
-            clauses.append("trade_date <= ?")
-            params.append(end_date)
+            filters["trade_date"] = ("", end_date)
 
         if intent_id is not None:
-            clauses.append("intent_id = ?")
-            params.append(intent_id)
+            filters["intent_id"] = intent_id
 
-        where = (" AND " + " AND ".join(clauses)) if clauses else ""
-        sql = _LIST_FILLS_BASE + where + " ORDER BY trade_date ASC"
+        sql, params = build_where_clause(
+            _LIST_FILLS_BASE, strategy_id, filters, "trade_date ASC"
+        )
 
         rows = self._client.fetchall(sql, params)
         return [self._row_to_fill(row) for row in rows]

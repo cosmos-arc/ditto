@@ -61,9 +61,9 @@ ditto_engine/
 ├── backtest/          # 回测引擎
 │   ├── engine.py      # EngineLoop 主循环 + 配置/结果模型
 │   ├── data_feed.py   # ProviderBackedDataFeed
-│   ├── manifest.py    # RunManifest
+│   ├── manifest.py    # RunManifest + build_run_manifest
 │   ├── replay.py      # 回放控制
-│   ├── result.py      # RunManifest 构建 + EngineResult 组装
+│   ├── config.py      # EngineMode + EngineConfig
 │   ├── statistics.py  # BacktestReport / Statistics
 │   ├── audit/         # 执行审计
 │   │   ├── collector.py  # ExecutionAuditCollector

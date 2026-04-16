@@ -179,7 +179,7 @@ class TestComparisonMetrics:
 
     def test_construction(self) -> None:
         """基本构造."""
-        from ditto_app.query.comparison import ComparisonMetrics
+        from ditto_app.query.comparison_math import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=10.0,
@@ -202,7 +202,7 @@ class TestComparisonMetrics:
 
     def test_frozen(self) -> None:
         """frozen dataclass 不可变."""
-        from ditto_app.query.comparison import ComparisonMetrics
+        from ditto_app.query.comparison_math import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=10.0,
@@ -255,7 +255,6 @@ class TestComputeComparison:
 
         result = compute_comparison(
             backtest_report=report,
-            actual_snapshots=[],
             actual_fills=fills,
             actual_navs=actual_navs,
             initial_cash=1_000_000.0,
@@ -290,7 +289,6 @@ class TestComputeComparison:
         report = _make_backtest_report()
         result = compute_comparison(
             backtest_report=report,
-            actual_snapshots=[],
             actual_fills=[],
             actual_navs=[],
             initial_cash=1_000_000.0,
@@ -318,7 +316,6 @@ class TestComputeComparison:
 
         result = compute_comparison(
             backtest_report=report,
-            actual_snapshots=[],
             actual_fills=[],
             actual_navs=actual_navs,
         )
@@ -339,7 +336,6 @@ class TestComputeComparison:
 
         result = compute_comparison(
             backtest_report=report,
-            actual_snapshots=[],
             actual_fills=[],
             actual_navs=actual_navs,
             initial_cash=1_000_000.0,
@@ -365,7 +361,6 @@ class TestComputeComparison:
 
         result = compute_comparison(
             backtest_report=report,
-            actual_snapshots=[],
             actual_fills=[],
             actual_navs=actual_navs,
         )

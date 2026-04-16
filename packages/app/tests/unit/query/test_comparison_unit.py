@@ -5,7 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from ditto_app.execution_dto import ActualPositionSnapshot, ManualExecutionFill
-from ditto_app.query.comparison import ComparisonMetrics, ComparisonQueryFacade
+from ditto_app.query.comparison import ComparisonQueryFacade
+from ditto_app.query.comparison_math import ComparisonMetrics
 
 
 def _make_backtest_facade(

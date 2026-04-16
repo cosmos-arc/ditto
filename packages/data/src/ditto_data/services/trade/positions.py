@@ -8,6 +8,11 @@ from ditto_data.models.trade import ActualPositionSnapshotRecord
 from ditto_data.services.trade._sql import build_where_clause
 from ditto_data.storage.sqlite_client import SQLiteClient
 
+__all__ = [
+    "POSITIONS_DDL",
+    "PositionWriter",
+]
+
 # ---------------------------------------------------------------------------
 # SQL: actual_positions
 # ---------------------------------------------------------------------------

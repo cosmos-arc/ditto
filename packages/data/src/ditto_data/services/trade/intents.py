@@ -8,6 +8,11 @@ from ditto_data.models.trade import TradeIntentRecord
 from ditto_data.services.trade._sql import build_where_clause
 from ditto_data.storage.sqlite_client import SQLiteClient
 
+__all__ = [
+    "INTENTS_DDL",
+    "TradeIntentWriter",
+]
+
 # ---------------------------------------------------------------------------
 # SQL: trade_intents
 # ---------------------------------------------------------------------------

@@ -1,133 +1,190 @@
-# V1 Sprint Review Fixes — 代码审查修复
+# V1 Sprint Review Fixes — 审查问题全量修复
 
 ## 概述
-- Sprint: V1 RC | Phase: Post-Review
+- Sprint: v1-sprint | Phase: Review Fixes (Round 2)
 - 创建: 2026-04-16
-- 来源: 6 维度代码审查报告（feat/v1-sprint 分支）
+- 完成状态: **全部 19 项已修复，验证通过**
+- 来源:
+  - 6 维度并行审查（架构/PIT/规约/可维护/质量/文档）— 14 项问题
+  - PR #62 Code Review（5 个 ≥80 分 + 2 个 ≥75 分问题）— 7 项问题
+- 前置: Round 1 拆分任务已全部完成，本计划修复两轮审查发现的问题
+- 去重后: **19 个独立问题**（2 项重叠合并）
 
-## 审查结论回顾
+## 问题清单
 
-6 维度全部通过，无严重问题。本计划仅处理改进建议，按优先级排列。
+| # | 严重度 | 来源 | 维度 | 描述 | 状态 |
+|---|--------|------|------|------|------|
+| M1 | major | 6D/CR#1 | 规约/架构 | `result.py` 使用 `TYPE_CHECKING` 规避循环依赖 | ✅ |
+| M2 | major | 6D/CR#6 | 可维护 | `FillWriter.list()` 未使用共享 `build_where_clause` | ✅ |
+| M3 | major | 6D | 文档 | `engine/CLAUDE.md` 描述 `result.py` 职责不符实际 | ✅ |
+| CR2 | high | CR#2 | 质量 | `signal_weights` 为空时 `compile_and_validate` 崩溃 | ✅ |
+| CR3 | high | CR#3 | 可维护 | `actual_snapshots` 死参数从未使用 | ✅ |
+| CR4 | high | CR#4 | 质量 | `fill_to_record`/`snapshot_to_record` 缺少 `created_at` 时间戳 | ✅ |
+| m1 | minor | 6D | 规约 | `ComparisonMetrics` 通过 `comparison.py` 间接 re-export | ✅ |
+| m2 | minor | 6D | 规约 | `fills.py`/`intents.py`/`positions.py` 缺少 `__all__` | ✅ |
+| m3 | minor | 6D | 可维护 | `_sql.py` 白名单缺少 `trade_date` | ✅ |
+| m4 | minor | 6D | 可维护 | `result.py` 命名与内容不匹配 | ✅ |
+| m5 | minor | 6D | 质量 | `_compute_sharpe_from_navs` 两次检查缺注释 | ✅ |
+| m6 | minor | 6D | 质量 | `FillWriter.list()` `end_date < trade_date` 边界行为未文档化 | ✅ |
+| m7 | minor | 6D | 质量 | `result.py` SHA-256 `[:16]` magic number | ✅ |
+| m8 | minor | 6D | 质量 | `build_actual_navs_simple` 被 `__all__` 导出但无外部消费者 | ✅ |
+| m9 | minor | 6D | 质量 | `build_where_clause` ValueError 调用方说明缺失 | ✅ |
+| CR5 | minor | CR#5 | 文档 | `ComparisonMetrics.backtest_return` docstring 写"总收益率"实为年化 | ✅ |
+| CR7 | minor | CR#7 | 可观测性 | `_is_rebalance_day` date 不在 index 时静默 fallback | ✅ |
+| n1 | nit | 6D | 可维护 | `TradeService` 门面纯委托方法 docstring 过于冗长 | ✅ |
+| n2 | nit | 6D | 质量 | `comparison_math.py` 中 `10_000.0` 基点因子可提取为常量 | ✅ |
 
 ## 技术方案
 
-### 决策 1：trade_service.py 拆分策略
+### 核心决策
 
-当前 583 行单文件包含 3 张表的全部 CRUD + SQL DDL + 行映射。
-拆分为 `TradeService` 门面 + 3 个内部 Writer，保持公共 API 不变。
+1. **EngineConfig 提取**: 新建 `backtest/config.py`，存放 `EngineMode` + `EngineConfig`，消除 `engine.py ↔ result.py` 循环依赖
+2. **result.py 重命名**: 合并进已有 `manifest.py`，精确反映职责（RunManifest 构建）
+3. **build_where_clause 扩展**: 支持 `tuple[str, str]` 范围查询值，`str` 值保持等值语义；参数类型改为 `dict[str, str | tuple[str, str] | None]` 消除 Any 传播
+4. **ComparisonMetrics 直导**: 消费者直接引用 `comparison_math.py`，`comparison.py` 停止 re-export
+5. **signal_weights 等权 fallback**: `signal_weights` 为空时自动生成等权，避免运行时崩溃
+6. **created_at 自动生成**: 映射函数内部生成 RFC3339 时间戳，与 `build_run_manifest` 一致
 
-```
-ditto_data/services/trade/
-├── __init__.py          # re-export TradeService
-├── service.py           # TradeService 门面（编排 3 个 Writer）
-├── intents.py           # TradeIntentWriter（intents 表 CRUD）
-├── fills.py             # FillWriter（fills 表 CRUD）
-└── positions.py         # PositionWriter（positions 表 CRUD）
-```
+### 影响范围
 
-**理由**：TradeService 的消费者（app/providers_portfolio.py、command/trade.py）仅依赖 TradeService 公共接口，拆分是内部重构，不影响外部。
-
-### 决策 2：comparison.py 纯计算函数抽取
-
-将 `compute_comparison_from_raw` 及其辅助函数抽取为 `comparison_math.py`，
-`comparison.py` 仅保留 `ComparisonQueryFacade` 和 `ComparisonMetrics` DTO。
-
-### 决策 3：engine.py 结果组装抽取
-
-将 `_assemble_result` + `_build_manifest` 抽取到 `backtest/result.py`，
-降低 engine.py 复杂度。EngineLoop 保留核心循环逻辑。
+- `EngineConfig` 消费者: 6 个测试文件 + `result.py`（共 7 处 import 变更）
+- `ComparisonMetrics` 消费者: 3 个源文件 + 3 个测试文件（共 6 处 import 变更）
+- `result.py → manifest.py`: 1 个消费者 `engine.py`
 
 ## 任务清单
 
-### Phase 1：trade_service 拆分（L）
+### Phase 1: 架构修正（消除循环依赖 + 命名修正）
 
-- [x] Task 1.1: 创建 `ditto_data/services/trade/` 包结构 `[S]`
-  - 验收: 目录存在，`__init__.py` re-export TradeService
-  - 文件: `packages/data/src/ditto_data/services/trade/__init__.py`
+- [x] Task 1.1: 提取 `EngineMode` + `EngineConfig` → `backtest/config.py` `[M]`
+  - 验收: `engine.py` 和 `manifest.py` 均从 `config.py` 导入；`TYPE_CHECKING` 块完全移除；`pixi run -e dev type` 通过
+  - 文件:
+    - `packages/engine/src/ditto_engine/backtest/config.py` (新建)
+    - `packages/engine/src/ditto_engine/backtest/engine.py` (修改 import)
+    - `packages/engine/src/ditto_engine/backtest/manifest.py` (移除 TYPE_CHECKING)
+    - `packages/engine/tests/unit/backtest/test_engine_loop_unit.py` (修改 import)
+    - `packages/engine/tests/unit/backtest/test_engine_events_unit.py` (修改 import)
+    - `packages/engine/tests/unit/backtest/test_post_trade_unit.py` (修改 import)
+    - `packages/engine/tests/unit/alpha/test_stock_selection_trend_unit.py` (修改 import)
+    - `packages/app/tests/unit/process/strategy/test_backtest_service_unit.py` (修改 import)
+  - 影响: M1, CR#1
 
-- [x] Task 1.2: 抽取 intents 表 CRUD 到 `intents.py` `[M]`
-  - 验收: TradeIntentWriter 类，包含 save_intent/get_intent/list_intents/update_intent_status + 行映射
-  - 文件: `packages/data/src/ditto_data/services/trade/intents.py`
-  - 测试: 更新 `test_trade_service_unit.py` 确保 intents 相关测试通过
+- [x] Task 1.2: 合并 `result.py` → `manifest.py` + 修正 CLAUDE.md `[S]`
+  - 验收: `build_run_manifest` 函数合并进已有 manifest.py；`engine.py` import 更新；`engine/CLAUDE.md` 描述修正；`pixi run -e dev check` 通过
+  - 文件:
+    - `packages/engine/src/ditto_engine/backtest/result.py` (删除)
+    - `packages/engine/src/ditto_engine/backtest/manifest.py` (合并 build_run_manifest)
+    - `packages/engine/src/ditto_engine/backtest/engine.py` (修改 import)
+    - `packages/engine/src/ditto_engine/backtest/__init__.py` (更新 re-export)
+    - `packages/engine/CLAUDE.md` (修正描述)
+  - 影响: M3, M4
+  - 依赖: Task 1.1
 
-- [x] Task 1.3: 抽取 fills 表 CRUD 到 `fills.py` `[S]`
-  - 验收: FillWriter 类，包含 save_fill/get_fill/find_fill/list_fills + 行映射
-  - 文件: `packages/data/src/ditto_data/services/trade/fills.py`
-  - 测试: 更新 `test_trade_service_unit.py` 确保 fills 相关测试通过
+### Phase 2: Data 层一致性（SQL 构建 + __all__）
 
-- [x] Task 1.4: 抽取 positions 表 CRUD 到 `positions.py` `[S]`
-  - 验收: PositionWriter 类，包含 save_position/get_latest_position/list_positions + 行映射
-  - 文件: `packages/data/src/ditto_data/services/trade/positions.py`
-  - 测试: 更新 `test_trade_service_unit.py` 确保 positions 相关测试通过
+- [x] Task 2.1: 扩展 `_sql.py` 支持范围查询 + 补全白名单 `[M]`
+  - 验收: `build_where_clause` 支持 `tuple[str, str]` 值表示范围查询；`ALLOWED_ORDER_BY` 含 `trade_date ASC/DESC`；`ALLOWED_COLUMNS` 含 `trade_date`/`intent_id`；参数类型从 `dict[str, Any]` 改为 `dict[str, str | tuple[str, str] | None]`；新增白名单测试；`pixi run -e dev test` 通过
+  - 文件:
+    - `packages/data/src/ditto_data/services/trade/_sql.py` (扩展函数 + 补全白名单 + 类型优化)
+    - `packages/data/tests/unit/services/test_trade_service_unit.py` (新增范围查询测试)
+  - 影响: M2, m3, CR#6
 
-- [x] Task 1.5: 重构 TradeService 为门面，委托 3 个 Writer `[M]`
-  - 验收: TradeService 保留原公共 API（init_schema + 所有公开方法），内部委托 Writer
-  - 文件: `packages/data/src/ditto_data/services/trade/service.py`
-  - 测试: 全部 `test_trade_service_unit.py` 测试通过，无 import 路径变更
+- [x] Task 2.2: 重构 `FillWriter.list()` 使用共享 `build_where_clause` `[M]`
+  - 验收: `FillWriter.list()` 使用 `build_where_clause` 构建 WHERE 子句；行为不变；`pixi run -e dev test` 通过
+  - 文件:
+    - `packages/data/src/ditto_data/services/trade/fills.py` (重构 list 方法)
+  - 影响: M2, CR#6
+  - 依赖: Task 2.1
 
-- [x] Task 1.6: 删除旧 `trade_service.py`，更新 import 路径 `[S]`
-  - 验收: `pixi run -e dev check` 全部通过，importlinter 无新增违规
-  - 文件: `packages/data/src/ditto_data/services/trade_service.py`（删除）
-  - 影响文件: `providers_portfolio.py`, `command/trade.py`, `di/trade.py`, CLAUDE.md
+- [x] Task 2.3: 为 Writer 文件添加 `__all__` `[S]`
+  - 验收: `fills.py`、`intents.py`、`positions.py` 均有 `__all__`；导出符号与实际 public API 一致
+  - 文件:
+    - `packages/data/src/ditto_data/services/trade/fills.py`
+    - `packages/data/src/ditto_data/services/trade/intents.py`
+    - `packages/data/src/ditto_data/services/trade/positions.py`
+  - 影响: m2
 
-### Phase 2：comparison.py 纯计算函数抽取（M）
+### Phase 3: App 层清理（re-export + 死代码 + 防御性修复）
 
-- [x] Task 2.1: 抽取 `compute_comparison_from_raw` 及辅助函数到 `comparison_math.py` `[M]`
-  - 验收: `compute_comparison_from_raw` + `_build_actual_navs` + `_extract_*` 辅助函数移至新文件
-  - 文件: `packages/app/src/ditto_app/query/comparison_math.py`
-  - 测试: `test_comparison_unit.py` 全部通过
+- [x] Task 3.1: `ComparisonMetrics` 直导 + `build_actual_navs_simple` 内联化 `[S]`
+  - 验收: 所有消费者直接 `from ditto_app.query.comparison_math import ComparisonMetrics`；`comparison.py` 停止 re-export `ComparisonMetrics`；`_build_actual_navs_simple` 逻辑内联到 `comparison.py` 并从 `comparison_math.py` 删除；`pixi run -e dev check` 通过
+  - 文件:
+    - `packages/app/src/ditto_app/query/comparison_math.py` (删除 _build_actual_navs_simple + 修改 __all__)
+    - `packages/app/src/ditto_app/query/comparison.py` (移除 ComparisonMetrics re-export + 内联 NAV 逻辑)
+    - `packages/app/src/ditto_app/process/execution/comparison.py` (修改 import)
+    - `interfaces/src/ditto_interfaces/api/routes/trade.py` (拆分 import)
+    - `packages/app/tests/unit/query/test_comparison_unit.py` (修改 import)
+    - `packages/app/tests/unit/process/execution/test_comparison_unit.py` (修改 import + 移除 actual_snapshots)
+    - `interfaces/tests/integration/api/test_trade_api_integration.py` (修改 import)
+  - 影响: m1, m8
 
-- [x] Task 2.2: 精简 `comparison.py` 仅保留 Facade + DTO `[S]`
-  - 验收: comparison.py 仅含 ComparisonMetrics、ComparisonQueryFacade、import from comparison_math
-  - 文件: `packages/app/src/ditto_app/query/comparison.py`
-  - 测试: `pixi run -e dev check` 通过
+- [x] Task 3.2: 移除 `actual_snapshots` 死参数 `[S]`
+  - 验收: `compute_comparison` 签名不含 `actual_snapshots`；无用 `ActualPositionSnapshot` 导入清理；所有调用点更新；`pixi run -e dev check` 通过
+  - 文件:
+    - `packages/app/src/ditto_app/process/execution/comparison.py` (修改签名 + 清理导入)
+    - `packages/app/tests/unit/process/execution/test_comparison_unit.py` (5 处调用点移除 actual_snapshots)
+  - 影响: CR#3
 
-### Phase 3：engine.py 结果组装抽取（M）
+- [x] Task 3.3: `signal_weights` 空时默认等权 fallback `[S]`
+  - 验收: 策略 spec 含 `signal_expressions` 但不含 `signal_weights` 时不崩溃；等权权重正确归一化；`pixi run -e dev check` 通过
+  - 文件:
+    - `packages/app/src/ditto_app/command/backtest.py` (添加等权 fallback)
+  - 影响: CR#2
 
-- [x] Task 3.1: 抽取 `_assemble_result` + `_build_manifest` 到 `backtest/result.py` `[M]`
-  - 验收: 新模块包含 `assemble_engine_result` + `build_run_manifest` 函数
-  - 文件: `packages/engine/src/ditto_engine/backtest/result.py`
-  - 测试: `test_engine_loop_unit.py` 全部通过
+### Phase 4: 数据完整性 + 文档修正
 
-- [x] Task 3.2: EngineLoop 调用新模块，精简 engine.py `[S]`
-  - 验收: engine.py 行数减少约 80 行，功能不变
-  - 文件: `packages/engine/src/ditto_engine/backtest/engine.py`
-  - 测试: `pixi run -e dev check` 通过
+- [x] Task 4.1: `fill_to_record`/`snapshot_to_record` 补充 `created_at` `[M]`
+  - 验收: 映射函数返回的 record 含非空 `created_at`（RFC3339 格式）；`intent_to_record` 同理；`pixi run -e dev check` 通过
+  - 文件:
+    - `packages/app/src/ditto_app/execution_dto.py` (三个映射函数内部生成时间戳)
+  - 影响: CR#4
 
-### Phase 4：文档同步 + 收尾（S）
+- [x] Task 4.2: 修正 `ComparisonMetrics.backtest_return` docstring `[S]`
+  - 验收: docstring 改为"回测年化收益率 (%)"，与实际语义一致
+  - 文件:
+    - `packages/app/src/ditto_app/query/comparison_math.py:36`
+  - 影响: CR#5
 
-- [x] Task 4.1: 更新 CLAUDE.md 反映 trade_service 拆分 `[S]`
-  - 验收: data/CLAUDE.md 中 trade_service 路径更新为 trade/service.py
-  - 文件: `packages/data/CLAUDE.md`
+- [x] Task 4.3: `_is_rebalance_day` fallback 添加 warning 日志 `[S]`
+  - 验收: date 不在 `_trading_day_index` 时输出 `logger.warning`；不影响正常逻辑
+  - 文件:
+    - `packages/engine/src/ditto_engine/backtest/engine.py:_is_rebalance_day`
+  - 影响: CR#7
 
-- [x] Task 4.2: 全量验证 `[S]`
-  - 验收: `pixi run -e dev check` 通过（lint + fmt + type + test）
-  - 命令: `pixi run -e dev check`
+### Phase 5: 代码质量（注释 + 常量 + docstring）
 
-## 依赖关系
+- [x] Task 5.1: 代码质量改进 `[M]`
+  - 验收: 所有注释和常量提取完成；docstring 更新；`pixi run -e dev check` 通过
+  - 变更明细:
+    - `comparison_math.py`: `_compute_sharpe_from_navs` 两次检查添加注释 (m5)；提取 `_BPS_FACTOR = 10_000.0` (n2)；删除未使用的 `_build_actual_navs_simple` (m8)
+    - `fills.py`: `list()` docstring 补充日期过滤逻辑说明 (m6)
+    - `_sql.py`: `build_where_clause` docstring 补充调用方说明 (m9)；提取 `_RANGE_TUPLE_LEN = 2` 常量
+    - `manifest.py`: 提取 `_HASH_TRUNCATE_LEN = 16` (m7)；模块 docstring 更新
+    - `service.py`: 纯委托方法 docstring 简化为单行 (n1)
+  - 文件:
+    - `packages/app/src/ditto_app/query/comparison_math.py`
+    - `packages/data/src/ditto_data/services/trade/fills.py`
+    - `packages/data/src/ditto_data/services/trade/_sql.py`
+    - `packages/engine/src/ditto_engine/backtest/manifest.py`
+    - `packages/data/src/ditto_data/services/trade/service.py`
+  - 影响: m5, m6, m7, m8, m9, n1, n2
+  - 依赖: Task 1.2 (manifest.py 重命名后修改)
+
+### Phase 6: 验证
+
+- [x] Task 6.1: 全量验证 `[S]`
+  - 验收: `pixi run -e dev check` 全部通过（lint + fmt + type + test --fast）
+  - 结果: 5459 passed, 25 skipped; 0 type errors; lint/fmt clean
+  - 依赖: 所有前置任务
+
+## 执行顺序
 
 ```
-Phase 1 (trade_service 拆分)
-  1.1 → 1.2 → 1.3 → 1.4 → 1.5 → 1.6
-Phase 2 (comparison 拆分)      — 可与 Phase 1 并行
-  2.1 → 2.2
-Phase 3 (engine 拆分)         — 可与 Phase 1/2 并行
-  3.1 → 3.2
-Phase 4 (收尾)                — 依赖 Phase 1/2/3 全部完成
-  4.1 + 4.2
+Phase 1 (架构):     Task 1.1 → Task 1.2
+Phase 2 (Data):     Task 2.1 → Task 2.2 + Task 2.3(并行)
+Phase 3 (App):      Task 3.1 + Task 3.2 + Task 3.3 (并行)
+Phase 4 (完整性):    Task 4.1 + Task 4.2 + Task 4.3 (并行)
+Phase 5 (质量):     Task 5.1
+Phase 6 (验证):     Task 6.1
 ```
 
-## 排除项
-
-以下审查建议经二次确认为合理设计，不纳入修复：
-
-| 建议 | 排除理由 |
-|------|---------|
-| `eod.py:72` except Exception | 已有 `logger.exception` 记录，告警发送失败不应阻断 Flow |
-| `dq_batch.py:301` except Exception | 已有 `logger.warning` 记录，DQ 告警失败不应阻断 Task |
-| `main.py:272` except Exception | 紧接 `raise` 重新抛出，仅用于请求日志记录 |
-| `ops.py` 异常粒度 | CLI 入口点的 DI 容器异常捕获 + 友好退出是标准模式 |
-| kernel/__init__.py re-export | 当前 2 层深度合规，增长到 3 层时再处理 |
-| backtest.py / trade.py API 路由行数 | 标准 CRUD 模式，结构清晰，无需拆分 |
-| Sprint 计划文档归档 | 低优先级文档整理，不影响代码质量 |
-| providers smoke test | 通过集成测试间接覆盖，非阻塞项 |
+Phase 1-4 之间无依赖，可并行。Phase 5 依赖 Phase 1 的 manifest.py 重命名。

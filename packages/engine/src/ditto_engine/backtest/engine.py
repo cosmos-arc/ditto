@@ -18,7 +18,6 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
 
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
@@ -30,12 +29,13 @@ from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_engine.backtest.config import EngineConfig, EngineMode
 from ditto_engine.backtest.data_feed import DataFeed, Slice
 from ditto_engine.backtest.manifest import (
     RuleRefCollector,
     RunManifest,
+    build_run_manifest,
 )
-from ditto_engine.backtest.result import build_run_manifest
 from ditto_engine.backtest.statistics import ExecutionAuditCollector
 from ditto_engine.backtest.steps import (
     AuditStep,
@@ -69,59 +69,6 @@ __all__ = [
     "EngineOptions",
     "EngineResult",
 ]
-
-
-# ---------------------------------------------------------------------------
-# Enums
-# ---------------------------------------------------------------------------
-
-
-class EngineMode(StrEnum):
-    """引擎运行模式。"""
-
-    BACKTEST = "backtest"
-    LIVE = "live"
-
-
-# ---------------------------------------------------------------------------
-# EngineConfig
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class EngineConfig:
-    """
-    引擎配置 -- frozen, 运行前确定.
-
-    Attributes:
-        start_date: 起始日期 (YYYY-MM-DD)
-        end_date: 结束日期 (YYYY-MM-DD)
-        initial_cash: 初始资金
-        benchmark_id: 基准标的 ID (None = 无基准)
-        mode: 运行模式
-        trade_matching: 成交匹配算法
-        strategy_id: 策略 ID
-        strategy_version: 策略版本
-        strategy_run_id: 策略运行 ID
-        parameter_overrides: 参数覆盖列表
-        rebalance_freq: 调仓频率 (daily / weekly / monthly)
-        engine_version: 引擎版本号 (用于 manifest/diff 追踪)
-
-    """
-
-    start_date: str
-    end_date: str
-    initial_cash: float
-    benchmark_id: InstrumentId | None = None
-    mode: EngineMode = EngineMode.BACKTEST
-    trade_matching: TradeMatchingMethod = TradeMatchingMethod.FIFO
-    strategy_id: str = "default"
-    strategy_version: str = ""
-    strategy_run_id: str = ""
-    parameter_overrides: tuple[str, ...] = ()
-    rebalance_freq: str = "daily"
-    engine_version: str = "0.1.0"
-    execution_delay: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -526,6 +473,13 @@ class EngineLoop:
 
         idx = self._trading_day_index.get(date)
         if idx is None:
+            logger.warning(
+                (
+                    "_is_rebalance_day: date={!r} 不在"
+                    " trading_days index 中, fallback 为 daily"
+                ),
+                date,
+            )
             return True
 
         # 首个交易日始终为调仓日（weekly / monthly 共享逻辑）

@@ -18,13 +18,13 @@ from ditto_app.query._artifact_utils import compute_total_return
 
 __all__ = [
     "ComparisonMetrics",
-    "build_actual_navs_simple",
     "compute_comparison_from_raw",
 ]
 
 _TRADING_DAYS_PER_YEAR = 252
 _MIN_PAIRED_POINTS = 2
 _MIN_POINTS_FOR_TRACKING_ERROR = 3
+_BPS_FACTOR = 10_000.0
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ class ComparisonMetrics:
     回测 vs 实际对比指标.
 
     Attributes:
-        backtest_return: 回测总收益率 (%)
+        backtest_return: 回测年化收益率 (%)
         actual_return: 实际总收益率 (%)
         return_diff: 收益率偏差 (actual - backtest) (%)
         return_diff_bps: 基点偏差
@@ -99,7 +99,7 @@ def compute_comparison_from_raw(
     )
 
     cost_drag_bps = (
-        (actual_total_cost - backtest_total_cost) / initial_cash * 10_000.0
+        (actual_total_cost - backtest_total_cost) / initial_cash * _BPS_FACTOR
         if initial_cash > 0
         else 0.0
     )
@@ -148,6 +148,7 @@ def _compute_sharpe_from_navs(navs: list[tuple[str, float]]) -> float:
     nav_values = [v for _, v in navs]
     daily_returns = _daily_returns(nav_values)
 
+    # 二次检查: _daily_returns 可能返回空列表（如连续相同 NAV）
     n = len(daily_returns)
     if n < _MIN_PAIRED_POINTS:
         return 0.0
@@ -221,7 +222,7 @@ def _compute_max_nav_diff_bps(
     max_diff_bps = 0.0
     for bt_v, actual_v in zip(bt_values, actual_values, strict=True):
         diff = abs(bt_v - actual_v)
-        bps = diff / initial_cash * 10_000.0
+        bps = diff / initial_cash * _BPS_FACTOR
         max_diff_bps = max(max_diff_bps, bps)
 
     return max_diff_bps
@@ -258,7 +259,7 @@ def _compute_tracking_error_bps(
         return 0.0
 
     # 日均超额收益标准差 → 基点 (CFA Institute 标准)
-    return math.sqrt(te_var) * 10_000.0
+    return math.sqrt(te_var) * _BPS_FACTOR
 
 
 def _daily_returns(navs: list[float]) -> list[float]:
@@ -270,15 +271,3 @@ def _daily_returns(navs: list[float]) -> list[float]:
         else:
             result.append(0.0)
     return result
-
-
-def build_actual_navs_simple(
-    fills: list[ManualExecutionFill],
-    initial_cash: float,
-) -> list[tuple[str, float]]:
-    """回退逻辑：无行情数据源时，仅扣除费用生成简化 NAV 序列."""
-    by_date: dict[str, float] = {}
-    for f in fills:
-        by_date.setdefault(f.trade_date, initial_cash)
-        by_date[f.trade_date] -= f.fee
-    return sorted(by_date.items())

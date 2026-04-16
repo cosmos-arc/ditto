@@ -1,14 +1,13 @@
 """Backtest — 回测引擎模块。"""
 
+from ditto_engine.backtest.config import EngineConfig, EngineMode
 from ditto_engine.backtest.data_feed import (
     DataFeed,
     ProviderBackedDataFeed,
     Slice,
 )
 from ditto_engine.backtest.engine import (
-    EngineConfig,
     EngineLoop,
-    EngineMode,
     EngineResult,
 )
 from ditto_engine.backtest.manifest import (
@@ -17,6 +16,7 @@ from ditto_engine.backtest.manifest import (
     RuleRefCollector,
     RunManifest,
     RunMode,
+    build_run_manifest,
     hash_spec,
     serialize_manifest,
 )
@@ -48,6 +48,7 @@ __all__ = [
     "RunMode",
     "Slice",
     "TradeStatistics",
+    "build_run_manifest",
     "hash_spec",
     "serialize_manifest",
 ]

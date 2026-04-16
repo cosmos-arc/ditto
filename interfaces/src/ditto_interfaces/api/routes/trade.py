@@ -32,7 +32,8 @@ from ditto_app.execution_dto import (
     ManualExecutionFill,
     TradeIntent,
 )
-from ditto_app.query.comparison import ComparisonMetrics, ComparisonQueryFacade
+from ditto_app.query.comparison import ComparisonQueryFacade
+from ditto_app.query.comparison_math import ComparisonMetrics
 from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
 from ditto_app.query.signal import SignalQueryFacade
 from ditto_app.query.trade import TradeQueryFacade

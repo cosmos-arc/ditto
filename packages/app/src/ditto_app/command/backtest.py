@@ -108,6 +108,11 @@ class BacktestRunHandler:
         signal_weights = _extract_signal_weights(spec_json)
 
         if signal_expressions:
+            # 未指定权重时，自动生成等权
+            if not signal_weights:
+                signal_weights = tuple(
+                    1.0 / len(signal_expressions) for _ in signal_expressions
+                )
             self._factor_bridge.compile_and_validate(signal_expressions, signal_weights)
 
         # 4. 序列化回测配置为 config_json

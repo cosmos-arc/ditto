@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from ditto_data.models.trade import (
     ActualPositionSnapshotRecord,
@@ -163,6 +164,7 @@ def intent_to_record(intent: TradeIntent) -> TradeIntentRecord:
         delta_weight=intent.delta_weight,
         quantity=intent.quantity,
         status=intent.status,
+        created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
 
@@ -181,6 +183,7 @@ def fill_to_record(fill: ManualExecutionFill) -> ManualExecutionFillRecord:
         slippage=fill.slippage,
         notes=fill.notes,
         settlement_date=fill.settlement_date,
+        created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
 
@@ -200,6 +203,7 @@ def snapshot_to_record(
         unrealized_pnl=snapshot.unrealized_pnl,
         realized_pnl=snapshot.realized_pnl,
         total_fees=snapshot.total_fees,
+        created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
 
