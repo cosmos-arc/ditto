@@ -115,18 +115,23 @@ ditto_app/
 │   ├── service_factory.py   # 服务工厂
 │   ├── _resolution.py       # 依赖解析工具
 │   └── _spec_deserializer.py # 衍生规格反序列化
-├── providers.py        # DI Provider 注册（4 个 Provider）
+├── providers.py            # DI Provider 聚合入口（6 个 Provider）
+├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
+├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
+├── providers_portfolio.py  # 组合/交易查询 Provider（3 个 @provide）
 ├── config.py           # 数据集配置
 ├── contracts.py        # 跨 CQRS 子模块共享契约（Command DTO + ReadModel）
 └── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
 ```
 
-## DI Provider（4 个）
+## DI Provider（6 个）
 
 | Provider | 职责 | 注册的服务 |
 |----------|------|-----------|
 | `AppCommandProvider` | Command Handler | CheckDataQualityHandler, CreateStrategyHandler, UpdateStrategyHandler, PublishStrategyHandler, RecordFillHandler, UpdateIntentStatusHandler, BacktestRunHandler, CancelRunHandler, RetryRunHandler, RunLifecycleService, CreateCustomUniverseHandler, UpdateCustomUniverseHandler, DeleteCustomUniverseHandler |
-| `AppQueryProvider` | 只读查询 | ForwardReturnService, DerivedQueryFacade, MarketQueryFacade, SourceQueryFacade, ResearchDatasetFacade, MetadataQueryFacade, CapitalQueryFacade, FundamentalQueryFacade, MacroQueryFacade, FXQueryFacade, CommodityQueryFacade, BacktestTradeQueryFacade, RunReadModel, StrategyQueryFacade, BacktestArtifactReader, BacktestQueryFacade, TradeQueryFacade, PortfolioActualQueryFacade, LineageQueryFacade, SignalQueryFacade, ComparisonQueryFacade, UniverseQueryFacade, IngestionStatusQueryFacade |
+| `AppMarketQueryProvider` | 市场数据查询 | ForwardReturnService, DerivedQueryFacade, MarketQueryFacade, SourceQueryFacade, ResearchDatasetFacade, MetadataQueryFacade, CapitalQueryFacade, FundamentalQueryFacade, MacroQueryFacade, FXQueryFacade, CommodityQueryFacade, UniverseQueryFacade, IngestionStatusQueryFacade |
+| `AppStrategyQueryProvider` | 策略/回测查询 | BacktestTradeQueryFacade, BacktestArtifactReader, RunReadModel, StrategyQueryFacade, BacktestQueryFacade, LineageQueryFacade, ComparisonQueryFacade |
+| `AppPortfolioQueryProvider` | 组合/交易查询 | TradeQueryFacade, PortfolioActualQueryFacade, SignalQueryFacade |
 | `AppProcessProvider` | 编排/物化/质量/执行 | SQLiteCompileCache, RuntimeDerivedInputProvider, DerivedMaterializationOrchestrator, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, ManualTracker, ReplayProcess, FactorBridge |
 | `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, ServiceBackedDataProvider, BacktestRuntimeBuilder, StrategySliceBuilder, StrategyServiceFactory, StrategyFacade |
 

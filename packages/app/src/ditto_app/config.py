@@ -26,7 +26,9 @@ from ditto_data.errors import DatasetNotFoundError
 from ditto_data.models import Dataset
 from pydantic import BaseModel, Field
 
-__all__ = ["DataStoreSettings", "now_iso"]
+__all__ = ["DEFAULT_INITIAL_CASH", "DataStoreSettings", "now_iso"]
+
+DEFAULT_INITIAL_CASH: float = 1_000_000.0
 
 
 def now_iso() -> str:

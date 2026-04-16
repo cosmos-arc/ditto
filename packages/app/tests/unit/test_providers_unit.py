@@ -28,9 +28,11 @@ from ditto_app.providers import (
     AppBuilderFactory,
     AppCommandProvider,
     AppProcessProvider,
-    AppQueryProvider,
     get_app_providers,
 )
+from ditto_app.providers_market import AppMarketQueryProvider
+from ditto_app.providers_portfolio import AppPortfolioQueryProvider
+from ditto_app.providers_strategy import AppStrategyQueryProvider
 from ditto_app.query.derived import DerivedQueryFacade
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
@@ -154,23 +156,62 @@ def _notification_provider() -> Provider:
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_four_providers(self) -> None:
-        """get_app_providers() 应返回 4 个 Provider 实例."""
+    def test_get_app_providers_returns_six_providers(self) -> None:
+        """get_app_providers() 应返回 6 个 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 4
+        assert len(providers) == 6
         names = [type(p).__name__ for p in providers]
         assert "AppCommandProvider" in names
-        assert "AppQueryProvider" in names
+        assert "AppMarketQueryProvider" in names
+        assert "AppStrategyQueryProvider" in names
+        assert "AppPortfolioQueryProvider" in names
         assert "AppProcessProvider" in names
         assert "AppBuilderFactory" in names
 
-    def test_app_query_provider_methods(self) -> None:
-        """AppQueryProvider 应包含 3 个 provide 方法."""
-        provider = AppQueryProvider()
+    def test_app_market_query_provider_methods(self) -> None:
+        """AppMarketQueryProvider 应包含市场数据查询的 provide 方法."""
+        provider = AppMarketQueryProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
+            "forward_return_service",
             "derived_query_facade",
+            "market_query_facade",
+            "source_query_facade",
             "research_dataset_facade",
+            "metadata_query_facade",
+            "capital_query_facade",
+            "fundamental_query_facade",
+            "macro_query_facade",
+            "fx_query_facade",
+            "commodity_query_facade",
+            "universe_query_facade",
+            "ingestion_status_query_facade",
+        }
+        assert expected.issubset(method_names)
+
+    def test_app_strategy_query_provider_methods(self) -> None:
+        """AppStrategyQueryProvider 应包含策略/回测查询的 provide 方法."""
+        provider = AppStrategyQueryProvider()
+        method_names = {name for name in dir(provider) if not name.startswith("_")}
+        expected = {
+            "backtest_trade_query_facade",
+            "backtest_artifact_reader",
+            "backtest_query_facade",
+            "run_read_model",
+            "strategy_query_facade",
+            "lineage_query_facade",
+            "comparison_query_facade",
+        }
+        assert expected.issubset(method_names)
+
+    def test_app_portfolio_query_provider_methods(self) -> None:
+        """AppPortfolioQueryProvider 应包含组合/交易查询的 provide 方法."""
+        provider = AppPortfolioQueryProvider()
+        method_names = {name for name in dir(provider) if not name.startswith("_")}
+        expected = {
+            "trade_query_facade",
+            "portfolio_actual_query_facade",
+            "signal_query_facade",
         }
         assert expected.issubset(method_names)
 
@@ -245,7 +286,7 @@ class TestAppProviderIntegration:
         container.close()
 
     def test_query_services_resolved(self, app_container) -> None:
-        """AppQueryProvider 的服务应可从容器解析."""
+        """AppMarketQueryProvider 的服务应可从容器解析."""
         assert isinstance(app_container.get(DerivedQueryFacade), DerivedQueryFacade)
 
     def test_process_services_resolved(self, app_container) -> None:

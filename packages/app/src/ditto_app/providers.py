@@ -1,9 +1,11 @@
 """
 App 层 DI Provider — 应用编排服务注册。
 
-四个 Provider 按职责分离，对应 R8 互斥规则：
+六个 Provider 按职责分离，对应 R8 互斥规则：
 - AppCommandProvider: Command Handler 注册（command 模块）
-- AppQueryProvider: 只读查询服务（query 模块）
+- AppMarketQueryProvider: 市场数据查询服务（query 模块）
+- AppStrategyQueryProvider: 策略/回测查询服务（query 模块）
+- AppPortfolioQueryProvider: 组合/交易查询服务（query 模块）
 - AppProcessProvider: 编排/物化/质量服务（process 模块）
 - AppBuilderFactory: 策略运行时装配服务（builders 模块）
 """
@@ -21,7 +23,6 @@ from dishka import Provider, Scope, provide
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
 from ditto_data.services import (
@@ -31,22 +32,13 @@ from ditto_data.services import (
     DerivedShadowSlotService,
     PublicationSafetyRecordService,
     QualityRecordService,
-    ResearchCatalogService,
 )
 from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
-from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.research_artifact_service import ResearchArtifactService
-from ditto_data.services.source_service import SourceService
-from ditto_data.services.strategy.backtest_artifact_reader import (
-    BacktestArtifactReader,
-)
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -112,38 +104,19 @@ from ditto_app.process.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
 from ditto_app.process.quality import QualityPatrolService
-
-# ---------------------------------------------------------------------------
-# App Query 层
-# ---------------------------------------------------------------------------
-from ditto_app.query.backtest import BacktestQueryFacade
-from ditto_app.query.backtest_trade import BacktestTradeQueryFacade
-from ditto_app.query.capital import CapitalQueryFacade
-from ditto_app.query.commodity import CommodityQueryFacade
-from ditto_app.query.comparison import ComparisonQueryFacade
-from ditto_app.query.derived import DerivedQueryFacade
-from ditto_app.query.forward_return_service import ForwardReturnService
-from ditto_app.query.fundamental import FundamentalQueryFacade
-from ditto_app.query.fx import FXQueryFacade
-from ditto_app.query.ingestion_status import IngestionStatusQueryFacade
-from ditto_app.query.lineage import LineageQueryFacade
-from ditto_app.query.macro import MacroQueryFacade
+from ditto_app.providers_market import AppMarketQueryProvider
+from ditto_app.providers_portfolio import AppPortfolioQueryProvider
+from ditto_app.providers_strategy import AppStrategyQueryProvider
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-from ditto_app.query.research import ResearchDatasetFacade
-from ditto_app.query.run import RunReadModel
-from ditto_app.query.signal import SignalQueryFacade
-from ditto_app.query.source import SourceQueryFacade
-from ditto_app.query.strategy import StrategyQueryFacade
-from ditto_app.query.trade import TradeQueryFacade
-from ditto_app.query.universe import UniverseQueryFacade
 
 __all__ = [
     "AppBuilderFactory",
     "AppCommandProvider",
+    "AppMarketQueryProvider",
+    "AppPortfolioQueryProvider",
     "AppProcessProvider",
-    "AppQueryProvider",
+    "AppStrategyQueryProvider",
     "get_app_providers",
 ]
 
@@ -296,234 +269,6 @@ class AppCommandProvider(Provider):
     ) -> DeleteCustomUniverseHandler:
         """删除自定义 Universe Command Handler."""
         return DeleteCustomUniverseHandler(metadata_service=metadata_service)
-
-
-# ---------------------------------------------------------------------------
-# AppQueryProvider — 只读查询服务
-# ---------------------------------------------------------------------------
-
-
-class AppQueryProvider(Provider):
-    """App Query 层 DI Provider — 只读查询服务注册。"""
-
-    scope = Scope.APP
-
-    @provide
-    def forward_return_service(
-        self,
-        market_service: MarketService,
-    ) -> ForwardReturnService:
-        """前向收益率计算服务."""
-        return ForwardReturnService(market_service=market_service)
-
-    @provide
-    def derived_query_facade(
-        self,
-        derived_query_service: DerivedQueryService,
-    ) -> DerivedQueryFacade:
-        """衍生数据查询用例 facade."""
-        return DerivedQueryFacade(
-            service=derived_query_service,
-        )
-
-    @provide
-    def market_query_facade(
-        self,
-        market_service: MarketService,
-    ) -> MarketQueryFacade:
-        """行情数据查询 facade — 隐藏内部查询类型."""
-        return MarketQueryFacade(market_service=market_service)
-
-    @provide
-    def source_query_facade(
-        self,
-        source_service: SourceService,
-        metadata_service: MetadataService,
-    ) -> SourceQueryFacade:
-        """数据源查询 facade — 隐藏 Dataset 枚举和服务接线."""
-        return SourceQueryFacade(
-            source_service=source_service,
-            metadata_service=metadata_service,
-        )
-
-    @provide
-    def research_dataset_facade(
-        self,
-        metadata_service: MetadataService,
-        research_catalog_service: ResearchCatalogService,
-        derived_catalog_service: DerivedCatalogService,
-        research_artifact_service: ResearchArtifactService,
-        settings: DataStoreSettings,
-    ) -> ResearchDatasetFacade:
-        """研究数据集快照构建 facade."""
-        return ResearchDatasetFacade(
-            metadata_service=metadata_service,
-            research_catalog_service=research_catalog_service,
-            artifact_reader=DerivedArtifactReader(
-                catalog_service=derived_catalog_service,
-                artifact_root=Path(settings.data_root),
-            ),
-            research_artifact_service=research_artifact_service,
-        )
-
-    @provide
-    def metadata_query_facade(
-        self,
-        metadata_service: MetadataService,
-    ) -> MetadataQueryFacade:
-        """元数据查询 facade — 隐藏 SecurityQuery 和内部类型."""
-        return MetadataQueryFacade(metadata_service=metadata_service)
-
-    @provide
-    def capital_query_facade(
-        self,
-        capital_service: CapitalService,
-    ) -> CapitalQueryFacade:
-        """资金查询 facade — 隐藏 CQRS 端口类型."""
-        return CapitalQueryFacade(capital_service=capital_service)
-
-    @provide
-    def fundamental_query_facade(
-        self,
-        fundamental_service: FundamentalService,
-    ) -> FundamentalQueryFacade:
-        """基本面查询 facade — 隐藏 CQRS 端口类型."""
-        return FundamentalQueryFacade(fundamental_service=fundamental_service)
-
-    @provide
-    def macro_query_facade(
-        self,
-        macro_service: MacroService,
-    ) -> MacroQueryFacade:
-        """宏观查询 facade — 隐藏 MacroQuery 和枚举类型."""
-        return MacroQueryFacade(macro_service=macro_service)
-
-    @provide
-    def fx_query_facade(
-        self,
-        market_service: MarketService,
-    ) -> FXQueryFacade:
-        """外汇查询 facade — 隐藏 FX 代码映射和资产类别."""
-        return FXQueryFacade(market_service=market_service)
-
-    @provide
-    def commodity_query_facade(
-        self,
-        market_service: MarketService,
-    ) -> CommodityQueryFacade:
-        """商品查询 facade — 隐藏 Commodity/VIX 映射和资产类别."""
-        return CommodityQueryFacade(market_service=market_service)
-
-    @provide
-    def backtest_trade_query_facade(
-        self,
-        artifact_service: StrategyArtifactService,
-    ) -> BacktestTradeQueryFacade:
-        """回测成交查询 facade."""
-        return BacktestTradeQueryFacade(artifact_service=artifact_service)
-
-    @provide
-    def run_read_model(
-        self,
-        run_service: StrategyRunLifecycleService,
-    ) -> RunReadModel:
-        """回测运行读模型."""
-        return RunReadModel(run_service=run_service)
-
-    @provide
-    def strategy_query_facade(
-        self,
-        catalog_service: StrategyCatalogService,
-    ) -> StrategyQueryFacade:
-        """策略只读查询 facade — 封装 StrategyCatalogService."""
-        return StrategyQueryFacade(catalog_service=catalog_service)
-
-    @provide
-    def backtest_artifact_reader(
-        self,
-    ) -> BacktestArtifactReader:
-        """回测产物文件读取服务 — 封装 JSON/Parquet 文件 I/O."""
-        return BacktestArtifactReader()
-
-    @provide
-    def backtest_query_facade(
-        self,
-        trade_facade: BacktestTradeQueryFacade,
-        run_model: RunReadModel,
-        audit_service: ExecutionAuditService,
-        artifact_service: StrategyArtifactService,
-        artifact_reader: BacktestArtifactReader,
-    ) -> BacktestQueryFacade:
-        """回测统一查询门面."""
-        return BacktestQueryFacade(
-            trade_facade=trade_facade,
-            run_model=run_model,
-            audit_service=audit_service,
-            artifact_service=artifact_service,
-            artifact_reader=artifact_reader,
-        )
-
-    @provide
-    def trade_query_facade(
-        self,
-        trade_service: TradeService,
-    ) -> TradeQueryFacade:
-        """交易意图查询 facade — 封装 TradeService."""
-        return TradeQueryFacade(trade_service=trade_service)
-
-    @provide
-    def portfolio_actual_query_facade(
-        self,
-        trade_service: TradeService,
-    ) -> PortfolioActualQueryFacade:
-        """实际组合查询 facade — 封装 TradeService 的持仓/成交/P&L 查询."""
-        return PortfolioActualQueryFacade(trade_service=trade_service)
-
-    @provide
-    def lineage_query_facade(
-        self,
-        run_service: StrategyRunLifecycleService,
-    ) -> LineageQueryFacade:
-        """运行血统查询 facade — 提供 lineage chain 查询."""
-        return LineageQueryFacade(run_service=run_service)
-
-    @provide
-    def signal_query_facade(
-        self,
-        trade_service: TradeService,
-    ) -> SignalQueryFacade:
-        """信号查询 facade — 封装 TradeService 的意图查询."""
-        return SignalQueryFacade(trade_service=trade_service)
-
-    @provide
-    def comparison_query_facade(
-        self,
-        backtest_facade: BacktestQueryFacade,
-        actual_facade: PortfolioActualQueryFacade,
-        market_facade: MarketQueryFacade,
-    ) -> ComparisonQueryFacade:
-        """回测 vs 实际对比查询 facade."""
-        return ComparisonQueryFacade(
-            backtest_facade=backtest_facade,
-            actual_facade=actual_facade,
-            market_facade=market_facade,
-        )
-
-    @provide
-    def universe_query_facade(
-        self,
-        metadata_service: MetadataService,
-    ) -> UniverseQueryFacade:
-        """Universe 只读查询 facade — 封装 MetadataService universe 方法."""
-        return UniverseQueryFacade(metadata_service=metadata_service)
-
-    @provide
-    def ingestion_status_query_facade(
-        self,
-        ingestion_log_service: IngestionLogService,
-    ) -> IngestionStatusQueryFacade:
-        """摄取状态查询 facade — 封装 IngestionLogService."""
-        return IngestionStatusQueryFacade(ingestion_log_service=ingestion_log_service)
 
 
 # ---------------------------------------------------------------------------
@@ -752,7 +497,9 @@ def get_app_providers() -> list[Provider]:
     """返回 App 层所有 Provider。"""
     return [
         AppCommandProvider(),
-        AppQueryProvider(),
+        AppMarketQueryProvider(),
+        AppStrategyQueryProvider(),
+        AppPortfolioQueryProvider(),
         AppProcessProvider(),
         AppBuilderFactory(),
     ]

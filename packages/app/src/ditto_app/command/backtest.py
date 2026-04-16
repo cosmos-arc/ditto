@@ -19,6 +19,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 )
 from ditto_kernel.enums import RunStatus
 
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.contracts import CostConfig
 from ditto_app.process.execution.factor_bridge import FactorBridge
 from ditto_app.process.execution.strategy_types import RunLifecycleService
@@ -40,7 +41,7 @@ class BacktestRunCommand:
     strategy_id: str
     start_date: str
     end_date: str
-    initial_cash: float = 1_000_000.0
+    initial_cash: float = DEFAULT_INITIAL_CASH
     parameter_overrides: tuple[str, ...] = ()
     cost_config: CostConfig | None = None
 

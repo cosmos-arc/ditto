@@ -534,6 +534,7 @@ class TestRebalanceFreq:
             options=EngineOptions(clock=Mock(), fee_model=Mock()),
         )
         loop._trading_days = tuple(trading_days)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         return loop
 
     def test_daily_always_true(self) -> None:

@@ -32,7 +32,6 @@ from ditto_app.command.universe import (
     UpdateCustomUniverseCommand,
     UpdateCustomUniverseHandler,
 )
-from ditto_app.contracts import CostConfig
 
 __all__ = [
     "BackfillRangeCommand",
@@ -41,7 +40,6 @@ __all__ = [
     "BacktestRunResult",
     "CheckDataQualityHandler",
     "CommandHandler",
-    "CostConfig",
     "CreateCustomUniverseCommand",
     "CreateCustomUniverseHandler",
     "DeleteCustomUniverseCommand",

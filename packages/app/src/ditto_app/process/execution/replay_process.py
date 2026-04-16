@@ -19,6 +19,7 @@ from ditto_engine.backtest.manifest import InputRef, RuleRef, RunManifest, RunMo
 from ditto_engine.backtest.replay import ReplayValidationResult, ReplayValidator
 from ditto_engine.backtest.statistics import BacktestReport
 
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.process.execution.backtest_process import BacktestServiceConfig
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
 from ditto_app.query._artifact_utils import find_artifact
@@ -170,7 +171,7 @@ class ReplayProcess:
             parent_run_id=parent_run_id,
             start_date=period.get("start", ""),
             end_date=period.get("end", ""),
-            initial_cash=float(report.get("initial_cash", 1_000_000.0)),
+            initial_cash=float(report.get("initial_cash", DEFAULT_INITIAL_CASH)),
             parameter_overrides=manifest.parameter_overrides,
             rebalance_freq=_extract_rebalance_freq(report),
             engine_version=manifest.engine_version,

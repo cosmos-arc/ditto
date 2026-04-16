@@ -12,7 +12,9 @@ from ditto_data.models.trade import (
     ManualExecutionFillRecord,
     TradeIntentRecord,
 )
-from ditto_data.services.trade_service import TradeService
+from ditto_data.services.trade_service import (
+    TradeService,
+)
 from ditto_data.storage.sqlite_client import SQLiteClient
 
 # ---------------------------------------------------------------------------
@@ -728,3 +730,180 @@ class TestListPositions:
         self._seed_positions(svc)
 
         assert svc.list_positions("STRAT-NONE") == []
+
+
+# ===========================================================================
+# Test: _build_where_clause whitelist validation
+# ===========================================================================
+
+
+class TestBuildWhereClauseWhitelist:
+    """_build_where_clause 白名单校验测试 — 防止 SQL 注入."""
+
+    def test_valid_order_by_signal_date_asc(self) -> None:
+        """合法 order_by 'signal_date ASC' 应正常构建 SQL."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        sql, params = _build_where_clause(
+            "SELECT * FROM trade_intents WHERE strategy_id = ?",
+            "STRAT-A",
+            {"signal_date": "2026-04-10"},
+            "signal_date ASC",
+        )
+        assert "ORDER BY signal_date ASC" in sql
+        assert params == ["STRAT-A", "2026-04-10"]
+
+    def test_valid_order_by_signal_date_desc(self) -> None:
+        """合法 order_by 'signal_date DESC' 应正常构建 SQL."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        sql, _params = _build_where_clause(
+            "SELECT * FROM trade_intents WHERE strategy_id = ?",
+            "STRAT-A",
+            {},
+            "signal_date DESC",
+        )
+        assert "ORDER BY signal_date DESC" in sql
+
+    def test_valid_order_by_snapshot_date_asc(self) -> None:
+        """合法 order_by 'snapshot_date ASC' 应正常构建 SQL."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        sql, _params = _build_where_clause(
+            "SELECT * FROM actual_positions WHERE strategy_id = ?",
+            "STRAT-A",
+            {"snapshot_date": "2026-04-10"},
+            "snapshot_date ASC",
+        )
+        assert "ORDER BY snapshot_date ASC" in sql
+
+    def test_valid_order_by_snapshot_date_desc(self) -> None:
+        """合法 order_by 'snapshot_date DESC' 应正常构建 SQL."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        sql, _params = _build_where_clause(
+            "SELECT * FROM actual_positions WHERE strategy_id = ?",
+            "STRAT-A",
+            {},
+            "snapshot_date DESC",
+        )
+        assert "ORDER BY snapshot_date DESC" in sql
+
+    def test_valid_filter_columns(self) -> None:
+        """合法过滤列 'signal_date', 'status', 'snapshot_date' 应正常构建 SQL."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        # signal_date
+        sql, _params = _build_where_clause(
+            "SELECT * FROM trade_intents WHERE strategy_id = ?",
+            "STRAT-A",
+            {"signal_date": "2026-04-10"},
+            "signal_date ASC",
+        )
+        assert "signal_date = ?" in sql
+
+        # status
+        sql, _params = _build_where_clause(
+            "SELECT * FROM trade_intents WHERE strategy_id = ?",
+            "STRAT-A",
+            {"status": "pending"},
+            "signal_date ASC",
+        )
+        assert "status = ?" in sql
+
+        # snapshot_date
+        sql, _params = _build_where_clause(
+            "SELECT * FROM actual_positions WHERE strategy_id = ?",
+            "STRAT-A",
+            {"snapshot_date": "2026-04-10"},
+            "snapshot_date ASC",
+        )
+        assert "snapshot_date = ?" in sql
+
+    def test_none_filter_values_skipped(self) -> None:
+        """None 值过滤条件应被跳过，不触发白名单校验."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        sql, params = _build_where_clause(
+            "SELECT * FROM trade_intents WHERE strategy_id = ?",
+            "STRAT-A",
+            {"signal_date": None, "status": None},
+            "signal_date ASC",
+        )
+        assert "ORDER BY signal_date ASC" in sql
+        assert params == ["STRAT-A"]
+
+    def test_invalid_order_by_rejects(self) -> None:
+        """非法 order_by（含 SQL 注入）应抛出 ValueError."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        with pytest.raises(ValueError, match="order_by"):
+            _build_where_clause(
+                "SELECT * FROM trade_intents WHERE strategy_id = ?",
+                "STRAT-A",
+                {},
+                "1; DROP TABLE trade_intents; --",
+            )
+
+    def test_invalid_order_by_rejects_subtle_injection(self) -> None:
+        """含子查询的 order_by 应被拒绝."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        with pytest.raises(ValueError, match="order_by"):
+            _build_where_clause(
+                "SELECT * FROM trade_intents WHERE strategy_id = ?",
+                "STRAT-A",
+                {},
+                "signal_date ASC; SELECT * FROM trade_intents",
+            )
+
+    def test_invalid_filter_column_rejects(self) -> None:
+        """非法过滤列名应抛出 ValueError."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        with pytest.raises(ValueError, match="不在白名单内"):
+            _build_where_clause(
+                "SELECT * FROM trade_intents WHERE strategy_id = ?",
+                "STRAT-A",
+                {"1; DROP TABLE trade_intents; --": "value"},
+                "signal_date ASC",
+            )
+
+    def test_invalid_filter_column_rejects_subtle(self) -> None:
+        """非法列名（含 SQL 片段）应被拒绝."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        with pytest.raises(ValueError, match="不在白名单内"):
+            _build_where_clause(
+                "SELECT * FROM trade_intents WHERE strategy_id = ?",
+                "STRAT-A",
+                {"status = 'filled' OR 1=1": "value"},
+                "signal_date ASC",
+            )
+
+    def test_empty_order_by_rejects(self) -> None:
+        """空字符串 order_by 应被拒绝."""
+        from ditto_data.services.trade_service import _build_where_clause
+
+        with pytest.raises(ValueError, match="order_by"):
+            _build_where_clause(
+                "SELECT * FROM trade_intents WHERE strategy_id = ?",
+                "STRAT-A",
+                {},
+                "",
+            )
+
+    def test_allowed_order_by_constants_cover_current_usage(self) -> None:
+        """_ALLOWED_ORDER_BY 应覆盖当前所有调用点的 order_by 值."""
+        from ditto_data.services.trade_service import _ALLOWED_ORDER_BY
+
+        assert "signal_date ASC" in _ALLOWED_ORDER_BY
+        assert "snapshot_date ASC" in _ALLOWED_ORDER_BY
+
+    def test_allowed_columns_constants_cover_current_usage(self) -> None:
+        """_ALLOWED_COLUMNS 应覆盖当前所有调用点的过滤列名."""
+        from ditto_data.services.trade_service import _ALLOWED_COLUMNS
+
+        assert "signal_date" in _ALLOWED_COLUMNS
+        assert "status" in _ALLOWED_COLUMNS
+        assert "snapshot_date" in _ALLOWED_COLUMNS

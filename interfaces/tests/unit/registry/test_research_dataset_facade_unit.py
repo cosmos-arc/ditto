@@ -58,7 +58,7 @@ def _sources_provider() -> Provider:
 
 
 def _make_container(*, monkeypatch, tmp_path: Path):
-    from ditto_app.providers import AppQueryProvider
+    from ditto_app.providers_market import AppMarketQueryProvider
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
     monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
@@ -73,7 +73,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         FundamentalProvider(),
         MacroProvider(),
         TradeProvider(),
-        AppQueryProvider(),
+        AppMarketQueryProvider(),
     )
 
 

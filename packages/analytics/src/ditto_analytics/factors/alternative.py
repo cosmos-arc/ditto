@@ -1,4 +1,4 @@
-"""Alternative factor definitions — margin trading, pledge, and sentiment."""
+"""Alternative factor definitions — margin trading and pledge."""
 
 from __future__ import annotations
 

@@ -50,6 +50,7 @@ from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
 
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_app.process.execution.factor_bridge import (
     CompiledExpressions,
@@ -98,7 +99,7 @@ class BacktestServiceConfig:
     parent_run_id: str = ""
     start_date: str = ""
     end_date: str = ""
-    initial_cash: float = 1_000_000.0
+    initial_cash: float = DEFAULT_INITIAL_CASH
     benchmark_id: InstrumentId | None = None
     parameter_overrides: tuple[str, ...] = ()
     rebalance_freq: str = "daily"

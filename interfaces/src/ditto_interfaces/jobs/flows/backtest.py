@@ -8,6 +8,7 @@ PENDING→RUNNING→COMPLETED/FAILED，支持自动重试。
 from __future__ import annotations
 
 from ditto_app.command.backtest import CostConfig
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.process.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
@@ -40,7 +41,7 @@ def run_backtest_flow(
     strategy_id: str,
     start_date: str,
     end_date: str,
-    initial_cash: float = 1_000_000.0,
+    initial_cash: float = DEFAULT_INITIAL_CASH,
     parameter_overrides: tuple[str, ...] = (),
     cost_config: dict[str, object] | None = None,
 ) -> dict[str, object]:

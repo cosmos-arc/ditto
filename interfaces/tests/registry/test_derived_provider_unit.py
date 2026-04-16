@@ -134,7 +134,7 @@ class TestAppProviderDerivedWiring:
         monkeypatch,
         tmp_path,
     ) -> None:
-        """AppQueryProvider 应提供 DerivedQueryFacade。"""
+        """AppMarketQueryProvider 应提供 DerivedQueryFacade。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = _make_full_container()

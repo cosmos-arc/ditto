@@ -165,6 +165,27 @@ LIMIT 1
 
 _LIST_POSITIONS_BASE = "SELECT * FROM actual_positions WHERE strategy_id = ?"
 
+# ---------------------------------------------------------------------------
+# Whitelist: 防止 SQL 注入
+# ---------------------------------------------------------------------------
+
+_ALLOWED_ORDER_BY: frozenset[str] = frozenset(
+    {
+        "signal_date ASC",
+        "signal_date DESC",
+        "snapshot_date ASC",
+        "snapshot_date DESC",
+    }
+)
+
+_ALLOWED_COLUMNS: frozenset[str] = frozenset(
+    {
+        "signal_date",
+        "status",
+        "snapshot_date",
+    }
+)
+
 
 def _build_where_clause(
     base_sql: str,
@@ -184,7 +205,21 @@ def _build_where_clause(
     Returns:
         (完整 SQL, 参数列表) 元组.
 
+    Raises:
+        ValueError: order_by 不在白名单内或 filters 包含非法列名.
+
     """
+    if order_by not in _ALLOWED_ORDER_BY:
+        raise ValueError(
+            f"order_by 不在白名单内: {order_by!r}, 允许值: {sorted(_ALLOWED_ORDER_BY)}"
+        )
+
+    for column in filters:
+        if column not in _ALLOWED_COLUMNS:
+            raise ValueError(
+                f"过滤列名不在白名单内: {column!r}, 允许值: {sorted(_ALLOWED_COLUMNS)}"
+            )
+
     clauses: list[str] = []
     params: list[Any] = [strategy_id]
 

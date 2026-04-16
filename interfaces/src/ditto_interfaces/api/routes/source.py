@@ -21,6 +21,81 @@ from ditto_interfaces.models.common import APIResponse
 router = APIRouter(prefix="/source", tags=["source"])
 
 
+# ---------------------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------------------
+
+
+def _infer_asset_class(facade: SourceQueryFacade, dataset: str) -> str:
+    """
+    从数据集推断资产类型.
+
+    Args:
+        facade: Source 查询 facade.
+        dataset: 数据集名称.
+
+    Returns:
+        资产类别字符串（如 "stock"）.
+
+    Raises:
+        BadRequestError: 不支持的数据集或不支持按标的查询.
+
+    """
+    try:
+        asset_class = facade.get_dataset_asset_class(dataset)
+    except ValueError as exc:
+        raise BadRequestError(str(exc)) from exc
+
+    if asset_class is None:
+        raise BadRequestError(f"数据集 {dataset} 不支持按标的查询")
+
+    return asset_class
+
+
+def _resolve_source_ticker(
+    facade: SourceQueryFacade,
+    params: SourceDataQueryParams,
+    asset_class: str,
+    source: str,
+) -> str:
+    """
+    解析标识符为 source ticker.
+
+    Args:
+        facade: Source 查询 facade.
+        params: 查询参数（含 ticker / standard_ticker / instrument_id）.
+        asset_class: 资产类别.
+        source: 数据源名称.
+
+    Returns:
+        解析后的 source ticker 字符串.
+
+    Raises:
+        BadRequestError: 标识符歧义或未找到.
+        APIError: 未预期的解析错误.
+
+    """
+    try:
+        return facade.resolve_source_ticker(
+            ticker=params.ticker,
+            standard_ticker=params.standard_ticker,
+            instrument_id=params.instrument_id,
+            asset_class=asset_class,
+            source=source,
+        )
+    except Exception as exc:
+        exc_name = type(exc).__name__
+        if exc_name in ("AmbiguousTickerError", "IdentifierNotFoundError"):
+            raise BadRequestError(str(exc)) from exc
+        logger.exception("Unexpected error resolving ticker")
+        raise APIError("Failed to resolve ticker") from exc
+
+
+# ---------------------------------------------------------------------------
+# Request / Response models
+# ---------------------------------------------------------------------------
+
+
 class SourceDataQueryParams(BaseModel):
     """
     Source 数据查询参数.
@@ -100,31 +175,10 @@ async def get_source_data(
         raise BadRequestError("必须提供 ticker、standard_ticker 或 instrument_id 之一")
 
     # 从数据集推断资产类型
-    try:
-        asset_class = facade.get_dataset_asset_class(dataset)
-    except ValueError as exc:
-        raise BadRequestError(str(exc)) from exc
-
-    if asset_class is None:
-        raise BadRequestError(f"数据集 {dataset} 不支持按标的查询")
+    asset_class = _infer_asset_class(facade, dataset)
 
     # 解析标识符为 source_ticker
-    try:
-        resolved_source_ticker = facade.resolve_source_ticker(
-            ticker=params.ticker,
-            standard_ticker=params.standard_ticker,
-            instrument_id=params.instrument_id,
-            asset_class=asset_class,
-            source=source,
-        )
-    except Exception as exc:
-        # 业务异常返回友好消息，未预期异常返回通用错误
-        exc_name = type(exc).__name__
-        if exc_name in ("AmbiguousTickerError", "IdentifierNotFoundError"):
-            raise BadRequestError(str(exc)) from exc
-        # 未预期异常，记录日志并返回通用错误
-        logger.exception("Unexpected error resolving ticker")
-        raise APIError("Failed to resolve ticker") from exc
+    resolved_source_ticker = _resolve_source_ticker(facade, params, asset_class, source)
 
     # 获取数据源
     try:

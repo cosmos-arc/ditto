@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 import orjson
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_kernel.enums import ImpactModel
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -173,7 +174,11 @@ class CreateBacktestRunRequest(BaseModel):
     strategy_id: str = Field(..., min_length=1, description="策略 ID")
     start_date: str = Field(..., min_length=1, description="起始日期 (YYYY-MM-DD)")
     end_date: str = Field(..., min_length=1, description="结束日期 (YYYY-MM-DD)")
-    initial_cash: float = Field(default=1_000_000.0, gt=0, description="初始资金")
+    initial_cash: float = Field(
+        default=DEFAULT_INITIAL_CASH,
+        gt=0,
+        description="初始资金",
+    )
     parameter_overrides: list[str] = Field(default_factory=list, description="参数覆盖")
     cost_config: CostConfigRequest | None = Field(
         default=None,

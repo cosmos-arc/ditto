@@ -104,7 +104,7 @@ App 层采用 CQRS 模式分离读写职责：
 ```python
 from ditto_app.providers import get_app_providers
 
-providers = get_app_providers()  # [AppQueryProvider, AppProcessProvider, AppBuilderFactory]
+providers = get_app_providers()  # [AppMarketQueryProvider, AppStrategyQueryProvider, AppPortfolioQueryProvider, ...]
 ```
 
 ### 查询服务

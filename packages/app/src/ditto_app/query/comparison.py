@@ -15,6 +15,7 @@ from typing import Any
 from ditto_kernel.math import pearson_correlation
 from loguru import logger
 
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.execution_dto import ManualExecutionFill
 from ditto_app.query._artifact_utils import compute_total_return
 from ditto_app.query.backtest import BacktestQueryFacade
@@ -136,7 +137,7 @@ def compute_comparison_from_raw(
     backtest_nav_series: list[tuple[str, float]],
     actual_fills: list[ManualExecutionFill],
     actual_navs: list[tuple[str, float]],
-    initial_cash: float = 1_000_000.0,
+    initial_cash: float = DEFAULT_INITIAL_CASH,
 ) -> ComparisonMetrics:
     """
     从原始指标计算回测 vs 实际对比.
@@ -223,7 +224,7 @@ def _safe_float(data: dict[str, object], key: str, default: float = 0.0) -> floa
 
 def _extract_initial_cash(report: dict[str, Any]) -> float:
     """从报告 dict 提取 initial_cash."""
-    return _safe_float(report, "initial_cash", 1_000_000.0)
+    return _safe_float(report, "initial_cash", DEFAULT_INITIAL_CASH)
 
 
 def _extract_nav_series(

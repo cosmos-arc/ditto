@@ -9,7 +9,6 @@ from types import MappingProxyType
 from typing import NamedTuple
 from unittest.mock import MagicMock, Mock
 
-import pytest
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.accounting.order_book import (
@@ -701,6 +700,7 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # 2026-03-02 is Monday; prev trading day 2026-03-01 is Sunday (ISO week 9 vs 9)
         # 但 2026-03-01 isocalendar() week 9, 2026-03-02 isocalendar() week 10
         assert loop._is_rebalance_day("2026-03-02") is True
@@ -709,6 +709,7 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # 2026-03-03 is Tuesday; prev trading day 2026-03-02 is Monday (same ISO week)
         assert loop._is_rebalance_day("2026-03-03") is False
 
@@ -718,20 +719,22 @@ class TestIsRebalanceDay:
         loop = _make_engine_loop(config=config)
         # 2026-03-01 is Sunday (ISO week 9), 2026-03-04 is Wednesday (ISO week 10)
         loop._trading_days = ("2026-03-01", "2026-03-04")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         assert loop._is_rebalance_day("2026-03-04") is True
 
-    def test_weekly_invalid_date_raises(self) -> None:
-        """date 不在 trading_days 中 → weekly 模式下 .index() 抛出 ValueError."""
+    def test_weekly_invalid_date_fallback(self) -> None:
+        """date 不在 trading_days 中 → weekly 模式下 fallback 为 daily (return True)."""
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
-        with pytest.raises(ValueError):
-            loop._is_rebalance_day("not-a-date")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
+        assert loop._is_rebalance_day("not-a-date") is True
 
     def test_monthly_first_day_of_month(self) -> None:
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # First trading day in list → idx=0 → True
         assert loop._is_rebalance_day("2026-03-01") is True
 
@@ -740,6 +743,7 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # "2026-03-02" same month as "2026-03-01" (idx 0) → False
         assert loop._is_rebalance_day("2026-03-02") is False
 
@@ -748,16 +752,17 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = ("2026-03-31", "2026-04-01")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # "2026-04-01" has month_prefix "2026-04", prev "2026-03" different → True
         assert loop._is_rebalance_day("2026-04-01") is True
 
-    def test_monthly_date_not_in_trading_days_raises(self) -> None:
-        """date 不在 trading_days 中 → .index() 抛出 ValueError."""
+    def test_monthly_date_not_in_trading_days_fallback(self) -> None:
+        """date 不在 trading_days 中 → fallback 为 daily (return True)."""
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
-        with pytest.raises(ValueError):
-            loop._is_rebalance_day("2026-06-01")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
+        assert loop._is_rebalance_day("2026-06-01") is True
 
     def test_unknown_freq_defaults_true(self) -> None:
         """未知 rebalance_freq → 默认返回 True."""

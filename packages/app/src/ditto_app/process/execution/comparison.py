@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from ditto_engine.backtest.statistics import BacktestReport
 
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
@@ -22,7 +23,7 @@ def compute_comparison(
     actual_snapshots: list[ActualPositionSnapshot],
     actual_fills: list[ManualExecutionFill],
     actual_navs: list[tuple[str, float]],
-    initial_cash: float = 1_000_000.0,
+    initial_cash: float = DEFAULT_INITIAL_CASH,
 ) -> ComparisonMetrics:
     """
     计算回测 vs 实际对比指标.

@@ -15,7 +15,6 @@ from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
 from ditto_kernel.enums import (
     AssetClass,
     Exchange,
-    ImpactModel,
     MacroCategory,
     MacroFrequency,
     OrderSide,
@@ -30,7 +29,6 @@ from ditto_kernel.exceptions import (
     NoIdentifierProvidedError,
 )
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.math import pearson_correlation
 from ditto_kernel.quality import (
     DQIssue,
     DQLevel,
@@ -78,7 +76,6 @@ __all__ = [
     "ExecutionPolicy",
     "GrainId",
     "IdentifierError",
-    "ImpactModel",
     "InstrumentId",
     "InstrumentIngestParams",
     "L3CheckResult",
@@ -98,5 +95,4 @@ __all__ = [
     "SimpleEventBus",
     "SimulatedClock",
     "TimeSpec",
-    "pearson_correlation",
 ]

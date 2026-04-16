@@ -289,6 +289,7 @@ class EngineLoop:
         self._signal_queue: deque[TargetPortfolioLike] = deque()
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
+        self._trading_day_index: dict[str, int] = {}
         self._input_instruments: set[InstrumentId] = set()
         self._bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]] = {}
 
@@ -371,6 +372,7 @@ class EngineLoop:
         # 过滤到配置区间：DataFeed 可能加载了 start_date 之前的额外数据（lookback）
         trading_days = [d for d in days if d >= self._config.start_date]
         self._trading_days = tuple(trading_days)
+        self._trading_day_index = {d: i for i, d in enumerate(self._trading_days)}
         start = trading_days[0] if trading_days else self._config.start_date
         end = trading_days[-1] if trading_days else self._config.end_date
 
@@ -585,23 +587,30 @@ class EngineLoop:
         daily: 每日
         weekly: 每自然周第一个交易日（基于 trading_days 判断 ISO week 跨越）
         monthly: 每月第一个交易日
+
+        date 不在 trading_days 中时，fallback 为 daily（return True），
+        避免抛出 ValueError。
         """
-        if self._config.rebalance_freq == "daily":
+        freq = self._config.rebalance_freq
+        if freq == "daily":
             return True
 
-        if self._config.rebalance_freq == "weekly":
-            idx = self._trading_days.index(date)
-            if idx == 0:
-                return True
+        idx = self._trading_day_index.get(date)
+        if idx is None:
+            return True
+
+        # 首个交易日始终为调仓日（weekly / monthly 共享逻辑）
+        if idx == 0:
+            return True
+
+        prev_date = self._trading_days[idx - 1]
+
+        if freq == "weekly":
             curr = datetime.strptime(date, "%Y-%m-%d")
-            prev = datetime.strptime(self._trading_days[idx - 1], "%Y-%m-%d")
+            prev = datetime.strptime(prev_date, "%Y-%m-%d")
             return curr.isocalendar()[1] != prev.isocalendar()[1]
 
-        if self._config.rebalance_freq == "monthly":
-            month_prefix = date[:7]
-            idx = self._trading_days.index(date)
-            if idx == 0:
-                return True
-            return not self._trading_days[idx - 1].startswith(month_prefix)
+        if freq == "monthly":
+            return not prev_date.startswith(date[:7])
 
         return True

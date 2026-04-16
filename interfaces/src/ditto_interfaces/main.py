@@ -26,6 +26,7 @@ from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import Metrics, logger
+from ditto_kernel import __version__ as ditto_version
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -168,7 +169,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Ditto Quant API",
     description="量化投资系统API",
-    version="0.1.0",
+    version=ditto_version,
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -277,7 +278,7 @@ async def log_requests(
 async def root() -> dict[str, str]:
     """根路径."""
     logger.info("Root endpoint accessed")
-    return {"message": "Ditto Quant API", "version": "0.1.0"}
+    return {"message": "Ditto Quant API", "version": ditto_version}
 
 
 @app.get("/healthz")
@@ -301,13 +302,13 @@ async def get_status(request: Request) -> dict[str, Any]:
     logger.info("Status endpoint accessed")
     return {
         "status": "running",
-        "version": "0.1.0",
+        "version": ditto_version,
         "environment": request.app.state.settings.system.environment.value,
         "features": {
             "data_collection": True,
             "data_validation": True,
-            "backtest": False,
-            "trading": False,
+            "backtest": True,
+            "trading": True,
         },
         "observability": {
             "level": request.app.state.settings.observability.log_level,
