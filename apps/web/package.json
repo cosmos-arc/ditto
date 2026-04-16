@@ -14,7 +14,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "visual:audit": "bun scripts/visual-audit.mjs"
+    "visual:audit": "bun scripts/visual-audit.mjs",
+    "generate-contracts": "bun scripts/contract-generator/generate.mjs"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.2.10",
@@ -50,6 +51,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.2",
+    "ajv": "^8.18.0",
     "globals": "^17.4.0",
     "jsdom": "^29.0.1",
     "msw": "^2.12.14",

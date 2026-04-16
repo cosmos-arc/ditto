@@ -17,7 +17,8 @@ disable-model-invocation: true
 - **流程规范**: [workflow.md](../rules/workflow.md)
 - **架构规范**: [architecture.md](../rules/architecture.md)
 - **视觉验证**: [visual-verification.md](../rules/visual-verification.md)
-- **页面合同**: [page-contracts.ts](../../src/features/shell/page-contracts.ts)
+- **页面合同**: [page-contracts.generated.ts](../../src/features/shell/page-contracts.generated.ts)（自动生成，源文件在 `docs/contracts/pages/`）
+- **合同管理**: `/ditto-page-contract` — 创建/验证/提升页面合同
 
 ---
 
@@ -62,6 +63,7 @@ disable-model-invocation: true
 | `--from-prototype <path>` | 指定 prototype HTML 路径（覆盖 page contract 默认值） |
 | `--viewport <WxH>` | 验证视口，默认 1536x900 |
 | `--max-diff-pixel-ratio <0-1>` | L3 像素阈值，默认 0.02（2%） |
+| `--force-metric` | 强制启动 Playwright 重放度量提取，忽略已有 contract baseline |
 
 ---
 
@@ -71,7 +73,7 @@ disable-model-invocation: true
 
 | Phase | Agent | Model | 职责 | 可用 Skills |
 |-------|-------|-------|------|------------|
-| 10 METRIC | Metric Extractor | sonnet | 从 prototype HTML 自动提取布局度量，写入 page contract | 无（机械操作） |
+| 10 METRIC | Metric Reader | sonnet | 读取 contract.metrics.baseline（已有则跳过提取，--force-metric 强制重放） | 无 |
 | 11 ARCHITECT | Component Architect | opus | 设计组件树、状态管理、shadcn 映射、复用策略 | brainstorming |
 | 12 IMPLEMENT | TDD Developer | sonnet × N | 红→绿→重构，按组件可并行拆分子 agent | test-driven-development, subagent-driven-development |
 | 13 POLISH | Interaction Polisher | opus | CSS transitions 基线 + Motion 按需 + hover/focus/active 状态审计 | impeccable:animate, impeccable:polish, impeccable:colorize |
@@ -99,7 +101,7 @@ disable-model-invocation: true
 │
 ▼
 Phase 10: METRIC [sonnet]
-│  提取 prototype 度量 → 推导布局策略 → 写入 page contract
+│  读取 contract.metrics.baseline（已有则跳过提取）→ 推导布局策略
 │
 ▼
 Phase 11: ARCHITECT [opus]
@@ -147,13 +149,26 @@ Phase 10 ← Phase 11（度量数据是架构设计的输入）
 
 ---
 
-### Phase 10: METRIC — 自动度量提取 [sonnet]
+### Phase 10: METRIC — 度量读取与提取 [sonnet]
 
-> 用 Playwright 统一替代 Chrome DevTools，确保度量提取与验证在同一浏览器引擎。
+> 优先从 contract JSON 读取已有 baseline，避免重复 Playwright 提取。
 
-**输入**：page contract 中的 `prototypeRef` 路径 + `--viewport` 参数
+**输入**：`docs/contracts/pages/<page>.contract.json` + `--viewport` 参数
 
-**执行步骤**：
+**前置检查**：
+
+```
+1. 检查 docs/contracts/pages/<page>.contract.json 是否存在？
+   ├─ 否 → STOP，提示用户先运行 /ditto-page-contract --create <page>
+   │        或使用 --force-metric 强制执行度量提取
+   └─ 是 → 继续
+
+2. 检查 metrics.baseline 是否非空？
+   ├─ 非空 → 读取 baseline，输出度量摘要，跳到 Phase 11
+   └─ 空 或 --force-metric → 启动 Playwright 提取（回退流程）
+```
+
+**回退流程**（baseline 为空或 `--force-metric`）：
 
 1. **启动 Playwright**
    ```js
@@ -164,7 +179,7 @@ Phase 10 ← Phase 11（度量数据是架构设计的输入）
    - 与 Phase 14 VERIFY 使用完全相同的浏览器配置
 
 2. **加载 prototype + 注入标准化 CSS**
-   - 启动 prototype HTTP 服务（复用 `visual-audit.config.mjs` 中的 `PROTOTYPE_NORMALIZE_CSS`）
+   - 启动 prototype HTTP 服务（复用 `visual-audit.config.generated.mjs` 中的 `PROTOTYPE_NORMALIZE_CSS`）
    - 隐藏 `.proto-nav`，强制 `#default-view` 100vh
    - 等待 `networkidle` + 字体加载完成（`document.fonts.ready`）
 
@@ -184,9 +199,10 @@ Phase 10 ← Phase 11（度量数据是架构设计的输入）
    原型无百分比      → React 禁止引入百分比
    ```
 
-5. **写入 page contract 度量字段**
-   - 将提取的度量数据追加到页面对应的度量文档中
-   - 每个命名区域记录：实际像素高度、布局策略、grid-template 值、padding/gap
+5. **更新 contract JSON 度量字段**
+   - 将提取的度量写入 `docs/contracts/pages/<page>.contract.json` 的 `metrics.baseline`
+   - `version` 递增，`updatedAt` 设为今天
+   - 运行 `bun run generate-contracts` 重新生成 `.generated.ts` + `.generated.mjs`
 
 6. **关闭 browser，输出度量摘要**
 
@@ -201,13 +217,14 @@ Phase 10 ← Phase 11（度量数据是架构设计的输入）
 
 > 将度量数据转化为组件实现方案。这是最关键的决策环节。
 
-**输入**：Phase 10 度量数据 + page contract（slots/states/pattern）+ 现有组件库
+**输入**：contract JSON（slots/subSlots/states/metrics.baseline/interactions/thresholds）+ 现有组件库
 
 **执行步骤**：
 
 1. **分析原型结构**
    - 将 prototype 的 DOM 结构映射到 React 组件树
    - 每个 prototype section → 一个 React 组件/子组件
+   - 使用 contract 的 `subSlots[]` 识别页面级内容区块（如 main 下的 decision-banner、priority-queue）
    - 标记哪些 section 共享状态（如 Tab 切换、联动筛选）
 
 2. **设计组件树**
@@ -251,7 +268,7 @@ Phase 10 ← Phase 11（度量数据是架构设计的输入）
 
 > 严格 RED → GREEN → REFACTOR，可按组件并行拆分。
 
-**输入**：Phase 11 架构文档 + Phase 10 度量数据 + page contract states 列表
+**输入**：Phase 11 架构文档 + Phase 10 度量数据 + contract JSON states 列表
 
 **执行策略**：
 
@@ -276,16 +293,18 @@ Phase 10 ← Phase 11（度量数据是架构设计的输入）
    - content-driven 区域不设高度约束
 
 4. **状态覆盖实现**
-   - 按 page contract 的 `requiredStates` 逐个实现：
+   - 按 contract JSON 的 `states.universal` + `states.pageSpecific` 逐个实现：
      - `loading` — skeleton / spinner
      - `empty` — 空状态 UI
      - `error` — 错误边界 + fallback
      - `stale` — 数据过期指示
-     - + domain-specific states
+     - + domain-specific states（来自 `states.pageSpecific`）
+   - 实现 contract 中定义的 `interactions[]`（如 sidebar-toggle 交互）
    - 每个状态至少一个测试用例
 
 5. **Slot 一致性验证**
-   - 每个组件渲染的 `data-slot` 属性必须与 page contract 的 `requiredSlots` 完全匹配
+   - 每个组件渲染的 `data-slot` 属性必须与 contract 的 `slots[]`（required=true）完全匹配
+   - 同时验证 `subSlots[].reactSelector` 在 React 中存在对应组件
    - 多余或缺失的 slot 视为 P0 阻断项
 
 **并行规则**：
@@ -363,6 +382,11 @@ const browser = await chromium.launch({ channel: 'chromium' });
 
 **执行步骤**：
 
+0. **0 容忍项预检**
+   - 从 contract JSON 读取 `visualThresholds`：
+     - `consoleErrors`、`pageErrors`、`missingSelectors`、`targetMismatch` 必须为 0
+   - 任何非 0 值 → STOP，报告具体违规项
+
 1. **L1 Token 合规**
    ```bash
    bun run test --run src/features/shell/design-system-compliance.test.ts
@@ -373,12 +397,13 @@ const browser = await chromium.launch({ channel: 'chromium' });
 2. **L2 Layout 度量对比**
    - 启动 prototype HTTP 服务 + React dev server
    - 用 Playwright 对两侧执行 `page.evaluate()` 提取 `getBoundingClientRect()`
-   - 按 `data-slot` / CSS class 配对比较：
+   - **selector 来源**：从 contract JSON 的 `slots[].prototypeSelector/reactSelector` + `subSlots[]` 读取配对
+   - **验证阈值**：从 contract JSON 的 `slots[].threshold` 和 `subSlots[].threshold` 读取
+   - `PROTOTYPE_NORMALIZE_CSS` 来源：`visual-audit.config.generated.mjs`
    ```
-   通过标准：
-   - 宽度偏差 < 3%
-   - 高度偏差 < 3%（content-driven 区域放宽至 < 5%）
-   - x/y 偏移 < 4px
+   通过标准（默认值，contract 可覆盖）：
+   - shell slot：宽度偏差 < 3%，高度偏差 < 5%，x/y 偏移 < 4px
+   - content subSlot：宽度偏差 < 5%，高度偏差 < 5%
    ```
    - 输出逐区域偏差报告表格
    - 失败处理：
@@ -425,6 +450,14 @@ const browser = await chromium.launch({ channel: 'chromium' });
 ### Phase 15: SHIP — 收尾 [sonnet]
 
 > 代码简化 + 文档同步 + 状态推进。
+
+**前置条件**：`docs/contracts/pages/<page>.contract.json` 的 `status === "contract-ready"`
+
+```
+检查 contract.status：
+├─ "contract-ready" → 继续执行
+└─ "draft" → STOP，提示用户先运行 /ditto-page-contract --promote <page>
+```
 
 **执行步骤**：
 
@@ -548,10 +581,27 @@ ditto-design-cycle Phase 8 FINAL（标记 done）
     │  git tag: review/<task>/done
     │
     ▼
-ditto-app-dev Phase 10 METRIC
+ditto-page-contract --create <page>       ← 新增
+    │  产出: docs/contracts/pages/<page>.contract.json (status: draft)
+    │  自动生成: .generated.ts + .generated.mjs
     │
-    │  读取 page contract: prototypeRef, requiredSlots, requiredStates
-    │  读取 edition manifest: done 状态的页面列表
+    ▼
+ditto-page-contract --validate <page>     ← 新增
+    │  10 项 BLOCK 检查
+    │
+    ▼
+ditto-page-contract --promote <page>      ← 新增
+    │  status: draft → contract-ready
+    │  重新生成 .generated.ts + .generated.mjs
+    │
+    ▼
+ditto-app-dev --implement <page>
+    │
+    │  Phase 10: 读取 contract.metrics.baseline（已有则跳过提取）
+    │  Phase 11: 读取 contract slots/subSlots/states/metrics/interactions
+    │  Phase 12: 从 contract 读取 states + 验证 subSlots
+    │  Phase 14: 从 contract 读取 selector + threshold → 精确验证
+    │  Phase 15: 检查 contract.status === "contract-ready"
     │
     ▼
 Phase 15 SHIP

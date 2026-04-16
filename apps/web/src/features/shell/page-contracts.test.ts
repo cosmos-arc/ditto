@@ -1,20 +1,30 @@
 import { describe, it, expect } from "vitest";
 import {
-	PAGE_CONTRACTS,
-	type PageContract,
-	SHELL_SLOT_MAP,
-	PAGE_PATTERNS,
-	SHELL_FAMILIES,
-	PROTOTYPE_SOURCES,
+	PAGE_CONTRACTS as LEGACY_CONTRACTS,
+	SHELL_SLOT_MAP as LEGACY_SLOT_MAP,
+	PAGE_PATTERNS as LEGACY_PATTERNS,
+	SHELL_FAMILIES as LEGACY_FAMILIES,
+	PROTOTYPE_SOURCES as LEGACY_SOURCES,
 } from "./page-contracts";
+import {
+	PAGE_CONTRACTS as GENERATED_CONTRACTS,
+	SHELL_SLOT_MAP as GENERATED_SLOT_MAP,
+	PAGE_PATTERNS as GENERATED_PATTERNS,
+	SHELL_FAMILIES as GENERATED_FAMILIES,
+	PROTOTYPE_SOURCES as GENERATED_SOURCES,
+} from "./page-contracts.generated";
+
+/* ================================================================== */
+/*  Legacy contracts (21 routes, hand-authored)                       */
+/* ================================================================== */
 
 /* ------------------------------------------------------------------ */
 /*  1. Type-level contract structure                                   */
 /* ------------------------------------------------------------------ */
 
-describe("PageContract type structure", () => {
+describe("Legacy PageContract type structure", () => {
 	it("every contract has required fields", () => {
-		for (const contract of PAGE_CONTRACTS) {
+		for (const contract of LEGACY_CONTRACTS) {
 			expect(contract).toHaveProperty("route");
 			expect(contract).toHaveProperty("pagePattern");
 			expect(contract).toHaveProperty("shellFamily");
@@ -25,34 +35,34 @@ describe("PageContract type structure", () => {
 	});
 
 	it("every route is a non-empty string starting with /", () => {
-		for (const contract of PAGE_CONTRACTS) {
+		for (const contract of LEGACY_CONTRACTS) {
 			expect(contract.route).toMatch(/^\//);
 		}
 	});
 
 	it("every pagePattern is a known pattern", () => {
-		const patterns = new Set(PAGE_PATTERNS);
-		for (const contract of PAGE_CONTRACTS) {
+		const patterns = new Set(LEGACY_PATTERNS);
+		for (const contract of LEGACY_CONTRACTS) {
 			expect(patterns.has(contract.pagePattern)).toBe(true);
 		}
 	});
 
 	it("every shellFamily is a known family", () => {
-		const families = new Set(SHELL_FAMILIES);
-		for (const contract of PAGE_CONTRACTS) {
+		const families = new Set(LEGACY_FAMILIES);
+		for (const contract of LEGACY_CONTRACTS) {
 			expect(families.has(contract.shellFamily)).toBe(true);
 		}
 	});
 
 	it("every prototypeSource is a known source type", () => {
-		const sources = new Set(PROTOTYPE_SOURCES);
-		for (const contract of PAGE_CONTRACTS) {
+		const sources = new Set(LEGACY_SOURCES);
+		for (const contract of LEGACY_CONTRACTS) {
 			expect(sources.has(contract.prototypeSource)).toBe(true);
 		}
 	});
 
 	it("prototype-backed pages have prototypeRef", () => {
-		for (const contract of PAGE_CONTRACTS) {
+		for (const contract of LEGACY_CONTRACTS) {
 			if (contract.prototypeSource === "prototype-backed") {
 				expect(contract).toHaveProperty("prototypeRef");
 				expect(contract.prototypeRef).toMatch(/\.html$/);
@@ -65,7 +75,7 @@ describe("PageContract type structure", () => {
 /*  2. Route coverage — all implemented pages are covered              */
 /* ------------------------------------------------------------------ */
 
-describe("Route coverage", () => {
+describe("Legacy route coverage", () => {
 	const implementedRoutes = [
 		"/",
 		"/markets",
@@ -91,20 +101,20 @@ describe("Route coverage", () => {
 	] as const;
 
 	it("covers all implemented page routes", () => {
-		const coveredRoutes = new Set(PAGE_CONTRACTS.map((c) => c.route));
+		const coveredRoutes = new Set(LEGACY_CONTRACTS.map((c) => c.route));
 		for (const route of implementedRoutes) {
 			expect(coveredRoutes.has(route), `Missing contract for ${route}`).toBe(true);
 		}
 	});
 
 	it("has no duplicate routes", () => {
-		const routes = PAGE_CONTRACTS.map((c) => c.route);
+		const routes = LEGACY_CONTRACTS.map((c) => c.route);
 		const uniqueRoutes = new Set(routes);
 		expect(uniqueRoutes.size).toBe(routes.length);
 	});
 
 	it("contract count matches implemented routes", () => {
-		expect(PAGE_CONTRACTS).toHaveLength(implementedRoutes.length);
+		expect(LEGACY_CONTRACTS).toHaveLength(implementedRoutes.length);
 	});
 });
 
@@ -112,17 +122,17 @@ describe("Route coverage", () => {
 /*  3. Slot consistency — requiredSlots must be valid for shellFamily  */
 /* ------------------------------------------------------------------ */
 
-describe("Slot consistency", () => {
+describe("Legacy slot consistency", () => {
 	it("SHELL_SLOT_MAP defines valid slots for each family", () => {
-		for (const [_family, slots] of Object.entries(SHELL_SLOT_MAP)) {
+		for (const [_family, slots] of Object.entries(LEGACY_SLOT_MAP)) {
 			expect(slots.length).toBeGreaterThan(0);
 			expect(slots).toContain("main");
 		}
 	});
 
 	it("every contract's requiredSlots are valid for its shellFamily", () => {
-		for (const contract of PAGE_CONTRACTS) {
-			const validSlots = SHELL_SLOT_MAP[contract.shellFamily];
+		for (const contract of LEGACY_CONTRACTS) {
+			const validSlots = LEGACY_SLOT_MAP[contract.shellFamily];
 			expect(
 				validSlots,
 				`Unknown shellFamily: ${contract.shellFamily}`,
@@ -138,7 +148,7 @@ describe("Slot consistency", () => {
 	});
 
 	it("every contract includes 'main' in requiredSlots", () => {
-		for (const contract of PAGE_CONTRACTS) {
+		for (const contract of LEGACY_CONTRACTS) {
 			expect(
 				contract.requiredSlots.includes("main"),
 				`${contract.route} missing 'main' slot`,
@@ -151,11 +161,11 @@ describe("Slot consistency", () => {
 /*  4. State coverage — universal states present                       */
 /* ------------------------------------------------------------------ */
 
-describe("State coverage", () => {
+describe("Legacy state coverage", () => {
 	const UNIVERSAL_STATES = ["loading", "empty", "error", "stale"] as const;
 
 	it("every contract covers universal states", () => {
-		for (const contract of PAGE_CONTRACTS) {
+		for (const contract of LEGACY_CONTRACTS) {
 			for (const state of UNIVERSAL_STATES) {
 				expect(
 					contract.requiredStates.includes(state),
@@ -170,9 +180,9 @@ describe("State coverage", () => {
 /*  5. Pattern-to-shell mapping correctness (per spec)                 */
 /* ------------------------------------------------------------------ */
 
-describe("Pattern-to-shell mapping correctness", () => {
+describe("Legacy pattern-to-shell mapping correctness", () => {
 	it("Command Center pages use command-center shell", () => {
-		const ccPages = PAGE_CONTRACTS.filter(
+		const ccPages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "global-command-center",
 		);
 		for (const page of ccPages) {
@@ -181,7 +191,7 @@ describe("Pattern-to-shell mapping correctness", () => {
 	});
 
 	it("Analytical Overview pages use analytical or radar shell", () => {
-		const pages = PAGE_CONTRACTS.filter(
+		const pages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "analytical-overview",
 		);
 		for (const page of pages) {
@@ -190,7 +200,7 @@ describe("Pattern-to-shell mapping correctness", () => {
 	});
 
 	it("Object Hub pages use object-hub shell", () => {
-		const pages = PAGE_CONTRACTS.filter(
+		const pages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "object-hub",
 		);
 		for (const page of pages) {
@@ -199,7 +209,7 @@ describe("Pattern-to-shell mapping correctness", () => {
 	});
 
 	it("Studio/Builder pages use studio shell", () => {
-		const pages = PAGE_CONTRACTS.filter(
+		const pages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "studio-builder",
 		);
 		for (const page of pages) {
@@ -208,7 +218,7 @@ describe("Pattern-to-shell mapping correctness", () => {
 	});
 
 	it("Queue/Ops Console pages use ops-console shell", () => {
-		const pages = PAGE_CONTRACTS.filter(
+		const pages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "queue-ops-console",
 		);
 		for (const page of pages) {
@@ -217,7 +227,7 @@ describe("Pattern-to-shell mapping correctness", () => {
 	});
 
 	it("Ledger/Execution Console pages use ops-console shell", () => {
-		const pages = PAGE_CONTRACTS.filter(
+		const pages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "ledger-execution-console",
 		);
 		for (const page of pages) {
@@ -226,7 +236,7 @@ describe("Pattern-to-shell mapping correctness", () => {
 	});
 
 	it("Catalog/Screener pages use catalog shell", () => {
-		const pages = PAGE_CONTRACTS.filter(
+		const pages = LEGACY_CONTRACTS.filter(
 			(c) => c.pagePattern === "catalog-screener",
 		);
 		for (const page of pages) {
@@ -239,29 +249,29 @@ describe("Pattern-to-shell mapping correctness", () => {
 /*  6. Spec compliance — known pattern misalignments                   */
 /* ------------------------------------------------------------------ */
 
-describe("Spec compliance — pattern alignment per 11_ditto_page_pattern_library", () => {
+describe("Legacy spec compliance", () => {
 	it("/trading/signals is Queue/Ops Console (not Catalog)", () => {
-		const contract = PAGE_CONTRACTS.find((c) => c.route === "/trading/signals");
+		const contract = LEGACY_CONTRACTS.find((c) => c.route === "/trading/signals");
 		expect(contract?.pagePattern).toBe("queue-ops-console");
 	});
 
 	it("/trading/orders is Ledger/Execution Console (not Catalog)", () => {
-		const contract = PAGE_CONTRACTS.find((c) => c.route === "/trading/orders");
+		const contract = LEGACY_CONTRACTS.find((c) => c.route === "/trading/orders");
 		expect(contract?.pagePattern).toBe("ledger-execution-console");
 	});
 
 	it("/ai/agents is Ops Console", () => {
-		const contract = PAGE_CONTRACTS.find((c) => c.route === "/ai/agents");
+		const contract = LEGACY_CONTRACTS.find((c) => c.route === "/ai/agents");
 		expect(contract?.pagePattern).toBe("queue-ops-console");
 	});
 
 	it("/ai is Global Command Center", () => {
-		const contract = PAGE_CONTRACTS.find((c) => c.route === "/ai");
+		const contract = LEGACY_CONTRACTS.find((c) => c.route === "/ai");
 		expect(contract?.pagePattern).toBe("global-command-center");
 	});
 
 	it("/ai follows the page-ai-overview prototype slot contract", () => {
-		const contract = PAGE_CONTRACTS.find((c) => c.route === "/ai");
+		const contract = LEGACY_CONTRACTS.find((c) => c.route === "/ai");
 		expect(contract?.prototypeRef).toBe(
 			"docs/designs/specs/prototypes/page-ai-overview.html",
 		);
@@ -273,7 +283,7 @@ describe("Spec compliance — pattern alignment per 11_ditto_page_pattern_librar
 /*  7. Prototype source classification                                 */
 /* ------------------------------------------------------------------ */
 
-describe("Prototype source classification", () => {
+describe("Legacy prototype source classification", () => {
 	const prototypeBackedRoutes = [
 		"/",
 		"/markets",
@@ -302,7 +312,7 @@ describe("Prototype source classification", () => {
 
 	it("prototype-backed pages are correctly classified", () => {
 		for (const route of prototypeBackedRoutes) {
-			const contract = PAGE_CONTRACTS.find((c) => c.route === route);
+			const contract = LEGACY_CONTRACTS.find((c) => c.route === route);
 			expect(
 				contract?.prototypeSource,
 				`${route} should be prototype-backed`,
@@ -312,7 +322,7 @@ describe("Prototype source classification", () => {
 
 	it("spec-only pages are correctly classified", () => {
 		for (const route of specOnlyRoutes) {
-			const contract = PAGE_CONTRACTS.find((c) => c.route === route);
+			const contract = LEGACY_CONTRACTS.find((c) => c.route === route);
 			expect(
 				contract?.prototypeSource,
 				`${route} should be spec-only`,
@@ -320,16 +330,17 @@ describe("Prototype source classification", () => {
 		}
 	});
 });
+
 /* ------------------------------------------------------------------ */
 /*  8. Sidebar collapsibility                                          */
 /* ------------------------------------------------------------------ */
 
-describe("Sidebar collapsibility", () => {
+describe("Legacy sidebar collapsibility", () => {
 	const SIDEBAR_COLLAPSIBLE_ROUTES = ["/", "/ai", "/markets/intelligence"] as const;
 
 	it("Home, AI Overview, and Intelligence have sidebarCollapsible: true", () => {
 		for (const route of SIDEBAR_COLLAPSIBLE_ROUTES) {
-			const contract = PAGE_CONTRACTS.find((c) => c.route === route);
+			const contract = LEGACY_CONTRACTS.find((c) => c.route === route);
 			expect(
 				contract?.sidebarCollapsible,
 				`${route} should have sidebarCollapsible: true`,
@@ -338,7 +349,7 @@ describe("Sidebar collapsibility", () => {
 	});
 
 	it("only designated routes have sidebarCollapsible: true", () => {
-		const collapsibleRoutes = PAGE_CONTRACTS.filter(
+		const collapsibleRoutes = LEGACY_CONTRACTS.filter(
 			(c) => c.sidebarCollapsible === true,
 		);
 		expect(collapsibleRoutes).toHaveLength(SIDEBAR_COLLAPSIBLE_ROUTES.length);
@@ -346,6 +357,75 @@ describe("Sidebar collapsibility", () => {
 			expect(
 				(SIDEBAR_COLLAPSIBLE_ROUTES as readonly string[]).includes(contract.route),
 			).toBe(true);
+		}
+	});
+});
+
+/* ================================================================== */
+/*  Generated contracts (contract-ready pages from JSON)               */
+/* ================================================================== */
+
+describe("Generated contract structure", () => {
+	it("exports PAGE_PATTERNS as a non-empty readonly tuple", () => {
+		expect(GENERATED_PATTERNS.length).toBeGreaterThan(0);
+	});
+
+	it("exports SHELL_FAMILIES as a non-empty readonly tuple", () => {
+		expect(GENERATED_FAMILIES.length).toBeGreaterThan(0);
+	});
+
+	it("exports PROTOTYPE_SOURCES as a non-empty readonly tuple", () => {
+		expect(GENERATED_SOURCES.length).toBeGreaterThan(0);
+	});
+
+	it("SHELL_SLOT_MAP has at least one family with slots", () => {
+		for (const [_family, slots] of Object.entries(GENERATED_SLOT_MAP)) {
+			expect(slots.length).toBeGreaterThan(0);
+			expect(slots).toContain("main");
+		}
+	});
+
+	it("every generated contract has required fields", () => {
+		for (const contract of GENERATED_CONTRACTS) {
+			expect(contract).toHaveProperty("route");
+			expect(contract).toHaveProperty("pagePattern");
+			expect(contract).toHaveProperty("shellFamily");
+			expect(contract).toHaveProperty("prototypeSource");
+			expect(contract).toHaveProperty("requiredSlots");
+			expect(contract).toHaveProperty("requiredStates");
+		}
+	});
+
+	it("every generated contract covers universal states", () => {
+		const universal = ["loading", "empty", "error", "stale"];
+		for (const contract of GENERATED_CONTRACTS) {
+			for (const state of universal) {
+				expect(
+					contract.requiredStates.includes(state),
+					`Generated ${contract.route} missing state: ${state}`,
+				).toBe(true);
+			}
+		}
+	});
+
+	it("every generated contract has valid shellFamily", () => {
+		const families = new Set(GENERATED_FAMILIES);
+		for (const contract of GENERATED_CONTRACTS) {
+			expect(families.has(contract.shellFamily)).toBe(true);
+		}
+	});
+
+	it("generated contracts match legacy contracts for migrated pages", () => {
+		// For each generated contract, verify it matches the legacy version
+		for (const generated of GENERATED_CONTRACTS) {
+			const legacy = LEGACY_CONTRACTS.find((c) => c.route === generated.route);
+			if (!legacy) continue; // New page not in legacy yet
+
+			expect(generated.pagePattern).toBe(legacy.pagePattern);
+			expect(generated.shellFamily).toBe(legacy.shellFamily);
+			expect(generated.requiredSlots).toEqual(legacy.requiredSlots);
+			expect(generated.prototypeRef).toBe(legacy.prototypeRef);
+			expect(generated.sidebarCollapsible).toBe(legacy.sidebarCollapsible);
 		}
 	});
 });
