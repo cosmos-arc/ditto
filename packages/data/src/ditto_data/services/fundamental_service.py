@@ -80,11 +80,15 @@ class FundamentalService:
     # list_* - Multi record queries
 
     def list_corporate_actions(
-        self, instrument_id: int, start_date: date, end_date: date
+        self,
+        instrument_id: int,
+        start_date: date,
+        end_date: date,
+        as_of_date: date | None = None,
     ) -> pl.DataFrame:
-        """List corporate actions for instrument in date range."""
+        """List corporate actions for instrument in date range (with optional PIT)."""
         return self._read_ports.corporate_actions.get(
-            instrument_id, start_date, end_date
+            instrument_id, start_date, end_date, as_of_date
         )
 
     # save_* - Write methods

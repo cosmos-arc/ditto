@@ -19,6 +19,7 @@ from enum import StrEnum
 
 import orjson
 from ditto_kernel.identity import InstrumentId
+from loguru import logger
 
 from ditto_engine.backtest.config import EngineConfig
 from ditto_engine.execution.rules import (
@@ -255,6 +256,10 @@ class RuleRefCollector:
                     fee_schedule.as_of_date,
                 )
             except (TypeError, ValueError, AttributeError):
+                logger.debug(
+                    "RuleRefCollector.observe: 跳过格式不匹配的规则元组: {t}",
+                    t=rule_tuple,
+                )
                 continue
 
             # F3: first_observed — 仅在 key 不存在时写入

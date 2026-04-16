@@ -12,8 +12,9 @@ from ditto_engine.accounting.cash import CashBook
 from ditto_engine.accounting.order_book import OrderBook
 from ditto_engine.accounting.position import Position
 from ditto_engine.alpha.models import TargetPortfolio
+from ditto_engine.backtest.config import EngineConfig
 from ditto_engine.backtest.data_feed import Slice
-from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.backtest.engine import EngineLoop, EngineOptions
 from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_engine.risk.post_trade import (
     CompositePostTradeGuard,

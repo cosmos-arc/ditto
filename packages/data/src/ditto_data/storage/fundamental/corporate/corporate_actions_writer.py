@@ -37,10 +37,11 @@ class CorporateActionsWriter:
     @traced("data.corporate_actions_write")
     def write(self, df: pl.DataFrame) -> int:
         """
-        Write corporate actions data to database (non-PIT).
+        Write corporate actions data to database (with PIT support).
 
         Args:
-            df: DataFrame with corporate actions data (no PIT columns).
+            df: DataFrame with corporate actions data (must contain
+                knowledge_date, effective_from, effective_to columns).
 
         Returns:
             Number of records written.
@@ -55,16 +56,18 @@ class CorporateActionsWriter:
             records = df.to_dicts()
             self._client.executemany(
                 """INSERT INTO corporate_actions
-                (instrument_id, action_type, announcement_date,
-                 effective_date, description)
-                VALUES (?, ?, ?, ?, ?)
+                (instrument_id, action_type, action_date,
+                 knowledge_date, effective_from, effective_to, description)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT DO NOTHING""",
                 [
                     (
                         r["instrument_id"],
                         r["action_type"],
-                        r["announcement_date"],
-                        r["effective_date"],
+                        r["action_date"],
+                        r["knowledge_date"],
+                        r["effective_from"],
+                        r["effective_to"],
                         r["description"],
                     )
                     for r in records

@@ -135,9 +135,9 @@ ditto_interfaces/
 |--------|-----|------|------|
 | `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 |
 | `/capital` | capital | `api/routes/capital.py` | Capital 域查询 |
-| `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询 |
+| `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询（POST 复用 `shared_bars.py`） |
 | `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询 |
-| `/fx` | fx | `api/routes/fx.py` | 外汇数据查询 |
+| `/fx` | fx | `api/routes/fx.py` | 外汇数据查询（POST 复用 `shared_bars.py`） |
 | `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 |
 | `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询 |
 | `/market` | market | `api/routes/market.py` | 行情数据查询 |

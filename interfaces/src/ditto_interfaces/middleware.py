@@ -72,10 +72,7 @@ async def api_error_handler(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
-async def ditto_exception_handler(
-    request: Request,
-    exc: Exception,  # Changed from DittoException to Exception
-) -> JSONResponse:
+async def ditto_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """处理 Ditto 自定义异常."""
     # APIError 子类有独立的 status_code，走专用 handler
     if isinstance(exc, APIError):
@@ -105,10 +102,7 @@ async def ditto_exception_handler(
     )
 
 
-async def http_exception_handler(
-    request: Request,
-    exc: Exception,  # Changed from StarletteHTTPException to Exception
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """处理 HTTP 异常."""
     if not isinstance(exc, StarletteHTTPException):
         return await general_exception_handler(request, exc)
@@ -134,8 +128,7 @@ async def http_exception_handler(
 
 
 async def validation_exception_handler(
-    request: Request,
-    exc: Exception,  # Changed from RequestValidationError to Exception
+    request: Request, exc: Exception
 ) -> JSONResponse:
     """处理请求验证异常."""
     if not isinstance(exc, RequestValidationError):

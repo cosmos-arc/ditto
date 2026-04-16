@@ -157,7 +157,7 @@ class TestFundamentalServiceIntInstrumentId:
 
         assert isinstance(result, pl.DataFrame)
         mock_reader.get.assert_called_once_with(
-            1_000_001, date(2024, 1, 1), date(2024, 3, 31)
+            1_000_001, date(2024, 1, 1), date(2024, 3, 31), None
         )
 
     def test_get_balance_sheet_returns_none_when_empty(

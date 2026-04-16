@@ -28,7 +28,8 @@ from ditto_engine.alpha.templates.stock_selection_trend import (
     get_param_constraints,
     validate_config,
 )
-from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.backtest.config import EngineConfig
+from ditto_engine.backtest.engine import EngineLoop, EngineOptions
 from ditto_engine.portfolio.allocation import (
     AllocationStage,
     EqualWeightAllocator,

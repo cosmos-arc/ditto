@@ -267,7 +267,7 @@ class TestFundamentalServiceListMethods:
 
         assert result.equals(test_df)
         corporate_actions_reader.get.assert_called_once_with(
-            1_000_001, date(2024, 1, 1), date(2024, 1, 31)
+            1_000_001, date(2024, 1, 1), date(2024, 1, 31), None
         )
 
 

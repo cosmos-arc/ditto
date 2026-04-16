@@ -23,12 +23,14 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
     pool = SQLitePool(str(db_path))
     pool.get_connection().execute(
         """CREATE TABLE IF NOT EXISTS corporate_actions (
-        instrument_id TEXT NOT NULL,
+        instrument_id INTEGER NOT NULL,
         action_type TEXT NOT NULL,
-        announcement_date DATE NOT NULL,
-        effective_date DATE,
+        action_date DATE NOT NULL,
+        knowledge_date DATE NOT NULL,
+        effective_from DATE NOT NULL,
+        effective_to DATE,
         description TEXT,
-        PRIMARY KEY (instrument_id, action_type, announcement_date)
+        PRIMARY KEY (instrument_id, action_type, action_date, effective_from)
     )"""
     )
     return pool
@@ -54,10 +56,12 @@ class TestCorporateActionsWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [600000],
                 "action_type": ["DIVIDEND"],
-                "announcement_date": [date(2024, 5, 1)],
-                "effective_date": [date(2024, 6, 1)],
+                "action_date": [date(2024, 5, 1)],
+                "knowledge_date": [date(2024, 4, 25)],
+                "effective_from": [date(2024, 4, 25)],
+                "effective_to": [None],
                 "description": ["Cash dividend 0.5 per share"],
             }
         )
@@ -78,7 +82,7 @@ class TestCorporateActionsWriter:
         client = SQLiteClient(in_memory_db)
         rows = client.fetchall("SELECT * FROM corporate_actions")
         assert len(rows) == 1
-        assert rows[0]["instrument_id"] == "600000"
+        assert rows[0]["instrument_id"] == 600000
         assert rows[0]["action_type"] == "DIVIDEND"
 
     def test_write_returns_count(
@@ -91,18 +95,24 @@ class TestCorporateActionsWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000", "600001", "600002"],
+                "instrument_id": [600000, 600001, 600002],
                 "action_type": ["DIVIDEND", "SPLIT", "BUYBACK"],
-                "announcement_date": [
+                "action_date": [
                     date(2024, 5, 1),
                     date(2024, 6, 15),
                     date(2024, 7, 1),
                 ],
-                "effective_date": [
-                    date(2024, 6, 1),
-                    date(2024, 7, 1),
-                    date(2024, 8, 1),
+                "knowledge_date": [
+                    date(2024, 4, 25),
+                    date(2024, 6, 10),
+                    date(2024, 6, 25),
                 ],
+                "effective_from": [
+                    date(2024, 4, 25),
+                    date(2024, 6, 10),
+                    date(2024, 6, 25),
+                ],
+                "effective_to": [None, None, None],
                 "description": [
                     "Cash dividend",
                     "Stock split 2:1",
@@ -131,8 +141,10 @@ class TestCorporateActionsWriter:
             {
                 "instrument_id": [],
                 "action_type": [],
-                "announcement_date": [],
-                "effective_date": [],
+                "action_date": [],
+                "knowledge_date": [],
+                "effective_from": [],
+                "effective_to": [],
                 "description": [],
             }
         )
@@ -160,10 +172,12 @@ class TestCorporateActionsWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [600000],
                 "action_type": ["DIVIDEND"],
-                "announcement_date": [date(2024, 5, 1)],
-                "effective_date": [date(2024, 6, 1)],
+                "action_date": [date(2024, 5, 1)],
+                "knowledge_date": [date(2024, 4, 25)],
+                "effective_from": [date(2024, 4, 25)],
+                "effective_to": [None],
                 "description": ["Cash dividend 0.5 per share"],
             }
         )
@@ -182,21 +196,23 @@ class TestCorporateActionsWriter:
         with pytest.raises(RuntimeError, match="Database error"):
             mock_writer.write(test_df)
 
-    def test_write_with_nullable_effective_date(
+    def test_write_with_nullable_effective_to(
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
         mocker: Mock,
     ) -> None:
-        """Test that write correctly handles nullable effective_date."""
+        """Test that write correctly handles nullable effective_to (current version)."""
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [600000],
                 "action_type": ["DIVIDEND"],
-                "announcement_date": [date(2024, 5, 1)],
-                "effective_date": [None],
-                "description": ["Cash dividend (no effective date)"],
+                "action_date": [date(2024, 5, 1)],
+                "knowledge_date": [date(2024, 4, 25)],
+                "effective_from": [date(2024, 4, 25)],
+                "effective_to": [None],
+                "description": ["Cash dividend (current version)"],
             }
         )
 
@@ -208,11 +224,11 @@ class TestCorporateActionsWriter:
         # Assert
         assert count == 1
 
-        # Verify effective_date was written as NULL
+        # Verify effective_to was written as NULL
         client = SQLiteClient(in_memory_db)
         rows = client.fetchall("SELECT * FROM corporate_actions")
         assert len(rows) == 1
-        assert rows[0]["effective_date"] is None
+        assert rows[0]["effective_to"] is None
 
     def test_write_multiple_actions_same_instrument(
         self,
@@ -224,18 +240,24 @@ class TestCorporateActionsWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000", "600000", "600000"],
+                "instrument_id": [600000, 600000, 600000],
                 "action_type": ["DIVIDEND", "SPLIT", "BUYBACK"],
-                "announcement_date": [
+                "action_date": [
                     date(2024, 5, 1),
                     date(2024, 6, 15),
                     date(2024, 7, 1),
                 ],
-                "effective_date": [
-                    date(2024, 6, 1),
-                    date(2024, 7, 1),
-                    date(2024, 8, 1),
+                "knowledge_date": [
+                    date(2024, 4, 25),
+                    date(2024, 6, 10),
+                    date(2024, 6, 25),
                 ],
+                "effective_from": [
+                    date(2024, 4, 25),
+                    date(2024, 6, 10),
+                    date(2024, 6, 25),
+                ],
+                "effective_to": [None, None, None],
                 "description": [
                     "Cash dividend",
                     "Stock split 2:1",
@@ -256,8 +278,8 @@ class TestCorporateActionsWriter:
         client = SQLiteClient(in_memory_db)
         rows = client.fetchall(
             "SELECT * FROM corporate_actions WHERE instrument_id = ? "
-            "ORDER BY announcement_date",
-            ["600000"],
+            "ORDER BY action_date",
+            [600000],
         )
         assert len(rows) == 3
         assert rows[0]["action_type"] == "DIVIDEND"
@@ -274,10 +296,12 @@ class TestCorporateActionsWriter:
         # Arrange
         test_df = pl.DataFrame(
             {
-                "instrument_id": ["600000"],
+                "instrument_id": [600000],
                 "action_type": ["DIVIDEND"],
-                "announcement_date": [date(2024, 5, 1)],
-                "effective_date": [date(2024, 6, 1)],
+                "action_date": [date(2024, 5, 1)],
+                "knowledge_date": [date(2024, 4, 25)],
+                "effective_from": [date(2024, 4, 25)],
+                "effective_to": [None],
                 "description": ["Cash dividend 0.5 per share"],
             }
         )

@@ -171,7 +171,7 @@ async def get_source_data(
     start_time = time.monotonic()
 
     # 验证必须提供至少一个标识符
-    if not any([params.ticker, params.standard_ticker, params.instrument_id]):
+    if not (params.ticker or params.standard_ticker or params.instrument_id):
         raise BadRequestError("必须提供 ticker、standard_ticker 或 instrument_id 之一")
 
     # 从数据集推断资产类型
