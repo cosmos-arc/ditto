@@ -80,28 +80,52 @@ async function probePrototype(page) {
 
     walk(view);
 
-    // Extract named sections with their selectors
+    // Extract named sections: two-pass strategy
     const sections = [];
-    const sectionSelectors = [
-      ".shell-pulse", ".shell-main", ".shell-sidebar",
-      ".shell-rail", ".shell-header",
-      ".decision-banner", ".panel-grow", ".shell-secondary",
-      ".scope-strip", ".status-bar",
-      ".context-bar", ".right-rail",
-      ".shell-body", ".tab-band",
-      ".catalog-main", ".screener-main",
-      ".hub-meta", ".hub-main", ".hub-bottom",
-      ".studio-main", ".studio-sources", ".studio-inspector",
-      ".ops-main", ".ops-detail", ".ops-health",
-      ".signals-main", ".signal-detail",
-      ".orders-main", ".order-detail",
-      ".radar-main", ".cross-market-matrix",
-    ];
 
-    for (const sel of sectionSelectors) {
-      const el = document.querySelector(sel);
+    // Pass 1: data-contract-slot attributes (deterministic, preferred)
+    const slotElements = view.querySelectorAll("[data-contract-slot]");
+    for (const el of slotElements) {
+      const slotName = el.getAttribute("data-contract-slot");
+      sections.push({
+        name: slotName,
+        selector: `[data-contract-slot="${slotName}"]`,
+        found: true,
+        method: "data-contract-slot",
+      });
+    }
+
+    // Pass 2: Fallback — class-name probing (only for sections not found in Pass 1)
+    const foundNames = new Set(sections.map((s) => s.name));
+    const fallbackSelectors = [
+      { name: "pulse", selector: ".shell-pulse" },
+      { name: "main", selector: ".shell-main" },
+      { name: "sidebar", selector: ".shell-sidebar" },
+      { name: "rail", selector: ".shell-rail" },
+      { name: "header", selector: ".shell-header" },
+      { name: "decision-banner", selector: ".decision-banner" },
+      { name: "priority-queue", selector: ".panel-grow" },
+      { name: "secondary", selector: ".shell-secondary" },
+      { name: "status-bar", selector: ".status-bar" },
+      { name: "scope-strip", selector: ".scope-strip" },
+      { name: "context-bar", selector: ".context-bar" },
+      { name: "right-rail", selector: ".right-rail" },
+      { name: "tab-band", selector: ".tab-band" },
+      { name: "activity", selector: ".shell-activity" },
+      { name: "analysis", selector: ".shell-analysis" },
+      { name: "detail", selector: ".shell-detail" },
+      { name: "meta", selector: ".hub-meta" },
+      { name: "tabs", selector: ".hub-tabs" },
+      { name: "bottom", selector: ".hub-bottom" },
+      { name: "source", selector: ".studio-sources" },
+      { name: "inspector", selector: ".studio-inspector" },
+      { name: "toolbar", selector: ".catalog-toolbar, .screener-toolbar" },
+    ];
+    for (const { name, selector } of fallbackSelectors) {
+      if (foundNames.has(name)) continue;
+      const el = view.querySelector(selector);
       if (el) {
-        sections.push({ selector: sel, found: true });
+        sections.push({ name, selector, found: true, method: "class-fallback" });
       }
     }
 
@@ -117,19 +141,19 @@ async function captureMetrics(page, viewport) {
     const results = {};
 
     const targets = [
-      { name: "pulse", selector: ".shell-pulse" },
-      { name: "main", selector: ".shell-main" },
-      { name: "sidebar", selector: ".shell-sidebar" },
-      { name: "rail", selector: ".shell-rail" },
-      { name: "header", selector: ".shell-header" },
-      { name: "decision-banner", selector: ".decision-banner" },
-      { name: "priority-queue", selector: ".panel-grow" },
-      { name: "secondary", selector: ".shell-secondary" },
-      { name: "status-bar", selector: ".status-bar" },
-      { name: "scope-strip", selector: ".scope-strip" },
-      { name: "context-bar", selector: ".context-bar" },
-      { name: "right-rail", selector: ".right-rail" },
-      { name: "tab-band", selector: ".tab-band" },
+      { name: "pulse", selector: "[data-contract-slot='pulse'], .shell-pulse" },
+      { name: "main", selector: "[data-contract-slot='main'], .shell-main" },
+      { name: "sidebar", selector: "[data-contract-slot='sidebar'], .shell-sidebar" },
+      { name: "rail", selector: "[data-contract-slot='rail'], .shell-rail" },
+      { name: "header", selector: "[data-contract-slot='header'], .shell-header" },
+      { name: "decision-banner", selector: "[data-contract-slot='decision-banner'], .decision-banner" },
+      { name: "priority-queue", selector: "[data-contract-slot='priority-queue'], .panel-grow" },
+      { name: "secondary", selector: "[data-contract-slot='secondary'], .shell-secondary" },
+      { name: "status-bar", selector: "[data-contract-slot='status-bar'], .status-bar" },
+      { name: "scope-strip", selector: "[data-contract-slot='scope-strip'], .scope-strip" },
+      { name: "context-bar", selector: "[data-contract-slot='context-bar'], .context-bar" },
+      { name: "right-rail", selector: "[data-contract-slot='right-rail'], .right-rail" },
+      { name: "tab-band", selector: "[data-contract-slot='tab-band'], .tab-band" },
     ];
 
     for (const target of targets) {

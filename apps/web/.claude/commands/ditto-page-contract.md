@@ -47,7 +47,7 @@ blueprint-approved → --create → draft → --validate → --promote → contr
 
 ```
 Phase R: RESOLVE
-├─ 读取 edition-manifest.json → 确认 page.status === "reviewed"
+├─ 读取 edition-manifest.json → 确认 page.status === "reviewed" 或 "done"
 ├─ 如果不是 → STOP，报告错误
 └─ 定位 blueprint section、prototype HTML、state spec
 
@@ -151,7 +151,7 @@ console.log('All passed:', r.allPassed);
 
 ```
 ✓ --validate 全部通过
-✓ edition-manifest 中页面 status === "reviewed"
+✓ edition-manifest 中页面 status === "reviewed" 或 "done"
 ✓ prototype HTML 无 console errors（Playwright page.on('console')）
 ✓ metrics.baseline 已捕获
 ```

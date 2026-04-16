@@ -148,6 +148,15 @@ disable-model-invocation: true
 │   │   │    到本页具体组件，是原型全状态生成的直接输入
 │   │   └─ 矩阵格式：组件 × (default/loading/empty/failed/
 │   │       stale/selected/bulk/running/blocker...)
+│   ├─ Page Contract Mapping（页面合同映射）
+│   │   ├─ route: 页面路由路径（如 /, /markets, /markets/a-shares）
+│   │   ├─ shellFamily: Shell 族（7 枚举值，见 Phase 2）
+│   │   ├─ pagePattern: 页面模式（8 枚举值，见 Phase 2）
+│   │   └─ 模块→Slot 映射表
+│   │       ├─ 每个核心模块对应一个 slot/subSlot 名称
+│   │       ├─ 格式：模块名 → slot名
+│   │       │   shell 级区块标注 [slot]，页面级区块标注 [subSlot]
+│   │       └─ shell 级区块名取自 SHELL_SLOT_MAP，页面级用 kebab-case
 │   ├─ 主 CTA
 │   ├─ 与其他页面的关系
 │   └─ 线框图（ASCII art）
@@ -217,6 +226,27 @@ disable-model-invocation: true
 │      failed/stale/selected/bulk/running/blocker...）。    │
 │      每个单元格简要描述该组件在该状态下的表现。             │
 │                                                         │
+│   D. Page Contract Mapping：                             │
+│      为每个页面产出合同映射数据，这是 ditto-page-contract  │
+│      --create 的直接输入，使合同创建无需 AI 猜测。         │
+│      ├─ route: 从 IA 文档的路由定义提取                   │
+│      ├─ shellFamily: 从页面角色推导（见枚举）             │
+│      ├─ pagePattern: 从页面角色推导（见枚举）             │
+│      └─ 模块→Slot 映射表：                               │
+│          ├─ shell 级区块映射到 SHELL_SLOT_MAP 中的 slot 名│
+│          ├─ 页面级区块映射到 subSlot 名（kebab-case）     │
+│          └─ 每个核心模块必须出现在映射表中                │
+│                                                         │
+│      shellFamily 枚举（7 个）：                          │
+│      command-center / analytical / catalog / object-hub / │
+│      studio / ops-console / radar                        │
+│                                                         │
+│      pagePattern 枚举（8 个）：                          │
+│      global-command-center / analytical-overview /        │
+│      catalog-screener / object-hub / studio-builder /     │
+│      queue-ops-console / ledger-execution-console /       │
+│      config-integration-console                         │
+│                                                         │
 │   每个角色的输出格式：                                    │
 │   - 📋 设计草案（结构化 Markdown）                       │
 │   - 🔍 发现的问题/风险                                   │
@@ -241,7 +271,10 @@ disable-model-invocation: true
 │      │   ⚠️ 每个页面必须包含：                            │
 │      │   ├─ Tab Content Sections（所有 tab 面板内容）     │
 │      │   ├─ Overlay Registry（弹出层注册表）              │
-│      │   └─ Component × State Matrix（组件状态矩阵）      │
+│      │   ├─ Component × State Matrix（组件状态矩阵）      │
+│      │   ├─ Page Contract Mapping（合同映射数据）         │
+│      │   │   ├─ route / shellFamily / pagePattern          │
+│      │   │   └─ 模块→Slot 映射表                          │
 │      │   缺失任一项 → 文档不完整，Phase 5 必须标记        │
 │      └─ 用户流程 + 术语表（内嵌或独立）                   │
 │   2. 更新设计决策（如有架构变更）                         │
@@ -262,6 +295,12 @@ disable-model-invocation: true
 │      └─ 生成「状态定义覆盖率报告」                        │
 │          （tab: N/M, overlay: N/M, state: N/M）          │
 │   5. 输出一致性报告 + 待同步清单 + 状态覆盖率报告         │
+│   6. [新增] 页面合同映射完整性验证：                       │
+│      ├─ 每个页面是否有 Page Contract Mapping section      │
+│      ├─ route 格式是否以 / 开头                          │
+│      ├─ shellFamily 是否在 7 个枚举值中                  │
+│      ├─ pagePattern 是否在 8 个枚举值中                  │
+│      └─ 模块→Slot 映射是否覆盖所有核心模块               │
 └─────────────────────────────────────────────────────────┘
 ```
 

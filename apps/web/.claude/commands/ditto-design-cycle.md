@@ -331,6 +331,40 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      ├─ 传入品牌 DNA（Graphite Studio 风格）             │
 │      └─ [如 --reference] 传入参考页面确保风格对齐         │
 │                                                         │
+│   ── 6b. [合同对接] data-contract-slot 注入 ──            │
+│                                                         │
+│   生成 HTML 时，必须为 #default-view 内主要布局区块       │
+│   添加 data-contract-slot 属性，供 ditto-page-contract    │
+│   --create 做确定性 selector 映射（避免 AI 猜测）。      │
+│                                                         │
+│   Shell 级区块（slots）—— 按页面 shellFamily 映射：      │
+│   ├─ command-center: pulse / main / sidebar              │
+│   ├─ analytical: strip / main / activity / analysis      │
+│   ├─ catalog: toolbar / main / detail                    │
+│   ├─ object-hub: meta / tabs / main / bottom             │
+│   ├─ studio: source / main / inspector / logs / modes    │
+│   ├─ ops-console: health / main / detail                 │
+│   └─ radar: strip / main / right-rail / tab-band         │
+│                                                         │
+│   页面级区块（subSlots）—— 从蓝图核心模块清单推导：       │
+│   ├─ 每个蓝图核心模块对应一个 data-contract-slot         │
+│   ├─ 命名规则：kebab-case 英文名                          │
+│   │   （如 decision-banner, priority-queue, scope-strip） │
+│   └─ 与 data-component（gallery 分组用）不冲突            │
+│                                                         │
+│   示例（home 页面 #default-view）：                      │
+│   <div class="shell-pulse" data-contract-slot="pulse">   │
+│   <div class="shell-main" data-contract-slot="main">     │
+│   <div class="shell-sidebar" data-contract-slot="sidebar">│
+│   <div class="decision-banner"                           │
+│        data-contract-slot="decision-banner">             │
+│   <div class="panel-grow" data-contract-slot="priority-queue">│
+│                                                         │
+│   ⚠️ 注意：                                              │
+│   - data-contract-slot 只加在 #default-view 内            │
+│   - states-gallery 和 overlays-gallery 内不添加           │
+│   - 不替代现有 class 名，是额外属性                       │
+│                                                         │
 │   ── 6a. 三区结构生成（CREATE 核心扩展）──                │
 │                                                         │
 │   原型采用三区 Hash 导航架构（借鉴 Figma frame +          │
@@ -415,6 +449,11 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      │   必须为 none（页面样式不得覆盖隐藏规则）           │
 │      └─ 检查 9: 全部用 DOM 解析器 / Playwright page.evaluate()
 │          （禁止正则做 HTML 结构验证）                      │
+│      ├─ 检查 10: #default-view 内 shell 级区块            │
+│      │   （.shell-pulse / .shell-main / .shell-sidebar /  │
+│      │   .shell-rail / .shell-header 等）必须有            │
+│      │   data-contract-slot 属性                           │
+│      │   （用 page.evaluate() 遍历 .shell-* 元素检查）     │
 │   8. git add → commit → tag review/<task>/round-0        │
 │                                                         │
 │   ── --create-all 批量创建（Phase 0.5 循环变体）──       │
@@ -434,6 +473,8 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      ├─ 传入蓝图模块清单 + 产品规格 + 品牌 DNA           │
 │      ├─ 执行步骤 6a 全状态生成（tab/overlay/state）      │
 │      │   （详见上方 Phase 0.5 步骤 6a）                   │
+│      ├─ 执行步骤 6b（data-contract-slot 注入）            │
+│      │   （详见上方 Phase 0.5 步骤 6b）                   │
 │      ├─ 写入目标文件 → 更新 manifest pages[]             │
 │      └─ [门禁] 每页创建后立即执行步骤 7a（9 项检查）     │
 │          ├─ 全部通过 → 继续下一页                        │
@@ -730,10 +771,32 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │  10. 更新 design decisions（如有架构调整）                 │
 │  11. 生成待同步清单（嵌入报告末尾）                       │
 │  12. [Edition 增强] 如 manifest 存在：                   │
+│                                                         │
+│  12a. [合同桥接] 在设置 status="done" 之前，先触发       │
+│       页面合同创建：                                     │
+│      ├─ 确认 manifest 中该页面当前 status === "reviewed"  │
+│      ├─ 调用 /ditto-page-contract --create <page-id>      │
+│      │   （此时 status 仍为 "reviewed"，满足前置条件）    │
+│      ├─ 合同创建成功 → 继续步骤 12b                      │
+│      ├─ 合同创建失败 → WARNING，记录原因，不阻断 done     │
+│      │   ├─ 缺少 Page Contract Mapping（蓝图未更新）     │
+│      │   │   → 提示运行 ditto-product-arch --iterate      │
+│      │   │     blueprint --page <page-id>                 │
+│      │   └─ prototype 探测失败 → 记录详情                 │
+│      └─ 如 docs/contracts/pages/<page>.contract.json     │
+│          已存在 → 提示确认覆盖                            │
+│                                                         │
+│  12b. [状态推进] 设置页面完成状态：                      │
 │      ├─ 更新对应 page 的 {status:"done", score, rounds}  │
 │      ├─ 如所有页面 status="done"                          │
 │      │   → manifest.status = "reviewing"                 │
 │      └─ 写入 .edition-manifest.json → git add             │
+│                                                         │
+│  12c. [合同验证] 合同创建成功后自动验证：                 │
+│      ├─ 调用 /ditto-page-contract --validate <page-id>    │
+│      ├─ 验证全绿 → 输出 "Contract draft ready"           │
+│      └─ 验证失败 → 输出失败项，不阻断 done 流程           │
+│          （用户可后续手动 --validate + --promote）         │
 │  13. [布局 bug 检测 — 仅 iterate 最后一轮或              │
 │      edition-review 时执行完整分析]                       │
 │      ├─ take_screenshot（VP-STANDARD, fullPage）          │
