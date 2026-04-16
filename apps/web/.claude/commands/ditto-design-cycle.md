@@ -1,6 +1,6 @@
 ---
 name: ditto-design-cycle
-description: Use when creating UI prototypes from blueprints, reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, brand temperament, or information architecture. Supports --create mode (from blueprint to prototype), --create-all (batch Edition creation with style anchoring), --edition-review (Edition-level acceptance), 6-role parallel review, autonomous iteration, and doc sync.
+description: Use when creating UI prototypes from blueprints, reviewing HTML prototypes or UI pages for visual quality, UX interaction, feature completeness, copy clarity, brand temperament, or information architecture. Supports --create mode (from blueprint to prototype), --create-all (batch Edition creation with style anchoring), --edition-review (Edition-level acceptance), --strict (contract failures block done), 6-role parallel review, autonomous iteration, and doc sync.
 disable-model-invocation: false
 ---
 
@@ -21,6 +21,19 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 - **用户是最终决策者**，选择采纳哪些建议
 - 审查可能产生**新的设计决策**，自动记录到 `docs/designs/decisions/`
 - 如果信息架构或交互流程有重大调整，同步更新 spec 文档
+
+## --strict 模式
+
+> **`--strict` 仅影响合同相关的 done 门禁（Step 12a/12c），不影响审查流程本身。**
+
+| 行为 | 默认模式 | `--strict` |
+|------|---------|------------|
+| 合同创建失败（Step 12a） | WARNING，记录原因，不阻断 done | **BLOCK**，立即停止，不设置 status="done" |
+| 合同验证失败（Step 12c） | 输出失败项，不阻断 done | **BLOCK**，立即停止，不设置 status="done" |
+
+**使用场景**：
+- `--create` / `--create-all`（exploration）：默认模式，合同失败不阻断，适合快速迭代
+- `--create --strict` / `--create-all --strict`（acceptance）：合同失败阻断 done，适合正式交付前的验收
 
 ## Edition 机制
 
@@ -58,6 +71,9 @@ UI 创建与设计审查编排。支持两种模式：**创建模式**（`--crea
 
 # 创建 + 自主迭代直到达标
 /ditto-design-cycle page-markets.html --create --page markets --iterate --goal 8.0
+
+# 创建 + strict 模式（合同失败阻断 done）
+/ditto-design-cycle page-markets.html --create --page markets --strict
 
 # === 审查模式（已有原型）===
 
@@ -778,7 +794,9 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │      ├─ 调用 /ditto-page-contract --create <page-id>      │
 │      │   （此时 status 仍为 "reviewed"，满足前置条件）    │
 │      ├─ 合同创建成功 → 继续步骤 12b                      │
-│      ├─ 合同创建失败 → WARNING，记录原因，不阻断 done     │
+│      ├─ 合同创建失败 →                                   │
+│      │   ├─ 默认模式：WARNING，记录原因，不阻断 done       │
+│      │   └─ --strict 模式：BLOCK，立即停止，不设置 done   │
 │      │   ├─ 缺少 Page Contract Mapping（蓝图未更新）     │
 │      │   │   → 提示运行 ditto-product-arch --iterate      │
 │      │   │     blueprint --page <page-id>                 │
@@ -795,8 +813,10 @@ git tag -l 'review/cross-market/*' | xargs git tag -d
 │  12c. [合同验证] 合同创建成功后自动验证：                 │
 │      ├─ 调用 /ditto-page-contract --validate <page-id>    │
 │      ├─ 验证全绿 → 输出 "Contract draft ready"           │
-│      └─ 验证失败 → 输出失败项，不阻断 done 流程           │
-│          （用户可后续手动 --validate + --promote）         │
+│      └─ 验证失败 →                                       │
+│          ├─ 默认模式：输出失败项，不阻断 done 流程        │
+│          │   （用户可后续手动 --validate + --promote）     │
+│          └─ --strict 模式：BLOCK，立即停止，不设置 done   │
 │  13. [布局 bug 检测 — 仅 iterate 最后一轮或              │
 │      edition-review 时执行完整分析]                       │
 │      ├─ take_screenshot（VP-STANDARD, fullPage）          │

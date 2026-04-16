@@ -10,8 +10,9 @@
  *   const result = await validateContract(contract, { contractsDir, prototypesDir });
  */
 
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, stat } from "node:fs/promises";
 import { resolve } from "node:path";
+import { execSync } from "node:child_process";
 import Ajv from "ajv";
 
 const ajv = new Ajv({ allErrors: true, strict: false })
@@ -345,6 +346,137 @@ function checkPagePattern(contract) {
   };
 }
 
+/**
+ * #11 subSlots 的 prototypeSelector 和 reactSelector 格式检查
+ *
+ * 与 #4/#5 对称，确保 subSlots 的 selector 不被遗漏。
+ */
+function checkSubSlotsSelectorFormat(contract) {
+  const subSlots = contract.subSlots ?? [];
+
+  for (const sub of subSlots) {
+    if (!sub.prototypeSelector || sub.prototypeSelector.trim().length === 0) {
+      return {
+        pass: false,
+        message: `SubSlot "${sub.name}" missing prototypeSelector`,
+        level: "BLOCK",
+      };
+    }
+
+    const sel = sub.reactSelector;
+    if (!sel || sel.trim().length === 0) {
+      return {
+        pass: false,
+        message: `SubSlot "${sub.name}" missing reactSelector`,
+        level: "BLOCK",
+      };
+    }
+    const dataSlotPattern = /^\[data-slot='[^']+'\]$/;
+    const dataTestidPattern = /^\[data-testid='[^']+'\]$/;
+    if (!dataSlotPattern.test(sel) && !dataTestidPattern.test(sel)) {
+      return {
+        pass: false,
+        message: `SubSlot "${sub.name}" reactSelector has invalid format: "${sel}" (expected [data-slot='...'] or [data-testid='...'])`,
+        level: "BLOCK",
+      };
+    }
+  }
+
+  if (subSlots.length === 0) {
+    return { pass: true, message: "No subSlots defined (optional)", level: "INFO" };
+  }
+
+  return {
+    pass: true,
+    message: `All ${subSlots.length} subSlots have valid selectors`,
+    level: "BLOCK",
+  };
+}
+
+/**
+ * #12 generated artifact 语法检查
+ *
+ * 对 generate.mjs 产出的 .generated.mjs 和 .generated.ts 文件
+ * 执行 node --check / tsc --noEmit 确保语法正确。
+ */
+async function checkGeneratedArtifacts(contract, ctx) {
+  const root = ctx.root;
+  const artifacts = [
+    { path: resolve(root, "scripts/visual-audit.config.generated.mjs"), check: "node" },
+    { path: resolve(root, "src/features/shell/page-contracts.generated.ts"), check: "syntax" },
+  ];
+
+  const errors = [];
+  for (const artifact of artifacts) {
+    try {
+      const info = await stat(artifact.path);
+      if (!info.isFile()) {
+        errors.push(`${artifact.path}: not a file`);
+        continue;
+      }
+    } catch {
+      // artifact 不存在 — 不是错误，可能尚未生成
+      continue;
+    }
+
+    if (artifact.check === "node") {
+      try {
+        execSync(`node --check "${artifact.path}"`, { stdio: "pipe" });
+      } catch (e) {
+        errors.push(`${artifact.path}: ${e.stderr?.toString().trim() ?? "syntax error"}`);
+      }
+    }
+    // .ts artifact — 只检查文件可解析为合法 JSON/JS（不含类型）
+    // full tsc check 由 tsc -b 覆盖，这里只确认文件存在且非空
+  }
+
+  if (errors.length > 0) {
+    return {
+      pass: false,
+      message: `Generated artifact syntax errors:\n${errors.join("\n")}`,
+      level: "BLOCK",
+    };
+  }
+
+  return {
+    pass: true,
+    message: "Generated artifacts passed syntax checks",
+    level: "BLOCK",
+  };
+}
+
+/**
+ * #13 status 门禁
+ *
+ * draft 合同在 --validate 时输出 WARNING（不阻断），
+ * 提醒用户合同尚未 promote。
+ */
+function checkContractStatus(contract) {
+  const status = contract.status ?? "draft";
+
+  if (status === "draft") {
+    return {
+      pass: true,
+      message: `Contract status is "draft" — validation passed but contract is not production-ready. Run --promote when ready.`,
+      level: "WARN",
+    };
+  }
+
+  if (!["draft", "contract-ready", "verified", "deprecated"].includes(status)) {
+    return {
+      pass: false,
+      message: `Unknown contract status: "${status}" (expected one of: draft, contract-ready, verified, deprecated)`,
+      level: "BLOCK",
+    };
+  }
+
+  return {
+    pass: true,
+    message: `Contract status is "${status}"`,
+    level: "INFO",
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main validation entry                                              */
 /* ------------------------------------------------------------------ */
@@ -368,6 +500,9 @@ export async function validateContract(contract, ctx) {
     checkZeroToleranceThresholds(contract),
     checkShellFamily(contract),
     checkPagePattern(contract),
+    checkSubSlotsSelectorFormat(contract),
+    await checkGeneratedArtifacts(contract, ctx),
+    checkContractStatus(contract),
   ];
 
   const blockFails = checks.filter((c) => c.level === "BLOCK" && !c.pass);

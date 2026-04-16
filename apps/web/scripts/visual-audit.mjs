@@ -13,7 +13,7 @@ import {
 import {
 	PROTOTYPE_NORMALIZE_CSS,
 	VISUAL_AUDIT_PAGES,
-} from "./visual-audit.config.mjs";
+} from "./visual-audit.config.generated.mjs";
 
 const STYLE_PROPS = [
 	// Layout

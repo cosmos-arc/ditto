@@ -256,14 +256,14 @@ function generateMJS(contracts) {
     // prototypeTargets
     lines.push("    prototypeTargets: {");
     for (const [key, val] of Object.entries(protoTargets)) {
-      lines.push(`      ${key}: "${val}",`);
+      lines.push(`      '${key}': "${val}",`);
     }
     lines.push("    },");
 
     // reactTargets
     lines.push("    reactTargets: {");
     for (const [key, val] of Object.entries(reactTargets)) {
-      lines.push(`      ${key}: "${val}",`);
+      lines.push(`      '${key}': "${val}",`);
     }
     lines.push("    },");
 

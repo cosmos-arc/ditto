@@ -51,12 +51,6 @@ blob-report/
 docs/review/visual-audit/
 
 # ──────────────────────────────────────────────
-# Contract generator (auto-generated)
-# ──────────────────────────────────────────────
-src/features/shell/page-contracts.generated.ts
-scripts/visual-audit.config.generated.mjs
-
-# ──────────────────────────────────────────────
 # Linter / formatter cache
 # ──────────────────────────────────────────────
 .eslintcache
