@@ -256,7 +256,7 @@ class TestFundamentalServiceListMethods:
             {
                 "instrument_id": [1_000_001],
                 "action_type": ["分红"],
-                "announcement_date": [date(2024, 1, 1)],
+                "action_date": [date(2024, 1, 1)],
             }
         )
         corporate_actions_reader.get.return_value = test_df

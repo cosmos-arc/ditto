@@ -5,8 +5,8 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 
-class InstrumentIdentifierParams(BaseModel):
-    """标的标识符参数（三选一）."""
+class InstrumentIdentifierQuery(BaseModel):
+    """标的标识符查询（三选一）."""
 
     instrument_id: int | None = Field(None, description="Canonical 标的 ID")
     ticker: str | None = Field(None, description="裸代码, 如 000001")
@@ -15,13 +15,13 @@ class InstrumentIdentifierParams(BaseModel):
     model_config = {"extra": "ignore"}
 
 
-class PITQueryParams(InstrumentIdentifierParams):
+class PITQueryParams(InstrumentIdentifierQuery):
     """PIT（时间点）查询参数 — as_of_date 必填."""
 
     as_of_date: date = Field(..., description="PIT 查询日期")
 
 
-class DateRangeQueryParams(InstrumentIdentifierParams):
+class DateRangeQueryParams(InstrumentIdentifierQuery):
     """日期范围查询参数."""
 
     start_date: date = Field(..., description="开始日期")

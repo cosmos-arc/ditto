@@ -127,22 +127,28 @@ INDEX_COMPOSITION_MAPPING = ColumnMapping(
     ),
 )
 
-# Corporate Actions - Non-PIT data
+# Corporate Actions - PIT data
 CORPORATE_ACTIONS_MAPPING = ColumnMapping(
     rename={
         "ts_code": "source_ticker",
         "ba_type": "action_type",
-        "ann_date": "announcement_date",
-        "act_date": "effective_date",
+        "ann_date": "action_date",
+        "act_date": "effective_from",
         "name": "description",
     },
-    date_columns={"announcement_date": "%Y%m%d", "effective_date": "%Y%m%d"},
+    date_columns={"action_date": "%Y%m%d", "effective_from": "%Y%m%d"},
     float_columns=[],
+    computed_columns={
+        "knowledge_date": pl.col("action_date"),
+        "effective_to": pl.lit(None, dtype=pl.Date),
+    },
     output_columns=(
         "source_ticker",
         "action_type",
-        "announcement_date",
-        "effective_date",
+        "action_date",
+        "knowledge_date",
+        "effective_from",
+        "effective_to",
         "description",
     ),
 )

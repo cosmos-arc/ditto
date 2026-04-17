@@ -1,13 +1,11 @@
 """Unit tests for CorporateActionsWriter."""
 
-from __future__ import annotations
-
 from datetime import date
 from pathlib import Path
-from unittest.mock import Mock
 
 import polars as pl
 import pytest
+import pytest_mock
 from ditto_data.storage.fundamental.corporate.corporate_actions_writer import (
     CorporateActionsWriter,
 )
@@ -50,7 +48,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write successfully inserts data."""
         # Arrange
@@ -89,7 +87,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write returns correct record count."""
         # Arrange
@@ -133,7 +131,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write handles empty DataFrame."""
         # Arrange
@@ -166,7 +164,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write rolls back on failure."""
         # Arrange
@@ -186,7 +184,7 @@ class TestCorporateActionsWriter:
 
         # Force an error by using invalid data type
         # Create a mock client that raises RuntimeError
-        mock_client = Mock(spec=SQLiteClient)
+        mock_client = mocker.Mock(spec=SQLiteClient)
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
@@ -200,7 +198,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write correctly handles nullable effective_to (current version)."""
         # Arrange
@@ -234,7 +232,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write handles multiple actions for same instrument."""
         # Arrange
@@ -290,7 +288,7 @@ class TestCorporateActionsWriter:
         self,
         corporate_actions_writer: CorporateActionsWriter,
         in_memory_db: SQLitePool,
-        mocker: Mock,
+        mocker: pytest_mock.MockFixture,
     ) -> None:
         """Test that write uses ON CONFLICT DO NOTHING correctly."""
         # Arrange

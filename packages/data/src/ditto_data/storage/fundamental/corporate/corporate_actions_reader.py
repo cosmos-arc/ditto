@@ -73,11 +73,11 @@ class CorporateActionsReader:
         conditions = ["instrument_id = ?"]
         params: list[Any] = [instrument_id]
 
-        if start_date:
+        if start_date is not None:
             conditions.append("action_date >= ?")
             params.append(start_date)
 
-        if end_date:
+        if end_date is not None:
             conditions.append("action_date <= ?")
             params.append(end_date)
 

@@ -5,12 +5,12 @@ description: "公司行为数据质量检查规则"
 # 技术类: 技术校验（写入时强制阻断）
 technical:
   - rule: not_null
-    columns: [instrument_id, action_type, announcement_date]
+    columns: [instrument_id, action_type, action_date]
     message: "必填字段不能为空"
 
   - rule: unique
-    columns: [instrument_id, action_type, announcement_date]
-    message: "主键 (instrument_id, action_type, announcement_date) 重复"
+    columns: [instrument_id, action_type, action_date]
+    message: "主键 (instrument_id, action_type, action_date) 重复"
 
   - rule: foreign_key
     column: instrument_id
@@ -21,8 +21,10 @@ technical:
     columns:
       instrument_id: int
       action_type: str
-      announcement_date: date
-      effective_date: date
+      action_date: date
+      knowledge_date: date
+      effective_from: date
+      effective_to: date
       description: str
     message: "字段类型不匹配"
 

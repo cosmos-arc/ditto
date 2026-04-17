@@ -509,7 +509,7 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         description="公司行为",
         typical_available_time=time(20, 0),
         depends_on=[Dataset.STOCK_BASIC],
-        critical_fields=["instrument_id", "action_type", "effective_date"],
+        critical_fields=["instrument_id", "action_type", "action_date"],
         task_name="ingest_corporate_actions",
         priority=65,
     ),

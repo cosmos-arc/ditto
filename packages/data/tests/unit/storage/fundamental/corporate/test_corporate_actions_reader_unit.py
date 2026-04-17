@@ -311,6 +311,7 @@ class TestCorporateActionsReader:
 
 
 @pytest.mark.unit
+@pytest.mark.pit
 class TestCorporateActionsReaderPIT:
     """Test PIT filtering for CorporateActionsReader."""
 
