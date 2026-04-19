@@ -24,7 +24,9 @@
       "prototypeSelector": ".shell-pulse",
       "reactSelector": "[data-slot='pulse-strip']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 }
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 },
+      "a11yRole": "banner",
+      "responsiveBehavior": { "compact": "collapsed" }
     },
     {
       "name": "main",
@@ -33,7 +35,8 @@
       "prototypeSelector": ".shell-main",
       "reactSelector": "[data-slot='main']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 }
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 },
+      "a11yRole": "main"
     },
     {
       "name": "sidebar",
@@ -42,7 +45,9 @@
       "prototypeSelector": ".shell-sidebar",
       "reactSelector": "[data-slot='sidebar-rail']",
       "layoutStrategy": "fixed-width",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 }
+      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 },
+      "a11yRole": "complementary",
+      "responsiveBehavior": { "compact": "overlay" }
     }
   ],
 

@@ -14,8 +14,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "visual:audit": "bun scripts/visual-audit.mjs",
-    "generate-contracts": "bun scripts/contract-generator/generate.mjs"
+    "visual:audit": "bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs",
+    "generate-contracts": "bun .claude/skills/ditto-page-contract/scripts/generate.mjs"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.2.10",

@@ -1,8 +1,17 @@
 # Ditto Shell Family 规范
 
-> **版本**：v1.2
-> **日期**：2026-03-31
+> **版本**：v1.3
+> **日期**：2026-04-18
 > **状态**：Final
+>
+> **v1.3 变更（IA v2.0 同步）**
+> - 全局 Rail 从 6 项缩减为 5 项（移除 AI，Copilot 升级为全局 Sidecar）
+> - §10.2 Markets：移除 `/markets/universes`（迁至 Research）、`/markets/chart-lab`（降级为 Instrument Hub tab）；标记 `/markets/hk`、`/markets/us` 延后
+> - §10.4 Trading：`/trading/positions` + `/trading/trades` 合并为 `/trading/portfolio`
+> - §10.5 AI Section 整体标记 deprecated（Copilot → 全局 Sidecar，Agent Console → `/platform/agents`）
+> - §10.6 Platform：新增 `/platform/agents`（Studio Shell）
+> - §4.2 Shell 定位同步更新
+>
 > **上游**：[00 视觉宪章](./00_ditto_visual_constitution.md)、[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[11 Page Pattern Library](./11_ditto_page_pattern_library.md)、[13 Component Spec](./13_ditto_component_spec.md)
 > **职责**：定义全站 6 类壳层与页面骨架家族
@@ -128,7 +137,7 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 - `/research`
 - `/research/regime`
 - `/trading`
-- `/trading/positions`
+- `/trading/portfolio` **[v1.3 合并：原 `/trading/positions` + `/trading/trades`]**
 - `/trading/risk`
 
 <!-- 已修正: `/trading/signals` → Operations Console（核心动词是 review/confirm/reject） -->
@@ -161,9 +170,9 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 - `/markets` — 全市场总览
 - `/markets/a-shares` — 中国 A 股总览
-- `/markets/hk` — 港股总览
-- `/markets/us` — 美股总览
-- 后续 `/markets/fx`、`/markets/rates`、`/markets/commodities`
+- 后续 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
+
+<!-- v1.3: `/markets/hk` 和 `/markets/us` 延后至 v1.5/v2，当前不列入对应页面 -->
 
 **任务特征**
 
@@ -237,14 +246,15 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 **对应页面**
 
 - `/markets/screener`
-- `/markets/universes`
 - `/markets/calendar`
 - `/research/factors`
 - `/research/strategies`
 - `/research/backtest`
 - `/research/experiments`
 - `/trading/orders`
-- `/trading/trades`
+
+<!-- v1.3: `/markets/universes` 已移至 Research 域 -->
+<!-- v1.3: `/trading/trades` 已合并入 `/trading/portfolio`（Analytical Workspace） -->
 
 <!-- 已降级: `/platform/brokers` → `/platform/settings` 的 tab -->
 <!-- 已降级: `/platform/data-providers` → `/platform/settings` 的 tab -->
@@ -303,10 +313,12 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 **对应页面**
 
-- `/markets/chart-lab`
 - `/research/strategies/[id]/studio`
-- `/ai/copilot`
-- `/ai/agent`
+- `/platform/agents` **[v1.3: 从 `/ai/agent` 迁入]**
+
+<!-- v1.3: `/markets/chart-lab` 已降级为 `/instruments/[id]` 的 tab，不再独立使用 Studio Shell -->
+<!-- v1.3: `/ai/copilot` 已升级为全局 Sidecar，不再作为独立路由 -->
+<!-- v1.3: `/ai/agent` 已迁入 `/platform/agents` -->
 
 **任务特征**
 
@@ -368,8 +380,9 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 - Markets
 - Research
 - Trading
-- AI
 - Platform
+
+<!-- v1.3: AI 已从全局 Rail 移除。Copilot 升级为全局 Sidecar（跨域可用），Agent Console 迁入 Platform 域。 -->
 
 **它不承担：**
 
@@ -681,7 +694,9 @@ Studio Shell 是 Ditto 的构建型工作区。适用于策略构建、图表实
 
 #### 6.5.4 适用页面
 
-Strategy Builder、Chart Lab、AI Copilot、AI Agent Workspace
+Strategy Builder、Agent Console（`/platform/agents`）
+
+<!-- v1.3: Chart Lab 降级为 Instrument Hub tab；AI Copilot 升级为全局 Sidecar；AI Agent Workspace 迁入 `/platform/agents` -->
 
 #### 6.5.5 Studio 内部常见面板
 
@@ -901,12 +916,15 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 | `/markets` | Analytical Workspace |
 | `/markets/a-shares` | Analytical Workspace |
 | `/markets/screener` | Catalog Workspace |
-| `/markets/universes` | Catalog Workspace |
 | `/markets/watchlist` | Analytical Workspace |
-| `/markets/chart-lab` | Studio |
 | `/markets/intelligence` | Analytical Workspace |
 | `/markets/calendar` | Catalog Workspace |
 | `/instruments/[id]` | Object Hub |
+
+<!-- v1.3: `/markets/universes` 已移至 Research 域（§10.3） -->
+<!-- v1.3: `/markets/chart-lab` 已降级为 `/instruments/[id]` 的 tab（Instrument Hub 内置） -->
+<!-- v1.3 延后: `/markets/hk` — 港股总览延后至 v1.5 -->
+<!-- v1.3 延后: `/markets/us` — 美股总览延后至 v2 -->
 
 <!-- 已降级/合并: `/markets/catalog` — IA 无此路由，screener 已承担目录职能 -->
 <!-- 已降级/合并: `/markets/map` — 并入 `/markets` 视图模式 -->
@@ -941,12 +959,12 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 | 路径 | Shell |
 |------|-------|
 | `/trading` | Analytical Workspace |
-| `/trading/positions` | Analytical Workspace |
 | `/trading/signals` | Operations Console **[v1.1 审计修正：核心动词是 review/confirm/reject，归属 Ops Console]** |
 | `/trading/orders` | Catalog Workspace |
-| `/trading/trades` | Catalog Workspace |
+| `/trading/portfolio` | Analytical Workspace **[v1.3 合并：原 `/trading/positions` + `/trading/trades` 合并为 portfolio]** |
 | `/trading/risk` | Analytical Workspace |
 
+<!-- v1.3 合并: `/trading/positions` + `/trading/trades` → `/trading/portfolio` — 持仓与成交统一视图 -->
 <!-- 已降级/合并: `/trading/risk/dashboard` → `/trading/risk` — 路由简化 -->
 <!-- 已降级/合并: `/trading/risk/stress-test` — IA 无此路由 -->
 <!-- 已降级/合并: `/trading/accounts` — IA 无此路由 -->
@@ -955,15 +973,20 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 
 ### 10.5 AI
 
-| 路径 | Shell |
-|------|-------|
-| `/ai` | Command Center（轻量变体——聚焦 AI 产出总览与分流） |
-| `/ai/copilot` | Studio |
-| `/ai/agent` | Studio |
+> **v1.3 DEPRECATED — AI 域整体废弃**
+>
+> AI 域已在 v2.0 中拆散：
+> - **Copilot**（`/ai/copilot`）升级为全局 Sidecar，不再作为独立一级路由存在，而是跨域浮层
+> - **Agent Console**（`/ai/agent`）迁入 `/platform/agents`，Shell 类型为 Studio
+> - **AI 概览**（`/ai`）职能由全局 Sidecar + 各域内 AI 功能承担，不再需要独立入口
+>
+> 以下路由保留仅供历史参考：
 
-> **v1.1 审计修正**：`/ai` 从原先的"Object Hub 或 Command Center 变体"明确为 **Command Center 轻量变体**。
-> 与 Home 同属 orient 模式（定优先级+分流），但聚焦 AI 产出。
-> 详见 01 IA §7.5 及 [AI 域 Pattern 决策](../../docs/designs/decisions/2026-03-31-product-arch-audit-fixes.md)。
+| 路径 | Shell | 状态 |
+|------|-------|------|
+| `/ai` | Command Center（轻量变体） | ~~Deprecated~~ — 职能由全局 Sidecar 承担 |
+| `/ai/copilot` | Studio | ~~Deprecated~~ — 升级为全局 Sidecar |
+| `/ai/agent` | Studio | ~~迁移~~ → `/platform/agents` |
 
 <!-- 已降级/合并: `/ai/market-analysis` — 合并为 `/ai/copilot` 内部模式 -->
 <!-- 已降级/合并: `/ai/stock-screener` — 合并为 `/ai/copilot` 内部模式 -->
@@ -975,7 +998,11 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 |------|-------|
 | `/platform` | Operations Console |
 | `/platform/settings` | Operations Console **[Config 变体]** |
+| `/platform/agents` | Studio **[v1.3 新增：Agent Console 从 `/ai/agent` 迁入]** |
 
+> **v1.3 扩展说明**：`/platform/agents`（Agent Console）从 AI 域迁入 Platform 域，使用 Studio Shell。
+> 详见 IA v2.0 及 AI 域拆散决策。
+>
 > **v1 收敛说明**：Platform 域在 v1 仅保留 2 条路由（`/platform` + `/platform/settings`）。
 > data-quality / pipelines 收敛为 `/platform` 的 tab；
 > accounts / data-providers / brokers 收敛为 `/platform/settings` 的 tab。

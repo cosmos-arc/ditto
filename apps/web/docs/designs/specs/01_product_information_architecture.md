@@ -1,14 +1,16 @@
 # Ditto 产品信息架构
-### v1.1
+### v2.0
 
 > Ditto v1 的正式产品信息架构文档。
 > 本文档用于替代旧的"大而全产品设计稿"，作为后续 UI 设计、AI 设计探索、AICoding 落地的唯一上游产品结构输入。
+>
+> **v2.0 变更摘要**：AI 域拆散嵌入（Copilot 升级为全局 Sidecar，Agent Console 迁入 Platform），域结构从 6 域收敛为 5 域，路由总数从 29 精简为 25。
 
 ---
 
 ## 0. 文档目标
 
-Ditto 不是很多金融页面的集合，也不是研究、交易、AI、平台管理四五套子系统的拼装。
+Ditto 不是很多金融页面的集合，也不是研究、交易、平台管理三四套子系统的拼装。
 
 Ditto 的本质是一个面向个人量化研究与实盘闭环的专业工作台，服务的核心链路只有一条：
 
@@ -60,16 +62,17 @@ Ditto 定位为：
 
 **面向个人量化研究与实盘闭环的全市场专业工作台**
 
-它覆盖六个核心产品域：
+它覆盖五个核心产品域：
 
 - Home
 - Markets
 - Research
 - Trading
-- AI
 - Platform
 
-这六个域不是六套独立产品，而是围绕同一条量化工作流展开的六个工作面。
+这五个域不是五套独立产品，而是围绕同一条量化工作流展开的五个工作面。
+
+> **v2.0 说明**：AI 域已拆散。Copilot 升级为全局 Sidecar（不属于任何域），Agent Console 迁入 Platform 域。AI 因子发现/策略生成等能力嵌入 Research 域对应页面。详见 §13 AI 嵌入方案。
 
 ### 2.1 用户画像
 
@@ -175,8 +178,8 @@ Ditto v1 只优先做强主工作流上的核心页面与核心对象。
 - 信号中心
 - 订单执行流水
 - 风险中心
-- AI Copilot
-- Agent 工作台
+- AI Copilot（全局 Sidecar）
+- Agent Console（Platform 域）
 - 平台健康控制台
 
 ### 3.3 v1 明确降级或后置的能力
@@ -194,16 +197,17 @@ Ditto v1 只优先做强主工作流上的核心页面与核心对象。
 
 ## 4. 一级信息架构
 
-Ditto 一级导航固定为六个，不再扩展：
+Ditto 一级导航固定为五个，不再扩展：
 
 - Home
 - Markets
 - Research
 - Trading
-- AI
 - Platform
 
 这是 Ditto v1 的稳定产品骨架。
+
+> **v2.0 说明**：AI 从一级导航中移除。Copilot 以全局 Sidecar 形式存在（任何页面可唤出），Agent Console 归入 Platform 域。
 
 ### 4.1 一级域的职责定义
 
@@ -213,23 +217,19 @@ Ditto 一级导航固定为六个，不再扩展：
 
 #### Markets
 
-回答："市场里发生了什么，下一步看什么"
+回答："市场里发生了什么"
 
 #### Research
 
-回答："为什么做、怎么做、值不值得做"
+回答："为什么做、怎么做"
 
 #### Trading
 
-回答："信号怎么复核、订单怎么执行、风险怎么控制"
-
-#### AI
-
-回答："AI 如何辅助研究、生成草案、推进审批与发现"
+回答："怎么做、风险如何"
 
 #### Platform
 
-回答："数据、任务、通道与系统是否正常"
+回答："系统是否正常"
 
 ---
 
@@ -240,23 +240,19 @@ Ditto 一级导航固定为六个，不再扩展：
 ```text
 Ditto
 │
-├── Home
+├── Home (1)
 │   └── /
 │
-├── Markets
+├── Markets (7)
 │   ├── /markets                  ← 全市场总览（Cross-Market Overview）
 │   ├── /markets/a-shares         ← 中国 A 股总览
-│   ├── /markets/hk               ← 港股总览（v1.5: 轻量级——指数行情 + 南向资金 + ETF 概览）
-│   ├── /markets/us               ← 美股总览（v2: 中量级——指数行情 + 美股 ADP/CPI/NFP 日历联动 + 中概股映射）
 │   ├── /markets/screener
-│   ├── /markets/universes
 │   ├── /markets/watchlist
 │   ├── /markets/intelligence
-│   ├── /markets/chart-lab
 │   ├── /markets/calendar
 │   └── /instruments/[id]
 │
-├── Research
+├── Research (10)
 │   ├── /research
 │   ├── /research/factors
 │   ├── /research/factors/[id]
@@ -265,27 +261,35 @@ Ditto
 │   ├── /research/backtest
 │   ├── /research/backtest/[id]
 │   ├── /research/experiments
-│   └── /research/regime
+│   ├── /research/regime
+│   └── /research/universes        ← 从 Markets 移入（v2.0）
 │
-├── Trading
+├── Trading (5)
 │   ├── /trading
-│   ├── /trading/positions
 │   ├── /trading/signals
 │   ├── /trading/orders
-│   ├── /trading/trades
+│   ├── /trading/portfolio        ← 合并原 /trading/positions + /trading/trades（v2.0）
 │   └── /trading/risk
 │
-├── AI
-│   ├── /ai
-│   ├── /ai/copilot
-│   └── /ai/agent
+├── Platform (3)
+│   ├── /platform                 ← 平台运维总览（Data Quality + Pipelines + Alerts）
+│   ├── /platform/settings        ← 集中配置（Data Providers + Brokers + Settings）
+│   └── /platform/agents          ← Agent Console（从 /ai/agent 迁入，v2.0）
 │
-└── Platform
-    ├── /platform                  ← 平台运维总览（Data Quality + Pipelines + Alerts）
-    └── /platform/settings          ← 集中配置（Data Providers + Brokers + Settings）
-    # v1 收敛说明：data-quality/pipelines 作为 /platform 的 tab；
-    # data-providers/brokers 合并到 /platform/settings 的 tab
+└── Global (非路由)
+    ├── AI Copilot Sidecar        ← 全局右侧可折叠面板，上下文感知
+    └── Regime Indicator          ← Shell 级全局组件（Status Bar 胶囊 → 展开面板）
 ```
+
+**路由统计**：5 域，25 条路由 + 2 个全局组件。
+
+> **v2.0 变更**：
+> - 移除 AI 域（Copilot → 全局 Sidecar，Agent Console → `/platform/agents`）
+> - `/markets/universes` 移入 Research 域
+> - `/markets/chart-lab` 降级为 Instrument Hub 的 tab
+> - `/markets/hk`、`/markets/us` 延后
+> - `/trading/positions` + `/trading/trades` 合并为 `/trading/portfolio`
+> - 新增 `/research/universes`、`/platform/agents`
 
 ---
 
@@ -312,6 +316,12 @@ Markets 不再等于中国 A 股页，而是覆盖跨市场扫描与单市场下
 - 后续扩展 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
 
 详见 [全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)。
+
+**v2.0 调整**：
+
+- `/markets/universes` 移入 Research 域（标的池管理本质是研究工作）
+- `/markets/chart-lab` 降级为 Instrument Hub 的 tab（不独立成路由）
+- `/markets/hk`、`/markets/us` 延后（v1.5+ 再考虑）
 
 ### 6.3 /markets/map 降级为视图模式
 
@@ -345,19 +355,16 @@ Markets 不再等于中国 A 股页，而是覆盖跨市场扫描与单市场下
 
 `/research/strategies/[id]/studio`
 
-### 6.6 AI 市场分析 / AI 选股 / AI 策略助手合并为 Copilot Studio
+### 6.6 AI 域拆散嵌入
 
-AI 域不再拆成多个看似平行但边界模糊的 AI 页面。
+**v2.0 重大调整**：AI 域作为一级域不再存在。AI 能力以嵌入方式分布在各域中：
 
-统一收敛为：
+- **Copilot** → 全局 Sidecar（右侧可折叠面板），任何页面可唤出，不属于任何域
+- **Agent Console** → `/platform/agents`（从 `/ai/agent` 迁入 Platform 域）
+- **AI Overview** 内容 → 拆分归入 Home（Agent Findings 区块）和 Platform/Agents
+- **AI 因子发现 / 策略生成** → 嵌入 Research 域对应页面
 
-`/ai/copilot`
-
-Copilot 内部再区分工作模式：
-
-- Market Analysis Mode
-- Stock Discovery Mode
-- Strategy Draft Mode
+详见 §13 AI 嵌入方案。
 
 ### 6.7 ML 能力降为 Research 子域能力
 
@@ -365,18 +372,29 @@ ML 能力保留，但不在 v1 中作为一级重页面与重型平台推进。
 
 只有在真实训练、注册、部署、监控闭环足够成熟后，再升级为更重的产品结构。
 
-### 6.8 Platform 明确定位为 Ops Console
+### 6.8 Platform 扩展为运维 + Agent 管理
 
-Platform 不做"后台大全"，只聚焦：
+Platform 不做"后台大全"，聚焦：
 
 - 数据是否可信
 - 任务是否正常
 - 通道是否可用
 - 系统是否异常
+- Agent 运行状态与审批（v2.0 新增）
+
+**v2.0 调整**：Agent Console 从 `/ai/agent` 迁入 `/platform/agents`，Platform 域从 2 路由扩展为 3 路由。
+
+### 6.9 Trading Positions/Trades 合并为 Portfolio
+
+**v2.0 调整**：`/trading/positions` 和 `/trading/trades` 合并为 `/trading/portfolio`，内部通过 tab 切换：
+
+- Positions（持仓）
+- Trades（成交流水）
+- Attribution（归因分析）
 
 ---
 
-## 7. 六个一级域的结构说明
+## 7. 五个一级域的结构说明
 
 ### 7.1 Home
 
@@ -392,7 +410,7 @@ Platform 不做"后台大全"，只聚焦：
 - 今日优先事项（跨域 3-5 条，预览级）
 - 市场脉搏（4 指标，极轻）
 - 全局预警（3-4 条，单行预览）
-- 研究进展 + Agent 洞察（底部双栏）
+- 研究进展 + Agent Findings（底部双栏）
 - 数据健康（preview 摘要）
 
 **不再扩展为独立心智的内容**：
@@ -421,12 +439,12 @@ Platform 不做"后台大全"，只聚焦：
 
 - `/markets`
 - `/markets/screener`
-- `/markets/universes`
 - `/markets/watchlist`
 - `/markets/intelligence`
-- `/markets/chart-lab`
 - `/markets/calendar`
 - `/instruments/[id]`
+
+> **v2.0 调整**：`/markets/universes` 移入 Research 域，`/markets/chart-lab` 降级为 Instrument Hub 的 tab，`/markets/hk` 和 `/markets/us` 延后。
 
 **A 股特有功能嵌入**：
 
@@ -447,16 +465,14 @@ Platform 不做"后台大全"，只聚焦：
 3. Markets Screener
 4. Instrument Hub
 5. Watchlist
-6. Universes
-7. Intelligence
-8. Chart Lab
-9. Calendar
+6. Intelligence
+7. Calendar
 
 ### 7.3 Research
 
 **角色**：Research + Validate 的主工作域
 
-**目标**：把因子、策略、回测、实验、Regime 串成一条连续研究链。
+**目标**：把因子、策略、回测、实验、Regime、标的池串成一条连续研究链。
 
 **主要页面**：
 
@@ -469,6 +485,7 @@ Platform 不做"后台大全"，只聚焦：
 - `/research/backtest/[id]`
 - `/research/experiments`
 - `/research/regime`
+- `/research/universes`（v2.0 从 Markets 移入）
 
 **优先级排序**：
 
@@ -479,6 +496,7 @@ Platform 不做"后台大全"，只聚焦：
 5. Backtest Center
 6. Experiments
 7. Regime
+8. Universes
 
 ### 7.4 Trading
 
@@ -489,11 +507,16 @@ Platform 不做"后台大全"，只聚焦：
 **主要页面**：
 
 - `/trading`
-- `/trading/positions`
 - `/trading/signals`
 - `/trading/orders`
-- `/trading/trades`
+- `/trading/portfolio`（v2.0 合并原 `/trading/positions` + `/trading/trades`）
 - `/trading/risk`
+
+> **v2.0 调整**：`/trading/positions` 和 `/trading/trades` 合并为 `/trading/portfolio`，内部通过 Positions / Trades / Attribution 三个 tab 切换。
+
+**Trading Overview 新增**（v2.0）：
+
+- **Signal-to-Order Pipeline Strip**：L2 水平进度条，展示信号池 → 待复核 → 已下单 → 成交的实时流转状态。
 
 **A 股交易规则 UI 约束**：
 
@@ -509,46 +532,29 @@ Trading 域必须在 UI 中体现以下 A 股交易规则：
 
 1. Trading Overview
 2. Signals Inbox
-3. Orders / Execution Ledger
-4. Risk Center
-5. Positions
-6. Trades
+3. Portfolio（Positions / Trades / Attribution）
+4. Orders / Execution Ledger
+5. Risk Center
 
-### 7.5 AI
+### 7.5 Platform
 
-**角色**：Research Acceleration + Workflow Assistance
+**角色**：Ops Console + Agent 管理
 
-**目标**：让 AI 融入 Ditto 工作台，而不是形成独立聊天产品。
-
-**主要页面**：
-
-- `/ai`
-- `/ai/copilot`
-- `/ai/agent`
-
-**页面职责**：
-
-- **`/ai`**：AI 域总览，展示最近产出、最近发现、待审批事项和高频入口。采用 **Global Command Center 的轻量变体** Pattern（与 Home 同属 orient 模式，但聚焦 AI 产出）。
-- **`/ai/copilot`**：统一的 AI 分析与生成工作台，承接市场分析、选股辅助、策略草案。
-- **`/ai/agent`**：Plan → Run → Finding → Approval 的 agent 工作台。
-
-### 7.6 Platform
-
-**角色**：Ops Console
-
-**目标**：管理和感知数据、任务、通道、系统的健康状况。
+**目标**：管理和感知数据、任务、通道、系统的健康状况，以及 Agent 运行状态与审批。
 
 **主要页面**：
 
 - `/platform` — 平台运维总览（Data Quality + Pipelines/Jobs + System Alerts + Health Strip）
 - `/platform/settings` — 集中配置（Data Providers + Brokers + 通用 Settings）
+- `/platform/agents` — Agent Console（v2.0 从 `/ai/agent` 迁入）
 
 > **v1 收敛说明**: Data Providers 和 Brokers 在用户仅有 1 个数据源和 1 个券商的早期阶段，不需要独立管理页面。通过 `/platform/settings` 的 Tab 视图承接。v2 若接入 3+ 数据源/券商时可拆分为独立路由。详见 [Platform 域收敛决策](../../docs/designs/decisions/2026-03-31-product-arch-audit-fixes.md)。
 
 **优先级排序**：
 
 1. Platform Ops Overview
-2. Settings（Data Providers / Brokers / 通用）
+2. Agent Console
+3. Settings（Data Providers / Brokers / 通用）
 
 ---
 
@@ -561,7 +567,6 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 适用：
 
 - `/`
-- `/ai`（轻量变体——聚焦 AI 产出总览与分流，参见 §7.5）
 
 ### 8.2 Analytical Overview Workspace
 
@@ -572,7 +577,7 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 - `/markets/watchlist`
 - `/research`
 - `/trading`
-- `/trading/positions`
+- `/trading/portfolio`
 - `/trading/risk`
 
 ### 8.3 Catalog / Screener Workspace
@@ -580,11 +585,11 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 适用：
 
 - `/markets/screener`
-- `/markets/universes`
 - `/research/factors`
 - `/research/strategies`
 - `/research/backtest`
 - `/research/experiments`
+- `/research/universes`
 
 ### 8.4 Object Hub
 
@@ -599,9 +604,7 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 适用：
 
 - `/research/strategies/[id]/studio`
-- `/ai/copilot`
-- `/ai/agent`
-- `/markets/chart-lab`
+- `/platform/agents`
 
 ### 8.6 Queue / Ops Console
 
@@ -615,7 +618,6 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 适用：
 
 - `/trading/orders`
-- `/trading/trades`
 
 ### 8.8 Config / Integration Console
 
@@ -624,6 +626,13 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 - `/platform/settings`（Data Providers / Brokers 作为 tab 承载于 Settings）
 
 > **映射说明**：Shell（物理壳层布局）和 Pattern（交互模式）描述不同维度。同一 Pattern 可对应多种 Shell 布局（如 Ledger Pattern 在 Shell 层用 Catalog 壳层的表格+详情面板结构），这是正常的维度差异，不是矛盾。
+>
+> **v2.0 映射变更**：
+> - `/ai`、`/ai/copilot`、`/ai/agent` 不再作为独立路由（AI 域已拆散）
+> - `/trading/positions`、`/trading/trades` 合并为 `/trading/portfolio`，归属 Analytical Overview Workspace
+> - `/markets/universes` 移至 Research 域，归属 Catalog / Screener Workspace
+> - `/markets/chart-lab` 降级为 Instrument Hub tab，不再独立映射
+> - `/platform/agents` 新增，归属 Studio / Builder
 
 ---
 
@@ -648,12 +657,12 @@ Ditto v1 不应按所有页面平均推进。
 9. Backtest Result
 10. Signals Inbox
 
-### 第三批：执行与 AI 深化的 4 页
+### 第三批：执行与 Agent 深化的 4 页
 
 11. Orders / Execution Ledger
 12. Risk Center
-13. AI Copilot Studio
-14. Agent Console
+13. Portfolio（Positions / Trades / Attribution）
+14. Agent Console（`/platform/agents`）
 
 ---
 
@@ -671,13 +680,13 @@ Ditto 的结构必须强调"我现在在处理什么"，而不是"这个功能�
 
 所有目录、筛选、队列表都应围绕扫描、比较、跳转和批处理来设计。
 
-### 10.4 AI 页面必须服从 Ditto 的统一工作台语法
+### 10.4 AI 能力必须服从 Ditto 的统一工作台语法
 
-Copilot 和 Agent 不是外部聊天产品，而是 Ditto 工作流的一部分。
+Copilot 和 Agent 不是外部聊天产品，而是 Ditto 工作流的一部分。Copilot 以全局 Sidecar 形式存在，Agent Console 归入 Platform 域。AI 能力嵌入各业务域，而非形成独立产品心智。
 
 ### 10.5 Platform 必须保持专业控制台语法，而不是后台管理语法
 
-Platform 的重点是状态、任务、日志、修复、可用性，而不是传统管理后台的表单堆叠。
+Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管理，而不是传统管理后台的表单堆叠。
 
 ---
 
@@ -690,12 +699,101 @@ Platform 的重点是状态、任务、日志、修复、可用性，而不是�
 - 让 Markets Map 成为平权核心页
 - 让 Builder 和 Editor 成为两个割裂工作流
 - 让 AI 市场分析、AI 选股、AI 策略助手成为三个独立子产品
+- 让 AI 成为独立一级域（v2.0 已拆散嵌入各业务域）
 - 让 Platform 朝"权限后台大全"方向发展
 - 让 ML 平台成为 v1 主战场
 
 ---
 
-## 12. 本文档输出给谁使用
+## 12. AI 嵌入方案
+
+> **v2.0 新增**。AI 域拆散后，AI 能力以嵌入方式分布在 Ditto 各处。本节明确每种 AI 能力的归属位置与交互形态。
+
+### 12.1 AI Copilot Sidecar
+
+**位置**：全局右侧可折叠面板，不属于任何域。
+
+**交互形态**：
+
+- 任何页面可通过快捷键或 Header 按钮唤出
+- 上下文感知：根据当前页面自动加载相关上下文（如 Markets 页面加载市场数据，Research 页面加载因子/策略信息）
+- 支持对话、结构化输出、建议采纳
+
+**取代**：原 `/ai/copilot` 独立路由。
+
+### 12.2 Agent Console
+
+**位置**：`/platform/agents`
+
+**职责**：Plan → Run → Finding → Approval 的 Agent 工作台。
+
+**包含内容**：
+
+- Agent 任务列表与状态
+- 运行时间线（Agent Run Timeline）
+- 工具调用追踪（Tool Trace）
+- 审批请求（Approval Request Block）
+- 产出结果（Output Artifact Block）
+
+**取代**：原 `/ai/agent` 路由。
+
+### 12.3 嵌入式 AI 能力
+
+| 能力 | 嵌入位置 | 交互形态 |
+|------|---------|---------|
+| Agent Findings | Home 底部区块 | 摘要卡片，点击展开详情或跳转 `/platform/agents` |
+| 因子发现 | `/research/factors` | Copilot Sidecar 内的 Factor Discovery Mode |
+| 策略生成 | `/research/strategies/[id]/studio` | Copilot Sidecar 内的 Strategy Draft Mode |
+| 市场分析 | `/markets`、`/markets/a-shares` | Copilot Sidecar 内的 Market Analysis Mode |
+| 选股辅助 | `/markets/screener` | Copilot Sidecar 内的 Stock Discovery Mode |
+| AI 概览内容 | Home + `/platform/agents` | Agent Findings 区块（Home）/ Agent 任务列表（Platform） |
+
+### 12.4 已废弃的 AI 路由
+
+| 路由 | 处理方式 |
+|------|---------|
+| `/ai` | 拆分内容归入 Home（Agent Findings）和 `/platform/agents` |
+| `/ai/copilot` | 升级为全局 Copilot Sidecar |
+| `/ai/agent` | 迁移至 `/platform/agents` |
+
+---
+
+## 13. 全局组件
+
+> **v2.0 新增**。除一级域和路由外，Ditto 还有不属于任何域的 Shell 级全局组件。
+
+### 13.1 Regime Indicator
+
+**角色**：Shell 级全局组件，展示当前市场状态（Risk-On / Risk-Off / Mixed）。
+
+**位置**：Status Bar 胶囊。
+
+**交互**：
+
+- 默认显示为 Status Bar 中的小胶囊，标注当前 Regime 状态和置信度
+- 点击展开面板，展示 Regime 模型详情、切换历史、驱动因素
+- 面板可收起，不占用主工作区空间
+
+**数据源**：`/research/regime` 中的 Regime Model。
+
+### 13.2 AI Copilot Sidecar
+
+**角色**：全局右侧可折叠面板，提供上下文感知的 AI 对话与分析能力。
+
+**位置**：页面右侧，可折叠。
+
+**交互**：
+
+- 通过快捷键（如 `Cmd+K` 或 `Ctrl+K`）或 Header 按钮唤出/收起
+- 展开时主工作区宽度自适应收缩
+- 上下文随当前页面自动切换
+- 支持 Market Analysis / Stock Discovery / Strategy Draft / Factor Discovery 等工作模式
+
+详见 §12.1。
+
+---
+
+## 14. 本文档输出给谁使用
 
 本文件是以下工作的直接输入：
 
@@ -718,6 +816,19 @@ Platform 的重点是状态、任务、日志、修复、可用性，而不是�
 ---
 
 ## Changelog
+
+### 2026-04-18 — v2.0
+
+- **[架构重构]** AI 域拆散嵌入，域结构从 6 域收敛为 5 域（移除 AI 域）
+- **[AI 嵌入]** Copilot 升级为全局 Sidecar（§12.1），Agent Console 迁入 `/platform/agents`（§12.2）
+- **[路由变更]** `/markets/universes` 移入 Research 域为 `/research/universes`
+- **[路由变更]** `/markets/chart-lab` 降级为 Instrument Hub 的 tab
+- **[路由变更]** `/markets/hk`、`/markets/us` 延后至 v1.5+
+- **[路由合并]** `/trading/positions` + `/trading/trades` 合并为 `/trading/portfolio`（含 Positions/Trades/Attribution 三个 tab）
+- **[新增路由]** `/platform/agents`（Agent Console）
+- **[新增组件]** Trading Overview Signal-to-Order Pipeline Strip（§7.4）
+- **[新增章节]** §12 AI 嵌入方案、§13 全局组件（Regime Indicator + Copilot Sidecar）
+- **[路由统计]** 从 29 路由精简为 25 路由 + 2 个全局组件
 
 ### 2026-03-31 — v1.1
 

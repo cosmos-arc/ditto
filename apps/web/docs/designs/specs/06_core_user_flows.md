@@ -1,7 +1,7 @@
 # Ditto 核心用户流程
 
-> **版本**: v1.2
-> **日期**: 2026-03-31
+> **版本**: v1.3
+> **日期**: 2026-04-18
 > **上游**: [01 产品信息架构](./01_product_information_architecture.md)、[02 核心页面蓝图](./02_core_page_blueprints.md)
 > **下游**: [04 交互与状态规范](./04_interaction_state_spec.md)
 
@@ -9,7 +9,7 @@
 
 ## 1. 文档目标
 
-定义 Ditto v1 的 4 条核心用户流程，覆盖 happy path + 关键错误分支。
+定义 Ditto v1 的 5 条核心用户流程，覆盖 happy path + 关键错误分支。
 
 Ditto 的本质是面向个人量化研究与实盘闭环的专业工作台，核心链路只有一条：
 
@@ -90,17 +90,17 @@ Ditto 的本质是面向个人量化研究与实盘闭环的专业工作台，�
 
 **说明**: 用户判断当前标的需要持续跟踪但暂不研究。Watchlist 是沉淀层，不阻断主流程。
 
-#### 分支 A3: Instrument Hub → 打开 Chart Lab
+#### 分支 A3: Instrument Hub → 图表分析（内部 Tab）
 
 ```
 /instruments/[id] (Instrument Hub)
-  │ "打开 Chart Lab" CTA
+  │ 切换到"图表分析" Tab
   ▼
-/markets/chart-lab (Chart Lab)
-  │ 在 Studio 环境中做深度技术分析
+/instruments/[id]?tab=chart-analysis
+  │ 在 Instrument Hub 内做深度技术分析（原 Chart Lab 已降级为内部 Tab）
 ```
 
-**说明**: Chart Lab 是 Studio/Builder 模式页面，用于高级图表分析。用户完成分析后通常回到 Instrument Hub 做判断。
+**说明**: Chart Lab 已降级为 Instrument Hub 的内部 Tab（图表分析），不再是独立路由 `/markets/chart-lab`。用户在标的详情页内直接切换 Tab 即可进入图表分析环境，完成分析后无需页面跳转。
 
 #### 分支 A4: Home 直接跳转信号/订单
 
@@ -123,7 +123,7 @@ Ditto 的本质是面向个人量化研究与实盘闭环的专业工作台，�
   │ 多维筛选 → 结果表 → Compare Drawer → Instrument Hub
 ```
 
-**说明**: 当 6 宫格概览不足以定位目标标的时，用户切换到 Screener 做多条件筛选。Screener 的结果可批量发送到 Universe / Watchlist / Copilot / Strategy Studio。
+**说明**: 当 6 宫格概览不足以定位目标标的时，用户切换到 Screener 做多条件筛选。Screener 的结果可批量发送到 Universe / Watchlist / AI Copilot Sidecar / Strategy Studio。
 
 ### 2.3 断裂点（已知）
 
@@ -248,11 +248,11 @@ Ditto 的本质是面向个人量化研究与实盘闭环的专业工作台，�
 /research/backtest/[id] (Backtest Result)
   │ "发送 AI 解读" CTA
   ▼
-/ai/copilot (Copilot Studio) — Strategy Draft 模式
+AI Copilot Sidecar（全局，当前页面唤出） — Strategy Draft 模式
   │ AI 分析回测结果 → 给出改进建议
 ```
 
-**说明**: 用户对回测结果不确定时，可借助 AI 辅助解读。此分支连接 Flow C。
+**说明**: 用户对回测结果不确定时，可唤出 Copilot Sidecar 借助 AI 辅助解读。此分支连接 Flow C。
 
 ### 3.3 断裂点（已知）
 
@@ -367,26 +367,100 @@ Ditto 的本质是面向个人量化研究与实盘闭环的专业工作台，�
 - Flow D 与 Flow A 共享 Risk Center 入口（Flow A 分支 A1 也从 Cross-Market Risk 预警进入 Risk Center）
 - Flow D 的终点是 Signals Inbox，与 Flow B/C 终点一致
 
+### 3.6 Flow E: Regime 变化全局响应
+
+#### 概述
+
+这是 Ditto 的 Shell 级响应流程。Regime Indicator（参见 IA v2.0 §13.1）是 Status Bar 中的全局胶囊组件，当市场状态发生变化时触发通知，用户可从任何页面感知并响应。核心动词序列是 **detect → notify → decide → act**。
+
+> **v1.3 新增**：此流程对应 IA v2.0 §13.1 Regime Indicator 全局组件。
+
+#### 3.6.1 Happy Path
+
+```
+Regime Indicator（Status Bar 胶囊）
+  │ 检测到 Regime 状态变化（Risk-On → Risk-Off 等）
+  ▼
+Shell 级通知条（页面顶部 banner）
+  │ 展示变化摘要 + 置信度 + 驱动因素
+  ▼
+用户点击通知条 → 展开详情面板
+  │ 查看 Regime 模型详情、切换历史、驱动因素
+  ▼
+用户决策：
+  ├─ 忽略（关闭通知，继续当前工作）
+  ├─ 调整策略 → /research/strategies/[id]/studio（添加/修改 Regime 条件分支）
+  ├─ 暂停交易 → /trading/risk（检查持仓风险）
+  └─ 查看详情 → /research/regime（深入分析 Regime 模型）
+```
+
+**每步的核心判断与动作**：
+
+| 步骤 | 位置 | 用户判断 | 主 CTA |
+|------|------|---------|--------|
+| 1 | Status Bar 胶囊 | Regime 状态是否变化？ | 查看变化详情 |
+| 2 | 通知条 banner | 这个变化是否影响我的策略/持仓？ | 展开 / 忽略 |
+| 3 | 详情面板 | 变化是否显著？置信度如何？ | 调整策略 / 暂停交易 / 深入分析 / 忽略 |
+
+#### 3.6.2 关键分支
+
+##### 分支 E1: 忽略 Regime 变化
+
+```
+通知条 banner → 用户点击"忽略"或自动消失
+  │ 继续当前工作流
+```
+
+**说明**: 不是所有 Regime 变化都需要用户响应。低置信度变化或用户策略已包含 Regime 条件时，用户可选择忽略。
+
+##### 分支 E2: Regime 变化 → 调整策略（连接 Flow D）
+
+```
+通知条 → "调整策略"
+  ▼
+/research/strategies/[id]/studio
+  │ 添加/修改 Regime 条件分支 → 提交回测
+  ▼
+后续进入 Flow D 回路
+```
+
+##### 分支 E3: Regime 变化 → 暂停交易（连接 Flow A/D）
+
+```
+通知条 → "暂停交易"
+  ▼
+/trading/risk (Risk Center)
+  │ 检查 Active Breaches → 暂停信号生成
+  ▼
+后续进入 Flow D 改进回路
+```
+
+#### 3.6.3 与其他 Flow 的关系
+
+- Flow E 是**唯一**由 Shell 级组件（而非页面内操作）触发的流程
+- Flow E 的下游可连接 Flow D（调整策略/暂停交易）或 Flow B（新建 Regime 适配策略）
+- Flow E 不改变当前页面上下文——用户从任何页面都能感知 Regime 变化，决策后跳转到对应工作流
+
 ---
 
 ## 4. Flow C: AI 辅助发现 → 审批 → 执行
 
 ### 概述
 
-这是 Ditto 的 AI 加速流程。用户借助 AI Copilot 和 Agent 进行市场发现、策略草案生成和自动化研究，经审批后进入执行。核心动词序列是 **discover → draft → approve → execute**。
+这是 Ditto 的 AI 加速流程。AI 能力以嵌入式形式分布在各业务域中：Copilot 作为全局 Sidecar 随时唤出（参见 IA v2.0 §13.2），Agent Console 归入 Platform 域（`/platform/agents`），Agent Findings 摘要在 Home 底部展示。用户借助这些嵌入式 AI 进行市场发现、策略草案生成和自动化研究，经审批后进入执行。核心动词序列是 **discover → draft → approve → execute**。
 
 ### 4.1 Happy Path
 
 ```
-/ai (AI 总览)
+/ (Home) — Agent Findings 区块
   │ 查看最近 Agent Findings 和待审批事项
   ▼
-/ai/copilot (Copilot Studio)
+AI Copilot Sidecar（全局，任意页面唤出）
   │ Market Analysis 模式 → AI 产出市场分析结论
   ▼
 用户采纳 AI 建议 → 发送到 Strategy Studio / Watchlist
   ▼
-/ai/agent (Agent Console)
+/platform/agents (Agent Console)
   │ 新建 Plan → Agent 运行 → Finding 产出
   ▼
 Finding 需要 Approval → 用户审批
@@ -401,9 +475,9 @@ Finding 需要 Approval → 用户审批
 
 | 步骤 | 页面 | 用户判断 | 主 CTA |
 |------|------|---------|--------|
-| 1 | AI 总览 | 最近 AI 有什么发现？有没有待审批事项？ | 查看 Finding / 进入 Copilot |
-| 2 | Copilot Studio | AI 分析是否可信？结论是否有价值？ | 保存结论 / 发送到目标工作区 |
-| 3 | Agent Console | Agent Plan 是否合理？运行结果如何？ | 提交审批 / 重跑 |
+| 1 | Home（Agent Findings 区块） | 最近 AI 有什么发现？有没有待审批事项？ | 查看 Finding / 唤出 Copilot Sidecar |
+| 2 | AI Copilot Sidecar | AI 分析是否可信？结论是否有价值？ | 保存结论 / 发送到目标工作区 |
+| 3 | Platform/Agents | Agent Plan 是否合理？运行结果如何？ | 提交审批 / 重跑 |
 | 4 | Agent Approval | Finding 是否值得执行？风险是否可控？ | 批准 / 拒绝 |
 | 5 | Signals Inbox | AI 生成的信号是否可信？ | 确认 → 生成订单复核 |
 
@@ -412,7 +486,7 @@ Finding 需要 Approval → 用户审批
 #### 分支 C1: Approval 被拒绝
 
 ```
-/ai/agent (Agent Console)
+/platform/agents (Agent Console)
   │ Finding 审批被拒绝
   ▼
 Agent 暂停
@@ -426,7 +500,7 @@ Agent 暂停
 #### 分支 C2: Agent 运行失败
 
 ```
-/ai/agent (Agent Console)
+/platform/agents (Agent Console)
   │ Agent Run 状态变为 failed
   ▼
 Detail / Tool Trace
@@ -442,7 +516,7 @@ Detail / Tool Trace
 #### 分支 C3: AI 建议不采纳
 
 ```
-/ai/copilot (Copilot Studio)
+AI Copilot Sidecar（全局，任意页面唤出）
   │ AI 分析结论不值得直接执行
   ▼
 "保存为 Research Note" CTA
@@ -455,21 +529,21 @@ Detail / Tool Trace
 #### 分支 C4: Copilot → Stock Discovery → Watchlist
 
 ```
-/ai/copilot (Copilot Studio)
-  │ Stock Discovery 模式 → AI 推荐标的一组标的
+AI Copilot Sidecar — Stock Discovery 模式
+  │ AI 推荐标的一组标的
   ▼
 批量 "加入 Watchlist" CTA
   ▼
 /markets/watchlist (Watchlist)
 ```
 
-**说明**: Copilot 的 Stock Discovery 模式产出的是标的列表，而非策略。这类产出的自然去向是 Watchlist 或 Universe，而非直接进入交易。
+**说明**: Copilot Sidecar 的 Stock Discovery 模式产出的是标的列表，而非策略。这类产出的自然去向是 Watchlist 或 Universe，而非直接进入交易。
 
 #### 分支 C5: Copilot → Strategy Draft → Strategy Studio
 
 ```
-/ai/copilot (Copilot Studio)
-  │ Strategy Draft 模式 → AI 生成策略草案
+AI Copilot Sidecar — Strategy Draft 模式
+  │ AI 生成策略草案
   ▼
 "发送到 Strategy Studio" CTA
   ▼
@@ -477,17 +551,17 @@ Detail / Tool Trace
   │ AI 草案作为初始代码/配置 → 用户微调 → 提交回测
 ```
 
-**说明**: 这是 AI 辅助研究的深度路径。AI 产出的策略草案进入 Strategy Studio 后，后续流程与 Flow B 完全一致。
+**说明**: 这是 AI 辅助研究的深度路径。AI 产出的策略草案进入 Strategy Studio 后，后续流程与 Flow B 完全一致。注意：Copilot Sidecar 可在任意页面唤出，此处为在 Strategy Studio 页面唤出 Copilot 的典型场景。
 
 ### 4.3 断裂点（已知）
 
 #### BP-C1: AI Approval → Trading 的连接未定义 ✅ 已修复
 
-**位置**: `/ai/agent` Approval 通过 → `/trading/signals`
+**位置**: `/platform/agents` Approval 通过 → `/trading/signals`
 
 **问题**: Agent Finding 审批通过后无自动化路径转化为 Signal。
 
-**修复方案**: 02 核心页面蓝图 §14 Agent Console 已增加"审批通过后自动生成信号"流程。完整自动化链路：
+**修复方案**: 02 核心页面蓝图 §14 Agent Console（`/platform/agents`）已增加"审批通过后自动生成信号"流程。完整自动化链路：
 
 1. Agent Finding 审批通过
 2. Finding 自动转化为 Signal，出现在 `/trading/signals` 的"待复核"队列
@@ -498,16 +572,16 @@ Detail / Tool Trace
 
 **状态**: 已修复（v1.1）— 02 蓝图 + 本文档同步更新
 
-#### BP-C2: AI 总览 → 具体工作台的跳转不清晰
+#### BP-C2: Home Agent Findings → 具体工作台的跳转不清晰
 
-**位置**: `/ai` → `/ai/copilot` 或 `/ai/agent`
+**位置**: Home（Agent Findings 区块） → `/platform/agents` 或 Copilot Sidecar
 
-**问题**: AI 总览页展示最近产出、发现和待审批事项，但从预览卡片跳转到具体 Copilot 会话或 Agent Run 的路径不够直观。
+**问题**: Home 底部的 Agent Findings 区块展示最近产出和待审批事项，但从摘要卡片跳转到 Agent Console 具体页面或唤出 Copilot 会话的路径不够直观。
 
-**建议修复**: AI 总览的每个预览卡片增加明确的 drill-down 入口：
-- Finding 卡片 → Agent Console 的 Findings Tab（定位到该 Finding）
-- 待审批卡片 → Agent Console 的 Approvals Tab（定位到该 Approval）
-- 最近 Copilot 会话 → Copilot Studio（定位到该 Session）
+**建议修复**: Home Agent Findings 的每个摘要卡片增加明确的 drill-down 入口：
+- Finding 卡片 → `/platform/agents`（定位到该 Finding）
+- 待审批卡片 → `/platform/agents`（定位到该 Approval）
+- 最近 Copilot 会话 → 唤出 Copilot Sidecar（定位到该 Session）
 
 **修复优先级**: P2（有替代路径但体验欠佳）
 
@@ -524,9 +598,9 @@ Detail / Tool Trace
 | Flow A 起点 | Today Pulse / Decision Banner → Markets |
 | Flow A 分支 | Pending → Signals / Orders（绕过研究直接执行） |
 | Flow B 终点 | Recent Signals / Runs 显示回测产出 |
-| Flow C 终点 | Agent Findings 显示 AI 发现 |
+| Flow C 终点 | Agent Findings 区块显示 AI 发现摘要（v2.0：原 `/ai` 总览内容归入此处） |
 
-**设计要求**: Home 必须同时服务于"开始新工作"和"继续未完成工作"两种场景。Pending 区应按优先级排序（critical > warning > running > pending），跨域混合展示。
+**设计要求**: Home 必须同时服务于"开始新工作"和"继续未完成工作"两种场景。Pending 区应按优先级排序（critical > warning > running > pending），跨域混合展示。Agent Findings 区块展示最近 Agent 产出摘要，点击可跳转 `/platform/agents`。
 
 ### 5.2 Research Workspace（/research）
 
@@ -556,17 +630,17 @@ Detail / Tool Trace
 | Flow A 核心 | 市场扫描后的下钻目标 |
 | Flow B 前置 | 研究前的标的判断 |
 
-**设计要求**: Instrument Hub 是市场域和研究域的桥梁。Object Header 的一级 CTA（加入观察 / 发送到研究 / 打开 Chart Lab）决定了用户下一步的去向。
+**设计要求**: Instrument Hub 是市场域和研究域的桥梁。Object Header 的一级 CTA（加入观察 / 发送到研究 / 打开图表分析）决定了用户下一步的去向。
 
 ### 5.5 Strategy Studio（/research/strategies/[id]/studio）
 
 | 连接流程 | 角色 |
 |---------|------|
 | Flow B 核心 | 策略构建与编辑 |
-| Flow C 分支 | AI 策略草案的接收目标 |
+| Flow C 分支 | AI 策略草案的接收目标（通过 Copilot Sidecar 生成） |
 | Flow A 分支 | Screener 结果的批量导入目标 |
 
-**设计要求**: Strategy Studio 必须支持多种入口上下文——空白创建（Flow B）、AI 草案导入（Flow C）、Screener 批量导入（Flow A 分支）。Inspector 面板应显示策略的来源信息。
+**设计要求**: Strategy Studio 必须支持多种入口上下文——空白创建（Flow B）、AI 草案导入（Flow C，通过 Copilot Sidecar）、Screener 批量导入（Flow A 分支）。Inspector 面板应显示策略的来源信息。
 
 ### 5.6 Risk Center（/trading/risk）
 
@@ -591,7 +665,7 @@ Ditto 的信息展示遵循"首屏给判断，滚动给细节，交互给深度"
 | 首屏 | 最高优先级信息 | 页面加载即可见 | Today Pulse、主工作面、待处理事项、KPI Strip |
 | 滚动 | 次要信息 | 用户主动滚动 | 底部模块、历史数据、Timeline、Diagnostics |
 | 交互展开 | drill-down 细节 | 点击/hover 触发 | Drawer、Inspector、Compare 面板、Detail 展开区 |
-| Tab 切换 | 同一对象的多视角 | Tab 切换 | Object Hub 的概览/行情/态势 Tab、Agent Console 的 Plans/Runs/Findings Tab |
+| Tab 切换 | 同一对象的多视角 | Tab 切换 | Object Hub 的概览/行情/态势 Tab、Platform/Agents 的 Plans/Runs/Findings Tab |
 
 ### 6.2 各流程的渐进展示节奏
 
@@ -618,9 +692,9 @@ Ditto 的信息展示遵循"首屏给判断，滚动给细节，交互给深度"
 
 | 阶段 | 首屏 | 滚动 | 交互展开 |
 |------|------|------|---------|
-| AI 总览 | 最近产出 + 待审批 + 高频入口 | — | 卡片点击 → Copilot/Agent 定位 |
-| Copilot Studio | Conversation + Structured Output | — | Context/Evidence 展开；"发送到" → 目标选择 |
-| Agent Console | Main Queue / Cards | — | Detail / Tool Trace 展开；Approval 弹窗 |
+| Home（Agent Findings 区块） | 最近产出 + 待审批摘要 | — | 卡片点击 → `/platform/agents` 定位 |
+| AI Copilot Sidecar | Conversation + Structured Output | — | Context/Evidence 展开；"发送到" → 目标选择 |
+| Platform/Agents | Main Queue / Cards | — | Detail / Tool Trace 展开；Approval 弹窗 |
 
 ### 6.3 展示原则
 
@@ -661,7 +735,7 @@ Ditto 作为内部工具，引导策略聚焦于"新成员快速上手团队现�
 | ID | 断裂点 | 位置 | 修复方案 |
 |----|--------|------|---------|
 | BP-B1 | ~~Backtest → Signal 激活路径缺失~~ | `/research/backtest/[id]` | ✅ 已修复 — Backtest Result 增加"启用信号"CTA，02 蓝图 + 本文档同步 |
-| BP-C1 | ~~AI Approval → Trading 连接未定义~~ | `/ai/agent` Approval 通过后 | ✅ 已修复 — Agent Console 增加自动信号生成流程，02 蓝图 + 本文档同步 |
+| BP-C1 | ~~AI Approval → Trading 连接未定义~~ | `/platform/agents` Approval 通过后 | ✅ 已修复 — Agent Console 增加自动信号生成流程，02 蓝图 + 本文档同步 |
 
 ### P1: 高频路径断裂（应当修复）
 
@@ -674,7 +748,7 @@ Ditto 作为内部工具，引导策略聚焦于"新成员快速上手团队现�
 | ID | 断裂点 | 位置 | 修复方案 |
 |----|--------|------|---------|
 | BP-B2 | Research → Strategy Studio 入口不直接 | `/research` → `/research/strategies/[id]/studio` | Research Workspace 的 Header 增加"新建策略"一级 CTA |
-| BP-C2 | AI 总览 → 具体工作台跳转不直观 | `/ai` → `/ai/copilot` 或 `/ai/agent` | 每个预览卡片增加明确 drill-down 入口，定位到具体 Session/Run/Finding |
+| BP-C2 | Home Agent Findings → 具体工作台跳转不直观 | Home（Agent Findings） → `/platform/agents` 或 Copilot Sidecar | 每个摘要卡片增加明确 drill-down 入口，定位到具体 Session/Run/Finding |
 
 ### 修复依赖关系
 
@@ -687,6 +761,7 @@ BP-C1 (AI Approval → Signal)
   └─ 前置：需要定义 Finding → Signal 的转化协议
   └─ 前置：Signals Inbox 需要支持 ai-agent source 标签
   └─ 关联：与 BP-B1 共享 Signals Inbox 的 source 筛选能力
+  └─ v2.0：路由从 `/ai/agent` 迁移至 `/platform/agents`
 
 BP-A1 (Market → Research 上下文)
   └─ 前置：需要定义 instrument → factors 的关联查询接口
@@ -699,7 +774,7 @@ BP-A1 (Market → Research 上下文)
 
 ### 8.1 定义
 
-Ditto 的多条核心流程涉及跨域跳转（如 Instrument Hub → Research、Copilot → Strategy Studio）。为保证跨域跳转时上下文不丢失，定义统一的上下文传递协议。
+Ditto 的多条核心流程涉及跨域跳转（如 Instrument Hub → Research、Copilot Sidecar → Strategy Studio）。为保证跨域跳转时上下文不丢失，定义统一的上下文传递协议。
 
 ### 8.2 协议格式
 
@@ -718,7 +793,7 @@ URL 参数格式：
 | `ctx[strategy]` | 策略 ID | `strat-023` |
 | `ctx[backtest]` | 回测 ID | `bt-1042` |
 | `ctx[finding]` | Agent Finding ID | `find-089` |
-| `ctx[mode]` | Copilot 模式 | `market-analysis`, `stock-discovery`, `strategy-draft` |
+| `ctx[mode]` | Copilot Sidecar 模式 | `market-analysis`, `stock-discovery`, `strategy-draft`, `factor-discovery` |
 | `ctx[action]` | 目标页面应执行的动作 | `show-related-factors`, `load-draft`, `highlight-anomaly` |
 
 ### 8.3 已定义的跨域路径
@@ -726,8 +801,8 @@ URL 参数格式：
 | 路径 | URL 参数 | 目标动作 |
 |------|---------|---------|
 | Instrument Hub → Research | `ctx[instrument]=<id>&ctx[action]=show-related-factors` | Factor Monitor 筛选关联因子 |
-| Copilot → Strategy Studio | `ctx[source]=copilot&ctx[mode]=strategy-draft&ctx[action]=load-draft` | Studio 加载 AI 策略草案 |
-| Backtest → Copilot | `ctx[source]=backtest&ctx[backtest]=<id>&ctx[action]=interpret` | Copilot Strategy Draft 模式加载回测上下文 |
+| Copilot Sidecar → Strategy Studio | `ctx[source]=copilot&ctx[mode]=strategy-draft&ctx[action]=load-draft` | Studio 加载 AI 策略草案 |
+| Backtest → Copilot Sidecar | `ctx[source]=backtest&ctx[backtest]=<id>&ctx[action]=interpret` | Copilot Strategy Draft 模式加载回测上下文 |
 | Screener → Strategy Studio | `ctx[source]=screener&ctx[instrument]=<ids>&ctx[action]=batch-import` | Studio 批量导入标的 |
 | Risk Center → Strategy Studio | `ctx[source]=risk&ctx[strategy]=<id>&ctx[action]=adjust-risk` | Studio 定位到风控参数面板 |
 | Agent Finding → Signals | `ctx[source]=agent&ctx[finding]=<id>&ctx[action]=signal-generated` | Signals 自动创建并筛选 |
@@ -742,6 +817,18 @@ URL 参数格式：
 ---
 
 ## Changelog
+
+### 2026-04-18 — v1.3
+
+- **[IA v2.0 同步]** Flow C 路由更新：`/ai` → Home Agent Findings 区块 + `/platform/agents`，`/ai/copilot` → AI Copilot Sidecar（全局），`/ai/agent` → `/platform/agents`
+- **[IA v2.0 同步]** Flow B 分支 B5 路由更新：`/ai/copilot` → AI Copilot Sidecar
+- **[IA v2.0 同步]** Flow A 分支 A5 Copilot 引用更新为 Copilot Sidecar
+- **[IA v2.0 同步]** §5 跨流程公共节点：Home Agent Findings 区块说明更新
+- **[IA v2.0 同步]** §6 渐进展示策略：Flow C 展示节奏更新为嵌入式 AI 架构
+- **[IA v2.0 同步]** §7 断裂点修复表：BP-C1/BP-C2 路由引用更新
+- **[IA v2.0 同步]** §8 跨域上下文传递协议：Copilot → Copilot Sidecar，新增 `factor-discovery` 模式
+- **[新增]** Flow E: Regime 变化全局响应（§3.6）— Shell 级 Regime Indicator 触发 → 通知条 → 用户决策 → 跳转对应工作流
+- 核心流程从 4 条扩展为 5 条
 
 ### 2026-03-31 — v1.1
 

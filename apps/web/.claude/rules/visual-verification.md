@@ -102,7 +102,7 @@ const metrics = await page.evaluate(() => {
 
 **必须记录到页面合同的度量字段**。
 
-**标准化 CSS**（复用 `scripts/visual-audit.config.mjs` 中的 `PROTOTYPE_NORMALIZE_CSS`）：
+**标准化 CSS**（复用 `.claude/skills/ditto-app-dev/scripts/visual-audit.config.mjs` 中的 `PROTOTYPE_NORMALIZE_CSS`）：
 - 隐藏 `.proto-nav`（原型的导航 UI，React 端不存在）
 - 强制 `#default-view` 为 100vh
 - 固定 status-bar 高度
@@ -153,16 +153,16 @@ bun run test --run src/features/shell/design-system-compliance.test.ts
 
 **使用 Playwright 对 prototype 和 React 两侧分别执行 `page.evaluate()` 提取 bounding rect，然后程序化对比。**
 
-现有自动化工具：`scripts/visual-audit.mjs`
+现有自动化工具：`.claude/skills/ditto-app-dev/scripts/visual-audit.mjs`
 
 ```bash
 # 运行全页面 L2 验证
-bun scripts/visual-audit.mjs --all \
+bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs --all \
   --react-base http://localhost:5173 \
   --prototype-base http://localhost:8888
 
 # 运行单页面 L2 验证
-bun scripts/visual-audit.mjs --route / \
+bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs --route / \
   --react-base http://localhost:5173 \
   --prototype-base http://localhost:8888
 ```
@@ -323,7 +323,7 @@ React 用 `data-slot` 属性标记布局区域，但视觉上有意义的元素�
 例如：`[data-slot='pulse']` 是一个透明的 grid-area wrapper，而 `[data-slot='pulse-strip']` 才是实际带样式、有边框的内部 div。
 映射错了，L2 度量对比的就是一个透明元素——边框/颜色/zIndex 全是 inherited/fallback 值。
 
-**解决方式**：在 `visual-audit.config.mjs` 中配置时，先用浏览器 DevTools 确认哪个 `data-slot` 元素实际承载了样式（`getComputedStyle()` 有非默认 border/background 等）。
+**解决方式**：在 `.claude/skills/ditto-app-dev/scripts/visual-audit.config.mjs` 中配置时，先用浏览器 DevTools 确认哪个 `data-slot` 元素实际承载了样式（`getComputedStyle()` 有非默认 border/background 等）。
 
 **已踩过的坑**：
 - `strip: "[data-slot='pulse']"` → 透明 wrapper，应改为 `"[data-slot='pulse-strip']"`

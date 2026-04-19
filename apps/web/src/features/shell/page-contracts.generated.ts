@@ -39,6 +39,8 @@ export interface PageContract {
   requiredStates: string[];
   hasStatusBar?: boolean;
   sidebarCollapsible?: boolean;
+  a11yRoles?: Record<string, string>;
+  responsiveBehavior?: Record<string, string>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -55,5 +57,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["pulse", "main", "sidebar"],
     requiredStates: ["loading", "empty", "error", "stale", "no-alerts", "has-critical"],
     sidebarCollapsible: true,
+    a11yRoles: {
+      "pulse": "banner",
+      "main": "main",
+      "sidebar": "complementary",
+    },
+    responsiveBehavior: {
+      "pulse": "collapsed",
+      "sidebar": "overlay",
+    },
   },
 ] as const satisfies readonly PageContract[];

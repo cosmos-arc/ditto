@@ -1,7 +1,7 @@
 # Ditto 统一术语表
 
-> **版本**: v2.4
-> **日期**: 2026-03-31
+> **版本**: v2.5
+> **日期**: 2026-04-18
 > **上游**: 全部 spec 文档 (00-15)
 > **下游**: UI 设计、AICoding、前端实现、内容审核
 
@@ -34,6 +34,7 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 |------|------|------|---------|
 | Market | 市场 | 泛指金融市场或某一具体市场，如 A 股市场、港股市场 | 01 |
 | Regime | 市场状态 | 三种状态：Risk-On（风险偏好）/ Risk-Off（风险规避）/ Mixed（混合） | 01 |
+| Regime Indicator | 市场状态指示器 | Shell 级全局市场状态指示器（Status Bar 胶囊） | 01 IA v2.0 |
 | Risk-On | 风险偏好 | 市场状态之一，表示风险资产受追捧 | 10 |
 | Risk-Off | 风险规避 | 市场状态之一，表示避险情绪占主导 | 10 |
 | Mixed | 混合 | 市场状态之一，表示无明显方向 | 10 |
@@ -170,6 +171,8 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | T+1 | T+1 交收 | A 股交易制度，当日买入的证券下一交易日方可卖出 | -- |
 | Trading Signals Inbox | 信号收件箱 | `/trading/signals` 页面。**不用"信号中心"** | 01 |
 | Review Mode | 盘后复盘模式 | Trading Overview 15:00 后自动切换的回顾模式（日归因/健康检查/明日预览） | 02 |
+| Portfolio | 持仓组合 | `/trading/portfolio` 页面，合并原 Positions 和 Trades | 02 Blueprint v2.0 |
+| Pipeline Strip | 管线条 | 信号→订单管线可视化条，Trading Overview L2 组件 | 02 Blueprint v2.0 |
 
 ---
 
@@ -296,8 +299,8 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | Approval | 审批 | 人工对 Agent 操作的确认 | 13 |
 | Tool Invocation | 工具调用 | Agent 调用外部工具的操作 | 13 |
 | Tool Trace | 工具追踪 | Agent 工具调用的详细执行记录 | 13 |
-| Agent Console | Agent 控制台 | `/ai/agent` 页面的正式名称 | 01 |
-| AI Copilot Studio | AI 智能助手工作坊 | `/ai/copilot` 页面的正式名称 | 01 |
+| Agent Console | Agent 控制台 | `/platform/agents` 页面的正式名称，归属 Platform 域 | 01 |
+| AI Copilot Studio | AI 智能助手工作坊 | 全局 Sidecar（不属于任何域路由） | 01 |
 | Session | 会话 | Copilot 的一次对话会话 | 01 |
 | Structured Output | 结构化输出 | Copilot 产出的非自由文本结果 | 01 |
 | Context | 上下文 | AI 工作时参考的关联对象与信息 | 01 |
@@ -318,6 +321,8 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | Multi-Agent Pipeline | 多 Agent 管道 | 多个 Agent 串行协作完成复杂研究任务的流水线 | 02 |
 | AI Confidence | AI 置信度 | AI 结论的可靠程度分级（🟢 高 80-100 / 🟡 中 50-79 / 🔴 低 0-49） | 02 |
 | Evidence Chain | 证据链 | AI 置信度背后的推理依据与数据源追踪链 | 02 |
+| AI Sidecar | AI 侧栏 | 全局右侧可折叠面板，上下文感知，不属于任何域路由 | 01 IA v2.0 |
+| AI Overview | ~~AI 总览~~ | **已废弃**。功能已拆分到 Home 页 + Platform/Agents | 01 |
 
 ---
 
@@ -363,7 +368,7 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | Banner | 横幅 | 页级持续可见的重要反馈 | 13 |
 | Alert Item | 告警项 | 可处理事项，持续存在直到处理完成 | 13 |
 | Blocker State | 阻断状态 | 不可忽视的严重问题，必须处理才能继续 | 13 |
-| Universe | 标的池 | `/markets/universes` 页面，策略可交易的标的集合管理 | 01 |
+| Universe | 标的池 | `/research/universes` 页面，策略可交易的标的集合管理。v2.0 从 Markets 域移至 Research 域 | 01 |
 | Watchlist | 观察列表 | `/markets/watchlist` 页面，用户关注的标的列表 | 01 |
 | Intelligence | 情报中心 | `/markets/intelligence` 页面，多源情报聚合工作区（tab 视图） | 01 |
 | Chart Lab | 图表实验室 | `/markets/chart-lab` 页面，交互式图表实验工作台 | 01 |
@@ -463,7 +468,7 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | 10 | Trading Session | **Trading Session / 交易时段** | Session 单独出现 | 10 Shell Family |
 | 11 | Turnover Rate | **Total Turnover Value / 两市成交额** | Turnover Rate（与换手率 Turnover 混淆） | 审计 FIX |
 | 12 | MDD vs Current Drawdown | **MDD = 历史最大回撤，Current Drawdown = 当前回撤深度** | 混用 MDD 表达当前回撤 | 02 蓝图, 审计 FIX |
-| 13 | /ai Pattern 归属 | **Global Command Center 轻量变体** | Object Hub（10 Shell）、Analytical Overview（11 Pattern 残留） | 01 IA + 10 Shell + 11 Pattern 审计对齐 |
+| 13 | /ai Pattern 归属 | **已废弃**，路由拆分为 `/platform/agents`（Platform 域）和全局 AI Sidecar | Object Hub（10 Shell）、Analytical Overview（11 Pattern 残留） | 01 IA v2.0 路由重构 |
 | 14 | /trading/accounts | **已废弃** | 所有文档中的残留引用 | 11 Pattern, 10 Shell |
 
 ---
@@ -510,6 +515,16 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 ---
 
 ## Changelog
+
+### 2026-04-18 — v2.5
+
+- **IA v2.0 路由重构同步**：所有 `/ai` 路由引用已更新
+  - Agent Console: `/ai/agent` → `/platform/agents`，标注归属 Platform 域
+  - AI Copilot Studio: `/ai/copilot` → 全局 Sidecar（不属于任何域路由）
+  - 不一致修复记录 #13：`/ai` Pattern 标记为已废弃
+- **新增术语 5 条**：AI Sidecar、Portfolio、Pipeline Strip、Regime Indicator、AI Overview (deprecated)
+- **更新 Universe**：路由从 `/markets/universes` 改为 `/research/universes`，标注从 Markets 域移至 Research 域
+- **AI Overview 标记为 deprecated**：功能已拆分到 Home 页 + Platform/Agents
 
 ### 2026-03-31 — v2.4
 

@@ -1,7 +1,7 @@
 # Ditto Page Pattern Library
 
-> **版本**：v1.2
-> **日期**：2026-03-31
+> **版本**：v1.3
+> **日期**：2026-04-18
 > **状态**：Final
 > **上游**：[10 Shell Family 规范](./10_ditto_shell_family_spec.md)、[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[02 核心页面蓝图](./02_core_page_blueprints.md)
@@ -92,7 +92,8 @@ Global Command Center 是 Ditto 的全局起点。
 ### 4.2 适用页面
 
 - `/`
-- `/ai`（轻量变体——聚焦 AI 产出总览与分流，参见 01 IA §7.5）
+
+<!-- 已移除: `/ai` — AI Overview 已 deprecated，功能并入全局 Sidecar -->
 
 未来也可以承接：
 
@@ -209,19 +210,22 @@ Global Command Center 是 Ditto 的全局起点。
 
 - `/markets`（Radar 变体）
 - `/markets/a-shares`（Radar 变体）
-- `/markets/hk`（Radar 变体）
-- `/markets/us`（Radar 变体）
+- `/markets/hk`（Radar 变体 — v1.5/v2 延后）
+- `/markets/us`（Radar 变体 — v1.5/v2 延后）
 - `/markets/watchlist`
 - `/markets/intelligence`
 - `/research`
 - `/research/regime`
 - `/trading`
-- `/trading/positions`
+- `/trading/portfolio`
 - `/trading/risk`
 
 <!-- 已移除: `/trading/signals` — IA 归为 Queue/Ops Console（核心动词是 review/confirm/reject） -->
 <!-- 已修正: `/trading/risk/dashboard` → `/trading/risk` -->
 <!-- 已移除: `/trading/risk/stress-test` — IA 无此路由 -->
+<!-- 已合并: `/trading/positions` + `/trading/trades` → `/trading/portfolio`（IA v2.0） -->
+<!-- 已移除: `/markets/universes` — 迁移至 Research 域（IA v2.0） -->
+<!-- 已降级: `/markets/chart-lab` — IA v2.0 不再作为一级路由 -->
 
 ### 5.3 页面目标
 
@@ -269,7 +273,7 @@ Global Command Center 是 Ditto 的全局起点。
 
 适用于跨市场扫描和单市场结构扫描——以"扫 → 比 → 选"为核心动词的页面。
 
-适用：`/markets`（全市场总览）、`/markets/a-shares`、`/markets/hk`、`/markets/us`
+适用：`/markets`（全市场总览）、`/markets/a-shares`、`/markets/hk`（v1.5/v2 延后）、`/markets/us`（v1.5/v2 延后）
 
 核心特征：
 - 双层 Context（Context Bar + Scope Strip）
@@ -362,14 +366,14 @@ Catalog / Screener Workspace 用于对象集合的检索、筛选、浏览、批
 ### 6.2 适用页面
 
 - `/markets/screener`
-- `/markets/universes`
+- `/research/universes` <!-- 已迁移: 原 `/markets/universes` → `/research/universes`（IA v2.0） -->
 - `/markets/calendar`
 - `/research/factors`
 - `/research/strategies`
 - `/research/backtest`
 - `/research/experiments`
 - `/trading/orders`
-- `/trading/trades`
+- `/trading/portfolio` <!-- 已合并: 原 `/trading/positions` + `/trading/trades` → `/trading/portfolio`（IA v2.0） -->
 
 <!-- 已移除: `/markets/catalog` — IA 无此独立路由，由 `/markets` + `/markets/screener` 覆盖 -->
 
@@ -591,11 +595,12 @@ Studio / Builder 用于构建、编辑、配置、对话、编排和调试。
 
 ### 8.2 适用页面
 
-- `/markets/chart-lab`
 - `/research/strategies/[id]/studio`
-- `/ai/copilot`
-- `/ai/agent`
+- `/platform/agents`
 
+<!-- 已降级: `/markets/chart-lab` — IA v2.0 不再作为一级路由 -->
+<!-- 已升级: `/ai/copilot` — 升级为全局 Sidecar，不再是独立页面路由 -->
+<!-- 已迁移: `/ai/agent` — 迁入 `/platform/agents`（Studio Shell） -->
 <!-- 已合并: `/research/strategies/new` → `/research/strategies/[id]/studio` -->
 <!-- 已合并: `/research/strategies/[id]/editor` → `/research/strategies/[id]/studio` -->
 <!-- 已合并: `/research/backtest/new` — IA 无此独立路由 -->
@@ -841,9 +846,9 @@ Ledger / Execution Console 用于订单、成交、执行状态、持仓流水�
 ### 10.2 适用页面
 
 - `/trading/orders`
-- `/trading/trades`
+- `/trading/portfolio`
 
-<!-- 已修正: `/trading/positions` → Analytical Overview Workspace（01 IA §8.6 / 10 Shell §10.4 / 11 Pattern §5.2 三处一致） -->
+<!-- 已修正（v1.3）: 原 `/trading/positions` + `/trading/trades` 已合并为 `/trading/portfolio`（IA v2.0） -->
 
 未来可能的 fills / execution logs / broker routes
 
@@ -1049,13 +1054,15 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 |------|---------|
 | `/markets` | Analytical Overview Workspace |
 | `/markets/a-shares` | Analytical Overview Workspace (Radar 变体) |
+| `/markets/hk` | Analytical Overview Workspace (Radar 变体 — **v1.5/v2 延后**) |
+| `/markets/us` | Analytical Overview Workspace (Radar 变体 — **v1.5/v2 延后**) |
 | `/markets/screener` | Catalog / Screener Workspace |
-| `/markets/universes` | Catalog / Screener Workspace |
+| ~~`/markets/universes`~~ | _迁移至 Research 域（IA v2.0）_ |
 | `/markets/watchlist` | Analytical Overview Workspace |
 | ~~`/markets/catalog`~~ | _移除：IA Sitemap 无此独立路由，由 `/markets` + `/markets/screener` 覆盖_ |
 | ~~`/markets/map`~~ | _降级：并入 `/markets` 视图模式_ |
 | `/markets/intelligence` | Analytical Overview Workspace (tab 视图，收敛原 `/*` 子路由) |
-| `/markets/chart-lab` | Studio / Builder |
+| ~~`/markets/chart-lab`~~ | _降级：IA v2.0 不再作为一级路由_ |
 | `/markets/calendar` | Catalog / Screener Workspace |
 | `/instruments/[id]` | Object Hub |
 
@@ -1064,6 +1071,7 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 | 路由 | Pattern |
 |------|---------|
 | `/research` | Analytical Overview Workspace |
+| `/research/universes` | Catalog / Screener Workspace **[v1.3 新增 — 从 Markets 域迁入]** |
 | `/research/factors` | Catalog / Screener Workspace |
 | `/research/factors/[id]` | Object Hub |
 | ~~`/research/factors/[id]/analysis`~~ | _修正：简化为 `/research/factors/[id]`_ |
@@ -1089,10 +1097,10 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 | `/trading` | Analytical Overview Workspace |
 | ~~`/trading/accounts`~~ | _移除：IA Sitemap 无此路由（v1.1 审计清理）_ |
 | ~~`/trading/portfolios`~~ | _移除：IA Sitemap 无此路由_ |
-| `/trading/positions` | Analytical Overview Workspace |
+| `/trading/portfolio` | Analytical Overview Workspace **[v1.3 — 合并原 positions + trades]** |
 | `/trading/signals` | Queue / Ops Console **[v1.1 审计修正]** |
 | `/trading/orders` | Ledger / Execution Console |
-| `/trading/trades` | Ledger / Execution Console |
+| ~~`/trading/trades`~~ | _已合并：并入 `/trading/portfolio`（IA v2.0）_ |
 | `/trading/risk` | Analytical Overview Workspace |
 | ~~`/trading/risk/dashboard`~~ | _修正：简化为 `/trading/risk`_ |
 | ~~`/trading/risk/stress-test`~~ | _移除：IA Sitemap 无此路由_ |
@@ -1100,11 +1108,16 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 
 ### 12.5 AI & Agent
 
+> **[v1.3] 整段 deprecated**：AI 域在 IA v2.0 中不再作为独立路由域存在。
+> - `/ai`（AI Overview）已 deprecated，功能并入全局 Sidecar
+> - `/ai/copilot` 已升级为全局 Sidecar，不再是独立页面路由
+> - `/ai/agent` 已迁入 `/platform/agents`（Studio Shell）
+
 | 路由 | Pattern |
 |------|---------|
-| `/ai` | Global Command Center（轻量变体）——**已修正：从 Object Hub 重新归类（v1.1 审计对齐 01 IA + 10 Shell 决策）** |
-| `/ai/copilot` | Studio / Builder |
-| `/ai/agent` | Studio / Builder |
+| ~~`/ai`~~ | _deprecated：功能并入全局 Sidecar（IA v2.0）_ |
+| ~~`/ai/copilot`~~ | _升级：全局 Sidecar，不再是独立页面路由_ |
+| ~~`/ai/agent`~~ | _迁移：→ `/platform/agents`（Studio Shell）_ |
 | ~~`/ai/market-analysis`~~ | _合并：作为 `/ai/copilot` 内部模式_ |
 | ~~`/ai/stock-screener`~~ | _合并：作为 `/ai/copilot` 内部模式_ |
 | ~~`/ai/strategy-assistant`~~ | _合并：作为 `/ai/copilot` 内部模式_ |
@@ -1115,6 +1128,7 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 |------|---------|
 | `/platform` | Queue / Ops Console |
 | `/platform/settings` | Config / Integration Console |
+| `/platform/agents` | Studio / Builder **[v1.3 新增 — 从 AI 域迁入]** |
 
 > **v1 收敛说明**：Platform 域在 v1 仅保留 2 条路由（`/platform` + `/platform/settings`）。
 > data-quality / pipelines 收敛为 `/platform` 的 tab；
@@ -1163,3 +1177,22 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 4. 设计和前端都能据此复用结构
 5. 用户在跨模块切换时，能感受到"同一产品，不同工作面"
 6. 不会再出现"所有页面都像同一个后台模板"的问题
+
+---
+
+## 15. 变更日志
+
+### v1.3 — 2026-04-18（IA v2.0 同步）
+
+| 变更 | 章节 | 说明 |
+|------|------|------|
+| 移除 `/ai` | §4.2 | AI Overview 已 deprecated，从 Global Command Center 适用页面列表移除 |
+| 移除 `/trading/positions`、`/trading/trades` | §5.2 | 合并为 `/trading/portfolio` |
+| 新增 `/trading/portfolio` | §5.2, §12.4 | 合并原 positions + trades |
+| 移除 `/markets/universes` | §5.2 | 迁移至 Research 域 |
+| 新增 `/research/universes` | §12.3 | 从 Markets 域迁入（Catalog / Screener Workspace） |
+| 降级 `/markets/chart-lab` | §5.2, §8.2, §12.2 | 不再作为一级路由 |
+| 标记 `/markets/hk`、`/markets/us` 延后 | §5.2, §5.5, §12.2 | v1.5/v2 延后 |
+| 移除 `/ai/copilot`、`/ai/agent` | §8.2 | copilot 升级为全局 Sidecar，agent 迁入 Platform |
+| 新增 `/platform/agents` | §8.2, §12.6 | 从 AI 域迁入（Studio Shell） |
+| §12.5 AI & Agent 整段 deprecated | §12.5 | AI 域不再作为独立路由域，添加迁移说明 |

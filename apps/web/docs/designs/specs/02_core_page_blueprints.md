@@ -1,11 +1,11 @@
 # Ditto 核心页面蓝图
 
-> **版本**：v1.2
-> **日期**：2026-03-31
+> **版本**：v2.0
+> **日期**：2026-04-18
 > **状态**：Final
 > **上游**：[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[03 对象页统一规范](./03_object_hub_spec.md)、[04 交互与状态规范](./04_interaction_state_spec.md)
-> **职责**：17 个页面模板——目标、主辅工作面、关键区块、主 CTA、wireframe
+> **职责**：26 个页面模板——目标、主辅工作面、关键区块、主 CTA、wireframe、Page Contract Mapping
 
 ---
 
@@ -169,6 +169,26 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 | Data Health | 健康状态面板 | skeleton 面板 | "所有数据源正常" + 绿色标识 | "数据源连接异常" + 重试 | 异常数据源黄色标记 | 不适用 |
 | My Workspace | widget 网格正常展示 | widget skeleton 占位 | 空网格 + "添加 widget"CTA | "加载工作台失败" + 重试 | widget 边框黄色标记 | 选中 widget 边框高亮
 
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/` |
+| shellFamily | `command-center` |
+| pagePattern | `global-command-center` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| decision-banner | main |
+| priority-queue | main |
+| market-pulse | sidebar |
+| alerts | sidebar |
+| data-health | sidebar |
+| agent-findings | main |
+| my-workspace | main |
+
 ---
 
 ## 2. 全市场总览（Cross-Market Overview）
@@ -314,6 +334,25 @@ Context Bar → Scope Strip → Market Cards → Matrix → Macro Drivers → Bo
 | Right Rail | 各面板正常展示 | 面板 skeleton | 面板空状态 CTA | "加载失败" + 重试 | 面板黄色边框 | 不适用 |
 | Bottom Tab Band | 3 个 tab 标签 + 当前 tab 内容 | tab 内容 skeleton | 当前 tab "暂无数据" | "加载失败" + 重试 | tab 标签黄色圆点 | 选中 tab 高亮
 
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/markets` |
+| shellFamily | `radar` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| context-bar | main |
+| scope-strip | main |
+| market-cards | main |
+| matrix-table | main |
+| bottom-tabs | main |
+| market-pulse | rail |
+
 ---
 
 ## 2.1 中国 A 股总览
@@ -458,6 +497,25 @@ Context → Scope → Market Structure → Breadth → ETF → Movers → Intell
 | Right Rail 北向深度面板 | 分时曲线 + 持仓 Top10 + 行业偏好 | 曲线 skeleton + 列表 skeleton | "盘前暂无北向数据" | "加载失败" + 重试 | 数据时戳标记 | 不适用 |
 | Bottom Tab Band | 4 个 tab 标签 + 当前 tab 内容 | tab 内容 skeleton | 当前 tab "暂无数据" | "加载失败" + 重试 | tab 标签黄色圆点 | 选中 tab 高亮
 
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/markets/a-shares` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| context-bar | main |
+| scope-strip | main |
+| structure-table | main |
+| flow-table | main |
+| dragon-tiger-table | main |
+| bottom-tabs | main |
+
 ---
 
 ## 2.2 情报中心（Markets Intelligence）
@@ -587,6 +645,24 @@ Right Rail（关联标的 / 快捷筛选 / 时间范围）
 | Right Rail AI 摘要 | AI 生成摘要文本 | 脉冲动画 + "AI 分析中..." | "暂无 AI 摘要" + 触发按钮 | "AI 分析失败" + 重试 | 标注生成时间 | 不适用 |
 | Analysis Band | 趋势/对比/笔记条正常展示 | skeleton 条状占位 | "暂无分析记录" + 新建 CTA | 错误提示 + 重试 | 数据时戳标记 | 当前选中条高亮 |
 
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/markets/intelligence` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| context-bar | main |
+| event-timeline | main |
+| macro-drivers | main |
+| news-feed | main |
+| bottom-tabs | main |
+
 ---
 
 ## 3. Markets Screener
@@ -713,7 +789,25 @@ Toolbar → Filters → Results → Actions → Compare
 | Compare Cart | 显示已选数量（0-N） | — | 空状态 + 拖入提示 | — | — | — | 显示批量已选数量 |
 | Compare Drawer | 展示对比内容 | 图表/数据 skeleton | 「请从结果表添加标的」 | 「加载对比数据失败」+ 重试 | 黄色边框提示 | 对比项高亮 | — |
 | Scoring Presets | 下拉列表 | 下拉 skeleton | 「暂无评分模型」 | — | — | 选中项标记 | — |
+
 | Result Destinations | 目标列表 | 列表 skeleton | 「暂无可选目标」 | — | — | — | 支持批量发送 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/markets/screener` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| filter-panel | main |
+| results-table | main |
+| compare-drawer | overlay |
+| watchlist-actions | header |
 
 ---
 
@@ -753,7 +847,7 @@ Related / Signals / Notes
 - 加入观察
 - 加入标的池
 - 发送到研究
-- 打开 Chart Lab
+- 打开图表分析（Instrument Hub 内 Tab）
 
 ### Wireframe
 
@@ -876,7 +970,27 @@ Related / Signals / Notes
 | 关联网络 Tab: 关系图 | 渲染力导向图 | 图 skeleton + 节点占位 | 「暂无关联标的」 | 「关联数据加载失败」+ 重试 | — | 中心节点高亮 | — |
 | 公告 Tab: 公告列表 | 公告列表 + 类型筛选 | 列表 skeleton（5 条） | 「暂无公告」 | 「公告加载失败」+ 重试 | 黄色边框提示 | 公告条目高亮 | — |
 | Related / Signals / Notes | 关联标的卡片 + 信号列表 + 笔记 | skeleton | 「暂无关联内容」 | 「加载失败」+ 重试 | 黄色边框 | — | — |
+
 | Timeline / Filings | 时间线 + 文件列表 | skeleton | 「暂无记录」 | 「加载失败」+ 重试 | — | 时间节点高亮 | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/instruments/[id]` |
+| shellFamily | `object-hub` |
+| pagePattern | `object-hub` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| object-header | header |
+| meta-strip | header |
+| tab-bar | main |
+| tab-content | main |
+| related-signals | rail |
+| notes | rail |
 
 
 ---
@@ -958,7 +1072,24 @@ Related / Signals / Notes
 | 月历视图 | 渲染日历网格 + 事件标记 | 日历 skeleton | 「所选范围内无事件」 | 「日历加载失败」+ 重试 | 事件标记变灰 + 时戳提示 | 日期单元格高亮 + 侧边事件列表 | — |
 | 事件列表 | 渲染事件条目列表 | 列表 skeleton（8 条） | 「暂无匹配事件」+ 调整筛选 CTA | 「事件加载失败」+ 重试 | 黄色边框提示 | 事件条目高亮 | 批量设置提醒 |
 | 经济数据时间线 | 渲染数据点 + 前值/预期 | skeleton | 「无经济数据发布」 | 「数据加载失败」+ 重试 | 数据点变灰 + 提示 | 数据点高亮 + 详情浮窗 | — |
+
 | Filter Bar | 展示当前筛选条件 | — | 显示默认条件 | — | — | — | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/markets/calendar` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| calendar-grid | main |
+| event-detail | overlay |
+| filter-bar | header |
 
 
 ---
@@ -1082,7 +1213,26 @@ Pulse → Factor Monitor → Recent Runs → Review Queue → Analysis Band
 | Recent Runs | 渲染运行记录列表 | 列表 skeleton（5 条） | 「暂无运行记录」+ 新建 CTA | 「运行记录加载失败」+ 重试 | — | 运行条目高亮 | 批量取消/导出 |
 | Experiments / Review Queue | 渲染实验列表 + 审核队列 | skeleton | 「暂无实验/审核」 | 「加载失败」+ 重试 | — | 条目高亮 | 批量审核操作 |
 | Analysis Band: IC 趋势 | 渲染迷你折线图 | 图表 skeleton | 「暂无 IC 数据」 | 「图表加载失败」 | 黄色边框 + 时戳 | — | — |
+
 | Analysis Band: 相关性 | 渲染热力图 | 热力图 skeleton | 「暂无相关性数据」 | 「加载失败」 | 黄色边框提示 | 单元格高亮 | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| recent-analysis | main |
+| factor-health-summary | main |
+| strategy-overview | main |
+| quick-actions | main |
+| research-timeline | rail |
 
 
 ---
@@ -1197,7 +1347,28 @@ IC → 收益 → 分布与相关 → 换手
 | 分布与相关 Tab: 相关矩阵 | 渲染相关性热力矩阵 | 矩阵 skeleton | 「暂无相关性数据」 | 「加载失败」+ 重试 | 黄色边框 | 单元格高亮 | — |
 | 换手 Tab: 序列图 | 渲染换手率折线 | 图表 skeleton | 「暂无换手数据」 | 「换手数据加载失败」+ 重试 | 黄色边框 + 时戳 | 数据点高亮 | — |
 | 2x2 Diagnostics | 渲染四象限诊断图 | 四象限 skeleton | 「暂无诊断数据」 | 「诊断数据加载失败」+ 重试 | 黄色边框 | 象限高亮 | — |
+
 | Bottom: 统计表 | 渲染详细统计表格 | 表格 skeleton | 「暂无统计数据」 | 「加载失败」+ 重试 | 黄色边框 | 行高亮 | 批量导出 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/factors/[id]` |
+| shellFamily | `object-hub` |
+| pagePattern | `object-hub` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| factor-header | header |
+| meta-strip | header |
+| diagnostics-panel | main |
+| distribution-chart | main |
+| decay-timeline | main |
+| tab-content | main |
+| related-strategies | rail |
 
 
 ---
@@ -1342,7 +1513,26 @@ Inspector / AI Assistant / Logs
 | Universe 标的池 | 表格/网格展示标的列表 | skeleton 行 × 10 | "请配置 Universe，或从模板加载" + 模板选择 CTA | 错误提示 + [重试] | — | 选中标的高亮 | 批量添加/移除标的 |
 | 权重配置 | 权重滑块/输入框 | skeleton 行 × 5 | "请先选择 Universe 标的" | — | — | — | — |
 | Inspector 面板 | AI 建议 + 校验状态列表 | spinner + "分析中..." | "配置策略后，AI 将提供优化建议" | 错误提示 + [重试] | "AI 分析结果可能已过时，点击刷新" | — | — |
+
 | Logs 底部面板 | 空白待输出状态 | — | "暂无日志，执行校验或 Dry Run 后在此查看" | — | — | — | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/strategies/[id]/studio` |
+| shellFamily | `studio` |
+| pagePattern | `studio-builder` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| strategy-header | header |
+| config-panel | main |
+| factor-list | main |
+| backtest-quick-run | main |
+| version-history | rail |
 
 ---
 
@@ -1486,7 +1676,27 @@ Stats / Trades / Attribution / Diagnostics
 | 交易明细表 | 分页表格，支持排序/筛选 | skeleton 行 × 10 | "回测期间无交易记录" | 错误提示 + [重试] | — | 选中行高亮，右侧展示交易详情 | 批量导出选中交易 |
 | 风险分析图表 | 回撤/VaR/波动率图表组 | skeleton 图表组 × 4 | "无风险数据" | 错误提示 + [重试] | — | 点击回撤区间查看详情 | — |
 | 因子暴露图表 | 时间序列 + 热力图 | skeleton 图表组 × 3 | "未配置因子暴露分析" | 错误提示 + [重试] | — | hover 暴露值 tooltip | — |
+
 | 持仓分析图表 | 饼图 + 重仓股列表 + 行业分布 | skeleton 图表组 × 3 | "无持仓数据" | 错误提示 + [重试] | — | 点击个股跳转标的详情 | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/backtest/[id]` |
+| shellFamily | `object-hub` |
+| pagePattern | `object-hub` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| backtest-header | header |
+| kpi-strip | header |
+| nav-chart | main |
+| attribution-panel | main |
+| trade-log | main |
+| tab-content | main |
 
 ### Backtest Compare 视图
 
@@ -1663,7 +1873,30 @@ Session → Equity → Risk → Positions → Signals → Orders / Recent Trades
 | Signal Queue | 待处理信号计数 + 最近信号列表 | skeleton 行 × 5 | "暂无待处理信号" | 错误提示 + [重试] | — | 点击信号跳转 Signals Inbox | — |
 | Order Status | 订单状态统计（待提交/已提交/部分成交/已完成/失败） | skeleton 卡片 × 5 | "今日无订单" | 错误提示 + [重试] | — | 点击状态过滤 Orders Ledger | — |
 | 当日归因（Review） | 行业/个股/因子贡献柱状图 | skeleton 图表 × 3 | "今日无归因数据" | 错误提示 + [重试] | — | 点击贡献项 drill-down | — |
+
 | 持仓健康检查（Review） | 风险持仓列表 + 状态标记 | skeleton 行 × 5 | "所有持仓状态正常" | 错误提示 + [重试] | — | 点击持仓查看详情 | — |
+
+> **v2.0 新增**: pipeline-strip 模块——Signal-to-Order Pipeline 可视化，展示从信号生成到订单执行的端到端流程。
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/trading` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| session-strip | main |
+| pipeline-strip | main |
+| equity-pnl | main |
+| risk-alerts | main |
+| positions-summary | main |
+| signal-queue | rail |
+| order-status | rail |
 
 ---
 
@@ -1812,7 +2045,25 @@ Signal Detail / Actions
 | Signal Detail | 信号解释 + 风控检查 + 组合影响 + 操作按钮 | skeleton 面板 | "选择左侧信号查看详情" | 错误提示 + [重试] | — | — | — |
 | Scope Strip | 状态 tab + 各状态计数 badge | skeleton tab × 4 | — | — | — | — | — |
 | 订单确认面板 | 标的信息 + 状态检查 + 委托配置 + 费用预估 | spinner + "检查中..." | — | 检查失败标记 + [重试] | — | — | — |
+
 | 涨跌停校验标识 | 信号行状态列显示校验结果 | — | — | — | — | 不通过信号标灰 + tooltip 说明原因 | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/trading/signals` |
+| shellFamily | `ops-console` |
+| pagePattern | `queue-ops-console` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| signal-list | main |
+| review-panel | main |
+| filter-bar | header |
+| batch-actions | header |
 
 ---
 
@@ -1925,11 +2176,133 @@ Order Trace
 | Order Trace | 状态时间线 + 费用明细 + 路由日志 | skeleton 时间线 | "选择左侧订单查看追踪" | 错误提示 + [重试] | — | — | — |
 | 撤单按钮 | 仅对已提交/部分成交状态可点击 | — | — | — | — | — | 批量撤单 Modal |
 | 重试按钮 | 仅对失败状态可点击 | — | — | — | — | — | 批量重试 Modal |
+
 | 成交进度条 | 部分成交 tab 下显示进度 | skeleton 进度条 | — | — | — | — | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/trading/orders` |
+| shellFamily | `ops-console` |
+| pagePattern | `ledger-execution-console` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| order-list | main |
+| order-detail | main |
+| execution-trace | overlay |
+| filter-bar | header |
 
 ---
 
-## 12. Risk Center
+## 12. Portfolio（合并页）
+
+> **路由**：`/trading/portfolio`
+> **说明**：v2.0 新增合并页，整合原 Positions、Trades、Attribution 为 tab 视图。
+
+### 页面目标
+
+统一的组合视图，整合持仓、交易历史和归因分析。
+
+### 页面角色
+
+Analytical Overview Workspace
+
+### 主工作面
+
+Portfolio Summary + Tab Content
+
+### 辅工作面
+
+PnL Chart
+
+### 默认 tab
+
+持仓 → 交易 → 归因
+
+### 核心区块
+
+- Portfolio Summary（总资产 / 当日 PnL / 风险指标）
+- Tabs（持仓 / 交易 / 归因）
+- PnL Chart
+
+### 主 CTA
+
+- 查看标的详情
+- 导出
+- 跳转 Risk Center
+
+### Wireframe
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Portfolio: 总资产 / 当日PnL / 风险指标                         │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ [持仓] [交易] [归因]                                           │
+│      ├───────────────────────────────┬───────────────────────────────┤
+│      │ Tab Content                   │ PnL Chart                     │
+│      │ (positions/trades/attribution)│                               │
+└──────┴───────────────────────────────┴───────────────────────────────┘
+```
+
+### Tab Content Sections
+
+#### Tab: 持仓（默认）
+- **子模块**: 持仓摘要卡片（总市值/总 PnL/集中度热力图）、持仓表格（标的/代码/方向/数量/可用数量/T+1冻结/成本价/现价/市值/PnL/PnL%/当日盈亏）
+- **数据字段**: 标的名称、证券代码、持仓方向、持仓数量、可用数量（T+1 冻结标记）、成本均价、最新价、持仓市值、累计盈亏、盈亏比例、当日盈亏（来源: Position Engine、Quote Service）
+- **交互说明**: 行点击展开 Position Detail Drawer；T+1 冻结行标记不可卖；支持按 PnL%/市值/行业排序；批量选择 → 批量平仓
+
+#### Tab: 交易
+- **子模块**: 筛选栏（日期范围/标的/方向/策略来源）、成交表格（时间/标的/方向/数量/价格/金额/状态/策略来源/滑点）
+- **数据字段**: 成交时间、标的名称、证券代码、买卖方向、成交数量、成交价格、成交金额、成交状态（全部成交/部分成交/已撤单）、策略来源、滑点（来源: Order Engine / Broker API）
+- **交互说明**: 行点击展开 Trade Detail Drawer（关联信号+订单）；日期范围筛选；导出 CSV
+
+#### Tab: 归因
+- **子模块**: 归因时间选择器、行业归因饼图、个股贡献柱状图（Top 5 盈利 + Top 5 亏损）、因子贡献表格
+- **数据字段**: 行业权重、行业 PnL 贡献、个股名称、个股 PnL、因子名称、因子收益贡献（来源: Attribution Engine）
+- **交互说明**: 时间范围切换（当日/本周/本月）；行业饼图点击下钻到个股；因子表格排序
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/trading/portfolio` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| portfolio-summary | header |
+| positions-tab | main |
+| trades-tab | main |
+| attribution-tab | main |
+| pnl-chart | main |
+
+### Component x State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected |
+|------|---------|---------|-------|--------|-------|----------|
+| Portfolio Summary | 显示总资产/PnL/风险指标 | Skeleton 占位 | "暂无持仓" | "数据加载失败" + 重试 | PnL 数据灰化 + 刷新提示 | — |
+| Positions Table | 持仓列表（标的/数量/成本/市值/PnL/T+1） | Skeleton 行 ×5 | "当前无持仓" 空态 | "持仓数据异常" + 重试 | 价格灰化 + "延迟 Ns" 标记 | 行高亮 + 详情展开 |
+| Trades Table | 当日成交列表 | Skeleton 行 ×5 | "今日无成交" 空态 | "成交数据异常" + 重试 | — | 行高亮 + 执行追踪 |
+| Attribution Panel | 行业/个股/因子归因图表 | Skeleton 图表 | "无归因数据" 空态 | "归因计算失败" + 重试 | — | — |
+
+### Overlay Registry
+
+| Overlay | 类型 | 触发条件 | 内容结构 | 关闭行为 |
+|---------|------|---------|---------|---------|
+| Trade Detail | Drawer | 点击成交记录行 | 成交详情（标的/方向/数量/价格/时间/策略来源/滑点） | ESC / 点击外部 |
+| Position Detail | Drawer | 点击持仓行 | 持仓详情（标的/数量/成本/市值/PnL%/T+1状态/关联信号/关联策略） | ESC / 点击外部 |
+| Confirm Close All | Confirm Dialog | 点击"全部平仓"按钮 | 风险语义（"确认平仓所有持仓？"）+ 当前持仓总市值 + 确认/取消 | 确认执行 / 取消关闭 |
+
+---
+
+## 13. Risk Center
 
 ### 页面目标
 
@@ -2024,11 +2397,30 @@ Risk Strip → Main Charts → Active Breaches → Stress Summary → Incident T
 | Main Risk Charts | 图表渲染完成，支持缩放和 Tooltip | 图表区域骨架屏动画 | "暂无风险数据，请先配置组合" | "图表渲染失败" + 重试按钮 | 图表右上角黄色提示 + "最后更新于 HH:MM" | 交叉线 + 数据 Tooltip |
 | Active Breaches | 违规列表，严重度色标 + 摘要 | 列表行骨架屏 | "当前无违规项" 绿色提示 | "违规数据加载失败" + 重试按钮 | 列表顶部黄色提示条 | 高亮行 + 右侧展开 Detail |
 | Stress Test Summary | 表格展示各场景 Impact + 受影响持仓 | 表格行骨架屏 | "暂无压力测试记录，点击运行测试" | "计算引擎异常" + 重试按钮 | 不适用 | 高亮行 + 联动 Charts |
+
 | Incident Timeline | 时间线渲染，事件按严重度着色 | 时间线骨架 | "暂无事件记录" | "事件加载失败" + 重试按钮 | 不适用 | 事件条目展开 Detail |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/trading/risk` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| risk-dashboard | main |
+| breach-list | main |
+| stress-test | main |
+| position-concentration | main |
+| regime-indicator | header |
 
 ---
 
-## 13. AI Copilot Studio
+## 14. AI Copilot Studio
 
 ### 页面目标
 
@@ -2151,11 +2543,30 @@ Context / Evidence / Actions
 | Conversation | 消息流：用户消息 + AI 回复（流式） | 消息骨架 + 打字指示器 | "开始新的分析，输入你的问题" + 输入框聚焦 | "AI 服务不可用，请稍后重试" + 重试 | 不适用 | 消息可点击查看详情 |
 | Structured Output | 结构化卡片：结论/数据/建议 | 卡片骨架屏 | 无（等待对话产出） | "结构化输出解析失败" | 不适用 | 点击卡片展开完整内容 |
 | Context 面板 | 数据对象/证据/操作面板 | 面板骨架 | "暂无关联上下文" | "上下文加载失败" + 重试 | 不适用 | 数据对象可点击跳转 |
+
 | Factor Hypothesis 输出 | 结构化文档：名称/逻辑/数据源/验证方法 | 文档骨架 | 无（等待 Factor Discovery 产出） | "假设生成失败" + 重试 | 不适用 | "发送到 Factor Analysis" / "加入 Strategy Studio" |
+
+> **v2.0 注意**: AI Copilot Studio 功能已嵌入其他页面（Markets Intelligence 的 AI 解读 tab、Agent Console 的 Finding 面板等），此蓝图保留但标记为 deprecated。路由从 `/ai/copilot` 迁入各功能域。
+>
+> **v2.0 迁移**: Copilot 功能已升级为全局 AI Sidecar（右侧可折叠面板），不属于任何域路由。用户可在任意页面通过快捷键唤出，自动感知当前页面上下文（市场/个股/策略/因子 4 种模式）。原 Copilot Studio 的 4 种模式完整保留在 Sidecar 中。
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/ai/copilot` *(deprecated，功能已嵌入)* |
+| shellFamily | `studio` |
+| pagePattern | `studio-builder` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| *(deprecated — AI 能力已嵌入各功能域)* | — |
 
 ---
 
-## 14. Agent Console
+## 15. Agent Console
 
 ### 页面目标
 
@@ -2313,11 +2724,32 @@ Agent Finding 审批通过后，自动执行以下步骤：
 | Findings 列表 | Finding 卡片 + Confidence 色标 | 卡片骨架屏 | "暂无 Finding" | "Finding 数据异常" + 重试 | 不适用 | 高亮卡片 + Evidence 面板 | 批量操作栏（提交审批） |
 | Approvals 队列 | 待审 Finding + Confidence + Evidence | 卡片骨架屏 | "暂无待审批项" 绿色提示 | "审批服务异常" + 重试 | 不适用 | 高亮卡片 + 审批详情 | 批量审批操作栏 |
 | Detail 面板 | 右侧面板展示完整详情 | 面板骨架 | 不适用（由选中触发） | "详情加载失败" + 重试 | 不适用 | 不适用 | 不适用 |
+
 | Pipeline 视图 | Agent 链路图 + 执行进度 | 流程图骨架 | 不适用 | "Pipeline 渲染失败" + 重试 | 节点灰色 + "等待更新" | 点击节点展开 Artifact | 不适用 |
+
+> **v2.0 迁移**: Agent Console 从 `/ai/agent` 迁入 `/platform/agents`，归属 Platform 域。
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/platform/agents` |
+| shellFamily | `studio` |
+| pagePattern | `studio-builder` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| agent-list | main |
+| pipeline-timeline | main |
+| finding-queue | main |
+| approval-panel | main |
+| run-history | rail |
 
 ---
 
-## 15. Platform Ops Console
+## 16. Platform Ops Console
 
 ### 页面目标
 
@@ -2414,11 +2846,30 @@ System Alerts / Resources / Logs
 | System Alerts | 告警列表，严重度色标 + 时间 | 列表行骨架屏 | "当前无系统告警" 绿色提示 | "告警加载失败" + 重试按钮 | 不适用 | 高亮行 + 展开详情 |
 | Provider 列表 | 表格：名称/延迟/缺失率/异常率 | 表格行骨架屏 | "暂无数据源配置" | "Provider 数据异常" + 重试按钮 | 表格顶部黄色提示 "数据延迟" | 高亮行 + 展开 DQ 面板 |
 | Job Queue | 任务列表：名称/状态/时间/耗时 | 列表行骨架屏 | "暂无运行中任务" | "Job 调度器异常" + 重试按钮 | 不适用 | 高亮行 + 展开日志 |
+
 | Logs Stream | 实时日志流，级别色标 | 加载指示器 | "暂无新日志" | "日志服务连接失败" + 重试按钮 | 不适用 | 点击展开日志详情 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/platform` |
+| shellFamily | `ops-console` |
+| pagePattern | `config-integration-console` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| health-strip | main |
+| data-providers | main |
+| pipelines | main |
+| system-alerts | rail |
+| resources | rail |
 
 ---
 
-## 16. Regime Monitor（轻量蓝图）
+## 17. Regime Monitor（轻量蓝图）
 
 > **路由**：`/research/regime`
 > **Pattern**: Analytical Overview Workspace
@@ -2494,17 +2945,36 @@ Regime Status → Drivers → Switch History → Strategy Impact
 
 ### Component × State Matrix
 
-| 组件 | default | loading | empty | failed | stale |
-|------|---------|---------|-------|--------|-------|
-| Regime Indicator | 三状态仪表渲染，当前状态高亮 | 仪表骨架屏动画 | 无（引擎必有判定） | "Regime 判定服务异常" + 重试按钮 | 黄色脉冲 + "判定延迟" |
-| Status Strip | 状态标签 + 置信度 + 关键指标值 | 指标骨架屏 | 不适用 | "数据加载失败" + 重试 | 指标旁灰色圆点 |
-| Drivers Panel | 因子列表：名称/当前值/趋势 Sparkline | 因子行骨架屏 | "暂无驱动因子数据" | "因子数据异常" + 重试 | 不适用 |
-| Switch History | 时间线渲染，切换节点着色 | 时间线骨架 | "暂无 Regime 切换记录" | "历史数据加载失败" + 重试 | 不适用 |
-| Strategy Impact | 策略卡片列表 + 表现数据 | 卡片骨架屏 | "暂无关联策略" + 跳转 Strategy Studio | "策略数据异常" + 重试 | 不适用 |
+| 组件 | default | loading | empty | failed | stale | selected | bulk |
+|------|---------|---------|-------|--------|-------|----------|------|
+| Regime Indicator | 三状态仪表渲染，当前状态高亮 | 仪表骨架屏动画 | 无（引擎必有判定） | "Regime 判定服务异常" + 重试按钮 | 黄色脉冲 + "判定延迟" | 边框高亮 + 详情展开 | N/A（单状态卡片） |
+| Status Strip | 状态标签 + 置信度 + 关键指标值 | 指标骨架屏 | 不适用 | "数据加载失败" + 重试 | 指标旁灰色圆点 | 边框高亮 + 详情展开 | N/A（单状态卡片） |
+| Drivers Panel | 因子列表：名称/当前值/趋势 Sparkline | 因子行骨架屏 | "暂无驱动因子数据" | "因子数据异常" + 重试 | 不适用 | 行高亮 | 多选因子进行组合分析 |
+| Switch History | 时间线渲染，切换节点着色 | 时间线骨架 | "暂无 Regime 切换记录" | "历史数据加载失败" + 重试 | 不适用 | 时间节点高亮 + 详情 | 多选时间段对比 |
+
+| Strategy Impact | 策略卡片列表 + 表现数据 | 卡片骨架屏 | "暂无关联策略" + 跳转 Strategy Studio | "策略数据异常" + 重试 | 不适用 | 卡片高亮 | 多选策略对比 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/regime` |
+| shellFamily | `analytical` |
+| pagePattern | `analytical-overview` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| regime-status | header |
+| confidence-chart | main |
+| driving-factors | main |
+| switch-history | main |
+| strategy-impact | main |
 
 ---
 
-## 17. AI 总览（轻量蓝图）
+## 18. AI 总览（轻量蓝图）
 
 > **路由**：`/ai`
 > **Pattern**: Global Command Center（轻量变体）
@@ -2571,13 +3041,36 @@ Global Command Center（轻量变体）
 |------|---------|---------|-------|--------|-------|
 | AI Pulse | 各模块数值 + 状态色标 | 骨架屏脉冲动画 | "暂无 AI 活动，开始你的第一次对话" + 新建 CTA | "AI 服务连接异常" + 重试按钮 | 数值旁灰色圆点 + "数据延迟" |
 | Agent Quick View | 卡片列表：运行中/待审/已完成 | 卡片骨架屏 | "暂无 Agent 活动" | "Agent 服务异常" + 重试 | 不适用 |
+
 | Copilot Quick View | 最近产出列表 + 会话链接 | 列表骨架屏 | "暂无 Copilot 活动" | "Copilot 服务异常" + 重试 | 不适用 |
+
+> **v2.0 注意**: AI 总览页面功能已嵌入 Home Command Center（Agent Findings 区块）和各功能域。此蓝图保留但标记为 deprecated。
+>
+> **v2.0 迁移**: 功能拆分至两处：
+> - Agent Findings 摘要 → Home Command Center 的 "Agent Findings" 区块
+> - Agent 配置与运行管理 → Platform/Agents (`/platform/agents`)
+> - AI 产出时间线 → Platform/Agents 的 Run History 面板
+> - 原页面不再作为独立路由存在。
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/ai` *(deprecated，功能已嵌入)* |
+| shellFamily | `command-center` |
+| pagePattern | `global-command-center` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| *(deprecated — AI 能力已嵌入各功能域)* | — |
 
 ---
 
-## 18. Strategy Detail
+## 19. Strategy Detail
 
-> **路由**：`/strategies/$id`
+> **路由**：`/research/strategies/[id]`
 > **Pattern**: Object Hub（对象详情页）
 
 ### 页面目标
@@ -2712,7 +3205,570 @@ KPI Strip / Meta Strip / Bottom Area
 | 信号 Tab: 统计 | 四状态计数 badge | badge skeleton | "暂无信号产出" | 错误 + 重试 | — |
 | 信号 Tab: 列表 | 信号行 + 状态 | 行 skeleton × 10 | "暂无信号" + 查看全部 CTA | 错误 + 重试 | 黄色边框 |
 | 版本 Tab: 时间线 | 版本行 + 变更摘要 | 行 skeleton × 5 | "暂无版本记录" | 错误 + 重试 | — |
+
 | 版本 Tab: Diff | 配置差异高亮 | diff skeleton | "选择两个版本查看差异" | 错误 + 重试 | — |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/strategies/[id]` |
+| shellFamily | `object-hub` |
+| pagePattern | `object-hub` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| strategy-header | header |
+| meta-strip | header |
+| tab-bar | main |
+| tab-content | main |
+| related-backtests | rail |
+
+---
+
+## 20. Watchlist（轻量）
+
+> **路由**：`/markets/watchlist`
+> **Pattern**: Catalog / Screener（列表视图）
+
+### 页面目标
+
+用户自定义观察标的列表，快速跳转到 Instrument Hub 或交易操作。
+
+### 页面角色
+
+Catalog
+
+### 主工作面
+
+列表
+
+### 默认信息顺序
+
+Watchlist Table → 行操作
+
+### 核心区块
+
+- Header（标题 / 添加标的按钮 / 批量操作）
+- Watchlist Table（代码 / 名称 / 最新价 / 涨跌幅 / 信号状态 / 备注）
+
+### 主 CTA
+
+- 添加标的
+- 批量删除
+- 行跳转 Instrument Hub
+
+### Tab Content Sections
+
+> Watchlist 无 tab 系统，单列表视图。
+
+#### 区域: Watchlist Table
+- **子模块**: 表格行（代码/名称/最新价/涨跌幅/信号状态/备注）、行操作菜单、批量选择
+- **数据字段**: 标的信息（来源: Instrument Master + Quote Service）、信号状态（来源: Signal Engine）、备注（来源: Watchlist Store）
+- **交互说明**: 点击行跳转 Instrument Hub；右键菜单支持快捷交易/移除/备注编辑；支持拖拽排序；虚拟滚动
+
+### Overlay Registry
+
+#### Overlay: 添加标的 — Drawer
+- **触发条件**: 用户点击「添加标的」按钮
+- **内容结构**: 搜索框 + 候选标的列表（代码/名称/行业） + 添加/取消按钮
+- **关闭行为**: 点击遮罩 / ESC / 添加成功后自动关闭
+
+#### Overlay: 批量删除 — Modal（破坏性操作）
+- **触发条件**: 用户勾选多个标的后点击「批量删除」
+- **内容结构**: 警告图标 + "确认从观察列表中移除 {N} 个标的？" + 已选标的列表 + [取消] [确认删除]
+- **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认删除后自动关闭 + Toast
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected | bulk |
+|------|---------|---------|-------|--------|-------|----------|------|
+| Watchlist Table | 标的行渲染 | 行 skeleton（8 行） | 「观察列表为空」+ 添加标的 CTA | 「加载失败」+ 重试按钮 | 行左上角黄色圆点 | 行背景高亮 + 右侧操作联动 | 顶部批量操作栏: 删除/导出 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/markets/watchlist` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| watchlist-table | main |
+| add-instrument | header |
+| batch-actions | header |
+
+---
+
+## 21. Factor List（轻量）
+
+> **路由**：`/research/factors`
+> **Pattern**: Catalog / Screener（列表视图）
+
+### 页面目标
+
+浏览所有因子，按健康状态/IC/IR 排序，快速下钻到因子详情或筛选策略。
+
+### 页面角色
+
+Catalog / Screener
+
+### 主工作面
+
+列表/表格
+
+### 默认信息顺序
+
+Health Summary → Filter Bar → Factor Table
+
+### 核心区块
+
+- Filter Bar（因子家族 / 健康状态 / 排序方式）
+- Health Summary（健康/警告/异常因子数量）
+- Factor Table（名称 / 家族 / IC / IR / 健康状态 / 关联策略数）
+
+### 主 CTA
+
+- 因子对比
+- 下钻因子详情
+
+### Tab Content Sections
+
+> Factor List 无 tab 系统，单列表视图 + 顶部健康摘要。
+
+#### 区域: Health Summary
+- **子模块**: 健康因子计数、警告因子计数、异常因子计数
+- **数据字段**: 健康状态分布（来源: Factor Health Engine 聚合）
+- **交互说明**: 点击计数 badge 快速筛选对应状态因子
+
+#### 区域: Factor Table
+- **子模块**: 表格行（名称/家族/IC/IR/健康状态/衰减率/关联策略数）、排序控件、行操作菜单
+- **数据字段**: 因子元数据（来源: Factor Library）、IC/IR（来源: Factor Performance Engine）、健康状态（来源: Factor Health Engine）、关联策略数（来源: Strategy Store）
+- **交互说明**: 点击行跳转因子详情；支持按 IC/IR/健康状态排序；勾选 2-4 个因子启用对比模式
+
+### Overlay Registry
+
+#### Overlay: 因子对比 — Drawer
+- **触发条件**: 用户勾选 2-4 个因子后点击「对比」
+- **内容结构**: IC/IR/衰减率对比表格 + 趋势 Sparkline + 关联策略交叉分析
+- **关闭行为**: 点击遮罩 / ESC / 取消选择后自动关闭
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected | compare |
+|------|---------|---------|-------|--------|-------|----------|---------|
+| Health Summary | 健康计数 badge | badge skeleton | 「暂无因子数据」 | 「因子健康服务异常」+ 重试 | 黄色边框 | — | 对比因子高亮 |
+| Factor Table | 因子行渲染 | 行 skeleton（10 行） | 「暂无因子」+ 创建因子引导 | 「加载失败」+ 重试按钮 | 行左上角黄色圆点 | 行背景高亮 | 对比因子蓝色边框 + 浮动对比栏 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/factors` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| filter-bar | header |
+| factor-table | main |
+| health-summary | main |
+
+---
+
+## 22. Strategy List（轻量）
+
+> **路由**：`/research/strategies`
+> **Pattern**: Catalog / Screener（列表视图）
+
+### 页面目标
+
+浏览所有策略版本，按状态/绩效排序，快速进入 Studio 或发起回测。
+
+### 页面角色
+
+Catalog / Screener
+
+### 主工作面
+
+列表/表格
+
+### 默认信息顺序
+
+Filter Bar → Performance Summary → Strategy Table
+
+### 核心区块
+
+- Filter Bar（状态 / 类型 / 创建时间）
+- Performance Summary（活跃策略数 / 平均 Sharpe / 最佳策略）
+- Strategy Table（名称 / 类型 / 状态 / Sharpe / 年化收益 / 最近运行）
+
+### 主 CTA
+
+- 新建策略
+- 克隆策略
+- 发起回测
+
+### Tab Content Sections
+
+> Strategy List 无 tab 系统，单列表视图。
+
+#### 区域: Strategy Table
+- **子模块**: 表格行（名称/类型/状态/Sharpe/年化收益/MDD/最近运行时间）、行操作菜单、批量选择
+- **数据字段**: 策略元数据（来源: Strategy Store）、绩效指标（来源: Backtest Engine）、运行状态（来源: Backtest Engine）
+- **交互说明**: 点击行跳转 Strategy Detail；右键菜单支持克隆/删除/回测；支持批量选择后发起回测
+
+### Overlay Registry
+
+#### Overlay: 策略克隆 — Modal
+- **触发条件**: 用户点击行菜单「克隆」
+- **内容结构**: 新策略名称输入 + 描述输入 + [取消] [确认克隆]
+- **关闭行为**: 点击遮罩 / ESC / 确认后自动关闭 + Toast
+
+#### Overlay: 策略删除 — Modal（破坏性操作）
+- **触发条件**: 用户点击行菜单「删除」
+- **内容结构**: 警告图标 + "确认删除策略 [名称] 及其所有版本和回测记录？" + [取消] [确认删除]
+- **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认删除后自动关闭 + Toast
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected | bulk |
+|------|---------|---------|-------|--------|-------|----------|------|
+| Strategy Table | 策略行渲染 | 行 skeleton（10 行） | 「暂无策略」+ 新建策略 CTA | 「加载失败」+ 重试按钮 | 行左上角黄色圆点 | 行背景高亮 + 右侧操作联动 | 顶部批量操作栏: 回测/删除 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/strategies` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| filter-bar | header |
+| strategy-table | main |
+| performance-summary | main |
+
+---
+
+## 23. Backtest List（轻量）
+
+> **路由**：`/research/backtest`
+> **Pattern**: Catalog / Screener（列表视图）
+
+### 页面目标
+
+浏览回测历史，按时间/策略/绩效排序，快速查看结果或对比。
+
+### 页面角色
+
+Catalog / Screener
+
+### 主工作面
+
+列表/表格
+
+### 默认信息顺序
+
+Filter Bar → Backtest Table
+
+### 核心区块
+
+- Filter Bar（策略 / 状态 / 时间范围）
+- Backtest Table（名称 / 策略 / 区间 / Sharpe / 年化收益 / MDD / 状态 / 完成时间）
+
+### 主 CTA
+
+- 查看结果
+- 回测对比
+- 发起新回测
+
+### Tab Content Sections
+
+> Backtest List 无 tab 系统，单列表视图。
+
+#### 区域: Backtest Table
+- **子模块**: 表格行（名称/策略/区间/Sharpe/年化收益/MDD/状态/完成时间）、排序控件、行操作菜单
+- **数据字段**: 回测元数据（来源: Backtest Engine）、绩效指标（来源: Backtest Engine）、运行状态（来源: Backtest Engine）
+- **交互说明**: 点击行跳转 Backtest Result；支持按 Sharpe/收益/时间排序；勾选 2-5 组回测启用对比模式
+
+### Overlay Registry
+
+#### Overlay: 回测对比 — Drawer
+- **触发条件**: 用户勾选 2-5 组回测后点击「对比」
+- **内容结构**: NAV 叠加图 + 绩效指标对比表 + 配置差异摘要
+- **关闭行为**: 点击遮罩 / ESC / 取消选择后自动关闭
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected |
+|------|---------|---------|-------|--------|-------|----------|
+| Backtest Table | 回试行渲染 | 行 skeleton（10 行） | 「暂无回测记录」+ 发起回测 CTA | 「加载失败」+ 重试按钮 | 行左上角黄色圆点 | 行背景高亮 + 浮动对比栏 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/backtest` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| filter-bar | header |
+| backtest-table | main |
+
+---
+
+## 24. Experiment List（轻量）
+
+> **路由**：`/research/experiments`
+> **Pattern**: Catalog / Screener（列表视图）
+
+### 页面目标
+
+浏览 A/B 对照实验，按状态排序，查看结果。
+
+### 页面角色
+
+Catalog / Screener
+
+### 主工作面
+
+列表/表格
+
+### 默认信息顺序
+
+Filter Bar → Experiment Table
+
+### 核心区块
+
+- Filter Bar（状态 / 类型 / 时间范围）
+- Experiment Table（名称 / 状态 / 对照组 / 实验组 / 指标差异 / 显著性 / 创建时间）
+
+### 主 CTA
+
+- 查看详情
+
+### Tab Content Sections
+
+> Experiment List 无 tab 系统，单列表视图。
+
+#### 区域: Experiment Table
+- **子模块**: 表格行（名称/状态/对照组/实验组/核心指标差异/统计显著性/创建时间）、排序控件、行操作菜单
+- **数据字段**: 实验元数据（来源: Experiment Engine）、指标对比（来源: Experiment Engine）、统计显著性（来源: Experiment Engine）
+- **交互说明**: 点击行展开实验详情 Drawer；支持按状态/显著性排序
+
+### Overlay Registry
+
+#### Overlay: 实验详情 — Drawer
+- **触发条件**: 用户点击实验行
+- **内容结构**: 实验配置摘要 + 对照组/实验组详细指标对比 + 统计检验结果 + 结论
+- **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected |
+|------|---------|---------|-------|--------|-------|----------|
+| Experiment Table | 实验行渲染 | 行 skeleton（8 行） | 「暂无实验记录」+ 创建实验引导 | 「加载失败」+ 重试按钮 | 行左上角黄色圆点 | 行背景高亮 + 详情联动 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/experiments` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| filter-bar | header |
+| experiment-table | main |
+
+---
+
+## 25. Universe List（轻量）
+
+> **路由**：`/research/universes`
+> **Pattern**: Catalog / Screener（列表视图）
+
+### 页面目标
+
+管理命名股票池（策略输入），查看成分股，从 Screener 保存或手动创建。
+
+### 页面角色
+
+Catalog / Screener
+
+### 主工作面
+
+列表/表格
+
+### 默认信息顺序
+
+Filter Bar → Universe List
+
+### 核心区块
+
+- Filter Bar（搜索 / 创建时间）
+- Create Universe 按钮
+- Universe List（名称 / 标的数 / 来源 / 策略关联数 / 更新时间）
+
+### 主 CTA
+
+- 创建 Universe
+- 查看成分股
+- 删除 Universe
+
+### Tab Content Sections
+
+> Universe List 无 tab 系统，单列表视图。
+
+#### 区域: Universe List
+- **子模块**: 表格行（名称/标的数/来源/关联策略数/更新时间）、行操作菜单、批量选择
+- **数据字段**: Universe 元数据（来源: Universe Service）、标的数量（来源: Universe Service）、来源（来源: Universe Service）、关联策略数（来源: Strategy Store）
+- **交互说明**: 点击行跳转 Universe 详情；右键菜单支持编辑/删除；支持批量选择后删除
+
+### Overlay Registry
+
+#### Overlay: 创建/编辑 Universe — Drawer
+- **触发条件**: 用户点击「创建」按钮或行菜单「编辑」
+- **内容结构**: 名称输入 + 来源选择（Screener 保存 / 手动创建）+ 筛选条件配置 + 成分股预览 + [取消] [保存]
+- **关闭行为**: 点击遮罩 / ESC / 保存成功后自动关闭 + Toast
+
+#### Overlay: 删除 Universe — Modal（破坏性操作）
+- **触发条件**: 用户点击行菜单「删除」或批量删除
+- **内容结构**: 警告图标 + "确认删除股票池 [名称]？关联的策略将不再使用此股票池。" + [取消] [确认删除]
+- **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认删除后自动关闭 + Toast
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale | selected | bulk |
+|------|---------|---------|-------|--------|-------|----------|------|
+| Universe List | Universe 行渲染 | 行 skeleton（8 行） | 「暂无股票池」+ 创建引导 CTA | 「加载失败」+ 重试按钮 | 行左上角黄色圆点 | 行背景高亮 + 右侧操作联动 | 顶部批量操作栏: 删除 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/universes` |
+| shellFamily | `catalog` |
+| pagePattern | `catalog-screener` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| universe-list | main |
+| create-universe | header |
+| filter-bar | header |
+
+---
+
+## 26. Platform Settings（轻量）
+
+> **路由**：`/platform/settings`
+> **Pattern**: Config / Integration Console
+
+### 页面目标
+
+系统配置——数据源管理、券商连接、通用设置。
+
+### 页面角色
+
+Ops Console
+
+### 主工作面
+
+Settings Content（当前 tab 对应的配置表单）
+
+### 默认信息顺序
+
+Settings Nav → Settings Content
+
+### 核心区块
+
+- Settings Nav（侧边导航：数据源配置 / 券商连接 / 通用设置）
+- Settings Content（tab 对应的配置表单）
+
+### 主 CTA
+
+- 保存配置
+- 测试连接
+
+### Tab Content Sections
+
+#### Tab: 数据源配置（默认）
+- **子模块**: 数据源列表（名称/类型/状态/最后同步时间）、新增数据源按钮、数据源编辑表单
+- **数据字段**: 数据源配置（来源: Settings Store）、连接状态（来源: Data Source Health Service）
+- **交互说明**: 点击数据源行展开编辑；支持新增/删除数据源；每个数据源可独立测试连接
+
+#### Tab: 券商连接
+- **子模块**: 券商列表（名称/状态/账户信息/最后连接时间）、新增连接按钮、连接配置表单
+- **数据字段**: 券商配置（来源: Settings Store）、连接状态（来源: Broker Health Service）
+- **交互说明**: 点击券商行展开配置编辑；支持测试连接；连接状态实时显示（Polling 60s）
+
+#### Tab: 通用设置
+- **子模块**: 基础设置表单（默认市场/时区/语言/通知偏好）、高级设置（回测默认参数/风控阈值）
+- **数据字段**: 通用配置（来源: Settings Store）
+- **交互说明**: 表单修改后「保存」按钮激活；支持重置为默认值
+
+### Overlay Registry
+
+#### Overlay: 数据源测试 — Dialog
+- **触发条件**: 用户点击数据源的「测试连接」按钮
+- **内容结构**: 连接测试进度指示 + 测试结果（成功/失败 + 延迟 + 错误信息）
+- **关闭行为**: 点击遮罩 / ESC / 测试完成后可关闭
+
+#### Overlay: 券商连接测试 — Dialog
+- **触发条件**: 用户点击券商的「测试连接」按钮
+- **内容结构**: 连接测试进度指示 + 测试结果（成功/失败 + 延迟 + 账户验证结果）
+- **关闭行为**: 点击遮罩 / ESC / 测试完成后可关闭
+
+#### Overlay: 重置配置 — Modal（破坏性操作）
+- **触发条件**: 用户点击「重置为默认值」
+- **内容结构**: "确认将所有配置重置为默认值？此操作不可撤销。" + [取消] [确认重置]
+- **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认重置后自动关闭 + Toast
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | stale |
+|------|---------|---------|-------|--------|-------|
+| Settings Nav | 导航菜单渲染 | — | — | — | — |
+| 数据源列表 | 数据源行渲染 | 行 skeleton（4 行） | 「暂无数据源」+ 新增 CTA | 「加载失败」+ 重试按钮 | 状态列黄色圆点 |
+| 券商列表 | 券商行渲染 | 行 skeleton（4 行） | 「暂无券商连接」+ 新增 CTA | 「加载失败」+ 重试按钮 | 状态列黄色圆点 |
+| Settings Form | 表单字段渲染 | 表单 skeleton | — | — | — |
+
+| Connection Status | 绿色圆点 + 已连接 | 灰色圆点 + 连接中... | — | 红色圆点 + 错误信息 + 重试 | 黄色圆点 + 上次同步时间异常 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/platform/settings` |
+| shellFamily | `ops-console` |
+| pagePattern | `config-integration-console` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| settings-nav | rail |
+| settings-content | main |
 
 ---
 
@@ -2742,6 +3798,31 @@ KPI Strip / Meta Strip / Bottom Area
 - Agent Console
 
 ## Changelog
+
+### 2026-04-18 — v2.1 轻量蓝图补全（Catalog/List 型页面）
+
+- **[新增]** §20 Watchlist 轻量蓝图（观察标的列表，添加/删除/跳转 Instrument Hub）
+- **[新增]** §21 Factor List 轻量蓝图（因子浏览，健康状态/IC/IR 排序，因子对比 Drawer）
+- **[新增]** §22 Strategy List 轻量蓝图（策略版本列表，克隆/删除/批量回测）
+- **[新增]** §23 Backtest List 轻量蓝图（回测历史列表，回测对比 Drawer）
+- **[新增]** §24 Experiment List 轻量蓝图（A/B 实验列表，实验详情 Drawer）
+- **[新增]** §25 Universe List 轻量蓝图（股票池管理，创建/编辑/删除 Drawer）
+- **[新增]** §26 Platform Settings 轻量蓝图（系统配置，数据源/券商/通用设置 Tab）
+- **[架构]** 6 个 Catalog/Screener 型页面统一使用 `shellFamily: catalog` + `pagePattern: catalog-screener`
+- **[架构]** Platform Settings 使用 `shellFamily: ops-console` + `pagePattern: config-integration-console`
+- **[编号]** 页面总数 19 → 26
+
+### 2026-04-18 — v2.0 架构重构 + Page Contract Mapping
+
+- **[架构]** 5 域结构（Markets / Research / Trading / Platform / AI），AI 域功能嵌入其他域
+- **[架构]** AI 能力嵌入方案：AI Copilot Studio 和 AI Overview 标记为 deprecated，功能分散到各功能域
+- **[路由]** Markets 域路由调整：`/markets` 为全市场总览，`/markets/a-shares` 为 A 股总览
+- **[路由]** Trading 域新增 `/trading/portfolio` 合并页（持仓 + 交易 + 归因）
+- **[迁移]** Agent Console 从 `/ai/agent` 迁入 `/platform/agents`
+- **[新增]** §12 Portfolio 合并页（持仓/交易/归因 tab 视图）
+- **[新增]** §9 Trading Overview 新增 pipeline-strip 模块（Signal-to-Order Pipeline）
+- **[新增]** 全部 19 个页面新增 Page Contract Mapping（route / shellFamily / pagePattern / 模块→Slot 映射）
+- **[编号]** 章节重新编号（原 §12-18 → §13-19，新增 §12 Portfolio）
 
 ### 2026-04-12 — v1.2 Strategy Detail 新增
 
