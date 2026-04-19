@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from ditto_kernel.exceptions import DittoError
 
-class DittoException(Exception):
+
+class DittoException(DittoError):
     """Ditto系统基础异常类."""
 
     def __init__(self, message: str, error_code: str | None = None) -> None:
@@ -47,8 +49,8 @@ class DatabaseError(DittoException):
         self.detail = detail
 
 
-class ValidationError(DittoException):
-    """数据验证异常."""
+class RouteValidationError(DittoException):
+    """路由数据验证异常."""
 
     def __init__(self, field: str, value: str, constraint: str) -> None:
         super().__init__(

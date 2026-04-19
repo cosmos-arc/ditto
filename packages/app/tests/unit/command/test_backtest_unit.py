@@ -14,14 +14,16 @@ from ditto_app.command.backtest import (
     BacktestRunCommand,
     BacktestRunHandler,
     BacktestRunResult,
+    CancelRunCommand,
     CancelRunHandler,
     CostConfig,
+    RetryRunCommand,
     RetryRunHandler,
 )
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_data.models.strategy_run import StrategyRunRecord
 from ditto_data.services.strategy.strategy_run_service import StrategyRunService
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 
 
 @pytest.fixture
@@ -268,7 +270,7 @@ class TestCancelRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="pending")
         handler = CancelRunHandler(run_service=run_svc)
 
-        handler.handle("abc123")
+        handler.handle(CancelRunCommand(run_id="abc123"))
 
         run_svc.mark_cancelled.assert_called_once_with("abc123")
 
@@ -278,7 +280,7 @@ class TestCancelRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="running")
         handler = CancelRunHandler(run_service=run_svc)
 
-        handler.handle("abc123")
+        handler.handle(CancelRunCommand(run_id="abc123"))
 
         run_svc.mark_cancelled.assert_called_once_with("abc123")
 
@@ -289,7 +291,7 @@ class TestCancelRunHandler:
         handler = CancelRunHandler(run_service=run_svc)
 
         with pytest.raises(ValueError, match="Cannot cancel"):
-            handler.handle("abc123")
+            handler.handle(CancelRunCommand(run_id="abc123"))
         run_svc.mark_cancelled.assert_not_called()
 
     def test_cancel_failed_rejected(self) -> None:
@@ -299,7 +301,7 @@ class TestCancelRunHandler:
         handler = CancelRunHandler(run_service=run_svc)
 
         with pytest.raises(ValueError, match="Cannot cancel"):
-            handler.handle("abc123")
+            handler.handle(CancelRunCommand(run_id="abc123"))
 
     def test_cancel_not_found(self) -> None:
         """运行不存在抛 ValueError."""
@@ -308,7 +310,7 @@ class TestCancelRunHandler:
         handler = CancelRunHandler(run_service=run_svc)
 
         with pytest.raises(ValueError, match="Run not found"):
-            handler.handle("missing")
+            handler.handle(CancelRunCommand(run_id="missing"))
 
 
 class TestRetryRunHandler:
@@ -323,7 +325,7 @@ class TestRetryRunHandler:
         )
         handler = RetryRunHandler(run_service=run_svc)
 
-        new_id = handler.handle("abc123")
+        new_id = handler.handle(RetryRunCommand(run_id="abc123"))
 
         # 创建新运行并传递 config_json
         run_svc.create_run.assert_called_once()
@@ -339,7 +341,7 @@ class TestRetryRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="cancelled")
         handler = RetryRunHandler(run_service=run_svc)
 
-        new_id = handler.handle("abc123")
+        new_id = handler.handle(RetryRunCommand(run_id="abc123"))
         assert new_id
 
     def test_retry_pending_rejected(self) -> None:
@@ -349,7 +351,7 @@ class TestRetryRunHandler:
         handler = RetryRunHandler(run_service=run_svc)
 
         with pytest.raises(ValueError, match="Cannot retry"):
-            handler.handle("abc123")
+            handler.handle(RetryRunCommand(run_id="abc123"))
         run_svc.create_run.assert_not_called()
 
     def test_retry_running_rejected(self) -> None:
@@ -359,7 +361,7 @@ class TestRetryRunHandler:
         handler = RetryRunHandler(run_service=run_svc)
 
         with pytest.raises(ValueError, match="Cannot retry"):
-            handler.handle("abc123")
+            handler.handle(RetryRunCommand(run_id="abc123"))
 
     def test_retry_not_found(self) -> None:
         """运行不存在抛 ValueError."""
@@ -368,7 +370,7 @@ class TestRetryRunHandler:
         handler = RetryRunHandler(run_service=run_svc)
 
         with pytest.raises(ValueError, match="Run not found"):
-            handler.handle("missing")
+            handler.handle(RetryRunCommand(run_id="missing"))
 
     def test_retry_preserves_strategy_version(self) -> None:
         """重试保留原始 strategy_version."""
@@ -379,7 +381,7 @@ class TestRetryRunHandler:
         )
         handler = RetryRunHandler(run_service=run_svc)
 
-        handler.handle("abc123")
+        handler.handle(RetryRunCommand(run_id="abc123"))
 
         call_kwargs = run_svc.create_run.call_args.kwargs
         assert call_kwargs["strategy_version"] == "2"

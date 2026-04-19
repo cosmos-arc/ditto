@@ -23,8 +23,8 @@ from ditto_engine.risk.post_trade import (
     RiskSeverity,
 )
 from ditto_kernel.clock import Clock
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Constants

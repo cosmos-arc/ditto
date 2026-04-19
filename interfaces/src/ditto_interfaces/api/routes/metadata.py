@@ -8,7 +8,7 @@ from typing import Annotated
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_kernel.enums import AssetClass
+from ditto_kernel.instrument import AssetClass
 from fastapi import APIRouter, Depends
 
 from ditto_interfaces.api.deps import paginate, pagination_params

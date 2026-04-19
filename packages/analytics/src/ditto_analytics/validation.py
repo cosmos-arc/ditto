@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ditto_data.errors import DerivedNotImplementedError
-from ditto_kernel.specs import DerivedSpec
+from ditto_kernel.strategy import DerivedSpec
 
 __all__ = ["validate_derived_spec"]
 

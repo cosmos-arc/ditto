@@ -12,7 +12,7 @@ from collections.abc import Callable
 import polars as pl
 from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset
 from ditto_data.sources.base import DataSource
-from ditto_kernel.types import InstrumentIngestParams
+from ditto_kernel.instrument import InstrumentIngestParams
 
 __all__ = [
     "build_daily_fetch_handlers",

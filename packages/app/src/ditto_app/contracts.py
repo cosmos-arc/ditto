@@ -20,7 +20,7 @@ from ditto_engine.execution.reality.constants import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_MIN_COMMISSION,
 )
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 
 REGIME_DEFAULT_LOOKBACK = 60
 """Regime detection minimum lookback days (MomentumIndicator, ts_mean, ts_std)."""

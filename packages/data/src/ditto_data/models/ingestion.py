@@ -74,51 +74,6 @@ class IngestionCursor:
     updated_at: str
 
 
-# ============ New Ingestion System: Exceptions ============
-
-
-class NotTradingDayError(Exception):
-    """Raised when trying to ingest data for a non-trading day."""
-
-    def __init__(self, trade_date: str) -> None:
-        """
-        Initialize NotTradingDayError.
-
-        Args:
-            trade_date: The non-trading date (YYYY-MM-DD).
-
-        """
-        self.trade_date = trade_date
-        super().__init__(f"{trade_date} is not a trading day")
-
-
-class DataChangedError(Exception):
-    """Raised when data checksum changed and force=False."""
-
-    def __init__(
-        self,
-        trade_date: str,
-        old_checksum: str,
-        new_checksum: str,
-    ) -> None:
-        """
-        Initialize DataChangedError.
-
-        Args:
-            trade_date: The trade date (YYYY-MM-DD).
-            old_checksum: Previous checksum.
-            new_checksum: New checksum.
-
-        """
-        self.trade_date = trade_date
-        self.old_checksum = old_checksum
-        self.new_checksum = new_checksum
-        super().__init__(
-            f"Data changed for {trade_date}: checksum {old_checksum} → {new_checksum}. "
-            + "Use force=True to overwrite."
-        )
-
-
 # ============ Late Arrival Policy ============
 
 
@@ -159,37 +114,6 @@ class LateArrivalCheckResult:
     needs_rebuild: bool
     delay_days: int
     policy: DataLateArrivalPolicy
-
-
-class LateArrivalRejectedError(Exception):
-    """延迟到达数据被拒绝时抛出."""
-
-    def __init__(
-        self,
-        delay_days: int,
-        max_delay_days: int,
-        trade_date: str,
-        knowledge_date: str,
-    ) -> None:
-        """
-        初始化 LateArrivalRejectedError.
-
-        Args:
-            delay_days: 实际延迟天数.
-            max_delay_days: 允许的最大延迟天数.
-            trade_date: 交易日期 (YYYY-MM-DD).
-            knowledge_date: 数据可知日期 (YYYY-MM-DD).
-
-        """
-        self.delay_days = delay_days
-        self.max_delay_days = max_delay_days
-        self.trade_date = trade_date
-        self.knowledge_date = knowledge_date
-        super().__init__(
-            f"数据延迟到达被拒绝: trade_date={trade_date}, "
-            + f"knowledge_date={knowledge_date}, "
-            + f"延迟 {delay_days} 天超过阈值 {max_delay_days} 天"
-        )
 
 
 # ============ Result Models (from ditto_data consolidation) ============

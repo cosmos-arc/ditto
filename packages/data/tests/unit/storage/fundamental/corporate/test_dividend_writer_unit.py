@@ -11,8 +11,11 @@ import pytest
 from ditto_data.storage.fundamental.corporate.dividend_writer import (
     DividendWriter,
 )
+from ditto_data.storage.fundamental.specs import DIVIDEND_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = DIVIDEND_SPEC
 
 
 @pytest.fixture
@@ -40,7 +43,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def dividend_writer(in_memory_db: SQLitePool) -> DividendWriter:
     """Provide DividendWriter with in-memory database."""
-    return DividendWriter(SQLiteClient(in_memory_db))
+    return DividendWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -192,7 +195,7 @@ class TestDividendWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = DividendWriter(mock_client)
+        mock_writer = DividendWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

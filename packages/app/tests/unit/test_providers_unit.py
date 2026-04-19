@@ -46,13 +46,17 @@ from ditto_data.di import (
     RuntimeProvider,
     TradeProvider,
 )
+from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_data.sources.tdx.source import TdxSource
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.services.notification import AlertManager
+
+_tdx_mock = MagicMock(spec=TdxSource)
 
 # ---------------------------------------------------------------------------
 # Test fixtures: 辅助 Provider（替代 Interfaces 层 ConfigProvider）
@@ -146,6 +150,26 @@ def _notification_provider() -> Provider:
             return MagicMock(spec=AlertManager)
 
     return NotificationProvider()
+
+
+class _TdxMockProvider(Provider):
+    """测试用 TdxSource mock Provider — 替代 SourcesProvider.tdx_source."""
+
+    scope = Scope.APP
+
+    @provide
+    def tdx_source(self) -> TdxSource:
+        return _tdx_mock
+
+
+class _GoldenNoneProvider(Provider):
+    """测试用 GoldenDatasetSpec mock Provider — 返回 None."""
+
+    scope = Scope.APP
+
+    @provide
+    def golden_dataset_spec(self) -> GoldenDatasetSpec | None:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -270,6 +294,8 @@ class TestAppProviderIntegration:
             _TestConfigProvider(tmp_path),
             QualityProvider(),
             _sources_provider(),
+            _TdxMockProvider(),
+            _GoldenNoneProvider(),
             RuntimeProvider(),
             MetadataProvider(),
             MarketProvider(),

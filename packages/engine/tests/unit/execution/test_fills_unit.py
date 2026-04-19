@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.execution.fills import Filled, FillOutcome, NoFill
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Shared fixture data — FillEvent is constructed identically in 5 tests.

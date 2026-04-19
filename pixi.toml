@@ -22,6 +22,7 @@ readme = "README.md"
 python = "3.13.*"
 
 # 数据科学与处理
+numpy = ">=2.0,<3"
 polars = ">=1.9,<2"
 
 # 数据库

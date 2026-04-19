@@ -9,6 +9,7 @@ import pytest
 from ditto_data.storage.capital.margin.margin_trading_reader import (
     MarginTradingReader,
 )
+from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
@@ -40,7 +41,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def reader(in_memory_db: SQLiteClient) -> MarginTradingReader:
     """创建 MarginTradingReader 实例."""
-    return MarginTradingReader(client=in_memory_db)
+    return MarginTradingReader(MARGIN_TRADING_SPEC, in_memory_db)
 
 
 def test_get_returns_data(

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from ditto_app.query.lineage import LineageQueryFacade
 from ditto_data.models.strategy_run import StrategyRunRecord
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 
 
 def _make_record(

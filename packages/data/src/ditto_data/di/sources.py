@@ -8,6 +8,7 @@ from ditto_data.config import DataSourceSettings
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.fred.fred_source import FredSource
 from ditto_data.sources.source import DataSources
+from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.sources.tdx.transformer import TdxExchangeTransformer
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_data.sources.tushare.tushare_source import TushareSource
@@ -80,6 +81,11 @@ class SourcesProvider(Provider):
     def tushare_transformer(self) -> TushareExchangeTransformer:
         """Tushare 交易所转换器."""
         return TushareExchangeTransformer()
+
+    @provide
+    def tdx_source(self, data_source_settings: DataSourceSettings) -> TdxSource:
+        """通达信数据源 — 仅用于质量对账."""
+        return TdxSource(data_source_settings=data_source_settings)
 
     @provide
     def tdx_transformer(self) -> TdxExchangeTransformer:

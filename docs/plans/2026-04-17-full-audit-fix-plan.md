@@ -187,55 +187,55 @@ DittoError(Exception)                         ← kernel 全局根（替代 Ditt
 
 ---
 
-## Phase 1: Kernel Rich Domain Model 重组
+## Phase 1: Kernel Rich Domain Model 重组 ✅ 已完成
 
 **目标**：Kernel 从纯值类型扩展为 Rich Domain Model，按子域重组。预计改动 ~40 文件。
 
-### 1.1 按子域重组文件结构
+**实际结果**（2026-04-18 完成）：
+- 改动 64+ 文件（27 源码 + 37 测试），删除 3 旧文件（enums.py / specs.py / types.py）
+- 新建 4 个子域文件：instrument.py / order.py / market.py / strategy.py
+- 5711 测试全部通过，lint/type/arch 检查通过
+
+### 1.1 按子域重组文件结构 ✅
 
 **当前**（按技术类型）：`enums.py`, `identity.py`, `types.py`, `specs.py`, `quality.py` ...
 
-**目标**（按业务子域）：
+**实际结果**（按业务子域）：
 ```
 ditto_kernel/
 ├── identity.py        # 保留：跨子域的 ID 类型
 ├── clock.py           # 保留：Clock Protocol + 实现
 ├── events.py          # 保留：EventBus Protocol + 实现
 ├── exceptions.py      # 保留：DittoError 根（Phase 0 新增）
-├── instrument.py      # 新：InstrumentType, MarketType 等
-├── order.py           # 新：OrderSide, OrderType, Order 冻结数据类
-├── trade.py           # 新：TradeRecord, FillStatus 等
-├── market.py          # 新：BarField, AdjustmentType 等
-├── strategy.py        # 新：StrategySpec, SignalType 等
-├── quality.py         # 精简：仅保留跨包使用的类型（Phase 0 迁出后）
+├── instrument.py      # ✅ 新：AssetClass / Exchange / InstrumentIngestParams
+├── order.py           # ✅ 新：OrderSide
+├── market.py          # ✅ 新：CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
+├── strategy.py        # ✅ 新：DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
+├── quality.py         # ✅ 精简：仅 DQLevel / DQSeverity / DQIssue / DQResult（Phase 0 迁出 L3CheckResult/ReconciliationResult）
 ├── research.py        # 保留：研究相关类型
 ├── math.py            # 保留：数学工具
-└── types.py           # 保留：无法归入子域的通用类型
+└── (已删除) enums.py, specs.py, types.py
 ```
 
-### 1.2 frozen dataclass 添加纯计算方法
+**偏离说明**：
+- `trade.py` 未创建 — 当前 kernel 中无 Trade 相关类型需要独立文件
+- `types.py` 已删除 — InstrumentIngestParams 并入 instrument.py
+- RiskScope 留在 strategy.py — 实际消费者为 4 个包（Engine/Data/Interfaces/App），迁入 engine 会违反 importlinter
+
+### 1.2 frozen dataclass 添加纯计算方法 ✅
 
 **原则**：
 - 只添加无外部依赖的纯计算（@property 或 cached_property）
 - 不引入任何 I/O、状态变更、外部服务调用
 
-**示例**：
-```python
-@dataclass(frozen=True)
-class Order:
-    instrument_id: str
-    side: OrderSide
-    quantity: Decimal
-    price: Decimal | None = None
-
-    @property
-    def notional_value(self) -> Decimal:
-        return self.quantity * (self.price or Decimal("0"))
-
-    @property
-    def is_buy(self) -> bool:
-        return self.side == OrderSide.BUY
-```
+**实际新增的 `@property`**（26 个测试覆盖）：
+| 类型 | 属性 | 说明 |
+|------|------|------|
+| `InstrumentIngestParams` | `has_identifier` | 是否存在有效标识符 |
+| `InstrumentIngestParams` | `primary_identifier` | 按优先级返回主标识符 |
+| `TimeSpec` | `has_availability_time` | 是否指定可用时间键 |
+| `ExecutionPolicy` | `is_pit_mode` | 是否为 PIT 模式 |
+| `DQIssue` | `is_error` | 是否为 ERROR 级别 |
 
 ### 1.4 V1.1 Phase 6: Regime 宏观指标（合并 MacroDataProvider）
 
@@ -248,29 +248,25 @@ class Order:
 
 **问题**：`DecisionFrame = pl.DataFrame` 无 schema 保护。
 
-**修改**：
+**实际方案**（偏离原计划）：在 `kernel/strategy.py` 定义 `DecisionFrame` 为 Protocol（零依赖），使用 `Sequence` 代替 polars 类型。`FrameCol` + `validate_frame` 保留在 engine 中。
+
 ```python
-@dataclass(frozen=True)
-class DecisionFrame:
-    data: pl.DataFrame  # 内部持有 DataFrame
-
-    def __post_init__(self):
-        _validate_required_columns(self.data, REQUIRED_COLS)
-
+# kernel/strategy.py — 零依赖 Protocol
+class DecisionFrame(Protocol):
     @property
-    def instruments(self) -> pl.Series: ...
+    def instruments(self) -> Sequence[str]: ...
     @property
-    def signals(self) -> pl.Series: ...
+    def signals(self) -> Sequence[str]: ...
     @property
-    def scores(self) -> pl.Series: ...
+    def scores(self) -> Sequence[float]: ...
 ```
 
-**位置**：从 `engine/alpha/frame.py` 迁移到 `kernel/strategy.py`（或 `kernel/order.py`），因为它是跨回测/实盘的领域契约。
+**偏离原因**：原计划将 DecisionFrame 作为 frozen dataclass 迁入 kernel，但其实现依赖 polars（违反 kernel 零外部依赖）。Protocol 方案既满足跨层共享需求，又不引入依赖。
 
 **关键文件**：
 - `packages/kernel/src/ditto_kernel/` — 全部现有文件重组
-- `packages/engine/src/ditto_engine/alpha/frame.py` — DecisionFrame 迁出
-- 所有导入 kernel 类型的文件 — 更新 import 路径
+- `packages/engine/src/ditto_engine/alpha/frame.py` — DecisionFrame Protocol 实现方
+- 所有导入 kernel 类型的文件 — 更新 import 路径（实际 64+ 文件）
 
 ### V1-1 间歇：V1 P1-1 LIMIT 单启用（独立）
 

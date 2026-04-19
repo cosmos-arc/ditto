@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from ditto_data.models.trade import TradeIntentRecord
+from ditto_data.models.trade import SignalRecord
 from ditto_data.services.trade import TradeService
 
 from ditto_app.execution_dto import (
@@ -124,7 +124,7 @@ class RecordFillHandler:
 
     @staticmethod
     def _validate_intent_match(
-        intent_record: TradeIntentRecord | None,
+        intent_record: SignalRecord | None,
         command: RecordFillCommand,
     ) -> None:
         """验证 intent 存在且身份信息匹配."""

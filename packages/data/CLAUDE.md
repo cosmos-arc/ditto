@@ -66,7 +66,7 @@ ditto_data/
 │   └── sql_engine.py             # SQL 引擎
 ├── scripts/             # 工具脚本
 ├── services/            # 域服务（13 Facade + 5 子目录）
-│   ├── ports.py         # 服务端口 Protocol
+│   ├── deps.py          # 服务依赖聚合（DI 参数分组）
 │   ├── market_service.py         # 行情服务
 │   ├── market_write_service.py   # 行情写入服务
 │   ├── metadata_service.py       # 元数据服务

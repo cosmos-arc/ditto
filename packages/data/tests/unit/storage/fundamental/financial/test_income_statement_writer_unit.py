@@ -11,8 +11,11 @@ import pytest
 from ditto_data.storage.fundamental.financial.income_statement_writer import (
     IncomeStatementWriter,
 )
+from ditto_data.storage.fundamental.specs import INCOME_STATEMENT_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = INCOME_STATEMENT_SPEC
 
 
 @pytest.fixture
@@ -41,7 +44,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def income_statement_writer(in_memory_db: SQLitePool) -> IncomeStatementWriter:
     """Provide IncomeStatementWriter with in-memory database."""
-    return IncomeStatementWriter(SQLiteClient(in_memory_db))
+    return IncomeStatementWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -196,7 +199,7 @@ class TestIncomeStatementWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = IncomeStatementWriter(mock_client)
+        mock_writer = IncomeStatementWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

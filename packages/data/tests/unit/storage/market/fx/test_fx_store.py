@@ -4,6 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
+from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
 
 
@@ -12,8 +13,9 @@ class TestFxStore:
 
     def test_write_and_read_fx_bars(self, tmp_path: Path) -> None:
         """测试写入和读取汇率数据."""
-        writer = FxBarsWriter(tmp_path)
-        reader = FxBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = FxBarsWriter(store)
+        reader = FxBarsReader(store)
 
         # 准备测试数据
         df = pl.DataFrame(
@@ -39,8 +41,9 @@ class TestFxStore:
 
     def test_read_by_instrument_id(self, tmp_path: Path) -> None:
         """测试按 instrument_id 过滤读取."""
-        writer = FxBarsWriter(tmp_path)
-        reader = FxBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = FxBarsWriter(store)
+        reader = FxBarsReader(store)
 
         # 写入多个货币对的数据
         df = pl.DataFrame(

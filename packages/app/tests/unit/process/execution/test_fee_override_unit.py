@@ -24,8 +24,9 @@ from ditto_app.process.execution.fee_override import (
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel
 from ditto_engine.execution.rules import FeeSchedule
-from ditto_kernel.enums import ImpactModel, OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
+from ditto_kernel.strategy import ImpactModel
 
 # ---------------------------------------------------------------------------
 # Fixtures

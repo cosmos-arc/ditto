@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from loguru import logger
 
 from ditto_analytics.expression.compiler import (

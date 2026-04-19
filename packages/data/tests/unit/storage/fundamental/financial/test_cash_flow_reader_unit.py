@@ -10,8 +10,11 @@ import pytest
 from ditto_data.storage.fundamental.financial.cash_flow_reader import (
     CashFlowReader,
 )
+from ditto_data.storage.fundamental.specs import CASH_FLOW_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = CASH_FLOW_SPEC
 
 
 @pytest.fixture
@@ -40,7 +43,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def cash_flow_reader(in_memory_db: SQLitePool) -> CashFlowReader:
     """Provide CashFlowReader with in-memory database."""
-    return CashFlowReader(SQLiteClient(in_memory_db))
+    return CashFlowReader(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit

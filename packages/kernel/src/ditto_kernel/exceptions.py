@@ -1,11 +1,11 @@
 """
 共享异常层级 — 跨层使用的基类异常.
 
-提供 DataError（数据层基础异常）和 IdentifierError（标识符异常），
-供 ditto_data、ditto_app、ditto_interfaces 等多层使用。
+提供 DittoError（全局根）、DataError（数据层基础异常）和
+IdentifierError（标识符异常），供所有业务包使用。
 
 准入依据:
-- DataError / IdentifierError 至少被 3 个业务包直接导入
+- DittoError / DataError / IdentifierError 至少被 2 个业务包直接导入
 - 零外部依赖，纯异常定义
 - 稳定性高，不随子域迭代变更
 """
@@ -13,13 +13,22 @@
 __all__ = [
     "AmbiguousTickerError",
     "DataError",
+    "DittoError",
     "IdentifierError",
     "NoIdentifierProvidedError",
 ]
 
 
-class DataError(Exception):
-    """Data base exception."""
+class DittoError(Exception):
+    """
+    Ditto 全局异常根.
+
+    所有业务域异常的统一祖先，供中间件统一捕获和映射。
+    """
+
+
+class DataError(DittoError):
+    """数据域基础异常."""
 
     def __init__(self, message: str, details: dict[str, object] | None = None) -> None:
         super().__init__(message)

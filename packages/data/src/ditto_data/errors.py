@@ -3,23 +3,20 @@ Data layer exception classes.
 
 Following design document at docs/design/02_data_design.md
 
-Note: DataError, IdentifierError are defined in ditto_kernel.exceptions and
-imported here because Data-layer subclasses (CalendarError, ValidationError, etc.)
-inherit from them. NoIdentifierProvidedError and AmbiguousTickerError have been
-moved to ditto_kernel.exceptions — import them from there directly.
+Note: DataError, DittoError, IdentifierError are defined in ditto_kernel.exceptions
+and imported here because Data-layer subclasses inherit from them.
 """
 
-from ditto_kernel.exceptions import DataError, IdentifierError
+from ditto_kernel.exceptions import DataError, DittoError, IdentifierError
 
 # ---------------------------------------------------------------------------
 # Derived* error hierarchy — canonical definition (Data layer owns these
 # because Data services raise them without depending on Engine).
-# Engine re-exports from here via ditto_engine.errors.
 # ---------------------------------------------------------------------------
 
 
-class DerivedError(Exception):
-    """Base exception for all derived-related errors."""
+class DerivedError(DittoError):
+    """衍生数据域基础异常."""
 
     def __init__(self, message: str, *, derived_id: str | None = None) -> None:
         self.derived_id = derived_id
@@ -44,34 +41,6 @@ class DerivedVersionError(DerivedError):
         self.reason = reason
         super().__init__(
             f"Version resolution failed for derived_id={derived_id}: {reason}",
-            derived_id=derived_id,
-        )
-
-
-class DerivedMaterializationError(DerivedError):
-    """Raised when materialization fails."""
-
-    def __init__(self, *, derived_id: str, version: int, reason: str) -> None:
-        self.version = version
-        self.reason = reason
-        super().__init__(
-            f"Materialization failed for derived_id={derived_id} "
-            + f"version={version}: {reason}",
-            derived_id=derived_id,
-        )
-
-
-class DerivedDependencyError(DerivedError):
-    """Raised when a dependency is missing or invalid."""
-
-    def __init__(
-        self, *, derived_id: str, missing: list[str], available: list[str]
-    ) -> None:
-        self.missing = missing
-        self.available = available
-        super().__init__(
-            f"Missing dependencies for derived_id={derived_id}: "
-            + f"{missing}. Available: {available}",
             derived_id=derived_id,
         )
 
@@ -116,6 +85,11 @@ class DerivedValidationError(DerivedError):
                     "or all of field, value, reason keyword arguments"
                 ),
             )
+
+
+# ---------------------------------------------------------------------------
+# Calendar / Identifier hierarchy
+# ---------------------------------------------------------------------------
 
 
 class CalendarError(DataError):
@@ -209,6 +183,53 @@ class TradingDateNotFoundError(CalendarError):
         if direction:
             details["direction"] = direction
         super().__init__(message, details if details else None)
+
+
+class NotTradingDayError(CalendarError):
+    """非交易日异常。"""
+
+    def __init__(self, trade_date: str) -> None:
+        self.trade_date = trade_date
+        super().__init__(f"{trade_date} is not a trading day")
+
+
+class DataChangedError(DataError):
+    """数据已变更异常（checksum 变更，force=False 时抛出）。"""
+
+    def __init__(
+        self,
+        trade_date: str,
+        old_checksum: str,
+        new_checksum: str,
+    ) -> None:
+        self.trade_date = trade_date
+        self.old_checksum = old_checksum
+        self.new_checksum = new_checksum
+        super().__init__(
+            f"Data changed for {trade_date}: checksum {old_checksum} → {new_checksum}. "
+            + "Use force=True to overwrite."
+        )
+
+
+class LateArrivalRejectedError(DataError):
+    """延迟到达数据被拒绝异常。"""
+
+    def __init__(
+        self,
+        delay_days: int,
+        max_delay_days: int,
+        trade_date: str,
+        knowledge_date: str,
+    ) -> None:
+        self.delay_days = delay_days
+        self.max_delay_days = max_delay_days
+        self.trade_date = trade_date
+        self.knowledge_date = knowledge_date
+        super().__init__(
+            f"数据延迟到达被拒绝: trade_date={trade_date}, "
+            + f"knowledge_date={knowledge_date}, "
+            + f"延迟 {delay_days} 天超过阈值 {max_delay_days} 天"
+        )
 
 
 class ValidationError(DataError):
@@ -442,6 +463,77 @@ class SourceFetchError(DataSourceError):
         self.__cause__ = cause
 
 
+class SourceConfigurationError(DataSourceError):
+    """数据源配置错误（缺少环境变量、无效配置）。"""
+
+    def __init__(
+        self,
+        message: str = "Source configuration error",
+        *,
+        env_var: str | None = None,
+        config_key: str | None = None,
+    ) -> None:
+        details: dict[str, object] = {}
+        if env_var:
+            details["env_var"] = env_var
+        if config_key:
+            details["config_key"] = config_key
+        super().__init__(message, "unknown", details if details else None)
+
+
+class SourceAuthenticationError(DataSourceError):
+    """数据源认证失败（无效 token、凭证）。"""
+
+    def __init__(
+        self,
+        message: str = "Authentication failed",
+        *,
+        source: str | None = None,
+    ) -> None:
+        super().__init__(message, source=source or "unknown")
+
+
+class SourceRateLimitError(DataSourceError):
+    """数据源限流错误。"""
+
+    def __init__(
+        self,
+        message: str = "Rate limit exceeded",
+        *,
+        source: str | None = None,
+        limit: int | None = None,
+        window: int | None = None,
+    ) -> None:
+        details: dict[str, object] = {}
+        if limit:
+            details["limit"] = limit
+        if window:
+            details["window"] = window
+        super().__init__(message, source or "unknown", details if details else None)
+
+
+class SourceTransformationError(DataSourceError):
+    """数据转换错误（schema 不匹配、转换失败）。"""
+
+    def __init__(
+        self,
+        message: str = "Data transformation failed",
+        *,
+        source: str | None = None,
+        dataset: str | None = None,
+        expected_columns: list[str] | None = None,
+        actual_columns: list[str] | None = None,
+    ) -> None:
+        details: dict[str, object] = {}
+        if dataset:
+            details["dataset"] = dataset
+        if expected_columns:
+            details["expected_columns"] = expected_columns
+        if actual_columns:
+            details["actual_columns"] = actual_columns
+        super().__init__(message, source or "unknown", details if details else None)
+
+
 class PersistenceError(DataError):
     """
     持久化错误基类。
@@ -559,13 +651,12 @@ def convert_httpx_to_network_error(
 __all__ = [
     "AuthError",
     "CalendarError",
+    "DataChangedError",
     "DataError",
     "DataSourceError",
     "DataValidationError",
     "DatasetNotFoundError",
-    "DerivedDependencyError",
     "DerivedError",
-    "DerivedMaterializationError",
     "DerivedNotFoundError",
     "DerivedNotImplementedError",
     "DerivedValidationError",
@@ -573,11 +664,17 @@ __all__ = [
     "IdentifierError",
     "IdentifierNotFoundError",
     "InstrumentIdNotFoundError",
+    "LateArrivalRejectedError",
     "NetworkError",
+    "NotTradingDayError",
     "PartitionNotFoundError",
     "PersistenceError",
     "SchemaValidationError",
+    "SourceAuthenticationError",
+    "SourceConfigurationError",
     "SourceFetchError",
+    "SourceRateLimitError",
+    "SourceTransformationError",
     "TradingDateNotFoundError",
     "ValidationError",
     "WriteError",

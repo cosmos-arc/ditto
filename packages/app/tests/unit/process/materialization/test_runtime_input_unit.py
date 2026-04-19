@@ -19,7 +19,7 @@ from ditto_app.process.materialization.runtime_input_provider import (
     RuntimeDerivedInputProvider,
 )
 from ditto_app.process.materialization.types import InputContext
-from ditto_kernel.specs import (
+from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,
     ExecutionPolicy,

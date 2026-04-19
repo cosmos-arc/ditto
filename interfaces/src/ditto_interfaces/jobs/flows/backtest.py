@@ -18,7 +18,7 @@ from ditto_app.process.execution.fee_override import (
     build_slippage_model,
 )
 from ditto_app.query._artifact_utils import compute_total_return
-from ditto_kernel.enums import ImpactModel, RunStatus
+from ditto_kernel.strategy import ImpactModel, RunStatus
 from prefect import flow
 
 from ditto_interfaces.registry.contexts.strategy import create_strategy_bundle

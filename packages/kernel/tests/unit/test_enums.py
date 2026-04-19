@@ -1,13 +1,8 @@
 """ditto_kernel.enums 单元测试."""
 
-from ditto_kernel.enums import (
-    AssetClass,
-    Exchange,
-    ImpactModel,
-    OrderSide,
-    RiskScope,
-    RunStatus,
-)
+from ditto_kernel.instrument import AssetClass, Exchange
+from ditto_kernel.order import OrderSide
+from ditto_kernel.strategy import ImpactModel, RunStatus
 
 
 class TestAssetClass:
@@ -70,18 +65,6 @@ class TestRunStatus:
         assert RunStatus.COMPLETED == "completed"
         assert RunStatus.FAILED == "failed"
         assert RunStatus.CANCELLED == "cancelled"
-
-
-class TestRiskScope:
-    """RiskScope 枚举测试."""
-
-    def test_members(self) -> None:
-        """应包含 2 个成员."""
-        assert len(RiskScope) == 2
-
-    def test_values(self) -> None:
-        assert RiskScope.INSTRUMENT == "instrument"
-        assert RiskScope.PORTFOLIO == "portfolio"
 
 
 class TestImpactModel:

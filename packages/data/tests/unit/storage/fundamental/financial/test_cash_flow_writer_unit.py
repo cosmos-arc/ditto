@@ -11,8 +11,11 @@ import pytest
 from ditto_data.storage.fundamental.financial.cash_flow_writer import (
     CashFlowWriter,
 )
+from ditto_data.storage.fundamental.specs import CASH_FLOW_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = CASH_FLOW_SPEC
 
 
 @pytest.fixture
@@ -41,7 +44,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def cash_flow_writer(in_memory_db: SQLitePool) -> CashFlowWriter:
     """Provide CashFlowWriter with in-memory database."""
-    return CashFlowWriter(SQLiteClient(in_memory_db))
+    return CashFlowWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -196,7 +199,7 @@ class TestCashFlowWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = CashFlowWriter(mock_client)
+        mock_writer = CashFlowWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

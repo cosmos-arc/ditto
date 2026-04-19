@@ -17,7 +17,7 @@ from ditto_data.models.ingestion import (
     DataLateArrivalPolicy,
     LateArrivalCheckResult,
 )
-from ditto_data.services.ports import MarketWritePorts
+from ditto_data.services.deps import MarketWriters
 from ditto_data.storage.market.commodity.bars import CommodityBarsWriter
 from ditto_data.storage.market.etf.bars import EtfBarsWriter
 from ditto_data.storage.market.fx.bars import FxBarsWriter
@@ -38,14 +38,14 @@ class MarketWriteService:
 
     def __init__(
         self,
-        write_ports: MarketWritePorts,
+        write_ports: MarketWriters,
         file_lock: FileLockManager,
     ) -> None:
         """
         初始化 MarketWriteService.
 
         Args:
-            write_ports: Market 域写入端口（包含所有 Writer）.
+            write_ports: Market 域写入依赖（包含所有 Writer）.
             file_lock: 文件锁管理器（用于并发写入保护）.
 
         """

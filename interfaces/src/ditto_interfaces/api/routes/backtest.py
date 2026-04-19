@@ -30,8 +30,10 @@ from ditto_app.command.backtest import (
     BacktestRunCommand,
     BacktestRunHandler,
     BacktestRunResult,
+    CancelRunCommand,
     CancelRunHandler,
     CostConfig,
+    RetryRunCommand,
     RetryRunHandler,
 )
 from ditto_app.process.execution.replay_process import ReplayProcess
@@ -39,7 +41,7 @@ from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_app.query.backtest import BacktestQueryFacade, RunSummary
 from ditto_app.query.backtest_trade import TradeRecord
 from ditto_app.query.lineage import LineageQueryFacade
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 from fastapi import APIRouter, Depends, Query
 from loguru import logger
 
@@ -252,7 +254,7 @@ async def cancel_run(
 ) -> APIResponse[CancelRunResponse]:
     """取消回测运行 — 检查 status in {pending, running}，更新为 cancelled."""
     try:
-        await asyncio.to_thread(handler.handle, run_id)
+        await asyncio.to_thread(handler.handle, CancelRunCommand(run_id=run_id))
     except ValueError as exc:
         raise_business_error(exc, default_conflict=True)
 
@@ -275,7 +277,10 @@ async def retry_run(
 ) -> APIResponse[RetryRunResponse]:
     """重试回测运行 — 检查 status in {failed, cancelled}，创建新 Run 并提交 flow."""
     try:
-        new_run_id = await asyncio.to_thread(handler.handle, run_id)
+        new_run_id = await asyncio.to_thread(
+            handler.handle,
+            RetryRunCommand(run_id=run_id),
+        )
     except ValueError as exc:
         raise_business_error(exc, default_conflict=True)
 

@@ -4,7 +4,7 @@ from datetime import date
 
 import polars as pl
 from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.ports import CapitalReadPorts, CapitalWritePorts
+from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from pytest_mock import MockerFixture
 
 
@@ -20,13 +20,13 @@ class TestCapitalServiceGetMethods:
         expected_df = pl.DataFrame({"instrument_id": [1], "date": ["2024-01-01"]})
         mock_reader.get = mocker.Mock(return_value=expected_df)
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mock_reader,
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
@@ -50,13 +50,13 @@ class TestCapitalServiceGetMethods:
         expected_df = pl.DataFrame({"instrument_id": [1], "ratio": [0.5]})
         mock_reader.get = mocker.Mock(return_value=expected_df)
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mock_reader,
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
@@ -80,13 +80,13 @@ class TestCapitalServiceGetMethods:
         expected_df = pl.DataFrame({"instrument_id": [1], "pe": [10.5]})
         mock_reader.get = mocker.Mock(return_value=expected_df)
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mock_reader,
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
@@ -112,13 +112,13 @@ class TestCapitalServiceGetMethods:
         expected_df = pl.DataFrame({"index_id": ["399300.XSHE"], "constituent_id": [2]})
         mock_reader.get = mocker.Mock(return_value=expected_df)
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
             index_composition=mock_reader,
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
@@ -148,13 +148,13 @@ class TestCapitalServiceSaveMethods:
         mock_writer.write = mocker.Mock(return_value=5)
         test_df = pl.DataFrame({"col1": [1, 2]})
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mock_writer,
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
@@ -176,13 +176,13 @@ class TestCapitalServiceSaveMethods:
         mock_writer.write = mocker.Mock(return_value=3)
         test_df = pl.DataFrame({"col1": [1, 2]})
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mock_writer,
             valuation_metrics=mocker.Mock(),
@@ -206,13 +206,13 @@ class TestCapitalServiceSaveMethods:
         mock_writer.write = mocker.Mock(return_value=7)
         test_df = pl.DataFrame({"col1": [1, 2]})
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mock_writer,
@@ -236,13 +236,13 @@ class TestCapitalServiceSaveMethods:
         mock_writer.write = mocker.Mock(return_value=6)
         test_df = pl.DataFrame({"col1": [1, 2]})
 
-        read_ports = CapitalReadPorts(
+        read_ports = CapitalReaders(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        write_ports = CapitalWritePorts(
+        write_ports = CapitalWriters(
             margin_trading=mocker.Mock(),
             pledge_ratio=mocker.Mock(),
             valuation_metrics=mocker.Mock(),

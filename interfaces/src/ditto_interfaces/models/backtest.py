@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import orjson
 from ditto_app.config import DEFAULT_INITIAL_CASH
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ditto_interfaces.models._date_helpers import DateField

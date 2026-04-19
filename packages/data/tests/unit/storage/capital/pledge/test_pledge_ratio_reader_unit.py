@@ -9,6 +9,7 @@ import pytest
 from ditto_data.storage.capital.pledge.pledge_ratio_reader import (
     PledgeRatioReader,
 )
+from ditto_data.storage.capital.specs import PLEDGE_RATIO_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
@@ -39,7 +40,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def reader(in_memory_db: SQLiteClient) -> PledgeRatioReader:
     """创建 PledgeRatioReader 实例."""
-    return PledgeRatioReader(client=in_memory_db)
+    return PledgeRatioReader(PLEDGE_RATIO_SPEC, in_memory_db)
 
 
 def test_get_returns_data(

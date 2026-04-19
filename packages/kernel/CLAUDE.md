@@ -46,54 +46,66 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 
 ## 模块结构
 
+按业务子域组织（2026-04-18 Phase 1 重组），每个子域文件包含相关枚举、值对象、Protocol。
+
 ```
 ditto_kernel/
+├── instrument.py      # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
+├── order.py           # Order 子域 — OrderSide
+├── market.py          # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
+├── strategy.py        # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
 ├── identity.py        # 共享身份类型（NewType）
-├── enums.py           # 共享枚举类型（StrEnum）
 ├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
-├── specs.py           # 衍生规格数据类（DerivedSpec / DerivedRole / TimeSpec 等，Phase 5 从 Engine 迁入）
 ├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
-├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult / L3CheckResult / ReconciliationResult）
-├── exceptions.py      # 共享异常层级（DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
-├── types.py           # 共享工具类型（InstrumentIngestParams）
+├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
+├── exceptions.py      # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── math.py            # 共享数学工具（pearson_correlation 等纯计算函数）
+```
+
+### 子域间依赖
+
+```
+strategy → market（单向依赖，策略规格引用市场时间语义）
+instrument / order / market / identity: 无子域间依赖
 ```
 
 ## 当前类型清单
 
 | 类型 | 模块 | 格式 | 消费者 |
 |------|------|------|--------|
+| `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Interfaces |
+| `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
+| `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
+| `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Engine |
+| `CalendarId` | market.py | `Literal["cn_stock"]` | Analytics |
+| `GrainId` | market.py | `Literal["1d", "1m"]` | Analytics |
+| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
+| `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, App, Interfaces |
+| `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App, Interfaces |
+| `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
+| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Engine |
+| `DerivedSpec` | strategy.py | frozen dataclass | Analytics, Engine |
+| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
+| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
+| `ImpactModel` | strategy.py | `StrEnum`（FIXED/FRACTIONAL/LINEAR） | Engine |
+| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine, Data, Interfaces, App |
+| `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
+| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Engine, App |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
-| `AssetClass` | enums.py | `StrEnum`（6 成员） | Data, Interfaces |
-| `Exchange` | enums.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
-| `OrderSide` | enums.py | `StrEnum`（BUY/SELL） | Data, Engine |
-| `RunStatus` | enums.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
-| `RiskScope` | enums.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine |
-| `MacroCategory` | enums.py | `StrEnum`（ECONOMIC/INTEREST_RATE/EXCHANGE_RATE/MONEY_SUPPLY/PRICES/EMPLOYMENT） | Data, App |
-| `MacroFrequency` | enums.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App |
-| `DerivedRole` | specs.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Engine |
-| `DerivedSpec` | specs.py | frozen dataclass | Analytics, Engine |
-| `MaterializationProfile` | specs.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
-| `TimeSpec` | specs.py | frozen dataclass | Analytics, Engine |
-| `ExecutionPolicy` | specs.py | frozen dataclass（含默认值） | Analytics, Engine |
-| `CalendarId` | specs.py | `Literal["cn_stock"]` | Analytics |
-| `GrainId` | specs.py | `Literal["1d", "1m"]` | Analytics |
 | `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
 | `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, App, Interfaces |
 | `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
-| `DQIssue` | quality.py | frozen dataclass | Data, App, Interfaces |
+| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
 | `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
-| `L3CheckResult` | quality.py | frozen dataclass（L3 统计巡检结果） | App, Interfaces |
-| `ReconciliationResult` | quality.py | frozen dataclass（数据源对账结果） | App, Interfaces |
-| `DataError` | exceptions.py | `Exception`（基类） | Data, App, Interfaces |
+| `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
+| `DataError` | exceptions.py | `DittoError`（数据域根） | Data, App, Interfaces |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
 | `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
-| `InstrumentIngestParams` | types.py | frozen dataclass | Data, App |
 | `pearson_correlation` | math.py | 纯函数 | Engine, App |
 
 ## 导入规范
@@ -102,10 +114,12 @@ ditto_kernel/
 # ✅ 正确：从 kernel 顶层导入
 from ditto_kernel import AssetClass, OrderSide, InstrumentId
 
-# ✅ 正确：从子模块导入
-from ditto_kernel.enums import AssetClass, Exchange
+# ✅ 正确：从子域模块导入
+from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
+from ditto_kernel.order import OrderSide
+from ditto_kernel.market import CalendarId, GrainId, TimeSpec, MacroCategory
+from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy, DecisionFrame
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.specs import DerivedSpec, DerivedRole, MaterializationProfile
 
 # ❌ 禁止：kernel 导入任何其他 ditto 包
 from ditto_data.models.enums import ...  # kernel 中禁止
@@ -140,10 +154,18 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 |------|------|
 | `import polars` / `import orjson` 等第三方库 | 零外部依赖 |
 | pyproject.toml 声明运行时 dependencies | 零外部依赖 |
-| 在枚举/值对象上添加方法 | 零业务行为 |
+| 在枚举上添加方法 | 零业务行为 |
+| frozen dataclass 上添加有副作用/有 I/O 的方法 | 零业务行为 |
 | 包含序列化、持久化逻辑 | 纯值语义 |
 | 薄实现类超过 30 行方法体 | 控制复杂度 |
 | Protocol / 薄实现包含 I/O | 零 I/O |
+
+### 允许的例外
+
+| 允许 | 条件 | 示例 |
+|------|------|------|
+| frozen dataclass `@property` | 纯计算：无副作用、无 I/O、仅基于自身字段 | `InstrumentIngestParams.has_identifier` |
+| Protocol 定义 | 零依赖签名，使用 `Sequence` 等标准库类型 | `DecisionFrame`, `MacroDataProvider` |
 
 ## 测试规范
 
@@ -155,9 +177,10 @@ packages/kernel/
 └── tests/
     └── unit/           # 单元测试
         ├── test_clock.py
-        ├── test_enums.py
         ├── test_events.py
-        └── test_identity.py
+        ├── test_identity.py
+        ├── test_subdomain_properties.py  # 子域 @property 纯计算测试
+        └── test_*.py                     # 其他单元测试
 ```
 
 ### 运行测试

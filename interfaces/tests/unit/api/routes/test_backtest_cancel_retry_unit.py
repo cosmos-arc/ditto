@@ -19,7 +19,9 @@ import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
 from ditto_app.command.backtest import (
+    CancelRunCommand,
     CancelRunHandler,
+    RetryRunCommand,
     RetryRunHandler,
 )
 from ditto_app.process.execution.strategy_types import RunLifecycleService
@@ -116,7 +118,9 @@ class TestCancelStatusGuard:
         mock_cancel_handler.handle.return_value = None
         resp = client.post("/api/v1/backtests/runs/run001/cancel")
         assert resp.status_code == 200
-        mock_cancel_handler.handle.assert_called_once_with("run001")
+        mock_cancel_handler.handle.assert_called_once_with(
+            CancelRunCommand(run_id="run001"),
+        )
         body = resp.json()
         assert body["data"]["run_id"] == "run001"
         assert body["data"]["status"] == "cancelled"
@@ -212,7 +216,9 @@ class TestRetryStatusGuard:
         )
         resp = client.post("/api/v1/backtests/runs/run001/retry")
         assert resp.status_code == 202
-        mock_retry_handler.handle.assert_called_once_with("run001")
+        mock_retry_handler.handle.assert_called_once_with(
+            RetryRunCommand(run_id="run001"),
+        )
         body = resp.json()
         assert body["data"]["run_id"] == "run002"
         assert body["data"]["parent_run_id"] == "run001"

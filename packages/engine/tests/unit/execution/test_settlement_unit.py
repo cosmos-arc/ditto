@@ -7,7 +7,7 @@ from ditto_engine.execution.reality.settlement import (
     SimpleSettlementModel,
 )
 from ditto_engine.execution.rules import TradingRuleSet
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test fixtures

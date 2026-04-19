@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ditto_analytics.expression.compiler import ExpressionCompiler
 from ditto_analytics.factors.alternative import ALTERNATIVES
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 _EXPECTED_IDS = ("margin_change", "pledge_ratio", "short_interest_ratio")
 

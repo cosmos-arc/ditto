@@ -13,7 +13,7 @@ from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_analytics.materialization import (
     CompiledDerivedExpression,
 )
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Schema SQL (excerpt for compile cache tables)

@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.strategy import RiskScope
 
 from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
 

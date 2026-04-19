@@ -17,7 +17,7 @@ from ditto_engine.backtest.statistics import (
 )
 from ditto_engine.execution.trade_builder import TradeRecord
 from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test data factories

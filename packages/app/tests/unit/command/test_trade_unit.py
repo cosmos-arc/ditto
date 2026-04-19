@@ -14,8 +14,8 @@ from ditto_app.command.trade import (
 )
 from ditto_app.execution_dto import ActualPositionSnapshot, ManualExecutionFill
 from ditto_data.models.trade import (
-    ManualExecutionFillRecord,
-    TradeIntentRecord,
+    FillRecord,
+    SignalRecord,
 )
 
 
@@ -41,8 +41,8 @@ def _make_manual_tracker() -> MagicMock:
     return MagicMock(spec=["compute_positions", "compute_settlement_date"])
 
 
-def _make_intent_record(**overrides: object) -> TradeIntentRecord:
-    """构建测试用 TradeIntentRecord."""
+def _make_intent_record(**overrides: object) -> SignalRecord:
+    """构建测试用 SignalRecord."""
     defaults: dict[str, object] = {
         "intent_id": "intent-001",
         "strategy_id": "strat-alpha",
@@ -57,7 +57,7 @@ def _make_intent_record(**overrides: object) -> TradeIntentRecord:
         "created_at": "2026-04-10T09:30:00Z",
     }
     defaults.update(overrides)
-    return TradeIntentRecord(**defaults)  # type: ignore[arg-type]
+    return SignalRecord(**defaults)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ class TestRecordFillHandler:
         tracker = _make_manual_tracker()
 
         # 模拟已有 fill 记录
-        existing_record = ManualExecutionFillRecord(
+        existing_record = FillRecord(
             fill_id="fill-existing",
             intent_id="intent-001",
             strategy_id="strat-alpha",
@@ -125,7 +125,7 @@ class TestRecordFillHandler:
         service.get_intent.return_value = intent
 
         # list_fills 返回空列表 + 新 fill 的 record
-        new_fill_record = ManualExecutionFillRecord(
+        new_fill_record = FillRecord(
             fill_id="fill-001",
             intent_id="intent-001",
             strategy_id="strat-alpha",
@@ -170,7 +170,7 @@ class TestRecordFillHandler:
         # 验证 save_fill 被调用
         service.save_fill.assert_called_once()
         saved_record = service.save_fill.call_args[0][0]
-        assert isinstance(saved_record, ManualExecutionFillRecord)
+        assert isinstance(saved_record, FillRecord)
         assert saved_record.fill_id == "fill-001"
 
         # 验证 intent 状态更新为 filled
@@ -558,7 +558,7 @@ class TestRecordFillPartialFillDetection:
         service.get_intent.return_value = intent
         # _determine_fill_status 查询累积 fills，save_fill 后数据库含当前 fill
         service.list_fills.return_value = [
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-full",
                 intent_id="intent-001",
                 strategy_id="strat-alpha",
@@ -601,7 +601,7 @@ class TestRecordFillPartialFillDetection:
         intent = _make_intent_record(quantity=1000)
         service.get_intent.return_value = intent
         service.list_fills.return_value = [
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-partial",
                 intent_id="intent-001",
                 strategy_id="strat-alpha",
@@ -644,7 +644,7 @@ class TestRecordFillPartialFillDetection:
         intent = _make_intent_record(quantity=1000)
         service.get_intent.return_value = intent
         service.list_fills.return_value = [
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-over",
                 intent_id="intent-001",
                 strategy_id="strat-alpha",
@@ -687,7 +687,7 @@ class TestRecordFillPartialFillDetection:
         service.get_intent.return_value = intent
 
         # 模拟已有一次部分成交 600 股
-        existing_fill = ManualExecutionFillRecord(
+        existing_fill = FillRecord(
             fill_id="fill-prev",
             intent_id="intent-001",
             strategy_id="strat-alpha",
@@ -701,7 +701,7 @@ class TestRecordFillPartialFillDetection:
         # list_fills 需要同时返回历史 fill + 新 fill
         service.list_fills.return_value = [
             existing_fill,
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-new",
                 intent_id="intent-001",
                 strategy_id="strat-alpha",
@@ -743,7 +743,7 @@ class TestRecordFillPartialFillDetection:
         intent = _make_intent_record(quantity=1000)
         service.get_intent.return_value = intent
 
-        existing_fill = ManualExecutionFillRecord(
+        existing_fill = FillRecord(
             fill_id="fill-prev",
             intent_id="intent-001",
             strategy_id="strat-alpha",
@@ -756,7 +756,7 @@ class TestRecordFillPartialFillDetection:
         )
         service.list_fills.return_value = [
             existing_fill,
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-new",
                 intent_id="intent-001",
                 strategy_id="strat-alpha",
@@ -799,7 +799,7 @@ class TestRecordFillPartialFillDetection:
         intent = _make_intent_record(quantity=None)
         service.get_intent.return_value = intent
         service.list_fills.return_value = [
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-none",
                 intent_id="intent-001",
                 strategy_id="strat-alpha",

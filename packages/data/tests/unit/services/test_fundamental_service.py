@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.ports import FundamentalReadPorts, FundamentalWritePorts
 
 
 class TestFundamentalServiceGetMethods:
@@ -47,7 +47,7 @@ class TestFundamentalServiceGetMethods:
         mock_writers: dict[str, MagicMock],
     ) -> FundamentalService:
         """Create FundamentalService with mocked dependencies."""
-        read_ports = FundamentalReadPorts(
+        read_ports = FundamentalReaders(
             balance_sheet=mock_readers["balance_sheet"],
             income_statement=mock_readers["income_statement"],
             cash_flow=mock_readers["cash_flow"],
@@ -57,7 +57,7 @@ class TestFundamentalServiceGetMethods:
             express=mock_readers["express"],
         )
 
-        write_ports = FundamentalWritePorts(
+        write_ports = FundamentalWriters(
             balance_sheet=mock_writers["balance_sheet"],
             income_statement=mock_writers["income_statement"],
             cash_flow=mock_writers["cash_flow"],
@@ -227,7 +227,7 @@ class TestFundamentalServiceListMethods:
         mock_reader = MagicMock()
         mock_writer = MagicMock()
 
-        read_ports = FundamentalReadPorts(
+        read_ports = FundamentalReaders(
             balance_sheet=mock_reader,
             income_statement=mock_reader,
             cash_flow=mock_reader,
@@ -237,7 +237,7 @@ class TestFundamentalServiceListMethods:
             express=mock_reader,
         )
 
-        write_ports = FundamentalWritePorts(
+        write_ports = FundamentalWriters(
             balance_sheet=mock_writer,
             income_statement=mock_writer,
             cash_flow=mock_writer,
@@ -259,14 +259,14 @@ class TestFundamentalServiceListMethods:
                 "action_date": [date(2024, 1, 1)],
             }
         )
-        corporate_actions_reader.get.return_value = test_df
+        corporate_actions_reader.query.return_value = test_df
 
         result = service.list_corporate_actions(
             1_000_001, date(2024, 1, 1), date(2024, 1, 31)
         )
 
         assert result.equals(test_df)
-        corporate_actions_reader.get.assert_called_once_with(
+        corporate_actions_reader.query.assert_called_once_with(
             1_000_001, date(2024, 1, 1), date(2024, 1, 31), None
         )
 
@@ -281,7 +281,7 @@ class TestFundamentalServiceSaveMethods:
         mock_writer = MagicMock()
         mock_writer.write.return_value = 5  # Simulate 5 records written
 
-        read_ports = FundamentalReadPorts(
+        read_ports = FundamentalReaders(
             balance_sheet=mock_reader,
             income_statement=mock_reader,
             cash_flow=mock_reader,
@@ -291,7 +291,7 @@ class TestFundamentalServiceSaveMethods:
             express=mock_reader,
         )
 
-        write_ports = FundamentalWritePorts(
+        write_ports = FundamentalWriters(
             balance_sheet=mock_writer,
             income_statement=mock_writer,
             cash_flow=mock_writer,

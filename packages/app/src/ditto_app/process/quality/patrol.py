@@ -16,17 +16,11 @@ from ditto_infra.foundation import logger
 from ditto_infra.services.notification import AlertManager, alert_dq_failure
 from ditto_kernel.quality import DQIssue, DQResult
 
+from ditto_app.process.quality.types import L3CheckResult
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 
-_CALENDAR_BUFFER_MULTIPLIER = 2  # 周末/假日缓冲系数
-
-# ---------------------------------------------------------------------------
-# L3 批量统计检查
-# ---------------------------------------------------------------------------
-
-# NOTE: L3CheckResult 临时从 ditto_kernel.quality 导入（Phase D 清理）。
-from ditto_kernel.quality import L3CheckResult  # noqa: E402
+_CALENDAR_BUFFER_MULTIPLIER = 2
 
 
 class QualityPatrolService:

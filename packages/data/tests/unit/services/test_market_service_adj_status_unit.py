@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_data.services.deps import MarketReaders
 from ditto_data.services.market_service import MarketService
-from ditto_data.services.ports import MarketReadPorts
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def market_service(
     mock_readers: dict[str, MagicMock],
 ) -> MarketService:
     """创建 MarketService 实例."""
-    read_ports = MarketReadPorts(
+    read_ports = MarketReaders(
         stock_bars=mock_readers["stock_bars"],
         stock_status=mock_readers["stock_status"],
         stock_adj=mock_readers["stock_adj"],

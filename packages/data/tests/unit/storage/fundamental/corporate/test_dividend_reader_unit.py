@@ -10,8 +10,11 @@ import pytest
 from ditto_data.storage.fundamental.corporate.dividend_reader import (
     DividendReader,
 )
+from ditto_data.storage.fundamental.specs import DIVIDEND_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = DIVIDEND_SPEC
 
 
 @pytest.fixture
@@ -29,6 +32,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
         effective_to DATE,
         dividend_per_share REAL,
         dividend_yield REAL,
+        div_proc TEXT,
         PRIMARY KEY (instrument_id, ex_dividend_date, effective_from)
     )"""
     )
@@ -38,7 +42,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def dividend_reader(in_memory_db: SQLitePool) -> DividendReader:
     """Provide DividendReader with in-memory database."""
-    return DividendReader(SQLiteClient(in_memory_db))
+    return DividendReader(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit

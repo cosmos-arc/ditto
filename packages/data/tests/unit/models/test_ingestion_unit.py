@@ -3,12 +3,11 @@
 import dataclasses
 
 import pytest
+from ditto_data.errors import DataChangedError, NotTradingDayError
 from ditto_data.models.ingestion import (
-    DataChangedError,
     IngestionCursor,
     IngestionLog,
     IngestionStatus,
-    NotTradingDayError,
 )
 
 

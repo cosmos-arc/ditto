@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from enum import Enum, StrEnum
 from typing import Literal, NamedTuple, cast
 
-from ditto_kernel.enums import AssetClass
+from ditto_kernel.instrument import AssetClass
 
 # 资产类别类型别名
 type AssetClassType = Literal[
@@ -177,6 +177,11 @@ class Dataset(StrEnum):
 
         """
         return self.asset_class is not None
+
+    @classmethod
+    def all_datasets(cls) -> list[str]:
+        """返回所有已注册数据集的值列表。"""
+        return [d.value for d in cls]
 
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:

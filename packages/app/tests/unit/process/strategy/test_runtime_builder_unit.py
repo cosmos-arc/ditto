@@ -19,7 +19,7 @@ from ditto_engine.alpha.specs import (
     SelectorSpec,
     StrategySpec,
 )
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 
 
 def _make_rotation_spec() -> StrategySpec:

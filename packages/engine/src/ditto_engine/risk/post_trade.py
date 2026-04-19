@@ -21,8 +21,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
 
-from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.strategy import RiskScope
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.risk._validation import validate_weight

@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 
 from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
 

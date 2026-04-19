@@ -11,8 +11,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.account import Account, AccountView
 from ditto_engine.accounting.fills import FillEvent

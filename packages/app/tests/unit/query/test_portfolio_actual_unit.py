@@ -10,8 +10,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from ditto_data.models.trade import (
-    ActualPositionSnapshotRecord,
-    ManualExecutionFillRecord,
+    FillRecord,
+    PositionRecord,
 )
 
 # ---------------------------------------------------------------------------
@@ -32,9 +32,9 @@ def _make_position_record(
     unrealized_pnl: float = 100.0,
     realized_pnl: float = 50.0,
     total_fees: float = 5.0,
-) -> ActualPositionSnapshotRecord:
-    """构建 ActualPositionSnapshotRecord 测试 fixture."""
-    return ActualPositionSnapshotRecord(
+) -> PositionRecord:
+    """构建 PositionRecord 测试 fixture."""
+    return PositionRecord(
         snapshot_id=snapshot_id,
         strategy_id=strategy_id,
         snapshot_date=snapshot_date,
@@ -63,9 +63,9 @@ def _make_fill_record(
     slippage: float = 0.0,
     notes: str = "",
     settlement_date: str = "2026-04-11",
-) -> ManualExecutionFillRecord:
-    """构建 ManualExecutionFillRecord 测试 fixture."""
-    return ManualExecutionFillRecord(
+) -> FillRecord:
+    """构建 FillRecord 测试 fixture."""
+    return FillRecord(
         fill_id=fill_id,
         intent_id=intent_id,
         strategy_id=strategy_id,

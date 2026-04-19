@@ -18,15 +18,15 @@ from ditto_analytics.materialization import (
     DerivedMaterializationRequest,
 )
 from ditto_data.models.derived import DerivedInvalidationRecord, DerivedSpecRecord
-from ditto_kernel.specs import (
-    CalendarId,
+from ditto_kernel.market import CalendarId, GrainId, TimeSpec
+from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,
     ExecutionPolicy,
-    GrainId,
     MaterializationProfile,
-    TimeSpec,
 )
+
+from ditto_app.exceptions import AppError
 
 __all__ = [
     "DerivedInputProvider",
@@ -92,7 +92,7 @@ class UnavailableDerivedInputProvider:
 # ---------------------------------------------------------------------------
 
 
-class MissingDependencyError(Exception):
+class MissingDependencyError(AppError):
     """Raised when required dependency columns are missing from input data."""
 
     def __init__(self, missing: list[str], available: list[str]) -> None:

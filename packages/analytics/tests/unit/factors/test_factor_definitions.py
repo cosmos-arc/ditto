@@ -8,7 +8,7 @@ from ditto_analytics.expression.compiler import (
     detect_dependency_cycles,
 )
 from ditto_analytics.factors import ALL_FACTOR_SPECS
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Task 3A: detect_dependency_cycles

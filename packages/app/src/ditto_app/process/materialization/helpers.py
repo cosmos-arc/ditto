@@ -26,7 +26,7 @@ from ditto_data.models.publication_safety import (
     JsonDict,
 )
 from ditto_data.services import DerivedCatalogService
-from ditto_kernel.specs import DerivedSpec
+from ditto_kernel.strategy import DerivedSpec
 
 from ditto_app.config import now_iso
 

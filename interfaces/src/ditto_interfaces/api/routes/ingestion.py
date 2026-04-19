@@ -10,6 +10,7 @@ from dishka.integrations.fastapi import inject
 from ditto_app.query.ingestion_status import (
     IngestionStatusQueryFacade,
 )
+from ditto_data.models.common import Dataset
 from fastapi import APIRouter, Query
 
 from ditto_interfaces.models.common import APIResponse
@@ -22,31 +23,8 @@ from ditto_interfaces.models.ingestion import (
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
 
-# V1 已注册的数据集列表
-_KNOWN_DATASETS = [
-    "calendar",
-    "stock_basic",
-    "etf_basic",
-    "index_basic",
-    "stock_daily",
-    "etf_daily",
-    "index_daily",
-    "index_weight",
-    "stock_status",
-    "adj_factor",
-    "fund_adj",
-    "balance_sheet",
-    "income_statement",
-    "cash_flow",
-    "dividend",
-    "corporate_actions",
-    "valuation_metrics",
-    "margin_trading",
-    "pledge_ratio",
-    "macro_indicators",
-    "fx_daily",
-    "commodity_daily",
-]
+# 从 Dataset StrEnum 派生，保证单一事实来源
+_KNOWN_DATASETS = Dataset.all_datasets()
 
 
 @router.get("/status", response_model=APIResponse[IngestionStatusResponse])

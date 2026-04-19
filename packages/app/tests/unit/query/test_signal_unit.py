@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from ditto_app.query.signal import SignalQueryFacade
-from ditto_data.models.trade import TradeIntentRecord
+from ditto_data.models.trade import SignalRecord
 
 
 def _make_intent_record(
@@ -19,8 +19,8 @@ def _make_intent_record(
     delta_weight: float = 0.2,
     quantity: int | None = 1000,
     status: str = "pending",
-) -> TradeIntentRecord:
-    return TradeIntentRecord(
+) -> SignalRecord:
+    return SignalRecord(
         intent_id=intent_id,
         strategy_id=strategy_id,
         signal_date=signal_date,

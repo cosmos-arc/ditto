@@ -3,7 +3,7 @@
 import pytest
 from ditto_analytics.validation import validate_derived_spec
 from ditto_data.errors import DerivedNotImplementedError
-from ditto_kernel.specs import (
+from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,
     MaterializationProfile,

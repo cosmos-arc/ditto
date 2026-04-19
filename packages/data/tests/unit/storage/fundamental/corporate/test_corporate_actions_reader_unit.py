@@ -10,8 +10,11 @@ import pytest
 from ditto_data.storage.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,
 )
+from ditto_data.storage.fundamental.specs import CORPORATE_ACTIONS_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = CORPORATE_ACTIONS_SPEC
 
 
 @pytest.fixture
@@ -38,7 +41,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def corporate_actions_reader(in_memory_db: SQLitePool) -> CorporateActionsReader:
     """Provide CorporateActionsReader with in-memory database."""
-    return CorporateActionsReader(SQLiteClient(in_memory_db))
+    return CorporateActionsReader(SPEC, SQLiteClient(in_memory_db))
 
 
 def _insert_row(
@@ -95,7 +98,7 @@ class TestCorporateActionsReader:
         )
 
         # Act
-        result = corporate_actions_reader.get(600000)
+        result = corporate_actions_reader.query(600000)
 
         # Assert
         assert len(result) == 1
@@ -113,7 +116,7 @@ class TestCorporateActionsReader:
     ) -> None:
         """Test that get returns empty DataFrame for empty table."""
         # Act
-        result = corporate_actions_reader.get(600000)
+        result = corporate_actions_reader.query(600000)
 
         # Assert
         assert len(result) == 0
@@ -138,7 +141,7 @@ class TestCorporateActionsReader:
         )
 
         # Act
-        result = corporate_actions_reader.get(600000)
+        result = corporate_actions_reader.query(600000)
 
         # Assert
         assert len(result) == 0
@@ -172,7 +175,7 @@ class TestCorporateActionsReader:
         )
 
         # Act - Query from May 1st onwards
-        result = corporate_actions_reader.get(600000, start_date=date(2024, 5, 1))
+        result = corporate_actions_reader.query(600000, start_date=date(2024, 5, 1))
 
         # Assert - Should only include the split (action_date >= 2024-05-01)
         assert len(result) == 1
@@ -207,7 +210,7 @@ class TestCorporateActionsReader:
         )
 
         # Act - Query up to May 1st
-        result = corporate_actions_reader.get(600000, end_date=date(2024, 5, 1))
+        result = corporate_actions_reader.query(600000, end_date=date(2024, 5, 1))
 
         # Assert - Should only include the dividend (action_date <= 2024-05-01)
         assert len(result) == 1
@@ -252,7 +255,7 @@ class TestCorporateActionsReader:
         )
 
         # Act - Query from April 1st to April 30th
-        result = corporate_actions_reader.get(
+        result = corporate_actions_reader.query(
             600000,
             start_date=date(2024, 4, 1),
             end_date=date(2024, 4, 30),
@@ -301,7 +304,7 @@ class TestCorporateActionsReader:
         )
 
         # Act
-        result = corporate_actions_reader.get(600000)
+        result = corporate_actions_reader.query(600000)
 
         # Assert - Should return 3 actions ordered by action_date DESC
         assert len(result) == 3
@@ -344,7 +347,7 @@ class TestCorporateActionsReaderPIT:
         )
 
         # Act - no PIT filter
-        result = corporate_actions_reader.get(600000)
+        result = corporate_actions_reader.query(600000)
 
         # Assert - both versions returned
         assert len(result) == 2
@@ -378,7 +381,7 @@ class TestCorporateActionsReaderPIT:
         )
 
         # Act - query as of April 28 (before second version)
-        result = corporate_actions_reader.get(600000, as_of_date=date(2024, 4, 28))
+        result = corporate_actions_reader.query(600000, as_of_date=date(2024, 4, 28))
 
         # Assert - only first version (effective_from <= Apr 28, effective_to > Apr 28)
         assert len(result) == 1
@@ -413,7 +416,7 @@ class TestCorporateActionsReaderPIT:
         )
 
         # Act - query as of May 1 exactly
-        result = corporate_actions_reader.get(600000, as_of_date=date(2024, 5, 1))
+        result = corporate_actions_reader.query(600000, as_of_date=date(2024, 5, 1))
 
         # Assert - only the revised version (effective_to > May 1 via NULL)
         assert len(result) == 1
@@ -438,7 +441,7 @@ class TestCorporateActionsReaderPIT:
         )
 
         # Act - query far in the future
-        result = corporate_actions_reader.get(600000, as_of_date=date(2030, 1, 1))
+        result = corporate_actions_reader.query(600000, as_of_date=date(2030, 1, 1))
 
         # Assert - current version still valid
         assert len(result) == 1
@@ -463,7 +466,7 @@ class TestCorporateActionsReaderPIT:
         )
 
         # Act - query before effective_from
-        result = corporate_actions_reader.get(600000, as_of_date=date(2024, 1, 1))
+        result = corporate_actions_reader.query(600000, as_of_date=date(2024, 1, 1))
 
         # Assert
         assert len(result) == 0
@@ -507,7 +510,7 @@ class TestCorporateActionsReaderPIT:
         )
 
         # Act - date range + PIT (all are current, so PIT doesn't filter)
-        result = corporate_actions_reader.get(
+        result = corporate_actions_reader.query(
             600000,
             start_date=date(2024, 4, 1),
             end_date=date(2024, 4, 30),

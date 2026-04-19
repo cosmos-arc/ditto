@@ -69,6 +69,10 @@ forbidden_modules =
     ditto_kernel.**
     ditto_analytics.**
     ditto_app.**
+# InfraError 继承 DittoError（全局异常根），这是跨层共享的合法依赖
+ignore_imports =
+    ditto_infra.exceptions -> ditto_kernel.exceptions
+unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
 # Data 层边界：禁止依赖 Engine/Interfaces/App
@@ -208,6 +212,9 @@ ignore_imports =
     ditto_interfaces.registry.** -> ditto_data.config.**
     ditto_interfaces.jobs.context -> ditto_data.quality
     ditto_interfaces.jobs.context -> ditto_data.quality.protocols
+    # Dataset StrEnum 是系统级枚举，API/CLI 需要列出已知数据集
+    ditto_interfaces.api.routes.ingestion -> ditto_data.models.common
+    ditto_interfaces.cli.commands.ops -> ditto_data.models.common
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 
@@ -311,12 +318,12 @@ forbidden_modules =
 # 这是 storage 层与 model 层的自然耦合，全部均为合法的类型注解
 ignore_imports =
     ditto_data.storage.** -> ditto_data.models
-    ditto_data.storage.** -> ditto_data.models.common
     ditto_data.storage.** -> ditto_data.models.storage
     ditto_data.storage.** -> ditto_data.models.metadata
     ditto_data.storage.** -> ditto_data.models.macro
     ditto_data.storage.** -> ditto_data.models.strategy
     ditto_data.storage.** -> ditto_data.models.strategy_run
+    ditto_data.storage.** -> ditto_data.models.trade
 unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:data-sources-no-storage-import]
@@ -326,6 +333,39 @@ source_modules =
     ditto_data.sources.**
 forbidden_modules =
     ditto_data.storage.**
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# Data sources 子域交叉隔离：各数据源互相禁止导入
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:data-sources-tushare-isolation]
+name = Data source tushare must not import tdx/fred
+type = forbidden
+source_modules =
+    ditto_data.sources.tushare.**
+forbidden_modules =
+    ditto_data.sources.tdx.**
+    ditto_data.sources.fred.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-sources-tdx-isolation]
+name = Data source tdx must not import tushare/fred
+type = forbidden
+source_modules =
+    ditto_data.sources.tdx.**
+forbidden_modules =
+    ditto_data.sources.tushare.**
+    ditto_data.sources.fred.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-sources-fred-isolation]
+name = Data source fred must not import tushare/tdx
+type = forbidden
+source_modules =
+    ditto_data.sources.fred.**
+forbidden_modules =
+    ditto_data.sources.tushare.**
+    ditto_data.sources.tdx.**
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════

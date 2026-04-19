@@ -12,13 +12,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
+from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.models import InstrumentIdRange
-from ditto_data.services.ports import MarketReadPorts
+
+if TYPE_CHECKING:
+    from ditto_data.services.deps import MarketReaders
 from ditto_data.storage.market.commodity.bars import CommodityBarsReader
 from ditto_data.storage.market.etf.bars import EtfBarsReader
 from ditto_data.storage.market.fx.bars import FxBarsReader
@@ -125,13 +128,13 @@ class MarketService:
 
     def __init__(
         self,
-        read_ports: MarketReadPorts,
+        read_ports: MarketReaders,
     ) -> None:
         """
         初始化 MarketService.
 
         Args:
-            read_ports: Market 域读取端口（包含所有 Reader）.
+            read_ports: Market 域读取依赖（包含所有 Reader）.
 
         """
         self._read_ports = read_ports
@@ -266,7 +269,7 @@ class MarketService:
             msg = (
                 "IndexConstituentReader not configured. "
                 "Please provide index_constituent when "
-                "initializing MarketReadPorts."
+                "initializing MarketReaders."
             )
             raise NotImplementedError(msg)
 
@@ -347,13 +350,13 @@ class MarketService:
             对应的 Reader 实例，如果未配置则返回 None.
 
         """
-        # 必需端口：stock 和 etf 始终可用
+        # 必需依赖：stock 和 etf 始终可用
         if asset_class == "stock":
             return self._read_ports.stock_bars
         if asset_class == "etf":
             return self._read_ports.etf_bars
 
-        # 可选端口：index / fx / commodity 可能未配置
+        # 可选依赖：index / fx / commodity 可能未配置
         optional_readers = {
             "index": self._read_ports.index_bars,
             "fx": self._read_ports.fx_bars,
@@ -518,7 +521,7 @@ class MarketService:
         """
         应用 ETF 价格调整.
 
-        与 _apply_adjustment() 类似，但使用 etf_adj 端口读取复权因子。
+        与 _apply_adjustment() 类似，但使用 etf_adj 依赖读取复权因子。
         当 adj_df 为空时，优雅回退返回原始数据。
 
         Args:
@@ -713,7 +716,7 @@ class MarketService:
 
         df = self._read_ports.etf_bars.read(start_date=start, end_date=end)
 
-        # 应用复权（如果需要且 etf_adj 端口可用）
+        # 应用复权（如果需要且 etf_adj 依赖可用）
         adj_type = AdjType.from_string(adj)
         if adj_type != AdjType.NONE and self._read_ports.etf_adj is not None:
             df = self._apply_etf_adjustment(df, adj_type, start, end)

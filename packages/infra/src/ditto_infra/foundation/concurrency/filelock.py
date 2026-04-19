@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from ditto_infra.exceptions import InfraError
 from ditto_infra.foundation.observability import logger
 
 try:
@@ -22,7 +23,7 @@ except ImportError as e:
 __all__ = ["FileLockManager", "LockAcquisitionError"]
 
 
-class LockAcquisitionError(Exception):
+class LockAcquisitionError(InfraError):
     """
     获取锁失败异常.
 

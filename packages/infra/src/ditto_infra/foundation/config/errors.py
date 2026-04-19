@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from ditto_infra.exceptions import InfraError
 
-class ConfigInitError(Exception):
+
+class ConfigInitError(InfraError):
     """
     Raised when configuration initialization fails during startup.
 

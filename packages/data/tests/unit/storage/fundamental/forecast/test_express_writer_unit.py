@@ -9,8 +9,11 @@ from unittest.mock import Mock
 import polars as pl
 import pytest
 from ditto_data.storage.fundamental.forecast.express_writer import ExpressWriter
+from ditto_data.storage.fundamental.specs import EXPRESS_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = EXPRESS_SPEC
 
 
 @pytest.fixture
@@ -38,7 +41,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def express_writer(in_memory_db: SQLitePool) -> ExpressWriter:
     """Provide ExpressWriter with in-memory database."""
-    return ExpressWriter(SQLiteClient(in_memory_db))
+    return ExpressWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -189,7 +192,7 @@ class TestExpressWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = ExpressWriter(mock_client)
+        mock_writer = ExpressWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

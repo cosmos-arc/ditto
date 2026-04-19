@@ -195,7 +195,7 @@ _obv_specs: dict[str, FactorSpec] = {
     "obv_ma20": FactorSpec(
         id="obv_ma20",
         expression="",
-        dependencies=("market.close", "market.volume"),
+        dependencies=("obv",),
         description="20-day moving average of On-Balance Volume",
         computation_type="python",
     ),

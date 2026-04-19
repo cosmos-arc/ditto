@@ -428,11 +428,11 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
     def test_returns_mapped_snapshots(self) -> None:
         """从 TradeService 获取 positions 并映射为 DTO."""
         from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import ActualPositionSnapshotRecord
+        from ditto_data.models.trade import PositionRecord
 
         mock_service = _make_mock_trade_service()
         records = [
-            ActualPositionSnapshotRecord(
+            PositionRecord(
                 snapshot_id="snap-1",
                 strategy_id="strat-001",
                 snapshot_date="2024-01-16",
@@ -445,7 +445,7 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
                 realized_pnl=200.0,
                 total_fees=15.0,
             ),
-            ActualPositionSnapshotRecord(
+            PositionRecord(
                 snapshot_id="snap-2",
                 strategy_id="strat-001",
                 snapshot_date="2024-01-16",
@@ -487,11 +487,11 @@ class TestPortfolioActualQueryFacadeGetFills:
     def test_get_all_fills(self) -> None:
         """获取全部成交记录."""
         from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import ManualExecutionFillRecord
+        from ditto_data.models.trade import FillRecord
 
         mock_service = _make_mock_trade_service()
         records = [
-            ManualExecutionFillRecord(
+            FillRecord(
                 fill_id="fill-1",
                 intent_id="intent-1",
                 strategy_id="strat-001",
@@ -549,11 +549,11 @@ class TestPortfolioActualQueryFacadeGetPositionHistory:
     def test_get_history(self) -> None:
         """获取持仓历史快照."""
         from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import ActualPositionSnapshotRecord
+        from ditto_data.models.trade import PositionRecord
 
         mock_service = _make_mock_trade_service()
         records = [
-            ActualPositionSnapshotRecord(
+            PositionRecord(
                 snapshot_id="snap-1",
                 strategy_id="strat-001",
                 snapshot_date="2024-01-10",
@@ -566,7 +566,7 @@ class TestPortfolioActualQueryFacadeGetPositionHistory:
                 realized_pnl=100.0,
                 total_fees=10.0,
             ),
-            ActualPositionSnapshotRecord(
+            PositionRecord(
                 snapshot_id="snap-2",
                 strategy_id="strat-001",
                 snapshot_date="2024-01-15",
@@ -601,11 +601,11 @@ class TestPortfolioActualQueryFacadeComputePnl:
     def test_compute_pnl_aggregation(self) -> None:
         """多持仓 P&L 正确汇总."""
         from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import ActualPositionSnapshotRecord
+        from ditto_data.models.trade import PositionRecord
 
         mock_service = _make_mock_trade_service()
         records = [
-            ActualPositionSnapshotRecord(
+            PositionRecord(
                 snapshot_id="snap-1",
                 strategy_id="strat-001",
                 snapshot_date="2024-01-16",
@@ -618,7 +618,7 @@ class TestPortfolioActualQueryFacadeComputePnl:
                 realized_pnl=200.0,
                 total_fees=15.0,
             ),
-            ActualPositionSnapshotRecord(
+            PositionRecord(
                 snapshot_id="snap-2",
                 strategy_id="strat-001",
                 snapshot_date="2024-01-16",
@@ -665,10 +665,10 @@ class TestPortfolioActualQueryFacadeComputePnl:
     def test_compute_pnl_single_position(self) -> None:
         """单持仓 P&L 汇总."""
         from ditto_app.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import ActualPositionSnapshotRecord
+        from ditto_data.models.trade import PositionRecord
 
         mock_service = _make_mock_trade_service()
-        record = ActualPositionSnapshotRecord(
+        record = PositionRecord(
             snapshot_id="snap-1",
             strategy_id="strat-001",
             snapshot_date="2024-01-16",

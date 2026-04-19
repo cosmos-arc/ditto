@@ -9,8 +9,11 @@ import pytest_mock
 from ditto_data.storage.fundamental.corporate.corporate_actions_writer import (
     CorporateActionsWriter,
 )
+from ditto_data.storage.fundamental.specs import CORPORATE_ACTIONS_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = CORPORATE_ACTIONS_SPEC
 
 
 @pytest.fixture
@@ -37,7 +40,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def corporate_actions_writer(in_memory_db: SQLitePool) -> CorporateActionsWriter:
     """Provide CorporateActionsWriter with in-memory database."""
-    return CorporateActionsWriter(SQLiteClient(in_memory_db))
+    return CorporateActionsWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -188,7 +191,7 @@ class TestCorporateActionsWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = CorporateActionsWriter(mock_client)
+        mock_writer = CorporateActionsWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

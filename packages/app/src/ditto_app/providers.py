@@ -25,6 +25,7 @@ from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
+from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -49,6 +50,9 @@ from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
 from ditto_data.services.trade import TradeService
+from ditto_data.sources.tdx.source import TdxSource
+from ditto_data.storage.metadata.instrument import InstrumentReader
+from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_infra.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------
@@ -70,6 +74,7 @@ from ditto_app.command.backtest import (
     RetryRunHandler,
 )
 from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.command.quality_reconciliation import ReconcileSourcesHandler
 from ditto_app.command.strategy import (
     CreateStrategyHandler,
     PublishStrategyHandler,
@@ -162,6 +167,24 @@ class AppCommandProvider(Provider):
         return CheckDataQualityHandler(
             engine=dq_engine,
             quarantine_writer=quality_record_service,
+        )
+
+    @provide
+    def reconcile_sources_handler(
+        self,
+        dq_engine: QualityEngine,
+        tdx_source: TdxSource,
+        comparison_store: ComparisonWriter,
+        instrument_store: InstrumentReader,
+        golden_dataset: GoldenDatasetSpec | None = None,
+    ) -> ReconcileSourcesHandler:
+        """数据源对账 Command Handler."""
+        return ReconcileSourcesHandler(
+            engine=dq_engine,
+            tdx_source=tdx_source,
+            comparison_store=comparison_store,
+            instrument_store=instrument_store,
+            golden_dataset=golden_dataset,
         )
 
     @provide

@@ -9,13 +9,13 @@ import pytest
 # ===========================================================================
 
 
-class TestTradeIntentRecord:
-    """TradeIntentRecord — 交易意图持久化记录."""
+class TestSignalRecord:
+    """SignalRecord — 交易意图持久化记录."""
 
     def test_construction_with_required_fields(self) -> None:
-        from ditto_data.models.trade import TradeIntentRecord
+        from ditto_data.models.trade import SignalRecord
 
-        record = TradeIntentRecord(
+        record = SignalRecord(
             intent_id="intent-1",
             strategy_id="strat-1",
             signal_date="2026-04-10",
@@ -34,9 +34,9 @@ class TestTradeIntentRecord:
         assert record.created_at == ""
 
     def test_frozen_immutability(self) -> None:
-        from ditto_data.models.trade import TradeIntentRecord
+        from ditto_data.models.trade import SignalRecord
 
-        record = TradeIntentRecord(
+        record = SignalRecord(
             intent_id="intent-1",
             strategy_id="strat-1",
             signal_date="2026-04-10",
@@ -50,13 +50,13 @@ class TestTradeIntentRecord:
             record.status = "filled"  # type: ignore[misc]
 
 
-class TestManualExecutionFillRecord:
-    """ManualExecutionFillRecord — 人工成交持久化记录."""
+class TestFillRecord:
+    """FillRecord — 人工成交持久化记录."""
 
     def test_construction_with_required_fields(self) -> None:
-        from ditto_data.models.trade import ManualExecutionFillRecord
+        from ditto_data.models.trade import FillRecord
 
-        record = ManualExecutionFillRecord(
+        record = FillRecord(
             fill_id="fill-1",
             intent_id="intent-1",
             strategy_id="strat-1",
@@ -77,13 +77,13 @@ class TestManualExecutionFillRecord:
         assert record.created_at == ""
 
 
-class TestActualPositionSnapshotRecord:
-    """ActualPositionSnapshotRecord — 实际持仓快照持久化记录."""
+class TestPositionRecord:
+    """PositionRecord — 实际持仓快照持久化记录."""
 
     def test_construction_with_required_fields(self) -> None:
-        from ditto_data.models.trade import ActualPositionSnapshotRecord
+        from ditto_data.models.trade import PositionRecord
 
-        record = ActualPositionSnapshotRecord(
+        record = PositionRecord(
             snapshot_id="snap-1",
             strategy_id="strat-1",
             snapshot_date="2026-04-11",
@@ -267,9 +267,9 @@ class TestDtoRecordMapping:
 
     def test_record_to_intent(self) -> None:
         from ditto_app.execution_dto import record_to_intent
-        from ditto_data.models.trade import TradeIntentRecord
+        from ditto_data.models.trade import SignalRecord
 
-        record = TradeIntentRecord(
+        record = SignalRecord(
             intent_id="intent-1",
             strategy_id="strat-1",
             signal_date="2026-04-10",
@@ -287,9 +287,9 @@ class TestDtoRecordMapping:
 
     def test_record_to_fill(self) -> None:
         from ditto_app.execution_dto import record_to_fill
-        from ditto_data.models.trade import ManualExecutionFillRecord
+        from ditto_data.models.trade import FillRecord
 
-        record = ManualExecutionFillRecord(
+        record = FillRecord(
             fill_id="fill-1",
             intent_id="intent-1",
             strategy_id="strat-1",
@@ -308,9 +308,9 @@ class TestDtoRecordMapping:
 
     def test_record_to_snapshot(self) -> None:
         from ditto_app.execution_dto import record_to_snapshot
-        from ditto_data.models.trade import ActualPositionSnapshotRecord
+        from ditto_data.models.trade import PositionRecord
 
-        record = ActualPositionSnapshotRecord(
+        record = PositionRecord(
             snapshot_id="snap-1",
             strategy_id="strat-1",
             snapshot_date="2026-04-11",

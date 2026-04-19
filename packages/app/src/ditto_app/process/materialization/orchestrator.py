@@ -43,7 +43,7 @@ from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactMetadataParams,
     ArtifactPersistenceService,
 )
-from ditto_kernel.specs import DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 
 from ditto_app.config import now_iso
 from ditto_app.process.materialization.dependencies import apply_cs_amplification

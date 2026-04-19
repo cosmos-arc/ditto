@@ -10,21 +10,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 __all__ = [
-    "ActualPositionSnapshotRecord",
-    "ManualExecutionFillRecord",
-    "TradeIntentRecord",
+    "FillRecord",
+    "PositionRecord",
+    "SignalRecord",
 ]
 
 
 # ===========================================================================
-# TradeIntentRecord — 交易意图
+# SignalRecord — 交易信号
 # ===========================================================================
 
 
 @dataclass(frozen=True)
-class TradeIntentRecord:
+class SignalRecord:
     """
-    交易意图持久化记录.
+    交易信号持久化记录.
 
     Attributes:
         intent_id: 意图唯一标识 (UUID).
@@ -55,18 +55,18 @@ class TradeIntentRecord:
 
 
 # ===========================================================================
-# ManualExecutionFillRecord — 人工成交
+# FillRecord — 成交记录
 # ===========================================================================
 
 
 @dataclass(frozen=True)
-class ManualExecutionFillRecord:
+class FillRecord:
     """
-    人工成交持久化记录.
+    成交持久化记录.
 
     Attributes:
         fill_id: 成交唯一标识 (UUID).
-        intent_id: 关联交易意图 ID.
+        intent_id: 关联交易信号 ID.
         strategy_id: 策略 ID.
         trade_date: 成交日期 (YYYY-MM-DD).
         instrument_id: 标的 ID.
@@ -97,14 +97,14 @@ class ManualExecutionFillRecord:
 
 
 # ===========================================================================
-# ActualPositionSnapshotRecord — 实际持仓快照
+# PositionRecord — 持仓快照
 # ===========================================================================
 
 
 @dataclass(frozen=True)
-class ActualPositionSnapshotRecord:
+class PositionRecord:
     """
-    实际持仓快照持久化记录.
+    持仓快照持久化记录.
 
     Attributes:
         snapshot_id: 快照唯一标识 (UUID).

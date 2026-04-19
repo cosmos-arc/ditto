@@ -17,11 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from ditto_data.models.trade import (
-    ActualPositionSnapshotRecord,
-    ManualExecutionFillRecord,
-    TradeIntentRecord,
-)
+from ditto_data.models.trade import FillRecord, PositionRecord, SignalRecord
 
 __all__ = [
     "ActualPositionSnapshot",
@@ -151,9 +147,9 @@ class ActualPositionSnapshot:
 # ===========================================================================
 
 
-def intent_to_record(intent: TradeIntent) -> TradeIntentRecord:
-    """TradeIntent DTO → TradeIntentRecord."""
-    return TradeIntentRecord(
+def intent_to_record(intent: TradeIntent) -> SignalRecord:
+    """TradeIntent DTO → SignalRecord."""
+    return SignalRecord(
         intent_id=intent.intent_id,
         strategy_id=intent.strategy_id,
         signal_date=intent.signal_date,
@@ -168,9 +164,9 @@ def intent_to_record(intent: TradeIntent) -> TradeIntentRecord:
     )
 
 
-def fill_to_record(fill: ManualExecutionFill) -> ManualExecutionFillRecord:
-    """ManualExecutionFill DTO → ManualExecutionFillRecord."""
-    return ManualExecutionFillRecord(
+def fill_to_record(fill: ManualExecutionFill) -> FillRecord:
+    """ManualExecutionFill DTO → FillRecord."""
+    return FillRecord(
         fill_id=fill.fill_id,
         intent_id=fill.intent_id,
         strategy_id=fill.strategy_id,
@@ -189,9 +185,9 @@ def fill_to_record(fill: ManualExecutionFill) -> ManualExecutionFillRecord:
 
 def snapshot_to_record(
     snapshot: ActualPositionSnapshot,
-) -> ActualPositionSnapshotRecord:
-    """ActualPositionSnapshot DTO → ActualPositionSnapshotRecord."""
-    return ActualPositionSnapshotRecord(
+) -> PositionRecord:
+    """ActualPositionSnapshot DTO → PositionRecord."""
+    return PositionRecord(
         snapshot_id=snapshot.snapshot_id,
         strategy_id=snapshot.strategy_id,
         snapshot_date=snapshot.snapshot_date,
@@ -212,8 +208,8 @@ def snapshot_to_record(
 # ===========================================================================
 
 
-def record_to_intent(record: TradeIntentRecord) -> TradeIntent:
-    """TradeIntentRecord → TradeIntent DTO."""
+def record_to_intent(record: SignalRecord) -> TradeIntent:
+    """SignalRecord → TradeIntent DTO."""
     return TradeIntent(
         intent_id=record.intent_id,
         strategy_id=record.strategy_id,
@@ -228,8 +224,8 @@ def record_to_intent(record: TradeIntentRecord) -> TradeIntent:
     )
 
 
-def record_to_fill(record: ManualExecutionFillRecord) -> ManualExecutionFill:
-    """ManualExecutionFillRecord → ManualExecutionFill DTO."""
+def record_to_fill(record: FillRecord) -> ManualExecutionFill:
+    """FillRecord → ManualExecutionFill DTO."""
     return ManualExecutionFill(
         fill_id=record.fill_id,
         intent_id=record.intent_id,
@@ -246,8 +242,8 @@ def record_to_fill(record: ManualExecutionFillRecord) -> ManualExecutionFill:
     )
 
 
-def record_to_snapshot(record: ActualPositionSnapshotRecord) -> ActualPositionSnapshot:
-    """ActualPositionSnapshotRecord → ActualPositionSnapshot DTO."""
+def record_to_snapshot(record: PositionRecord) -> ActualPositionSnapshot:
+    """PositionRecord → ActualPositionSnapshot DTO."""
     return ActualPositionSnapshot(
         snapshot_id=record.snapshot_id,
         strategy_id=record.strategy_id,

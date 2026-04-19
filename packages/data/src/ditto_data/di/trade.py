@@ -4,7 +4,19 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 
+from ditto_data.services.deps import ExecutionReaders, ExecutionWriters
 from ditto_data.services.trade import TradeService
+from ditto_data.storage.execution import (
+    FILLS_DDL,
+    INTENTS_DDL,
+    POSITIONS_DDL,
+    FillReader,
+    FillWriter,
+    PositionReader,
+    PositionWriter,
+    SignalReader,
+    SignalWriter,
+)
 from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["TradeProvider"]
@@ -16,8 +28,31 @@ class TradeProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def trade_service(self, sqlite_client: SQLiteClient) -> TradeService:
-        """交易意图/人工成交/实际持仓 CRUD 服务."""
-        svc = TradeService(client=sqlite_client)
-        svc.init_schema()
-        return svc
+    def execution_readers(self, sqlite_client: SQLiteClient) -> ExecutionReaders:
+        """Execution 域读取依赖聚合."""
+        return ExecutionReaders(
+            signal=SignalReader(sqlite_client),
+            fill=FillReader(sqlite_client),
+            position=PositionReader(sqlite_client),
+        )
+
+    @provide
+    def execution_writers(self, sqlite_client: SQLiteClient) -> ExecutionWriters:
+        """Execution 域写入依赖聚合."""
+        return ExecutionWriters(
+            signal=SignalWriter(sqlite_client),
+            fill=FillWriter(sqlite_client),
+            position=PositionWriter(sqlite_client),
+        )
+
+    @provide
+    def trade_service(
+        self,
+        readers: ExecutionReaders,
+        writers: ExecutionWriters,
+        sqlite_client: SQLiteClient,
+    ) -> TradeService:
+        """交易信号/成交/持仓 CRUD 服务."""
+        sqlite_client.executescript(INTENTS_DDL + FILLS_DDL + POSITIONS_DDL)
+        sqlite_client.commit()
+        return TradeService(readers=readers, writers=writers)

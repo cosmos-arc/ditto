@@ -13,7 +13,7 @@ from ditto_data.errors import IdentifierNotFoundError
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig
-from ditto_kernel.types import InstrumentIngestParams
+from ditto_kernel.instrument import InstrumentIngestParams
 
 
 @pytest.fixture(autouse=True)

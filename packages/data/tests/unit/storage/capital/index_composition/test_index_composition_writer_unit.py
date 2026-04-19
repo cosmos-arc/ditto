@@ -10,6 +10,7 @@ import pytest
 from ditto_data.storage.capital.index_composition.index_composition_writer import (
     IndexCompositionWriter,
 )
+from ditto_data.storage.capital.specs import INDEX_COMPOSITION_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
@@ -37,7 +38,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def writer(in_memory_db: SQLiteClient) -> IndexCompositionWriter:
     """创建 IndexCompositionWriter 实例."""
-    return IndexCompositionWriter(client=in_memory_db)
+    return IndexCompositionWriter(INDEX_COMPOSITION_SPEC, in_memory_db)
 
 
 def test_write_success(writer: IndexCompositionWriter) -> None:
@@ -130,7 +131,7 @@ def test_write_failure_rollback(writer: IndexCompositionWriter) -> None:
     mock_client.rollback = Mock()
 
     # 使用模拟客户端创建 Writer
-    mock_writer = IndexCompositionWriter(client=mock_client)
+    mock_writer = IndexCompositionWriter(INDEX_COMPOSITION_SPEC, mock_client)
 
     # 由于模拟客户端会抛出异常，预期会传播异常
     with pytest.raises(RuntimeError, match="Database error"):

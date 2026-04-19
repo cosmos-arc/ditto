@@ -11,7 +11,7 @@ from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService,
     StrategyRunWriterProtocol,
 )
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 
 # ---------------------------------------------------------------------------
 # Helpers

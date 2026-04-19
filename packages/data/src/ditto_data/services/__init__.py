@@ -35,6 +35,14 @@ from ditto_data.ingestion.publication_safety_record_service import (
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.services.capital_service import CapitalService
 
+# 服务依赖（用于 DI 容器组装）
+from ditto_data.services.deps import (
+    FundamentalReaders,
+    FundamentalWriters,
+    MarketReaders,
+    MarketWriters,
+)
+
 # Runtime 服务
 from ditto_data.services.derived import (
     DerivedArtifactReader,
@@ -64,14 +72,6 @@ from ditto_data.services.market_write_service import MarketWriteService
 
 # Metadata 域服务
 from ditto_data.services.metadata_service import MetadataService
-
-# Ports 对象（用于 DI 容器组装）
-from ditto_data.services.ports import (
-    FundamentalReadPorts,
-    FundamentalWritePorts,
-    MarketReadPorts,
-    MarketWritePorts,
-)
 from ditto_data.services.research_catalog_service import ResearchCatalogService
 
 # Source 服务
@@ -89,18 +89,18 @@ __all__ = [
     "DerivedShadowSlotService",
     "DerivedSourceScope",
     "FreezeService",
-    "FundamentalReadPorts",
+    "FundamentalReaders",
     "FundamentalService",
-    "FundamentalWritePorts",
+    "FundamentalWriters",
     "IngestionCursorService",
     "IngestionLogService",
     "MacroService",
     "MarketBarsQuery",
     "MarketConstituentsQuery",
-    "MarketReadPorts",
+    "MarketReaders",
     "MarketService",
-    "MarketWritePorts",
     "MarketWriteService",
+    "MarketWriters",
     "MetadataService",
     "PublicationSafetyRecordService",
     "QualityRecordService",

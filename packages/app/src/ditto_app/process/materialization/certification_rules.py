@@ -19,7 +19,7 @@ from ditto_data.models.publication_safety import (
     DerivedMinimalDQSummaryRecord,
     ShadowDiffReportRecord,
 )
-from ditto_kernel.specs import DerivedRole, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 __all__ = ["build_certification_checks"]
 

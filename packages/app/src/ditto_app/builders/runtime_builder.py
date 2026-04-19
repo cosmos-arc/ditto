@@ -38,7 +38,7 @@ from ditto_engine.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
 from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 
 from ditto_app.builders._spec_deserializer import (
     as_float_tuple,

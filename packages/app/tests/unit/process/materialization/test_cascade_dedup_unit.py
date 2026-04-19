@@ -15,7 +15,7 @@ from ditto_app.process.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
 from ditto_data.models.derived import DerivedInvalidationRecord
-from ditto_kernel.specs import MaterializationProfile
+from ditto_kernel.strategy import MaterializationProfile
 
 
 def _make_record(

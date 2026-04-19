@@ -10,8 +10,10 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
+
+from ditto_engine.exceptions import EngineError
 
 __all__ = [
     "Order",
@@ -57,7 +59,7 @@ class OrderStatus(StrEnum):
         )
 
 
-class StateTransitionError(Exception):
+class StateTransitionError(EngineError):
     """非法状态转换，如 FILLED → CANCEL。"""
 
 

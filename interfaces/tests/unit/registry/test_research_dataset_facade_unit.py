@@ -34,7 +34,7 @@ from ditto_kernel.research import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # CapitalProvider is used in _make_container to satisfy MetadataService deps
 

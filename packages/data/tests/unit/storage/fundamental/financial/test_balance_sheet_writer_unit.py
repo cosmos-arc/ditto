@@ -11,8 +11,11 @@ import pytest
 from ditto_data.storage.fundamental.financial.balance_sheet_writer import (
     BalanceSheetWriter,
 )
+from ditto_data.storage.fundamental.specs import BALANCE_SHEET_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = BALANCE_SHEET_SPEC
 
 
 @pytest.fixture
@@ -42,7 +45,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def balance_sheet_writer(in_memory_db: SQLitePool) -> BalanceSheetWriter:
     """Provide BalanceSheetWriter with in-memory database."""
-    return BalanceSheetWriter(SQLiteClient(in_memory_db))
+    return BalanceSheetWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -201,7 +204,7 @@ class TestBalanceSheetWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = BalanceSheetWriter(mock_client)
+        mock_writer = BalanceSheetWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

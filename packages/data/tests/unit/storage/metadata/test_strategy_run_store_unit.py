@@ -10,7 +10,7 @@ from ditto_data.storage.metadata.strategy_run_store import (
     SQLiteStrategyRunWriter,
 )
 from ditto_infra.foundation import SQLitePool
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 
 
 def _make_record(

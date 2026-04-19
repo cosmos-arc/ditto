@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 
 
 @dataclass(frozen=True)

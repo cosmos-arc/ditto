@@ -14,7 +14,7 @@ import polars as pl
 from ditto_analytics.expression.compiler import ExpressionCompiler
 from ditto_analytics.expression.diagnostics import ExpressionCompileError
 from ditto_analytics.materialization.contracts import CompiledDerivedExpression
-from ditto_kernel.specs import (
+from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,
     ExecutionPolicy,

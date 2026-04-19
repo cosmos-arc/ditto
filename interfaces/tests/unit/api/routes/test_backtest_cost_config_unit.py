@@ -28,7 +28,7 @@ from ditto_interfaces.models.backtest import (
     CostConfigRequest,
     CreateBacktestRunRequest,
 )
-from ditto_kernel.enums import ImpactModel
+from ditto_kernel.strategy import ImpactModel
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError

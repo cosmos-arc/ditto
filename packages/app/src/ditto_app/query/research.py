@@ -27,13 +27,13 @@ from ditto_data.services import DerivedArtifactReader, ResearchCatalogService
 from ditto_data.services.derived import VersionResolutionStrategy
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_kernel.market import CalendarId, GrainId
 from ditto_kernel.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_kernel.specs import CalendarId, GrainId
 
 from ditto_app.config import now_iso
 

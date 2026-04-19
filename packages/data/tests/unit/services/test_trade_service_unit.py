@@ -1,21 +1,56 @@
 """Tests for TradeService — 交易意图/人工成交/实际持仓的 CRUD 服务.
 
-使用 Data 本地 DTO (TradeIntentRecord / ManualExecutionFillRecord /
-ActualPositionSnapshotRecord)，不依赖 app/engine 包。
+使用 Data 本地 DTO (SignalRecord / FillRecord /
+PositionRecord)，不依赖 app/engine 包。
 """
 
 from __future__ import annotations
 
 import pytest
 from ditto_data.models.trade import (
-    ActualPositionSnapshotRecord,
-    ManualExecutionFillRecord,
-    TradeIntentRecord,
+    FillRecord,
+    PositionRecord,
+    SignalRecord,
 )
+from ditto_data.services.deps import ExecutionReaders, ExecutionWriters
 from ditto_data.services.trade import (
     TradeService,
 )
+from ditto_data.storage.execution import (
+    FILLS_DDL,
+    INTENTS_DDL,
+    POSITIONS_DDL,
+    FillReader,
+    FillWriter,
+    PositionReader,
+    PositionWriter,
+    SignalReader,
+    SignalWriter,
+)
 from ditto_data.storage.sqlite_client import SQLiteClient
+
+
+def _init_db(client: SQLiteClient) -> None:
+    """Initialize trade tables (moved from TradeService.init_schema to DI)."""
+    client.executescript(INTENTS_DDL + FILLS_DDL + POSITIONS_DDL)
+    client.commit()
+
+
+def _make_service(client: SQLiteClient) -> TradeService:
+    """Create TradeService with real Reader/Writer instances."""
+    _init_db(client)
+    readers = ExecutionReaders(
+        signal=SignalReader(client),
+        fill=FillReader(client),
+        position=PositionReader(client),
+    )
+    writers = ExecutionWriters(
+        signal=SignalWriter(client),
+        fill=FillWriter(client),
+        position=PositionWriter(client),
+    )
+    return TradeService(readers=readers, writers=writers)
+
 
 # ---------------------------------------------------------------------------
 # Test data factories
@@ -33,9 +68,9 @@ def _make_intent(
     delta_weight: float = 0.20,
     quantity: int | None = 1000,
     status: str = "pending",
-) -> TradeIntentRecord:
-    """创建测试用 TradeIntentRecord."""
-    return TradeIntentRecord(
+) -> SignalRecord:
+    """创建测试用 SignalRecord."""
+    return SignalRecord(
         intent_id=intent_id,
         strategy_id=strategy_id,
         signal_date=signal_date,
@@ -61,9 +96,9 @@ def _make_fill(
     fill_price: float = 4.123,
     fee: float = 5.0,
     slippage: float = 0.002,
-) -> ManualExecutionFillRecord:
-    """创建测试用 ManualExecutionFillRecord."""
-    return ManualExecutionFillRecord(
+) -> FillRecord:
+    """创建测试用 FillRecord."""
+    return FillRecord(
         fill_id=fill_id,
         intent_id=intent_id,
         strategy_id=strategy_id,
@@ -92,9 +127,9 @@ def _make_position(
     unrealized_pnl: float = 50.0,
     realized_pnl: float = 0.0,
     total_fees: float = 5.0,
-) -> ActualPositionSnapshotRecord:
-    """创建测试用 ActualPositionSnapshotRecord."""
-    return ActualPositionSnapshotRecord(
+) -> PositionRecord:
+    """创建测试用 PositionRecord."""
+    return PositionRecord(
         snapshot_id=snapshot_id,
         strategy_id=strategy_id,
         snapshot_date=snapshot_date,
@@ -119,9 +154,8 @@ class TestInitSchema:
     """建表与索引测试."""
 
     def test_creates_trade_intents_table(self, sqlite_client: SQLiteClient) -> None:
-        """init_schema 应创建 trade_intents 表."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        """_init_db 应创建 trade_intents 表."""
+        _init_db(sqlite_client)
 
         row = sqlite_client.fetchone(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='trade_intents'"
@@ -130,9 +164,8 @@ class TestInitSchema:
         assert row["name"] == "trade_intents"
 
     def test_creates_execution_fills_table(self, sqlite_client: SQLiteClient) -> None:
-        """init_schema 应创建 execution_fills 表."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        """_init_db 应创建 execution_fills 表."""
+        _init_db(sqlite_client)
 
         row = sqlite_client.fetchone(
             "SELECT name FROM sqlite_master "
@@ -142,9 +175,8 @@ class TestInitSchema:
         assert row["name"] == "execution_fills"
 
     def test_creates_actual_positions_table(self, sqlite_client: SQLiteClient) -> None:
-        """init_schema 应创建 actual_positions 表."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        """_init_db 应创建 actual_positions 表."""
+        _init_db(sqlite_client)
 
         row = sqlite_client.fetchone(
             "SELECT name FROM sqlite_master "
@@ -154,9 +186,8 @@ class TestInitSchema:
         assert row["name"] == "actual_positions"
 
     def test_creates_indexes(self, sqlite_client: SQLiteClient) -> None:
-        """init_schema 应创建所有索引."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        """_init_db 应创建所有索引."""
+        _init_db(sqlite_client)
 
         rows = sqlite_client.fetchall(
             "SELECT name FROM sqlite_master WHERE type='index' "
@@ -172,10 +203,9 @@ class TestInitSchema:
         assert "idx_actual_positions_strategy_instrument_date" in index_names
 
     def test_idempotent(self, sqlite_client: SQLiteClient) -> None:
-        """重复调用 init_schema 不应报错."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
-        svc.init_schema()  # second call
+        """重复调用 _init_db 不应报错."""
+        _init_db(sqlite_client)
+        _init_db(sqlite_client)  # second call
 
         count = sqlite_client.fetchval("SELECT COUNT(*) FROM trade_intents")
         assert count == 0
@@ -191,8 +221,7 @@ class TestSaveIntent:
 
     def test_saves_and_retrieves_intent(self, sqlite_client: SQLiteClient) -> None:
         """保存后应能按 intent_id 查回完整记录."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         intent = _make_intent()
         svc.save_intent(intent)
@@ -213,8 +242,7 @@ class TestSaveIntent:
 
     def test_saves_intent_with_null_quantity(self, sqlite_client: SQLiteClient) -> None:
         """quantity=None 应能正常保存和查回."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         intent = _make_intent(quantity=None)
         svc.save_intent(intent)
@@ -225,8 +253,7 @@ class TestSaveIntent:
 
     def test_get_intent_nonexistent(self, sqlite_client: SQLiteClient) -> None:
         """查询不存在的 intent_id 应返回 None."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         assert svc.get_intent("NONEXISTENT") is None
 
@@ -263,8 +290,7 @@ class TestListIntents:
 
     def test_list_by_strategy_id(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_intents(svc)
 
         results = svc.list_intents("STRAT-A")
@@ -275,8 +301,7 @@ class TestListIntents:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """按 strategy_id + signal_date 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_intents(svc)
 
         results = svc.list_intents("STRAT-A", signal_date="2026-04-10")
@@ -285,8 +310,7 @@ class TestListIntents:
 
     def test_list_by_strategy_and_status(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id + status 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_intents(svc)
 
         results = svc.list_intents("STRAT-A", status="filled")
@@ -297,8 +321,7 @@ class TestListIntents:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """按 strategy_id + signal_date + status 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_intents(svc)
 
         results = svc.list_intents("STRAT-A", signal_date="2026-04-11", status="filled")
@@ -307,8 +330,7 @@ class TestListIntents:
 
     def test_list_no_match_returns_empty(self, sqlite_client: SQLiteClient) -> None:
         """无匹配返回空列表."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_intents(svc)
 
         assert svc.list_intents("STRAT-NONE") == []
@@ -317,8 +339,7 @@ class TestListIntents:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """不附加过滤条件时返回该策略所有 intents."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_intents(svc)
 
         results = svc.list_intents("STRAT-B")
@@ -331,8 +352,7 @@ class TestUpdateIntentStatus:
 
     def test_updates_status(self, sqlite_client: SQLiteClient) -> None:
         """应正确更新状态字段."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_intent(_make_intent(status="pending"))
         svc.update_intent_status("INT-001", "filled")
@@ -343,8 +363,7 @@ class TestUpdateIntentStatus:
 
     def test_update_to_cancelled(self, sqlite_client: SQLiteClient) -> None:
         """应能更新为 cancelled 状态."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_intent(_make_intent(status="pending"))
         svc.update_intent_status("INT-001", "cancelled")
@@ -357,8 +376,7 @@ class TestUpdateIntentStatus:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """expected_current 匹配时应成功更新并返回 True."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_intent(_make_intent(status="pending"))
         updated = svc.update_intent_status(
@@ -376,8 +394,7 @@ class TestUpdateIntentStatus:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """expected_current 不匹配时应跳过更新并返回 False."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_intent(_make_intent(status="cancelled"))
         updated = svc.update_intent_status(
@@ -402,8 +419,7 @@ class TestSaveFill:
 
     def test_saves_and_retrieves_fill(self, sqlite_client: SQLiteClient) -> None:
         """保存后应能按 fill_id 查回完整记录."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         fill = _make_fill()
         svc.save_fill(fill)
@@ -426,8 +442,7 @@ class TestSaveFill:
 
     def test_get_fill_nonexistent(self, sqlite_client: SQLiteClient) -> None:
         """查询不存在的 fill_id 应返回 None."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         assert svc.get_fill("NONEXISTENT") is None
 
@@ -437,8 +452,7 @@ class TestFindFill:
 
     def test_finds_existing_fill(self, sqlite_client: SQLiteClient) -> None:
         """存在匹配的 fill 时应返回对应记录."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         fill = _make_fill(intent_id="INT-001", trade_date="2026-04-11")
         svc.save_fill(fill)
@@ -451,8 +465,7 @@ class TestFindFill:
 
     def test_returns_none_when_no_match(self, sqlite_client: SQLiteClient) -> None:
         """无匹配时返回 None."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         fill = _make_fill(intent_id="INT-001", trade_date="2026-04-11")
         svc.save_fill(fill)
@@ -464,8 +477,7 @@ class TestFindFill:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """同 intent_id + trade_date 存在多条时返回第一条（LIMIT 1）."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_fill(
             _make_fill(
@@ -520,8 +532,7 @@ class TestListFills:
 
     def test_list_by_strategy_id(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_fills(svc)
 
         results = svc.list_fills("STRAT-A")
@@ -530,8 +541,7 @@ class TestListFills:
 
     def test_list_by_strategy_and_trade_date(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id + trade_date 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_fills(svc)
 
         results = svc.list_fills("STRAT-A", trade_date="2026-04-11")
@@ -540,8 +550,7 @@ class TestListFills:
 
     def test_list_by_intent_id(self, sqlite_client: SQLiteClient) -> None:
         """按 intent_id 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_fills(svc)
 
         results = svc.list_fills("STRAT-A", intent_id="INT-002")
@@ -550,8 +559,7 @@ class TestListFills:
 
     def test_list_no_match_returns_empty(self, sqlite_client: SQLiteClient) -> None:
         """无匹配返回空列表."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_fills(svc)
 
         assert svc.list_fills("STRAT-NONE") == []
@@ -567,8 +575,7 @@ class TestSavePosition:
 
     def test_saves_and_retrieves_position(self, sqlite_client: SQLiteClient) -> None:
         """保存后应能通过 get_latest_position 查回."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         pos = _make_position()
         svc.save_position(pos)
@@ -590,15 +597,13 @@ class TestSavePosition:
 
     def test_get_latest_position_nonexistent(self, sqlite_client: SQLiteClient) -> None:
         """查询不存在的 strategy_id/instrument_id 应返回 None."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         assert svc.get_latest_position("STRAT-NONE", 999999) is None
 
     def test_get_latest_returns_newest_date(self, sqlite_client: SQLiteClient) -> None:
         """多天快照应返回最新日期."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_position(
             _make_position(snapshot_id="POS-001", snapshot_date="2026-04-10")
@@ -619,8 +624,7 @@ class TestSavePosition:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """同一 snapshot_id 重复写入不报错，后写入覆盖先写入."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_position(
             _make_position(snapshot_id="POS-001", quantity=1000, average_cost=4.0)
@@ -638,8 +642,7 @@ class TestSavePosition:
         self, sqlite_client: SQLiteClient
     ) -> None:
         """同一业务键不同 snapshot_id，后写入覆盖先写入."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
 
         svc.save_position(
             _make_position(
@@ -705,8 +708,7 @@ class TestListPositions:
 
     def test_list_by_strategy_id(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_positions(svc)
 
         results = svc.list_positions("STRAT-A")
@@ -715,8 +717,7 @@ class TestListPositions:
 
     def test_list_by_strategy_and_date(self, sqlite_client: SQLiteClient) -> None:
         """按 strategy_id + snapshot_date 过滤."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_positions(svc)
 
         results = svc.list_positions("STRAT-A", snapshot_date="2026-04-10")
@@ -725,8 +726,7 @@ class TestListPositions:
 
     def test_list_no_match_returns_empty(self, sqlite_client: SQLiteClient) -> None:
         """无匹配返回空列表."""
-        svc = TradeService(sqlite_client)
-        svc.init_schema()
+        svc = _make_service(sqlite_client)
         self._seed_positions(svc)
 
         assert svc.list_positions("STRAT-NONE") == []
@@ -742,7 +742,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_signal_date_asc(self) -> None:
         """合法 order_by 'signal_date ASC' 应正常构建 SQL."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -757,7 +757,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_signal_date_desc(self) -> None:
         """合法 order_by 'signal_date DESC' 应正常构建 SQL."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -771,7 +771,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_snapshot_date_asc(self) -> None:
         """合法 order_by 'snapshot_date ASC' 应正常构建 SQL."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -785,7 +785,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_snapshot_date_desc(self) -> None:
         """合法 order_by 'snapshot_date DESC' 应正常构建 SQL."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -799,7 +799,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_filter_columns(self) -> None:
         """合法过滤列 'signal_date', 'status', 'snapshot_date' 应正常构建 SQL."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -832,7 +832,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_none_filter_values_skipped(self) -> None:
         """None 值过滤条件应被跳过，不触发白名单校验."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -847,7 +847,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_order_by_rejects(self) -> None:
         """非法 order_by（含 SQL 注入）应抛出 ValueError."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -861,7 +861,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_order_by_rejects_subtle_injection(self) -> None:
         """含子查询的 order_by 应被拒绝."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -875,7 +875,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_filter_column_rejects(self) -> None:
         """非法过滤列名应抛出 ValueError."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -889,7 +889,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_filter_column_rejects_subtle(self) -> None:
         """非法列名（含 SQL 片段）应被拒绝."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -903,7 +903,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_empty_order_by_rejects(self) -> None:
         """空字符串 order_by 应被拒绝."""
-        from ditto_data.services.trade._sql import (
+        from ditto_data.storage.execution._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -917,14 +917,18 @@ class TestBuildWhereClauseWhitelist:
 
     def test_allowed_order_by_constants_cover_current_usage(self) -> None:
         """_ALLOWED_ORDER_BY 应覆盖当前所有调用点的 order_by 值."""
-        from ditto_data.services.trade._sql import ALLOWED_ORDER_BY as _ALLOWED_ORDER_BY
+        from ditto_data.storage.execution._sql import (
+            ALLOWED_ORDER_BY as _ALLOWED_ORDER_BY,
+        )
 
         assert "signal_date ASC" in _ALLOWED_ORDER_BY
         assert "snapshot_date ASC" in _ALLOWED_ORDER_BY
 
     def test_allowed_columns_constants_cover_current_usage(self) -> None:
         """_ALLOWED_COLUMNS 应覆盖当前所有调用点的过滤列名."""
-        from ditto_data.services.trade._sql import ALLOWED_COLUMNS as _ALLOWED_COLUMNS
+        from ditto_data.storage.execution._sql import (
+            ALLOWED_COLUMNS as _ALLOWED_COLUMNS,
+        )
 
         assert "signal_date" in _ALLOWED_COLUMNS
         assert "status" in _ALLOWED_COLUMNS

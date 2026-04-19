@@ -9,11 +9,11 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
+from ditto_data.errors import LateArrivalRejectedError
 from ditto_data.ingestion.late_arrival import check_late_arrival
 from ditto_data.models.ingestion import (
     DataLateArrivalPolicy,
     LateArrivalCheckResult,
-    LateArrivalRejectedError,
 )
 
 

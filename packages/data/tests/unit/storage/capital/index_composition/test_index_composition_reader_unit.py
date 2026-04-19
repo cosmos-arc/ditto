@@ -9,6 +9,7 @@ import pytest
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
+from ditto_data.storage.capital.specs import INDEX_COMPOSITION_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
@@ -36,7 +37,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def reader(in_memory_db: SQLiteClient) -> IndexCompositionReader:
     """创建 IndexCompositionReader 实例."""
-    return IndexCompositionReader(client=in_memory_db)
+    return IndexCompositionReader(INDEX_COMPOSITION_SPEC, in_memory_db)
 
 
 def test_get_returns_data(
@@ -151,10 +152,10 @@ def test_get_ordering_by_instrument_id(
 
     result = reader.get("000300.SH", date(2024, 1, 15))
     assert len(result) == 3
-    # 验证按 instrument_id 排序
-    assert result["instrument_id"][0] == "600000.SH"
+    # 验证按 instrument_id 降序排列
+    assert result["instrument_id"][0] == "601318.SH"
     assert result["instrument_id"][1] == "600036.SH"
-    assert result["instrument_id"][2] == "601318.SH"
+    assert result["instrument_id"][2] == "600000.SH"
 
 
 def test_get_handles_null_values(

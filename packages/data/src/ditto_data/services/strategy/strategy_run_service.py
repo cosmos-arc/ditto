@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 
 from ditto_data.models.strategy_run import StrategyRunRecord
 

@@ -10,8 +10,11 @@ import pytest
 from ditto_data.storage.fundamental.financial.income_statement_reader import (
     IncomeStatementReader,
 )
+from ditto_data.storage.fundamental.specs import INCOME_STATEMENT_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = INCOME_STATEMENT_SPEC
 
 
 @pytest.fixture
@@ -40,7 +43,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def income_statement_reader(in_memory_db: SQLitePool) -> IncomeStatementReader:
     """Provide IncomeStatementReader with in-memory database."""
-    return IncomeStatementReader(SQLiteClient(in_memory_db))
+    return IncomeStatementReader(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit

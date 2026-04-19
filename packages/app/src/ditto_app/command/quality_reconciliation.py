@@ -13,7 +13,9 @@ from ditto_data.quality.protocols import (
     TdxSourceProtocol,
 )
 from ditto_infra.foundation import logger
-from ditto_kernel.quality import DQResult, ReconciliationResult
+from ditto_kernel.quality import DQResult
+
+from ditto_app.process.quality.types import ReconciliationResult
 
 
 @dataclass(frozen=True)

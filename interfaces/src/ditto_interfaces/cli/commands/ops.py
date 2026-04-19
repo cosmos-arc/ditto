@@ -7,36 +7,15 @@ from typing import Any
 import typer
 from ditto_app.process.quality.patrol import QualityPatrolService
 from ditto_app.query.ingestion_status import IngestionStatusQueryFacade
+from ditto_data.models.common import Dataset
 
 from ditto_interfaces.cli.utils.output import output_json_dicts
 from ditto_interfaces.registry.container import make_app_container
 
 app = typer.Typer(help="运维命令")
 
-# 已知数据集列表 (与 API ingestion 路由保持一致)
-_KNOWN_DATASETS = [
-    "calendar",
-    "stock_basic",
-    "etf_basic",
-    "index_basic",
-    "stock_daily",
-    "etf_daily",
-    "index_daily",
-    "stock_status",
-    "adj_factor",
-    "fund_adj",
-    "balance_sheet",
-    "income_statement",
-    "cash_flow",
-    "dividend",
-    "corporate_actions",
-    "valuation_metrics",
-    "margin_trading",
-    "pledge_ratio",
-    "macro_indicators",
-    "fx_daily",
-    "commodity_daily",
-]
+# 从 Dataset StrEnum 派生，保证单一事实来源（自动包含 index_weight）
+_KNOWN_DATASETS = Dataset.all_datasets()
 
 # 核心数据集 (dq 默认检查范围)
 _CORE_DATASETS = ["etf_daily", "stock_daily", "index_daily", "adj_factor"]

@@ -137,15 +137,13 @@ class FredClient:
             raise SourceFetchError(
                 message=f"FRED API request failed: {e.response.status_code}",
                 source="fred",
-                dataset=series_id,
-                original_error=str(e),
+                details={"dataset": series_id, "original_error": str(e)},
             ) from e
         except httpx.RequestError as e:
             raise SourceFetchError(
                 message="FRED API network error",
                 source="fred",
-                dataset=series_id,
-                original_error=str(e),
+                details={"dataset": series_id, "original_error": str(e)},
             ) from e
 
         data = response.json()

@@ -24,11 +24,15 @@ from ditto_data.di import (
     TradeProvider,
     get_data_providers,
 )
+from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services import DerivedQueryService
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_data.sources.tdx.source import TdxSource
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.infra import NotificationProvider
+
+_tdx_mock = MagicMock(spec=TdxSource)
 
 
 def _sources_provider() -> Provider:
@@ -49,6 +53,22 @@ def _sources_provider() -> Provider:
     return SourcesProvider()
 
 
+class _TdxMockProvider(Provider):
+    scope = Scope.APP
+
+    @provide
+    def tdx_source(self) -> TdxSource:
+        return _tdx_mock
+
+
+class _GoldenNoneProvider(Provider):
+    scope = Scope.APP
+
+    @provide
+    def golden_dataset_spec(self) -> GoldenDatasetSpec | None:
+        return None
+
+
 def _make_full_container():
     """构建包含 Data + App 层 Provider 的完整容器。"""
     from ditto_app.providers import get_app_providers
@@ -57,6 +77,8 @@ def _make_full_container():
         ConfigProvider(),
         QualityProvider(),
         _sources_provider(),
+        _TdxMockProvider(),
+        _GoldenNoneProvider(),
         RuntimeProvider(),
         MetadataProvider(),
         MarketProvider(),
@@ -110,7 +132,6 @@ class TestDerivedProvider:
         from dishka import Provider as BaseProvider
 
         provider = DerivedProvider()
-        # 过滤掉 Provider 基类的方法，仅保留实例的 @provide 方法
         base_methods = {name for name in dir(BaseProvider) if not name.startswith("_")}
         all_methods = {
             name
@@ -118,7 +139,6 @@ class TestDerivedProvider:
             if not name.startswith("_") and callable(getattr(provider, name))
         }
         provide_methods = all_methods - base_methods
-        # 应仅包含 2 个 Data 层方法（compile_cache_service 已迁至 App 层）
         expected = {
             "research_artifact_service",
             "derived_query_service",

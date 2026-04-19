@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ditto_kernel.enums import RiskScope
+from ditto_kernel.strategy import RiskScope
 
 
 class AuditRecordType(StrEnum):

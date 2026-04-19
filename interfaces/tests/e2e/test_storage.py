@@ -14,6 +14,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 from ditto_data.models import OnDuplicate
+from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
 from pytest_mock import MockerFixture
 
@@ -236,8 +237,8 @@ class TestStorage:
         )
 
         # 重新创建 Writer/Reader 以使用新的 tmp_path
-        writer = StockBarsWriter(data_root=tmp_path)
-        reader = StockBarsReader(data_root=tmp_path)
+        writer = StockBarsWriter(ParquetStore(tmp_path))
+        reader = StockBarsReader(ParquetStore(tmp_path))
 
         # Act: 写入数据
         writer.write(df=df_2023, year=2023, on_duplicate=OnDuplicate.ERROR)

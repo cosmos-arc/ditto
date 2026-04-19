@@ -17,7 +17,7 @@ import orjson
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_kernel.enums import RunStatus
+from ditto_kernel.strategy import RunStatus
 
 from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.contracts import CostConfig
@@ -28,8 +28,10 @@ __all__ = [
     "BacktestRunCommand",
     "BacktestRunHandler",
     "BacktestRunResult",
+    "CancelRunCommand",
     "CancelRunHandler",
     "CostConfig",
+    "RetryRunCommand",
     "RetryRunHandler",
 ]
 
@@ -196,6 +198,20 @@ _CANCEL_ALLOWED = {RunStatus.PENDING, RunStatus.RUNNING}
 _RETRY_ALLOWED = {RunStatus.FAILED, RunStatus.CANCELLED}
 
 
+@dataclass(frozen=True)
+class CancelRunCommand:
+    """取消运行命令."""
+
+    run_id: str
+
+
+@dataclass(frozen=True)
+class RetryRunCommand:
+    """重试运行命令."""
+
+    run_id: str
+
+
 class CancelRunHandler:
     """
     取消运行 Command Handler — 检查状态 + 标记取消.
@@ -209,14 +225,18 @@ class CancelRunHandler:
     def __init__(self, *, run_service: RunLifecycleService) -> None:
         self._run_service = run_service
 
-    def handle(self, run_id: str) -> None:
+    def handle(self, command: CancelRunCommand) -> None:
         """
         处理取消运行命令.
+
+        Args:
+            command: 取消运行命令.
 
         Raises:
             ValueError: 运行不存在或状态不允许取消.
 
         """
+        run_id = command.run_id
         record = self._run_service.get_run(run_id)
         if record is None:
             msg = f"Run not found: {run_id}"
@@ -242,9 +262,12 @@ class RetryRunHandler:
     def __init__(self, *, run_service: RunLifecycleService) -> None:
         self._run_service = run_service
 
-    def handle(self, run_id: str) -> str:
+    def handle(self, command: RetryRunCommand) -> str:
         """
         处理重试运行命令.
+
+        Args:
+            command: 重试运行命令.
 
         Returns:
             新运行 ID.
@@ -253,6 +276,7 @@ class RetryRunHandler:
             ValueError: 运行不存在或状态不允许重试.
 
         """
+        run_id = command.run_id
         record = self._run_service.get_run(run_id)
         if record is None:
             msg = f"Run not found: {run_id}"

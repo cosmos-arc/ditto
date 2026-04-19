@@ -49,7 +49,7 @@ from ditto_interfaces.jobs.flows.materialization import (
 )
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial
 

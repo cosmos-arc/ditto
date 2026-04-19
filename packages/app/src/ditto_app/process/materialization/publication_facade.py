@@ -35,7 +35,7 @@ from ditto_data.services import (
     PublicationSafetyRecordService,
 )
 from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_kernel.specs import DerivedRole, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 from ditto_app.config import now_iso
 from ditto_app.process.materialization.certification_rules import (

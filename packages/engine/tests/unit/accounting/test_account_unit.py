@@ -10,7 +10,7 @@ from ditto_engine.accounting.account import Account
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.accounting.position import Position
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Helpers
