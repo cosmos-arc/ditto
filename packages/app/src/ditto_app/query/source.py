@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
-from ditto_data.sources.base import DataSource
+
+if TYPE_CHECKING:
+    from ditto_data.sources.fred.fred_source import FredSource
+    from ditto_data.sources.tushare.tushare_source import TushareSource
 
 __all__ = ["SourceQueryFacade"]
 
@@ -78,7 +83,7 @@ class SourceQueryFacade:
             source=source,
         )
 
-    def get_source(self, name: str) -> DataSource:
+    def get_source(self, name: str) -> TushareSource | FredSource:
         """
         获取数据源实例.
 
@@ -86,12 +91,12 @@ class SourceQueryFacade:
             name: 数据源名称（如 "tushare"）
 
         Returns:
-            DataSource 实例
+            TushareSource 或 FredSource 实例
 
         """
         return self._source.get_source(name)
 
     @property
-    def tushare(self) -> DataSource:
+    def tushare(self) -> TushareSource:
         """获取 Tushare 数据源."""
         return self._source.tushare

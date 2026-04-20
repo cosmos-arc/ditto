@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.base import DataSource
+
+if TYPE_CHECKING:
+    from ditto_data.sources.protocols import MarketFetcher
+
 from ditto_infra.foundation import logger, traced
 
 # list_date 推断的最早起始日期
@@ -36,7 +39,7 @@ class ListDateInferenceService:
     def __init__(
         self,
         metadata_service: MetadataService,
-        source: DataSource,
+        source: MarketFetcher,
         source_name: str = "tushare",
     ) -> None:
         """
@@ -44,7 +47,7 @@ class ListDateInferenceService:
 
         Args:
             metadata_service: MetadataService 实例
-            source: 数据源实例
+            source: 行情数据源
             source_name: 数据源名称
 
         """

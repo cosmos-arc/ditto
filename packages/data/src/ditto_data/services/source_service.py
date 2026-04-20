@@ -4,9 +4,16 @@ SourceService - 外部数据源访问服务.
 封装 DataSources，为 Port 层提供统一的外部数据源访问接口.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from ditto_data.models.common import Source
-from ditto_data.sources.base import DataSource
-from ditto_data.sources.source import DataSources
+
+if TYPE_CHECKING:
+    from ditto_data.sources.fred.fred_source import FredSource
+    from ditto_data.sources.source import DataSources
+    from ditto_data.sources.tushare.tushare_source import TushareSource
 
 
 class SourceService:
@@ -31,7 +38,7 @@ class SourceService:
         """
         self._sources = sources
 
-    def get_source(self, name: str | Source) -> DataSource:
+    def get_source(self, name: str | Source) -> TushareSource | FredSource:
         """
         获取数据源实例.
 
@@ -39,7 +46,7 @@ class SourceService:
             name: 数据源名称（枚举或字符串，如 "tushare"、Source.TUSHARE）
 
         Returns:
-            DataSource 实例
+            TushareSource 或 FredSource 实例
 
         Raises:
             ValueError: 数据源名称未知
@@ -48,7 +55,7 @@ class SourceService:
         return self._sources.get(name)
 
     @property
-    def tushare(self) -> DataSource:
+    def tushare(self) -> TushareSource:
         """
         获取 Tushare 数据源.
 
@@ -57,3 +64,14 @@ class SourceService:
 
         """
         return self._sources.tushare
+
+    @property
+    def fred(self) -> FredSource | None:
+        """
+        获取 FRED 数据源.
+
+        Returns:
+            FredSource 实例或 None
+
+        """
+        return self._sources.fred

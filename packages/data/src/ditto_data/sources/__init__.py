@@ -1,7 +1,6 @@
 """Data sources for external data ingestion."""
 
 from ditto_data.sources.base import (
-    DataSource,
     DataSourceError,
     SourceAuthenticationError,
     SourceConfigurationError,
@@ -19,23 +18,38 @@ from ditto_data.sources.normalization import (
     InstrumentType,
     NormalizationConfig,
 )
+from ditto_data.sources.protocols import (
+    CapitalFetcher,
+    CommodityFetcher,
+    FundamentalFetcher,
+    MacroFetcher,
+    MarketFetcher,
+    MetadataFetcher,
+)
+from ditto_data.sources.registry import SourceRegistry
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
 __all__ = [
+    "CapitalFetcher",
+    "CommodityFetcher",
     "Currency",
-    "DataSource",
     "DataSourceError",
     "DataSources",
     "Exchange",
     "ExchangeTransformer",
     "ExchangeTransformers",
+    "FundamentalFetcher",
     "InstrumentType",
+    "MacroFetcher",
+    "MarketFetcher",
+    "MetadataFetcher",
     "NormalizationConfig",
     "SourceAuthenticationError",
     "SourceConfigurationError",
     "SourceFetchError",
     "SourceRateLimitError",
+    "SourceRegistry",
     "SourceTransformationError",
     "TushareSource",
 ]

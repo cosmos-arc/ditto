@@ -1,7 +1,5 @@
-"""Tests for DataSource base classes and exceptions."""
+"""Tests for DataSource exception classes."""
 
-import polars as pl
-import pytest
 from ditto_data.errors import (
     DataSourceError,
     SourceAuthenticationError,
@@ -10,7 +8,6 @@ from ditto_data.errors import (
     SourceRateLimitError,
     SourceTransformationError,
 )
-from ditto_data.sources.base import DataSource
 
 
 class TestDataSourceError:
@@ -146,40 +143,3 @@ class TestSourceTransformationError:
             message="Transform failed",
         )
         assert error.details == {"source": "unknown"}
-
-
-class TestDataSourceABC:
-    """Tests for DataSource abstract base class."""
-
-    def test_cannot_instantiate_abstract_class(self) -> None:
-        """Test that DataSource cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            DataSource()  # type: ignore[abstract]
-
-    def test_subclass_must_implement_all_methods(self) -> None:
-        """Test subclass must implement all abstract methods."""
-
-        class IncompleteSource(DataSource):
-            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            # Missing fetch_etf_daily
-
-        with pytest.raises(TypeError):
-            IncompleteSource()  # type: ignore[abstract]
-
-    def test_complete_subclass_can_be_instantiated(self) -> None:
-        """Test complete subclass can be instantiated."""
-
-        class CompleteSourcer(DataSource):
-            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()

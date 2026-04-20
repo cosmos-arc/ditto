@@ -5,7 +5,6 @@ from __future__ import annotations
 import polars as pl
 
 from ditto_data.config import DataSourceSettings
-from ditto_data.sources.base import DataSource
 from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
 from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
@@ -19,7 +18,7 @@ from ditto_data.sources.tushare.adapters.stock import StockTushareAdapter
 from ditto_data.sources.tushare.client import TushareClient
 
 
-class TushareSource(DataSource):
+class TushareSource:
     """
     Tushare Pro data source (组合模式入口).
 

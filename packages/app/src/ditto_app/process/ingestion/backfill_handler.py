@@ -9,7 +9,7 @@ import polars as pl
 from ditto_data.models import OnDuplicate
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.base import DataSource
+from ditto_data.sources.protocols import MarketFetcher
 from ditto_infra.foundation import logger
 
 from ditto_app.process.ingestion.data_writer import IngestionDataWriter
@@ -21,7 +21,7 @@ class BackfillContext:
 
     metadata_service: MetadataService
     market_service: MarketService
-    source: DataSource
+    source: MarketFetcher
     source_name: str
     data_writer: IngestionDataWriter
 
@@ -139,7 +139,7 @@ def detect_adj_factor_gaps(
 
 
 def fetch_adj_factor_range(
-    source: DataSource,
+    source: MarketFetcher,
     source_ticker: str,
     range_start: str,
     range_end: str,

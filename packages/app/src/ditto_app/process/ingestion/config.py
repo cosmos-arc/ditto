@@ -10,7 +10,6 @@ from ditto_data.services import (
     IngestionCursorService,
     IngestionLogService,
 )
-from ditto_data.sources.base import DataSource
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_app.process.ingestion.ports import QualityCheckerProtocol
@@ -38,4 +37,3 @@ class IngestionCoordinatorConfig:
     ingestion_cursor_service: IngestionCursorService | None = None
     quality_checker: QualityCheckerProtocol | None = None
     freeze_service: FreezeService | None = None
-    fred_source: DataSource | None = None

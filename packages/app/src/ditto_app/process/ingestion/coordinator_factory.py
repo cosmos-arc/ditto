@@ -24,7 +24,9 @@ from ditto_infra.foundation import logger
 from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
 from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
+    IngestionServices,
     MarketServices,
+    SourceFetchers,
 )
 from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
@@ -66,7 +68,6 @@ def create_coordinator(
         IngestionCoordinator: 协调器实例
 
     """
-    # 支持 Source 枚举和字符串
     if isinstance(source_name, Source):
         source_key = source_name
     else:
@@ -78,34 +79,37 @@ def create_coordinator(
                 f"Unknown source: '{source_name}'. Supported sources: {supported}"
             ) from e
 
-    # 获取主数据源
-    data_source = services.source_service.get_source(source_key)
+    data_source = services.source_service.tushare
 
-    # 获取 FRED 数据源（用于大宗商品数据）
-    fred_source = None
-    try:
-        fred_source = services.source_service.get_source(Source.FRED)
-    except Exception as e:
-        logger.warning("FRED source not available", error=str(e))
+    fred_source = services.source_service.fred
+    if fred_source is not None:
+        logger.debug("FRED source available for commodity data")
 
-    # 创建协调器
     coordinator = IngestionCoordinator(
-        metadata_service=services.metadata_service,
-        market_services=MarketServices(
-            query=services.market_service,
-            write=services.market_write_service,
+        services=IngestionServices(
+            metadata=services.metadata_service,
+            market=MarketServices(
+                query=services.market_service,
+                write=services.market_write_service,
+            ),
+            fundamental=services.fundamental_service,
+            capital=services.capital_service,
+            macro=services.macro_service,
         ),
-        fundamental_service=services.fundamental_service,
-        capital_service=services.capital_service,
-        macro_service=services.macro_service,
-        source=data_source,
+        fetchers=SourceFetchers(
+            metadata=data_source,
+            market=data_source,
+            fundamental=data_source,
+            capital=data_source,
+            macro=data_source,
+        ),
+        fred_source=fred_source,
         config=IngestionCoordinatorConfig(
             source_name=source_key.value,
             ingestion_log_service=services.ingestion_log_service,
             ingestion_cursor_service=ingestion_cursor_service,
             quality_checker=quality_checker,
             freeze_service=freeze_service,
-            fred_source=fred_source,
         ),
     )
 

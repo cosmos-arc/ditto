@@ -21,7 +21,14 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.base import DataSource
+from ditto_data.sources.protocols import (
+    CapitalFetcher,
+    CommodityFetcher,
+    FundamentalFetcher,
+    MacroFetcher,
+    MarketFetcher,
+    MetadataFetcher,
+)
 from ditto_infra.foundation import logger
 from ditto_kernel.instrument import InstrumentIngestParams
 
@@ -50,7 +57,9 @@ from ditto_app.process.ingestion.result_handler import IngestionResultHandler
 
 __all__ = [
     "IngestionCoordinator",
+    "IngestionServices",
     "MarketServices",
+    "SourceFetchers",
 ]
 
 
@@ -92,31 +101,49 @@ class MarketServices(NamedTuple):
     write: MarketWriteService
 
 
+class SourceFetchers(NamedTuple):
+    """5 个域级 Fetcher Protocol 聚合."""
+
+    metadata: MetadataFetcher
+    market: MarketFetcher
+    fundamental: FundamentalFetcher
+    capital: CapitalFetcher
+    macro: MacroFetcher
+
+
+class IngestionServices(NamedTuple):
+    """域级写入服务聚合."""
+
+    metadata: MetadataService
+    market: MarketServices
+    fundamental: FundamentalService
+    capital: CapitalService
+    macro: MacroService
+
+
 class IngestionCoordinator:
     """统一摄取协调器。"""
 
     def __init__(
         self,
-        metadata_service: MetadataService,
-        market_services: MarketServices,
-        fundamental_service: FundamentalService,
-        capital_service: CapitalService,
-        macro_service: MacroService,
-        source: DataSource,
+        services: IngestionServices,
+        *,
+        fetchers: SourceFetchers,
+        fred_source: CommodityFetcher | None = None,
         config: IngestionCoordinatorConfig | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""
         cfg = config or IngestionCoordinatorConfig()
 
-        self._metadata_service = metadata_service
-        self._market_service = market_services.query
-        self._market_write_service = market_services.write
-        self._fundamental_service = fundamental_service
-        self._capital_service = capital_service
-        self._macro_service = macro_service
-        self._source = source
+        self._metadata_service = services.metadata
+        self._market_service = services.market.query
+        self._market_write_service = services.market.write
+        self._fundamental_service = services.fundamental
+        self._capital_service = services.capital
+        self._macro_service = services.macro
+        self._fetchers = fetchers
         self._source_name = cfg.source_name
-        self._fred_source = cfg.fred_source
+        self._fred_source = fred_source
         self._ingestion_log_service = cfg.ingestion_log_service
         self._ingestion_cursor_service = cfg.ingestion_cursor_service
         self._quality_checker = cfg.quality_checker
@@ -127,29 +154,27 @@ class IngestionCoordinator:
             cfg.ingestion_log_service, cfg.source_name
         )
         self._data_writer = IngestionDataWriter(
-            metadata_service=metadata_service,
-            market_write_service=self._market_write_service,
-            fundamental_service=fundamental_service,
-            capital_service=capital_service,
-            macro_service=macro_service,
+            metadata_service=services.metadata,
+            market_write_service=services.market.write,
+            fundamental_service=services.fundamental,
+            capital_service=services.capital,
+            macro_service=services.macro,
             source_name=cfg.source_name,
         )
 
-        # list_date 推断服务（用于 basic 数据摄取后的补偿）
         self._list_date_inference = ListDateInferenceService(
-            metadata_service=metadata_service,
-            source=source,
+            metadata_service=services.metadata,
+            source=fetchers.market,
             source_name=cfg.source_name,
         )
 
-        # 缓存指数代码，避免每次摄取都调用 API
         self._index_codes_cache: list[str] | None = None
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
         """获取商品数据（原油、贵金属、VIX），委托至 ``commodity_fetcher``。"""
         return _fetch_commodity_daily(
             trade_date,
-            primary_source=self._source,
+            primary_source=self._fetchers.macro,
             fred_source=self._fred_source,
         )
 
@@ -199,7 +224,6 @@ class IngestionCoordinator:
             httpx.NetworkError,
             httpx.TimeoutException,
         ) as e:
-            # 推断失败不影响主流程，仅记录警告
             logger.warning(
                 f"list_date inference failed for {asset_class}",
                 event="list_date_inference_error",
@@ -220,7 +244,7 @@ class IngestionCoordinator:
         if self._index_codes_cache is None:
             logger.debug("Caching index codes from API on first access")
             self._index_codes_cache = get_all_index_codes(
-                self._source, include_sw_levels=[1, 2]
+                self._fetchers.metadata, include_sw_levels=[1, 2]
             )
             logger.debug(
                 "已缓存指数代码",
@@ -244,18 +268,14 @@ class IngestionCoordinator:
             force=force,
         )
 
-        # 验证数据集是否支持
         _validate_dataset(dataset)
 
-        # 检查是否应该跳过摄取
         if skip_result := self._check_should_skip(dataset, trade_date, force):
             return skip_result
 
-        # 检查交易日（仅行情类数据集）
         if not self._is_trading_day_for_dataset(dataset, trade_date):
             return self._create_skipped_result(dataset, trade_date, "非交易日, 跳过")
 
-        # 获取数据并执行摄取
         return self._fetch_and_ingest(dataset, trade_date, force)
 
     def _check_should_skip(
@@ -428,7 +448,6 @@ class IngestionCoordinator:
         if df.is_empty():
             return self._result_handler.handle_empty_data(dataset, trade_date)
 
-        # DQ 质量检查
         if self._quality_checker is not None:
             checked_df, should_block = self._quality_checker.handle(
                 CheckDataQualityCommand(
@@ -451,20 +470,17 @@ class IngestionCoordinator:
                 )
             df = checked_df
 
-        # 将 force 映射到 on_duplicate
         on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
         write_result = self._write_data_safe(dataset, df, trade_date, on_duplicate)
         if isinstance(write_result, IngestionResult):
             return write_result
 
-        # 检查 DQ 阻断
         if write_result.blocked:
             return self._result_handler.handle_dq_blocked(
                 dataset, trade_date, write_result
             )
 
-        # basic 数据摄取成功后，执行 list_date 推断补偿
         self._run_list_date_inference(dataset)
         self._run_post_ingest_hooks(dataset, trade_date)
 
@@ -593,7 +609,7 @@ class IngestionCoordinator:
             asset_class,
             dataset,
             metadata_service=self._metadata_service,
-            source=self._source,
+            source=self._fetchers.metadata,
             source_name=self._source_name,
         )
 
@@ -689,7 +705,11 @@ class IngestionCoordinator:
         params: InstrumentIngestParams,
     ) -> pl.DataFrame:
         """根据数据集类型调用对应的 fetch 方法（按标的）。"""
-        handlers = build_instrument_fetch_handlers(self._source, source_ticker, params)
+        handlers = build_instrument_fetch_handlers(
+            self._fetchers,
+            source_ticker,
+            params,
+        )
 
         if dataset_enum not in handlers:
             raise ValueError(f"不支持按标的摄取的数据集: {dataset_enum.value}")
@@ -701,7 +721,7 @@ class IngestionCoordinator:
         dataset_enum = _validate_dataset(dataset)
 
         handlers = build_daily_fetch_handlers(
-            self._source,
+            self._fetchers,
             trade_date,
             fetch_commodity_daily=self._fetch_commodity_daily,
             get_cached_index_codes=self._get_cached_index_codes,
@@ -726,7 +746,7 @@ class IngestionCoordinator:
             ctx=BackfillContext(
                 metadata_service=self._metadata_service,
                 market_service=self._market_service,
-                source=self._source,
+                source=self._fetchers.market,
                 source_name=self._source_name,
                 data_writer=self._data_writer,
             ),
