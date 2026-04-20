@@ -274,7 +274,7 @@ AI / Agent 应更像：
 | **04 交互与状态规范** | selected、loading、running、critical 等统一状态与反馈层级 |
 | **05 AI Prompt Pack** | 给 Stitch / Claude Code / skills 的统一提示词和硬约束 |
 | **06 核心用户流程** | 3 条核心 happy path + 错误分支 + 断裂点修复建议 |
-| **10 Shell Family 规范** | 定义全站 6 类壳层与页面骨架家族 |
+| **10 Shell Family 规范** | 定义全站 7 类壳层与页面骨架家族 |
 | **11 Page Pattern Library** | 定义 sitemap 对应的页面模式与结构模板 |
 | **12 Data Views 规范** | 定义表格、上下文面板、图表 / 时间线三类核心工作面 |
 | **13 Component Spec** | 定义按钮、面板、标签、抽屉、AI / Agent 组件等角色化组件体系 |

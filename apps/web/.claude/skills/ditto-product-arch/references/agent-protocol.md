@@ -161,6 +161,7 @@ Phase 0 → [Gate 0→1] → Phase 1 → Phase 2 → [Gate 2→3] → Phase 3 �
 
 **Gate 4→5（DOCUMENT → VALIDATE）**:
 - 文档变更摘要
+- **跨文档契约验证结果**（C1-C6，见 validation-rules.md §一致性）
 - 状态覆盖率报告
 - Constitution 合规报告
 

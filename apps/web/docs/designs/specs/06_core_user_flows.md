@@ -1,6 +1,6 @@
 # Ditto 核心用户流程
 
-> **版本**: v1.3
+> **版本**: v1.4
 > **日期**: 2026-04-18
 > **上游**: [01 产品信息架构](./01_product_information_architecture.md)、[02 核心页面蓝图](./02_core_page_blueprints.md)
 > **下游**: [04 交互与状态规范](./04_interaction_state_spec.md)
@@ -86,9 +86,11 @@ Ditto 的本质是面向个人量化研究与实盘闭环的专业工作台，�
   ▼
 /markets/watchlist (Watchlist)
   │ 标的被添加到观察列表，后续可批量处理
+  │ 单击标的 → Instrument Hub（继续研究）
+  │ 批量选择 → Screener（进一步筛选）或 Research（加入标的池）
 ```
 
-**说明**: 用户判断当前标的需要持续跟踪但暂不研究。Watchlist 是沉淀层，不阻断主流程。
+**说明**: 用户判断当前标的需要持续跟踪但暂不研究。Watchlist 是沉淀层，不阻断主流程。用户可从 Watchlist 回流：单击标的跳转到 Instrument Hub 继续研究，批量选择后可发送到 Screener 进一步筛选或加入 Research 标的池。
 
 #### 分支 A3: Instrument Hub → 图表分析（内部 Tab）
 
@@ -522,9 +524,11 @@ AI Copilot Sidecar（全局，任意页面唤出）
 "保存为 Research Note" CTA
   ▼
 结论归档到 Research Workspace 的 Notes 区
+  │ 点击 Note → 跳转来源上下文（Instrument Hub / Backtest Result 等）
+  │ Notes 区支持搜索/分类/关联对象导航
 ```
 
-**说明**: AI 输出不应只有"采纳/拒绝"二元选择。不采纳的结论仍有归档价值，作为研究素材沉淀到 Research 域。
+**说明**: AI 输出不应只有"采纳/拒绝"二元选择。不采纳的结论仍有归档价值，作为研究素材沉淀到 Research 域。Notes 区提供完整导航：搜索/分类/关联对象跳转，用户可从 Note 回到来源上下文继续工作。
 
 #### 分支 C4: Copilot → Stock Discovery → Watchlist
 
@@ -622,6 +626,31 @@ AI Copilot Sidecar — Strategy Draft 模式
 | Flow D 终点 | 回测验证后的更新信号替换旧版本 |
 
 **设计要求**: Signals Inbox 必须区分信号来源（策略信号 / AI 信号 / 手动信号），并在 Signal Detail 中展示来源上下文。这是全站执行闭环的最终关卡。
+
+#### Signal 状态机与回退规则
+
+Signal 完整生命周期（8 态，详见 [04 交互与状态规范 §15](./04_interaction_state_spec.md)）：
+
+| 状态 | 说明 | UI 表现 |
+|------|------|---------|
+| pending | 等待处理 | 灰色标签 |
+| reviewing | 用户正在复核 | 蓝色标签 + 详情面板展开 |
+| approved | 已确认 | 绿色标签 |
+| signal-generated | 已生成信号 | 青色标签 |
+| order-submitted | 已提交订单 | 橙色标签 + 关联订单号 |
+| completed | 订单已完成 | 绿色标签 + 成交确认 |
+| expired | 信号已过期 | 灰色删除线 |
+| failed | 失败 | 红色标签 + 失败原因 |
+
+主链：`pending → reviewing → approved → signal-generated → order-submitted → completed`
+
+**状态回退规则**：
+- 订单提交失败（券商断连/余额不足/涨跌停阻断）: Signal 从 `order-submitted` 回退到 `reviewing`，Signal Detail 中展示失败原因 + "重试生成订单" CTA
+- 用户取消已确认信号: Signal 从 `approved` 回退到 `reviewing`，需二次确认
+- 订单部分成交: Signal 保持 `order-submitted`，标注部分成交数量
+- 信号过期（超过有效期或标的状态变更）: Signal 从 `pending`/`reviewing`/`approved`/`signal-generated` 变为 `expired`，移入归档 Tab
+
+> Signal 完整 8 态定义、UI 表现及通用状态映射见 [04 交互与状态规范 §15](./04_interaction_state_spec.md)。
 
 ### 5.4 Instrument Hub（/instruments/[id]）
 

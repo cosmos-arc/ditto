@@ -372,6 +372,7 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | Watchlist | 观察列表 | `/markets/watchlist` 页面，用户关注的标的列表 | 01 |
 | Intelligence | 情报中心 | `/markets/intelligence` 页面，多源情报聚合工作区（tab 视图） | 01 |
 | Chart Lab | 图表实验室 | `/markets/chart-lab` 页面，交互式图表实验工作台 | 01 |
+| Instrument Hub | 标的详情页 | `/instruments/[id]` 的页面名称。Object Hub Shell 的实例之一。 | 01 产品信息架构 §7.2 |
 
 ---
 

@@ -1,11 +1,11 @@
 # Ditto 核心页面蓝图
 
-> **版本**：v2.0
+> **版本**：v2.2
 > **日期**：2026-04-18
 > **状态**：Final
 > **上游**：[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[03 对象页统一规范](./03_object_hub_spec.md)、[04 交互与状态规范](./04_interaction_state_spec.md)
-> **职责**：26 个页面模板——目标、主辅工作面、关键区块、主 CTA、wireframe、Page Contract Mapping
+> **职责**：27 个页面模板 + 1 个全局组件——目标、主辅工作面、关键区块、主 CTA、wireframe、Page Contract Mapping
 
 ---
 
@@ -502,7 +502,7 @@ Context → Scope → Market Structure → Breadth → ETF → Movers → Intell
 | 字段 | 值 |
 |------|-----|
 | route | `/markets/a-shares` |
-| shellFamily | `analytical` |
+| shellFamily | `radar` |
 | pagePattern | `analytical-overview` |
 
 **模块→Slot 映射**:
@@ -1579,7 +1579,7 @@ Stats / Trades / Attribution / Diagnostics
 
 | 成本项 | 费率 | 说明 |
 |--------|------|------|
-| 印花税 | 卖出 0.05% | A 股单向征收 |
+| 印花税 | 卖出 0.05% | A 股卖出单向征收 0.05%（2023.8.28 起） |
 | 佣金 | 万 2.5（双向） | 可配置，含最低 5 元 |
 | 滑点 | 成交额 × X | 可配置，默认 0.01% |
 | 冲击成本 | 自动估算 | 大额订单市场冲击 |
@@ -2001,6 +2001,7 @@ Signal Detail / Actions
 
 #### Tab: 待复核（默认）
 - **子模块**: Scope Strip（待复核/已确认/已忽略/已转订单）、Signal Table（时间/标的/来源/方向/权重/置信度/状态）、Signal Detail（解释/风控检查/组合影响/操作）
+> Scope Strip 为 UI 层面的 Tab 分组视图，不等于系统级 Signal 状态枚举。完整 8 态定义见 [04 交互与状态规范 §15](./04_interaction_state_spec.md)。
 - **数据字段**: 信号 ID（来源: Signal Engine）、信号时间（来源: Signal Engine）、标的代码/名称（来源: Market Data）、信号来源（来源: Signal Engine：策略信号/AI 信号/手动信号）、方向/权重/置信度（来源: Signal Engine）、状态（来源: Signal Engine）、风控检查结果（来源: Risk Engine）、组合影响预估（来源: Portfolio Engine）
 - **交互说明**: 表格支持排序和筛选（按来源/状态/优先级/组合）；点击信号行展开 Signal Detail；涨跌停校验不通过的信号标灰（涨停买入/跌停卖出跳过）；支持批量确认/忽略；Signal Detail 中提供溯源链接（查看来源回测 → /research/backtest/[id]，查看来源策略 → /research/strategies/[id]/studio）
 
@@ -2036,6 +2037,11 @@ Signal Detail / Actions
 - **触发条件**: 用户勾选多条信号后点击批量确认
 - **内容结构**: 已选信号摘要（N 条信号，总权重/总金额）+ 风控批量检查结果 + [取消] [确认全部]
 - **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认后自动关闭
+
+#### Overlay: 信号确认 → 生成订单 — Modal
+- **触发条件**: 用户点击"确认信号"时弹出
+- **内容结构**: 订单预览（标的/方向/数量/价格/交易规则校验结果）+ 风险语义 + [取消] [确认提交订单]
+- **关闭行为**: 点击"取消"关闭，信号保持待复核；点击"确认提交"→ 生成订单 → 信号状态变为已转订单
 
 ### Component × State Matrix
 
@@ -2855,7 +2861,7 @@ System Alerts / Resources / Logs
 |------|-----|
 | route | `/platform` |
 | shellFamily | `ops-console` |
-| pagePattern | `config-integration-console` |
+| pagePattern | `queue-ops-console` |
 
 **模块→Slot 映射**:
 
@@ -3796,6 +3802,55 @@ Settings Nav → Settings Content
 - Risk Center
 - AI Copilot Studio
 - Agent Console
+
+---
+
+## 27. AI Copilot Sidecar（全局组件）
+
+> **v2.0 新增**。非路由页面，而是 Shell 级全局组件，可从任意页面通过 Cmd+K 或侧边按钮唤出。
+
+### 目标与角色
+
+- **页面目标**: 为当前工作上下文提供 AI 辅助分析能力，输出直接流入下游工作流
+- **主要用户角色**: 所有 Ditto 用户（不限于特定角色）
+
+### 与其他组件的关系
+
+- 作为全局 Overlay，不属于任何域
+- 输出可流入: Strategy Studio（策略草稿）、Signals Inbox（信号）、Research Workspace（笔记）
+- 输入: 当前页面上下文（选中资产、当前策略、当前视图等）
+
+### 5 种模式
+
+| 模式 | 触发场景 | 输入上下文 | 输出 |
+|------|---------|-----------|------|
+| Market Analysis | Markets 域任意页面 | 当前市场视图 + 选中资产 | 市场分析结论 |
+| Stock Discovery | Instrument Hub | 当前标的详情 | 机会/风险提示 |
+| Strategy Draft | Research 域任意页面 | 当前因子/策略 | 策略草稿 → Strategy Studio |
+| Factor Discovery | Factor Analysis | 当前因子列表 | 因子建议 |
+| Strategy Interpretation | Backtest Result | 当前回测结果 | 诊断建议 |
+
+### Overlay Registry
+
+| Overlay | 类型 | 触发条件 | 关闭行为 |
+|---------|------|---------|---------|
+| Copilot Panel | Sheet（右侧滑出） | Cmd+K 或侧边按钮 | Esc / 点击外部关闭 |
+| AI 输出确认 | Modal | AI 输出需人工审批时（如生成策略草稿、提交信号） | 取消关闭 / 确认流入下游 |
+| "保存为 Research Note" | Toast | CTA 点击后 | 3s 自动消失 |
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | running | selected |
+|------|---------|---------|-------|--------|---------|----------|
+| Copilot Panel | 展示 5 种模式入口 + 最近对话 | 首次唤出时 Skeleton 占位 | 无历史对话时展示引导文案 + 模式入口 | AI 服务不可用时展示错误 + 重试 | AI 推理中展示 Thinking 动画 + 流式输出 | 当前模式高亮 |
+| AI Response | 完整回复 + 操作 CTA | — | — | 推理失败展示原因 + 重试 | 流式输出文本 | — |
+| CTA Bar | "复制" / "保存为笔记" / "生成策略草稿" / "提交信号" | — | — | — | — | — |
+
+### Design Token Requirements
+
+无需新增 Token，复用现有 Shell 层级 Token。
+
+---
 
 ## Changelog
 

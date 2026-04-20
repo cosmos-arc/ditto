@@ -1,8 +1,14 @@
 # Ditto Shell Family 规范
 
-> **版本**：v1.3
-> **日期**：2026-04-18
+> **版本**：v1.4
+> **日期**：2026-04-19
 > **状态**：Final
+>
+> **v1.4 变更（审计修复）**
+> - Radar 从 Analytical 子变体升级为第 7 个独立 Shell Family（§4.7 Radar Workspace Shell）
+> - `/markets`、`/markets/a-shares` 从 Analytical Workspace 迁移至 Radar Workspace
+> - `/trading/orders` 从 Catalog Workspace 迁移至 Operations Console（P1-2）
+> - Shell 总数从 6 类扩展为 7 类
 >
 > **v1.3 变更（IA v2.0 同步）**
 > - 全局 Rail 从 6 项缩减为 5 项（移除 AI，Copilot 升级为全局 Sidecar）
@@ -14,7 +20,7 @@
 >
 > **上游**：[00 视觉宪章](./00_ditto_visual_constitution.md)、[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[11 Page Pattern Library](./11_ditto_page_pattern_library.md)、[13 Component Spec](./13_ditto_component_spec.md)
-> **职责**：定义全站 6 类壳层与页面骨架家族
+> **职责**：定义全站 7 类壳层与页面骨架家族
 >
 > 适用范围：Ditto 全站一级工作区与对象页
 > 目标：建立完整量化平台级的页面壳层体系，而不是单一 Research 页模板
@@ -78,7 +84,7 @@ Ditto 的核心页面会被长时间盯盘、研究、回顾、配置、监控�
 
 ## 3. Shell Family 总览
 
-Ditto 全站建议固定为 **6 类基础壳层**：
+Ditto 全站建议固定为 **7 类基础壳层**：
 
 | # | Shell 名称 | 一句话定位 |
 |---|-----------|-----------|
@@ -88,12 +94,13 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 | 4 | **Object Hub Shell** | 对象中心，单一对象的综合操作面 |
 | 5 | **Studio Shell** | 构建工坊，编辑/对话/编排/调试 |
 | 6 | **Operations Console Shell** | 运维控制台，系统管理与配置 |
+| 7 | **Radar Workspace Shell** | 雷达扫描全景布局 |
 
-这 6 类壳层已经足以覆盖当前 sitemap 里的绝大多数页面，并且能支撑后续扩展。
+这 7 类壳层已经足以覆盖当前 sitemap 里的绝大多数页面，并且能支撑后续扩展。
 
 ---
 
-## 4. 六类 Shell 的定位
+## 4. 七类 Shell 的定位
 
 ### 4.1 Command Center Shell
 
@@ -130,9 +137,6 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 **对应页面**
 
-- `/markets`
-- `/markets/a-shares`
-- `/markets/watchlist`
 - `/markets/intelligence`
 - `/research`
 - `/research/regime`
@@ -141,6 +145,8 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 - `/trading/risk`
 
 <!-- 已修正: `/trading/signals` → Operations Console（核心动词是 review/confirm/reject） -->
+<!-- v1.4: `/markets`、`/markets/a-shares` 已迁移至 Radar Workspace Shell（§4.7） -->
+<!-- v1.4: `/markets/watchlist` 迁移至 Catalog Workspace（浏览+下钻+批量操作模式更匹配 catalog） -->
 
 **任务特征**
 
@@ -160,17 +166,22 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 ### 4.2.1 Analytical / Radar 子变体
 
+> **注意**：Radar 子变体已在 v1.4 中独立为第 7 类壳层 Radar Workspace Shell（§4.7）。
+> 以下内容保留作为设计演进历史参考。
+>
 > **详细设计**：[全市场总览设计文档](../../plans/2026-03-29-cross-market-overview-design.md)
 
 **适用场景**
 
-用于跨市场扫描和单市场结构扫描——以"扫 → 比 → 选"为核心动词的页面。
+> ~~用于跨市场扫描和单市场结构扫描——以"扫 → 比 → 选"为核心动词的页面。~~
+> 已由 §4.7 Radar Workspace Shell 承载。
 
 **对应页面**
 
-- `/markets` — 全市场总览
-- `/markets/a-shares` — 中国 A 股总览
-- 后续 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
+> 以下页面已迁移至 §4.7 Radar Workspace Shell：
+> - `/markets` — 全市场总览
+> - `/markets/a-shares` — 中国 A 股总览
+> - 后续 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
 
 <!-- v1.3: `/markets/hk` 和 `/markets/us` 延后至 v1.5/v2，当前不列入对应页面 -->
 
@@ -245,15 +256,16 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 **对应页面**
 
+- `/markets/watchlist` **[v1.4: 从 Analytical Workspace 迁入（浏览+下钻+批量操作模式更匹配 catalog）]**
 - `/markets/screener`
 - `/markets/calendar`
 - `/research/factors`
 - `/research/strategies`
 - `/research/backtest`
 - `/research/experiments`
-- `/trading/orders`
 
 <!-- v1.3: `/markets/universes` 已移至 Research 域 -->
+<!-- v1.4: `/trading/orders` 已迁移至 Operations Console（核心动词是 review/track/reconcile） -->
 <!-- v1.3: `/trading/trades` 已合并入 `/trading/portfolio`（Analytical Workspace） -->
 
 <!-- 已降级: `/platform/brokers` → `/platform/settings` 的 tab -->
@@ -345,6 +357,7 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 - `/platform`
 - `/platform/settings`
+- `/trading/orders` **[v1.4: 从 Catalog Workspace 迁入，核心动词是 review/track/reconcile]**
 - 未来可能的 `/platform/logs`、`/platform/jobs`、`/platform/audit`
 
 <!-- 已降级: `/platform/accounts` → `/platform/settings` 的 tab -->
@@ -366,9 +379,87 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 
 ---
 
+### 4.7 Radar Workspace Shell
+
+**适用场景**
+
+用于跨市场/单市场雷达扫描全景布局——以"扫 → 比 → 选"为核心动词的页面。从 Analytical Workspace Shell 的 Radar 子变体（§4.2.1）独立为第 7 类壳层，因其布局结构、比例和交互模式与 Analytical 原版差异显著。
+
+**对应页面**
+
+- `/markets` — 全市场总览
+- `/markets/a-shares` — 中国 A 股总览
+- 后续 `/markets/hk`、`/markets/us`、`/markets/fx`、`/markets/rates`、`/markets/commodities`
+
+<!-- v1.3: `/markets/hk` 和 `/markets/us` 延后至 v1.5/v2，当前不列入对应页面 -->
+
+**任务特征**
+
+- 双层 Context：Context Bar（客观变量） + Scope Strip（解读摘要）
+- 主工作面 70%，Right Rail 30%（固定比例）
+- 主工作面不是单一主表/主图，而是 Market Cards / Matrix / Drivers 组合
+- Right Rail 聚焦风险、事件和下钻推荐，不是信息堆叠
+- 底部 Tab Band（资金轮动 / 事件日历 / AI 解读）
+- 页面核心动词是 scan / compare / drill down，不是深度分析
+
+**与 Analytical Workspace Shell 的差异**
+
+| 维度 | Analytical Workspace | Radar Workspace |
+|------|----------------------|-----------------|
+| Context 层 | 单层 Pulse Strip | 双层（Context Bar + Scope Strip） |
+| 主工作面比例 | 65-70% | 固定 70% |
+| 右侧 | Activity Stack | Right Rail（风险 + 事件 + 下钻） |
+| 底部 | Analysis Band | Tab Band（资金轮动 / 事件日历 / AI 解读） |
+| 页面动词 | 分析 / 监控 / 判断 | 扫描 / 比较 / 下钻 |
+| CSS Grid | 标准三栏 | 独立 grid（含 scope-strip 行） |
+
+**推荐骨架**
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Workspace Header                                              │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Context Bar（全局环境条 — 客观变量）                             │
+│      ├───────────────────────────────────────────────────────────────┤
+│      │ Scope Strip（今日解读条 — 人话摘要）                             │
+│      ├───────────────────────────────────┬───────────────────────────┤
+│      │ Main Stage (70%)                  │ Right Rail (30%)          │
+│      │                                   │                           │
+│      │ Market Cards / Matrix / Drivers   │ 脉搏 / 风险 / 事件 / 下钻   │
+│      │                                   │                           │
+│      ├───────────────────────────────────┴───────────────────────────┤
+│      │ Bottom Tab Band                                               │
+└──────┴───────────────────────────────────────────────────────────────┘
+```
+
+**CSS Grid 定义**
+
+```css
+.shell-radar {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-rail-radar-width);
+  grid-template-rows: var(--shell-header-height) var(--context-bar-height) var(--scope-strip-height) 1fr var(--tab-band-height);
+  grid-template-areas:
+    "rail    header   header"
+    "rail    context  context"
+    "rail    scope    scope"
+    "rail    main     right-rail"
+    "rail    tabs     tabs";
+}
+```
+
+**不适合的场景**
+
+- 深度单对象分析（应使用 Object Hub）
+- 纯配置台（应使用 Operations Console）
+- 纯目录页（应使用 Catalog Workspace）
+- 复杂编辑器（应使用 Studio）
+
+---
+
 ## 5. 全站统一壳层元素
 
-虽然 Ditto 有 6 类 Shell，但它们仍共享一套顶层语法。
+虽然 Ditto 有 7 类 Shell，但它们仍共享一套顶层语法。
 
 ### 5.1 全局 Rail
 
@@ -403,6 +494,7 @@ Ditto 全站建议固定为 **6 类基础壳层**：
 | Object Hub | 对象身份 + meta + actions |
 | Studio | session / object + run state + save/publish |
 | Operations | system scope + environment + action / logs / filters |
+| Radar | workspace 上下文 + 市场环境 + 主动作（scan/compare/drill down） |
 
 ### 5.3 上下文条或状态条
 
@@ -434,7 +526,7 @@ Ditto 的壳层应优先支持：
 
 ---
 
-## 6. 六类 Shell 的结构规范
+## 6. 七类 Shell 的结构规范
 
 ### 6.1 Command Center Shell 规范
 
@@ -763,13 +855,17 @@ Platform overview、Accounts [Shell 扩展]、Brokers、Data providers、Data qu
 | **Object Hub Header** | 68px |
 | **Studio Header** | 60px |
 | **Operations Header** | 60px |
+| **Radar Header** | 64px |
 | **状态条 / Context Strip** | 36px–44px |
+| **Radar Scope Strip** | 36px |
 | **Analytical Activity Stack（右侧）** | 300px |
 | **Catalog Preview / Inspector（右侧）** | 320px |
 | **Object Hub Side Context（右侧）** | 300px |
 | **Studio Inspector（右侧）** | 320px–360px |
 | **Operations Detail Panel（右侧）** | 320px–380px |
+| **Radar Right Rail（右侧）** | 300px |
 | **底部 Analysis Band** | 220px–280px（仅推荐用于 Analytical 和部分 Object Hub） |
+| **底部 Tab Band** | 200px–240px（Radar Workspace 专用） |
 
 ---
 
@@ -785,8 +881,9 @@ Platform overview、Accounts [Shell 扩展]、Brokers、Data providers、Data qu
 | **Object Hub** | Related / Notes / History / Versions |
 | **Studio** | Inspector / Config / Run State / AI Suggestions / Tool Output |
 | **Operations Console** | Detail / Logs / Incident Trace / Actions |
+| **Radar Workspace** | Right Rail（风险 + 事件 + 下钻推荐） |
 
-> 不能把这六类右侧面板都当作 Activity Stack。
+> 不能把这七类右侧面板都当作 Activity Stack。
 
 ---
 
@@ -800,6 +897,7 @@ Platform overview、Accounts [Shell 扩展]、Brokers、Data providers、Data qu
 | **Object Hub** | 常有 timeline / diagnostics / logs，重要性中高 |
 | **Studio** | 不是默认结构，优先侧向展开 |
 | **Operations Console** | 通常弱于右侧 detail，不建议常规使用 analysis band |
+| **Radar Workspace** | Tab Band（资金轮动 / 事件日历 / AI 解读），默认启用 |
 
 ---
 
@@ -913,10 +1011,10 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 
 | 路径 | Shell |
 |------|-------|
-| `/markets` | Analytical Workspace |
-| `/markets/a-shares` | Analytical Workspace |
+| `/markets` | Radar Workspace **[v1.4: 从 Analytical Workspace 独立为 Radar Shell]** |
+| `/markets/a-shares` | Radar Workspace **[v1.4: 从 Analytical Workspace 独立为 Radar Shell]** |
 | `/markets/screener` | Catalog Workspace |
-| `/markets/watchlist` | Analytical Workspace |
+| `/markets/watchlist` | Catalog Workspace **[v1.4: 从 Analytical Workspace 迁入]** |
 | `/markets/intelligence` | Analytical Workspace |
 | `/markets/calendar` | Catalog Workspace |
 | `/instruments/[id]` | Object Hub |
@@ -938,16 +1036,18 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 | `/research/factors` | Catalog Workspace |
 | `/research/factors/[id]` | Object Hub |
 | `/research/strategies` | Catalog Workspace |
+| `/research/strategies/[id]` | Object Hub |
 | `/research/strategies/[id]/studio` | Studio |
 | `/research/backtest` | Catalog Workspace |
 | `/research/backtest/[id]` | Object Hub |
 | `/research/experiments` | Catalog Workspace |
 | `/research/regime` | Analytical Workspace |
+| `/research/universes` | Catalog Workspace |
 
 <!-- 已降级/合并: `/research/factors/[id]/analysis` → `/research/factors/[id]` — 路由简化 -->
 <!-- 已降级/合并: `/research/strategies/new` — 统一为 `/research/strategies/[id]/studio` -->
 <!-- 已降级/合并: `/research/strategies/[id]/editor` — 统一为 `/research/strategies/[id]/studio` -->
-<!-- 已降级/合并: `/research/strategies/[id]` — 统一为 `/research/strategies/[id]/studio` -->
+<!-- v1.4: `/research/strategies/[id]` 新增路由（Strategy Detail 查看态），使用 Object Hub -->
 <!-- 已降级/合并: `/research/backtest/new` — IA 无此路由 -->
 <!-- 已降级/合并: `/research/backtest/compare` — IA 无此路由 -->
 <!-- 已降级/合并: `/research/experiments/[id]` — IA 无此路由 -->
@@ -960,7 +1060,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 |------|-------|
 | `/trading` | Analytical Workspace |
 | `/trading/signals` | Operations Console **[v1.1 审计修正：核心动词是 review/confirm/reject，归属 Ops Console]** |
-| `/trading/orders` | Catalog Workspace |
+| `/trading/orders` | Operations Console **[v1.4: 从 Catalog Workspace 迁入，核心动词是 review/track/reconcile]** |
 | `/trading/portfolio` | Analytical Workspace **[v1.3 合并：原 `/trading/positions` + `/trading/trades` 合并为 portfolio]** |
 | `/trading/risk` | Analytical Workspace |
 
@@ -1029,7 +1129,8 @@ AppShell
 ├── CatalogWorkspaceShell
 ├── ObjectHubShell
 ├── StudioShell
-└── OperationsConsoleShell
+├── OperationsConsoleShell
+└── RadarWorkspaceShell
 ```
 
 每个 Shell 再暴露以下插槽：

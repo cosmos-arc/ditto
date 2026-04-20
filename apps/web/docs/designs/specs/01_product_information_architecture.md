@@ -4,7 +4,7 @@
 > Ditto v1 的正式产品信息架构文档。
 > 本文档用于替代旧的"大而全产品设计稿"，作为后续 UI 设计、AI 设计探索、AICoding 落地的唯一上游产品结构输入。
 >
-> **v2.0 变更摘要**：AI 域拆散嵌入（Copilot 升级为全局 Sidecar，Agent Console 迁入 Platform），域结构从 6 域收敛为 5 域，路由总数从 29 精简为 25。
+> **v2.0 变更摘要**：AI 域拆散嵌入（Copilot 升级为全局 Sidecar，Agent Console 迁入 Platform），域结构从 6 域收敛为 5 域，路由总数从 29 精简为 27。
 
 ---
 
@@ -252,11 +252,12 @@ Ditto
 │   ├── /markets/calendar
 │   └── /instruments/[id]
 │
-├── Research (10)
+├── Research (11)
 │   ├── /research
 │   ├── /research/factors
 │   ├── /research/factors/[id]
 │   ├── /research/strategies
+│   ├── /research/strategies/[id]   ← Strategy Detail（查看态）
 │   ├── /research/strategies/[id]/studio
 │   ├── /research/backtest
 │   ├── /research/backtest/[id]
@@ -281,7 +282,7 @@ Ditto
     └── Regime Indicator          ← Shell 级全局组件（Status Bar 胶囊 → 展开面板）
 ```
 
-**路由统计**：5 域，25 条路由 + 2 个全局组件。
+**路由统计**：5 域，27 条路由 + 2 个全局组件。
 
 > **v2.0 变更**：
 > - 移除 AI 域（Copilot → 全局 Sidecar，Agent Console → `/platform/agents`）
@@ -480,6 +481,7 @@ Platform 不做"后台大全"，聚焦：
 - `/research/factors`
 - `/research/factors/[id]`
 - `/research/strategies`
+- `/research/strategies/[id]`（Strategy Detail — 查看态）
 - `/research/strategies/[id]/studio`
 - `/research/backtest`
 - `/research/backtest/[id]`
@@ -597,6 +599,7 @@ Ditto v1 不应逐页重新发明，而应按统一页面模式推进。
 
 - `/instruments/[id]`
 - `/research/factors/[id]`
+- `/research/strategies/[id]`
 - `/research/backtest/[id]`
 
 ### 8.5 Studio / Builder
@@ -826,9 +829,10 @@ Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管�
 - **[路由变更]** `/markets/hk`、`/markets/us` 延后至 v1.5+
 - **[路由合并]** `/trading/positions` + `/trading/trades` 合并为 `/trading/portfolio`（含 Positions/Trades/Attribution 三个 tab）
 - **[新增路由]** `/platform/agents`（Agent Console）
+- **[新增路由]** `/research/strategies/[id]`（Strategy Detail）
 - **[新增组件]** Trading Overview Signal-to-Order Pipeline Strip（§7.4）
 - **[新增章节]** §12 AI 嵌入方案、§13 全局组件（Regime Indicator + Copilot Sidecar）
-- **[路由统计]** 从 29 路由精简为 25 路由 + 2 个全局组件
+- **[路由统计]** 从 29 路由精简为 27 路由 + 2 个全局组件
 
 ### 2026-03-31 — v1.1
 

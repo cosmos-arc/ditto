@@ -456,3 +456,37 @@ Object Hub 的 sidebar section 可根据当前 tab 联动展开/折叠：
 
 > 原型阶段：使用 CSS `:has()` + checkbox 实现基础联动。
 > 生产阶段：通过前端框架状态管理实现完整的用户偏好持久化。
+
+---
+
+## 15. Signal 专属状态
+
+### 状态定义
+
+| 状态 | 说明 | UI 表现 |
+|------|------|---------|
+| pending | 等待处理 | 灰色标签 |
+| reviewing | 用户正在复核 | 蓝色标签 + 详情面板展开 |
+| approved | 已确认 | 绿色标签 |
+| signal-generated | 已生成信号 | 青色标签 |
+| order-submitted | 已提交订单 | 橙色标签 + 关联订单号 |
+| completed | 订单已完成 | 绿色标签 + 成交确认 |
+| expired | 信号已过期 | 灰色删除线 |
+| failed | 失败 | 红色标签 + 失败原因 |
+
+### 状态回退
+
+- `order-submitted → reviewing`: 订单失败时自动回退，展示失败原因
+- `approved → reviewing`: 用户取消已确认信号时回退，需二次确认
+- `pending → expired`: 超过有效期自动过期
+- `reviewing → expired`: 复核中超时自动过期
+- `approved → expired`: 已确认但未及时执行时过期
+- `signal-generated → expired`: 已生成信号但超时未提交订单时过期
+
+### 与通用状态的关系
+
+Signal 专属状态映射到通用状态（§1）：
+- `pending` / `expired` → `default`
+- `reviewing` → `active`
+- `failed` → `failed`
+- 订单生成中 → `running`

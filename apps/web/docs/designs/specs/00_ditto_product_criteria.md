@@ -114,13 +114,14 @@ section_gap = max(12px, 可用高度 × 2.5%)
 
 ## AI 叙事定位
 
-Ditto 的 AI 域不是"辅助分析"工具，而是**研究自动化平台**。
+Ditto 的 AI 不是独立的"AI 域"，而是**嵌入各业务域的智能层**。
 
-核心叙事：
+核心叙事（v2.0 嵌入方案）：
 
-- **Copilot 的价值不是"帮你分析"，而是"帮你跑完全程"**——用户从修改 AI 草案开始，而不是从零构建
-- **Agent 的价值不是"给出建议"，而是"你只做决策点审批"**——设定研究目标 → Agent 自动运行 → 产出待审批的 Finding
-- **AI 融入工作流，不独立于工作流**——Copilot/Agent 的产出直接对接 Strategy Studio 和 Signals Inbox
+- **AI Copilot 是全局 Sidecar 组件**——不属于任何域路由，可从任意页面唤出，提供市场分析、选股辅助、策略草案、因子发现等能力
+- **AI Agent Console 归入 Platform 域**（`/platform/agents`）——自主执行研究任务的 Agent 工作台，产出 Finding 经审批后进入 Signals Inbox
+- **AI 能力嵌入业务域页面**——因子发现、策略生成、信号解读等 AI 能力不再有独立入口，而是作为各业务域页面的内嵌功能
+- **AI 融入工作流，不独立于工作流**——Copilot 的产出可发送到 Strategy Studio / Watchlist / Research；Agent 的 Finding 经审批后直接对接 Signals Inbox
 
 > 详见 [01 产品信息架构 §7.5](01_product_information_architecture.md) 和 [06 核心用户流程 Flow C](06_core_user_flows.md)。
 

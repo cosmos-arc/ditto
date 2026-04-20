@@ -27,6 +27,32 @@
 | 页面间关系与导航矩阵一致 | 0 偏差 |
 | Blueprint 数据字段引用与 IA 字段定义一致 | 0 孤立引用 |
 
+#### 跨文档契约验证（MUST — Phase 5 最终步骤）
+
+以下检查项在 Phase 4 DOCUMENT 完成后、Phase 5 VALIDATE 评分前执行。**每次文档变更后都必须重新跑此清单**，包括 `--audit` 和 `--iterate` 模式。
+
+| # | 契约 | 源文档（权威） | 验证规则 | 本次遗漏 |
+|---|------|---------------|---------|---------|
+| C1 | **shellFamily × Route 一致性** | Shell Spec §10.3 路由映射表 | Blueprint 每个页面的 shellFamily 必须与 Shell Spec §10.3 中该路由的映射一致 | P1-1: a-shares 映射到 radar 但 Blueprint 写 analytical |
+| C2 | **Route Count 一致性** | IA §5 sitemap 树形结构 | IA 中显式写的"X 条路由"必须等于 sitemap 实际路由数（不含 Global 组件） | P1-5: 写 26 实际 27 |
+| C3 | **状态机枚举一致性** | 04 状态规范（权威定义） | 当 04 定义了 N 态状态机（如 Signal 8 态），06/02 中引用时必须：(a) 列出全部 N 态，或 (b) 显式标注"完整定义见 04 §X"并引用正确章节号 | P1-6: 06 列 6 态、02 列 4 态，均未引用 04 §15 |
+| C4 | **章节交叉引用正确性** | 被引用文档的实际章节号 | 所有 `§N` 引用必须指向目标文档的实际章节号 | P1-6: 06 引用"04 §12"但 Signal 在 §15 |
+| C5 | **版本号同步** | `.arch-manifest.json` artifacts.previousAudit.docsSynced | 每个文档头部的版本号必须与 manifest 记录的版本号一致 | P1-7: 06 写 v1.3 manifest 写 v1.4 |
+| C6 | **枚举计数引用一致性** | Shell Spec §5/§6 / IA §5 | 文本中引用"N 类 Shell"、"N 条路由"、"N 态 Signal"等数字必须与实际枚举数量一致 | P1-4: §5/§6 写"六类"实际七类 |
+
+#### 执行方式
+
+Phase 5 VALIDATE MUST 按以下步骤执行跨文档契约验证：
+
+```
+1. 提取 IA §5 sitemap → 计算实际路由数 → 对比 IA 文本中的"X 条路由"
+2. 提取 Shell Spec §10.3 → 构建 {route: shellFamily} 映射表 → 逐条对比 Blueprint Page Contract Mapping
+3. 提取 04 状态规范中所有状态机定义（章节号 + 状态数） → 搜索 06/02 中所有引用 → 验证一致性
+4. 搜索所有 `§N` 引用 → 验证目标文档该章节号是否存在且内容匹配
+5. 读取 manifest 版本号 → 逐文档对比 header 版本号
+6. 搜索"N 类/N 条/N 态"模式 → 验证数字与实际枚举一致
+```
+
 ### 维度 3: 可达性
 
 | 检查项 | 通过标准 |

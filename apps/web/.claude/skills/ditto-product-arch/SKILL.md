@@ -50,7 +50,7 @@ disable-model-invocation: true
 | [roles.md](references/roles.md) | 四角色定义、审查清单、产出物分配 |
 | [output-structure.md](references/output-structure.md) | IA 文档模板、Blueprint 模板、审计报告模板 |
 | [enums.md](references/enums.md) | shellFamily/pagePattern 枚举、映射规则、通用状态清单 |
-| [validation-rules.md](references/validation-rules.md) | 6 维审计规则、Constitution 合规检查、覆盖率报告格式 |
+| [validation-rules.md](references/validation-rules.md) | 6 维审计规则、跨文档契约验证 C1-C6、Constitution 合规检查、覆盖率报告格式 |
 | [agent-protocol.md](references/agent-protocol.md) | 模型路由、Agent dispatch、冲突协调、Phase Gate 规范 |
 
 ---
@@ -129,6 +129,13 @@ Phase 4: DOCUMENT [sonnet]
   ├─ 写入 02_core_page_blueprints.md（MUST 含 4 项状态定义 + Token Requirements 章节）
   ├─ 写入 04_interaction_state_spec.md（通用状态定义 + 页面状态映射 + 转换规则）
   ├─ 更新设计决策（如有架构变更）
+  ├─ 跨文档契约校验（C1-C6，见 validation-rules.md §一致性）
+  │   ├─ shellFamily × Route 一致性
+  │   ├─ Route Count 一致性
+  │   ├─ 状态机枚举一致性
+  │   ├─ 章节交叉引用正确性
+  │   ├─ 版本号同步
+  │   └─ 枚举计数引用一致性
   └─ 更新 manifest
 
 ── Gate 4→5: 变更摘要 + 合规报告 ──
