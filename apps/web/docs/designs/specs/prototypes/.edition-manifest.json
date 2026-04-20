@@ -473,16 +473,21 @@
       "id": "strategies-detail",
       "file": "page-strategies-detail.html",
       "status": "reviewed",
-      "score": null,
-      "styleAnchor": null,
-      "rounds": 0,
+      "score": 9.2,
+      "styleAnchor": "platform",
+      "rounds": 1,
       "createdAt": "2026-04-12",
+      "inlineStyles": {
+        "before": 0,
+        "after": 0
+      },
       "stateCoverage": {
         "tabs": 5,
-        "overlays": 5,
+        "overlays": 4,
         "stateVariants": 12,
         "coveragePercent": 100
-      }
+      },
+      "note": "Edition review 2026-04-20: zero inline styles, complete 3-zone (5 tabs, 15 state cards, 4 overlay cards), Hub Shell layout, version timeline dot-pulse, compare best highlight"
     },
     {
       "id": "factor-analysis",
@@ -646,20 +651,22 @@
     }
   },
   "crossPageAudit": {
-    "lastRun": "2026-04-07",
-    "issues": 2,
-    "fixed": 2,
-    "summary": "Edition v1 验收：修复 agent-console 5 处 gallery-card 未闭合 + ai-overview 1 处 span 未闭合。16/17 页面 DOM 全部平衡。",
+    "lastRun": "2026-04-20",
+    "issues": 0,
+    "fixed": 0,
+    "summary": "Edition v1 重新验收：22/22 页面截图 + 视觉审查通过。strategies-detail 评分 9.2（此前 null）。0 P0 / 0 P1 / 5 P2。DOM 全部平衡。",
     "previousIssues": {
       "v5Audit": "v3 subagent 引入 2 处 DOM 嵌套错误(regime-monitor + research)，已手动修复",
-      "editionReview": "agent-console 5 处 <details> 闭合错误 + 5 处 gallery-card 未闭合; ai-overview 1 处 </span> 缺失"
+      "editionReview20260407": "agent-console 5 处 <details> 闭合错误 + 5 处 gallery-card 未闭合; ai-overview 1 处 </span> 缺失",
+      "editionReview20260420": "0 P0 / 0 P1 / 5 P2。strategies-detail 首次评分 9.2。markets-intelligence (26) / a-shares (37) inline style 残留。"
     },
     "tokenCompliance": {
       "deprecatedTokens": 0,
       "hardcodedColors": 0,
-      "inlineStyleAvg": 25,
-      "inlineStyleTotal": 402,
-      "staleCoverage": "100%"
+      "inlineStyleAvg": 22,
+      "inlineStyleTotal": 370,
+      "staleCoverage": "100%",
+      "zeroInlineStylePages": 9
     }
   },
   "iterationV3": {
@@ -833,5 +840,5 @@
       "buttonColorInconsistencies": 0
     }
   },
-  "editionReviewedAt": "2026-04-14"
+  "editionReviewedAt": "2026-04-20"
 }
