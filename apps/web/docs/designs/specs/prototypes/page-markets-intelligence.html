@@ -4,10 +4,12 @@
   Edition: v1
   Generated: 2026-04-02
 
-  Tabs: 3
+  Tabs: 5
   - tab-capital-flow (资金流向) [covered]
   - tab-macro (宏观指标) [covered]
   - tab-fundamental (基本面) [covered]
+  - tab-news (新闻) [covered]
+  - tab-network (关联网络) [covered]
 
   Overlays: 5
   - overlay-intelligence-detail (Drawer: 情报详情) [covered]
@@ -710,6 +712,265 @@
     .correlation-cell.negative { background: color-mix(in oklch, var(--market-down-fg) 12%, transparent); color: var(--market-down-fg); }
 
     /* ══════════════════════════════════════════════
+     * News Feed (Tab: 新闻)
+     * ══════════════════════════════════════════════ */
+    .news-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-10) var(--space-12);
+      border-bottom: 1px solid var(--overlay-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-item:hover { background: var(--interaction-hover-subtle-bg); }
+    .news-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-8);
+    }
+    .news-item-time {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      flex-shrink: 0;
+    }
+    .news-item-tags {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      flex-shrink: 0;
+    }
+    .news-item-tag {
+      font-size: var(--font-size-10);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-2);
+      white-space: nowrap;
+    }
+    .news-item-tag--source {
+      background: var(--overlay-4);
+      color: var(--text-tertiary);
+    }
+    .news-item-tag--sentiment {
+      font-weight: var(--font-weight-medium);
+    }
+    .news-item-tag--sentiment.positive { background: color-mix(in oklch, var(--market-up-fg) 12%, transparent); color: var(--market-up-fg); }
+    .news-item-tag--sentiment.negative { background: color-mix(in oklch, var(--market-down-fg) 12%, transparent); color: var(--market-down-fg); }
+    .news-item-tag--sentiment.neutral { background: var(--overlay-4); color: var(--text-tertiary); }
+    .news-item-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+    .news-item-summary {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .news-item-footer {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .news-item-stock {
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      color: var(--brand-accent);
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-2);
+    }
+
+    /* ── Hotspot Tracker (热点追踪) ── */
+    .hotspot-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .hotspot-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .hotspot-item:hover { background: var(--interaction-hover-subtle-bg); }
+    .hotspot-rank {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--brand-accent);
+      width: var(--space-16);
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .hotspot-topic {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hotspot-heat {
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      color: var(--text-quaternary);
+      flex-shrink: 0;
+    }
+    .hotspot-heat-bar {
+      width: 48px;
+      height: 3px;
+      background: var(--overlay-3);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .hotspot-heat-fill {
+      height: 100%;
+      background: var(--brand-accent);
+      border-radius: 2px;
+    }
+    .hotspot-heat-fill--100 { width: 100%; }
+    .hotspot-heat-fill--74 { width: 74%; }
+    .hotspot-heat-fill--49 { width: 49%; }
+    .hotspot-heat-fill--35 { width: 35%; }
+    .hotspot-heat-fill--30 { width: 30%; }
+
+    /* ── Research Summary (研报摘要) ── */
+    .research-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--overlay-3);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      cursor: pointer;
+    }
+    .research-item:last-child { border-bottom: none; }
+    .research-item:hover { background: var(--interaction-hover-subtle-bg); }
+    .research-item-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+    .research-item-institution {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      flex-shrink: 0;
+    }
+    .research-item-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--text-quaternary);
+      flex-shrink: 0;
+    }
+    .research-item-time {
+      font-size: var(--font-size-10);
+      color: var(--text-quaternary);
+      font-family: var(--font-family-numeric);
+      flex-shrink: 0;
+    }
+    .research-item-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+    .research-item-stocks {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+
+    /* ══════════════════════════════════════════════
+     * Network View (Tab: 关联网络)
+     * ══════════════════════════════════════════════ */
+    .sector-linkage-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-8);
+    }
+    .sector-linkage-item {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-10) var(--space-12);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .sector-linkage-item:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+    }
+    .sector-linkage-name {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+    }
+    .sector-linkage-beta {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .sector-linkage-beta-value {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* ── Fund Flow Path (资金链路) ── */
+    .flow-path-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+    .flow-path-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      padding: var(--space-6) 0;
+      border-bottom: 1px solid var(--overlay-3);
+      font-size: var(--font-size-12);
+    }
+    .flow-path-item:last-child { border-bottom: none; }
+    .flow-path-source {
+      color: var(--text-secondary);
+      min-width: 80px;
+      flex-shrink: 0;
+    }
+    .flow-path-arrow {
+      color: var(--text-quaternary);
+      flex-shrink: 0;
+    }
+    .flow-path-target {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .flow-path-amount {
+      font-family: var(--font-family-numeric);
+      font-feature-settings: 'tnum' 1;
+      font-weight: var(--font-weight-medium);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════
      * Analysis Band (bottom strip)
      * ══════════════════════════════════════════════ */
     .analysis-band {
@@ -764,6 +1025,19 @@
       box-shadow: 0 1px 0 var(--brand-accent);
     }
     .intel-tab-strip:has(#tab-fundamental:checked) label[for="tab-fundamental"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    :root:has(#tab-news:checked) [data-panel="tab-news"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+    :root:has(#tab-network:checked) [data-panel="tab-network"] { display: flex; flex-direction: column; gap: var(--space-12); animation: tab-reveal 0.2s ease-out forwards; }
+
+    .intel-tab-strip:has(#tab-news:checked) label[for="tab-news"] {
+      color: var(--text-primary);
+      background: var(--overlay-4);
+      box-shadow: 0 1px 0 var(--brand-accent);
+    }
+    .intel-tab-strip:has(#tab-network:checked) label[for="tab-network"] {
       color: var(--text-primary);
       background: var(--overlay-4);
       box-shadow: 0 1px 0 var(--brand-accent);
@@ -1519,10 +1793,14 @@
         <input type="radio" name="intel-tab" id="tab-capital-flow" checked class="tab-radio sr-only">
         <input type="radio" name="intel-tab" id="tab-macro" class="tab-radio sr-only">
         <input type="radio" name="intel-tab" id="tab-fundamental" class="tab-radio sr-only">
+        <input type="radio" name="intel-tab" id="tab-news" class="tab-radio sr-only">
+        <input type="radio" name="intel-tab" id="tab-network" class="tab-radio sr-only">
         <!-- Tab labels -->
         <label for="tab-capital-flow" class="intel-tab active" role="tab">资金流向</label>
         <label for="tab-macro" class="intel-tab" role="tab">宏观指标</label>
         <label for="tab-fundamental" class="intel-tab" role="tab">基本面</label>
+        <label for="tab-news" class="intel-tab" role="tab">新闻</label>
+        <label for="tab-network" class="intel-tab" role="tab">关联网络</label>
         <div class="tab-strip-spacer"></div>
         <span class="tab-strip-meta">资金流向</span>
         <span class="tab-strip-meta">1D</span>
@@ -2019,6 +2297,340 @@
                 </table>
               </div>
             </div>
+
+            <!-- ═══ Tab 4: 新闻 (News) ═══ -->
+            <div class="tab-panel" data-panel="tab-news">
+
+              <!-- KPI Cards -->
+              <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="过去 24 小时抓取的新闻总数" data-tooltip-pos="top">24h 新闻</div>
+                  <div class="kpi-value" data-counter="1247" data-counter-decimals="0">1,247</div>
+                  <div class="kpi-change up">+18% vs 昨日</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="NLP 模型判定为正面情绪的新闻占比" data-tooltip-pos="top">正面情绪</div>
+                  <div class="kpi-value text-up" data-counter="42.3" data-counter-decimals="1" data-counter-suffix="%">42.3%</div>
+                  <div class="kpi-change up">+5.1pp</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="NLP 模型判定为负面情绪的新闻占比" data-tooltip-pos="top">负面情绪</div>
+                  <div class="kpi-value text-down" data-counter="31.2" data-counter-decimals="1" data-counter-suffix="%">31.2%</div>
+                  <div class="kpi-change down">+2.3pp</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="当日活跃热点话题数量" data-tooltip-pos="top">活跃热点</div>
+                  <div class="kpi-value" data-counter="8" data-counter-decimals="0">8</div>
+                  <div class="kpi-change up">+3 新增</div>
+                </div>
+              </div>
+
+              <!-- News Feed -->
+              <div data-reveal="fade-up" data-reveal-delay="50">
+                <div class="section-title">实时新闻流</div>
+                <div class="panel">
+                  <div class="news-item">
+                    <div class="news-item-header">
+                      <span class="news-item-time">14:32</span>
+                      <div class="news-item-tags">
+                        <span class="news-item-tag news-item-tag--source">财联社</span>
+                        <span class="news-item-tag news-item-tag--sentiment positive">利好</span>
+                      </div>
+                    </div>
+                    <div class="news-item-title">国务院印发《关于推动资本市场高质量发展的指导意见》，明确中长期资金入市时间表</div>
+                    <div class="news-item-summary">意见提出力争未来五年年均引入中长期资金不少于 5000 亿元，鼓励社保基金、年金扩大 A 股投资比例，推动公募基金改革费率结构。</div>
+                    <div class="news-item-footer">
+                      <span class="news-item-stock">600519 贵州茅台</span>
+                      <span class="news-item-stock">300750 宁德时代</span>
+                      <span class="news-item-stock">601318 中国平安</span>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-item-header">
+                      <span class="news-item-time">13:15</span>
+                      <div class="news-item-tags">
+                        <span class="news-item-tag news-item-tag--source">华尔街见闻</span>
+                        <span class="news-item-tag news-item-tag--sentiment negative">利空</span>
+                      </div>
+                    </div>
+                    <div class="news-item-title">美联储会议纪要显示官员对通胀路径存在分歧，降息预期进一步推迟</div>
+                    <div class="news-item-summary">多位委员认为当前通胀回落速度不及预期，需要看到更多数据支持才能开始降息。市场对 6 月首次降息的预期概率从 72% 降至 54%。</div>
+                    <div class="news-item-footer">
+                      <span class="news-item-stock">600036 招商银行</span>
+                      <span class="news-item-stock">601398 工商银行</span>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-item-header">
+                      <span class="news-item-time">11:40</span>
+                      <div class="news-item-tags">
+                        <span class="news-item-tag news-item-tag--source">证券时报</span>
+                        <span class="news-item-tag news-item-tag--sentiment positive">利好</span>
+                      </div>
+                    </div>
+                    <div class="news-item-title">宁德时代发布凝聚态电池量产进展，能量密度突破 500Wh/kg</div>
+                    <div class="news-item-summary">宁德时代在年度技术大会上公布凝聚态电池已进入小批量量产阶段，首批产品将搭载于航空领域。分析师预计 2026 年 Q3 开始贡献营收。</div>
+                    <div class="news-item-footer">
+                      <span class="news-item-stock">300750 宁德时代</span>
+                      <span class="news-item-stock">002460 赣锋锂业</span>
+                      <span class="news-item-stock">002812 恩捷股份</span>
+                    </div>
+                  </div>
+                  <div class="news-item">
+                    <div class="news-item-header">
+                      <span class="news-item-time">10:08</span>
+                      <div class="news-item-tags">
+                        <span class="news-item-tag news-item-tag--source">财联社</span>
+                        <span class="news-item-tag news-item-tag--sentiment neutral">中性</span>
+                      </div>
+                    </div>
+                    <div class="news-item-title">北向资金连续第五个交易日净买入，今日净流入 12.4 亿元</div>
+                    <div class="news-item-summary">其中沪股通净买入 8.7 亿元，深股通净买入 3.7 亿元。加仓方向集中在新能源和消费板块，贵州茅台获净买入 3.2 亿元居首。</div>
+                    <div class="news-item-footer">
+                      <span class="news-item-stock">600519 贵州茅台</span>
+                      <span class="news-item-stock">002594 比亚迪</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hotspot Tracker -->
+              <div data-reveal="fade-up" data-reveal-delay="100">
+                <div class="section-title">热点追踪 Top5</div>
+                <div class="panel">
+                  <div class="hotspot-list">
+                    <div class="hotspot-item">
+                      <span class="hotspot-rank">1</span>
+                      <span class="hotspot-topic">资本市场高质量发展政策</span>
+                      <span class="hotspot-heat">847 条</span>
+                      <span class="hotspot-heat-bar"><span class="hotspot-heat-fill hotspot-heat-fill--100" aria-label="热度 100%"></span></span>
+                    </div>
+                    <div class="hotspot-item">
+                      <span class="hotspot-rank">2</span>
+                      <span class="hotspot-topic">美联储降息预期推迟</span>
+                      <span class="hotspot-heat">623 条</span>
+                      <span class="hotspot-heat-bar"><span class="hotspot-heat-fill hotspot-heat-fill--74" aria-label="热度 74%"></span></span>
+                    </div>
+                    <div class="hotspot-item">
+                      <span class="hotspot-rank">3</span>
+                      <span class="hotspot-topic">凝聚态电池量产突破</span>
+                      <span class="hotspot-heat">412 条</span>
+                      <span class="hotspot-heat-bar"><span class="hotspot-heat-fill hotspot-heat-fill--49" aria-label="热度 49%"></span></span>
+                    </div>
+                    <div class="hotspot-item">
+                      <span class="hotspot-rank">4</span>
+                      <span class="hotspot-topic">一季度公募基金重仓股调整</span>
+                      <span class="hotspot-heat">298 条</span>
+                      <span class="hotspot-heat-bar"><span class="hotspot-heat-fill hotspot-heat-fill--35" aria-label="热度 35%"></span></span>
+                    </div>
+                    <div class="hotspot-item">
+                      <span class="hotspot-rank">5</span>
+                      <span class="hotspot-topic">地产政策持续优化</span>
+                      <span class="hotspot-heat">256 条</span>
+                      <span class="hotspot-heat-bar"><span class="hotspot-heat-fill hotspot-heat-fill--30" aria-label="热度 30%"></span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Research Summary -->
+              <div data-reveal="fade-up" data-reveal-delay="150">
+                <div class="section-title">研报摘要</div>
+                <div class="panel">
+                  <div class="research-item">
+                    <div class="research-item-header">
+                      <span class="research-item-institution">中信证券</span>
+                      <span class="research-item-dot"></span>
+                      <span class="research-item-time">10:20</span>
+                    </div>
+                    <div class="research-item-title">A 股策略：政策底已现，关注科技成长与高股息双主线</div>
+                    <div class="research-item-stocks">
+                      <span class="news-item-stock">600519 贵州茅台</span>
+                      <span class="news-item-stock">300750 宁德时代</span>
+                    </div>
+                  </div>
+                  <div class="research-item">
+                    <div class="research-item-header">
+                      <span class="research-item-institution">国泰君安</span>
+                      <span class="research-item-dot"></span>
+                      <span class="research-item-time">09:45</span>
+                    </div>
+                    <div class="research-item-title">新能源行业深度：凝聚态电池开启航空应用元年，产业链迎来催化</div>
+                    <div class="research-item-stocks">
+                      <span class="news-item-stock">300750 宁德时代</span>
+                      <span class="news-item-stock">002460 赣锋锂业</span>
+                    </div>
+                  </div>
+                  <div class="research-item">
+                    <div class="research-item-header">
+                      <span class="research-item-institution">华泰证券</span>
+                      <span class="research-item-dot"></span>
+                      <span class="research-item-time">08:30</span>
+                    </div>
+                    <div class="research-item-title">北向资金行为解析：从交易型到配置型的切换信号</div>
+                    <div class="research-item-stocks">
+                      <span class="news-item-stock">601318 中国平安</span>
+                      <span class="news-item-stock">000858 五粮液</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══ Tab 5: 关联网络 (Network) ═══ -->
+            <div class="tab-panel" data-panel="tab-network">
+
+              <!-- KPI Cards -->
+              <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="与当前关联标的平均相关性系数" data-tooltip-pos="top">平均相关性</div>
+                  <div class="kpi-value" data-counter="0.67" data-counter-decimals="2">0.67</div>
+                  <div class="kpi-change up">+0.05</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="强相关标的数量（系数 > 0.7）" data-tooltip-pos="top">强关联标的</div>
+                  <div class="kpi-value" data-counter="12" data-counter-decimals="0">12</div>
+                  <div class="kpi-change up">+3 只</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="板块联动强度指数" data-tooltip-pos="top">联动指数</div>
+                  <div class="kpi-value" data-counter="73.5" data-counter-decimals="1">73.5</div>
+                  <div class="kpi-change down">-2.8</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label" data-tooltip="产业链传导活跃度评分" data-tooltip-pos="top">传导活跃度</div>
+                  <div class="kpi-value" data-counter="68.0" data-counter-decimals="1">68.0</div>
+                  <div class="kpi-change up">+4.2</div>
+                </div>
+              </div>
+
+              <!-- Correlation Matrix -->
+              <div data-reveal="fade-up" data-reveal-delay="50">
+                <div class="section-title">标的相关性矩阵</div>
+                <div class="panel">
+                  <div class="correlation-grid">
+                    <div class="correlation-cell header"></div>
+                    <div class="correlation-cell header">贵州茅台</div>
+                    <div class="correlation-cell header">宁德时代</div>
+                    <div class="correlation-cell header">比亚迪</div>
+                    <div class="correlation-cell header">中国平安</div>
+                    <div class="correlation-cell header">美的集团</div>
+
+                    <div class="correlation-cell label">贵州茅台</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell weak">0.23</div>
+                    <div class="correlation-cell weak">0.31</div>
+                    <div class="correlation-cell moderate">0.56</div>
+                    <div class="correlation-cell moderate">0.48</div>
+
+                    <div class="correlation-cell label">宁德时代</div>
+                    <div class="correlation-cell weak">0.23</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell strong">0.82</div>
+                    <div class="correlation-cell weak">0.18</div>
+                    <div class="correlation-cell weak">0.27</div>
+
+                    <div class="correlation-cell label">比亚迪</div>
+                    <div class="correlation-cell weak">0.31</div>
+                    <div class="correlation-cell strong">0.82</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell weak">0.21</div>
+                    <div class="correlation-cell weak">0.33</div>
+
+                    <div class="correlation-cell label">中国平安</div>
+                    <div class="correlation-cell moderate">0.56</div>
+                    <div class="correlation-cell weak">0.18</div>
+                    <div class="correlation-cell weak">0.21</div>
+                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell moderate">0.45</div>
+
+                    <div class="correlation-cell label">美的集团</div>
+                    <div class="correlation-cell moderate">0.48</div>
+                    <div class="correlation-cell weak">0.27</div>
+                    <div class="correlation-cell weak">0.33</div>
+                    <div class="correlation-cell moderate">0.45</div>
+                    <div class="correlation-cell strong">1.00</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sector Linkage -->
+              <div data-reveal="fade-up" data-reveal-delay="100">
+                <div class="section-title">板块联动分析</div>
+                <div class="sector-linkage-grid">
+                  <div class="sector-linkage-item">
+                    <div class="sector-linkage-name">白酒 / 消费</div>
+                    <div class="sector-linkage-beta">Beta <span class="sector-linkage-beta-value">1.12</span> &middot; 强联动</div>
+                  </div>
+                  <div class="sector-linkage-item">
+                    <div class="sector-linkage-name">新能源 / 电力设备</div>
+                    <div class="sector-linkage-beta">Beta <span class="sector-linkage-beta-value">1.35</span> &middot; 强联动</div>
+                  </div>
+                  <div class="sector-linkage-item">
+                    <div class="sector-linkage-name">金融 / 保险</div>
+                    <div class="sector-linkage-beta">Beta <span class="sector-linkage-beta-value">0.89</span> &middot; 中联动</div>
+                  </div>
+                  <div class="sector-linkage-item">
+                    <div class="sector-linkage-name">家电 / 制造</div>
+                    <div class="sector-linkage-beta">Beta <span class="sector-linkage-beta-value">0.76</span> &middot; 弱联动</div>
+                  </div>
+                  <div class="sector-linkage-item">
+                    <div class="sector-linkage-name">半导体 / 科技</div>
+                    <div class="sector-linkage-beta">Beta <span class="sector-linkage-beta-value">1.28</span> &middot; 强联动</div>
+                  </div>
+                  <div class="sector-linkage-item">
+                    <div class="sector-linkage-name">医药 / 生物</div>
+                    <div class="sector-linkage-beta">Beta <span class="sector-linkage-beta-value">0.65</span> &middot; 弱联动</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fund Flow Paths -->
+              <div data-reveal="fade-up" data-reveal-delay="150">
+                <div class="section-title">资金链路追踪</div>
+                <div class="panel">
+                  <div class="flow-path-list">
+                    <div class="flow-path-item">
+                      <span class="flow-path-source">北向资金</span>
+                      <span class="flow-path-arrow">&rarr;</span>
+                      <span class="flow-path-target">贵州茅台</span>
+                      <span class="flow-path-amount up">+3.2亿</span>
+                    </div>
+                    <div class="flow-path-item">
+                      <span class="flow-path-source">北向资金</span>
+                      <span class="flow-path-arrow">&rarr;</span>
+                      <span class="flow-path-target">宁德时代</span>
+                      <span class="flow-path-amount up">+2.8亿</span>
+                    </div>
+                    <div class="flow-path-item">
+                      <span class="flow-path-source">主力资金</span>
+                      <span class="flow-path-arrow">&rarr;</span>
+                      <span class="flow-path-target">比亚迪</span>
+                      <span class="flow-path-amount up">+4.5亿</span>
+                    </div>
+                    <div class="flow-path-item">
+                      <span class="flow-path-source">主力资金</span>
+                      <span class="flow-path-arrow">&rarr;</span>
+                      <span class="flow-path-target">美的集团</span>
+                      <span class="flow-path-amount down">-1.3亿</span>
+                    </div>
+                    <div class="flow-path-item">
+                      <span class="flow-path-source">融资资金</span>
+                      <span class="flow-path-arrow">&rarr;</span>
+                      <span class="flow-path-target">中国平安</span>
+                      <span class="flow-path-amount up">+1.8亿</span>
+                    </div>
+                    <div class="flow-path-item">
+                      <span class="flow-path-source">融资资金</span>
+                      <span class="flow-path-arrow">&rarr;</span>
+                      <span class="flow-path-target">中芯国际</span>
+                      <span class="flow-path-amount up">+1.2亿</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div><!-- .tab-group -->
 
           <!-- State Variants: Tab View -->

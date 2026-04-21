@@ -259,10 +259,11 @@
       "createdAt": "2026-04-01",
       "stateCoverage": {
         "tabs": 4,
-        "overlays": 3,
+        "overlays": 4,
         "stateVariants": 5,
         "coveragePercent": 100
-      }
+      },
+      "note": "added overlay-signal-confirm-to-order (信号确认→生成订单), 3→4 overlays"
     },
     {
       "id": "orders-ledger",
@@ -408,7 +409,8 @@
         "overlays": 5,
         "stateVariants": 25,
         "coveragePercent": 100
-      }
+      },
+      "updatedTabs": "added tab-news (新闻) + tab-network (关联网络), 3→5 tabs"
     },
     {
       "id": "ai-copilot",
@@ -522,12 +524,12 @@
         "after": 1
       },
       "stateCoverage": {
-        "tabs": 6,
-        "overlays": 4,
+        "tabs": 7,
+        "overlays": 5,
         "stateVariants": 11,
         "coveragePercent": 100
       },
-      "note": "79→1 inline styles, attribution bar value labels, KPI change semantics, overlay activation rule"
+      "note": "79→1 inline styles, added tab-holdings (持仓分析) + overlay-compare (Compare), 6→7 tabs, 4→5 overlays"
     },
     {
       "id": "markets-calendar",
@@ -626,9 +628,153 @@
         "stateVariants": 0,
         "coveragePercent": 100
       }
+    },
+    {
+      "id": "portfolio",
+      "file": "page-portfolio.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "analytical",
+      "blueprintId": 12,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 3,
+        "overlays": 3,
+        "stateVariants": 15,
+        "coveragePercent": 100
+      },
+      "note": "Blueprint #12: 3 tabs (持仓/交易/归因), 3 overlays (position-detail/trade-detail/confirm-close-all), 4×multi-state components"
+    },
+    {
+      "id": "watchlist",
+      "file": "page-watchlist.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "catalog",
+      "blueprintId": 20,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 2,
+        "stateVariants": 4,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "factor-list",
+      "file": "page-factor-list.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "catalog",
+      "blueprintId": 21,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 1,
+        "stateVariants": 4,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "strategy-list",
+      "file": "page-strategy-list.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "catalog",
+      "blueprintId": 22,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 2,
+        "stateVariants": 4,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "backtest-list",
+      "file": "page-backtest-list.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "catalog",
+      "blueprintId": 23,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 1,
+        "stateVariants": 4,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "experiment-list",
+      "file": "page-experiment-list.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "catalog",
+      "blueprintId": 24,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 1,
+        "stateVariants": 4,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "universe-list",
+      "file": "page-universe-list.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "catalog",
+      "blueprintId": 25,
+      "inlineStyles": { "before": 0, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 2,
+        "stateVariants": 4,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "platform-settings",
+      "file": "page-platform-settings.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "shellFamily": "ops-console",
+      "blueprintId": 26,
+      "inlineStyles": { "before": 5, "after": 0 },
+      "stateCoverage": {
+        "tabs": 3,
+        "overlays": 3,
+        "stateVariants": 12,
+        "coveragePercent": 100
+      }
+    },
+    {
+      "id": "ai-copilot-sidecar",
+      "file": "component-ai-copilot-sidecar.html",
+      "status": "created",
+      "createdAt": "2026-04-21",
+      "type": "global-component",
+      "blueprintId": 27,
+      "inlineStyles": { "before": 5, "after": 0 },
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 3,
+        "stateVariants": 8,
+        "coveragePercent": 100
+      },
+      "note": "Global component triggered by Cmd+K, 5 modes, not a routed page"
     }
   ],
-  "auxiliary": [],
+  "auxiliary": [
+    {
+      "id": "ai-copilot-sidecar",
+      "file": "component-ai-copilot-sidecar.html",
+      "type": "global-component",
+      "createdAt": "2026-04-21"
+    }
+  ],
   "legacy": [],
   "iterationV2": {
     "startedAt": "2026-04-05",
@@ -654,7 +800,7 @@
     "lastRun": "2026-04-20",
     "issues": 0,
     "fixed": 0,
-    "summary": "Edition v1 重新验收：22/22 页面截图 + 视觉审查通过。strategies-detail 评分 9.2（此前 null）。0 P0 / 0 P1 / 5 P2。DOM 全部平衡。",
+    "summary": "Edition v1 create-all: 30/30 页面（21 reviewed + 9 created）+ 1 global component。3 modified pages (markets-intelligence, backtest-result, signals-inbox) tabs/overlays 补齐。0 inline styles 全部清零。DOM 全部平衡。",
     "previousIssues": {
       "v5Audit": "v3 subagent 引入 2 处 DOM 嵌套错误(regime-monitor + research)，已手动修复",
       "editionReview20260407": "agent-console 5 处 <details> 闭合错误 + 5 处 gallery-card 未闭合; ai-overview 1 处 </span> 缺失",

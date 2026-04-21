@@ -10,10 +10,11 @@
   - tab-ignored (已忽略) [covered]
   - tab-ordered (已转订单) [covered]
 
-  Overlays: 3
+  Overlays: 4
   - overlay-order-confirm (Sheet: 订单确认面板) [covered]
   - overlay-ai-read (Modal: AI 解读信号) [covered]
   - overlay-batch-confirm (Modal: 批量确认) [covered]
+  - overlay-signal-confirm-to-order (Modal: 信号确认→生成订单) [covered]
 
   State Variants: 5 components × 3 states (empty/loading/error)
   - scope-strip: default[covered] loading[covered] empty[n/a] failed[n/a] stale[covered] selected[n/a]
@@ -1000,6 +1001,8 @@
       [data-overlay="overlay-ai-read"] { display: flex; }
     :root:has(#overlay-batch-confirm:checked)
       [data-overlay="overlay-batch-confirm"] { display: flex; }
+    :root:has(#overlay-signal-confirm-to-order:checked)
+      [data-overlay="overlay-signal-confirm-to-order"] { display: flex; }
 
     /* ── Overlay content refinement ── */
     .overlay-sheet .overlay-header,
@@ -2606,6 +2609,12 @@
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             确认信号
           </label>
+          <!-- Overlay trigger: 确认信号→生成订单 → 弹出信号确认 Modal -->
+          <label for="overlay-signal-confirm-to-order" class="detail-action secondary" tabindex="0" aria-label="确认信号并生成订单">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
+            确认并下单
+          </label>
           <!-- Overlay trigger: 生成订单复核 → 弹出订单确认面板 -->
           <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
@@ -2808,6 +2817,51 @@
           <div class="overlay-actions">
             <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" >取消</label>
             <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" >确认全部</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay D: 信号确认→生成订单 (Modal 居中弹窗) -->
+    <div class="overlay-backdrop" data-overlay="overlay-signal-confirm-to-order">
+      <label class="overlay-dismiss" for="overlay-signal-confirm-to-order" aria-label="关闭"></label>
+      <div class="overlay-sheet" role="dialog" aria-label="信号确认">
+        <div class="overlay-header">
+          <span class="overlay-title">确认信号并生成订单</span>
+          <label for="overlay-signal-confirm-to-order" class="overlay-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="overlay-body">
+          <!-- 信号摘要 -->
+          <div class="overlay-field">
+            <span class="overlay-field-label">信号</span>
+            <span class="overlay-field-value">贵州茅台 (600519) · 买入 · 权重 +3.2%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">信号来源</span>
+            <span class="overlay-field-value">动量增强策略 v1.2</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">置信度</span>
+            <span class="overlay-field-value">87 / 100</span>
+          </div>
+          <!-- 订单预览 -->
+          <div class="overlay-field">
+            <span class="overlay-field-label">预估委托</span>
+            <span class="overlay-field-value">买入 100 股 × ¥1,856.00</span>
+          </div>
+          <!-- 风险语义 -->
+          <div class="overlay-field">
+            <span class="overlay-field-label">风险提示</span>
+            <span class="overlay-field-value color-warn">⚠ 接近涨停（+8.7%），买入滑点可能较大</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">组合影响</span>
+            <span class="overlay-field-value">白酒板块占比将升至 37.2%</span>
+          </div>
+          <!-- 操作按钮 -->
+          <div class="overlay-actions">
+            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-secondary">取消</label>
+            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-primary">确认提交订单</label>
           </div>
         </div>
       </div>
@@ -3307,6 +3361,48 @@
       </div>
     </div>
 
+    <div class="gallery-card">
+      <div class="gallery-card__label">信号确认→生成订单 (Modal)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-sheet" role="dialog" aria-label="信号确认">
+          <div class="overlay-header">
+            <span class="overlay-title">确认信号并生成订单</span>
+            <span class="overlay-close" aria-label="关闭">✕</span>
+          </div>
+          <div class="overlay-body">
+            <div class="overlay-field">
+              <span class="overlay-field-label">信号</span>
+              <span class="overlay-field-value">贵州茅台 (600519) · 买入 · 权重 +3.2%</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">信号来源</span>
+              <span class="overlay-field-value">动量增强策略 v1.2</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">置信度</span>
+              <span class="overlay-field-value">87 / 100</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">预估委托</span>
+              <span class="overlay-field-value">买入 100 股 × ¥1,856.00</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">风险提示</span>
+              <span class="overlay-field-value color-warn">⚠ 接近涨停（+8.7%），买入滑点可能较大</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">组合影响</span>
+              <span class="overlay-field-value">白酒板块占比将升至 37.2%</span>
+            </div>
+            <div class="overlay-actions">
+              <button class="overlay-btn overlay-btn-secondary">取消</button>
+              <button class="overlay-btn overlay-btn-primary">确认提交订单</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
           </div>
         </div>
       </div>
@@ -3316,6 +3412,7 @@
   <input type="checkbox" id="overlay-order-confirm" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-ai-read" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-batch-confirm" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-signal-confirm-to-order" class="overlay-radio sr-only">
 
   <!-- SVG noise filter (Graphite Studio material) -->
   <svg class="noise-svg-source" aria-hidden="true">
