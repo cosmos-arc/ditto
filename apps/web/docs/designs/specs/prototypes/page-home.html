@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <!--
   State Coverage Index: page-home
-  Edition: v1
+  Edition: v1.1
   Generated: 2026-04-02
+  Updated: 2026-04-22
 
   Tabs: 0 (Home 无 tab 系统)
 
@@ -12,17 +13,18 @@
   - overlay-edit-workspace (Drawer: 编辑工作台) [covered]
   - overlay-ai-advice (Drawer: AI 建议详情) [covered]
 
-  State Variants: 8 components × 3 states (empty/loading/error)
-  - today-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - decision-banner: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
-  - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
-  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
-  - agent-findings: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
-  - my-workspace: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  Note: my-workspace 已从默认视图移除（pending product spec），overlay 保留。
 
-  Coverage Score: 100%
+  State Variants: 7 components × 3 states (empty/loading/error)
+  - today-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - decision-banner: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
+  - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
+  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
+  - agent-findings: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+
+  Coverage Score: 60% (21/35 states covered; stale/selected not yet implemented)
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact">
 <head>
@@ -32,13 +34,15 @@
 
   <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
   <link rel="stylesheet" href="shared/fonts.css">
-  <!-- Tokens (order matters: base → semantic → domain → interaction → density → style) -->
+  <!-- Tokens (order matters: base → semantic → domain → data-viz → interaction → density → component → shell → style) -->
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="tokens-style.css">
 
   <!-- Layout + Components -->
@@ -355,6 +359,70 @@
      * R2: My Workspace — REMOVED (pending product spec)
      * ══════════════════════════════════════════════ */
 
+    /* ══════════════════════════════════════════════
+     * Today Pulse — L1 核心数据面板 (5 指标卡片)
+     * ══════════════════════════════════════════════ */
+    .today-pulse {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--space-2);
+    }
+    .pulse-card {
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      padding: var(--space-10) var(--space-12);
+      cursor: pointer;
+      transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+      position: relative;
+    }
+    .pulse-card:hover {
+      border-color: var(--border-default);
+      box-shadow: 0 0 0 1px var(--border-default);
+    }
+    .pulse-card.warning {
+      border-color: color-mix(in oklch, var(--risk-high-fg) 30%, transparent);
+    }
+    .pulse-card.warning:hover {
+      border-color: color-mix(in oklch, var(--risk-high-fg) 50%, transparent);
+      box-shadow: 0 0 8px 0 color-mix(in oklch, var(--risk-high-fg) 10%, transparent);
+    }
+    .pulse-card-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: var(--space-2);
+    }
+    .pulse-card-value {
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      font-family: var(--font-family-mono);
+      line-height: 1.2;
+    }
+    .pulse-card-value.positive { color: var(--market-up-fg); }
+    .pulse-card-value.warning { color: var(--system-degraded-fg); }
+    .pulse-card-sub {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-top: var(--space-1);
+      font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .pulse-card-sub .indicator-up { color: var(--market-up-fg); }
+    .pulse-card-sub .indicator-down { color: var(--market-down-fg); }
+    .pulse-card-badge {
+      position: absolute;
+      top: var(--space-6);
+      right: var(--space-8);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--risk-high-fg);
+      background: color-mix(in oklch, var(--risk-high-fg) 12%, transparent);
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-4);
+    }
+
     /* ── R2 POLISH: Activate value-flash on PnL (one-shot on load) ── */
     .decision-primary .metric-value {
       animation: value-flash 400ms ease-out;
@@ -400,6 +468,11 @@
     }
     [data-theme="light"] .noise-layer {
       opacity: 0.008;
+    }
+
+    /* ── Status bar brand tint (dark mode) ── */
+    [data-theme="dark"] .shell-home .shell-status-bar {
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-strip));
     }
 
     /* ══════════════════════════════════════════════
@@ -527,8 +600,8 @@
     /* Data health trust gauge */
     .health-gauge {
       display: flex;
-      gap: 2px;
-      height: 3px;
+      gap: 1px;
+      height: 4px;
       border-radius: 2px;
       overflow: hidden;
       margin-bottom: var(--space-6);
@@ -629,7 +702,7 @@
       transition: background var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .shell-home .context-section:hover {
-      background: color-mix(in oklch, var(--brand-accent) 2%, var(--surface-card));
+      background: color-mix(in oklch, var(--brand-accent) 2%, var(--surface-panel-base));
     }
 
     /* ── Alert row urgency hover ── */
@@ -692,7 +765,7 @@
       opacity: 0.3;
     }
     [data-theme="light"] .shell-home .context-section:hover {
-      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-card));
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
     }
 
     /* ── Health item hover feedback ── */
@@ -729,7 +802,7 @@
       width: var(--shell-sidebar-collapsed-width);
       gap: var(--space-8, 8px);
       padding: var(--space-12, 12px) 0;
-      background: var(--surface-1);
+      background: var(--surface-panel-elevated);
       border-left: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
       overflow: hidden;
@@ -741,7 +814,7 @@
       justify-content: center;
       width: 40px;
       height: 40px;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-6);
       color: var(--text-secondary);
       cursor: pointer;
     }
@@ -754,7 +827,7 @@
       height: 16px;
       border-radius: 50%;
       background: var(--risk-critical-fg);
-      color: white;
+      color: var(--text-inverse);
       font-size: var(--font-size-10);
       font-weight: var(--font-weight-semibold);
       display: flex;
@@ -819,9 +892,6 @@
         <button class="rail-icon" aria-label="Trading" title="Trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </button>
-        <button class="rail-icon" aria-label="AI" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
         <button class="rail-icon" aria-label="Platform" title="Platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </button>
@@ -853,8 +923,8 @@
           </div>
           <div class="switcher-sep"></div>
           <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">深</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">浅</button>
           </div>
         </div>
         <button class="header-action-btn" aria-label="Notifications" title="Notifications">
@@ -868,7 +938,7 @@
       </div>
     </header>
 
-    <!-- ═══ Status Bar (v2 — lightweight operational status) ═══ -->
+    <!-- ═══ Status Bar (L3 — lightweight operational status) ═══ -->
     <div class="shell-status-bar">
       <div class="status-bar-item">
         <span class="status-bar-label">盘中</span>
@@ -876,42 +946,58 @@
       </div>
       <div class="status-bar-separator"></div>
       <div class="status-bar-item">
-        <span class="status-bar-label">盈亏</span>
-        <span class="status-bar-value positive" data-tooltip="今日组合收益率">+0.34%</span>
+        <span class="status-bar-label">市场</span>
+        <span class="status-bar-value">沪深300 <span data-ticker="3432" data-decimals="0">3,432</span> · <span class="indicator-up">+0.82%</span></span>
       </div>
       <div class="status-bar-separator"></div>
       <div class="status-bar-item">
-        <span class="status-bar-label">风险</span>
-        <span class="status-bar-value" data-tooltip="VaR 95% 分位接近预警线">中等</span>
-      </div>
-      <div class="status-bar-separator"></div>
-      <div class="status-bar-item">
-        <span class="status-bar-label">Regime</span>
-        <span class="status-bar-value" data-tooltip="当前市场环境：波动回落+北向转暖">温和风险偏好</span>
-      </div>
-      <div class="status-bar-separator"></div>
-      <div class="status-bar-item">
-        <span class="status-bar-label">待处理</span>
-        <span class="status-bar-value" data-tooltip="2 项待处理，含 1 项 P1">2</span>
-      </div>
-      <div class="status-bar-separator"></div>
-      <div class="status-bar-item">
-        <span class="status-bar-label">运行中</span>
-        <span class="status-bar-value" data-tooltip="3 个后台任务运行中">3</span>
+        <span class="status-bar-label">连接</span>
+        <span class="status-bar-value">5/7 数据源正常</span>
       </div>
     </div>
 
     <!-- State Variants: Today Pulse -->
-    
-    
-    
+
+
+
+
+    <!-- ═══ Today Pulse (L1 — core data cards) ═══ -->
+    <div class="today-pulse" data-contract-slot="today-pulse" data-reveal="fade-up" data-mouse-glow="true" data-mouse-glow-size="200px">
+      <div class="pulse-card" data-tooltip="今日实现盈亏 +¥86,472.50，点击查看组合详情" title="组合盈亏">
+        <span class="pulse-card-label">今日盈亏</span>
+        <span class="pulse-card-value positive">+¥86,472</span>
+        <span class="pulse-card-sub"><span class="indicator-up">▲</span> +0.34% 较昨日</span>
+      </div>
+      <div class="pulse-card warning" data-tooltip="VaR 已超过 95% 历史分位，点击查看风控详情" title="风险指标">
+        <span class="pulse-card-badge">预警</span>
+        <span class="pulse-card-label">风险</span>
+        <span class="pulse-card-value warning">中等</span>
+        <span class="pulse-card-sub">VaR 95% · 回撤 -3.8%</span>
+      </div>
+      <div class="pulse-card" data-tooltip="波动回落 + 北向转暖，市场环境温和" title="市场状态">
+        <span class="pulse-card-label">Regime</span>
+        <span class="pulse-card-value">温和偏好</span>
+        <span class="pulse-card-sub">波动回落 · 北向转暖</span>
+      </div>
+      <div class="pulse-card" data-tooltip="2 项待处理，含 1 项 P1，点击查看全部" title="待处理事项">
+        <span class="pulse-card-badge">2</span>
+        <span class="pulse-card-label">待处理</span>
+        <span class="pulse-card-value">2</span>
+        <span class="pulse-card-sub">含 1 项 P1</span>
+      </div>
+      <div class="pulse-card" data-tooltip="3 个后台任务运行中（回测 1 / 采集 1 / 监控 1）" title="后台任务">
+        <span class="pulse-card-label">后台任务</span>
+        <span class="pulse-card-value">3</span>
+        <span class="pulse-card-sub">回测 · 采集 · 监控</span>
+      </div>
+    </div>
 
     <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
     <div class="shell-main" id="main-content">
       <!-- Primary: Decision Banner + Execution Queue -->
       <div class="main-primary">
         <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
-        <div class="panel">
+        <div class="panel" data-contract-slot="decision-banner">
           <div class="decision-banner" data-mouse-glow="true" data-reveal="fade-up">
             <!-- Left: Account primary status (~42%) -->
             <div class="decision-primary">
@@ -957,9 +1043,8 @@
             </div>
             <!-- Right: Routing CTAs (~25%) -->
             <div class="decision-execution">
-              <span class="decision-routing-label">下一步</span>
-              <div class="decision-cta-row">
-                <button class="decision-cta primary">查看信号总览</button>
+              <span class="decision-routing-label">操作建议</span>              <div class="decision-cta-row">
+                <button class="decision-cta primary">前往信号</button>
                 <button class="decision-cta secondary">进入研究</button>
                 <button class="decision-cta ghost">查看风控</button>
               </div>
@@ -973,7 +1058,7 @@
         
 
         <!-- Today's Priority Items — Main Work Surface -->
-        <div class="panel panel-grow" data-mouse-glow="true" data-mouse-glow-size="160px" data-reveal="fade-up">
+        <div class="panel panel-grow" data-contract-slot="pending-actions" data-mouse-glow="true" data-mouse-glow-size="160px" data-reveal="fade-up">
           <div class="panel-header">
             <span class="panel-title">今日优先事项 <span class="panel-subtitle">跨域关注项</span></span>
             <span class="panel-count">5</span>
@@ -1020,7 +1105,7 @@
 
             <!-- P2/P3 items — collapsed by default -->
             <details>
-              <summary class="queue-disclosure">+3 more ▾</summary>
+              <summary class="queue-disclosure">+3 更多 ▾</summary>
             <!-- P2 item -->
             <div class="queue-item" data-reveal="fade-up" data-reveal-delay="150">
               <div class="queue-item-bar p2"></div>
@@ -1089,9 +1174,9 @@
 
 
         <!-- Research Progress (cross-domain, not trading-specific) -->
-        <div class="panel" data-reveal="fade-up" data-reveal-delay="150">
+        <div class="panel" data-contract-slot="recent-signals" data-reveal="fade-up" data-reveal-delay="150">
           <div class="panel-header">
-            <span class="panel-title">研究进展 <span class="panel-subtitle">研究动态</span></span>
+            <span class="panel-title">研究进展 <span class="panel-subtitle">因子 · 策略 · 模型</span></span>
             <button class="panel-action">查看全部 →</button>
           </div>
           <div class="panel-body">
@@ -1135,10 +1220,10 @@
         
 
         <!-- Agent Insights (cross-domain intelligence summary) -->
-        <div class="panel" data-reveal="fade-up" data-reveal-delay="200">
+        <div class="panel" data-contract-slot="agent-findings" data-reveal="fade-up" data-reveal-delay="200">
           <div class="panel-header">
-            <span class="panel-title">Agent 洞察 <span class="panel-subtitle">关联分析</span></span>
-            <button class="panel-action">展开全部 Agent 分析 →</button>
+            <span class="panel-title">Agent 洞察 <span class="panel-subtitle">跨域发现</span></span>
+            <button class="panel-action">查看全部洞察 →</button>
           </div>
           <div class="panel-body">
           <div class="finding-item">
@@ -1182,7 +1267,7 @@
     <div class="shell-sidebar">
       <div class="context-rail">
         <!-- Market Pulse (context-first — lightest ambient data) -->
-        <div class="context-section" data-reveal="fade-right" data-reveal-delay="100">
+        <div class="context-section" data-contract-slot="market-pulse" data-reveal="fade-right" data-reveal-delay="100">
           <div class="context-section-header">
             <span class="context-section-title">市场脉搏</span>
           </div>
@@ -1216,7 +1301,7 @@
         </div>
 
         <!-- Global Alerts -->
-        <div class="context-section" data-reveal="fade-right" data-reveal-delay="200">
+        <div class="context-section" data-contract-slot="global-alerts" data-reveal="fade-right" data-reveal-delay="200">
           <div class="context-section-header">
             <span class="context-section-title">全局预警</span>
             <span class="panel-count">4</span>
@@ -1257,7 +1342,7 @@
         
 
         <!-- Data Health (system trust check) -->
-        <div class="context-section" data-reveal="fade-right" data-reveal-delay="300">
+        <div class="context-section" data-contract-slot="data-health" data-reveal="fade-right" data-reveal-delay="300">
           <div class="context-section-header">
             <span class="context-section-title">数据健康</span>
           </div>
@@ -1357,7 +1442,7 @@
 
           <div class="overlay-actions">
             
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">复核通过</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认通过</label>
             <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
             <button class="overlay-btn overlay-btn-danger">驳回</button>
           </div>
@@ -1409,7 +1494,7 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认提交</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认下单</label>
             <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
           </div>
         </div>
@@ -1482,6 +1567,10 @@
           <div class="overlay-field">
             <span class="overlay-field-label">科技板块集中度</span>
             <span class="overlay-field-value val-risk">37.2%</span>
+          </div>
+          <div class="overlay-actions">
+            <button class="overlay-btn overlay-btn-primary">采纳建议</button>
+            <label for="overlay-ai-advice" class="overlay-btn overlay-btn-secondary cursor-pointer">暂时忽略</label>
           </div>
         </div>
       </div>
@@ -1625,8 +1714,8 @@
 <div class="state-variant-content" data-state="empty">
             <div class="state-empty">
               <div class="state-empty-icon">🧩</div>
-              <div class="state-empty-title">工作区为空</div>
-              <div class="state-empty-desc">添加 Widget 开始自定义你的工作区</div>
+              <div class="state-empty-title">工作台为空</div>
+              <div class="state-empty-desc">添加 Widget 开始自定义你的工作台</div>
               <label for="overlay-edit-workspace" class="state-empty-cta cursor-pointer">编辑工作台</label>
             </div>
           </div>
@@ -1650,8 +1739,8 @@
 <div class="state-variant-content" data-state="failed">
             <div class="state-error">
               <div class="state-error-icon">!</div>
-              <div class="state-error-title">工作区加载失败</div>
-              <div class="state-error-desc">无法加载工作区配置，将使用默认布局</div>
+              <div class="state-error-title">工作台加载失败</div>
+              <div class="state-error-desc">无法加载工作台配置，将使用默认布局</div>
               <button class="state-error-retry">重试</button>
             </div>
           </div>
@@ -1884,7 +1973,7 @@
             <h4>风险评估</h4>
             <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
             <div class="overlay-actions">
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">复核通过</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认通过</label>
               <button class="overlay-btn overlay-btn-secondary">查看完整信号</button>
               <button class="overlay-btn overlay-btn-danger">驳回</button>
             </div>
@@ -1933,7 +2022,7 @@
               <span class="overlay-field-value">¥55.90</span>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认提交</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认下单</label>
               <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
             </div>
           </div>
