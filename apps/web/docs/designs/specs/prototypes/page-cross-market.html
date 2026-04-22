@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
   State Coverage Index: page-cross-market
-  Edition: v17
-  Generated: 2026-04-02
+  Edition: v18
+  Generated: 2026-04-22
 
   Tabs: 3
   - tab-rotation (资金轮动) [covered]
@@ -24,6 +24,10 @@
   - macro-drivers-bar: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - right-rail: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - bottom-tab-band: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  data-contract-slots: 7
+  - context-bar, scope-strip, market-card-grid, cross-market-matrix,
+    macro-drivers, right-rail, bottom-tab-band, market-depth-overlay
 
   Coverage Score: 100%
 -->
@@ -1281,13 +1285,13 @@
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
-    .corr-cell[data-corr="1"]  { background: color-mix(in oklch, var(--market-up-fg) 35%, transparent); color: var(--text-primary); }
-    .corr-cell[data-corr="2"]  { background: color-mix(in oklch, var(--market-up-fg) 22%, transparent); color: var(--text-secondary); }
-    .corr-cell[data-corr="3"]  { background: color-mix(in oklch, var(--market-up-fg) 12%, transparent); color: var(--text-secondary); }
+    .corr-cell[data-corr="1"]  { background: var(--heat-up-3); color: var(--text-primary); }
+    .corr-cell[data-corr="2"]  { background: var(--heat-up-2); color: var(--text-secondary); }
+    .corr-cell[data-corr="3"]  { background: var(--heat-up-1); color: var(--text-secondary); }
     .corr-cell[data-corr="4"]  { background: var(--overlay-3); color: var(--text-tertiary); }
-    .corr-cell[data-corr="5"]  { background: color-mix(in oklch, var(--market-down-fg) 12%, transparent); color: var(--text-secondary); }
-    .corr-cell[data-corr="6"]  { background: color-mix(in oklch, var(--market-down-fg) 22%, transparent); color: var(--text-secondary); }
-    .corr-cell[data-corr="7"]  { background: color-mix(in oklch, var(--market-down-fg) 35%, transparent); color: var(--text-primary); }
+    .corr-cell[data-corr="5"]  { background: var(--heat-down-1); color: var(--text-secondary); }
+    .corr-cell[data-corr="6"]  { background: var(--heat-down-2); color: var(--text-secondary); }
+    .corr-cell[data-corr="7"]  { background: var(--heat-down-2); color: var(--text-primary); }
     .corr-cell--self {
       background: var(--overlay-2);
       color: var(--text-quaternary);
@@ -1508,7 +1512,7 @@
   <section id="default-view" class="proto-section">
 
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — Cross-Market Overview · v17 · Design Review R10</div>
+  <div class="style-label">Graphite Studio — Cross-Market Overview · v18 · Design Review R11</div>
 
   <div class="shell-radar">
 
@@ -1527,9 +1531,6 @@
         </div>
         <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
-        </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" role="listitem" tabindex="0" aria-label="平台">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
@@ -1586,7 +1587,7 @@
       </header>
 
       <!-- Context Bar (L1: objective environment variables) -->
-      <div class="context-bar" role="status" aria-label="市场环境">
+      <div class="context-bar" data-contract-slot="context-bar" role="status" aria-label="市场环境">
         <div class="context-bar-item">
           <span class="context-bar-label">市态</span>
           <span class="context-bar-value regime-on">温和风险偏好</span>
@@ -1607,7 +1608,7 @@
         </div>
         <div class="context-bar-sep"></div>
         <label for="overlay-pin-viewpoint" class="context-bar-item cursor-pointer" title="固定当前视角">
-          <span class="context-bar-label">📌 固定视角</span>
+          <span class="context-bar-label">固定视角</span>
         </label>
       </div>
 
@@ -1617,7 +1618,7 @@
       
 
       <!-- Scope Strip (L1: today's interpretation) -->
-      <div class="scope-strip" role="status" aria-label="今日解读">
+      <div class="scope-strip" data-contract-slot="scope-strip" role="status" aria-label="今日解读">
         <div class="context-bar-item">
           <span class="context-bar-label">领涨</span>
           <span class="context-bar-value regime-on">港股科技 / 黄金</span>
@@ -1635,7 +1636,7 @@
         <div class="context-bar-sep"></div>
         <div class="context-bar-item">
           <span class="context-bar-label">事件</span>
-          <span class="context-bar-value regime-mixed">FOMC 03:00</span>
+          <span class="context-bar-value regime-mixed">FOMC 明日 02:00</span>
         </div>
       </div>
 
@@ -1651,7 +1652,7 @@
         <main id="main-content" class="main-content">
 
           <!-- L1: Market Card Grid (unified 3-line template) -->
-          <div class="market-card-grid" data-mouse-glow="true" data-reveal="fade-up" data-reveal-delay="0">
+          <div class="market-card-grid" data-contract-slot="market-card-grid" data-mouse-glow="true" data-reveal="fade-up" data-reveal-delay="0">
 
             <div class="market-card card-lead" tabindex="0" role="button" aria-label="A股 沪深300 +0.67% 广度偏强 AI+半导体主线扩散" data-tooltip="沪深300 · 涨跌比偏强 · AI+半导体扩散 · 点击查看板块详情" onclick="document.getElementById('overlay-market-depth').checked=true">
               <div class="market-card-top">
@@ -1735,7 +1736,7 @@
           
 
           <!-- L2: Cross-Market Matrix (comparison tool with conclusion) -->
-          <div class="matrix-section">
+          <div class="matrix-section" data-contract-slot="cross-market-matrix">
             <div class="matrix-header">
               <h2 class="matrix-title">相对强弱矩阵</h2>
               <div data-flow='{"segments":[{"label":"流入","value":35},{"label":"流出","value":28},{"label":"净流入","value":7}]}' aria-label="资金流向" class="ml-auto flow-w-8rem"></div>
@@ -1745,136 +1746,7 @@
               <span class="lag">美元</span>走弱，<span class="lag">利率</span>上行对成长估值形成压制。
             </div>
 
-            <!-- JS Tabs: 宏观驱动 / 资金轮动 / 跨市场相关性 -->
-            <div data-tabs="markets-main-tabs" class="mt-12">
-              <div class="flex-row-center gap-8 mb-10">
-                <button data-tab-target="macro-drivers" class="tab-band-tab active" aria-selected="true">宏观驱动</button>
-                <button data-tab-target="capital-rotation" class="tab-band-tab" aria-selected="false">资金轮动</button>
-                <button data-tab-target="cross-correlation" class="tab-band-tab" aria-selected="false">跨市场相关性</button>
-              </div>
-
-              <!-- Panel: 宏观驱动 -->
-              <div data-tab-panel="macro-drivers">
-                <div class="drivers-strip">
-            <span class="drivers-strip-label">宏观驱动</span>
-            <div class="driver-item" data-tooltip="美元指数 DXY · 日跌幅 -0.4% · 走弱趋势">
-              <span class="driver-item-name">DXY</span>
-              <span class="driver-item-val">102.4</span>
-              <span class="driver-item-change down">-0.4%</span>
-              <span class="driver-mini-bar down"></span>
-              <svg data-sparkline='{"data":[18,16,15,13,12,10,9,8],"series":"down","width":28,"height":10}' aria-label="DXY走势"></svg>
-            </div>
-            <div class="driver-sep"></div>
-            <div class="driver-item" data-tooltip="美债10Y收益率 · 日涨 +7bp · 利率上行">
-              <span class="driver-item-name">US10Y</span>
-              <span class="driver-item-val">4.41%</span>
-              <span class="driver-item-change up">+7bp</span>
-              <span class="driver-mini-bar up"></span>
-              <svg data-sparkline='{"data":[8,9,8,10,11,12,13,15],"series":"up","width":28,"height":10}' aria-label="US10Y走势"></svg>
-            </div>
-            <div class="driver-sep"></div>
-            <div class="driver-item" data-tooltip="中债10Y收益率 · 日涨 +2bp · 小幅上行">
-              <span class="driver-item-name">CN10Y</span>
-              <span class="driver-item-val">2.32%</span>
-              <span class="driver-item-change up">+2bp</span>
-              <span class="driver-mini-bar up"></span>
-            </div>
-            <div class="driver-sep"></div>
-            <div class="driver-item" data-tooltip="VIX 恐慌指数 · 日跌幅 -5.2% · 波动回落">
-              <span class="driver-item-name">VIX</span>
-              <span class="driver-item-val">16.8</span>
-              <span class="driver-item-change down">-5.2%</span>
-              <span class="driver-mini-bar down"></span>
-              <svg data-sparkline='{"data":[16,15,14,12,11,10,9,8],"series":"down","width":28,"height":10}' aria-label="VIX走势"></svg>
-            </div>
-            <div class="driver-sep"></div>
-            <div class="driver-item" data-tooltip="黄金现货 · 日涨幅 +1.2% · 避险推升">
-              <span class="driver-item-name">XAUUSD</span>
-              <span class="driver-item-val">2,648</span>
-              <span class="driver-item-change up">+1.2%</span>
-              <span class="driver-mini-bar up"></span>
-              <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
-            </div>
-            <div class="driver-sep"></div>
-            <div class="driver-item" data-tooltip="WTI 原油 · 日跌幅 -0.8% · OPEC 观望">
-              <span class="driver-item-name">WTI</span>
-              <span class="driver-item-val">71.3</span>
-              <span class="driver-item-change down">-0.8%</span>
-              <span class="driver-mini-bar down"></span>
-            </div>
-            <div class="driver-sep"></div>
-            <div class="driver-item" data-tooltip="美元/离岸人民币 · 日跌幅 -0.3% · 人民币偏强">
-              <span class="driver-item-name">USD/CNH</span>
-              <span class="driver-item-val">7.24</span>
-              <span class="driver-item-change down">-0.3%</span>
-              <span class="driver-mini-bar down"></span>
-            </div>
-                </div>
-              </div>
-              <!-- /Panel: macro-drivers -->
-
-              <!-- Panel: 资金轮动 -->
-              <div data-tab-panel="capital-rotation" aria-hidden="true">
-                <div class="flow-bar-group">
-                  <div class="flow-bar-item">
-                    <span class="flow-bar-label">港股科技</span>
-                    <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-78"></div></div>
-                    <span class="flow-bar-value inflow">+42.3 亿</span>
-                  </div>
-                  <div class="flow-bar-item">
-                    <span class="flow-bar-label">A股成长</span>
-                    <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-52"></div></div>
-                    <span class="flow-bar-value inflow">+18.6 亿</span>
-                  </div>
-                  <div class="flow-bar-item">
-                    <span class="flow-bar-label">黄金</span>
-                    <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-35"></div></div>
-                    <span class="flow-bar-value inflow">+12.1 亿</span>
-                  </div>
-                  <div class="flow-bar-item">
-                    <span class="flow-bar-label">长债</span>
-                    <div class="flow-bar-track"><div class="flow-bar-fill outflow flow-w-45"></div></div>
-                    <span class="flow-bar-value outflow">-15.8 亿</span>
-                  </div>
-                  <div class="flow-bar-item">
-                    <span class="flow-bar-label">美元</span>
-                    <div class="flow-bar-track"><div class="flow-bar-fill outflow flow-w-32"></div></div>
-                    <span class="flow-bar-value outflow">-8.7 亿</span>
-                  </div>
-                </div>
-                <div class="rotation-sentence mt-10">
-                  资金偏好从<strong>美元与长债</strong>转向<strong>港股科技、A股成长与黄金</strong>，风险偏好持续回升。
-                </div>
-                <!-- 板块联动 drilldown items -->
-                <div class="flex-col gap-8 mt-10">
-                <div class="flex-col gap-8">
-                  <div class="drilldown-item" tabindex="0">
-                    <span class="drilldown-market">港股科技</span>
-                    <span class="drilldown-reason">弹性领先，南向资金持续流入，AI 概念扩散</span>
-                    <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":48,"height":16}' aria-label="港股科技走势"></svg>
-                  </div>
-                  <div class="drilldown-item" tabindex="0">
-                    <span class="drilldown-market">A股 AI</span>
-                    <span class="drilldown-reason">半导体 + 算力主线扩散，成交占比升至 18%</span>
-                    <svg data-sparkline='{"data":[8,9,11,10,13,14,12,16],"series":"up","width":48,"height":16}' aria-label="A股 AI走势"></svg>
-                  </div>
-                  <div class="drilldown-item" tabindex="0">
-                    <span class="drilldown-market">黄金避险</span>
-                    <span class="drilldown-reason">央行购金 + 地缘风险推升，突破前高</span>
-                    <svg data-sparkline='{"data":[12,13,12,15,16,18,17,20],"series":"up","width":48,"height":16}' aria-label="黄金避险走势"></svg>
-                  </div>
-                  <div class="drilldown-item" tabindex="0">
-                    <span class="drilldown-market">美元资产</span>
-                    <span class="drilldown-reason">降息预期降温 + 欧元走强，美元承压</span>
-                    <svg data-sparkline='{"data":[18,16,15,14,12,13,11,10],"series":"down","width":48,"height":16}' aria-label="美元资产走势"></svg>
-                  </div>
-                </div>
-                </div>
-              </div>
-              <!-- /Panel: capital-rotation -->
-
-              <!-- Panel: 跨市场相关性 -->
-              <div data-tab-panel="cross-correlation" aria-hidden="true">
+            <!-- Cross-Market Heat Matrix (always visible) -->
             <div data-mouse-glow="true">
             <table class="matrix-table">
               <caption class="sr-only">相对强弱矩阵 — 跨市场多周期表现对比</caption>
@@ -2006,12 +1878,71 @@
                 <div class="corr-cell" data-corr="7" data-tooltip="美元 vs 黄金 · 相关系数 -0.84 · 强负相关">-0.84</div>
                 <div class="corr-cell corr-cell--self" data-tooltip="美元 vs 美元 — 自相关">1.00</div>
               </div>
-              <!-- /Panel: cross-correlation -->
-
+              <!-- /correlation-grid -->
             </div>
-            <!-- /data-tabs="markets-main-tabs" -->
-
+            <!-- /correlation-section -->
           </div>
+          <!-- /matrix-section -->
+
+          <!-- Macro Drivers Bar (standalone section per Blueprint) -->
+          <div class="drivers-section mt-12" data-contract-slot="macro-drivers">
+            <div class="drivers-strip">
+              <span class="drivers-strip-label">宏观驱动</span>
+              <div class="driver-item" data-tooltip="美元指数 DXY · 日跌幅 -0.4% · 走弱趋势">
+                <span class="driver-item-name">DXY</span>
+                <span class="driver-item-val">102.4</span>
+                <span class="driver-item-change down">-0.4%</span>
+                <span class="driver-mini-bar down"></span>
+                <svg data-sparkline='{"data":[18,16,15,13,12,10,9,8],"series":"down","width":28,"height":10}' aria-label="DXY走势"></svg>
+              </div>
+              <div class="driver-sep"></div>
+              <div class="driver-item" data-tooltip="美债10Y收益率 · 日涨 +7bp · 利率上行">
+                <span class="driver-item-name">US10Y</span>
+                <span class="driver-item-val">4.41%</span>
+                <span class="driver-item-change up">+7bp</span>
+                <span class="driver-mini-bar up"></span>
+                <svg data-sparkline='{"data":[8,9,8,10,11,12,13,15],"series":"up","width":28,"height":10}' aria-label="US10Y走势"></svg>
+              </div>
+              <div class="driver-sep"></div>
+              <div class="driver-item" data-tooltip="中债10Y收益率 · 日涨 +2bp · 小幅上行">
+                <span class="driver-item-name">CN10Y</span>
+                <span class="driver-item-val">2.32%</span>
+                <span class="driver-item-change up">+2bp</span>
+                <span class="driver-mini-bar up"></span>
+              </div>
+              <div class="driver-sep"></div>
+              <div class="driver-item" data-tooltip="VIX 恐慌指数 · 日跌幅 -5.2% · 波动回落">
+                <span class="driver-item-name">VIX</span>
+                <span class="driver-item-val">16.8</span>
+                <span class="driver-item-change down">-5.2%</span>
+                <span class="driver-mini-bar down"></span>
+                <svg data-sparkline='{"data":[16,15,14,12,11,10,9,8],"series":"down","width":28,"height":10}' aria-label="VIX走势"></svg>
+              </div>
+              <div class="driver-sep"></div>
+              <div class="driver-item" data-tooltip="黄金现货 · 日涨幅 +1.2% · 避险推升">
+                <span class="driver-item-name">XAUUSD</span>
+                <span class="driver-item-val">2,648</span>
+                <span class="driver-item-change up">+1.2%</span>
+                <span class="driver-mini-bar up"></span>
+                <svg data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
+              </div>
+              <div class="driver-sep"></div>
+              <div class="driver-item" data-tooltip="WTI 原油 · 日跌幅 -0.8% · OPEC 观望">
+                <span class="driver-item-name">WTI</span>
+                <span class="driver-item-val">71.3</span>
+                <span class="driver-item-change down">-0.8%</span>
+                <span class="driver-mini-bar down"></span>
+              </div>
+              <div class="driver-sep"></div>
+              <div class="driver-item" data-tooltip="美元/离岸人民币 · 日跌幅 -0.3% · 人民币偏强">
+                <span class="driver-item-name">USD/CNH</span>
+                <span class="driver-item-val">7.24</span>
+                <span class="driver-item-change down">-0.3%</span>
+                <span class="driver-mini-bar down"></span>
+              </div>
+            </div>
+          </div>
+          <!-- /drivers-section -->
 
           <!-- State Variants: Cross-Market Matrix -->
           
@@ -2026,7 +1957,7 @@
         </main>
 
         <!-- Right Rail (sticky, no internal scroll) -->
-        <div class="right-rail" data-reveal="fade-right" data-reveal-delay="150">
+        <div class="right-rail" data-contract-slot="right-rail" data-reveal="fade-right" data-reveal-delay="150">
 
           <!-- 1. Pulse: ultra-compact, always expanded -->
           <div class="rail-section">
@@ -2153,20 +2084,20 @@
       <!-- /shell-workspace -->
 
       <!-- Tab Band (summary-only, detail → drawer/sub-page) — radio tab system -->
-      <div class="tab-band tab-group" data-tab-group="cross-market">
+      <div class="tab-band tab-group" data-contract-slot="bottom-tab-band" data-tab-group="cross-market">
         <!-- Radio inputs (hidden, CSS-driven activation) -->
         <input type="radio" name="cross-market" id="tab-rotation" checked class="tab-radio sr-only">
         <input type="radio" name="cross-market" id="tab-calendar" class="tab-radio sr-only">
         <input type="radio" name="cross-market" id="tab-ai" class="tab-radio sr-only">
 
         <div class="tab-band-header" role="tablist" aria-label="辅助视角切换">
-          <label for="tab-rotation" class="tab-band-tab" role="tab" tabindex="0">资金轮动</label>
-          <label for="tab-calendar" class="tab-band-tab" role="tab" tabindex="0">事件日历</label>
-          <label for="tab-ai" class="tab-band-tab" role="tab" tabindex="0">AI 解读</label>
+          <label for="tab-rotation" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-rotation" aria-selected="true">资金轮动</label>
+          <label for="tab-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-calendar" aria-selected="false">事件日历</label>
+          <label for="tab-ai" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-ai" aria-selected="false">AI 解读</label>
         </div>
 
         <!-- Tab 1: Capital Rotation — summary only -->
-        <div class="tab-panel tab-band-body" data-panel="tab-rotation" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-rotation" data-panel="tab-rotation" role="tabpanel" aria-labelledby="tab-rotation">
           <div class="rotation-summary-row">
             <div class="rotation-summary-item">
               <span class="rotation-summary-label">风险偏好</span>
@@ -2191,27 +2122,27 @@
           <div class="flow-bar-group">
             <div class="flow-bar-item">
               <span class="flow-bar-label">港股科技</span>
-              <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-78"></div></div>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-62"></div></div>
               <span class="flow-bar-value inflow">+42.3 亿</span>
             </div>
             <div class="flow-bar-item">
               <span class="flow-bar-label">A股成长</span>
-              <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-52"></div></div>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-38"></div></div>
               <span class="flow-bar-value inflow">+18.6 亿</span>
             </div>
             <div class="flow-bar-item">
               <span class="flow-bar-label">黄金</span>
-              <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-35"></div></div>
+              <div class="flow-bar-track"><div class="flow-bar-fill inflow flow-w-28"></div></div>
               <span class="flow-bar-value inflow">+12.1 亿</span>
             </div>
             <div class="flow-bar-item">
               <span class="flow-bar-label">长债</span>
-              <div class="flow-bar-track"><div class="flow-bar-fill outflow flow-w-45"></div></div>
+              <div class="flow-bar-track"><div class="flow-bar-fill outflow flow-w-38"></div></div>
               <span class="flow-bar-value outflow">-15.8 亿</span>
             </div>
             <div class="flow-bar-item">
               <span class="flow-bar-label">美元</span>
-              <div class="flow-bar-track"><div class="flow-bar-fill outflow flow-w-32"></div></div>
+              <div class="flow-bar-track"><div class="flow-bar-fill outflow flow-w-24"></div></div>
               <span class="flow-bar-value outflow">-8.7 亿</span>
             </div>
           </div>
@@ -2219,7 +2150,7 @@
         </div>
 
         <!-- Tab 2: Event Calendar — summary-only, upcoming events -->
-        <div class="tab-panel tab-band-body" data-panel="tab-calendar" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-calendar" data-panel="tab-calendar" role="tabpanel" aria-labelledby="tab-calendar">
           <div class="calendar-summary-list">
             <div class="calendar-summary-event">
               <span class="calendar-summary-time">今晚 20:30</span>
@@ -2246,7 +2177,7 @@
         </div>
 
         <!-- Tab 3: AI Insight — enhanced analysis -->
-        <div class="tab-panel tab-band-body" data-panel="tab-ai" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-ai" data-panel="tab-ai" role="tabpanel" aria-labelledby="tab-ai">
           <div class="insight-headline">
             <strong>美元走弱</strong>是本轮跨市场反弹的核心驱动，港股高弹性领先；黄金与成长同步偏强，指向<strong>美元信用走弱</strong>与实际利率预期下行。
           </div>
@@ -2320,14 +2251,27 @@
   <div class="overlays">
 
     <!-- Overlay 1: Market Depth / Sector Detail (Drawer 右侧滑入) -->
-    <div class="overlay-backdrop" data-overlay="overlay-market-depth">
+    <div class="overlay-backdrop" data-overlay="overlay-market-depth" data-contract-slot="market-depth-overlay">
       <label class="overlay-dismiss" for="overlay-market-depth" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="市场深度">
+      <div class="overlay-drawer" role="dialog" aria-label="市场深度" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">市场深度 · 港股科技</span>
           <label for="overlay-market-depth" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
+          <h4>市场广度</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">涨跌比</span>
+            <span class="overlay-field-value up">382 : 98</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">新高 / 新低</span>
+            <span class="overlay-field-value">12 / 3</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">相对恒指</span>
+            <span class="overlay-field-value up">+0.8% α</span>
+          </div>
           <h4>板块资金流向</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">主力净流入</span>
@@ -2340,6 +2284,19 @@
           <div class="overlay-field">
             <span class="overlay-field-label">南向资金</span>
             <span class="overlay-field-value val-up">+18.6 亿</span>
+          </div>
+          <h4>板块细分</h4>
+          <div class="overlay-field">
+            <span class="overlay-field-label">互联网</span>
+            <span class="overlay-field-value val-up">+2.4%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">半导体</span>
+            <span class="overlay-field-value val-up">+1.8%</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">消费电子</span>
+            <span class="overlay-field-value val-down">-0.3%</span>
           </div>
           <h4>领涨个股</h4>
           <div class="overlay-field">
@@ -2364,7 +2321,7 @@
     <!-- Overlay 2: Index Components (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-index-components">
       <label class="overlay-dismiss" for="overlay-index-components" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="指数成分股">
+      <div class="overlay-sheet" role="dialog" aria-label="指数成分股" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">指数成分股 · 沪深300</span>
           <label for="overlay-index-components" class="overlay-close" aria-label="关闭">✕</label>
@@ -2401,7 +2358,7 @@
     <!-- Overlay 3: Filter Panel (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-filter-panel">
       <label class="overlay-dismiss" for="overlay-filter-panel" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="筛选器">
+      <div class="overlay-drawer" role="dialog" aria-label="筛选器" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">筛选器</span>
           <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
@@ -2442,7 +2399,7 @@
     <!-- Overlay 4: Event Detail (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-event-detail">
       <label class="overlay-dismiss" for="overlay-event-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="事件详情">
+      <div class="overlay-drawer" role="dialog" aria-label="事件详情" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">事件详情</span>
           <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -2477,7 +2434,7 @@
     <!-- Overlay 5: Pin Viewpoint (inline toast — simplified, no full overlay) -->
     <div class="overlay-backdrop" data-overlay="overlay-pin-viewpoint">
       <label class="overlay-dismiss" for="overlay-pin-viewpoint" aria-label="关闭"></label>
-      <div class="overlay-sheet pin-sheet" role="dialog" aria-label="固定视角">
+      <div class="overlay-sheet pin-sheet" role="dialog" aria-label="固定视角" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">固定视角</span>
           <label for="overlay-pin-viewpoint" class="overlay-close" aria-label="关闭">✕</label>
@@ -3052,7 +3009,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">事件详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="事件详情">
+        <div class="overlay-drawer" role="dialog" aria-label="事件详情" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">事件详情</span>
           </div>
@@ -3087,7 +3044,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">固定视角 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet pin-sheet" role="dialog" aria-label="固定视角">
+        <div class="overlay-sheet pin-sheet" role="dialog" aria-label="固定视角" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">固定视角</span>
           </div>
