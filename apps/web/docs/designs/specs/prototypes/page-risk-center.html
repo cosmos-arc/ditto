@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
   State Coverage Index: page-risk-center
-  Edition: v1
-  Generated: 2026-04-02
+  Edition: v2
+  Generated: 2026-04-22
 
   Tabs: 3
   - risk-summary (Risk Summary) [covered]
@@ -20,6 +20,9 @@
   - active-breaches: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - stress-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - incident-timeline: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+
+  data-contract-slots: 5
+  - risk-strip, risk-gauges, risk-dashboard, analysis-band, regime-indicator
 
   Coverage Score: 100%
 -->
@@ -435,7 +438,7 @@
       flex-shrink: 0;
       margin-top: 5px;
     }
-    .breach-dot.ok { background: var(--risk-low-fg); }
+    .breach-dot.ok { background: var(--status-connected-color); }
     .breach-dot.warn { background: var(--risk-near-limit-fg); animation: dot-pulse 3s ease-in-out infinite; }
     .breach-dot.critical { background: var(--risk-breach-fg); animation: dot-pulse 1.5s ease-in-out infinite; }
 
@@ -477,7 +480,7 @@
       height: 100%;
       border-radius: 2px;
     }
-    .breach-progress-fill.ok { background: var(--risk-low-fg); }
+    .breach-progress-fill.ok { background: var(--status-connected-color); }
     .breach-progress-fill.warn { background: var(--risk-near-limit-fg); }
     .breach-progress-fill.critical { background: var(--risk-breach-fg); }
 
@@ -615,7 +618,7 @@
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .incident-time-dot.ok { background: var(--risk-low-fg); }
+    .incident-time-dot.ok { background: var(--status-connected-color); }
     .incident-time-dot.warn { background: var(--risk-near-limit-fg); }
     .incident-time-dot.critical { background: var(--risk-breach-fg); }
 
@@ -732,7 +735,7 @@
     .status-indicator {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--risk-low-fg);
+      background: var(--status-connected-color);
       margin-right: var(--space-6);
       flex-shrink: 0;
       animation: dot-pulse 3s ease-in-out infinite;
@@ -1109,7 +1112,7 @@
       transition: height 0.5s var(--motion-easing-emphasis);
       position: relative;
     }
-    .stress-bar.pass { background: color-mix(in oklch, var(--market-down-fg) 35%, transparent); }
+    .stress-bar.pass { background: color-mix(in oklch, var(--risk-low-fg) 35%, transparent); }
     .stress-bar.fail { background: color-mix(in oklch, var(--risk-critical-fg) 50%, transparent); }
     .stress-bar-limit {
       position: absolute;
@@ -1165,7 +1168,7 @@
       right: 0;
       height: 2px;
     }
-    .risk-level-card.healthy::before { background: var(--risk-low-fg); }
+    .risk-level-card.healthy::before { background: var(--status-connected-color); }
     .risk-level-card.warning::before { background: var(--risk-near-limit-fg); }
     .risk-level-card.critical::before { background: var(--risk-breach-fg); }
     .risk-level-value {
@@ -1541,9 +1544,6 @@
         <div class="rail-icon" title="Trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
         <div class="rail-icon" title="Platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
@@ -1561,6 +1561,8 @@
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
       <span class="header-title">风控中心</span>
+
+      <span class="market-card-regime on" data-contract-slot="regime-indicator" data-tooltip="当前市场体制：温和风险偏好">Risk-On</span>
 
       <div class="header-spacer"></div>
 
@@ -1621,14 +1623,14 @@
         <input type="radio" name="risk" id="risk-incidents" class="tab-radio sr-only">
 
         <!-- Tab labels -->
-        <label for="risk-summary" class="risk-tab" role="tab">Risk Summary</label>
-        <label for="risk-stress" class="risk-tab" role="tab">Stress Test</label>
-        <label for="risk-incidents" class="risk-tab" role="tab">Incidents</label>
+        <label for="risk-summary" class="risk-tab" role="tab" aria-controls="panel-risk-summary" aria-selected="true">风险概览</label>
+        <label for="risk-stress" class="risk-tab" role="tab" aria-controls="panel-risk-stress" aria-selected="false">压力测试</label>
+        <label for="risk-incidents" class="risk-tab" role="tab" aria-controls="panel-risk-incidents" aria-selected="false">事件记录</label>
       </div>
     </div>
 
     <!-- ═══ Risk Strip — Key Metrics ═══ -->
-    <div class="scope-strip">
+    <div class="scope-strip" data-contract-slot="risk-strip">
       <div class="risk-strip-metric">
         <span class="risk-strip-label">VaR(95%)</span>
         <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400"><span data-ticker="1.23" data-decimals="2" data-ticker-suffix="%">1.23%</span></span>
@@ -1655,12 +1657,12 @@
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
-        <span class="risk-strip-label">接近限制</span>
+        <span class="risk-strip-label">接近阈值</span>
         <span class="risk-strip-value warn" data-tooltip="回撤 69% + 集中度 80.2% 接近阈值" data-tooltip-delay="400">2</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
-        <span class="risk-strip-label">风控触及</span>
+        <span class="risk-strip-label">突破数</span>
         <span class="risk-strip-value ok" data-tooltip="当前无指标突破风控线" data-tooltip-delay="400"><span data-ticker="0" data-decimals="0">0</span></span>
       </div>
       <div class="risk-strip-separator"></div>
@@ -1671,23 +1673,23 @@
     </div>
 
     <!-- ═══ Risk Gauges — DonutGauge ═══ -->
-    <div class="flex-row-center gap-16 border-b-subtle risk-strip-band" data-mouse-glow="true" data-mouse-glow-size="180px">
+    <div class="flex-row-center gap-16 border-b-subtle risk-strip-band" data-contract-slot="risk-gauges" data-mouse-glow="true" data-mouse-glow-size="180px">
       <div class="flex-row-center gap-10" data-tooltip="VaR 额度使用率，当前 68% 安全" data-tooltip-delay="500">
-        <svg data-donut='{"value":0.68,"label":"68%","color":"oklch(0.746 0.165 50)","size":72}' aria-label="风险利用率"></svg>
+        <svg data-donut='{"value":0.68,"label":"68%","size":72}' aria-label="风险利用率"></svg>
         <div class="flex-col gap-1">
           <span class="text-size-12 text-weight-medium text-primary">风险利用率</span>
           <span class="text-size-10 text-tertiary">VaR 额度已用 68%</span>
         </div>
       </div>
       <div class="flex-row-center gap-10" data-tooltip="VaR 占总阈值 49.2%，安全范围" data-tooltip-delay="500">
-        <svg data-donut='{"value":0.49,"label":"49%","color":"oklch(0.55 0.15 155)","size":72}' aria-label="VaR占比"></svg>
+        <svg data-donut='{"value":0.49,"label":"49%","size":72}' aria-label="VaR占比"></svg>
         <div class="flex-col gap-1">
           <span class="text-size-12 text-weight-medium text-primary">VaR 占比</span>
           <span class="text-size-10 text-tertiary">占阈值 2.50% 的 49.2%</span>
         </div>
       </div>
-      <div class="flex-row-center gap-10" data-tooltip="科技行业集中度 80.2%，接近限制" data-tooltip-delay="500">
-        <svg data-donut='{"value":0.80,"label":"80%","color":"oklch(0.6317 0.1567 22.64)","size":72}' aria-label="集中度"></svg>
+      <div class="flex-row-center gap-10" data-tooltip="科技行业集中度 80.2%，接近阈值" data-tooltip-delay="500">
+        <svg data-donut='{"value":0.80,"label":"80%","size":72}' aria-label="集中度"></svg>
         <div class="flex-col gap-1">
           <span class="text-size-12 text-weight-medium text-primary">行业集中度</span>
           <span class="text-size-10 text-tertiary">科技行业 32.1% / 40%</span>
@@ -1699,14 +1701,14 @@
     <div class="tab-panels">
 
       <!-- ─── Tab Panel: Risk Summary (default) ─── -->
-      <div class="tab-panel" data-panel="risk-summary">
+      <div class="tab-panel" id="panel-risk-summary" data-panel="risk-summary" role="tabpanel" aria-labelledby="risk-summary">
 
     <!-- ═══ Main Content ═══ -->
     <div class="main-content">
       <div class="risk-main-layout">
 
         <!-- ─── Left: Main Risk Charts (~65%) ─── -->
-        <div class="risk-charts">
+        <div class="risk-charts" data-contract-slot="risk-dashboard">
 
           <!-- Chart 1: VaR 趋势图 -->
           <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="200px">
@@ -1785,14 +1787,14 @@
             <div data-tabs="risk-activity-tabs" class="flex-col col-auto risk-activity-tabs-col">
               <div class="flex-row-center gap-2 border-b-subtle py-4 mb-4">
                 <button data-tab-target="breaches" class="filter-btn active" aria-selected="true">Breaches</button>
-                <button data-tab-target="stress-test" class="filter-btn" aria-selected="false">Stress Test</button>
+                <button data-tab-target="stress-test" class="filter-btn" aria-selected="false">压力测试</button>
               </div>
 
               <!-- Tab Panel: Breaches -->
               <div data-tab-panel="breaches">
                 <div class="context-section">
                   <div class="context-section-header">
-                    <span class="context-section-title">Active Breaches</span>
+                    <span class="context-section-title">活跃突破</span>
                     <span class="context-section-count" data-tooltip="当前无指标突破风控线" data-tooltip-delay="500">0 突破</span>
                   </div>
                   <div class="context-section-body">
@@ -1868,7 +1870,7 @@
               <div data-tab-panel="stress-test">
                 <div class="context-section">
                   <div class="context-section-header">
-                    <span class="context-section-title">Stress Test</span>
+                    <span class="context-section-title">压力测试</span>
                     <span class="context-section-action">运行测试</span>
                   </div>
                   <div class="context-section-body">
@@ -1924,15 +1926,15 @@
     </div>
 
     <!-- ═══ Analysis Band: Risk Heatmap + Incident Timeline ═══ -->
-    <div class="analysis-band" data-reveal="fade-up" data-reveal-delay="300">
+    <div class="analysis-band" data-contract-slot="analysis-band" data-reveal="fade-up" data-reveal-delay="300">
       <div class="analysis-band-header">
-        <span class="analysis-band-title">Risk Overview</span>
+        <span class="analysis-band-title">风险总览</span>
         <span class="analysis-band-subtitle">资产风险热力矩阵 · 最近事件</span>
         <div class="flex-1"></div>
-        <span class="analysis-band-tab active">全部</span>
-        <span class="analysis-band-tab">警告</span>
-        <span class="analysis-band-tab">突破</span>
-        <span class="analysis-band-tab">已处理</span>
+        <button class="analysis-band-tab active" role="tab" aria-selected="true">全部</button>
+        <button class="analysis-band-tab" role="tab" aria-selected="false">警告</button>
+        <button class="analysis-band-tab" role="tab" aria-selected="false">突破</button>
+        <button class="analysis-band-tab" role="tab" aria-selected="false">已处理</button>
         <span class="panel-action margin-left-8">查看全部 →</span>
       </div>
       <div class="analysis-band-body">
@@ -1944,7 +1946,7 @@
               <span class="text-size-12 text-weight-medium text-primary">资产风险热力图</span>
               <span class="text-size-10 text-tertiary">近 20 日 VaR 贡献</span>
             </div>
-            <svg data-heatgrid='{"rows":4,"cols":6,"palette":["oklch(0.55 0.15 155)","oklch(0.746 0.165 50)","oklch(0.746 0.165 50)","oklch(0.6317 0.1567 22.64)"],"rowLabels":["股票","债券","商品","加密"],"colLabels":["W1","W2","W3","W4","W5","W6"],"data":[[0.3,0.5,0.7,0.4,0.6,0.8],[0.1,0.2,0.15,0.3,0.25,0.2],[0.2,0.4,0.6,0.9,0.5,0.3],[0.4,0.6,0.8,0.95,0.7,0.5]]}' aria-label="资产风险热力图"></svg>
+            <svg data-heatgrid='{"rows":4,"cols":6,"rowLabels":["股票","债券","商品","加密"],"colLabels":["第1周","第2周","第3周","第4周","第5周","第6周"],"data":[[0.3,0.5,0.7,0.4,0.6,0.8],[0.1,0.2,0.15,0.3,0.25,0.2],[0.2,0.4,0.6,0.9,0.5,0.3],[0.4,0.6,0.8,0.95,0.7,0.5]]}' aria-label="资产风险热力图"></svg>
           </div>
 
           <!-- Right: Incident Timeline -->
@@ -1984,7 +1986,7 @@
             </div>
             <div class="incident-body">
               <div class="incident-title">科技行业集中度预警</div>
-              <div class="incident-detail">科技行业持仓占比达 32.1%，接近限制值 40%。建议分散配置。</div>
+              <div class="incident-detail">科技行业持仓占比达 32.1%，接近阈值值 40%。建议分散配置。</div>
             </div>
             <span class="incident-status monitoring">监控中</span>
           </div>
@@ -2023,7 +2025,7 @@
       </div><!-- /tab-panel: risk-summary -->
 
       <!-- ─── Tab Panel: Stress Test ─── -->
-      <div class="tab-panel" data-panel="risk-stress">
+      <div class="tab-panel" id="panel-risk-stress" data-panel="risk-stress" role="tabpanel" aria-labelledby="risk-stress">
 
         <!-- Stress Test Scenario Selector -->
         <div class="tab-section-header">
@@ -2158,11 +2160,11 @@
       </div><!-- /tab-panel: risk-stress -->
 
       <!-- ─── Tab Panel: Incidents ─── -->
-      <div class="tab-panel" data-panel="risk-incidents">
+      <div class="tab-panel" id="panel-risk-incidents" data-panel="risk-incidents" role="tabpanel" aria-labelledby="risk-incidents">
 
         <!-- Incident Timeline Header -->
         <div class="tab-section-header">
-          <span class="section-title">Incident Timeline</span>
+          <span class="section-title">事件时间线</span>
           <span class="section-subtitle">风控事件全记录</span>
           <div class="flex-1"></div>
           <div class="filter-group" role="group" aria-label="事件筛选">
@@ -2214,7 +2216,7 @@
               </div>
               <div class="incident-body">
                 <div class="incident-title">科技行业集中度预警</div>
-                <div class="incident-detail">科技行业持仓占比达 32.1%，接近限制值 40%。建议分散配置。</div>
+                <div class="incident-detail">科技行业持仓占比达 32.1%，接近阈值值 40%。建议分散配置。</div>
               </div>
               <span class="incident-status monitoring" data-tooltip="集中度持续偏高，待调仓生效" data-tooltip-delay="500">监控中</span>
             </div>
@@ -2289,9 +2291,9 @@
   <!-- Status Bar -->
   <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator"></span>
-    <span>RISK LIVE</span>
+    <span>风控实时</span>
     <span class="status-sep">|</span>
-    <span>最后刷新: 2s ago</span>
+    <span>最后刷新: 2 秒前</span>
     <span class="status-sep">|</span>
     <span>组合: <span class="status-val">主策略组合</span></span>
     <span class="status-sep">|</span>
@@ -2310,7 +2312,7 @@
     <!-- Overlay A: Stress Test Config (Sheet 居中) -->
     <div class="overlay-backdrop" data-overlay="overlay-stress-config">
       <label class="overlay-dismiss" for="overlay-stress-config" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="压力测试配置">
+      <div class="overlay-sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">压力测试配置</span>
           <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
@@ -2357,7 +2359,7 @@
     <!-- Overlay B: Breach Detail (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-breach-detail">
       <label class="overlay-dismiss" for="overlay-breach-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="违规详情">
+      <div class="overlay-drawer" role="dialog" aria-label="违规详情" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">违规详情</span>
           <label for="overlay-breach-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -2406,7 +2408,7 @@
     <!-- Overlay C: Rule Editor (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-rule-editor">
       <label class="overlay-dismiss" for="overlay-rule-editor" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="规则编辑">
+      <div class="overlay-sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">调整风控规则</span>
           <label for="overlay-rule-editor" class="overlay-close" aria-label="关闭">✕</label>
@@ -2581,7 +2583,7 @@
         <div class="state-empty">
           <div class="state-empty-icon text-risk-ok">✓</div>
           <div class="state-empty-title">当前无违规项</div>
-          <div class="state-empty-desc">所有指标在安全范围内，无风控触及或接近限制</div>
+          <div class="state-empty-desc">所有指标在安全范围内，无突破数或接近阈值</div>
         </div>
       </div>
       </div>
@@ -2762,7 +2764,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">压力测试配置 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="压力测试配置">
+        <div class="overlay-sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">压力测试配置</span>
           </div>
@@ -2809,7 +2811,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">违规详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="违规详情">
+        <div class="overlay-drawer" role="dialog" aria-label="违规详情" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">违规详情</span>
           </div>
@@ -2858,7 +2860,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">调整风控规则 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="规则编辑">
+        <div class="overlay-sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">调整风控规则</span>
           </div>
