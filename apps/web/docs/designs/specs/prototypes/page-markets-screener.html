@@ -1230,9 +1230,9 @@
     .shm-legend { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--font-size-11); color: var(--text-tertiary); }
     .shm-legend-row { display: flex; align-items: center; gap: var(--space-4); }
     .shm-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-    .shm-swatch--down { background: oklch(0.6317 0.1567 22.64 / 0.25); }
+    .shm-swatch--down { background: color-mix(in oklch, var(--market-down-fg) 25%, transparent); }
     .shm-swatch--flat { background: oklch(1 0 0 / 0.00); border: 1px solid var(--border-subtle); }
-    .shm-swatch--up { background: oklch(0.55 0.15 155 / 0.25); }
+    .shm-swatch--up { background: color-mix(in oklch, var(--market-up-fg) 25%, transparent); }
 
     /* ── View Tabs Bar ── */
     .view-tabs-bar { display: flex; gap: var(--space-2); padding: var(--space-6) var(--space-12) 0; border-bottom: 1px solid var(--border-subtle); }
@@ -2010,7 +2010,7 @@
     </header>
 
     <!-- ═══ Filter Toolbar ═══ -->
-    <div class="filter-toolbar" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true">
+    <div class="filter-toolbar" data-contract-slot="filter-panel" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true">
       <div class="filter-group">
         <span class="filter-label">股票池:</span>
         <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹">沪深300</button>
@@ -2627,7 +2627,7 @@
     <!-- Overlay A: 保存预设 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-save-preset">
       <label class="overlay-dismiss" for="overlay-save-preset" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="保存预设">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存预设">
         <div class="overlay-header">
           <span class="overlay-title">保存筛选预设</span>
           <label for="overlay-save-preset" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2677,7 +2677,7 @@
     <!-- Overlay B: 列管理 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-column-manage">
       <label class="overlay-dismiss" for="overlay-column-manage" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="列管理">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="列管理">
         <div class="overlay-header">
           <span class="overlay-title">列管理</span>
           <label for="overlay-column-manage" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2730,7 +2730,7 @@
     <!-- Overlay C: Compare Drawer (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-compare">
       <label class="overlay-dismiss" for="overlay-compare" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="标的对比">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="标的对比">
         <div class="overlay-header">
           <span class="overlay-title">标的对比</span>
           <label for="overlay-compare" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2793,7 +2793,7 @@
     <!-- Overlay D: 生成标的池确认 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-generate-pool">
       <label class="overlay-dismiss" for="overlay-generate-pool" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="生成标的池确认">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="生成标的池确认">
         <div class="overlay-header">
           <span class="overlay-title">生成标的池</span>
           <label for="overlay-generate-pool" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2826,7 +2826,7 @@
     <!-- Overlay E: 导出结果 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-export">
       <label class="overlay-dismiss" for="overlay-export" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="导出筛选结果">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="导出筛选结果">
         <div class="overlay-header">
           <span class="overlay-title">导出筛选结果</span>
           <label for="overlay-export" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3236,7 +3236,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">保存筛选预设 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="保存预设">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存预设">
           <div class="overlay-header">
             <span class="overlay-title">保存筛选预设</span>
           </div>
@@ -3286,7 +3286,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">列管理 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="列管理">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="列管理">
           <div class="overlay-header">
             <span class="overlay-title">列管理</span>
           </div>
@@ -3339,7 +3339,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">标的对比 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="标的对比">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="标的对比">
           <div class="overlay-header">
             <span class="overlay-title">标的对比</span>
           </div>
@@ -3402,7 +3402,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">生成标的池 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="生成标的池确认">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="生成标的池确认">
           <div class="overlay-header">
             <span class="overlay-title">生成标的池</span>
           </div>
@@ -3435,7 +3435,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">导出筛选结果 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="导出筛选结果">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="导出筛选结果">
           <div class="overlay-header">
             <span class="overlay-title">导出筛选结果</span>
           </div>

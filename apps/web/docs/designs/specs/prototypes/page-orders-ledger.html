@@ -1875,9 +1875,6 @@
         <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
@@ -1892,7 +1889,7 @@
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
       <span class="header-title">Execution<span class="header-subtitle">执行账本</span></span>
-      <div class="header-filters" role="toolbar" aria-label="订单筛选">
+      <div class="header-filters" data-contract-slot="filter-bar" role="toolbar" aria-label="订单筛选">
         <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话">
           <span>会话</span>
           <span class="filter-value">主策略会话</span>
@@ -2063,7 +2060,7 @@
       <div class="tab-panel" data-panel="orders-done">
 
     <!-- ═══ Orders Ledger Table ═══ -->
-    <div class="ledger-table-area" id="main-content" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
+    <div class="ledger-table-area" id="main-content" data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
       <!-- JS Tab Panel: 全部 (default visible) -->
       <div data-tab-panel="all">
       <table class="ledger-table" aria-label="订单账本">
@@ -2461,7 +2458,7 @@
     
 
     <!-- ═══ Order Trace Panel (340px) ═══ -->
-    <aside class="order-trace" id="order-trace" data-reveal="fade-right" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
+    <aside class="order-trace" id="order-trace" data-contract-slot="execution-trace" data-reveal="fade-right" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
       <!-- Trace Header -->
       <div class="trace-header">
         <div class="trace-title">
@@ -2904,7 +2901,7 @@
     <!-- Overlay A: 撤单确认 Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-cancel-confirm">
       <label class="overlay-dismiss" for="overlay-cancel-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="撤单确认">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
         <div class="overlay-header">
           <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           <label for="overlay-cancel-confirm" class="overlay-close" aria-label="关闭">✕</label>
@@ -2941,7 +2938,7 @@
     <!-- Overlay B: 重试提交 Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-retry-submit">
       <label class="overlay-dismiss" for="overlay-retry-submit" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="重试提交">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="重试提交">
         <div class="overlay-header">
           <span class="overlay-title">重试提交</span>
           <label for="overlay-retry-submit" class="overlay-close" aria-label="关闭">✕</label>
@@ -2991,7 +2988,7 @@
     <!-- Overlay C: 订单详情 Drawer (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-detail">
       <label class="overlay-dismiss" for="overlay-order-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="订单详情">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="订单详情">
         <div class="overlay-header">
           <span class="overlay-title">订单详情</span>
           <label for="overlay-order-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -3082,7 +3079,7 @@
     <!-- Overlay D: 批量撤单确认 Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-cancel">
       <label class="overlay-dismiss" for="overlay-batch-cancel" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="批量撤单确认">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
         <div class="overlay-header">
           <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
           <label for="overlay-batch-cancel" class="overlay-close" aria-label="关闭">✕</label>
@@ -3494,7 +3491,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">撤单确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="撤单确认">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
           <div class="overlay-header">
             <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           </div>
@@ -3531,7 +3528,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">重试提交 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="重试提交">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="重试提交">
           <div class="overlay-header">
             <span class="overlay-title">重试提交</span>
           </div>
@@ -3581,7 +3578,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">订单详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="订单详情">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="订单详情">
           <div class="overlay-header">
             <span class="overlay-title">订单详情</span>
           </div>
@@ -3672,7 +3669,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">批量撤单确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="批量撤单确认">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
           <div class="overlay-header">
             <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
           </div>

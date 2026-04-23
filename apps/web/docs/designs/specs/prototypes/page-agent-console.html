@@ -1726,9 +1726,6 @@
         <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="AI" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
@@ -1793,7 +1790,7 @@
       <div class="tab-panels">
 
         <!-- ═══ Panel: Plans (default) ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content">
+        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main">
 
           <!-- Status Filter Tabs -->
           <div data-tabs="agent-status-filter" class="flex-row-center gap-4 mb-6">
@@ -2696,7 +2693,7 @@
     <!-- Overlay A: 审批确认 Confirm Dialog (Sheet, centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-approval-confirm">
       <label class="overlay-dismiss" for="overlay-approval-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="审批确认">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审批确认">
         <div class="overlay-header">
           <span class="overlay-title">审批确认</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-approval-confirm').checked=false" aria-label="关闭">&#10005;</button>
@@ -2737,7 +2734,7 @@
     <!-- Overlay B: Plan 创建 Sheet (centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-plan-create">
       <label class="overlay-dismiss" for="overlay-plan-create" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="新建 Plan">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建 Plan">
         <div class="overlay-header">
           <span class="overlay-title">新建计划</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-plan-create').checked=false" aria-label="关闭">&#10005;</button>
@@ -2802,7 +2799,7 @@
     <!-- Overlay C: Run 重跑确认 Modal (centered confirm) -->
     <div class="overlay-backdrop" data-overlay="overlay-run-rerun">
       <label class="overlay-dismiss" for="overlay-run-rerun" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="确认重跑">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="确认重跑">
         <div class="overlay-header">
           <span class="overlay-title">确认重跑</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-run-rerun').checked=false" aria-label="关闭">&#10005;</button>
@@ -2841,7 +2838,7 @@
     <!-- Overlay D: Tool Trace Drawer (right-aligned) -->
     <div class="overlay-backdrop" data-overlay="overlay-tool-trace">
       <label class="overlay-dismiss" for="overlay-tool-trace" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="Tool Trace 详情">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="Tool Trace 详情">
         <div class="overlay-header">
           <span class="overlay-title">Tool 调用详情</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-tool-trace').checked=false" aria-label="关闭">&#10005;</button>
@@ -3226,7 +3223,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">审批确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="审批确认">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审批确认">
           <div class="overlay-header">
             <span class="overlay-title">审批确认</span>
           </div>
@@ -3267,7 +3264,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">新建 Plan (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="新建 Plan">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建 Plan">
           <div class="overlay-header">
             <span class="overlay-title">新建计划</span>
           </div>
@@ -3332,7 +3329,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">确认重跑 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="确认重跑">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="确认重跑">
           <div class="overlay-header">
             <span class="overlay-title">确认重跑</span>
           </div>
@@ -3371,7 +3368,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">Tool 调用详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="Tool Trace 详情">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="Tool Trace 详情">
           <div class="overlay-header">
             <span class="overlay-title">Tool 调用详情</span>
           </div>

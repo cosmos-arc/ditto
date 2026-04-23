@@ -450,10 +450,10 @@
     .cal-dot--ipo { background: var(--brand-accent); }
     .cal-dot--lockup { background: var(--market-down-fg); }
     .cal-dot--option { background: var(--system-degraded-fg); }
-    .cal-dot--future { background: oklch(0.7 0.15 260); }
+    .cal-dot--future { background: color-mix(in oklch, var(--brand-accent) 60%, var(--system-degraded-fg)); }
     .cal-dot--economic { background: var(--system-healthy-fg); }
-    .cal-dot--dividend { background: oklch(0.75 0.12 85); }
-    .cal-dot--earnings { background: oklch(0.65 0.18 30); }
+    .cal-dot--dividend { background: color-mix(in oklch, var(--system-healthy-fg) 70%, var(--brand-accent)); }
+    .cal-dot--earnings { background: color-mix(in oklch, var(--market-down-fg) 50%, var(--system-healthy-fg)); }
 
     /* ══════════════════════════════════════════════
      * Event List (v1.1)
@@ -540,20 +540,20 @@
       color: var(--system-degraded-fg);
     }
     .event-type-badge--future {
-      background: color-mix(in oklch, oklch(0.7 0.15 260) 12%, transparent);
-      color: oklch(0.7 0.15 260);
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      color: color-mix(in oklch, var(--brand-accent) 60%, var(--system-degraded-fg));
     }
     .event-type-badge--economic {
       background: color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
       color: var(--system-healthy-fg);
     }
     .event-type-badge--dividend {
-      background: color-mix(in oklch, oklch(0.75 0.12 85) 12%, transparent);
-      color: oklch(0.75 0.12 85);
+      background: color-mix(in oklch, var(--system-healthy-fg) 10%, transparent);
+      color: color-mix(in oklch, var(--system-healthy-fg) 70%, var(--brand-accent));
     }
     .event-type-badge--earnings {
-      background: color-mix(in oklch, oklch(0.65 0.18 30) 12%, transparent);
-      color: oklch(0.65 0.18 30);
+      background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
+      color: color-mix(in oklch, var(--market-down-fg) 50%, var(--system-healthy-fg));
     }
 
     .event-info {
@@ -1077,7 +1077,7 @@
     </header>
 
     <!-- ═══ Filter Bar ═══ -->
-    <div class="filter-toolbar" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true">
+    <div class="filter-toolbar" data-contract-slot="filter-bar" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true">
       <div class="filter-group">
         <span class="filter-label">事件类型:</span>
         <button class="filter-chip active" data-tooltip="新股申购">新股申购</button>
@@ -1451,7 +1451,7 @@
     <!-- Overlay A: 事件详情 (Drawer 右侧滑出) -->
     <div class="overlay-backdrop" data-overlay="overlay-event-detail">
       <label class="overlay-dismiss" for="overlay-event-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="事件详情">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="事件详情">
         <div class="overlay-header">
           <span class="overlay-title">事件详情</span>
           <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -1505,7 +1505,7 @@
     <!-- Overlay B: 日历提醒设置 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-reminder">
       <label class="overlay-dismiss" for="overlay-reminder" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="日历提醒设置">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
         <div class="overlay-header">
           <span class="overlay-title">日历提醒设置</span>
           <label for="overlay-reminder" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -1561,7 +1561,7 @@
     <!-- Overlay C: 跳转 Intelligence (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-intelligence">
       <label class="overlay-dismiss" for="overlay-intelligence" aria-label="关闭"></label>
-      <div class="overlay-modal" role="dialog" aria-label="跳转 Intelligence">
+      <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="跳转 Intelligence">
         <div class="overlay-header">
           <span class="overlay-title">AI 分析</span>
           <label for="overlay-intelligence" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -1813,7 +1813,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">事件详情 (Drawer)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-drawer" role="dialog" aria-label="事件详情">
+              <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="事件详情">
                 <div class="overlay-header">
                   <span class="overlay-title">事件详情</span>
                 </div>
@@ -1857,7 +1857,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">日历提醒设置 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-label="日历提醒设置">
+              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
                 <div class="overlay-header">
                   <span class="overlay-title">日历提醒设置</span>
                 </div>
@@ -1908,7 +1908,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">跳转 Intelligence (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-label="跳转 Intelligence">
+              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="跳转 Intelligence">
                 <div class="overlay-header">
                   <span class="overlay-title">AI 分析</span>
                 </div>

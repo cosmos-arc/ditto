@@ -509,7 +509,7 @@
     .metric-card:hover {
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
-      box-shadow: 0 1px 4px oklch(0 0 0 / 0.08);
+      box-shadow: 0 1px 4px color-mix(in oklch, var(--text-primary) 8%, transparent);
     }
     .metric-card:hover::before { opacity: 0.6; }
 
@@ -1067,8 +1067,6 @@
         <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
@@ -1198,7 +1196,7 @@
         <label for="strat-versions" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-versions">版本</label>
       </div>
 
-      <div class="tab-panels" id="main-content">
+      <div class="tab-panels" id="main-content" data-contract-slot="main">
 
         <!-- ══════════════════════════════════════════════
              Tab 1: Overview
@@ -1981,8 +1979,6 @@
       </div>
     </div>
 
-  </div><!-- /shell-hub -->
-
   </section>
 
   <!-- ══════════════════════════════════════════════
@@ -2211,7 +2207,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">删除策略 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-label="删除策略">
+              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="删除策略">
                 <div class="overlay-header">
                   <span class="overlay-title sd-color-down">⚠ 确认删除</span>
                 </div>
@@ -2236,7 +2232,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">提交回测 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-label="提交回测">
+              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="提交回测">
                 <div class="overlay-header">
                   <span class="overlay-title">回测参数配置</span>
                 </div>
@@ -2278,7 +2274,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">复制策略 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-label="复制策略">
+              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="复制策略">
                 <div class="overlay-header">
                   <span class="overlay-title">复制策略</span>
                 </div>
@@ -2300,7 +2296,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">版本回滚 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-label="版本回滚">
+              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="版本回滚">
                 <div class="overlay-header">
                   <span class="overlay-title sd-color-degraded">⚠ 版本回滚</span>
                 </div>

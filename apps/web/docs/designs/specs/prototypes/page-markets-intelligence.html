@@ -1811,7 +1811,7 @@
       <div class="intel-workspace">
 
         <!-- ===== Main Content ===== -->
-        <main id="main-content" class="intel-main">
+        <main id="main-content" class="intel-main" data-contract-slot="main">
           <div class="tab-group">
 
             <!-- ═══ Tab 1: 资金面 (Capital Flow) ═══ -->
@@ -2823,6 +2823,8 @@
         </div>
       </details>
 
+      </div><!-- /intel-workspace -->
+
     </div><!-- .shell-body -->
   </div><!-- .shell-intel -->
 
@@ -2839,7 +2841,7 @@
     <!-- Overlay A: 情报详情 (Drawer — right slide) -->
     <div class="overlay-backdrop" data-overlay="overlay-intelligence-detail">
       <label class="overlay-dismiss" for="overlay-intelligence-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="情报详情">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="情报详情">
         <div class="overlay-header">
           <span class="overlay-title">情报详情</span>
           <label for="overlay-intelligence-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2884,7 +2886,7 @@
     <!-- Overlay B: 自定义筛选 (Sheet — centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-custom-filter">
       <label class="overlay-dismiss" for="overlay-custom-filter" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="自定义筛选">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="自定义筛选">
         <div class="overlay-header">
           <span class="overlay-title">自定义筛选</span>
           <label for="overlay-custom-filter" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2959,7 +2961,7 @@
     <!-- Overlay D: 删除标注确认 (Sheet — centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-delete-confirm">
       <label class="overlay-dismiss" for="overlay-delete-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="删除标注确认">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
         <div class="overlay-header">
           <span class="overlay-title">删除标注</span>
           <label for="overlay-delete-confirm" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2993,7 +2995,7 @@
     <!-- Overlay E: 发送到 Copilot (Drawer — right slide) -->
     <div class="overlay-backdrop" data-overlay="overlay-send-to-copilot">
       <label class="overlay-dismiss" for="overlay-send-to-copilot" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="发送到 Copilot">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="发送到 Copilot">
         <div class="overlay-header">
           <span class="overlay-title">发送到 Copilot</span>
           <label for="overlay-send-to-copilot" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3388,7 +3390,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">情报详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="情报详情">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="情报详情">
           <div class="overlay-header">
             <span class="overlay-title">情报详情</span>
           </div>
@@ -3430,7 +3432,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">自定义筛选 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="自定义筛选">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="自定义筛选">
           <div class="overlay-header">
             <span class="overlay-title">自定义筛选</span>
           </div>
@@ -3494,7 +3496,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">删除标注确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="删除标注确认">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
           <div class="overlay-header">
             <span class="overlay-title">删除标注</span>
           </div>
@@ -3526,7 +3528,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">发送到 Copilot (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="发送到 Copilot">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="发送到 Copilot">
           <div class="overlay-header">
             <span class="overlay-title">发送到 Copilot</span>
           </div>

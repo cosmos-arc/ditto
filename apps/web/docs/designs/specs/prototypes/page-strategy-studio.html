@@ -1202,7 +1202,7 @@
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
-      box-shadow: 0 8px 32px oklch(0 0 0 / 0.40);
+      box-shadow: 0 8px 32px color-mix(in oklch, var(--text-primary) 40%, transparent);
       padding: var(--space-12) var(--space-16);
       width: 360px;
       position: absolute;
@@ -2010,8 +2010,6 @@
         <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
@@ -2025,7 +2023,7 @@
     </nav>
 
     <!-- ═══ Studio Header ═══ -->
-    <header class="studio-header">
+    <header class="studio-header" data-contract-slot="header">
       <span class="header-title">Strategy Studio</span>
       <div class="strategy-name">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon">
@@ -2223,7 +2221,7 @@
     </aside>
 
     <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
-    <main class="studio-main tab-panels" id="main-content" role="main" aria-label="策略编辑器">
+    <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" role="main" aria-label="策略编辑器">
 
       <!-- Tab Panel: Form Builder -->
       <div class="tab-panel" data-panel="studio-mode-form">
@@ -2887,7 +2885,7 @@
     <!-- Overlay 1: 策略保存 — Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-save-strategy">
       <label class="overlay-dismiss" for="overlay-save-strategy" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="保存策略">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存策略">
         <div class="overlay-header">
           <span class="overlay-title">保存策略</span>
           <label for="overlay-save-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2929,7 +2927,7 @@
     <!-- Overlay 2: 回测参数配置 — Sheet (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-backtest-config">
       <label class="overlay-dismiss" for="overlay-backtest-config" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="回测参数配置">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
         <div class="overlay-header">
           <span class="overlay-title">回测参数配置</span>
           <label for="overlay-backtest-config" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2986,7 +2984,7 @@
     <!-- Overlay 3: 因子预处理预览 — Drawer (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-factor-preview">
       <label class="overlay-dismiss" for="overlay-factor-preview" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="因子预处理预览">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
         <div class="overlay-header">
           <span class="overlay-title">因子预处理预览</span>
           <label for="overlay-factor-preview" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3465,7 +3463,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">保存策略 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="保存策略">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存策略">
           <div class="overlay-header">
             <span class="overlay-title">保存策略</span>
           </div>
@@ -3504,7 +3502,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">回测参数配置 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="回测参数配置">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
           <div class="overlay-header">
             <span class="overlay-title">回测参数配置</span>
           </div>
@@ -3559,7 +3557,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">因子预处理预览 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="因子预处理预览">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
           <div class="overlay-header">
             <span class="overlay-title">因子预处理预览</span>
           </div>

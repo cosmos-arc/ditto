@@ -523,9 +523,9 @@
             <input type="radio" name="portfolio-tab" id="tab-positions" checked class="tab-radio sr-only">
             <input type="radio" name="portfolio-tab" id="tab-trades" class="tab-radio sr-only">
             <input type="radio" name="portfolio-tab" id="tab-attribution" class="tab-radio sr-only">
-            <label for="tab-positions" class="portfolio-tab active" role="tab">持仓</label>
-            <label for="tab-trades" class="portfolio-tab" role="tab">交易</label>
-            <label for="tab-attribution" class="portfolio-tab" role="tab">归因</label>
+            <label for="tab-positions" class="portfolio-tab active" role="tab" aria-selected="true" aria-controls="panel-positions">持仓</label>
+            <label for="tab-trades" class="portfolio-tab" role="tab" aria-selected="false" aria-controls="panel-trades">交易</label>
+            <label for="tab-attribution" class="portfolio-tab" role="tab" aria-selected="false" aria-controls="panel-attribution">归因</label>
             <div class="tab-strip-spacer"></div>
             <label for="overlay-confirm-close-all" class="btn btn-ghost ov-label-btn ml-auto">全部平仓</label>
           </div>
@@ -534,7 +534,7 @@
           <div class="tab-group">
 
             <!-- ═══ Tab: 持仓 ═══ -->
-            <div class="tab-panel" data-panel="tab-positions">
+            <div class="tab-panel" id="panel-positions" data-panel="tab-positions" role="tabpanel" aria-labelledby="tablist-portfolio">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -661,7 +661,7 @@
             </div>
 
             <!-- ═══ Tab: 交易 ═══ -->
-            <div class="tab-panel" data-panel="tab-trades">
+            <div class="tab-panel" id="panel-trades" data-panel="tab-trades" role="tabpanel" aria-labelledby="tablist-portfolio">
               <div class="filter-bar">
                 <input type="text" placeholder="搜索标的…">
                 <select>
@@ -768,7 +768,7 @@
             </div>
 
             <!-- ═══ Tab: 归因 ═══ -->
-            <div class="tab-panel" data-panel="tab-attribution">
+            <div class="tab-panel" id="panel-attribution" data-panel="tab-attribution" role="tabpanel" aria-labelledby="tablist-portfolio">
               <div class="attribution-time-selector">
                 <button class="attribution-time-btn active">当日</button>
                 <button class="attribution-time-btn">本周</button>
@@ -958,7 +958,7 @@
     <!-- ═══ Overlay: Position Detail (Drawer) ═══ -->
     <div class="overlay-drawer" data-overlay="overlay-position-detail">
       <label class="overlay-dismiss" for="overlay-position-detail" aria-label="关闭"></label>
-      <div class="drawer-sheet" role="dialog" aria-label="持仓详情">
+      <div class="drawer-sheet" role="dialog" aria-modal="true" aria-label="持仓详情">
         <div class="drawer-header">
           <span class="drawer-title">贵州茅台 — 持仓详情</span>
           <label for="overlay-position-detail" class="drawer-close">✕</label>
@@ -985,7 +985,7 @@
     <!-- ═══ Overlay: Trade Detail (Drawer) ═══ -->
     <div class="overlay-drawer" data-overlay="overlay-trade-detail">
       <label class="overlay-dismiss" for="overlay-trade-detail" aria-label="关闭"></label>
-      <div class="drawer-sheet" role="dialog" aria-label="成交详情">
+      <div class="drawer-sheet" role="dialog" aria-modal="true" aria-label="成交详情">
         <div class="drawer-header">
           <span class="drawer-title">贵州茅台 — 成交详情</span>
           <label for="overlay-trade-detail" class="drawer-close">✕</label>
@@ -1012,7 +1012,7 @@
     <!-- ═══ Overlay: Confirm Close All (Modal) ═══ -->
     <div class="overlay-modal" data-overlay="overlay-confirm-close-all">
       <label class="overlay-dismiss" for="overlay-confirm-close-all" aria-label="关闭"></label>
-      <div class="modal-sheet" role="dialog" aria-label="确认全部平仓">
+      <div class="modal-sheet" role="dialog" aria-modal="true" aria-label="确认全部平仓">
         <div class="modal-header">
           <span class="modal-title">确认全部平仓</span>
           <label for="overlay-confirm-close-all" class="modal-close">✕</label>

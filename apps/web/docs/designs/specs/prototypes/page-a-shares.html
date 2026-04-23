@@ -1441,9 +1441,6 @@
         <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易" title="交易">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI" title="AI">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
         <div class="rail-icon" role="listitem" tabindex="0" aria-label="平台" title="平台">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
@@ -1495,7 +1492,7 @@
       </header>
 
       <!-- Context Bar -->
-      <div class="context-bar" role="status" aria-label="A股市场环境">
+      <div class="context-bar" data-contract-slot="context-bar" role="status" aria-label="A股市场环境">
         <div class="context-bar-item">
           <span class="context-bar-label">Regime</span>
           <span class="context-bar-value regime-on" data-tooltip="市场风险偏好偏强，建议适度进攻">Risk-On</span>
@@ -1525,7 +1522,7 @@
       </div>
 
       <!-- Scope Strip -->
-      <div class="scope-strip" role="status" aria-label="今日解读">
+      <div class="scope-strip" data-contract-slot="scope-strip" role="status" aria-label="今日解读">
         <div class="scope-tag lead" data-tooltip="今日领涨板块，AI 算力 + 半导体设备">AI / 半导体</div>
         <span class="scope-sep">|</span>
         <div class="scope-tag lag" data-tooltip="今日领跌板块，地产风险 + 银行跟跌">地产 / 银行</div>
@@ -1625,7 +1622,7 @@
           </div>
 
           <!-- Auxiliary Panels -->
-          <div class="aux-panels" data-reveal="fade-up" data-reveal-delay="50">
+          <div class="aux-panels" data-contract-slot="aux-panels" data-reveal="fade-up" data-reveal-delay="50">
 
             <!-- Index Summary -->
             <div class="panel" data-reveal="fade-up" data-reveal-delay="350" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
@@ -1727,7 +1724,7 @@
         </main>
 
         <!-- Right Rail: 北向资金深度面板 -->
-        <div class="right-rail" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
+        <div class="right-rail" data-contract-slot="right-rail" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
 
           <div class="rail-section" data-reveal="fade-up" data-reveal-delay="500">
             <div class="rail-section-header">
@@ -1842,21 +1839,21 @@
       <!-- /shell-workspace -->
 
       <!-- Bottom Tab Band -->
-      <div class="tab-band tab-group" data-tab-group="a-shares" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.02)">
+      <div class="tab-band tab-group" data-contract-slot="bottom-tab-band" data-tab-group="a-shares" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.02)">
         <input type="radio" name="a-shares" id="tab-capital-flow" checked class="tab-radio sr-only">
         <input type="radio" name="a-shares" id="tab-dragon-tiger" class="tab-radio sr-only">
         <input type="radio" name="a-shares" id="tab-margin-trading" class="tab-radio sr-only">
         <input type="radio" name="a-shares" id="tab-event-calendar" class="tab-radio sr-only">
 
         <div class="tab-band-header" role="tablist" aria-label="辅助数据切换">
-          <label for="tab-capital-flow" class="tab-band-tab" role="tab" tabindex="0">资金轮动</label>
-          <label for="tab-dragon-tiger" class="tab-band-tab" role="tab" tabindex="0">龙虎榜</label>
-          <label for="tab-margin-trading" class="tab-band-tab" role="tab" tabindex="0">两融数据</label>
-          <label for="tab-event-calendar" class="tab-band-tab" role="tab" tabindex="0">事件日历</label>
+          <label for="tab-capital-flow" class="tab-band-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="panel-capital-flow">资金轮动</label>
+          <label for="tab-dragon-tiger" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-dragon-tiger">龙虎榜</label>
+          <label for="tab-margin-trading" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-margin-trading">两融数据</label>
+          <label for="tab-event-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-event-calendar">事件日历</label>
         </div>
 
         <!-- Tab 1: 资金轮动 -->
-        <div class="tab-panel tab-band-body" data-panel="tab-capital-flow" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-capital-flow" data-panel="tab-capital-flow" role="tabpanel" aria-labelledby="tablist-a-shares">
           <div class="rotation-summary-row">
             <div class="rotation-summary-item" data-reveal="fade-up" data-reveal-delay="40">
               <span class="rotation-summary-label">北向净买入</span>
@@ -1901,7 +1898,7 @@
         </div>
 
         <!-- Tab 2: 龙虎榜 -->
-        <div class="tab-panel tab-band-body" data-panel="tab-dragon-tiger" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-dragon-tiger" data-panel="tab-dragon-tiger" role="tabpanel" aria-labelledby="tablist-a-shares">
           <div class="dragon-list">
             <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="80" data-tooltip="寒武纪-U · 涨停 · 机构净买入 3.2 亿">
               <span class="dragon-stock">寒武纪-U</span>
@@ -1932,7 +1929,7 @@
         </div>
 
         <!-- Tab 3: 两融数据 -->
-        <div class="tab-panel tab-band-body" data-panel="tab-margin-trading" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-margin-trading" data-panel="tab-margin-trading" role="tabpanel" aria-labelledby="tablist-a-shares">
           <div class="margin-stats">
             <div class="margin-stat" data-reveal="fade-up" data-reveal-delay="480">
               <div class="margin-stat-label">两融余额</div>
@@ -1971,7 +1968,7 @@
         </div>
 
         <!-- Tab 4: 事件日历 -->
-        <div class="tab-panel tab-band-body" data-panel="tab-event-calendar" role="tabpanel">
+        <div class="tab-panel tab-band-body" id="panel-event-calendar" data-panel="tab-event-calendar" role="tabpanel" aria-labelledby="tablist-a-shares">
           <div class="event-calendar-list">
             <div class="event-cal-item" data-reveal="fade-up" data-reveal-delay="50">
               <span class="event-cal-date">04-14 周一</span>
@@ -2044,7 +2041,7 @@
     <!-- Overlay 1: 北向资金详情 (Drawer) -->
     <div class="overlay-backdrop" data-overlay="overlay-northbound-detail">
       <label class="overlay-dismiss" for="overlay-northbound-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="北向资金详情">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="北向资金详情">
         <div class="overlay-header">
           <span class="overlay-title">北向资金详情</span>
           <label for="overlay-northbound-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -2091,7 +2088,7 @@
     <!-- Overlay 2: 行业详情 (Sheet) -->
     <div class="overlay-backdrop" data-overlay="overlay-sector-detail">
       <label class="overlay-dismiss" for="overlay-sector-detail" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="行业详情">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="行业详情">
         <div class="overlay-header">
           <span class="overlay-title">行业详情 · 电子</span>
           <label for="overlay-sector-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -2132,7 +2129,7 @@
     <!-- Overlay 3: 筛选器面板 (Drawer) -->
     <div class="overlay-backdrop" data-overlay="overlay-filter-panel">
       <label class="overlay-dismiss" for="overlay-filter-panel" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="筛选器">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="筛选器">
         <div class="overlay-header">
           <span class="overlay-title">筛选器</span>
           <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
@@ -2168,7 +2165,7 @@
     <!-- Overlay 4: AI 解读 (Drawer) -->
     <div class="overlay-backdrop" data-overlay="overlay-ai-analysis">
       <label class="overlay-dismiss" for="overlay-ai-analysis" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="AI 解读" class="iv-drawer-w">
+      <div class="overlay-drawer iv-drawer-w" role="dialog" aria-modal="true" aria-label="AI 解读">
         <div class="overlay-header">
           <span class="overlay-title">AI 结构分析</span>
           <label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">✕</label>

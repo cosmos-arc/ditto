@@ -1613,7 +1613,7 @@
       cursor: default;
     }
     .regime-state-badge:hover {
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.2);
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 20%, transparent);
     }
     .regime-state-badge--bull:hover {
       box-shadow: 0 2px 8px color-mix(in oklch, var(--market-up-fg) 20%, transparent);
@@ -2196,7 +2196,7 @@
 
       <!-- ─── Tab Panel: Regime Status (default) ─── -->
       <div class="tab-panel" data-panel="regime-status" role="tabpanel" id="panel-regime-status" aria-labelledby="regime-status" tabindex="0">
-        <div class="main-content">
+        <div class="main-content" data-contract-slot="main">
           <div class="regime-layout">
 
             <!-- Left: Regime Indicator + Chart -->
@@ -2307,7 +2307,7 @@
 
             <!-- Right: Drivers Panel -->
             <div class="activity-stack">
-              <div class="context-rail">
+              <div class="context-rail" data-contract-slot="rail">
 
                 <!-- Section: Key Drivers -->
                 <div class="context-section" data-reveal="fade-right">
@@ -2785,7 +2785,7 @@
     <!-- Overlay: AI Regime Drawer -->
     <div class="overlay-backdrop" data-overlay="overlay-ai-regime">
       <label class="overlay-dismiss" for="overlay-ai-regime" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="AI Regime 解读">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="AI Regime 解读">
         <div class="overlay-header">
           <span class="overlay-title">AI Regime 解读</span>
           <label for="overlay-ai-regime" class="overlay-close" aria-label="关闭">✕</label>
@@ -3247,7 +3247,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">AI Regime 解读 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="AI Regime 解读">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="AI Regime 解读">
           <div class="overlay-header">
             <span class="overlay-title">AI Regime 解读</span>
           </div>

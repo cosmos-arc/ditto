@@ -2085,7 +2085,7 @@
     </header>
 
     <!-- ═══ Scope Strip (Research context) ═══ -->
-    <div class="scope-strip">
+    <div class="scope-strip" data-contract-slot="scope-strip">
       <!-- Health group -->
       <div class="pulse-item ic-pulse" data-tooltip="当前活跃因子总数 · 近期呈上升趋势">
         <span class="pulse-label">活跃因子</span>
@@ -2155,14 +2155,14 @@
     </div>
 
     <!-- ═══ Research View Tabs ═══ -->
-    <div data-tabs="research-tabs" class="flex-row-center research-tab-bar">
-      <button data-tab-target="reports" class="tab-button">研报</button>
-      <button data-tab-target="factors" class="tab-button active">因子</button>
-      <button data-tab-target="backtest" class="tab-button">回测</button>
+    <div data-tabs="research-tabs" class="flex-row-center research-tab-bar" role="tablist" aria-label="研究视图切换">
+      <button data-tab-target="reports" class="tab-button" role="tab" aria-selected="false" aria-controls="panel-reports">研报</button>
+      <button data-tab-target="factors" class="tab-button active" role="tab" aria-selected="true" aria-controls="panel-factors">因子</button>
+      <button data-tab-target="backtest" class="tab-button" role="tab" aria-selected="false" aria-controls="panel-backtest">回测</button>
     </div>
 
     <!-- Tab Panel: Reports -->
-    <div data-tab-panel="reports" aria-hidden="true">
+    <div data-tab-panel="reports" id="panel-reports" aria-hidden="true" role="tabpanel" aria-labelledby="tablist-research">
       <div class="tab-panel-scroll">
         <!-- Report 1: A股动量因子深度报告 -->
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="0" data-glow>
@@ -2305,7 +2305,7 @@
     </div>
 
     <!-- Tab Panel: Factors (default visible) — display:contents lets grid children pass through -->
-    <div data-tab-panel="factors" aria-hidden="false">
+    <div data-tab-panel="factors" id="panel-factors" aria-hidden="false" role="tabpanel" aria-labelledby="tablist-research">
 
     <!-- State Variants: Pulse Strip -->
 
@@ -2520,7 +2520,7 @@
     
 
     <!-- ═══ Activity Stack (300px right) ═══ -->
-    <div class="activity-stack">
+    <div class="activity-stack" data-contract-slot="activity-stack">
       <!-- Section 1: 最近运行 -->
       <div class="context-section" data-reveal="fade-up" data-reveal-delay="100">
         <div class="context-section-header">
@@ -2640,7 +2640,7 @@
     
 
     <!-- ═══ Analysis Band (220px bottom) ═══ -->
-    <div class="analysis-band">
+    <div class="analysis-band" data-contract-slot="analysis-band">
       <input type="radio" id="analysis-tab-ic" name="analysis-tab" checked class="sr-only">
       <input type="radio" id="analysis-tab-width" name="analysis-tab" class="sr-only">
       <input type="radio" id="analysis-tab-corr" name="analysis-tab" class="sr-only">
@@ -2894,7 +2894,7 @@
     </div><!-- end data-tab-panel="factors" -->
 
     <!-- Tab Panel: Backtest -->
-    <div data-tab-panel="backtest" aria-hidden="true">
+    <div data-tab-panel="backtest" id="panel-backtest" aria-hidden="true" role="tabpanel" aria-labelledby="tablist-research">
       <div class="tab-panel-scroll">
         <!-- Backtest metrics row -->
         <div class="backtest-metrics-row">
@@ -3006,7 +3006,7 @@
     <!-- Overlay A: New Backtest (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-new-backtest">
       <label class="overlay-dismiss" for="overlay-new-backtest" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="新建回测">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建回测">
         <div class="overlay-header">
           <span class="overlay-title">新建回测</span>
           <label for="overlay-new-backtest" class="overlay-close" aria-label="关闭">✕</label>
@@ -3055,7 +3055,7 @@
     <!-- Overlay B: New Strategy (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-new-strategy">
       <label class="overlay-dismiss" for="overlay-new-strategy" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="新建策略">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建策略">
         <div class="overlay-header">
           <span class="overlay-title">新建策略</span>
           <label for="overlay-new-strategy" class="overlay-close" aria-label="关闭">✕</label>
@@ -3102,7 +3102,7 @@
     <!-- Overlay C: New Experiment (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-new-experiment">
       <label class="overlay-dismiss" for="overlay-new-experiment" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="新建实验">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建实验">
         <div class="overlay-header">
           <span class="overlay-title">新建实验</span>
           <label for="overlay-new-experiment" class="overlay-close" aria-label="关闭">✕</label>
@@ -3145,7 +3145,7 @@
     <!-- Overlay D: Run Detail (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-run-detail">
       <label class="overlay-dismiss" for="overlay-run-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="运行详情">
+      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="运行详情">
         <div class="overlay-header">
           <span class="overlay-title">运行详情</span>
           <label for="overlay-run-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -3216,7 +3216,7 @@
     <!-- Overlay E: Review Action (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-review-action">
       <label class="overlay-dismiss" for="overlay-review-action" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="审核操作">
+      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审核操作">
         <div class="overlay-header">
           <span class="overlay-title">审核操作</span>
           <label for="overlay-review-action" class="overlay-close" aria-label="关闭">✕</label>
@@ -3605,7 +3605,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">新建回测 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="新建回测">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建回测">
           <div class="overlay-header">
             <span class="overlay-title">新建回测</span>
           </div>
@@ -3652,7 +3652,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">新建策略 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="新建策略">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建策略">
           <div class="overlay-header">
             <span class="overlay-title">新建策略</span>
           </div>
@@ -3696,7 +3696,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">新建实验 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="新建实验">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建实验">
           <div class="overlay-header">
             <span class="overlay-title">新建实验</span>
           </div>
@@ -3736,7 +3736,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">运行详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="运行详情">
+        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="运行详情">
           <div class="overlay-header">
             <span class="overlay-title">运行详情</span>
           </div>
@@ -3804,7 +3804,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">审核操作 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="审核操作">
+        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审核操作">
           <div class="overlay-header">
             <span class="overlay-title">审核操作</span>
           </div>

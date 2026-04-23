@@ -914,6 +914,7 @@ button {
 .queue-item-tag.domain   { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .queue-item-tag.risk     { background: var(--risk-high-bg); color: var(--risk-high-fg); }
 .queue-item-tag.trade    { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+.queue-item-tag.research { background: color-mix(in oklch, var(--brand-accent) 12%, transparent); color: var(--brand-accent); }
 .queue-item-tag.data     { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .queue-item-tag.platform { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
 
