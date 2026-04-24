@@ -411,34 +411,43 @@ class SourceRegistry:
 
 ---
 
-## Phase 4: Engine TradingLoop Protocol 轻量提取
+## Phase 4: Engine TradingLoop Protocol 轻量提取 ✅ 已完成
 
 **目标**：为回测/实盘统一接口提取 TradingLoop Protocol，不拆分 EngineLoop 类。
 代码审查确认 EngineLoop 实际 348 行（非原估 630 行），step-chain 模式结构良好，无需拆分。
 预计改动 ~5 文件。
 
-### 4.1 TradingLoop Protocol
+**实际结果**（2026-04-20 完成）：
+- 改动 4 文件（2 新增 + 2 修改），删除 0 文件
+- 新增 `protocol.py` 定义 `TradingLoop` Protocol（`run() -> EngineResult`）
+- EngineLoop docstring 声明实现 TradingLoop Protocol
+- `__init__.py` 导出 TradingLoop
+- 3 个 Protocol 测试通过，lint/type/arch 全部通过
+
+### 4.1 TradingLoop Protocol ✅
 
 ```python
 # engine/backtest/protocol.py
 class TradingLoop(Protocol):
-    clock: Clock
-    def run(self, config: EngineConfig) -> BacktestResult: ...
-
-class Clock(Protocol):
-    def now(self) -> datetime: ...
-    def advance_to(self, dt: datetime) -> None: ...
+    def run(self) -> EngineResult: ...
 ```
 
-### 4.2 EngineLoop 实现 Protocol
+**偏离说明**：
+- Clock Protocol 已存在于 `ditto_kernel.clock.Clock`，**不重复定义**
+- `run()` 无参数（config 在构造时传入），返回 `EngineResult`（非原草案的 `BacktestResult`）
+- 不加 `@runtime_checkable`（遵循 Engine 域 Protocol 惯例）
 
-- `EngineLoop` 添加 `TradingLoop` Protocol 声明（不重命名、不拆分）
+### 4.2 EngineLoop 实现 Protocol ✅
+
+- `EngineLoop` docstring 声明实现 `TradingLoop` Protocol（结构化子类型，无需显式继承）
 - 现有 step-chain 模式保持不变
 - 为未来 LiveLoop 实现预留接口
 
 **关键文件**：
-- `packages/engine/src/ditto_engine/backtest/protocol.py` — 新增 TradingLoop/Clock Protocol
-- `packages/engine/src/ditto_engine/backtest/engine.py:191` — EngineLoop 实现 Protocol
+- `packages/engine/src/ditto_engine/backtest/protocol.py` — 新增 TradingLoop Protocol
+- `packages/engine/src/ditto_engine/backtest/engine.py:192` — EngineLoop docstring 声明
+- `packages/engine/src/ditto_engine/backtest/__init__.py` — 导出 TradingLoop
+- `packages/engine/tests/unit/backtest/test_trading_loop_protocol_unit.py` — 3 个测试
 
 ### V1-3 间歇：V1 P1-2 PostTrade 风控通知（重新设计）
 
@@ -469,27 +478,25 @@ class CompositePostTradeGuard:
 
 ---
 
-## Phase 5: Infra 领域知识清理 + 收尾
+## Phase 5: Infra 领域知识清理 + 收尾 ✅ 已完成
 
 **目标**：消除 Infra 中的 3 处领域知识泄漏，补全测试覆盖。
 
-### 5.1 Infra 领域知识迁移
+### 5.1 Infra 领域知识迁移 ✅
 
-- Data 层目录结构硬编码 → 迁移到 Data 层配置
-- Tushare token 验证 → 迁移到 Data 层 Source
-- Dataset metadata checksum → 迁移到 Data 层
+- Data 层目录结构硬编码 → `DataStoreSettings.all_directories()` 唯一真源，`DataRootInitProvider` 构造器注入
+- Tushare token 验证 → `ditto_data.config.DataSourceValidationProvider`（从 Infra 迁出）
+- Dataset metadata checksum → `ditto_data.config.dataset_sort_keys()`（从 Infra `ChecksumCompute.SORT_KEYS` 迁出），`ChecksumCompute` 纯工具化（`sort_keys` 参数注入）
 
-### 5.2 测试覆盖补全
+### 5.2 测试覆盖补全 ✅
 
-- kernel 6 个未测模块补测试
-- notification 4 个未测文件补测试
-- analytics compiler 子模块补独立测试
+- kernel instrument/market/order 子域补单元测试（29 个测试）
+- analytics compiler 子模块补独立测试（12 个测试）
 
-### 5.3 文档同步
+### 5.3 文档同步 ✅
 
-- 更新所有包级 CLAUDE.md 反映新架构
-- 更新 importlinter 规则
-- 更新 ADR 记录决策
+- 更新 infra/data CLAUDE.md 反映新架构
+- importlinter 无需修改（data → infra 已允许）
 
 ### V1.1 功能（审计 Phase 2-4 完成后执行）
 

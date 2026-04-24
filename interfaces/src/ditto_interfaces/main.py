@@ -48,9 +48,7 @@ from ditto_interfaces.api.routes import (
     trade,
     universe,
 )
-from ditto_interfaces.exceptions import DittoException
 from ditto_interfaces.middleware import (
-    ditto_exception_handler,
     general_exception_handler,
     http_exception_handler,
     validation_exception_handler,
@@ -317,8 +315,16 @@ async def get_status(request: Request) -> dict[str, Any]:
     }
 
 
-# 注册异常处理器
-app.add_exception_handler(DittoException, ditto_exception_handler)
+# 注册异常处理器（顺序：从具体到通用）
+from ditto_kernel.exceptions import DataError, DittoError  # noqa: E402
+
+from ditto_interfaces.middleware import (  # noqa: E402
+    data_error_handler,
+    ditto_error_handler,
+)
+
+app.add_exception_handler(DataError, data_error_handler)
+app.add_exception_handler(DittoError, ditto_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)

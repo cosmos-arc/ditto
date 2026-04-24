@@ -369,6 +369,109 @@ forbidden_modules =
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
+# Data storage 子域交叉隔离：各子域互相禁止导入
+# storage/base 和 storage/schemas 是共享基类，不在隔离范围
+# importlinter forbidden 类型不支持 source/forbidden 集重叠，
+# 因此按子域拆分为独立规则
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:data-storage-market-isolation]
+name = Data storage market must not import other storage subdomains
+type = forbidden
+source_modules =
+    ditto_data.storage.market.**
+forbidden_modules =
+    ditto_data.storage.fundamental.**
+    ditto_data.storage.capital.**
+    ditto_data.storage.metadata.**
+    ditto_data.storage.runtime.**
+    ditto_data.storage.execution.**
+    ditto_data.storage.factors.**
+    ditto_data.storage.features.**
+    ditto_data.storage.macro.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-storage-fundamental-isolation]
+name = Data storage fundamental must not import other storage subdomains
+type = forbidden
+source_modules =
+    ditto_data.storage.fundamental.**
+forbidden_modules =
+    ditto_data.storage.market.**
+    ditto_data.storage.capital.**
+    ditto_data.storage.metadata.**
+    ditto_data.storage.runtime.**
+    ditto_data.storage.execution.**
+    ditto_data.storage.factors.**
+    ditto_data.storage.features.**
+    ditto_data.storage.macro.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-storage-capital-isolation]
+name = Data storage capital must not import other storage subdomains
+type = forbidden
+source_modules =
+    ditto_data.storage.capital.**
+forbidden_modules =
+    ditto_data.storage.market.**
+    ditto_data.storage.fundamental.**
+    ditto_data.storage.metadata.**
+    ditto_data.storage.runtime.**
+    ditto_data.storage.execution.**
+    ditto_data.storage.factors.**
+    ditto_data.storage.features.**
+    ditto_data.storage.macro.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-storage-metadata-isolation]
+name = Data storage metadata must not import other storage subdomains
+type = forbidden
+source_modules =
+    ditto_data.storage.metadata.**
+forbidden_modules =
+    ditto_data.storage.market.**
+    ditto_data.storage.fundamental.**
+    ditto_data.storage.capital.**
+    ditto_data.storage.runtime.**
+    ditto_data.storage.execution.**
+    ditto_data.storage.factors.**
+    ditto_data.storage.features.**
+    ditto_data.storage.macro.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-storage-runtime-isolation]
+name = Data storage runtime must not import other storage subdomains
+type = forbidden
+source_modules =
+    ditto_data.storage.runtime.**
+forbidden_modules =
+    ditto_data.storage.market.**
+    ditto_data.storage.fundamental.**
+    ditto_data.storage.capital.**
+    ditto_data.storage.metadata.**
+    ditto_data.storage.execution.**
+    ditto_data.storage.factors.**
+    ditto_data.storage.features.**
+    ditto_data.storage.macro.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:data-storage-execution-isolation]
+name = Data storage execution must not import other storage subdomains
+type = forbidden
+source_modules =
+    ditto_data.storage.execution.**
+forbidden_modules =
+    ditto_data.storage.market.**
+    ditto_data.storage.fundamental.**
+    ditto_data.storage.capital.**
+    ditto_data.storage.metadata.**
+    ditto_data.storage.runtime.**
+    ditto_data.storage.factors.**
+    ditto_data.storage.features.**
+    ditto_data.storage.macro.**
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# 循环依赖检测
 # 循环依赖检测
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:acyclic-packages]

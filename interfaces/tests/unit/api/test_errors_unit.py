@@ -58,13 +58,13 @@ class TestAPIError:
         assert error.status_code == 503
         assert error.error_code == "SERVICE_UNAVAILABLE"
 
-    def test_inherits_from_ditto_exception(self) -> None:
-        """验证继承自 DittoException."""
+    def test_inherits_from_ditto_error(self) -> None:
+        """验证继承自 DittoError."""
         from ditto_interfaces.api.errors import APIError
-        from ditto_interfaces.exceptions import DittoException
+        from ditto_kernel.exceptions import DittoError
 
         error = APIError("test")
-        assert isinstance(error, DittoException)
+        assert isinstance(error, DittoError)
         assert isinstance(error, Exception)
 
 

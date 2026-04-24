@@ -20,6 +20,8 @@ from ditto_engine.backtest.manifest import (
     hash_spec,
     serialize_manifest,
 )
+from ditto_engine.backtest.protocol import TradingLoop
+from ditto_engine.backtest.report_renderer import BacktestReportRenderer
 from ditto_engine.backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
@@ -33,6 +35,7 @@ __all__ = [
     "AggregatedTradeStatistics",
     "AlphaStatistics",
     "BacktestReport",
+    "BacktestReportRenderer",
     "DataFeed",
     "EngineConfig",
     "EngineLoop",
@@ -48,6 +51,7 @@ __all__ = [
     "RunMode",
     "Slice",
     "TradeStatistics",
+    "TradingLoop",
     "build_run_manifest",
     "hash_spec",
     "serialize_manifest",

@@ -29,6 +29,8 @@ from ditto_engine.risk.post_trade import (
 )
 from ditto_engine.risk.pre_trade import Decision, OrderCheckResult
 from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.strategy import RiskScope
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -43,7 +45,7 @@ def _make_position(
     unrealized_pnl: float = 1000.0,
 ) -> Position:
     return Position(
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         quantity=quantity,
         available_quantity=quantity,
         average_cost=average_cost,
@@ -61,7 +63,7 @@ def _make_account_view(
     pos = positions or {}
     cash = CashBook(available=50000.0, settled=50000.0, frozen=0.0)
     return AccountView(
-        positions=MappingProxyType(pos),
+        positions=MappingProxyType({InstrumentId(k): v for k, v in pos.items()}),
         cash=cash,
         total_value=nav,
         nav=nav,
@@ -78,7 +80,7 @@ def _make_bar(
 ) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-01-15",
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         open=prev_close,
         high=close,
         low=prev_close,
@@ -90,10 +92,11 @@ def _make_bar(
 
 
 def _make_slice(bars: dict[int, MarketSnapshot] | None = None) -> Slice:
+    raw = bars or {}
     return Slice(
         trade_date="2026-01-15",
         step_time=datetime(2026, 1, 15, 15, 0, tzinfo=UTC),
-        bars=bars or {},
+        bars={InstrumentId(k): v for k, v in raw.items()},
     )
 
 
@@ -106,8 +109,8 @@ class TestRiskAction:
     def test_frozen_immutability(self) -> None:
         action = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id=1,
-            scope="instrument",
+            instrument_id=InstrumentId(1),
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             rule_id="test_rule",
             detail="test detail",
@@ -120,8 +123,8 @@ class TestRiskAction:
     def test_default_optional_fields(self) -> None:
         action = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id=1,
-            scope="instrument",
+            instrument_id=InstrumentId(1),
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             rule_id="test",
             detail="d",
@@ -136,7 +139,7 @@ class TestRiskAction:
         action = RiskAction(
             action_type=RiskActionType.LIQUIDATE,
             instrument_id=None,
-            scope="portfolio",
+            scope=RiskScope.PORTFOLIO,
             severity=RiskSeverity.EMERGENCY,
             rule_id="max_drawdown",
             detail="drawdown exceeded",
@@ -150,8 +153,8 @@ class TestRiskAction:
         """Instrument-scoped actions use concrete instrument_id, scope='instrument'."""
         action = RiskAction(
             action_type=RiskActionType.REDUCE_POSITION,
-            instrument_id=1,
-            scope="instrument",
+            instrument_id=InstrumentId(1),
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.CRITICAL,
             rule_id="single_loss_limit",
             detail="loss exceeded",
@@ -513,7 +516,7 @@ class TestMarketAnomalyRule:
         rule = MarketAnomalyRule(threshold=0.05)
         bar = MarketSnapshot(
             trade_date="2026-01-15",
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             open=4.5,
             high=4.5,
             low=4.5,
@@ -570,8 +573,8 @@ class TestCompositePostTradeGuard:
         mock_rule1 = Mock(spec=PostTradeRiskGuard)
         action1 = RiskAction(
             action_type=RiskActionType.ALERT,
-            instrument_id=1,
-            scope="instrument",
+            instrument_id=InstrumentId(1),
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.WARNING,
             rule_id="rule_1",
             detail="test",
@@ -584,8 +587,8 @@ class TestCompositePostTradeGuard:
         mock_rule2 = Mock(spec=PostTradeRiskGuard)
         action2 = RiskAction(
             action_type=RiskActionType.REDUCE_POSITION,
-            instrument_id=2,
-            scope="instrument",
+            instrument_id=InstrumentId(2),
+            scope=RiskScope.INSTRUMENT,
             severity=RiskSeverity.CRITICAL,
             rule_id="rule_2",
             detail="test",
@@ -595,7 +598,7 @@ class TestCompositePostTradeGuard:
         action3 = RiskAction(
             action_type=RiskActionType.LIQUIDATE,
             instrument_id=None,
-            scope="portfolio",
+            scope=RiskScope.PORTFOLIO,
             severity=RiskSeverity.EMERGENCY,
             rule_id="rule_2",
             detail="test",
@@ -647,6 +650,89 @@ class TestCompositePostTradeGuard:
         assert RiskActionType.ALERT in action_types
         assert RiskActionType.REDUCE_POSITION in action_types
 
+    def test_callback_invoked_with_actions(self) -> None:
+        mock_rule = Mock(spec=PostTradeRiskGuard)
+        action = RiskAction(
+            action_type=RiskActionType.ALERT,
+            instrument_id=InstrumentId(1),
+            scope=RiskScope.INSTRUMENT,
+            severity=RiskSeverity.WARNING,
+            rule_id="test_rule",
+            detail="test",
+            current_value=0.1,
+            threshold=0.1,
+        )
+        mock_rule.scan.return_value = [action]
+
+        callback = Mock()
+        guard = CompositePostTradeGuard(
+            rules=(mock_rule,),
+            callbacks=(callback,),
+        )
+        view = _make_account_view(nav=100000.0)
+        sl = _make_slice()
+
+        result = guard.scan(view, sl)
+
+        callback.assert_called_once_with(result)
+        assert result == [action]
+
+    def test_multiple_callbacks_called_in_order(self) -> None:
+        mock_rule = Mock(spec=PostTradeRiskGuard)
+        mock_rule.scan.return_value = []
+
+        call_order: list[int] = []
+        cb1 = Mock(side_effect=lambda _: call_order.append(1))
+        cb2 = Mock(side_effect=lambda _: call_order.append(2))
+        cb3 = Mock(side_effect=lambda _: call_order.append(3))
+
+        guard = CompositePostTradeGuard(
+            rules=(mock_rule,),
+            callbacks=(cb1, cb2, cb3),
+        )
+        view = _make_account_view(nav=100000.0)
+        sl = _make_slice()
+
+        guard.scan(view, sl)
+
+        assert call_order == [1, 2, 3]
+        cb1.assert_called_once()
+        cb2.assert_called_once()
+        cb3.assert_called_once()
+
+    def test_callback_called_with_empty_actions(self) -> None:
+        callback = Mock()
+        guard = CompositePostTradeGuard(
+            rules=(),
+            callbacks=(callback,),
+        )
+        view = _make_account_view(nav=100000.0)
+        sl = _make_slice()
+
+        guard.scan(view, sl)
+
+        callback.assert_called_once_with([])
+
+    def test_callback_exception_does_not_block_others(self) -> None:
+        mock_rule = Mock(spec=PostTradeRiskGuard)
+        mock_rule.scan.return_value = []
+
+        cb1 = Mock(side_effect=RuntimeError("callback error"))
+        cb2 = Mock()
+
+        guard = CompositePostTradeGuard(
+            rules=(mock_rule,),
+            callbacks=(cb1, cb2),
+        )
+        view = _make_account_view(nav=100000.0)
+        sl = _make_slice()
+
+        with pytest.raises(RuntimeError, match="callback error"):
+            guard.scan(view, sl)
+
+        cb1.assert_called_once()
+        cb2.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # EngineLoop Integration Tests
@@ -679,12 +765,13 @@ def _make_target_portfolio(
     positions: dict[int, float] | None = None,
 ) -> TargetPortfolio:
     """创建 mock TargetPortfolio。"""
+    pos = {InstrumentId(k): v for k, v in (positions or {}).items()}
     return TargetPortfolio(
         trade_date="2026-01-15",
         strategy_id="default",
         run_id="run-test",
-        positions=positions or {},
-        cash_target=1.0 - sum(positions.values()) if positions else 1.0,
+        positions=pos,
+        cash_target=1.0 - sum(pos.values()) if pos else 1.0,
     )
 
 
@@ -705,8 +792,8 @@ class TestEngineLoopPostTradeIntegration:
         mock_guard.scan.return_value = [
             RiskAction(
                 action_type=RiskActionType.REDUCE_POSITION,
-                instrument_id=1,
-                scope="instrument",
+                instrument_id=InstrumentId(1),
+                scope=RiskScope.INSTRUMENT,
                 severity=RiskSeverity.CRITICAL,
                 rule_id="single_loss_limit",
                 detail="510300.SH loss exceeds 15%",
@@ -774,8 +861,8 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id=1,
-                    scope="instrument",
+                    instrument_id=InstrumentId(1),
+                    scope=RiskScope.INSTRUMENT,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="test",
                     detail="test",
@@ -816,7 +903,7 @@ class TestEngineLoopPostTradeIntegration:
             RiskAction(
                 action_type=RiskActionType.LIQUIDATE,
                 instrument_id=None,
-                scope="portfolio",
+                scope=RiskScope.PORTFOLIO,
                 severity=RiskSeverity.EMERGENCY,
                 rule_id="max_drawdown",
                 detail="portfolio drawdown exceeds 20%",
@@ -852,8 +939,8 @@ class TestEngineLoopPostTradeIntegration:
         mock_guard.scan.return_value = [
             RiskAction(
                 action_type=RiskActionType.ALERT,
-                instrument_id=1,
-                scope="instrument",
+                instrument_id=InstrumentId(1),
+                scope=RiskScope.INSTRUMENT,
                 severity=RiskSeverity.WARNING,
                 rule_id="market_anomaly",
                 detail="510300.SH return exceeds 5%",
@@ -898,8 +985,8 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id=1,
-                    scope="instrument",
+                    instrument_id=InstrumentId(1),
+                    scope=RiskScope.INSTRUMENT,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -948,8 +1035,8 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id=1,
-                    scope="instrument",
+                    instrument_id=InstrumentId(1),
+                    scope=RiskScope.INSTRUMENT,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -1000,8 +1087,8 @@ class TestEngineLoopPostTradeIntegration:
             [
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id=1,
-                    scope="instrument",
+                    instrument_id=InstrumentId(1),
+                    scope=RiskScope.INSTRUMENT,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="single_loss_limit",
                     detail="loss exceeds 15%",
@@ -1011,8 +1098,8 @@ class TestEngineLoopPostTradeIntegration:
                 ),
                 RiskAction(
                     action_type=RiskActionType.REDUCE_POSITION,
-                    instrument_id=2,
-                    scope="instrument",
+                    instrument_id=InstrumentId(2),
+                    scope=RiskScope.INSTRUMENT,
                     severity=RiskSeverity.CRITICAL,
                     rule_id="concentration_limit",
                     detail="concentration exceeds 20%",

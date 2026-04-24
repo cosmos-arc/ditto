@@ -242,5 +242,45 @@ class DataStoreSettings(BaseModel):
         """数据库存储路径。"""
         return self.data_root / "db"
 
+    def all_directories(self) -> list[str]:
+        """
+        返回所有数据目录的相对路径列表（相对于 data_root）。
+
+        作为 Data 层目录结构的唯一真源，供 Infra DataRootInitProvider 使用。
+        """
+        return [
+            "market/stock/bars/daily",
+            "market/etf/bars/daily",
+            "market/index/bars/daily",
+            "market/stock/status",
+            "market/etf/status",
+            "market/stock/adj",
+            "market/etf/adj",
+            "market/etf/nav",
+            "metadata",
+            "capital/flow",
+            "capital/margin",
+            "capital/top_board",
+            "capital/limit_board",
+            "capital/chip",
+            "fundamental/financial",
+            "fundamental/indicator",
+            "fundamental/forecast",
+            "fundamental/holding",
+            "features/technical/price",
+            "features/technical/indicators_narrow",
+            "features/technical/indicators_wide",
+            "factors/narrow/style",
+            "factors/wide/style",
+            "factors/factors_narrow",
+            "factors/factors_wide",
+            "macro/indicators",
+            "logs",
+            "backups",
+            "temp",
+            "db",
+            "locks",
+        ]
+
 
 __all__ = ["DataStoreSettings", "SqlEngineConfig"]

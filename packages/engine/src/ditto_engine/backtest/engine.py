@@ -192,6 +192,8 @@ class EngineLoop:
     """
     回测引擎主循环 -- 通过 TradingStep chain 编排每日执行流程.
 
+    实现 TradingLoop Protocol（结构化子类型）。
+
     Step Chain:
       DataFetchStep -> RiskScanStep -> StrategyStep -> PlanningStep
       -> PreTradeStep -> ExecutionStep -> AuditStep

@@ -29,6 +29,7 @@ from ditto_engine.execution.rules import (
     InstrumentRules,
     TradingRuleSet,
 )
+from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -52,7 +53,7 @@ def _account_view(
     pos = positions or {}
     pending = pending_tickets or {}
     return AccountView(
-        positions=MappingProxyType(pos),
+        positions=MappingProxyType({InstrumentId(k): v for k, v in pos.items()}),
         cash=CashBook(available=nav, settled=nav, frozen=0.0),
         total_value=nav + exposure,
         nav=nav,
@@ -70,7 +71,7 @@ def _position(
     """创建用于测试的 Position."""
     avg_cost = market_value / quantity if quantity > 0 else 0.0
     return Position(
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         quantity=quantity,
         available_quantity=quantity,
         average_cost=avg_cost,
@@ -89,7 +90,7 @@ def _pending_buy(
     """创建一个未成交的买单."""
     order = Order(
         order_id=order_id,
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         order_type=OrderType.MARKET,
         direction=OrderSide.BUY,
         quantity=quantity,
@@ -105,7 +106,7 @@ def _pending_sell(
     """创建一个未成交的卖单."""
     order = Order(
         order_id=order_id,
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         order_type=OrderType.MARKET,
         direction=OrderSide.SELL,
         quantity=quantity,
@@ -118,11 +119,12 @@ def _target(
     cash_target: float = 0.0,
 ) -> TargetPortfolio:
     """创建用于测试的 TargetPortfolio (weight → quantity 由 planner 按 nav 计算)."""
+    pos = {InstrumentId(k): v for k, v in (positions or {}).items()}
     return TargetPortfolio(
         trade_date="2026-03-21",
         strategy_id="test-strategy",
         run_id="run-001",
-        positions=positions or {},
+        positions=pos,
         cash_target=cash_target,
     )
 
@@ -144,7 +146,7 @@ def _target_qty(weight: float, nav: float = 100_000.0, lot_size: int = 100) -> i
 class TestBlockedOrder:
     def test_frozen(self) -> None:
         bo = BlockedOrder(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             intended_quantity=100,
             reason="risk_locked",
@@ -155,7 +157,7 @@ class TestBlockedOrder:
 
     def test_severity_values(self) -> None:
         bo_block = BlockedOrder(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             intended_quantity=100,
             reason="risk_locked",
@@ -164,7 +166,7 @@ class TestBlockedOrder:
         assert bo_block.severity is BlockSeverity.BLOCK
 
         bo_defer = BlockedOrder(
-            instrument_id=1,
+            instrument_id=InstrumentId(1),
             direction=OrderSide.BUY,
             intended_quantity=100,
             reason="price_limit",
@@ -239,14 +241,14 @@ class TestFirstBuild:
         assert plan.trade_date == "2026-03-21"
         assert plan.plan_id.startswith("plan-")
         orders = {o.instrument_id: o for o in plan.orders}
-        assert set(orders.keys()) == {1, 2}
+        assert set(orders.keys()) == {InstrumentId(1), InstrumentId(2)}
 
         # ETF-001: 0.5 * 100K = 50000 / 100 = 500 lots → 50000
-        assert orders[1].direction == OrderSide.BUY
-        assert orders[1].quantity == 50000
+        assert orders[InstrumentId(1)].direction == OrderSide.BUY
+        assert orders[InstrumentId(1)].quantity == 50000
         # ETF-002: 0.3 * 100K = 30000 / 100 = 300 lots → 30000
-        assert orders[2].direction == OrderSide.BUY
-        assert orders[2].quantity == 30000
+        assert orders[InstrumentId(2)].direction == OrderSide.BUY
+        assert orders[InstrumentId(2)].quantity == 30000
         assert len(plan.blocked_orders) == 0
 
     def test_empty_target_no_orders(self) -> None:
@@ -515,7 +517,7 @@ class TestPlannerLock:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
-            locked_instruments={1},
+            locked_instruments={InstrumentId(1)},
         )
 
         assert len(plan.orders) == 0
@@ -546,7 +548,7 @@ class TestPlannerLock:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
-            locked_instruments={1},
+            locked_instruments={InstrumentId(1)},
         )
 
         assert len(plan.blocked_orders) == 0
@@ -588,23 +590,28 @@ class TestMixedScenario:
         )
 
         orders = {o.instrument_id: o for o in plan.orders}
-        assert set(orders.keys()) == {1, 2, 3, 4}
+        assert set(orders.keys()) == {
+            InstrumentId(1),
+            InstrumentId(2),
+            InstrumentId(3),
+            InstrumentId(4),
+        }
 
         # ETF-001: 加仓 10000
-        assert orders[1].direction == OrderSide.BUY
-        assert orders[1].quantity == 10000
+        assert orders[InstrumentId(1)].direction == OrderSide.BUY
+        assert orders[InstrumentId(1)].quantity == 10000
 
         # ETF-002: 减仓 10000
-        assert orders[2].direction == OrderSide.SELL
-        assert orders[2].quantity == 10000
+        assert orders[InstrumentId(2)].direction == OrderSide.SELL
+        assert orders[InstrumentId(2)].quantity == 10000
 
         # ETF-003: 清仓
-        assert orders[3].direction == OrderSide.SELL
-        assert orders[3].quantity == 10000
+        assert orders[InstrumentId(3)].direction == OrderSide.SELL
+        assert orders[InstrumentId(3)].quantity == 10000
 
         # ETF-004: 新入场
-        assert orders[4].direction == OrderSide.BUY
-        assert orders[4].quantity == 10000
+        assert orders[InstrumentId(4)].direction == OrderSide.BUY
+        assert orders[InstrumentId(4)].quantity == 10000
 
 
 # ---------------------------------------------------------------------------
@@ -630,8 +637,8 @@ class TestLotSizeRounding:
         )
 
         orders = {o.instrument_id: o for o in plan.orders}
-        assert orders[1].quantity == 31300
-        assert orders[2].quantity == 10400
+        assert orders[InstrumentId(1)].quantity == 31300
+        assert orders[InstrumentId(2)].quantity == 10400
 
     def test_custom_lot_size(self) -> None:
         """自定义 lot_size = 200 (通过构造参数)."""
@@ -797,7 +804,7 @@ class TestEdgeCases:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
-            locked_instruments={1},
+            locked_instruments={InstrumentId(1)},
         )
 
         # ETF-001 不在 target，weight = 0, 需要卖出
@@ -879,7 +886,7 @@ def _definition(
     lot_size: int = 100,
 ) -> InstrumentDefinition:
     return InstrumentDefinition(
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         asset_class="etf",
         exchange="XSHE",
         currency="CNY",
@@ -896,7 +903,7 @@ def _trading_rule(
     settlement_cycle: int = 0,
 ) -> TradingRuleSet:
     return TradingRuleSet(
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         as_of_date="2026-03-21",
         settlement_cycle=settlement_cycle,
         fund_settlement_cycle=settlement_cycle,
@@ -911,7 +918,7 @@ def _fee_schedule(
     commission_rate: float = 0.0,
 ) -> FeeSchedule:
     return FeeSchedule(
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         as_of_date="2026-03-21",
         commission_rate=commission_rate,
         min_commission=0.0,
@@ -942,7 +949,7 @@ def _market_snapshot(
 ) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-03-21",
-        instrument_id=instrument_id,
+        instrument_id=InstrumentId(instrument_id),
         open=close,
         high=close,
         low=close,
@@ -1019,9 +1026,9 @@ class TestProtocolUpgrade:
 
         orders = {o.instrument_id: o for o in plan.orders}
         # ETF-001: 50000, floor(50000/200)*200 = 50000
-        assert orders[1].quantity == 50000
+        assert orders[InstrumentId(1)].quantity == 50000
         # ETF-002: 50000, floor(50000/100)*100 = 50000
-        assert orders[2].quantity == 50000
+        assert orders[InstrumentId(2)].quantity == 50000
 
 
 # ---------------------------------------------------------------------------
@@ -1037,7 +1044,7 @@ class TestTPlusOne:
         av = _account_view(
             positions={
                 1: Position(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     quantity=1000,
                     available_quantity=500,
                     average_cost=10.0,
@@ -1073,7 +1080,7 @@ class TestTPlusOne:
         av = _account_view(
             positions={
                 1: Position(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     quantity=1000,
                     available_quantity=500,
                     average_cost=10.0,
@@ -1105,7 +1112,7 @@ class TestTPlusOne:
         av = _account_view(
             positions={
                 1: Position(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     quantity=1000,
                     available_quantity=500,
                     average_cost=10.0,
@@ -1479,7 +1486,7 @@ class TestCombinedScenarios:
         av = _account_view(
             positions={
                 1: Position(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     quantity=350,
                     available_quantity=300,
                     average_cost=10.0,
@@ -1519,7 +1526,7 @@ class TestCombinedScenarios:
         av = _account_view(
             positions={
                 1: Position(
-                    instrument_id=1,
+                    instrument_id=InstrumentId(1),
                     quantity=5000,
                     available_quantity=1000,
                     average_cost=10.0,
@@ -1637,3 +1644,68 @@ class TestEstimatedPriceFromSnapshot:
 
         # turnover = 15000, rate = 0.001, cost = 15
         assert plan.estimated_cost == pytest.approx(15.0)
+
+
+# ---------------------------------------------------------------------------
+# LIMIT order type
+# ---------------------------------------------------------------------------
+
+
+class TestLimitOrderType:
+    """default_order_type=LIMIT 时订单类型行为。"""
+
+    def test_default_limit_creates_limit_orders(self) -> None:
+        """default_order_type=LIMIT → planner 生成 LIMIT 类型订单。"""
+        av = _account_view()
+        target = _target({1: 0.5, 2: 0.3})
+
+        planner = SimpleExecutionPlanner(default_order_type=OrderType.LIMIT)
+        plan = planner.plan(
+            target=target,
+            account_view=av,
+            trade_date="2026-03-21",
+        )
+
+        assert len(plan.orders) == 2
+        for order in plan.orders:
+            assert order.order_type is OrderType.LIMIT
+
+    def test_explicit_market_overrides_limit_default(self) -> None:
+        """default_order_type=LIMIT 但显式传入 MARKET → 使用 MARKET。"""
+        planner = SimpleExecutionPlanner(default_order_type=OrderType.LIMIT)
+
+        order = planner._make_order(
+            instrument_id=InstrumentId(1),
+            direction=OrderSide.BUY,
+            quantity=100,
+            order_type=OrderType.MARKET,
+        )
+
+        assert order.order_type is OrderType.MARKET
+
+    def test_limit_order_carries_price(self) -> None:
+        """LIMIT 订单携带 price 参数。"""
+        planner = SimpleExecutionPlanner(default_order_type=OrderType.LIMIT)
+
+        order = planner._make_order(
+            instrument_id=InstrumentId(1),
+            direction=OrderSide.BUY,
+            quantity=100,
+            price=1.5,
+        )
+
+        assert order.order_type is OrderType.LIMIT
+        assert order.price == pytest.approx(1.5)
+
+    def test_limit_order_without_price_is_none(self) -> None:
+        """LIMIT 订单未传 price → price=None。"""
+        planner = SimpleExecutionPlanner(default_order_type=OrderType.LIMIT)
+
+        order = planner._make_order(
+            instrument_id=InstrumentId(1),
+            direction=OrderSide.BUY,
+            quantity=100,
+        )
+
+        assert order.order_type is OrderType.LIMIT
+        assert order.price is None

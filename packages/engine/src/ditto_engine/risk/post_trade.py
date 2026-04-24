@@ -17,6 +17,7 @@ Design Doc: v3 §7.1, §7.3
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
@@ -409,21 +410,29 @@ class CompositePostTradeGuard:
     Parameters
     ----------
         rules: PostTrade 规则列表
+        callbacks: 扫描完成后回调列表（用于通知/告警）
 
     """
 
-    def __init__(self, rules: tuple[PostTradeRiskGuard, ...]) -> None:
+    def __init__(
+        self,
+        rules: tuple[PostTradeRiskGuard, ...],
+        callbacks: tuple[Callable[[list[RiskAction]], None], ...] = (),
+    ) -> None:
         self._rules = rules
+        self._callbacks = callbacks
 
     def scan(
         self,
         account_view: AccountView,
         slice_: _SliceView,
     ) -> list[RiskAction]:
-        """依次执行每条规则，收集所有风控行为。"""
+        """依次执行每条规则，收集所有风控行为，触发回调。"""
         actions: list[RiskAction] = []
         for rule in self._rules:
             actions.extend(rule.scan(account_view, slice_))
+        for cb in self._callbacks:
+            cb(actions)
         return actions
 
     def reset(self) -> None:

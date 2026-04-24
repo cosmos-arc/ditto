@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from ditto_kernel.strategy import ImpactModel
 
+from ditto_engine.accounting.order_book import OrderType
 from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
 
 __all__ = [
@@ -74,12 +75,14 @@ class ExecutionSpec:
         frequency: 换仓频率 (D / W / M / Q)
         method: 触发方法 (calendar / signal_change_pct / composite)
         cost_model: 成本模型
+        default_order_type: 默认订单类型 (MARKET / LIMIT)
 
     """
 
     frequency: str = "M"
     method: str = "calendar"
     cost_model: CostModelSpec = field(default_factory=CostModelSpec)
+    default_order_type: OrderType = OrderType.MARKET
 
 
 @dataclass(frozen=True)

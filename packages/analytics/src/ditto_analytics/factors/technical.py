@@ -192,6 +192,13 @@ _elder_ray_specs: dict[str, FactorSpec] = {
 }
 
 _obv_specs: dict[str, FactorSpec] = {
+    "obv": FactorSpec(
+        id="obv",
+        expression="",
+        dependencies=("market.close", "market.volume"),
+        description="On-Balance Volume: cumulative volume flow indicator",
+        computation_type="python",
+    ),
     "obv_ma20": FactorSpec(
         id="obv_ma20",
         expression="",

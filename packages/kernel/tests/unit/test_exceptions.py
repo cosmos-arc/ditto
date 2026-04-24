@@ -150,14 +150,25 @@ class TestNoDuplicateDefinitions:
 
 
 class TestInterfacesMerge:
-    """Interfaces 层 DittoException 合并验证."""
+    """Interfaces 层异常清理验证."""
 
-    def test_ditto_exception_inherits_ditto_error(self) -> None:
-        from ditto_interfaces.exceptions import DittoException
+    def test_ditto_exception_removed(self) -> None:
+        import ditto_interfaces.exceptions as m
 
-        assert issubclass(DittoException, DittoError)
+        assert not hasattr(m, "DittoException")
 
-    def test_route_validation_error_exists(self) -> None:
+    def test_dead_subclasses_removed(self) -> None:
+        import ditto_interfaces.exceptions as m
+
+        for name in (
+            "DataNotFoundError",
+            "InvalidDateError",
+            "DatabaseError",
+            "ExternalServiceError",
+        ):
+            assert not hasattr(m, name), f"{name} should be removed"
+
+    def test_route_validation_error_inherits_ditto_error(self) -> None:
         from ditto_interfaces.exceptions import RouteValidationError
 
         assert issubclass(RouteValidationError, DittoError)
@@ -166,6 +177,7 @@ class TestInterfacesMerge:
         from ditto_interfaces.api.errors import APIError
 
         assert issubclass(APIError, DittoError)
+        assert not issubclass(APIError, DataError)
 
     def test_api_subclasses_inherit_ditto_error(self) -> None:
         from ditto_interfaces.api.errors import (
@@ -177,15 +189,14 @@ class TestInterfacesMerge:
             RateLimitError,
         )
 
-        api_subclasses = [
+        for cls in [
             DateRangeError,
             RateLimitError,
             NotFoundError,
             ConflictError,
             ForbiddenError,
             BadRequestError,
-        ]
-        for cls in api_subclasses:
+        ]:
             assert issubclass(cls, DittoError), (
                 f"{cls.__name__} should inherit DittoError"
             )

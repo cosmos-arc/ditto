@@ -2,7 +2,7 @@
 
 from typing import Never
 
-from ditto_interfaces.exceptions import DittoException
+from ditto_kernel.exceptions import DittoError
 
 
 def raise_business_error(
@@ -31,7 +31,7 @@ def raise_business_error(
     raise BadRequestError(msg) from exc
 
 
-class APIError(DittoException):
+class APIError(DittoError):
     """
     API 错误基类.
 
@@ -50,8 +50,10 @@ class APIError(DittoException):
         status_code: int = 500,
         error_code: str = "INTERNAL_ERROR",
     ) -> None:
-        super().__init__(message, error_code)
+        super().__init__(message)
+        self.message = message
         self.status_code = status_code
+        self.error_code = error_code
 
 
 class DateRangeError(APIError):

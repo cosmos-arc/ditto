@@ -5,9 +5,11 @@
 ```
 ditto_data/
 ├── config/              # 数据层配置（数据源/存储/存储路径）
-│   ├── data_source.py   # 数据源配置
-│   ├── data_store.py    # 数据存储配置
-│   └── storage.py       # 存储路径配置
+│   ├── data_source.py            # 数据源配置
+│   ├── data_source_validation.py # 数据源特定校验（DataSourceValidationProvider，如 TUSHARE_TOKEN）
+│   ├── data_store.py             # 数据存储配置（含 all_directories() 目录唯一真源）
+│   ├── dataset_checksum.py       # 数据集校验和排序键映射（dataset_sort_keys()）
+│   └── storage.py                # 存储路径配置
 ├── di/                  # DI 注册（builders/sources/quality/runtime 等 Provider）
 │   ├── builders.py      # DI Builder
 │   ├── _factory.py      # DI 工厂

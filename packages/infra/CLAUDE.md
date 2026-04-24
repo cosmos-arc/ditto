@@ -48,9 +48,9 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 | 模块 | 职责 | 禁止 |
 |------|------|------|
 | `cache` | 数据缓存、缓存统计 | 包含业务逻辑 |
-| `checksum` | 文件/数据校验和 | - |
+| `checksum` | 文件/数据校验和（纯工具，sort_keys 由调用方提供） | 领域知识（如数据集排序键映射） |
 | `concurrency` | 文件锁、并发控制 | - |
-| `config` | 配置加载、环境管理、XDG 路径 | 读取业务配置 |
+| `config` | 配置加载、环境管理、XDG 路径 | 读取业务配置或数据源特定校验 |
 | `db` | SQLite 连接池 | 包含 SQL 业务逻辑 |
 | `observability` | 日志、追踪、指标 | - |
 | `util` | 通用工具函数 | 领域特定工具 |
