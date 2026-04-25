@@ -169,7 +169,7 @@
 
     /* ── Decision Banner visual anchor — left brand border ── */
     .shell-home .decision-banner {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
+      border-left: 2px solid color-mix(in oklch, var(--brand-signature-fg) 50%, transparent);
       padding-left: var(--space-16);
     }
 
@@ -399,7 +399,7 @@
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
-      font-family: var(--font-family-mono);
+      font-family: var(--font-family-numeric);
       line-height: 1.2;
     }
     .pulse-card-value.positive { color: var(--market-up-fg); }
@@ -473,7 +473,7 @@
 
     /* ── Status bar brand tint (dark mode) ── */
     [data-theme="dark"] .shell-home .shell-status-bar {
-      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-strip));
+      background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-strip));
     }
 
     /* ══════════════════════════════════════════════
@@ -547,6 +547,17 @@
 
     /* Cursor utility — label/button interactive pointer */
     .cursor-pointer { cursor: pointer; }
+
+    /* Decision judgment label — expand touch target without visual padding */
+    .decision-judgment > .cursor-pointer {
+      display: block;
+      position: relative;
+    }
+    .decision-judgment > .cursor-pointer::before {
+      content: '';
+      position: absolute;
+      inset: -2px 0;
+    }
 
     /* Overlay field semantic value colors */
     .val-weak    { color: var(--market-weak-fg); }
@@ -967,7 +978,7 @@
       <div class="pulse-card" data-tooltip="今日实现盈亏 +¥86,472.50，点击查看组合详情" title="组合盈亏">
         <span class="pulse-card-label">今日盈亏</span>
         <span class="pulse-card-value positive">+¥86,472</span>
-        <span class="pulse-card-sub"><span class="indicator-up">▲</span> +0.34% 较昨日</span>
+        <span class="pulse-card-sub"><span class="indicator-up">+0.34% 较昨日</span></span>
       </div>
       <div class="pulse-card warning" data-tooltip="VaR 已超过 95% 历史分位，点击查看风控详情" title="风险指标">
         <span class="pulse-card-badge">预警</span>

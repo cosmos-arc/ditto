@@ -37,6 +37,7 @@ button {
   background: transparent;
   border: none;
   color: inherit;
+  font-family: var(--font-family-ui);
 }
 
 /* ── Layout Component Variables (density-sensitive) ── */
@@ -210,7 +211,8 @@ button {
   font-size: var(--font-size-16);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  font-family: var(--font-family-heading);
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
@@ -523,9 +525,10 @@ button {
 }
 
 .panel-title {
-  font-size: var(--font-size-12);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-13);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  font-family: var(--font-family-heading);
   flex: 1;
   display: flex;
   align-items: baseline;
@@ -574,11 +577,15 @@ button {
 }
 
 .panel-action {
+  font-family: var(--font-family-ui);
   font-size: var(--font-size-12);
   color: var(--text-secondary);
   cursor: pointer;
-  padding: var(--space-2) var(--space-6);
+  padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-4);
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
   transition: background var(--motion-duration-fast) var(--motion-easing-standard),
               color var(--motion-duration-fast) var(--motion-easing-standard);
   white-space: nowrap;
@@ -658,7 +665,8 @@ button {
   font-size: var(--font-size-14);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  line-height: 1.6;
+  font-family: var(--font-family-heading);
+  line-height: 1.4;
 }
 
 .decision-judgment-metrics {
@@ -704,11 +712,15 @@ button {
 }
 
 .decision-cta {
+  font-family: var(--font-family-ui);
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-medium);
   padding: var(--space-4) var(--space-10);
   border-radius: var(--radius-4);
   cursor: pointer;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
   transition: background var(--motion-duration-fast) var(--motion-easing-standard);
   white-space: nowrap;
 }
@@ -914,9 +926,9 @@ button {
 .queue-item-tag.domain   { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .queue-item-tag.risk     { background: var(--risk-high-bg); color: var(--risk-high-fg); }
 .queue-item-tag.trade    { background: var(--brand-accent-subtle); color: var(--brand-accent); }
-.queue-item-tag.research { background: color-mix(in oklch, var(--brand-accent) 12%, transparent); color: var(--brand-accent); }
-.queue-item-tag.data     { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
-.queue-item-tag.platform { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+.queue-item-tag.research { background: color-mix(in oklch, var(--purple-500) 12%, transparent); color: var(--purple-500); }
+.queue-item-tag.data     { background: color-mix(in oklch, var(--system-degraded-fg) 12%, transparent); color: var(--system-degraded-fg); }
+.queue-item-tag.platform { background: color-mix(in oklch, var(--brand-500) 12%, transparent); color: var(--brand-500); }
 
 .queue-item-tag.priority {
   font-size: var(--font-size-10);
@@ -1015,8 +1027,8 @@ button {
 
 .context-section-title {
   font-size: var(--font-size-12);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-tertiary);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -3231,7 +3243,7 @@ details.context-section > .context-section-body {
 .text-label    { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-primary); }
 .text-body     { font-size: var(--font-size-13); color: var(--text-secondary); }
 .text-value    { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.text-mono     { font-family: var(--font-family-mono); font-variant-numeric: tabular-nums; }
+.text-mono     { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
 
 /* ── Status colors ── */
 .status-healthy   { color: var(--system-healthy-fg); }

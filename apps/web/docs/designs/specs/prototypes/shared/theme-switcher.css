@@ -33,6 +33,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 24px;
   height: var(--density-action-height);
   padding: 0 var(--space-8);
   font-family: var(--font-family-ui);
@@ -45,7 +46,6 @@
   transition: color var(--motion-duration-fast) var(--motion-easing-standard),
               background var(--motion-duration-fast) var(--motion-easing-standard);
   white-space: nowrap;
-  line-height: 1;
 }
 
 .switcher-btn:hover {
