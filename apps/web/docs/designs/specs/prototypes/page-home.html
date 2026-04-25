@@ -57,29 +57,20 @@
   <script src="shared/mock-data.js"></script>
 
   <style>
-    /* ── Rail theme/density switcher — vertical layout ── */
-    .rail-theme-switcher {
+    /* ── Rail toggle icons ── */
+    .rail-bottom {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: var(--space-4);
-      padding: var(--space-4) var(--space-2);
     }
-    .rail-theme-switcher .switcher-group {
-      flex-direction: column;
-      gap: 1px;
+
+    /* ── Subtle scrollbar for low-frequency panels ── */
+    .panel-body.scrollbar-subtle::-webkit-scrollbar-thumb {
+      background: transparent;
     }
-    .rail-theme-switcher .switcher-btn {
-      font-size: var(--font-size-10);
-      padding: 0 var(--space-4);
-      min-height: 20px;
-    }
-    .rail-theme-switcher .switcher-group-label {
-      display: none;
-    }
-    .rail-theme-switcher .switcher-sep {
-      width: 16px;
-      height: 1px;
+    .panel-body.scrollbar-subtle:hover::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
     }
 
     /* ── Style label for comparison (L4 — prototype annotation) ── */
@@ -176,12 +167,14 @@
       position: absolute;
       bottom: -4px;
       left: 0;
-      width: 40%;
+      width: 180%;
       height: 2px;
       background: linear-gradient(
         90deg,
-        var(--brand-accent) 30%,
-        var(--brand-signature-fg) 60%,
+        color-mix(in oklch, var(--brand-accent) 60%, transparent) 0%,
+        var(--brand-accent) 15%,
+        color-mix(in oklch, var(--brand-accent) 40%, transparent) 40%,
+        color-mix(in oklch, var(--brand-accent) 15%, transparent) 70%,
         transparent 100%
       );
       border-radius: 1px;
@@ -273,6 +266,10 @@
     }
 
     /* ── Decision CTA active/pressed state ── */
+    .decision-cta {
+      min-width: 72px;
+      justify-content: center;
+    }
     .decision-cta:active {
       transform: scale(0.97);
       transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
@@ -346,6 +343,12 @@
       font-size: 0.85em;
       margin-right: 2px;
     }
+    .status-value.indicator-down {
+      color: var(--market-down-fg);
+    }
+    .decision-judgment-metric .status-value:not(.up):not(.down):not(.indicator-down):not(.warning):not(.positive):not(.negative) {
+      color: var(--text-primary);
+    }
 
     /* ── Status dot — live indicator lamp ── */
     .status-dot {
@@ -379,6 +382,8 @@
       vertical-align: middle;
       margin-left: var(--space-2);
       flex-shrink: 0;
+      background: transparent;
+      opacity: 1;
     }
 
     /* ══════════════════════════════════════════════
@@ -407,11 +412,11 @@
       box-shadow: 0 0 0 1px var(--border-default);
     }
     .pulse-card.warning {
-      border-color: color-mix(in oklch, var(--risk-high-fg) 30%, transparent);
+      border-color: var(--border-default);
     }
     .pulse-card.warning:hover {
-      border-color: color-mix(in oklch, var(--risk-high-fg) 50%, transparent);
-      box-shadow: 0 0 8px 0 color-mix(in oklch, var(--risk-high-fg) 10%, transparent);
+      border-color: var(--border-default);
+      box-shadow: 0 0 0 1px var(--border-default);
     }
     .pulse-card-label {
       font-size: var(--font-size-10);
@@ -428,7 +433,7 @@
       line-height: 1.2;
     }
     .pulse-card-value.positive { color: var(--market-up-fg); }
-    .pulse-card-value.warning { color: var(--system-degraded-fg); }
+    .pulse-card-value.warning { color: var(--risk-medium-fg); }
     .pulse-card-sub {
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
@@ -875,6 +880,12 @@
       opacity: 0.8;
     }
 
+    /* ── Panel action — consistent sizing ── */
+    .panel-action {
+      min-width: 72px;
+      justify-content: center;
+    }
+
     /* ── Panel action enhanced focus ── */
     .panel-action:focus-visible {
       outline: none;
@@ -985,19 +996,11 @@
         </button>
       </div>
       <div class="rail-bottom">
-        <div class="theme-switcher rail-theme-switcher" data-tooltip="密度 / 主题切换">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">深</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">浅</button>
-          </div>
-        </div>
-        <button class="rail-icon" aria-label="Settings" title="Settings">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
+        <button class="rail-icon" id="density-toggle" aria-label="密度切换" title="密度: 标准" data-tooltip="密度切换">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5h14"/><path d="M3 10h14"/><path d="M3 15h14"/></svg>
+        </button>
+        <button class="rail-icon" id="theme-toggle" aria-label="主题切换" title="主题: 深色" data-tooltip="主题切换">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
         </button>
       </div>
       <!-- R1: Rail right edge ambient light -->
@@ -1043,20 +1046,16 @@
       </div>
     </div>
 
-    <!-- State Variants: Today Pulse -->
 
-
-
-
-    <!-- ═══ Today Pulse (L1 — core data cards) ═══ -->
+    <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
+    <div class="shell-main" id="main-content">
+      <!-- ═══ Today Pulse (L1 — core data cards) ═══ -->
     <div class="today-pulse" data-contract-slot="today-pulse" data-reveal="fade-up" data-mouse-glow="true" data-mouse-glow-size="200px">
       <div class="pulse-card" data-tooltip="今日实现盈亏 +¥86,472.50，点击查看组合详情" title="组合盈亏">
         <span class="pulse-card-label">今日盈亏</span>
         <span class="pulse-card-value positive">+¥86,472</span>
         <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日盈亏走势">
           <polyline points="2,10 14,11 28,6 42,4 54,2" stroke="var(--market-up-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <linearGradient id="spark-up" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient>
-          <polygon points="2,10 14,11 28,6 42,4 54,2 54,14 2,14" fill="url(#spark-up)"/>
         </svg>
         <span class="pulse-card-sub"><span class="indicator-up">+0.34% 较昨日</span></span>
       </div>
@@ -1065,17 +1064,15 @@
         <span class="pulse-card-label">风险</span>
         <span class="pulse-card-value warning">中等</span>
         <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日风险走势">
-          <polyline points="2,3 14,2 28,5 42,8 54,10" stroke="var(--system-degraded-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <linearGradient id="spark-warn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--system-degraded-fg)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--system-degraded-fg)" stop-opacity="0"/></linearGradient>
-          <polygon points="2,3 14,2 28,5 42,8 54,10 54,14 2,14" fill="url(#spark-warn)"/>
+          <polyline points="2,3 14,2 28,5 42,8 54,10" stroke="var(--market-down-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
-        <span class="pulse-card-sub">VaR 95% · <span class="val-warning">回撤 -3.8%</span></span>
+        <span class="pulse-card-sub">VaR 95% · <span class="indicator-down">回撤 -3.8%</span></span>
       </div>
       <div class="pulse-card" data-tooltip="波动回落 + 北向转暖，市场环境温和" title="市场状态">
         <span class="pulse-card-label">Regime</span>
         <span class="pulse-card-value">温和偏好</span>
         <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日波动率走势">
-          <polyline points="2,8 14,6 28,10 42,11 54,9" stroke="var(--brand-signature-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <polyline points="2,8 14,6 28,10 42,11 54,9" stroke="var(--market-up-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.5"/>
         </svg>
         <span class="pulse-card-sub">波动回落 · <span class="val-positive">北向转暖</span></span>
       </div>
@@ -1092,8 +1089,6 @@
       </div>
     </div>
 
-    <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
-    <div class="shell-main" id="main-content">
       <!-- Primary: Decision Banner + Execution Queue -->
       <div class="main-primary">
         <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
@@ -1104,9 +1099,7 @@
               <span class="metric-label">今日盈亏</span>
               <span class="metric-value positive" data-tooltip="今日实现盈亏 +¥86,472.50">+¥<span data-ticker="86472.50" data-decimals="2">86,472.50</span>
                 <svg class="sparkline" width="64" height="20" viewBox="0 0 64 20" fill="none" aria-label="近 5 日盈亏趋势">
-                  <defs><linearGradient id="pnl-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-strong-fg)" stop-opacity="0.2"/><stop offset="100%" stop-color="var(--market-strong-fg)" stop-opacity="0"/></linearGradient></defs>
                   <polyline points="2,14 14,12 26,10 38,8 50,6 62,4" stroke="var(--market-strong-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                  <polygon points="2,14 14,12 26,10 38,8 50,6 62,4 62,20 2,20" fill="url(#pnl-grad)"/>
                 </svg>
               </span>
               <span class="metric-sub">+0.34% · 总权益 ¥<span data-counter="25432180" data-counter-decimals="0" data-tooltip="账户总权益">25,432,180</span> · <span class="indicator-up" data-tooltip="较昨日 +¥21,400 (+0.08%)">较昨日 +¥21,400</span></span>
@@ -1123,14 +1116,14 @@
                 </div>
                 <div class="decision-judgment-metric">
                   <span class="status-label" data-tooltip="组合最大回撤">回撤</span>
-                  <span class="status-value warning" data-tooltip="接近预警线 -5%">-3.8%</span>
+                  <span class="status-value indicator-down" data-tooltip="接近预警线 -5%">-3.8%</span>
                 </div>
               </div>
               <div class="decision-judgment-metrics">
                 <div class="decision-judgment-metric">
                   <span class="status-label" data-tooltip="隐含波动率指数">IVIX</span>
                   <span class="status-value"><span data-ticker="18.52" data-decimals="2">18.52</span>
-                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"series":"warning","fill":true,"width":36,"height":14}' aria-label="IVIX 走势"></svg>
+                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"series":"down","fill":true,"width":36,"height":14}' aria-label="IVIX 走势"></svg>
                   </span>
                 </div>
                 <div class="decision-judgment-metric">
@@ -1279,7 +1272,7 @@
             <span class="panel-title">研究进展 <span class="panel-subtitle">因子 · 策略 · 模型</span></span>
             <button class="panel-action">查看全部 →</button>
           </div>
-          <div class="panel-body">
+          <div class="panel-body scrollbar-subtle">
             <!-- Deduplicated: removed "价值因子 Q1 回测完成" (already in Priority Items) -->
             <div class="research-item">
               <span class="research-item-icon icon-healthy">
@@ -1325,7 +1318,7 @@
             <span class="panel-title">Agent 洞察 <span class="panel-subtitle">跨域发现</span></span>
             <button class="panel-action">查看全部洞察 →</button>
           </div>
-          <div class="panel-body">
+          <div class="panel-body scrollbar-subtle">
           <div class="finding-item">
             <span class="finding-icon icon-agent">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
