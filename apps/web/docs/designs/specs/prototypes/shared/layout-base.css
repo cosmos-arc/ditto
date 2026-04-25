@@ -953,6 +953,21 @@ button {
   color: var(--text-secondary);
 }
 
+/* P2/P3 queue items: collapse reason row, reveal on hover */
+.queue-item:has(.queue-item-bar.p2) .queue-item-detail,
+.queue-item:has(.queue-item-bar.p3) .queue-item-detail {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height var(--motion-duration-fast) var(--motion-easing-standard),
+              opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+.queue-item:has(.queue-item-bar.p2):hover .queue-item-detail,
+.queue-item:has(.queue-item-bar.p3):hover .queue-item-detail {
+  max-height: 40px;
+  opacity: 1;
+}
+
 .queue-item-footer {
   display: flex;
   align-items: center;
@@ -962,6 +977,11 @@ button {
 .queue-item-source {
   font-size: var(--font-size-10);
   color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.queue-item:hover .queue-item-source {
+  opacity: 1;
 }
 
 .queue-item-actions {

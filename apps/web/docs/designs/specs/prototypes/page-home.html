@@ -412,6 +412,17 @@
     }
     .pulse-card-sub .indicator-up { color: var(--market-up-fg); }
     .pulse-card-sub .indicator-down { color: var(--market-down-fg); }
+
+    /* Pulse card sparkline — inline micro chart */
+    .pulse-card-sparkline {
+      display: block;
+      margin-top: var(--space-2);
+      opacity: 0.6;
+    }
+
+    /* Pulse card sub conditional coloring */
+    .pulse-card-sub .val-positive { color: var(--market-up-fg); }
+    .pulse-card-sub .val-warning  { color: var(--system-degraded-fg); }
     .pulse-card-badge {
       position: absolute;
       top: var(--space-6);
@@ -473,7 +484,10 @@
 
     /* ── Status bar brand tint (dark mode) ── */
     [data-theme="dark"] .shell-home .shell-status-bar {
-      background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-strip));
+      background: color-mix(in oklch, var(--brand-signature-fg) 6%, var(--surface-strip));
+    }
+    [data-theme="dark"] .shell-home .shell-status-bar .status-bar-separator {
+      background: color-mix(in oklch, var(--brand-signature-fg) 12%, var(--border-subtle));
     }
 
     /* ══════════════════════════════════════════════
@@ -552,11 +566,48 @@
     .decision-judgment > .cursor-pointer {
       display: block;
       position: relative;
+      padding: var(--space-2) var(--space-16) var(--space-2) 0;
+      margin: calc(var(--space-2) * -1) calc(var(--space-16) * -1) calc(var(--space-2) * -1) 0;
+      border-radius: var(--radius-4);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .decision-judgment > .cursor-pointer::before {
       content: '';
       position: absolute;
-      inset: -2px 0;
+      inset: 0;
+      border-radius: var(--radius-4);
+    }
+    .decision-judgment > .cursor-pointer:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .decision-judgment > .cursor-pointer::after {
+      content: '›';
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: var(--font-size-14);
+      color: var(--text-quaternary);
+      opacity: 0;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .decision-judgment > .cursor-pointer:hover::after {
+      opacity: 1;
+    }
+
+    /* Decision KPI metrics micro-divider — Brass signature */
+    .shell-home .decision-judgment-metrics {
+      position: relative;
+      padding-top: var(--space-8);
+    }
+    .shell-home .decision-judgment-metrics::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: color-mix(in oklch, var(--brand-signature-fg) 10%, var(--border-subtle));
     }
 
     /* Overlay field semantic value colors */
@@ -686,7 +737,7 @@
       height: 80px;
       background: radial-gradient(
         ellipse at center,
-        color-mix(in oklch, var(--brand-accent) 3%, transparent) 0%,
+        color-mix(in oklch, var(--brand-signature-fg) 4%, transparent) 0%,
         transparent 70%
       );
       pointer-events: none;
@@ -704,17 +755,17 @@
     .panel {
       transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
     }
-    .panel:hover {
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 6%, transparent),
-                  0 1px 3px color-mix(in oklch, var(--brand-accent) 3%, transparent);
+    .shell-home .panel:hover {
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-signature-fg) 6%, transparent),
+                  0 1px 3px color-mix(in oklch, var(--brand-signature-fg) 3%, transparent);
     }
 
     /* ── Sidebar context rail premium polish ── */
     .shell-home .context-section {
       transition: background var(--motion-duration-normal) var(--motion-easing-standard);
     }
-    .shell-home .context-section:hover {
-      background: color-mix(in oklch, var(--brand-accent) 2%, var(--surface-panel-base));
+    [data-theme="dark"] .shell-home .context-section:hover {
+      background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
     }
 
     /* ── Alert row urgency hover ── */
@@ -978,13 +1029,23 @@
       <div class="pulse-card" data-tooltip="今日实现盈亏 +¥86,472.50，点击查看组合详情" title="组合盈亏">
         <span class="pulse-card-label">今日盈亏</span>
         <span class="pulse-card-value positive">+¥86,472</span>
+        <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日盈亏走势">
+          <polyline points="2,10 14,11 28,6 42,4 54,2" stroke="var(--market-up-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <linearGradient id="spark-up" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient>
+          <polygon points="2,10 14,11 28,6 42,4 54,2 54,14 2,14" fill="url(#spark-up)"/>
+        </svg>
         <span class="pulse-card-sub"><span class="indicator-up">+0.34% 较昨日</span></span>
       </div>
       <div class="pulse-card warning" data-tooltip="VaR 已超过 95% 历史分位，点击查看风控详情" title="风险指标">
         <span class="pulse-card-badge">预警</span>
         <span class="pulse-card-label">风险</span>
         <span class="pulse-card-value warning">中等</span>
-        <span class="pulse-card-sub">VaR 95% · 回撤 -3.8%</span>
+        <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日风险走势">
+          <polyline points="2,3 14,2 28,5 42,8 54,10" stroke="var(--system-degraded-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <linearGradient id="spark-warn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--system-degraded-fg)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--system-degraded-fg)" stop-opacity="0"/></linearGradient>
+          <polygon points="2,3 14,2 28,5 42,8 54,10 54,14 2,14" fill="url(#spark-warn)"/>
+        </svg>
+        <span class="pulse-card-sub">VaR 95% · <span class="val-warning">回撤 -3.8%</span></span>
       </div>
       <div class="pulse-card" data-tooltip="波动回落 + 北向转暖，市场环境温和" title="市场状态">
         <span class="pulse-card-label">Regime</span>
