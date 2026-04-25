@@ -828,7 +828,7 @@
       opacity: 0.3;
     }
     [data-theme="light"] .shell-home .context-section:hover {
-      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
+      background: color-mix(in oklch, var(--brand-signature-fg) 4%, var(--surface-panel-base));
     }
 
     /* ── Health item hover feedback ── */
@@ -1050,13 +1050,16 @@
       <div class="pulse-card" data-tooltip="波动回落 + 北向转暖，市场环境温和" title="市场状态">
         <span class="pulse-card-label">Regime</span>
         <span class="pulse-card-value">温和偏好</span>
-        <span class="pulse-card-sub">波动回落 · 北向转暖</span>
+        <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日波动率走势">
+          <polyline points="2,8 14,6 28,10 42,11 54,9" stroke="var(--brand-signature-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.5"/>
+        </svg>
+        <span class="pulse-card-sub">波动回落 · <span class="val-positive">北向转暖</span></span>
       </div>
       <div class="pulse-card" data-tooltip="2 项待处理，含 1 项 P1，点击查看全部" title="待处理事项">
         <span class="pulse-card-badge">2</span>
         <span class="pulse-card-label">待处理</span>
         <span class="pulse-card-value">2</span>
-        <span class="pulse-card-sub">含 1 项 P1</span>
+        <span class="pulse-card-sub">含 <span class="val-warning">1 项 P1</span></span>
       </div>
       <div class="pulse-card" data-tooltip="3 个后台任务运行中（回测 1 / 采集 1 / 监控 1）" title="后台任务">
         <span class="pulse-card-label">后台任务</span>
