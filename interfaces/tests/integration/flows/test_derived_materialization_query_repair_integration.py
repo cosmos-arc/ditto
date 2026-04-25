@@ -28,8 +28,8 @@ from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.services import (
     DerivedCatalogService,
     DerivedQueryService,
-    DerivedSeriesQuery,
 )
+from ditto_data.services.derived import DerivedSeriesQuery
 from ditto_data.sources import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.jobs.flows.materialization import (

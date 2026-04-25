@@ -8,11 +8,13 @@ from datetime import date, datetime
 
 import polars as pl
 from ditto_data.services import (
+    DerivedQueryService,
+    DerivedSourceScope,
+)
+from ditto_data.services.derived import (
     DerivedCompareQuery,
     DerivedLatestQuery,
-    DerivedQueryService,
     DerivedSeriesQuery,
-    DerivedSourceScope,
 )
 
 type TemporalValue = date | datetime

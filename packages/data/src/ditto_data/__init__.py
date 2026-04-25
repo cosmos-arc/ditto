@@ -7,30 +7,14 @@
 from ditto_data.events import DataIngested, QualityCheckCompleted
 from ditto_data.provider import BarQuery, DataProvider, InstrumentQuery
 
-# 导出 Domain Services（供 App 层使用）
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.derived import DerivedQueryService
-from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.macro_service import MacroService
-from ditto_data.services.market_service import MarketService
-from ditto_data.services.market_write_service import MarketWriteService
-from ditto_data.services.metadata_service import MetadataService
-
 # 导出运行时基础设施（供 App 层 DI 使用）
 from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = [
     "BarQuery",
-    "CapitalService",
     "DataIngested",
     "DataProvider",
-    "DerivedQueryService",
-    "FundamentalService",
     "InstrumentQuery",
-    "MacroService",
-    "MarketService",
-    "MarketWriteService",
-    "MetadataService",
     "QualityCheckCompleted",
     "SQLiteClient",
 ]

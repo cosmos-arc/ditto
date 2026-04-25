@@ -5,8 +5,7 @@ Ditto 共享内核 — 跨层领域原语 + Protocol 抽象 + 薄实现.
 零业务行为、零外部依赖、零 I/O。
 """
 
-__version__ = "0.2.0"
-
+from ditto_kernel._version import __version__ as __version__
 from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
 from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
 from ditto_kernel.exceptions import (
@@ -23,18 +22,12 @@ from ditto_kernel.market import (
     GRAIN_TO_TIME_KEYS,
     CalendarId,
     GrainId,
-    MacroCategory,
     MacroDataProvider,
     MacroFrequency,
     TimeSpec,
 )
 from ditto_kernel.order import OrderSide
-from ditto_kernel.quality import (
-    DQIssue,
-    DQLevel,
-    DQResult,
-    DQSeverity,
-)
+from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_kernel.research import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -77,7 +70,6 @@ __all__ = [
     "ImpactModel",
     "InstrumentId",
     "InstrumentIngestParams",
-    "MacroCategory",
     "MacroDataProvider",
     "MacroFrequency",
     "MaterializationProfile",
@@ -93,4 +85,5 @@ __all__ = [
     "SimpleEventBus",
     "SimulatedClock",
     "TimeSpec",
+    "__version__",
 ]
