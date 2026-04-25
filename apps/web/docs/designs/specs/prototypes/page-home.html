@@ -57,6 +57,31 @@
   <script src="shared/mock-data.js"></script>
 
   <style>
+    /* ── Rail theme/density switcher — vertical layout ── */
+    .rail-theme-switcher {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-2);
+    }
+    .rail-theme-switcher .switcher-group {
+      flex-direction: column;
+      gap: 1px;
+    }
+    .rail-theme-switcher .switcher-btn {
+      font-size: var(--font-size-10);
+      padding: 0 var(--space-4);
+      min-height: 20px;
+    }
+    .rail-theme-switcher .switcher-group-label {
+      display: none;
+    }
+    .rail-theme-switcher .switcher-sep {
+      width: 16px;
+      height: 1px;
+    }
+
     /* ── Style label for comparison (L4 — prototype annotation) ── */
     .style-label {
       position: fixed;
@@ -960,6 +985,17 @@
         </button>
       </div>
       <div class="rail-bottom">
+        <div class="theme-switcher rail-theme-switcher" data-tooltip="密度 / 主题切换">
+          <div class="switcher-group" role="group" aria-label="密度">
+            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
+            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
+            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          </div>
+          <div class="switcher-group" role="group" aria-label="主题">
+            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">深</button>
+            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">浅</button>
+          </div>
+        </div>
         <button class="rail-icon" aria-label="Settings" title="Settings">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
         </button>
@@ -978,18 +1014,6 @@
         <kbd>⌘K</kbd>
       </div>
       <div class="header-actions">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">深</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">浅</button>
-          </div>
-        </div>
         <button class="header-action-btn" aria-label="Notifications" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
