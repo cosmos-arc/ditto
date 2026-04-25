@@ -187,6 +187,33 @@
 
 ## Phase 8: FINAL（最终验证 + 气质评分） [混合]
 
+### Step 8.0: PRE-SCORE GATES（评分前置门禁） [sonnet]
+
+> **以下门禁全部通过后才能进行五维度评分。任何一项不通过 = 布局错误，必须先修复。**
+
+#### Gate 0: 原型工具 UI 隔离
+- `.proto-nav` 不可见（`getBoundingClientRect().height === 0` 或不在 default-view 中）
+- `.style-label` 不可见
+- `.skip-link` 默认不可见
+
+#### Gate 1: CSS 资源完整加载
+- 所有 token CSS `sheet.cssRules.length > 0`
+- Console 无 `Failed to load resource`（404）
+- 关键 token 变量有值（如 `--font-size-12`、`--text-primary`）
+
+#### Gate 2: Shell 网格结构
+- Shell display 为 grid
+- Grid 列数 ≥ 2
+- rail / header / main / sidebar 高度 > 0
+
+#### Gate 3: 浏览器视觉验证
+- **必须执行 `browser_take_screenshot`** 并对截图进行视觉检查
+- 检查页面整体布局是否符合预期
+- 检查无元素错位/重叠/溢出
+- 检查原型工具 UI 未污染产品视图
+
+**失败处理**：Gate 0-2 不通过 → STOP 修复。Gate 3 不通过 → 视觉问题严重程度扣除 1-3 分。
+
 ### Step 8.1: 零 Inline Style 门禁 [sonnet]
 
 - grep 所有 style="..." 属性（排除 CSS 注释）
@@ -214,7 +241,9 @@
 
 ### Step 8.8: Art Director 最终气质评估 [opus]
 
+- **浏览器截图**：`browser_take_screenshot` 全页面截图，作为评分依据
 - 重新提取视觉指纹，对比 Phase 1 基线
+- 五维度评分必须结合截图视觉效果，不能仅凭 `getComputedStyle()` 数据
 - 输出 5 维气质评分卡（克制度/一致性/高级感/品牌方向/信息效率）
 - 跨页一致性验证
 

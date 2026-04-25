@@ -8,6 +8,53 @@
 
 ---
 
+## PRE-SCORE GATES（评分前置门禁）
+
+> **宏观布局正确是评分的前提。以下门禁全部通过后才能进行五维度评分。任何一项不通过 = 布局错误，不计分。**
+
+### Gate 0: 原型工具 UI 隔离（P0）
+
+| 检查项 | 验证方法 | 通过标准 |
+|--------|---------|---------|
+| `.proto-nav` 不可见或不在 default-view 中 | Playwright `getBoundingClientRect().height === 0` 或在 `#states-gallery`/`#overlays-gallery` 内 | 不可见 |
+| `.style-label` 不可见 | 同上 | 不可见 |
+| `.skip-link` 不可见 | 同上（仅 `:focus` 时可见是允许的） | 默认不可见 |
+
+### Gate 1: CSS 资源完整加载（P0）
+
+| 检查项 | 验证方法 | 通过标准 |
+|--------|---------|---------|
+| Token CSS 已加载 | `document.querySelectorAll('link')[].sheet.cssRules.length > 0` | 所有 token 文件 rules > 0 |
+| 无 404 错误 | Console 无 `Failed to load resource` | 0 个 404 |
+| CSS 变量可用 | `getComputedStyle(document.documentElement).getPropertyValue('--font-size-12')` 非空 | 关键 token 有值 |
+
+### Gate 2: Shell 网格结构正确（P0）
+
+| 检查项 | 验证方法 | 通过标准 |
+|--------|---------|---------|
+| Shell 为 grid 布局 | `getComputedStyle(.shell-*).display === 'grid'` | grid |
+| Grid 列数正确 | `gridTemplateColumns.split(' ').length >= 2` | ≥ 2 列 |
+| 各区域可见 | rail / header / main / sidebar 的 `getBoundingClientRect().height > 0` | 全部可见 |
+
+### Gate 3: 浏览器视觉验证（P0）
+
+> **必须执行 `browser_take_screenshot` 并人工/AI 视觉检查。** 纯 `getComputedStyle()` 验证不能替代视觉检查。
+
+| 检查项 | 方法 |
+|--------|------|
+| 页面整体布局是否符合预期 | 截图 + AI vision 分析 |
+| 无元素错位/重叠/溢出 | 截图检查 |
+| 原型工具 UI 未污染产品视图 | 截图中无 proto-nav/style-label |
+
+### 失败处理
+
+- Gate 0 不通过：**STOP**，修复原型工具 UI 隔离后再评分
+- Gate 1 不通过：**STOP**，修复 CSS 加载问题（通常是 HTTP 服务器目录错误）
+- Gate 2 不通过：**STOP**，修复 shell 布局后再评分
+- Gate 3 不通过：**降分处理**，根据视觉问题严重程度扣除 1-3 分
+
+---
+
 ## Fixed/Sticky 元素遮挡检测
 
 > viewport 验证不能只看 scrollHeight，必须检测 z-index 层叠遮挡。
