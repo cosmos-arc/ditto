@@ -28,7 +28,8 @@ Token Stabilization R1 是 Ditto Design Token 体系从"设计阶段"走向"工�
 | # | 层名 | 职责 | 对应 CSS 文件 | Token 数量 | 依赖 | R1 状态 |
 |---|------|------|--------------|-----------|------|--------|
 | 1 | **Foundation** | 物理原语：中性色、品牌色、功能色、字号、字重、字体、间距、圆角、动画、色觉辅助符号 | `tokens-base.css` | 49 | 无 | ✅ 已稳定 |
-| 2 | **Semantic Surface** | 界面表面语义：背景层级、文本层级（含 data-stale）、边框、品牌强调、图标、滚动条、代码/等宽、分隔线、Overlay（白色透明度）、Frosted Glass | `tokens-semantic.css` | 42 | L1 | ✅ 已稳定 |
+| 2 | **Semantic Surface** | 界面表面语义：背景层级、文本层级（含 data-stale）、边框、品牌强调、图标、滚动条、代码/等宽、分隔线、Overlay（白色透明度）、Frosted Glass、Domain 签名色 | `tokens-semantic.css` | 42 + 24 (domain) | L1 | ✅ 已稳定 |
+| 2b | **Atmosphere** | 亚感知级背景氛围：色温渐变、面板呼吸动画（运行时由 JS hook 注入） | `tokens-atmosphere.css` | 5 | L2 | ✅ Living Graphite |
 | 3 | **Shell** | 页面壳层布局：rail/header/sidebar/detail/context-bar/status-bar 尺寸 + per-shell overrides | `tokens-shell.css` | 18 | L1, L2 | ✅ 已稳定 |
 | 4 | **Data Visualization** | 图表/热力图/sparkline/数据新鲜度/资产类别色/状态 LED | `tokens-data-viz.css` | 38 | L1-L3 | ✅ 已稳定 |
 | 5 | **Component** | UI 组件结构 token：button/badge/card/panel/input/tab/checkbox/status-dot | `tokens-component.css` | 38 | L1, L2, L8 | ✅ 已稳定 |
@@ -623,6 +624,7 @@ R1 审计范围：所有 CSS 文件中的 token 引用、hardcoded 色值、inli
 |------|---|------|
 | `tokens-base.css` | L1 Foundation | ✅ |
 | `tokens-semantic.css` | L2 Semantic Surface | ✅ |
+| `tokens-atmosphere.css` | L2b Atmosphere (Living Graphite) | ✅ |
 | `tokens-shell.css` | L3 Shell | ✅ R2 新增 |
 | `tokens-data-viz.css` | L4 Data Visualization | ✅ R2 新增 |
 | `tokens-interaction.css` | L6 Interaction | ✅ |
@@ -640,6 +642,7 @@ R1 审计范围：所有 CSS 文件中的 token 引用、hardcoded 色值、inli
 | `data-theme` | `<html>` | `dark`, `light` | `dark` | 全局主题 |
 | `data-density` | `<html>` | `dense`, `compact`, `comfortable` | `compact` | 全局密度 |
 | `data-market-region` | `<html>` | `cn`, `intl` | `cn` | Market 域颜色 |
+| `data-domain` | `<html>` | `home`, `markets`, `research`, `trading`, `ai`, `platform` | `home` | Domain 签名色（Living Graphite） |
 
 ## 附录 C：命名速查
 

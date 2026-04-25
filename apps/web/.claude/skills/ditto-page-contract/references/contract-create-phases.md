@@ -12,6 +12,7 @@
 4. 定位 blueprint section 文件（`02_core_page_blueprints.md`）
 5. 定位 prototype HTML（`docs/designs/specs/prototypes/page-<page>.html`）
 6. 定位 state spec（`04_interaction_state_spec.md`）
+7. 读取 `DESIGN.md` 的 Components 章节作为 token 映射参考
 
 ---
 

@@ -9,6 +9,7 @@
  * ══════════════════════════════════════════════════════════ */
 @import "./design-tokens/tokens-base.css";
 @import "./design-tokens/tokens-semantic.css";
+@import "./design-tokens/tokens-atmosphere.css";
 @import "./design-tokens/tokens-shell.css";
 @import "./design-tokens/tokens-data-viz.css";
 @import "./design-tokens/tokens-component.css";
@@ -110,7 +111,7 @@
   --color-signature-muted:  var(--brand-signature-muted);
   --color-signature-line:   var(--brand-signature-line);
   --color-signature-subtle: var(--brand-signature-subtle);
-  --color-signature-glow:   oklch(0.760 0.055 74 / 0.60);
+  --color-signature-glow:   oklch(from var(--brand-signature-fg) l c h / 0.60);
 
   /* ── 代码 / 滚动条 / 分割线 ── */
   --color-code-bg:           var(--code-bg);
@@ -392,6 +393,7 @@
 
 html {
   height: 100%;
+  transition: background 60s linear;
 }
 
 body {
@@ -595,6 +597,33 @@ body {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes value-flash-up {
+  0% {
+    text-shadow: 0 3px 6px oklch(from var(--market-up-fg) l c h / 0.08);
+    opacity: 0.85;
+  }
+  100% {
+    text-shadow: none;
+    opacity: 1;
+  }
+}
+
+@keyframes value-flash-down {
+  0% {
+    text-shadow: 0 -3px 6px oklch(from var(--market-down-fg) l c h / 0.08);
+    opacity: 0.85;
+  }
+  100% {
+    text-shadow: none;
+    opacity: 1;
+  }
+}
+
+@keyframes panel-breathe {
+  0%, 100% { border-color: var(--border-subtle); }
+  50% { border-color: color-mix(in oklch, var(--border-subtle) 90%, var(--color-signature-line) 10%); }
+}
+
 @keyframes task-breathe {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.88; }
@@ -671,6 +700,11 @@ body {
 [data-sidebar-collapsed] {
   --sidebar-width: var(--shell-sidebar-collapsed-width);
   --activity-width: var(--shell-sidebar-collapsed-width);
+}
+
+/* ── Panel breathe: sub-perceptual border color animation ── */
+[data-slot="panel"] {
+  animation: panel-breathe var(--atmosphere-breathe-duration, 45s) ease-in-out infinite;
 }
 
 /* Sidebar grid-template-columns transition */

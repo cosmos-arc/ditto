@@ -15,6 +15,12 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "visual:audit": "bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs",
+    "audit:tokens": "bun scripts/audit-wcag-contrast.mjs && bun scripts/audit-token-dead-links.mjs",
+    "audit:tokens:contrast": "bun scripts/audit-wcag-contrast.mjs",
+    "audit:tokens:dead-links": "bun scripts/audit-token-dead-links.mjs",
+    "build:tokens": "bun scripts/export-tokens.ts",
+    "build:tokens:check": "bun scripts/export-tokens.ts --check",
+    "audit:tokens:diff": "bun scripts/audit-token-diff.mjs",
     "generate-contracts": "bun .claude/skills/ditto-page-contract/scripts/generate.mjs"
   },
   "dependencies": {
@@ -52,6 +58,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.2",
     "ajv": "^8.18.0",
+    "culori": "^4.0.2",
     "globals": "^17.4.0",
     "jsdom": "^29.0.1",
     "msw": "^2.12.14",
@@ -59,6 +66,7 @@
     "pixelmatch": "^7.1.0",
     "playwright": "^1.59.1",
     "pngjs": "^7.0.0",
+    "style-dictionary": "^5.4.0",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "vite": "^8.0.2",

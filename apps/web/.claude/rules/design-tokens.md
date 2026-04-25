@@ -14,7 +14,8 @@ paths:
 ```
 src/styles/design-tokens/          ← 唯一真理源
   tokens-base.css                  ← L1: 颜色/间距/字号/圆角/动效/字体
-  tokens-semantic.css              ← L2: 表面/文本/边框/品牌
+  tokens-semantic.css              ← L2: 表面/文本/边框/品牌/签名色
+  tokens-atmosphere.css            ← L2b: 亚感知级氛围变量（运行时动态）
   tokens-shell.css                 ← L3: 壳层布局尺寸
   tokens-data-viz.css              ← L4: 图表/热力图
   tokens-component.css             ← L5: 组件结构
@@ -158,3 +159,20 @@ src/styles/design-tokens/          ← 唯一真理源
 | 4 | React 组件缺失（Workspace） | L2 bounding rect 通过但模块不存在 | 新增 L0 完整性验证层 |
 | 5 | Mock 数据为空导致区域空白 | hook 返回 `[]`，L2 容器高度可能仍通过 | L0 检查 mock 非空 |
 | 6 | 间距 token base 不同步 | Prototype 用 4pt base（--space-N），React 用 Tailwind step（--spacing-N） | 映射表固化到此文档 |
+
+## AI 可读设计系统描述
+
+`DESIGN.md` 是设计系统的结构化描述文件，供所有 AI agent 消费。
+
+### 与 Token SSOT 的关系
+
+| 文件 | 角色 | 消费者 |
+|------|------|--------|
+| `src/styles/design-tokens/*.css` | SSOT（值的权威来源） | Prototype HTML + React |
+| `DESIGN.md` | 描述层（为什么 + 怎么用） | AI agent（设计/编码/review） |
+
+### 同步规则
+
+- Token 值变更时：更新 CSS → 同步 DESIGN.md 的 YAML front matter
+- 新增 token 时：更新 CSS → 同步 DESIGN.md 的 YAML + Markdown body
+- 设计原则变更时：更新 DESIGN.md → 同步 Visual Constitution spec

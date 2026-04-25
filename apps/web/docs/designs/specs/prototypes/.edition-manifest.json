@@ -749,33 +749,19 @@
         "stateVariants": 12,
         "coveragePercent": 100
       }
-    },
+    }
+  ],
+  "auxiliary": [],
+  "legacy": [
     {
       "id": "ai-copilot-sidecar",
       "file": "component-ai-copilot-sidecar.html",
-      "status": "created",
+      "type": "global-component",
       "createdAt": "2026-04-21",
-      "type": "global-component",
-      "blueprintId": 27,
-      "inlineStyles": { "before": 5, "after": 0 },
-      "stateCoverage": {
-        "tabs": 0,
-        "overlays": 3,
-        "stateVariants": 8,
-        "coveragePercent": 100
-      },
-      "note": "Global component triggered by Cmd+K, 5 modes, not a routed page"
+      "removedAt": "2026-04-24",
+      "reason": "AI capability distributed to domain pages per v2.0 architecture refactor; no React implementation"
     }
   ],
-  "auxiliary": [
-    {
-      "id": "ai-copilot-sidecar",
-      "file": "component-ai-copilot-sidecar.html",
-      "type": "global-component",
-      "createdAt": "2026-04-21"
-    }
-  ],
-  "legacy": [],
   "iterationV2": {
     "startedAt": "2026-04-05",
     "phase1CompletedAt": "2026-04-05",
@@ -800,7 +786,7 @@
     "lastRun": "2026-04-20",
     "issues": 0,
     "fixed": 0,
-    "summary": "Edition v1 create-all: 30/30 页面（21 reviewed + 9 created）+ 1 global component。3 modified pages (markets-intelligence, backtest-result, signals-inbox) tabs/overlays 补齐。0 inline styles 全部清零。DOM 全部平衡。",
+    "summary": "Edition v1: 29 pages（21 reviewed + 8 created）+ token-showcase。ai-copilot-sidecar removed 2026-04-24 (v2.0 deprecation)。",
     "previousIssues": {
       "v5Audit": "v3 subagent 引入 2 处 DOM 嵌套错误(regime-monitor + research)，已手动修复",
       "editionReview20260407": "agent-console 5 处 <details> 闭合错误 + 5 处 gallery-card 未闭合; ai-overview 1 处 </span> 缺失",

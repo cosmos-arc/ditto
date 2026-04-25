@@ -1,20 +1,23 @@
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { Rail } from "./rail";
 import { ShellHeader } from "./header";
 import { NoiseLayer } from "./noise-layer";
+import { useActiveDomain } from "../hooks/use-active-domain";
+import { useAtmosphere } from "../hooks/use-atmosphere";
 
 interface AppShellProps {
 	children: ReactNode;
 }
 
-/**
- * AppShell -- global layout container.
- *
- * 2-column, 2-row grid: Rail | Content.
- * Header spans full width above Content.
- * NoiseLayer overlays as a decorative atmosphere.
- */
 export function AppShell({ children }: AppShellProps) {
+	const activeDomain = useActiveDomain();
+	useAtmosphere();
+
+	useEffect(() => {
+		document.documentElement.setAttribute("data-domain", activeDomain);
+	}, [activeDomain]);
+
 	return (
 		<div
 			className={

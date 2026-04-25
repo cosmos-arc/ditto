@@ -6,6 +6,11 @@
 
 **执行步骤**：
 
+0. **检查 DESIGN.md**
+   - 读取 `docs/DESIGN.md` 的 Components 章节，确认组件 token 映射
+   - 对比 DESIGN.md 中的组件 token 与 contract 中的 token 引用，标记偏差
+   - 确保架构方案的组件样式选择与 DESIGN.md 一致（而非仅参考 prototype 字面值）
+
 1. **分析原型结构**
    - 将 prototype 的 DOM 结构映射到 React 组件树
    - 每个 prototype section → 一个 React 组件/子组件

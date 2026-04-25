@@ -48,6 +48,17 @@
 
 ## 📋 项目规范
 
+### 设计系统描述
+
+`DESIGN.md` 是 Ditto 设计系统的 **AI 可读入口**。所有 AI agent 在参与 Ditto 的设计或编码工作前，应先阅读此文件以理解：
+- 调色板体系（OKLCH + 域签名色）
+- 排版系统（4 角色字体）
+- 间距/圆角/阴影规范
+- 组件 token 映射
+- 设计哲学和禁止事项
+
+**注意**：`DESIGN.md` 是描述层，不是 token 的 SSOT。token 的唯一真理源仍是 `src/styles/design-tokens/`。
+
 ### 代码风格 — TypeScript strict + Biome
 - **语言**：中文回复/文档，UTF-8 编码
 - **TypeScript**：详见 [core.md](.claude/rules/core.md)

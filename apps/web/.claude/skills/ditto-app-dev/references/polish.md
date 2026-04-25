@@ -8,9 +8,11 @@
 
 ## Step 1: Design System 对齐（使用 impeccable:normalize）
 
+- 读取 `docs/DESIGN.md` Components 章节，确认组件 token 映射基线
 - 扫描 React 实现，对照 contract slots/subSlots 的 token 消费
 - 检查是否存在硬编码颜色/字号/间距（应使用 design token）
 - 确保与项目 design system 一致（shadcn 组件变体、spacing scale、typography scale）
+- 确保 token 使用与 DESIGN.md 一致（组件背景色、边框色、圆角等应匹配 DESIGN.md Components 章节）
 - 修复所有 drift（偏离 design system 的样式）
 
 ## Step 2: 排版精修（使用 impeccable:typeset）

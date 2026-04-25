@@ -22,7 +22,12 @@
 | 04_interaction_state_spec.md | 通用状态定义 + 页面状态映射（如有） |
 | 00_ditto_product_criteria.md | 密度准则、字号映射、间距梯度 |
 
-### 2. 读取 Design Token（tokens-style.css）
+### 2. 读取 Design Token
+
+| 文件 | 内容 |
+|------|------|
+| `DESIGN.md` | AI 设计系统描述（结构化 YAML + 设计原则） |
+| `src/styles/design-tokens/tokens-*.css` | Token SSOT（9 个文件） |
 
 ### 3. 读取设计决策（docs/designs/decisions/）
 

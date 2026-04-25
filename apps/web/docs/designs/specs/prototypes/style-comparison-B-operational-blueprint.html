@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<!--
+  Style Comparison: B — Operational Blueprint (操作蓝图)
+  Reference: Crezco + Bloomberg Launchpad + military command interface
+  Aesthetic: Functional blueprint — lines are data flow paths, nodes are decision points.
+  Commander's battlefield situational awareness, NOT decorative grid.
+  Key differentiator: Every visual element has operational meaning.
+  Grid = information architecture, not decoration.
+  Lines = data flow direction, not decoration.
+  Nodes = decision states, not decoration.
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Style Comparison — B: Operational Blueprint</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { background: #0c0e14; color: #c8ccd4; font-family: 'Inter', system-ui, sans-serif; }
+
+    /* ═══ STYLE BADGE ═══ */
+    .style-badge {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 100; background: rgba(200,204,212,0.06); border: 1px solid rgba(200,204,212,0.1);
+      padding: 8px 20px; border-radius: 2px; font-size: 11px; color: rgba(200,204,212,0.4);
+      letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .style-badge strong { color: rgba(200,204,212,0.7); }
+
+    /* ═══ BLUEPRINT GRID BACKGROUND ═══ */
+    .blueprint-bg {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(100,120,180,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100,120,180,0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    /* Major grid lines every 100px */
+    .blueprint-bg::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        linear-gradient(rgba(100,120,180,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100,120,180,0.07) 1px, transparent 1px);
+      background-size: 100px 100px;
+    }
+
+    /* ═══ COORDINATE TICKS ═══ */
+    .coord-labels {
+      position: fixed; bottom: 30px; left: 52px; z-index: 2;
+      font-family: 'JetBrains Mono', monospace; font-size: 8px; color: rgba(100,120,180,0.15);
+    }
+
+    /* ═══ SHELL ═══ */
+    .shell { display: flex; height: 100vh; overflow: hidden; position: relative; z-index: 1; }
+
+    /* Rail — Structural, industrial */
+    .rail {
+      width: 52px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      padding: 0; gap: 0;
+      background: rgba(10,12,18,0.95);
+      border-right: 1px solid rgba(100,120,180,0.12);
+    }
+    /* Rail top coordinate marker */
+    .rail-coord {
+      font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      color: rgba(100,120,180,0.25); padding: 6px 0; letter-spacing: 0.05em;
+    }
+    .rail-logo {
+      width: 28px; height: 28px; margin: 8px 0 16px; border-radius: 2px;
+      background: transparent; border: 1px solid rgba(100,120,180,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      color: rgba(200,204,212,0.6);
+    }
+    .rail-item {
+      width: 52px; height: 38px; display: flex; align-items: center; justify-content: center;
+      color: rgba(200,204,212,0.2); font-size: 14px; cursor: pointer;
+      border-right: 2px solid transparent; transition: all 150ms ease;
+    }
+    .rail-item:hover { color: rgba(200,204,212,0.5); background: rgba(100,120,180,0.04); }
+    .rail-item.active {
+      color: #7c8fd4; background: rgba(100,120,180,0.06);
+      border-right-color: #7c8fd4;
+    }
+    .rail-spacer { flex: 1; }
+
+    /* Main area */
+    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Header — Command bar */
+    .header {
+      height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+      padding: 0 16px; border-bottom: 1px solid rgba(100,120,180,0.1);
+      background: rgba(12,14,20,0.9);
+    }
+    .header-cmd {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: rgba(100,120,180,0.3); font-weight: 500;
+    }
+    .header-title {
+      font-family: 'Source Serif 4', serif; font-size: 14px; font-weight: 600;
+      color: #dde0e8; letter-spacing: 0.01em;
+    }
+    .header-domain-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 6px;
+      border-radius: 1px; font-weight: 600; letter-spacing: 0.08em;
+      border: 1px solid rgba(100,120,180,0.2); color: rgba(100,120,180,0.5);
+      background: transparent;
+    }
+    .header-spacer { flex: 1; }
+    .header-actions { display: flex; gap: 2px; }
+    .header-btn {
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      border-radius: 2px; border: none; background: transparent; color: rgba(200,204,212,0.2);
+      cursor: pointer; font-size: 13px; transition: all 150ms ease;
+    }
+    .header-btn:hover { background: rgba(100,120,180,0.06); color: rgba(200,204,212,0.5); }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* ═══ DECISION BANNER — Operational alert ═══ */
+    .banner {
+      border-radius: 2px; padding: 12px 16px; display: flex; align-items: center; gap: 14px;
+      background: rgba(100,120,180,0.04);
+      border: 1px solid rgba(100,120,180,0.15);
+      border-left: 3px solid #7c8fd4;
+    }
+    .banner-icon {
+      font-size: 18px; flex-shrink: 0; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(100,120,180,0.2); border-radius: 2px;
+    }
+    .banner-content { flex: 1; }
+    .banner-title {
+      font-family: 'Source Serif 4', serif; font-size: 13px; font-weight: 600;
+      color: #dde0e8; margin-bottom: 3px;
+    }
+    .banner-desc { font-size: 11px; color: rgba(200,204,212,0.4); line-height: 1.6; font-family: 'JetBrains Mono', monospace; }
+    .banner-cta {
+      padding: 6px 12px; border-radius: 2px; font-size: 11px; font-weight: 600;
+      background: transparent; color: #7c8fd4; border: 1px solid rgba(100,120,180,0.3);
+      cursor: pointer; white-space: nowrap; font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em; transition: all 150ms ease;
+    }
+    .banner-cta:hover { background: rgba(100,120,180,0.1); border-color: rgba(100,120,180,0.5); }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 5fr 4fr; gap: 10px; min-height: 0; flex: 1; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    /* Panel — Blueprint zone */
+    .panel {
+      border-radius: 2px; background: rgba(200,204,212,0.015);
+      border: 1px solid rgba(100,120,180,0.1); display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    /* Zone label — top left corner coordinate */
+    .panel::before {
+      content: attr(data-zone); position: absolute; top: 0; right: 0;
+      font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      color: rgba(100,120,180,0.12); padding: 2px 4px;
+    }
+    .panel { position: relative; }
+    .panel-header {
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border-bottom: 1px solid rgba(100,120,180,0.08); flex-shrink: 0;
+    }
+    .panel-title {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+      color: rgba(200,204,212,0.5); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .panel-count {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 5px;
+      border: 1px solid rgba(100,120,180,0.15); color: rgba(200,204,212,0.25); font-weight: 500;
+    }
+    .panel-body { padding: 8px 12px; flex: 1; overflow-y: auto; }
+
+    /* Metric Card — Operational readout */
+    .metric-card {
+      padding: 12px; border-radius: 2px; background: rgba(200,204,212,0.01);
+      border: 1px solid rgba(100,120,180,0.08);
+    }
+    .metric-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      color: rgba(100,120,180,0.35); margin-bottom: 6px; font-weight: 500;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500;
+      color: #dde0e8; font-variant-numeric: tabular-nums;
+    }
+    .metric-change { font-size: 10px; font-weight: 500; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+    .metric-up { color: #4ade80; }
+    .metric-down { color: #f87171; }
+    .metric-sparkline {
+      height: 20px; margin-top: 8px; border-radius: 1px; overflow: hidden;
+      border: 1px solid rgba(100,120,180,0.06);
+    }
+
+    /* Queue Item — Operational task */
+    .queue-item {
+      display: flex; align-items: center; gap: 10px; padding: 7px 8px;
+      border-radius: 2px; cursor: pointer; transition: all 100ms ease;
+      border-left: 2px solid transparent;
+    }
+    .queue-item:hover { background: rgba(100,120,180,0.04); }
+    .queue-item[data-priority="critical"] { border-left-color: #f87171; }
+    .queue-item[data-priority="high"] { border-left-color: #fbbf24; }
+    .queue-item[data-priority="normal"] { border-left-color: rgba(100,120,180,0.3); }
+    .queue-item[data-priority="low"] { border-left-color: rgba(100,120,180,0.12); }
+    .queue-status {
+      width: 18px; height: 18px; flex-shrink: 0; border-radius: 1px;
+      border: 1px solid; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    }
+    .queue-content { flex: 1; min-width: 0; }
+    .queue-title { font-size: 12px; color: rgba(200,204,212,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-meta { font-size: 10px; color: rgba(200,204,212,0.25); margin-top: 1px; font-family: 'JetBrains Mono', monospace; }
+    .queue-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; text-align: right; }
+    .queue-time { font-size: 9px; color: rgba(200,204,212,0.15); margin-top: 1px; text-align: right; font-family: 'JetBrains Mono', monospace; }
+
+    /* Pulse Item — Intel feed */
+    .pulse-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 0;
+      border-bottom: 1px solid rgba(100,120,180,0.05); font-size: 11px;
+    }
+    .pulse-item:last-child { border-bottom: none; }
+    .pulse-tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 1px 5px;
+      border-radius: 1px; font-weight: 600; white-space: nowrap; letter-spacing: 0.04em;
+      border: 1px solid;
+    }
+    .pulse-text { color: rgba(200,204,212,0.45); flex: 1; line-height: 1.5; }
+    .pulse-time { font-size: 9px; color: rgba(100,120,180,0.2); white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+
+    /* Context */
+    .ctx-item {
+      display: flex; align-items: center; gap: 8px; padding: 5px 0;
+      font-size: 11px; color: rgba(200,204,212,0.35); font-family: 'JetBrains Mono', monospace;
+    }
+    .ctx-label { flex: 1; text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em; }
+    .ctx-value { font-size: 12px; color: rgba(200,204,212,0.65); }
+
+    /* Bottom Strip — Status bar */
+    .bottom-strip {
+      flex-shrink: 0; height: 26px; display: flex; align-items: center; gap: 12px;
+      padding: 0 16px; border-top: 1px solid rgba(100,120,180,0.1);
+      background: rgba(10,12,18,0.95);
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: rgba(200,204,212,0.2);
+    }
+    .strip-dot {
+      width: 6px; height: 6px; border-radius: 1px; background: #4ade80;
+      border: 1px solid rgba(74,222,128,0.3);
+    }
+    .strip-sep { width: 1px; height: 12px; background: rgba(100,120,180,0.1); }
+
+    /* Tag colors — Muted operational palette */
+    .tag-up { background: transparent; color: #4ade80; border-color: rgba(74,222,128,0.25); }
+    .tag-down { background: transparent; color: #f87171; border-color: rgba(248,113,113,0.25); }
+    .tag-warn { background: transparent; color: #fbbf24; border-color: rgba(251,191,36,0.25); }
+    .tag-ai { background: transparent; color: #c084fc; border-color: rgba(192,132,252,0.25); }
+    .status-critical { color: #f87171; border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.05); }
+    .status-high { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.05); }
+    .status-normal { color: rgba(100,120,180,0.5); border-color: rgba(100,120,180,0.2); background: transparent; }
+    .status-ok { color: #4ade80; border-color: rgba(74,222,128,0.25); background: transparent; }
+    .status-low { color: rgba(100,120,180,0.25); border-color: rgba(100,120,180,0.12); background: transparent; }
+    .fg-brand { color: #7c8fd4; }
+  </style>
+</head>
+<body>
+  <div class="blueprint-bg"></div>
+  <div class="coord-labels">0  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16</div>
+
+  <div class="style-badge"><strong>OPERATIONAL BLUEPRINT</strong> &nbsp;·&nbsp; Crezco + Bloomberg Launchpad + Command</div>
+
+  <div class="shell">
+    <!-- Rail -->
+    <nav class="rail">
+      <div class="rail-coord">SYS</div>
+      <div class="rail-logo">D</div>
+      <div class="rail-item active" title="Home">⌂</div>
+      <div class="rail-item" title="Markets">📊</div>
+      <div class="rail-item" title="Trading">₿</div>
+      <div class="rail-item" title="Research">🔬</div>
+      <div class="rail-item" title="Strategy">⚡</div>
+      <div class="rail-item" title="Portfolio">📈</div>
+      <div class="rail-item" title="Risk">🛡</div>
+      <div class="rail-item" title="AI">🤖</div>
+      <div class="rail-spacer"></div>
+      <div class="rail-item" title="Settings">⚙</div>
+    </nav>
+
+    <div class="main-area">
+      <header class="header">
+        <span class="header-cmd">$ ditto/home</span>
+        <span class="header-title">决策中心</span>
+        <span class="header-domain-badge">HOME</span>
+        <div class="header-spacer"></div>
+        <div class="header-actions">
+          <button class="header-btn">🔍</button>
+          <button class="header-btn">🔔</button>
+          <button class="header-btn">👤</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Alert Banner — Operational directive -->
+        <div class="banner">
+          <div class="banner-icon">⚡</div>
+          <div class="banner-content">
+            <div class="banner-title">沪深 300 多因子信号触发</div>
+            <div class="banner-desc">momentum+turnover_anomaly | conf:87.3% | win_rate_30d:73%</div>
+          </div>
+          <button class="banner-cta">EXEC →</button>
+        </div>
+
+        <!-- Metrics — Readouts -->
+        <div class="grid-3">
+          <div class="metric-card">
+            <div class="metric-label">组合净值 / NAV</div>
+            <div class="metric-value">2.8471</div>
+            <div class="metric-change metric-up">+1.23% D</div>
+            <div class="metric-sparkline"><svg viewBox="0 0 120 20" width="100%" height="100%"><polyline fill="none" stroke="#4ade80" stroke-width="1" stroke-dasharray="2,2" points="0,18 15,14 30,16 45,10 60,12 75,8 90,5 105,6 120,2"/></svg></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">今日 P&L</div>
+            <div class="metric-value" style="color:#7c8fd4;">+¥34.2K</div>
+            <div class="metric-change metric-up">+0.87% α</div>
+            <div class="metric-sparkline"><svg viewBox="0 0 120 20" width="100%" height="100%"><polyline fill="none" stroke="#7c8fd4" stroke-width="1" stroke-dasharray="2,2" points="0,10 15,8 30,12 45,6 60,9 75,4 90,7 105,3 120,5"/></svg></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">风险 / RISK</div>
+            <div class="metric-value" style="font-size:14px; color:rgba(200,204,212,0.45);">MED-LOW</div>
+            <div class="metric-change" style="color:rgba(200,204,212,0.2);">VaR 1.2% | CVaR 1.8%</div>
+          </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-2">
+          <div class="panel" data-zone="ZONE-A">
+            <div class="panel-header">
+              <span class="panel-title">Priority Queue</span>
+              <span class="panel-count">5</span>
+            </div>
+            <div class="panel-body">
+              <div class="queue-item" data-priority="critical">
+                <div class="queue-status status-critical">!</div>
+                <div class="queue-content">
+                  <div class="queue-title">平仓 IF2406 多头 — 止损触发</div>
+                  <div class="queue-meta">futures / auto-stop</div>
+                </div>
+                <div>
+                  <div class="queue-value" style="color:#f87171;">-2.1%</div>
+                  <div class="queue-time">09:32</div>
+                </div>
+              </div>
+              <div class="queue-item" data-priority="high">
+                <div class="queue-status status-high">↑</div>
+                <div class="queue-content">
+                  <div class="queue-title">调仓信号：宁德时代 → 超配</div>
+                  <div class="queue-meta">stock_signal / ai_advisory</div>
+                </div>
+                <div>
+                  <div class="queue-value" style="color:#fbbf24;">87.3%</div>
+                  <div class="queue-time">09:28</div>
+                </div>
+              </div>
+              <div class="queue-item" data-priority="normal">
+                <div class="queue-status status-normal">✓</div>
+                <div class="queue-content">
+                  <div class="queue-title">回测完成：V3 动量策略</div>
+                  <div class="queue-meta">research / ann:23.7%</div>
+                </div>
+                <div>
+                  <div class="queue-value fg-brand">1.84</div>
+                  <div class="queue-time">08:45</div>
+                </div>
+              </div>
+              <div class="queue-item" data-priority="normal">
+                <div class="queue-status status-ok">◉</div>
+                <div class="queue-content">
+                  <div class="queue-title">风险限额预警：行业集中度</div>
+                  <div class="queue-meta">risk / new_energy:38%>35%</div>
+                </div>
+                <div>
+                  <div class="queue-value" style="color:#4ade80;">WATCH</div>
+                  <div class="queue-time">08:30</div>
+                </div>
+              </div>
+              <div class="queue-item" data-priority="low">
+                <div class="queue-status status-low">·</div>
+                <div class="queue-content">
+                  <div class="queue-title">数据源延迟：Wind API 3s</div>
+                  <div class="queue-meta">infra / auto-recover</div>
+                </div>
+                <div>
+                  <div class="queue-value" style="color:rgba(200,204,212,0.3);">LOW</div>
+                  <div class="queue-time">08:15</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="panel" data-zone="ZONE-B" style="flex:1;">
+              <div class="panel-header">
+                <span class="panel-title">Intel Feed</span>
+                <span class="panel-count">LIVE</span>
+              </div>
+              <div class="panel-body">
+                <div class="pulse-item">
+                  <span class="pulse-tag tag-up">SH300</span>
+                  <span class="pulse-text">+0.67% 科技领涨，北向净流入 42 亿</span>
+                  <span class="pulse-time">09:31</span>
+                </div>
+                <div class="pulse-item">
+                  <span class="pulse-tag tag-down">ZZ500</span>
+                  <span class="pulse-text">-0.23% 小盘承压，量能萎缩</span>
+                  <span class="pulse-time">09:30</span>
+                </div>
+                <div class="pulse-item">
+                  <span class="pulse-tag tag-warn">FX</span>
+                  <span class="pulse-text">USDCNY 7.2480 波动率上升，关注联储</span>
+                  <span class="pulse-time">09:15</span>
+                </div>
+                <div class="pulse-item">
+                  <span class="pulse-tag tag-ai">AI</span>
+                  <span class="pulse-text">短期回调概率 34%，中期看多</span>
+                  <span class="pulse-time">09:00</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel" data-zone="ZONE-C">
+              <div class="panel-header">
+                <span class="panel-title">Position</span>
+              </div>
+              <div class="panel-body" style="padding:6px 12px;">
+                <div class="ctx-item"><span class="ctx-label">Market Value</span><span class="ctx-value">¥3.92M</span></div>
+                <div class="ctx-item"><span class="ctx-label">Positions</span><span class="ctx-value">12</span></div>
+                <div class="ctx-item"><span class="ctx-label">Cash Ratio</span><span class="ctx-value">8.3%</span></div>
+                <div class="ctx-item"><span class="ctx-label">Turnover</span><span class="ctx-value">2.1%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-strip">
+        <div class="strip-dot"></div>
+        <span>CONN</span>
+        <div class="strip-sep"></div>
+        <span>09:31:42 CST</span>
+        <div class="strip-sep"></div>
+        <span>LAT 23ms</span>
+        <div class="strip-sep"></div>
+        <span>GRID 20px</span>
+        <div style="flex:1;"></div>
+        <span>BLUEPRINT · 2026-04-24</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

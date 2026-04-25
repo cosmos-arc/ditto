@@ -532,6 +532,62 @@ function checkResponsiveBehavior(contract) {
   };
 }
 
+/**
+ * #16 DESIGN.md Components 章节存在性检查
+ *
+ * WARN 级：验证 DESIGN.md 存在且 YAML front matter 中有 components 定义。
+ * 确保合同消费的设计系统描述保持最新。
+ */
+async function checkDesignMdToken(_contract, ctx) {
+  const designMdPath = resolve(ctx.root, "DESIGN.md");
+  let content;
+
+  try {
+    content = await readFile(designMdPath, "utf-8");
+  } catch {
+    return {
+      pass: true,
+      message: `WARN: DESIGN.md not found at project root. Create DESIGN.md with Components section to enable token consistency checks.`,
+      level: "WARN",
+    };
+  }
+
+  const yamlMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!yamlMatch) {
+    return {
+      pass: true,
+      message: `WARN: DESIGN.md has no YAML front matter. Add components section to design token documentation.`,
+      level: "WARN",
+    };
+  }
+
+  const componentsMatch = yamlMatch[1].match(/^components:\s*\n((?:  .+\n*)*)/m);
+  if (!componentsMatch) {
+    return {
+      pass: true,
+      message: `WARN: DESIGN.md YAML front matter has no "components" section. Add component token mappings (panel, button-primary, etc.).`,
+      level: "WARN",
+    };
+  }
+
+  const componentKeys = [...componentsMatch[1].matchAll(/^  (\w[\w-]*)\s*:/gm)].map((m) => m[1]);
+  if (componentKeys.length === 0) {
+    return {
+      pass: true,
+      message: `WARN: DESIGN.md has "components" section but no component definitions. Add at least panel, button-primary, button-secondary.`,
+      level: "WARN",
+    };
+  }
+
+  const listed = componentKeys.slice(0, 5).join(", ");
+  const suffix = componentKeys.length > 5 ? `... (+${componentKeys.length - 5} more)` : "";
+  return {
+    pass: true,
+    message: `DESIGN.md has ${componentKeys.length} component definitions: ${listed}${suffix}`,
+    level: "INFO",
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main validation entry                                              */
 /* ------------------------------------------------------------------ */
@@ -560,6 +616,7 @@ export async function validateContract(contract, ctx) {
     checkContractStatus(contract),
     checkA11yRoles(contract),
     checkResponsiveBehavior(contract),
+    await checkDesignMdToken(contract, ctx),
   ];
 
   const blockFails = checks.filter((c) => c.level === "BLOCK" && !c.pass);

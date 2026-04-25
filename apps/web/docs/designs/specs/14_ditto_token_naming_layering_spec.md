@@ -50,6 +50,7 @@
 
 - Foundation
 - Semantic Surface
+- Atmosphere (Living Graphite)
 - Shell
 - Data View
 - Component
@@ -121,7 +122,8 @@ Ditto 建议固定为 9 层 token 结构。
 | # | Layer | 稳定性 | 说明 |
 |---|-------|--------|------|
 | 1 | Foundation | 最高 | 物理原语：颜色、字号、间距、圆角等 |
-| 2 | Semantic Surface | 很高 | 界面表面语义：背景、文本层级、边框 |
+| 2 | Semantic Surface | 很高 | 界面表面语义：背景、文本层级、边框、Domain 签名色 |
+| 2b | Atmosphere | 高 | 亚感知级背景氛围（运行时动态） |
 | 3 | Shell | 高 | 页面壳层布局与节奏 |
 | 4 | Data View | 中高 | Table / Context / Visual 三族 token |
 | 5 | Component | 中 | 具体组件角色 token |

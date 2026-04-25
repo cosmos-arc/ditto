@@ -7,7 +7,7 @@
 :root {
   /* ── Surface Elevation (6 levels) ── */
   /* Level 0: App background — deepest, most recessed */
-  --surface-app:               var(--neutral-0);
+  --surface-app:               var(--surface-app-atmosphere, var(--neutral-0));
   /* Level 1: Panel base — primary content containers */
   --surface-panel-base:        var(--neutral-25);
   /* Level 2: Panel elevated — nested cards, secondary panels */
@@ -26,9 +26,9 @@
   --surface-elevated:          var(--neutral-75);
 
   /* ── Text Hierarchy (5 levels) ── */
-  --text-primary:              oklch(0.925 0.004 253);
+  --text-primary:              oklch(0.940 0.004 253);
   --text-secondary:            oklch(0.655 0.007 253);
-  --text-tertiary:             oklch(0.555 0.007 253);
+  --text-tertiary:             oklch(0.480 0.007 253);
   --text-quaternary:           oklch(0.490 0.006 253);
   --text-disabled:             oklch(0.415 0.005 253);
   --text-inverse:              var(--neutral-0);
@@ -97,13 +97,53 @@
   --surface-frosted-subtle:    oklch(from var(--surface-app) l c h / 0.80);
 }
 
+/* --- Domain Signature Colors --- */
+/* Each domain gets a unique signature palette; brass is default for home/trading */
+
+[data-domain="trading"] {
+  --brand-signature-fg:     oklch(0.760 0.055 74);   /* Brass — current default */
+  --brand-signature-muted:  oklch(0.660 0.040 74);
+  --brand-signature-line:   oklch(0.620 0.040 74);
+  --brand-signature-subtle: oklch(0.760 0.055 74 / 0.08);
+}
+[data-domain="markets"] {
+  --brand-signature-fg:     oklch(0.731 0.095 220);   /* Cyan — calm observation */
+  --brand-signature-muted:  oklch(0.631 0.070 220);
+  --brand-signature-line:   oklch(0.580 0.065 220);
+  --brand-signature-subtle: oklch(0.731 0.095 220 / 0.08);
+}
+[data-domain="research"] {
+  --brand-signature-fg:     oklch(0.732 0.095 300);   /* Purple — thinking & exploration */
+  --brand-signature-muted:  oklch(0.632 0.070 300);
+  --brand-signature-line:   oklch(0.582 0.065 300);
+  --brand-signature-subtle: oklch(0.732 0.095 300 / 0.08);
+}
+[data-domain="platform"] {
+  --brand-signature-fg:     oklch(0.640 0.100 235);   /* Lapis — order & control */
+  --brand-signature-muted:  oklch(0.540 0.080 235);
+  --brand-signature-line:   oklch(0.470 0.070 235);
+  --brand-signature-subtle: oklch(0.640 0.100 235 / 0.08);
+}
+[data-domain="home"] {
+  --brand-signature-fg:     oklch(0.760 0.055 74);   /* Brass — warm home */
+  --brand-signature-muted:  oklch(0.660 0.040 74);
+  --brand-signature-line:   oklch(0.620 0.040 74);
+  --brand-signature-subtle: oklch(0.760 0.055 74 / 0.08);
+}
+[data-domain="ai"] {
+  --brand-signature-fg:     oklch(0.680 0.110 310);   /* Magenta — intelligent creation */
+  --brand-signature-muted:  oklch(0.580 0.085 310);
+  --brand-signature-line:   oklch(0.510 0.075 310);
+  --brand-signature-subtle: oklch(0.680 0.110 310 / 0.08);
+}
+
 /* ── Light Mode ──
  * Radix step-scale pattern: higher elevation → lower lightness (darker surface).
  * Mirrors dark mode where higher elevation → higher lightness.
  */
 [data-theme="light"] {
   /* Surface Elevation — white → gray steps */
-  --surface-app:               var(--neutral-0);
+  --surface-app:               var(--surface-app-atmosphere, var(--neutral-0));
   --surface-panel-base:        var(--neutral-25);
   --surface-panel-elevated:    var(--neutral-75);
   --surface-strip:             var(--neutral-25);
@@ -115,9 +155,9 @@
   --surface-elevated:          var(--neutral-75);
 
   /* Text Hierarchy — dark on light */
-  --text-primary:              oklch(0.155 0.015 253);
+  --text-primary:              oklch(0.140 0.015 253);
   --text-secondary:            oklch(0.400 0.015 253);
-  --text-tertiary:             oklch(0.550 0.010 253);
+  --text-tertiary:             oklch(0.490 0.010 253);
   --text-quaternary:           oklch(0.650 0.008 253);
   --text-disabled:             oklch(0.750 0.006 253);
   --text-inverse:              var(--neutral-0);
@@ -146,4 +186,31 @@
   --code-bg:                   var(--neutral-25);
   --code-text:                 oklch(0.200 0.015 253);
   --code-border:               var(--neutral-100);
+}
+
+/* --- Domain Signature Colors (Light) --- */
+
+[data-theme="light"][data-domain="markets"] {
+  --brand-signature-fg:     oklch(0.491 0.095 220);
+  --brand-signature-muted:  oklch(0.441 0.070 220);
+  --brand-signature-line:   oklch(0.390 0.065 220);
+  --brand-signature-subtle: oklch(0.491 0.095 220 / 0.10);
+}
+[data-theme="light"][data-domain="research"] {
+  --brand-signature-fg:     oklch(0.492 0.095 300);
+  --brand-signature-muted:  oklch(0.442 0.070 300);
+  --brand-signature-line:   oklch(0.392 0.065 300);
+  --brand-signature-subtle: oklch(0.492 0.095 300 / 0.10);
+}
+[data-theme="light"][data-domain="platform"] {
+  --brand-signature-fg:     oklch(0.400 0.100 235);
+  --brand-signature-muted:  oklch(0.350 0.080 235);
+  --brand-signature-line:   oklch(0.300 0.070 235);
+  --brand-signature-subtle: oklch(0.400 0.100 235 / 0.10);
+}
+[data-theme="light"][data-domain="ai"] {
+  --brand-signature-fg:     oklch(0.440 0.110 310);
+  --brand-signature-muted:  oklch(0.390 0.085 310);
+  --brand-signature-line:   oklch(0.340 0.075 310);
+  --brand-signature-subtle: oklch(0.440 0.110 310 / 0.10);
 }

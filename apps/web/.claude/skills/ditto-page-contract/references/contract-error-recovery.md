@@ -1,6 +1,6 @@
 # Contract Error Recovery — 验证失败修复指引
 
-> 对应 validator 13 项检查的逐条修复指引。每次 --validate 失败时参考此表。
+> 对应 validator 16 项检查的逐条修复指引。每次 --validate 失败时参考此表。
 
 ---
 
@@ -26,3 +26,4 @@
 |---|--------|------|---------------|
 | 14 | a11y role | WARN | 为 required slot 添加 `a11yRole`（如 rail→`"navigation"`, main→`"main"`, sidebar→`"complementary"`） |
 | 15 | responsive | WARN | 如果 viewports 含 compact 且 slot 在 compact 下有行为变化，添加 `responsiveBehavior: { compact: "hidden"\|"collapsed"\|"overlay"\|"reflow" }` |
+| 16 | DESIGN.md token | WARN | 合同中组件 token 引用是否存在于 `docs/DESIGN.md` Components 章节。失败时：检查 token 名是否拼写错误，或 DESIGN.md 是否需要同步更新（见 design-tokens.md 同步规则） |

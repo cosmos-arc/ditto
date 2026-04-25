@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<!--
+  Style Comparison: Baseline — Graphite Studio (Current)
+  Reference: Linear / Vercel / Raycast
+  Aesthetic: Modern SaaS, clean, balanced density, warm limestone undertone
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Style Comparison — Baseline: Graphite Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Geist+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ══════════════════════════════════════════════
+     * RESET & BASE
+     * ══════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body { background: #0d0f14; color: #eee; font-family: 'Inter', system-ui, sans-serif; }
+
+    /* ══════════════════════════════════════════════
+     * STYLE LABEL
+     * ══════════════════════════════════════════════ */
+    .style-badge {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 100; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 20px; border-radius: 20px; font-size: 12px; color: rgba(255,255,255,0.5);
+      letter-spacing: 0.05em; text-transform: uppercase; font-weight: 500;
+      backdrop-filter: blur(12px);
+    }
+    .style-badge strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+    /* ══════════════════════════════════════════════
+     * LAYOUT: Shell three-zone
+     * ══════════════════════════════════════════════ */
+    .shell { display: flex; height: 100vh; overflow: hidden; }
+
+    /* Rail */
+    .rail {
+      width: 52px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      padding: 12px 0; gap: 4px; background: #0a0c10; border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .rail-logo { width: 28px; height: 28px; margin-bottom: 16px; border-radius: 6px; background: linear-gradient(135deg, #3b5bdb, #5b7cfa); }
+    .rail-item {
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; color: rgba(255,255,255,0.35); font-size: 16px; cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .rail-item:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); }
+    .rail-item.active { color: #7c8aff; background: rgba(100,128,255,0.12); }
+    .rail-spacer { flex: 1; }
+
+    /* Main area */
+    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Header */
+    .header {
+      height: 44px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+      padding: 0 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(13,15,20,0.85); backdrop-filter: blur(12px);
+    }
+    .header-title {
+      font-family: 'Geist Sans', sans-serif; font-size: 14px; font-weight: 600;
+      color: #eee; letter-spacing: -0.01em;
+    }
+    .header-domain-badge {
+      font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500;
+      background: rgba(234,179,8,0.1); color: #d4a017;
+    }
+    .header-spacer { flex: 1; }
+    .header-actions { display: flex; gap: 6px; }
+    .header-btn {
+      width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; border: none; background: transparent; color: rgba(255,255,255,0.4);
+      cursor: pointer; font-size: 14px; transition: all 150ms ease;
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ══════════════════════════════════════════════
+     * COMPONENTS
+     * ══════════════════════════════════════════════ */
+
+    /* Decision Banner */
+    .banner {
+      border-radius: 8px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(135deg, rgba(100,128,255,0.08), rgba(100,128,255,0.03));
+      border: 1px solid rgba(100,128,255,0.15);
+    }
+    .banner-icon { font-size: 20px; flex-shrink: 0; }
+    .banner-content { flex: 1; }
+    .banner-title { font-size: 13px; font-weight: 600; color: #eee; margin-bottom: 3px; }
+    .banner-desc { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+    .banner-cta {
+      padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      background: #5b7cfa; color: #fff; border: none; cursor: pointer; white-space: nowrap;
+    }
+
+    /* Grid Layout */
+    .grid-2 { display: grid; grid-template-columns: 5fr 4fr; gap: 12px; min-height: 0; flex: 1; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    /* Panel */
+    .panel {
+      border-radius: 8px; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85);
+      font-family: 'Geist Sans', sans-serif;
+    }
+    .panel-count {
+      font-size: 10px; padding: 1px 6px; border-radius: 3px;
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); font-weight: 500;
+    }
+    .panel-body { padding: 10px 14px; flex: 1; overflow-y: auto; }
+
+    /* Metric Card */
+    .metric-card {
+      padding: 12px; border-radius: 6px; background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .metric-label { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 6px; font-weight: 500; }
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 500;
+      color: #eee; font-variant-numeric: tabular-nums;
+    }
+    .metric-change { font-size: 11px; font-weight: 500; margin-top: 4px; }
+    .metric-up { color: #22c55e; }
+    .metric-down { color: #ef4444; }
+    .metric-sparkline {
+      height: 20px; margin-top: 8px; border-radius: 3px; overflow: hidden;
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* Queue Item */
+    .queue-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border-radius: 6px; cursor: pointer; transition: background 100ms ease;
+    }
+    .queue-item:hover { background: rgba(255,255,255,0.04); }
+    .queue-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .queue-content { flex: 1; min-width: 0; }
+    .queue-title { font-size: 12px; color: rgba(255,255,255,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .queue-meta { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+    .queue-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; text-align: right; }
+    .queue-time { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 1px; text-align: right; }
+
+    /* Pulse Item */
+    .pulse-item {
+      display: flex; align-items: center; gap: 8px; padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px;
+    }
+    .pulse-item:last-child { border-bottom: none; }
+    .pulse-tag {
+      font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500;
+      white-space: nowrap;
+    }
+    .pulse-text { color: rgba(255,255,255,0.6); flex: 1; line-height: 1.4; }
+    .pulse-time { font-size: 10px; color: rgba(255,255,255,0.2); white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+
+    /* Context Section */
+    .ctx-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 0;
+      font-size: 12px; color: rgba(255,255,255,0.5);
+    }
+    .ctx-label { flex: 1; }
+    .ctx-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.75); }
+
+    /* Bottom Strip */
+    .bottom-strip {
+      flex-shrink: 0; height: 28px; display: flex; align-items: center; gap: 16px;
+      padding: 0 20px; border-top: 1px solid rgba(255,255,255,0.05);
+      background: #0a0c10; font-size: 11px; color: rgba(255,255,255,0.3);
+    }
+    .strip-dot { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; }
+    .strip-sep { width: 1px; height: 12px; background: rgba(255,255,255,0.08); }
+
+    /* Utility */
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .fg-muted { color: rgba(255,255,255,0.35); }
+    .fg-brand { color: #5b7cfa; }
+    .fg-brass { color: #d4a017; }
+    .bg-up { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .bg-down { background: rgba(239,68,68,0.1); color: #ef4444; }
+    .bg-neutral { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+    .bg-brass { background: rgba(234,179,8,0.1); color: #d4a017; }
+    .bg-blue { background: rgba(100,128,255,0.1); color: #7c8aff; }
+    .bg-purple { background: rgba(168,85,247,0.1); color: #c084fc; }
+    .bg-cyan { background: rgba(34,211,238,0.1); color: #22d3ee; }
+  </style>
+</head>
+<body>
+  <div class="style-badge"><strong>Graphite Studio</strong> &nbsp;·&nbsp; Baseline — Linear / Vercel / Raycast</div>
+
+  <div class="shell">
+    <!-- Rail -->
+    <nav class="rail">
+      <div class="rail-logo"></div>
+      <div class="rail-item active" title="Home">⌂</div>
+      <div class="rail-item" title="Markets">📊</div>
+      <div class="rail-item" title="Trading">₿</div>
+      <div class="rail-item" title="Research">🔬</div>
+      <div class="rail-item" title="Strategy">⚡</div>
+      <div class="rail-item" title="Portfolio">📈</div>
+      <div class="rail-item" title="Risk">🛡</div>
+      <div class="rail-item" title="AI">🤖</div>
+      <div class="rail-spacer"></div>
+      <div class="rail-item" title="Settings">⚙</div>
+    </nav>
+
+    <!-- Main -->
+    <div class="main-area">
+      <!-- Header -->
+      <header class="header">
+        <span class="header-title">Ditto</span>
+        <span class="header-domain-badge">HOME</span>
+        <div class="header-spacer"></div>
+        <div class="header-actions">
+          <button class="header-btn">🔍</button>
+          <button class="header-btn">🔔</button>
+          <button class="header-btn">👤</button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="content">
+        <!-- Decision Banner -->
+        <div class="banner">
+          <div class="banner-icon">⚡</div>
+          <div class="banner-content">
+            <div class="banner-title">沪深 300 多因子信号触发</div>
+            <div class="banner-desc">动量因子 + 换手率异动共振，置信度 87.3% — 过去 30 日同类信号胜率 73%</div>
+          </div>
+          <button class="banner-cta">查看详情</button>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="grid-3">
+          <div class="metric-card">
+            <div class="metric-label">组合净值</div>
+            <div class="metric-value">2.8471</div>
+            <div class="metric-change metric-up">+1.23% 今日</div>
+            <div class="metric-sparkline"><svg viewBox="0 0 120 20" width="100%" height="100%"><polyline fill="none" stroke="#22c55e" stroke-width="1.5" points="0,18 15,14 30,16 45,10 60,12 75,8 90,5 105,6 120,2"/></svg></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">今日 P&L</div>
+            <div class="metric-value">+¥34.2K</div>
+            <div class="metric-change metric-up">+0.87% vs 基准</div>
+            <div class="metric-sparkline"><svg viewBox="0 0 120 20" width="100%" height="100%"><polyline fill="none" stroke="#5b7cfa" stroke-width="1.5" points="0,10 15,8 30,12 45,6 60,9 75,4 90,7 105,3 120,5"/></svg></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">风险等级</div>
+            <div class="metric-value fg-muted" style="font-size:16px;">中等偏低</div>
+            <div class="metric-change" style="color: rgba(255,255,255,0.3);">VaR 1.2% · CVaR 1.8%</div>
+          </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-2">
+          <!-- Left: Priority Queue -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">优先事项</span>
+              <span class="panel-count">5</span>
+            </div>
+            <div class="panel-body">
+              <div class="queue-item">
+                <div class="queue-dot" style="background: #ef4444;"></div>
+                <div class="queue-content">
+                  <div class="queue-title">平仓 IF2406 多头 — 止损触发</div>
+                  <div class="queue-meta">股指期货 · 自动止损</div>
+                </div>
+                <div>
+                  <div class="queue-value" style="color:#ef4444;">-2.1%</div>
+                  <div class="queue-time">09:32</div>
+                </div>
+              </div>
+              <div class="queue-item">
+                <div class="queue-dot" style="background: #d4a017;"></div>
+                <div class="queue-content">
+                  <div class="queue-title">调仓信号：宁德时代 → 超配</div>
+                  <div class="queue-meta">个股信号 · AI 建议</div>
+                </div>
+                <div>
+                  <div class="queue-value fg-brass">87.3%</div>
+                  <div class="queue-time">09:28</div>
+                </div>
+              </div>
+              <div class="queue-item">
+                <div class="queue-dot" style="background: #5b7cfa;"></div>
+                <div class="queue-content">
+                  <div class="queue-title">回测完成：V3 动量策略</div>
+                  <div class="queue-meta">策略研究 · 年化 23.7%</div>
+                </div>
+                <div>
+                  <div class="queue-value fg-brand">夏普 1.84</div>
+                  <div class="queue-time">08:45</div>
+                </div>
+              </div>
+              <div class="queue-item">
+                <div class="queue-dot" style="background: #22c55e;"></div>
+                <div class="queue-content">
+                  <div class="queue-title">风险限额预警：行业集中度</div>
+                  <div class="queue-meta">风控 · 新能源 38% > 35%</div>
+                </div>
+                <div>
+                  <div class="queue-value" style="color:#22c55e;">监控中</div>
+                  <div class="queue-time">08:30</div>
+                </div>
+              </div>
+              <div class="queue-item">
+                <div class="queue-dot" style="background: rgba(255,255,255,0.2);"></div>
+                <div class="queue-content">
+                  <div class="queue-title">数据源延迟：Wind API 3s</div>
+                  <div class="queue-meta">基础设施 · 自动恢复</div>
+                </div>
+                <div>
+                  <div class="queue-value fg-muted">低</div>
+                  <div class="queue-time">08:15</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Market Pulse + Context -->
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="panel" style="flex:1;">
+              <div class="panel-header">
+                <span class="panel-title">市场脉搏</span>
+                <span class="panel-count">实时</span>
+              </div>
+              <div class="panel-body">
+                <div class="pulse-item">
+                  <span class="pulse-tag bg-up">沪深300</span>
+                  <span class="pulse-text">+0.67% 科技领涨，北向净流入 42 亿</span>
+                  <span class="pulse-time">09:31</span>
+                </div>
+                <div class="pulse-item">
+                  <span class="pulse-tag bg-down">中证500</span>
+                  <span class="pulse-text">-0.23% 小盘承压，量能萎缩</span>
+                  <span class="pulse-time">09:30</span>
+                </div>
+                <div class="pulse-item">
+                  <span class="pulse-tag bg-brass">⚠ USDCNY</span>
+                  <span class="pulse-text">7.2480 波动率上升，关注联储决议</span>
+                  <span class="pulse-time">09:15</span>
+                </div>
+                <div class="pulse-item">
+                  <span class="pulse-tag bg-purple">AI 观点</span>
+                  <span class="pulse-text">短期回调概率 34%，中期看多</span>
+                  <span class="pulse-time">09:00</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">持仓概览</span>
+              </div>
+              <div class="panel-body" style="padding:8px 14px;">
+                <div class="ctx-item"><span class="ctx-label">总市值</span><span class="ctx-value">¥3.92M</span></div>
+                <div class="ctx-item"><span class="ctx-label">持仓数</span><span class="ctx-value">12 只</span></div>
+                <div class="ctx-item"><span class="ctx-label">现金比例</span><span class="ctx-value">8.3%</span></div>
+                <div class="ctx-item"><span class="ctx-label">当日换手</span><span class="ctx-value">2.1%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Strip -->
+      <div class="bottom-strip">
+        <div class="strip-dot"></div>
+        <span>实时连接</span>
+        <div class="strip-sep"></div>
+        <span class="mono">09:31:42 CST</span>
+        <div class="strip-sep"></div>
+        <span>延迟 23ms</span>
+        <div style="flex:1;"></div>
+        <span>Draft · 2026-04-24</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -82,6 +82,7 @@ paths:
 /* 3. 共享 Design Tokens（唯一真理源 — :root 变量） */
 @import "./design-tokens/tokens-base.css";
 @import "./design-tokens/tokens-semantic.css";
+@import "./design-tokens/tokens-atmosphere.css";
 /* ... 其余 6 个 token 文件 */
 
 /* 4. @theme inline 映射层（:root → Tailwind namespace） */
@@ -149,13 +150,18 @@ paths:
 - 如果变量需要在 `var()` 中被**非 Tailwind 代码**（`:root {}`、`[data-theme]`、`globals.css 中的组件样式）引用 → 必须用 `:root {}` 定义
 - 如果变量只通过 Tailwind utility class 消费（`p-4`、`text-sm`、`bg-brand-500`）→ 可以用 `@theme inline`
 
+## DESIGN.md 与 Tailwind 的关系
+
+`DESIGN.md` 的 YAML front matter 中的 token 值应与 `src/styles/design-tokens/` 中的值保持一致。
+Tailwind utility class 的使用应遵循 DESIGN.md 中 Components 章节的 token 映射。
+
 ### Token SSOT 架构
 
 ```
 src/styles/design-tokens/          ← 唯一真理源（Prototype + React 共享）
   tokens-base.css                  ← :root 定义（oklch 值）
   tokens-semantic.css              ← :root 定义
-  ...（8 个文件，全部用 :root）
+  ...（9 个文件，全部用 :root）
 
 src/styles/globals.css             ← @import 共享 token + @theme inline 映射层
   @import "./design-tokens/tokens-base.css"   ← 导入 :root 变量

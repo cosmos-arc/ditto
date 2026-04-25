@@ -248,9 +248,10 @@ Ditto 的基本原则：
 
 任何 AI 参与 Ditto 设计或编码前，都先给它：
 
-- Ditto Visual Constitution
-- Shell Family / Page Pattern / Data Views / Component / Token 规范
-- 本 Prompt Pack
-- 当前目标页面的 blueprint
+1. `DESIGN.md`（设计系统描述 — 先读这个）
+2. Ditto Visual Constitution
+3. Shell Family / Page Pattern / Data Views / Component / Token 规范
+4. 本 Prompt Pack
+5. 当前目标页面的 blueprint
 
 这样 AI 才是在"翻译你的系统"，而不是"替你发明一个新产品"。

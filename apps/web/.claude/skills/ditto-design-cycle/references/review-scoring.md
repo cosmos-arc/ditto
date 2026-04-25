@@ -72,6 +72,23 @@
 |------|------|------|
 | **信息效率** | **20%** | 信息密度、可扫视性、交互可达性、模块角色适配性 |
 
+### 第 6 维度（DESIGN.md 一致性）
+
+| 维度 | 权重 | 说明 |
+|------|------|------|
+| **DESIGN.md 一致性** | **附加分** | 原型的组件 token 使用是否与 DESIGN.md Components 章节一致 |
+
+**评分细则**：
+
+| 检查项 | 量化方法 | 满分条件 |
+|--------|---------|---------|
+| Components token 映射 | 原型组件使用的 token 是否存在于 DESIGN.md Components 章节 | 全部匹配 |
+| Typography 角色对应 | 字号/字重使用是否符合 DESIGN.md Typography 4 角色系统 | 0 违规 |
+| Domain 签名色规范 | 域签名色使用是否符合 DESIGN.md Domain Identity 规则 | 0 跨域混用 |
+| Do's and Don'ts 合规 | 是否违反 DESIGN.md Do's and Don'ts 章节的任何禁止项 | 0 违规 |
+
+**计算方式**：本维度作为附加分，不影响 5 维度基础评分。违规时在审查报告中标注 `[DESIGN.md drift]` 并列出具体偏差。
+
 ### 综合气质评分卡
 
 ```

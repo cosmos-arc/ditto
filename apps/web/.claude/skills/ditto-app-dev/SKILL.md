@@ -112,9 +112,10 @@ Phase 12 ← Phase 14（实现的组件是验证的输入）
 
 当合同值与项目 design system 冲突时，按以下优先级处理：
 
-1. **project design system tokens**（`src/styles/design-tokens/`）— 最高优先级
-2. **page contract selector/threshold** — 中优先级
-3. **prototype literal values** — 最低优先级
+1. **`DESIGN.md`**（设计系统描述）— P0：最高优先级，AI 可读的结构化描述
+2. **project design system tokens**（`src/styles/design-tokens/`）— P1：token SSOT
+3. **page contract selector/threshold** — P2：中优先级
+4. **prototype literal values** — P3：最低优先级
 
 处理方式：以 design system 为准实现，通过 `/ditto-page-contract --update` 反馈到合同，记录 `[contract-override]` rationale。
 

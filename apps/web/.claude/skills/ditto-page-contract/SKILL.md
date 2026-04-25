@@ -38,7 +38,7 @@ blueprint-approved → --create → draft → --validate → --promote → contr
 |------|------|
 | [contract-cli.md](references/contract-cli.md) | 各子命令的具体 CLI 命令 |
 | [contract-create-phases.md](references/contract-create-phases.md) | `--create` 的 AI 执行 phases（R/B/P+S+M/S/T/W）详情 |
-| [contract-error-recovery.md](references/contract-error-recovery.md) | 15 项验证检查的逐条修复指引 |
+| [contract-error-recovery.md](references/contract-error-recovery.md) | 16 项验证检查的逐条修复指引 |
 
 ---
 
@@ -67,7 +67,7 @@ Phase W: WRITE         → 组装 JSON → generate.mjs → 产出 .generated.ts
 
 运行 `validateContract()` / `validateAllContracts()`（详见 [contract-cli.md](references/contract-cli.md)）。
 
-**15 项检查**（13 BLOCK + 2 WARN）：
+**16 项检查**（13 BLOCK + 3 WARN）：
 
 | # | 级别 | 检查项 |
 |---|:----:|--------|
@@ -86,6 +86,7 @@ Phase W: WRITE         → 组装 JSON → generate.mjs → 产出 .generated.ts
 | 13 | WARN | status 门禁（draft=WARNING, unknown=BLOCK） |
 | 14 | WARN | Shell 级 required slot 有 a11yRole |
 | 15 | WARN | compact viewport 下 slot 标注 responsiveBehavior |
+| 16 | WARN | DESIGN.md 存在且 Components 章节有定义 |
 
 修复指引见 [contract-error-recovery.md](references/contract-error-recovery.md)。
 
