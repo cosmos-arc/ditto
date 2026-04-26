@@ -32,12 +32,14 @@ from ditto_data.di import (
     MetadataProvider,
     RuntimeProvider,
 )
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
 from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.models.publication_safety import CompatibilityManifestRecord
 from ditto_data.services import (
     DerivedCatalogService,
     DerivedQueryService,
-    PublicationSafetyRecordService,
 )
 from ditto_data.services.derived import DerivedLatestQuery
 from ditto_data.sources.exchange_transformers import ExchangeTransformers

@@ -23,6 +23,7 @@ from ditto_app.process.materialization.orchestrator import (
 )
 from ditto_app.process.materialization.types import InMemoryDerivedInputProvider
 from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
 from ditto_data.models.derived import (
@@ -31,7 +32,6 @@ from ditto_data.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_data.services import PublicationSafetyRecordService
 from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )

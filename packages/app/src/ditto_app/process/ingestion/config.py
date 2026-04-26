@@ -5,11 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ditto_data.services import (
-    FreezeService,
-    IngestionCursorService,
-    IngestionLogService,
-)
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_app.process.ingestion.ports import QualityCheckerProtocol

@@ -19,6 +19,7 @@ from ditto_app.process.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
 from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
 from ditto_data.models.derived import (
@@ -33,7 +34,6 @@ from ditto_data.models.publication_safety import (
 from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
-    PublicationSafetyRecordService,
 )
 from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_data.storage.runtime.derived_sqlite import (

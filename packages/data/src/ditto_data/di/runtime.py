@@ -11,20 +11,20 @@ from ditto_infra.foundation import SQLitePool
 from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.runtime.freeze_manager import FreezeManager
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_data.services import (
     DerivedCatalogService,
     DerivedShadowSlotService,
-    FreezeService,
-    IngestionCursorService,
-    IngestionLogService,
-    PublicationSafetyRecordService,
-    QualityRecordService,
     ResearchCatalogService,
 )
 from ditto_data.services.audit import ExecutionAuditService

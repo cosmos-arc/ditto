@@ -22,7 +22,7 @@ from ditto_engine.backtest.statistics import BacktestReport
 from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.process.execution.backtest_process import BacktestServiceConfig
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
-from ditto_app.query._artifact_utils import find_artifact
+from ditto_app.query.artifact_utils import find_artifact
 
 __all__ = ["ReplayProcess", "ReplayResult"]
 

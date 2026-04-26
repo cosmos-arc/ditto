@@ -6,12 +6,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.models import Source
-from ditto_data.services import (
-    FreezeService,
-    IngestionCursorService,
-    IngestionLogService,
-)
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService

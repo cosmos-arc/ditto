@@ -10,7 +10,7 @@ from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
-from ditto_app.query._artifact_utils import find_artifact
+from ditto_app.query.artifact_utils import find_artifact
 
 __all__ = ["BacktestTradeQueryFacade", "TradeRecord"]
 

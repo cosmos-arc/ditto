@@ -17,7 +17,7 @@ from ditto_app.process.execution.fee_override import (
     build_fee_model,
     build_slippage_model,
 )
-from ditto_app.query._artifact_utils import compute_total_return
+from ditto_app.query.artifact_utils import compute_total_return
 from ditto_kernel.strategy import ImpactModel, RunStatus
 from prefect import flow
 

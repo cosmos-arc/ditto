@@ -14,7 +14,7 @@ from ditto_kernel.math import pearson_correlation
 
 from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.execution_dto import ManualExecutionFill
-from ditto_app.query._artifact_utils import compute_total_return
+from ditto_app.query.artifact_utils import compute_total_return
 
 __all__ = [
     "ComparisonMetrics",

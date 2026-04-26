@@ -22,6 +22,10 @@ from dishka import Provider, Scope, provide
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
@@ -30,8 +34,6 @@ from ditto_data.services import (
     DerivedCatalogService,
     DerivedQueryService,
     DerivedShadowSlotService,
-    PublicationSafetyRecordService,
-    QualityRecordService,
 )
 from ditto_data.services.audit import ExecutionAuditService
 from ditto_data.services.derived.artifact_persistence_service import (

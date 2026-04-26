@@ -17,7 +17,7 @@ class TestAdjFactorIngestion:
             IngestionCoordinator,
             MarketServices,
         )
-        from ditto_data.services import IngestionLogService
+        from ditto_data.ingestion.ingestion_log_service import IngestionLogService
         from ditto_data.services.capital_service import CapitalService
         from ditto_data.services.fundamental_service import FundamentalService
         from ditto_data.services.macro_service import MacroService
@@ -103,7 +103,7 @@ class TestAdjFactorIngestion:
             IngestionCoordinator,
             MarketServices,
         )
-        from ditto_data.services import IngestionLogService
+        from ditto_data.ingestion.ingestion_log_service import IngestionLogService
         from ditto_data.services.capital_service import CapitalService
         from ditto_data.services.fundamental_service import FundamentalService
         from ditto_data.services.macro_service import MacroService
