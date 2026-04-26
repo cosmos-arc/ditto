@@ -89,7 +89,7 @@ from ditto_data.storage.market.stock.status import (
 from ditto_data.storage.metadata.instrument import InstrumentReader
 
 
-@dataclass
+@dataclass(frozen=True)
 class MarketReaders:
     """
     Market 域读取依赖。
@@ -129,7 +129,7 @@ class MarketReaders:
     commodity_bars: CommodityBarsReader | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class MarketWriters:
     """
     Market 域写入依赖。
@@ -167,7 +167,7 @@ class MarketWriters:
     commodity_bars: CommodityBarsWriter | None = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class FundamentalReaders:
     """
     Fundamental 域读取依赖。
@@ -194,7 +194,7 @@ class FundamentalReaders:
     express: ExpressReader
 
 
-@dataclass
+@dataclass(frozen=True)
 class FundamentalWriters:
     """
     Fundamental 域写入依赖。
@@ -221,7 +221,7 @@ class FundamentalWriters:
     express: ExpressWriter
 
 
-@dataclass
+@dataclass(frozen=True)
 class CapitalReaders:
     """
     Capital 域读取依赖。
@@ -242,7 +242,7 @@ class CapitalReaders:
     index_composition: IndexCompositionReader
 
 
-@dataclass
+@dataclass(frozen=True)
 class CapitalWriters:
     """
     Capital 域写入依赖。
@@ -263,7 +263,7 @@ class CapitalWriters:
     index_composition: IndexCompositionWriter
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExecutionReaders:
     """Execution 域读取依赖."""
 
@@ -272,7 +272,7 @@ class ExecutionReaders:
     position: PositionReader
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExecutionWriters:
     """Execution 域写入依赖."""
 

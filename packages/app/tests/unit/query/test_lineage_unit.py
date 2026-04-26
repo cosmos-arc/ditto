@@ -34,7 +34,7 @@ def _make_record(
 def _make_service() -> MagicMock:
     """构造 MagicMock 模拟 StrategyRunService."""
     return MagicMock(
-        spec=["get_lineage", "list_replays", "get_run", "list_runs"],
+        spec=["list_lineage", "list_replays", "get_run", "list_runs"],
     )
 
 
@@ -48,7 +48,7 @@ class TestGetLineage:
         """原始运行（无 parent_run_id）返回 depth=0."""
         service = _make_service()
         record = _make_record(run_id="run-001")
-        service.get_lineage.return_value = [record]
+        service.list_lineage.return_value = [record]
         facade = LineageQueryFacade(run_service=service)
 
         result = facade.get_lineage("run-001")
@@ -57,14 +57,14 @@ class TestGetLineage:
         assert result.depth == 0
         assert len(result.runs) == 1
         assert result.runs[0].run_id == "run-001"
-        service.get_lineage.assert_called_once_with("run-001")
+        service.list_lineage.assert_called_once_with("run-001")
 
     def test_replay_chain_depth_1(self) -> None:
         """一级重放 — 原始 → 重放1."""
         service = _make_service()
         original = _make_record(run_id="run-001")
         replay = _make_record(run_id="run-002", parent_run_id="run-001")
-        service.get_lineage.return_value = [original, replay]
+        service.list_lineage.return_value = [original, replay]
         facade = LineageQueryFacade(run_service=service)
 
         result = facade.get_lineage("run-002")
@@ -81,7 +81,7 @@ class TestGetLineage:
         original = _make_record(run_id="run-001")
         replay1 = _make_record(run_id="run-002", parent_run_id="run-001")
         replay2 = _make_record(run_id="run-003", parent_run_id="run-002")
-        service.get_lineage.return_value = [original, replay1, replay2]
+        service.list_lineage.return_value = [original, replay1, replay2]
         facade = LineageQueryFacade(run_service=service)
 
         result = facade.get_lineage("run-003")
@@ -93,7 +93,7 @@ class TestGetLineage:
     def test_run_not_found_returns_none(self) -> None:
         """运行不存在时返回 None."""
         service = _make_service()
-        service.get_lineage.return_value = []
+        service.list_lineage.return_value = []
         facade = LineageQueryFacade(run_service=service)
 
         result = facade.get_lineage("nonexistent")

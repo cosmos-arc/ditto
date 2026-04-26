@@ -227,20 +227,20 @@ class TestStrategyRunServiceLifecycle:
 class TestStrategyRunServiceLineage:
     """测试 StrategyRunService 血统查询方法."""
 
-    def test_get_lineage_single_run(self) -> None:
-        """get_lineage() 原始运行返回长度 1 的链."""
+    def test_list_lineage_single_run(self) -> None:
+        """list_lineage() 原始运行返回长度 1 的链."""
         mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
         record = _make_record(run_id="run-001", parent_run_id="")
         mock_reader.get.return_value = record
         service = _make_service(reader=mock_reader)
 
-        result = service.get_lineage("run-001")
+        result = service.list_lineage("run-001")
 
         assert len(result) == 1
         assert result[0].run_id == "run-001"
 
-    def test_get_lineage_chain_depth_2(self) -> None:
-        """get_lineage() 追溯两级 — run-002 → run-001."""
+    def test_list_lineage_chain_depth_2(self) -> None:
+        """list_lineage() 追溯两级 — run-002 → run-001."""
         mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
         original = _make_record(run_id="run-001", parent_run_id="")
         replay = _make_record(run_id="run-002", parent_run_id="run-001")
@@ -251,24 +251,24 @@ class TestStrategyRunServiceLineage:
         mock_reader.get.side_effect = _get
         service = _make_service(reader=mock_reader)
 
-        result = service.get_lineage("run-002")
+        result = service.list_lineage("run-002")
 
         assert len(result) == 2
         assert result[0].run_id == "run-001"
         assert result[1].run_id == "run-002"
 
-    def test_get_lineage_not_found(self) -> None:
-        """get_lineage() 运行不存在返回空列表."""
+    def test_list_lineage_not_found(self) -> None:
+        """list_lineage() 运行不存在返回空列表."""
         mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
         mock_reader.get.return_value = None
         service = _make_service(reader=mock_reader)
 
-        result = service.get_lineage("nonexistent")
+        result = service.list_lineage("nonexistent")
 
         assert result == []
 
-    def test_get_lineage_breaks_cycle(self) -> None:
-        """get_lineage() 检测循环并中断."""
+    def test_list_lineage_breaks_cycle(self) -> None:
+        """list_lineage() 检测循环并中断."""
         mock_reader = MagicMock(spec=StrategyRunReaderProtocol)
         record_a = _make_record(run_id="run-a", parent_run_id="run-b")
         record_b = _make_record(run_id="run-b", parent_run_id="run-a")
@@ -279,7 +279,7 @@ class TestStrategyRunServiceLineage:
         mock_reader.get.side_effect = _get
         service = _make_service(reader=mock_reader)
 
-        result = service.get_lineage("run-a")
+        result = service.list_lineage("run-a")
 
         assert len(result) == 2
 

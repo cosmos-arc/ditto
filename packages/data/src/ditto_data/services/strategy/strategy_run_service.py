@@ -176,13 +176,8 @@ class StrategyRunService:
             offset=offset,
         )
 
-    def get_lineage(self, run_id: str) -> list[StrategyRunRecord]:
-        """
-        获取运行血统链 — 从当前运行追溯到原始运行.
-
-        返回列表按时间正序排列: [原始运行, ..., 当前运行].
-        如果运行不存在，返回空列表.
-        """
+    def list_lineage(self, run_id: str) -> list[StrategyRunRecord]:
+        """获取运行血统链 — 从当前运行追溯到原始运行."""
         chain: list[StrategyRunRecord] = []
         visited: set[str] = set()
         current_id = run_id

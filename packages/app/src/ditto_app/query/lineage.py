@@ -33,14 +33,8 @@ class LineageQueryFacade:
         self._service = run_service
 
     def get_lineage(self, run_id: str) -> LineageChain | None:
-        """
-        获取运行血统链.
-
-        Returns:
-            LineageChain 或 None（运行不存在时）
-
-        """
-        chain = self._service.get_lineage(run_id)
+        """获取运行血统链."""
+        chain = self._service.list_lineage(run_id)
         if not chain:
             return None
         return LineageChain(
