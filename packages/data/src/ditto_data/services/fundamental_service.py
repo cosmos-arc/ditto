@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_infra.foundation import logger
 
-if TYPE_CHECKING:
-    from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
+from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 
 
 class FundamentalService:

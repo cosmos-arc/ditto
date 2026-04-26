@@ -4,18 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_app.query.source import SourceQueryFacade
+from ditto_data.sources.protocols import MarketFetcher
 from ditto_infra.foundation import logger
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from ditto_data.sources.tushare.tushare_source import TushareSource
 
 from ditto_interfaces.api.errors import APIError, BadRequestError
 from ditto_interfaces.models.common import APIResponse
@@ -218,7 +216,7 @@ async def get_source_data(
     )
 
 
-def _get_data_source(facade: SourceQueryFacade, source: str) -> TushareSource:
+def _get_data_source(facade: SourceQueryFacade, source: str) -> MarketFetcher:
     """获取指定数据源."""
     if source == "tushare":
         return facade.tushare
@@ -231,7 +229,7 @@ SUPPORTED_SOURCE_DATASETS: set[str] = {"stock_daily"}
 
 
 def _fetch_source_data(
-    source: TushareSource,
+    source: MarketFetcher,
     dataset: str,
     source_ticker: str,
     start_date: str,

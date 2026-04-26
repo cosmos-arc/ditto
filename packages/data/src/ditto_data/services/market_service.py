@@ -12,16 +12,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_infra.foundation import Metrics, logger, traced
 
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.models import InstrumentIdRange
-
-if TYPE_CHECKING:
-    from ditto_data.services.deps import MarketReaders
+from ditto_data.services.deps import MarketReaders
 from ditto_data.storage.market.commodity.bars import CommodityBarsReader
 from ditto_data.storage.market.etf.bars import EtfBarsReader
 from ditto_data.storage.market.fx.bars import FxBarsReader

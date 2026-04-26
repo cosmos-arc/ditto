@@ -12,7 +12,6 @@ App 层 DI Provider — 应用编排服务注册。
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
@@ -53,6 +52,7 @@ from ditto_data.services.trade import TradeService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
+from ditto_infra.foundation.config.settings import TradingSettings
 from ditto_infra.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------
@@ -131,20 +131,22 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
-def get_trading_calendar_range() -> tuple[str, str]:
+def get_trading_calendar_range(
+    trading_settings: TradingSettings,
+) -> tuple[str, str]:
     """
     获取交易日历查询的日期范围。
 
-    通过环境变量 DITTO_TRADING_CALENDAR_START / DITTO_TRADING_CALENDAR_END
-    外部化配置，未设置时保留与原硬编码一致的默认值。
+    通过 TradingSettings 类型化配置获取，支持环境变量别名覆盖。
 
     Returns:
         (start_date, end_date) 字符串元组，格式 YYYY-MM-DD。
 
     """
-    start = os.environ.get("DITTO_TRADING_CALENDAR_START", "2020-01-01")
-    end = os.environ.get("DITTO_TRADING_CALENDAR_END", "2030-12-31")
-    return start, end
+    return (
+        trading_settings.trading_calendar_start,
+        trading_settings.trading_calendar_end,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -399,9 +401,10 @@ class AppProcessProvider(Provider):
     def manual_tracker(
         self,
         metadata_service: MetadataService,
+        trading_settings: TradingSettings,
     ) -> ManualTracker:
         """人工持仓聚合追踪器 — 注入交易日历以支持 T+1 冻结逻辑."""
-        start_date, end_date = get_trading_calendar_range()
+        start_date, end_date = get_trading_calendar_range(trading_settings)
         trading_days = metadata_service.list_trading_days(start_date, end_date)
         return ManualTracker(trading_calendar=tuple(trading_days))
 

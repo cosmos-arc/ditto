@@ -185,7 +185,7 @@ class TestCompareData:
             }
         )
 
-        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum = ChecksumCompute.from_dataframe(df)
 
         existing_log = IngestionLog(
             dataset="stock_daily",
@@ -240,7 +240,7 @@ class TestCompareData:
             }
         )
 
-        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum = ChecksumCompute.from_dataframe(df)
 
         # 行数不匹配
         existing_log = IngestionLog(
@@ -297,7 +297,7 @@ class TestCompareData:
             }
         )
 
-        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum = ChecksumCompute.from_dataframe(df)
 
         # rows 为 None（老数据可能没有记录行数）
         existing_log = IngestionLog(

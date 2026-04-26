@@ -88,9 +88,9 @@ instrument / order / market / identity: 无子域间依赖
 | `DerivedSpec` | strategy.py | frozen dataclass | Analytics, Engine |
 | `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
 | `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
-| `ImpactModel` | strategy.py | `StrEnum`（FIXED/FRACTIONAL/LINEAR） | Engine |
+| `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Engine |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine, Data, Interfaces, App |
-| `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED） | Data |
+| `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
 | `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Engine, App |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
@@ -110,20 +110,34 @@ instrument / order / market / identity: 无子域间依赖
 
 ## 导入规范
 
-```python
-# ✅ 正确：从 kernel 顶层导入
-from ditto_kernel import AssetClass, OrderSide, InstrumentId
+Barrel（`__init__.py`）仅保留高频跨层符号（≤30 个）。低频符号需从叶模块直接导入。
 
-# ✅ 正确：从子域模块导入
+```python
+# ✅ 正确：从 kernel 顶层导入（仅高频符号）
+from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
+
+# ✅ 正确：从子域模块导入（低频或子域内聚符号）
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
 from ditto_kernel.order import OrderSide
-from ditto_kernel.market import CalendarId, GrainId, TimeSpec, MacroCategory
+from ditto_kernel.market import CalendarId, GrainId, TimeSpec, MacroCategory, MacroFrequency
+from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_kernel.research import ResearchDatasetSpecRecord, ResearchSpineSpecRecord
 from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy, DecisionFrame
 from ditto_kernel.identity import InstrumentId
 
 # ❌ 禁止：kernel 导入任何其他 ditto 包
 from ditto_data.models.enums import ...  # kernel 中禁止
 ```
+
+### Barrel vs 叶模块导入（30 限制）
+
+以下符号**不在** barrel `__all__` 中，必须从叶模块导入：
+
+| 子域 | 需叶模块导入的符号 |
+|------|-------------------|
+| `market` | `CalendarId`, `GrainId` |
+| `quality` | `DQIssue`, `DQLevel`, `DQResult`, `DQSeverity` |
+| `research` | `ResearchDatasetSnapshotRecord`, `ResearchDatasetSpecRecord`, `ResearchSpineSnapshotRecord`, `ResearchSpineSpecRecord` |
 
 ## 依赖规则
 

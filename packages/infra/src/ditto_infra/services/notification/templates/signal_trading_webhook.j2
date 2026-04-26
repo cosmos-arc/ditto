@@ -6,8 +6,8 @@
   "regime": {% if regime_label is defined %}{ "label": "{{ regime_label }}"{% if regime_score is defined %}, "score": {{ regime_score }}{% endif %} }{% else %}null{% endif %},
   "actions": [
     {% for a in actions %}
-    { "instrument_id": {{ a.instrument_id }}, "action": "{{ a.action }}", "target_weight": {{ a.target_weight }},
-      "current_weight": {{ a.current_weight }}, "delta_weight": {{ a.delta_weight }} }{% if not loop.last %},{% endif %}
+    { "instrument_id": {{ a.instrument_id | tojson }}, "action": {{ a.action | tojson }}, "target_weight": {{ a.target_weight | tojson }},
+      "current_weight": {{ a.current_weight | tojson }}, "delta_weight": {{ a.delta_weight | tojson }} }{% if not loop.last %},{% endif %}
     {% endfor %}
   ],
   "timestamp": "{{ timestamp | default('') }}"

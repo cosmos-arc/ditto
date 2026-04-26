@@ -34,16 +34,9 @@ def validate_frame(frame: pl.DataFrame, required: tuple[str, ...]) -> None:
     """
     校验 DecisionFrame 是否包含必需列.
 
-    无条件执行校验，缺少列时抛出 ValueError。
-
-    Args:
-        frame: 待校验的 DataFrame。
-        required: 必需列名元组。
-
-    Raises:
-        ValueError: 缺少必需列时。
-
+    Release 模式（python -O）下跳过校验以提升性能。
     """
-    missing = set(required) - set(frame.columns)
-    if missing:
-        raise ValueError(f"DecisionFrame missing required columns: {missing}")
+    if __debug__:
+        missing = set(required) - set(frame.columns)
+        if missing:
+            raise ValueError(f"DecisionFrame missing required columns: {missing}")

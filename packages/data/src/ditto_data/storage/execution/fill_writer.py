@@ -39,7 +39,7 @@ _CREATE_IDX_FILLS_INTENT = (
 )
 
 _INSERT_FILL = """
-INSERT INTO execution_fills
+INSERT OR IGNORE INTO execution_fills
     (fill_id, intent_id, strategy_id, trade_date, instrument_id, direction,
      quantity, fill_price, fee, slippage, notes, settlement_date, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

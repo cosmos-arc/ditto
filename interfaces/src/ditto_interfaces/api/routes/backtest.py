@@ -54,10 +54,12 @@ from ditto_interfaces.api.errors import (
 from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 from ditto_interfaces.models.backtest import (
     AuditRecordResponse,
+    BacktestReportResponse,
     BacktestRunTriggerResponse,
     BenchmarkNavResponse,
     CancelRunResponse,
     CreateBacktestRunRequest,
+    NavPointResponse,
     RetryRunResponse,
     RunResponse,
     TradeResponse,
@@ -402,18 +404,18 @@ async def get_audit(
 
 @router.get(
     "/runs/{run_id}/report",
-    response_model=APIResponse[dict[str, object]],
+    response_model=APIResponse[BacktestReportResponse],
 )
 @inject
 async def get_report(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
-) -> APIResponse[dict[str, object]]:
+) -> APIResponse[BacktestReportResponse]:
     """获取回测报告 (backtest_report.json 元数据)."""
     report = await asyncio.to_thread(facade.get_report, run_id)
     if report is None:
         raise NotFoundError(f"Report not found for run: {run_id}")
-    return APIResponse(data=report)
+    return APIResponse(data=BacktestReportResponse.model_validate(report))
 
 
 # ---------------------------------------------------------------------------
@@ -473,15 +475,17 @@ async def replay_run(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/runs/{run_id}/nav", response_model=APIResponse[list[dict[str, object]]])
+@router.get("/runs/{run_id}/nav", response_model=APIResponse[list[NavPointResponse]])
 @inject
 async def get_nav_series(
     run_id: str,
     facade: Annotated[BacktestQueryFacade, FromComponent()],
-) -> APIResponse[list[dict[str, object]]]:
+) -> APIResponse[list[NavPointResponse]]:
     """获取回测 NAV 序列."""
     nav_series = await asyncio.to_thread(facade.get_nav_series, run_id)
-    return APIResponse(data=nav_series)
+    return APIResponse(
+        data=[NavPointResponse.model_validate(item) for item in nav_series]
+    )
 
 
 # ---------------------------------------------------------------------------

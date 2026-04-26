@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
-
-if TYPE_CHECKING:
-    from ditto_data.sources.fred.fred_source import FredSource
-    from ditto_data.sources.tushare.tushare_source import TushareSource
+from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.tushare.tushare_source import TushareSource
 
 __all__ = ["SourceQueryFacade"]
 

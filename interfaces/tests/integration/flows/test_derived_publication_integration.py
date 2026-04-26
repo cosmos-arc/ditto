@@ -40,7 +40,7 @@ from ditto_data.services import (
     PublicationSafetyRecordService,
 )
 from ditto_data.services.derived import DerivedLatestQuery
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.jobs.flows.materialization import (
     certify_publication_flow,

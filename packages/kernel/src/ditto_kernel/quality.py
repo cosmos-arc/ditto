@@ -31,7 +31,13 @@ class DQLevel(Enum):
 
 
 class DQSeverity(Enum):
-    """DQ severity level."""
+    """
+    数据质量严重程度。
+
+    ERROR: 数据存在严重问题，应阻断后续处理。
+    WARNING: 数据存在潜在风险，可继续处理但需记录。
+    ALERT: 信息性提示，数据可正常使用。
+    """
 
     ERROR = "error"
     WARNING = "warning"

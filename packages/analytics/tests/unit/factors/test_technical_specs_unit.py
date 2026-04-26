@@ -1,41 +1,41 @@
-"""Tests for technical indicator factor specs (obv, kdj, supertrend, etc.)."""
+"""Tests for technical indicator factor specs (obv_ma20, kdj, supertrend, etc.)."""
 
 from __future__ import annotations
 
-from ditto_analytics.factors.technical import TECHNICALS, _obv_specs
+from ditto_analytics.factors.technical import TECHNICALS
 
 
-class TestObvSpec:
-    """Verify the obv (On-Balance Volume) FactorSpec definition."""
+class TestObvMa20Spec:
+    """Verify the obv_ma20 FactorSpec definition (obv itself lives in liquidity)."""
 
-    def test_obv_in_obv_specs_dict(self) -> None:
-        """_obv_specs should contain an 'obv' entry."""
-        assert "obv" in _obv_specs
+    def test_obv_ma20_in_technicals(self) -> None:
+        """TECHNICALS dict should expose 'obv_ma20'."""
+        assert "obv_ma20" in TECHNICALS
 
-    def test_obv_in_technicals(self) -> None:
-        """TECHNICALS dict should expose 'obv' via merged specs."""
-        assert "obv" in TECHNICALS
+    def test_obv_ma20_dependencies(self) -> None:
+        """obv_ma20 should depend on obv."""
+        spec = TECHNICALS["obv_ma20"]
+        assert spec.dependencies == ("obv",)
 
-    def test_obv_dependencies(self) -> None:
-        """obv should depend on market.close and market.volume."""
-        spec = _obv_specs["obv"]
-        assert spec.dependencies == ("market.close", "market.volume")
-
-    def test_obv_computation_type(self) -> None:
-        """obv should use python computation type."""
-        spec = _obv_specs["obv"]
+    def test_obv_ma20_computation_type(self) -> None:
+        """obv_ma20 should use python computation type."""
+        spec = TECHNICALS["obv_ma20"]
         assert spec.computation_type == "python"
 
-    def test_obv_expression_empty(self) -> None:
-        """obv should have an empty expression (python computation)."""
-        spec = _obv_specs["obv"]
+    def test_obv_ma20_expression_empty(self) -> None:
+        """obv_ma20 should have an empty expression (python computation)."""
+        spec = TECHNICALS["obv_ma20"]
         assert spec.expression == ""
 
-    def test_obv_has_description(self) -> None:
-        """obv should have a non-empty description."""
-        spec = _obv_specs["obv"]
+    def test_obv_ma20_has_description(self) -> None:
+        """obv_ma20 should have a non-empty description."""
+        spec = TECHNICALS["obv_ma20"]
         assert spec.description
 
-    def test_obv_id_matches_key(self) -> None:
-        """obv spec id should match its dict key."""
-        assert _obv_specs["obv"].id == "obv"
+    def test_obv_ma20_id_matches_key(self) -> None:
+        """obv_ma20 spec id should match its dict key."""
+        assert TECHNICALS["obv_ma20"].id == "obv_ma20"
+
+    def test_obv_not_duplicated_in_technicals(self) -> None:
+        """obv should NOT be in TECHNICALS; it lives in LIQUIDITIES."""
+        assert "obv" not in TECHNICALS

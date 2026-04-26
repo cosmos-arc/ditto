@@ -2,7 +2,10 @@
 
 from dishka import make_container
 from ditto_data.di.sources import SourcesProvider
-from ditto_data.sources import ExchangeTransformer, ExchangeTransformers
+from ditto_data.sources.exchange_transformers import (
+    ExchangeTransformer,
+    ExchangeTransformers,
+)
 from ditto_data.sources.tdx.transformer import TdxExchangeTransformer
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_interfaces.registry.infra import ConfigProvider

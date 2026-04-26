@@ -6,14 +6,10 @@ SourceService - 外部数据源访问服务.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ditto_data.models.common import Source
-
-if TYPE_CHECKING:
-    from ditto_data.sources.fred.fred_source import FredSource
-    from ditto_data.sources.source import DataSources
-    from ditto_data.sources.tushare.tushare_source import TushareSource
+from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.source import DataSources
+from ditto_data.sources.tushare.tushare_source import TushareSource
 
 
 class SourceService:

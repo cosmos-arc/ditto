@@ -34,6 +34,17 @@ class SqliteTableWriter:
         )
 
         try:
+            missing_cols = [
+                col
+                for col in self._spec.columns
+                if col not in self._spec.nullable_columns and col not in df.columns
+            ]
+            if missing_cols:
+                msg = (
+                    f"Missing required columns for table '{self._spec.table}': "
+                    + f"{missing_cols}. Columns: {list(df.columns)}"
+                )
+                raise ValueError(msg)
             records = df.to_dicts()
             rows = [
                 tuple(

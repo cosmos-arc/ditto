@@ -60,57 +60,16 @@ class TestBuildActualNavsEmpty:
 
     def test_empty_fills_returns_empty(self) -> None:
         """空 fills 返回空序列."""
-        result = _build_actual_navs([], 1_000_000.0)
+        market = MagicMock()
+        result = _build_actual_navs([], 1_000_000.0, price_query=market)
         assert result == []
 
 
-# ========== 无行情回退模式 ==========
-
-
-class TestBuildActualNavsFallback:
-    """_build_actual_navs — 无行情数据回退模式."""
-
-    def test_fallback_only_deducts_fees(self) -> None:
-        """无 price_query 时仅扣除费用，NAV 跨日累积."""
-        fills = [
-            _make_fill(trade_date="2024-01-02", fee=50.0),
-            _make_fill(trade_date="2024-01-03", fee=80.0),
-        ]
-        result = _build_actual_navs(fills, 1_000_000.0, price_query=None)
-
-        assert len(result) == 2
-        assert result[0] == ("2024-01-02", 999_950.0)
-        assert result[1] == ("2024-01-03", 999_870.0)
-
-    def test_fallback_same_date_accumulates_fees(self) -> None:
-        """同日多笔成交累计扣费."""
-        fills = [
-            _make_fill(trade_date="2024-01-02", fee=50.0),
-            _make_fill(fill_id="fill-002", trade_date="2024-01-02", fee=30.0),
-        ]
-        result = _build_actual_navs(fills, 1_000_000.0, price_query=None)
-
-        assert len(result) == 1
-        assert result[0] == ("2024-01-02", 999_920.0)
-
-    def test_fills_sorted_by_date(self) -> None:
-        """结果按日期排序."""
-        fills = [
-            _make_fill(trade_date="2024-01-05", fill_id="f3"),
-            _make_fill(trade_date="2024-01-02", fill_id="f1"),
-            _make_fill(trade_date="2024-01-03", fill_id="f2"),
-        ]
-        result = _build_actual_navs(fills, 1_000_000.0, price_query=None)
-
-        dates = [r[0] for r in result]
-        assert dates == ["2024-01-02", "2024-01-03", "2024-01-05"]
-
-
-# ========== 完整 NAV 重建 ==========
+# ========== NAV 重建 ==========
 
 
 class TestBuildActualNavsFull:
-    """_build_actual_navs — 完整 NAV 重建（有行情数据）."""
+    """_build_actual_navs — NAV 重建（逐日现金/持仓台账 + 收盘价）."""
 
     def test_buy_only_reduces_cash_adds_position(self) -> None:
         """纯买入: 现金减少，持仓增加，NAV = 现金 + 持仓市值."""

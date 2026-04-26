@@ -42,8 +42,6 @@ INSERT INTO trade_intents
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
-_UPDATE_INTENT_STATUS = "UPDATE trade_intents SET status = ? WHERE intent_id = ?"
-
 _UPDATE_INTENT_STATUS_TRANSITION = (
     "UPDATE trade_intents SET status = ? "
     "WHERE intent_id = ? AND status IN ({placeholders})"
@@ -87,20 +85,21 @@ class SignalWriter:
         intent_id: str,
         status: str,
         *,
-        expected_current: tuple[str, ...] | None = None,
+        expected_current: tuple[str, ...],
     ) -> bool:
         """
-        更新交易信号状态.
+        更新交易信号状态（乐观并发控制）.
+
+        Args:
+            intent_id: 交易意图 ID.
+            status: 目标状态.
+            expected_current: 期望的当前状态集合，SQL 仅当数据库中的实际状态
+                落在该集合内时才执行更新，防止 TOCTOU lost-update。
 
         Returns:
             True 表示更新成功，False 表示因状态前置条件不满足而跳过。
 
         """
-        if expected_current is None:
-            self._client.execute(_UPDATE_INTENT_STATUS, (status, intent_id))
-            self._client.commit()
-            return True
-
         placeholders = ", ".join("?" for _ in expected_current)
         sql = _UPDATE_INTENT_STATUS_TRANSITION.format(placeholders=placeholders)
         params = [status, intent_id, *expected_current]

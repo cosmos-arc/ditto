@@ -249,10 +249,13 @@ class UpdateIntentStatusHandler:
         # 幂等：status == status 时也允许（expected 可能为空集，此时用当前状态）
         if command.status == intent.status:
             expected = (intent.status,)
+        # 终态（空转换集）时，用当前状态作为守卫条件以防止 lost-update
+        if not expected:
+            expected = (intent.status,)
         updated = self._service.update_intent_status(
             command.intent_id,
             command.status,
-            expected_current=tuple(expected) if expected else None,
+            expected_current=tuple(expected),
         )
         if not updated:
             msg = (

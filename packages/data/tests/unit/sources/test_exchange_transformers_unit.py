@@ -1,7 +1,10 @@
 """Tests for ExchangeTransformer Protocol and ExchangeTransformers factory."""
 
 import pytest
-from ditto_data.sources import ExchangeTransformer, ExchangeTransformers
+from ditto_data.sources.exchange_transformers import (
+    ExchangeTransformer,
+    ExchangeTransformers,
+)
 from pytest_mock import MockerFixture
 
 

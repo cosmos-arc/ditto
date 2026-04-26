@@ -8,14 +8,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 import polars as pl
 from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset
 from ditto_kernel.instrument import InstrumentIngestParams
 
-if TYPE_CHECKING:
-    from ditto_app.process.ingestion.coordinator import SourceFetchers
+from ditto_app.process.ingestion.types import SourceFetchers
 
 __all__ = [
     "build_daily_fetch_handlers",

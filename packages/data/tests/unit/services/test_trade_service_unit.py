@@ -355,7 +355,7 @@ class TestUpdateIntentStatus:
         svc = _make_service(sqlite_client)
 
         svc.save_intent(_make_intent(status="pending"))
-        svc.update_intent_status("INT-001", "filled")
+        svc.update_intent_status("INT-001", "filled", expected_current=("pending",))
 
         result = svc.get_intent("INT-001")
         assert result is not None
@@ -366,7 +366,7 @@ class TestUpdateIntentStatus:
         svc = _make_service(sqlite_client)
 
         svc.save_intent(_make_intent(status="pending"))
-        svc.update_intent_status("INT-001", "cancelled")
+        svc.update_intent_status("INT-001", "cancelled", expected_current=("pending",))
 
         result = svc.get_intent("INT-001")
         assert result is not None

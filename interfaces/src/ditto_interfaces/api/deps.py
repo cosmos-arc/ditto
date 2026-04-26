@@ -19,6 +19,8 @@ def pagination_params(
     return PaginationRequest(limit=limit, offset=offset)
 
 
+# TODO: 当前 paginate 在内存中对全量列表分页。当 items 量大时应改为
+# 数据库层分页（LIMIT/OFFSET 或 cursor-based），避免将全量数据加载到内存。
 def paginate[T](items: list[T], params: PaginationRequest) -> APIResponse[list[T]]:
     """对列表进行分页，返回包含 pagination 元数据的 APIResponse."""
     total = len(items)

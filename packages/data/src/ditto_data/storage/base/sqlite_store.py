@@ -105,11 +105,11 @@ class SQLiteStore:
             conditions.append(f"instrument_id IN ({placeholders})")
             params.extend(instrument_ids)
 
-        if start_date:
+        if start_date is not None:
             conditions.append("trade_date >= ?")
             params.append(start_date)
 
-        if end_date:
+        if end_date is not None:
             conditions.append("trade_date <= ?")
             params.append(end_date)
 
@@ -467,14 +467,14 @@ class SQLiteStore:
             conditions.append(f"instrument_id IN ({placeholders})")
             params.extend(instrument_ids)
 
-        if start_date and end_date:
+        if start_date is not None and end_date is not None:
             conditions.append("trade_date >= ? AND trade_date <= ?")
             params.append(start_date)
             params.append(end_date)
-        elif start_date:
+        elif start_date is not None:
             conditions.append("trade_date >= ?")
             params.append(start_date)
-        elif end_date:
+        elif end_date is not None:
             conditions.append("trade_date <= ?")
             params.append(end_date)
 

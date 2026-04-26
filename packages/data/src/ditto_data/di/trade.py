@@ -46,13 +46,17 @@ class TradeProvider(Provider):
         )
 
     @provide
+    def init_schema(self, sqlite_client: SQLiteClient) -> None:
+        """执行 execution 域 DDL（应用级单次初始化）。"""
+        sqlite_client.executescript(INTENTS_DDL + FILLS_DDL + POSITIONS_DDL)
+        sqlite_client.commit()
+
+    @provide
     def trade_service(
         self,
         readers: ExecutionReaders,
         writers: ExecutionWriters,
-        sqlite_client: SQLiteClient,
+        _schema_initialized: None,
     ) -> TradeService:
         """交易信号/成交/持仓 CRUD 服务."""
-        sqlite_client.executescript(INTENTS_DDL + FILLS_DDL + POSITIONS_DDL)
-        sqlite_client.commit()
         return TradeService(readers=readers, writers=writers)

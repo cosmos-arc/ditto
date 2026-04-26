@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_data.storage.metadata.universe.universe_writer import UniverseWriter
 

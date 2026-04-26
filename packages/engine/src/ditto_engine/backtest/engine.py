@@ -48,7 +48,7 @@ from ditto_engine.backtest.steps import (
     StrategyStep,
     TradingStep,
 )
-from ditto_engine.backtest.steps._input_bundle import build_input_bundle
+from ditto_engine.backtest.steps.input_bundle import build_input_bundle
 from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel
@@ -418,8 +418,8 @@ class EngineLoop:
         """
         对延迟信号执行 Planning -> PreTrade -> Execution 子链（尾部 flush）。
 
-        跳过 DataFetchStep / RiskScanStep / StrategyStep / AuditStep，
-        仅执行 PlanningStep -> PreTradeStep -> ExecutionStep。
+        跳过 DataFetchStep / RiskScanStep / StrategyStep，
+        执行 PlanningStep -> PreTradeStep -> ExecutionStep -> AuditStep。
         """
         last_date = self._trading_days[-1] if self._trading_days else ""
         ctx = StepContext(date=last_date, is_rebalance_day=True)
@@ -434,7 +434,7 @@ class EngineLoop:
         ctx.account_view = self._brokerage.get_account()
 
         for step in self._steps:
-            if isinstance(step, (DataFetchStep, RiskScanStep, StrategyStep, AuditStep)):
+            if isinstance(step, (DataFetchStep, RiskScanStep, StrategyStep)):
                 continue
             if isinstance(step, PlanningStep):
                 ctx.target_portfolio = signal
@@ -457,6 +457,11 @@ class EngineLoop:
 
         # 执行 Step chain
         for step in self._steps:
+            # execution_delay: 无延迟信号时跳过 PlanningStep
+            # （信号已入队，等待 N 日后执行）
+            if delay > 0 and deferred_signal is None and isinstance(step, PlanningStep):
+                continue
+
             # execution_delay: PlanningStep 前恢复延迟信号
             if (
                 delay > 0

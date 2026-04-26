@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 
+import pytest
 from ditto_kernel.math import pearson_correlation
 
 # ---------------------------------------------------------------------------
@@ -188,3 +189,22 @@ class TestPearsonCorrelationEdgeCases:
         r_xy = pearson_correlation(x, y)
         r_yx = pearson_correlation(y, x)
         assert math.isclose(r_xy, r_yx)
+
+
+# ---------------------------------------------------------------------------
+# 长度不匹配
+# ---------------------------------------------------------------------------
+
+
+class TestPearsonCorrelationLengthMismatch:
+    """输入长度不一致时应抛出 ValueError."""
+
+    def test_x_longer_than_y(self) -> None:
+        """x 比 y 长时抛出 ValueError."""
+        with pytest.raises(ValueError):
+            pearson_correlation([1.0, 2.0, 3.0], [1.0, 2.0])
+
+    def test_y_longer_than_x(self) -> None:
+        """y 比 x 长时抛出 ValueError."""
+        with pytest.raises(ValueError):
+            pearson_correlation([1.0, 2.0], [1.0, 2.0, 3.0])

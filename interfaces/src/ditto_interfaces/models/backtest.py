@@ -217,13 +217,98 @@ class RetryRunResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class NavPointResponse(BaseModel):
+    """NAV 序列数据点."""
+
+    trade_date: str = Field(description="交易日期 (YYYY-MM-DD)")
+    nav: float = Field(description="净值")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class AggregatedTradeStatsResponse(BaseModel):
+    """汇总交易统计."""
+
+    total_trades: int = Field(default=0)
+    long_trades: int = Field(default=0)
+    short_trades: int = Field(default=0)
+    win_trades: int = Field(default=0)
+    loss_trades: int = Field(default=0)
+    win_rate: float = Field(default=0.0)
+    profit_factor: float = Field(default=0.0)
+    avg_win: float = Field(default=0.0)
+    avg_loss: float = Field(default=0.0)
+    avg_win_loss_ratio: float = Field(default=0.0)
+    max_consecutive_wins: int = Field(default=0)
+    max_consecutive_losses: int = Field(default=0)
+    avg_holding_days: float = Field(default=0.0)
+    median_holding_days: float = Field(default=0.0)
+    best_trade: float = Field(default=0.0)
+    worst_trade: float = Field(default=0.0)
+    avg_trade_return_pct: float = Field(default=0.0)
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class AlphaStatsResponse(BaseModel):
+    """绩效分析统计."""
+
+    annualized_return: float = Field(default=0.0)
+    annualized_volatility: float = Field(default=0.0)
+    sharpe_ratio: float = Field(default=0.0)
+    sortino_ratio: float = Field(default=0.0)
+    max_drawdown: float = Field(default=0.0)
+    max_drawdown_duration_days: int = Field(default=0)
+    calmar_ratio: float = Field(default=0.0)
+    information_ratio: float | None = Field(default=None)
+    tracking_error: float | None = Field(default=None)
+    beta: float | None = Field(default=None)
+    alpha_annualized: float | None = Field(default=None)
+    total_turnover: float = Field(default=0.0)
+    avg_turnover_per_rebalance: float = Field(default=0.0)
+    total_fees: float = Field(default=0.0)
+    net_return_after_cost: float = Field(default=0.0)
+    cost_drag: float = Field(default=0.0)
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class BacktestReportResponse(BaseModel):
+    """回测报告响应 — 对应 backtest_report.json 的元数据结构."""
+
+    run_id: str = Field(default="")
+    period: dict[str, str] = Field(
+        default_factory=dict, description="回测期间 {start, end}"
+    )
+    initial_cash: float = Field(default=0.0)
+    final_nav: float = Field(default=0.0)
+    aggregated_trade_stats: AggregatedTradeStatsResponse | None = Field(
+        default=None,
+        description="汇总交易统计",
+    )
+    alpha_stats: AlphaStatsResponse | None = Field(
+        default=None,
+        description="绩效分析统计",
+    )
+    rebalance_freq: str = Field(default="daily")
+    nav_series: list[float] | None = Field(
+        default=None, description="NAV series (float list)"
+    )
+
+    model_config = ConfigDict(strict=True, extra="allow")
+
+
 __all__ = [
+    "AggregatedTradeStatsResponse",
+    "AlphaStatsResponse",
     "AuditRecordResponse",
+    "BacktestReportResponse",
     "BacktestRunTriggerResponse",
     "BenchmarkNavResponse",
     "CancelRunResponse",
     "CostConfigRequest",
     "CreateBacktestRunRequest",
+    "NavPointResponse",
     "RetryRunResponse",
     "RunResponse",
     "RunsQueryParams",

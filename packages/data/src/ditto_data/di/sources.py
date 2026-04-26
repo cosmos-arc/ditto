@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dishka import Provider, Scope, provide
 
 from ditto_data.config import DataSourceSettings
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.fred.fred_source import FredSource
 from ditto_data.sources.protocols import (
     CapitalFetcher,

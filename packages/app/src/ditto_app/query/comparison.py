@@ -38,7 +38,7 @@ class ComparisonQueryFacade:
         self,
         backtest_facade: BacktestQueryFacade,
         actual_facade: PortfolioActualQueryFacade,
-        market_facade: MarketQueryFacade | None = None,
+        market_facade: MarketQueryFacade,
     ) -> None:
         self._backtest = backtest_facade
         self._actual = actual_facade
@@ -138,18 +138,17 @@ def _extract_nav_series(
 def _build_actual_navs(
     fills: list[ManualExecutionFill],
     initial_cash: float,
-    price_query: MarketQueryFacade | None = None,
+    price_query: MarketQueryFacade,
 ) -> list[tuple[str, float]]:
     """
     从成交记录构建实际 NAV 序列.
 
-    当 price_query 为 None 时，回退到简化占位逻辑（仅扣除费用）。
-    当 price_query 可用时，逐日重建现金/持仓台账并按收盘价计算 NAV。
+    逐日重建现金/持仓台账并按收盘价计算 NAV。
 
     Args:
         fills: 成交记录列表.
         initial_cash: 初始资金.
-        price_query: 行情查询门面（可选）.
+        price_query: 行情查询门面.
 
     Returns:
         按日期排序的 [(date_str, nav), ...] 序列.
@@ -157,23 +156,7 @@ def _build_actual_navs(
     """
     if not fills:
         return []
-    if price_query is None:
-        # 回退逻辑：无行情数据源时，仅扣除费用生成简化 NAV 序列
-        by_date: dict[str, float] = {}
-        cash = initial_cash
-        for f in fills:
-            cash -= f.fee
-            by_date[f.trade_date] = cash
-        return sorted(by_date.items())
-    return _build_actual_navs_full(fills, initial_cash, price_query)
 
-
-def _build_actual_navs_full(
-    fills: list[ManualExecutionFill],
-    initial_cash: float,
-    price_query: MarketQueryFacade,
-) -> list[tuple[str, float]]:
-    """完整 NAV 重建：逐日构建现金/持仓台账并按收盘价计算 NAV."""
     # 1. 收集所有成交日期和标的 ID
     all_dates: set[str] = set()
     all_instrument_ids: set[int] = set()

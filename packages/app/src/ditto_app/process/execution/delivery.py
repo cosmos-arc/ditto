@@ -40,8 +40,8 @@ class DeliveryRouter:
             return self._alert_manager.send_alert(
                 "signal_trading", context, NotificationLevel.INFO
             )
-        except Exception:
-            logger.exception(
+        except (OSError, ConnectionError, TimeoutError):
+            logger.error(
                 "Signal delivery failed, strategy_id={}, signal_date={}",
                 strategy_id,
                 signal_date,

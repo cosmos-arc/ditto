@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
-
-if TYPE_CHECKING:
-    from ditto_data.sources.protocols import MarketFetcher
-
+from ditto_data.sources.protocols import MarketFetcher
 from ditto_infra.foundation import logger, traced
 
 # list_date 推断的最早起始日期

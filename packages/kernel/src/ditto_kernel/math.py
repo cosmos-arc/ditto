@@ -43,7 +43,7 @@ def pearson_correlation(x: list[float], y: list[float]) -> float:
     cov = 0.0
     var_x = 0.0
     var_y = 0.0
-    for xi, yi in zip(x, y, strict=False):
+    for xi, yi in zip(x, y, strict=True):
         dx = xi - mean_x
         dy = yi - mean_y
         cov += dx * dy

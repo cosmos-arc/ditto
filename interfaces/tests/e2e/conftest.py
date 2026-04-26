@@ -26,8 +26,8 @@ import polars as pl  # noqa: E402
 import pytest  # noqa: E402
 from ditto_data.config import DataSourceSettings  # noqa: E402
 from ditto_data.quality import GoldenDatasetSpec  # noqa: E402
-from ditto_data.sources import TushareSource  # noqa: E402
 from ditto_data.sources.tdx import TdxSource  # noqa: E402
+from ditto_data.sources.tushare.tushare_source import TushareSource  # noqa: E402
 from ditto_data.storage.base.parquet_store import ParquetStore  # noqa: E402
 from ditto_data.storage.market.stock.bars import (  # noqa: E402
     StockBarsReader,

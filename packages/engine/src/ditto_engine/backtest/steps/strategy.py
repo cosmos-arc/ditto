@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
-from ditto_engine.backtest.steps._input_bundle import build_input_bundle
+from ditto_engine.backtest.steps.input_bundle import build_input_bundle
 from ditto_engine.backtest.steps.types import StepContext, StepResult
 
 __all__ = ["StrategyStep"]

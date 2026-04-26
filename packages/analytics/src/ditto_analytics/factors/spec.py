@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 __all__ = ["FactorContext", "FactorSpec"]
 
@@ -62,4 +63,4 @@ class FactorSpec:
     dependencies: tuple[str, ...] = ()
     description: str = ""
     calendar_context: FactorContext | None = None
-    computation_type: str = "expression"
+    computation_type: Literal["expression", "python"] = "expression"

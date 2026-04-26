@@ -24,7 +24,7 @@ from ditto_data.models.metadata import (
     StockExtension,
 )
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.metadata.industry import (
     IndustryMappingReader,
     IndustryMappingWriter,

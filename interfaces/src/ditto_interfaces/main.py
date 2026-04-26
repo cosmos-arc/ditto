@@ -27,6 +27,7 @@ from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, Ini
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import Metrics, logger
 from ditto_kernel import __version__ as ditto_version
+from ditto_kernel.exceptions import DataError, DittoError
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +50,8 @@ from ditto_interfaces.api.routes import (
     universe,
 )
 from ditto_interfaces.middleware import (
+    data_error_handler,
+    ditto_error_handler,
     general_exception_handler,
     http_exception_handler,
     validation_exception_handler,
@@ -316,12 +319,7 @@ async def get_status(request: Request) -> dict[str, Any]:
 
 
 # 注册异常处理器（顺序：从具体到通用）
-from ditto_kernel.exceptions import DataError, DittoError  # noqa: E402
 
-from ditto_interfaces.middleware import (  # noqa: E402
-    data_error_handler,
-    ditto_error_handler,
-)
 
 app.add_exception_handler(DataError, data_error_handler)
 app.add_exception_handler(DittoError, ditto_error_handler)

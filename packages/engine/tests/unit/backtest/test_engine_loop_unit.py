@@ -1106,3 +1106,74 @@ class TestExecutionDelay:
         assert pipeline.run.call_count == 3
         assert brokerage.place_order.call_count == 3
         assert planner.plan.call_count == 3
+
+    def test_delay_1_no_skipped_dates(self) -> None:
+        """execution_delay=1: PlanningStep 被跳过而非 fail，无 skipped_dates."""
+        loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+        )
+        result = loop.run()
+
+        assert result.skipped_dates == ()
+
+    def test_delay_1_flush_runs_audit_step(self) -> None:
+        """execution_delay=1: flush 阶段应执行 AuditStep，记录审计数据."""
+        from ditto_engine.backtest.audit.collector import ExecutionAuditCollector
+
+        audit_collector = Mock(spec=ExecutionAuditCollector)
+        config = replace(
+            _make_config(),
+            execution_delay=1,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        order = _make_order()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(order,),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(
+                clock=_make_clock(),
+                fee_model=fee_model,
+                audit_collector=audit_collector,
+            ),
+        )
+        loop.run()
+
+        # 3 normal days + 1 flush = 4 record_account_view calls
+        call_dates = [
+            call[0][0] for call in audit_collector.record_account_view.call_args_list
+        ]
+        assert len(call_dates) == 4
+        assert call_dates[-1] == DAYS[-1]

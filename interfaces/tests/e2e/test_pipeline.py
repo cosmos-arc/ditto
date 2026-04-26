@@ -22,7 +22,7 @@ import pytest
 from ditto_data.models import OnDuplicate
 from ditto_data.quality import DQSpec, GoldenDatasetSpec, QualityEngine
 from ditto_data.services.market_service import MarketBarsQuery, MarketService
-from ditto_data.sources import TushareSource
+from ditto_data.sources.tushare.tushare_source import TushareSource
 from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,

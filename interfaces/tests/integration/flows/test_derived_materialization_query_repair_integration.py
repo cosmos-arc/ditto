@@ -30,7 +30,7 @@ from ditto_data.services import (
     DerivedQueryService,
 )
 from ditto_data.services.derived import DerivedSeriesQuery
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.jobs.flows.materialization import (
     daily_materialization_flow,

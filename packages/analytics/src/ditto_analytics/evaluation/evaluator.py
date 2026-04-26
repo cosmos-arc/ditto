@@ -668,24 +668,18 @@ def _estimate_avg_turnover(
         return 0.0
 
     try:
-        dates = sorted(
-            q_ret_df.select(pl.col("trade_date").unique()).to_series().to_list(),
+        daily = (
+            q_ret_df.group_by("trade_date")
+            .agg(pl.col("mean_return").mean())
+            .sort("trade_date")
         )
-        if len(dates) < _MIN_DATES_FOR_TURNOVER:
+
+        if daily.height < _MIN_DATES_FOR_TURNOVER:
             return 0.0
 
-        migrations: list[float] = []
-        for i in range(1, len(dates)):
-            prev = q_ret_df.filter(pl.col("trade_date") == dates[i - 1])
-            curr = q_ret_df.filter(pl.col("trade_date") == dates[i])
-            # If we had weight data we'd compute actual turnover;
-            # here we estimate from quantile return stability
-            curr_mean = curr.select(pl.col("mean_return").mean()).item() or 0
-            prev_mean = prev.select(pl.col("mean_return").mean()).item() or 0
-            avg_change = abs(curr_mean - prev_mean)
-            migrations.append(avg_change)
+        migrations = daily.select(pl.col("mean_return").diff().abs().drop_nans())
 
-        return float(sum(migrations) / len(migrations)) if migrations else 0.0
+        return float(migrations.select(pl.col("mean_return").mean()).item()) or 0.0
     except (pl_exc.ComputeError, TypeError, IndexError):
         return 0.0
 

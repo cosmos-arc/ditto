@@ -24,6 +24,7 @@ from ditto_engine.accounting.order_book import (
     StateTransitionError,
 )
 from ditto_engine.accounting.position import Position
+from ditto_engine.exceptions import EngineError
 from ditto_engine.execution.fills import Filled, NoFill
 from ditto_engine.execution.reality import BrokerageModel
 from ditto_engine.execution.reality.constants import (
@@ -357,7 +358,7 @@ class BacktestBrokerage:
         # 如 V2 引入部分成交模型，需重构 fill model contract。
         model_qty = filled.fill_event.filled_quantity
         if model_qty != fill_qty:
-            raise AssertionError(
+            raise EngineError(
                 f"Fill model returned qty {model_qty} != leaves qty {fill_qty} "
                 + f"for order {order.order_id}. V1 fill model is all-or-nothing; "
                 + "partial fills require fill model contract refactoring."

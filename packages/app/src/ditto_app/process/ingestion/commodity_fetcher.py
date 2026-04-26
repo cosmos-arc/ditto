@@ -9,14 +9,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_data.models import METAL_CODE_ALIASES, VIX_CODE_TO_INSTRUMENT_ID
+from ditto_data.sources.protocols import CommodityFetcher, MacroFetcher
 from ditto_infra.foundation import logger
-
-if TYPE_CHECKING:
-    from ditto_data.sources.protocols import CommodityFetcher, MacroFetcher
 
 __all__ = ["fetch_commodity_daily"]
 

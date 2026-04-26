@@ -24,6 +24,14 @@ class TradingSettings(BaseModel):
     benchmark: str = Field(default="000300.SH", description="基准指数代码")
     cost_bps: float = Field(default=3.0, description="交易成本 (基点)")
     slippage_bps: float = Field(default=1.0, description="滑点成本 (基点)")
+    trading_calendar_start: str = Field(
+        default="2020-01-01",
+        description="交易日历起始日期 (YYYY-MM-DD)",
+    )
+    trading_calendar_end: str = Field(
+        default="2030-12-31",
+        description="交易日历结束日期 (YYYY-MM-DD)",
+    )
 
     @field_validator("max_position_pct")
     @classmethod

@@ -92,6 +92,7 @@ class TestGetComparison:
         facade = ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=MagicMock(),
         )
 
         result = facade.get_comparison(
@@ -115,6 +116,7 @@ class TestGetComparison:
         facade = ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=MagicMock(),
         )
 
         result = facade.get_comparison(
@@ -134,6 +136,7 @@ class TestGetComparison:
         facade = ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=MagicMock(),
         )
 
         facade.get_comparison(strategy_id="strat-001", run_id="run-001")
@@ -151,6 +154,7 @@ class TestGetComparison:
         facade = ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=MagicMock(),
         )
 
         facade.get_comparison(strategy_id="strat-001", run_id="run-001")
@@ -174,6 +178,7 @@ class TestGetComparisonEdgeCases:
         facade = ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=MagicMock(),
         )
 
         result = facade.get_comparison(
@@ -194,6 +199,7 @@ class TestGetComparisonEdgeCases:
         facade = ComparisonQueryFacade(
             backtest_facade=backtest_facade,
             actual_facade=actual_facade,
+            market_facade=MagicMock(),
         )
 
         result = facade.get_comparison(

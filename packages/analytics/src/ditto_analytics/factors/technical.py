@@ -191,22 +191,13 @@ _elder_ray_specs: dict[str, FactorSpec] = {
     ),
 }
 
-_obv_specs: dict[str, FactorSpec] = {
-    "obv": FactorSpec(
-        id="obv",
-        expression="",
-        dependencies=("market.close", "market.volume"),
-        description="On-Balance Volume: cumulative volume flow indicator",
-        computation_type="python",
-    ),
-    "obv_ma20": FactorSpec(
-        id="obv_ma20",
-        expression="",
-        dependencies=("obv",),
-        description="20-day moving average of On-Balance Volume",
-        computation_type="python",
-    ),
-}
+_obv_ma20_spec: FactorSpec = FactorSpec(
+    id="obv_ma20",
+    expression="",
+    dependencies=("obv",),
+    description="20-day moving average of On-Balance Volume",
+    computation_type="python",
+)
 
 _kdj_specs: dict[str, FactorSpec] = {
     "kdj_k": FactorSpec(
@@ -251,7 +242,7 @@ TECHNICALS: dict[str, FactorSpec] = {
     **_vwap_specs,
     **_choppiness_specs,
     **_elder_ray_specs,
-    **_obv_specs,
+    "obv_ma20": _obv_ma20_spec,
     **_kdj_specs,
     **_supertrend_specs,
 }

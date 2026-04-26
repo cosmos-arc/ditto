@@ -54,15 +54,25 @@ class TestDeliveryRouterDeliver:
         assert result == {}
         alert_manager.send_alert.assert_not_called()
 
-    def test_deliver_fire_and_forget(self) -> None:
-        """推送失败不阻塞（fire-and-forget）."""
+    def test_deliver_fire_and_forget_on_connection_error(self) -> None:
+        """网络错误不阻塞（fire-and-forget）。"""
         alert_manager = MagicMock(spec=AlertManager)
-        alert_manager.send_alert.side_effect = RuntimeError("network error")
+        alert_manager.send_alert.side_effect = ConnectionError("network error")
         router = DeliveryRouter(alert_manager=alert_manager)
         intents = [_make_intent()]
-        # 不抛异常
         result = router.deliver("test-strategy", intents, "2025-01-15")
         assert result == {}
+
+    def test_deliver_propagates_programming_error(self) -> None:
+        """编程错误（TypeError 等）不应被吞掉，应向上传播."""
+        alert_manager = MagicMock(spec=AlertManager)
+        alert_manager.send_alert.side_effect = TypeError("wrong argument")
+        router = DeliveryRouter(alert_manager=alert_manager)
+        intents = [_make_intent()]
+        import pytest
+
+        with pytest.raises(TypeError, match="wrong argument"):
+            router.deliver("test-strategy", intents, "2025-01-15")
 
     def test_deliver_context_contains_strategy_info(self) -> None:
         """通知上下文包含策略信息."""

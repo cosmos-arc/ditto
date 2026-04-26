@@ -26,20 +26,11 @@ from ditto_kernel.clock import Clock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-IID_1: InstrumentId = 1
-IID_2: InstrumentId = 2
+IID_1 = InstrumentId(1)
+IID_2 = InstrumentId(2)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_snapshot(iid: int = 1, close: float = 10.0) -> MarketSnapshot:
+def _make_snapshot(iid: InstrumentId = IID_1, close: float = 10.0) -> MarketSnapshot:
     return MarketSnapshot(
         trade_date="2026-03-01",
         instrument_id=iid,
@@ -55,7 +46,7 @@ def _make_snapshot(iid: int = 1, close: float = 10.0) -> MarketSnapshot:
 
 def _make_slice(
     date: str = "2026-03-01",
-    bars: dict[int, MarketSnapshot] | None = None,
+    bars: dict[InstrumentId, MarketSnapshot] | None = None,
 ) -> Slice:
     bars = bars or {IID_1: _make_snapshot(IID_1)}
     return Slice(
@@ -96,7 +87,6 @@ def _make_risk_action(
     rule_id: str = "single_loss_limit",
     cooldown_until_date: str | None = "2026-03-05",
 ) -> RiskAction:
-    """构建测试用 RiskAction。"""
     return RiskAction(
         action_type=action_type,
         instrument_id=instrument_id,
@@ -115,7 +105,6 @@ def _make_fill(
     instrument_id: InstrumentId = IID_1,
     direction: OrderSide = OrderSide.BUY,
 ) -> FillEvent:
-    """构建测试用 FillEvent。"""
     return FillEvent(
         fill_id="fill-1",
         order_id=order_id,
@@ -137,7 +126,6 @@ def _make_order(
     direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
 ) -> Order:
-    """构建测试用 Order。"""
     return Order(
         order_id=order_id,
         instrument_id=instrument_id,
@@ -148,7 +136,6 @@ def _make_order(
 
 
 def _make_execution_plan(orders: tuple[Order, ...] | None = None) -> ExecutionPlan:
-    """构建测试用 ExecutionPlan。"""
     return ExecutionPlan(
         plan_id="plan-1",
         trade_date="2026-03-01",

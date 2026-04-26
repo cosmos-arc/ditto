@@ -160,3 +160,24 @@ class BadRequestError(APIError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message, status_code=400, error_code="BAD_REQUEST")
+
+
+class FutureDateError(APIError):
+    """
+    未来日期错误.
+
+    当请求中的日期参数为未来日期时抛出（如 as_of_date）。
+
+    Attributes:
+        field_name: 出错的参数名.
+        date_value: 提交的日期值.
+        status_code: HTTP 状态码，固定为 400.
+        error_code: 业务错误码，固定为 'FUTURE_DATE_ERROR'.
+
+    """
+
+    def __init__(self, field_name: str, date_value: str) -> None:
+        message = f"{field_name} cannot be in the future: {date_value}"
+        super().__init__(message, status_code=400, error_code="FUTURE_DATE_ERROR")
+        self.field_name = field_name
+        self.date_value = date_value

@@ -21,14 +21,7 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.protocols import (
-    CapitalFetcher,
-    CommodityFetcher,
-    FundamentalFetcher,
-    MacroFetcher,
-    MarketFetcher,
-    MetadataFetcher,
-)
+from ditto_data.sources.protocols import CommodityFetcher
 from ditto_infra.foundation import logger
 from ditto_kernel.instrument import InstrumentIngestParams
 
@@ -54,6 +47,7 @@ from ditto_app.process.ingestion.fetch_handlers import (
 from ditto_app.process.ingestion.list_date_inference import ListDateInferenceService
 from ditto_app.process.ingestion.metadata_manager import MetadataManager
 from ditto_app.process.ingestion.result_handler import IngestionResultHandler
+from ditto_app.process.ingestion.types import SourceFetchers
 
 __all__ = [
     "IngestionCoordinator",
@@ -99,16 +93,6 @@ class MarketServices(NamedTuple):
 
     query: MarketService
     write: MarketWriteService
-
-
-class SourceFetchers(NamedTuple):
-    """5 个域级 Fetcher Protocol 聚合."""
-
-    metadata: MetadataFetcher
-    market: MarketFetcher
-    fundamental: FundamentalFetcher
-    capital: CapitalFetcher
-    macro: MacroFetcher
 
 
 class IngestionServices(NamedTuple):

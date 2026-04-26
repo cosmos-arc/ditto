@@ -26,7 +26,7 @@ from ditto_data.services.metadata.instrument import (
     InstrumentServiceDeps,
 )
 from ditto_data.services.metadata.universe import UniverseService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_data.storage.metadata.industry import (

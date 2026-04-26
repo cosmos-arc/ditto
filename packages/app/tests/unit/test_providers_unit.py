@@ -49,11 +49,12 @@ from ditto_data.di import (
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.config.settings import TradingSettings
 from ditto_infra.services.notification import AlertManager
 
 _tdx_mock = MagicMock(spec=TdxSource)
@@ -86,6 +87,11 @@ class _TestConfigProvider(Provider):
     def data_root(self) -> Path:
         """提供数据根目录路径."""
         return self._data_root
+
+    @provide
+    def trading_settings(self) -> TradingSettings:
+        """提供测试用交易配置."""
+        return TradingSettings()
 
     @provide
     def data_cache(self) -> DataCache[Any]:  # type: ignore[misc]
@@ -374,34 +380,48 @@ class TestAppProviderIntegration:
 
 
 class TestTradingCalendarRange:
-    """测试 get_trading_calendar_range 配置外部化."""
+    """测试 get_trading_calendar_range 类型化配置."""
 
-    def test_default_values(self, monkeypatch) -> None:
-        """未设置环境变量时应返回默认值."""
+    def test_default_values(self) -> None:
+        """默认 TradingSettings 应返回默认日期范围."""
         from ditto_app.providers import get_trading_calendar_range
+        from ditto_infra.foundation.config.settings import TradingSettings
 
-        monkeypatch.delenv("DITTO_TRADING_CALENDAR_START", raising=False)
-        monkeypatch.delenv("DITTO_TRADING_CALENDAR_END", raising=False)
-        start, end = get_trading_calendar_range()
+        settings = TradingSettings()
+        start, end = get_trading_calendar_range(settings)
         assert start == "2020-01-01"
         assert end == "2030-12-31"
 
-    def test_custom_values_via_env(self, monkeypatch) -> None:
-        """设置环境变量应覆盖默认值."""
+    def test_custom_values(self) -> None:
+        """自定义 TradingSettings 应返回自定义日期范围."""
         from ditto_app.providers import get_trading_calendar_range
+        from ditto_infra.foundation.config.settings import TradingSettings
 
-        monkeypatch.setenv("DITTO_TRADING_CALENDAR_START", "2019-06-01")
-        monkeypatch.setenv("DITTO_TRADING_CALENDAR_END", "2040-06-30")
-        start, end = get_trading_calendar_range()
+        settings = TradingSettings(
+            trading_calendar_start="2019-06-01",
+            trading_calendar_end="2040-06-30",
+        )
+        start, end = get_trading_calendar_range(settings)
         assert start == "2019-06-01"
         assert end == "2040-06-30"
 
-    def test_only_start_set(self, monkeypatch) -> None:
-        """仅设置 START 时 END 应保持默认值."""
+    def test_only_start_customized(self) -> None:
+        """仅自定义 START 时 END 应保持默认值."""
         from ditto_app.providers import get_trading_calendar_range
+        from ditto_infra.foundation.config.settings import TradingSettings
 
-        monkeypatch.setenv("DITTO_TRADING_CALENDAR_START", "2018-01-01")
-        monkeypatch.delenv("DITTO_TRADING_CALENDAR_END", raising=False)
-        start, end = get_trading_calendar_range()
+        settings = TradingSettings(trading_calendar_start="2018-01-01")
+        start, end = get_trading_calendar_range(settings)
         assert start == "2018-01-01"
         assert end == "2030-12-31"
+
+    def test_env_alias_populates_settings(self) -> None:
+        """TradingSettings 应通过构造参数覆盖默认值."""
+        from ditto_infra.foundation.config.settings import TradingSettings
+
+        settings = TradingSettings(
+            trading_calendar_start="2021-03-01",
+            trading_calendar_end="2035-06-30",
+        )
+        assert settings.trading_calendar_start == "2021-03-01"
+        assert settings.trading_calendar_end == "2035-06-30"

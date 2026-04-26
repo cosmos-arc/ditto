@@ -64,7 +64,7 @@ class TradeService:
         intent_id: str,
         status: str,
         *,
-        expected_current: tuple[str, ...] | None = None,
+        expected_current: tuple[str, ...],
     ) -> bool:
         """更新交易信号状态（expected_current 用于 TOCTOU 防护）。"""
         return self._writers.signal.update_status(

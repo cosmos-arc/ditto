@@ -126,7 +126,7 @@ def generate_pit_snapshots(as_of_date: str) -> int:
     """生成 PIT 快照预期数据."""
     import keyring
     from ditto_data.config import DataSourceSettings
-    from ditto_data.sources import TushareSource
+    from ditto_data.sources.tushare.tushare_source import TushareSource
     from keyring.errors import KeyringError
 
     # 获取 Token
