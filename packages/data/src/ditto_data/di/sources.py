@@ -9,7 +9,6 @@ from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.fred.fred_source import FredSource
 from ditto_data.sources.protocols import (
     CapitalFetcher,
-    CommodityFetcher,
     FundamentalFetcher,
     MacroFetcher,
     MarketFetcher,
@@ -30,12 +29,10 @@ _TUSHARE_PROTOCOLS: list[type] = [
     FundamentalFetcher,
     CapitalFetcher,
     MacroFetcher,
-    CommodityFetcher,
 ]
 
 _FRED_PROTOCOLS: list[type] = [
     MacroFetcher,
-    CommodityFetcher,
 ]
 
 

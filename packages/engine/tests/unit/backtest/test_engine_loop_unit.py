@@ -9,6 +9,7 @@ from types import MappingProxyType
 from typing import NamedTuple
 from unittest.mock import MagicMock, Mock
 
+import pytest
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.accounting.order_book import (
@@ -1177,3 +1178,17 @@ class TestExecutionDelay:
         ]
         assert len(call_dates) == 4
         assert call_dates[-1] == DAYS[-1]
+
+    def test_flush_propagates_unexpected_error(self) -> None:
+        """flush 延迟信号时，get_slice 异常应向上传播而非被静默吞掉."""
+        targets = [_make_target()]
+        loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+            targets=targets,
+        )
+        loop._data_feed.get_slice = Mock(
+            side_effect=RuntimeError("unexpected DB error")
+        )
+
+        with pytest.raises(RuntimeError, match="unexpected DB error"):
+            loop._execute_delayed_signal(_make_target())

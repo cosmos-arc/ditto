@@ -10,15 +10,23 @@ from ditto_app.query.ingestion_status import IngestionStatusQueryFacade
 from ditto_data.models.common import Dataset
 
 from ditto_interfaces.cli.utils.output import output_json_dicts
-from ditto_interfaces.registry.container import make_app_container
+from ditto_interfaces.registry.container import Container, make_app_container
 
 app = typer.Typer(help="运维命令")
 
 # 从 Dataset StrEnum 派生，保证单一事实来源（自动包含 index_weight）
 _KNOWN_DATASETS = Dataset.all_datasets()
 
-# 核心数据集 (dq 默认检查范围)
-_CORE_DATASETS = ["etf_daily", "stock_daily", "index_daily", "adj_factor"]
+# 核心数据集 (dq 默认检查范围)，从 Dataset 枚举派生避免硬编码
+_CORE_DATASETS = [
+    d.value
+    for d in (
+        Dataset.ETF_DAILY,
+        Dataset.STOCK_DAILY,
+        Dataset.INDEX_DAILY,
+        Dataset.ADJ_FACTOR,
+    )
+]
 
 # 表格列宽
 _COL_DATASET = 24
@@ -99,9 +107,9 @@ def _print_history_table(
             typer.secho(f"  error: {item['error_message']}", fg=typer.colors.RED)
 
 
-def _fetch_status_facade() -> tuple[Any, IngestionStatusQueryFacade]:
+def _fetch_status_facade() -> tuple[Container, IngestionStatusQueryFacade]:
     """获取 IngestionStatusQueryFacade, 失败时退出."""
-    container = make_app_container()
+    container: Container = make_app_container()
     try:
         return container, container.get(IngestionStatusQueryFacade)
     except Exception as exc:
@@ -110,9 +118,9 @@ def _fetch_status_facade() -> tuple[Any, IngestionStatusQueryFacade]:
         raise typer.Exit(1) from exc
 
 
-def _fetch_patrol_service() -> tuple[Any, QualityPatrolService]:
+def _fetch_patrol_service() -> tuple[Container, QualityPatrolService]:
     """获取 QualityPatrolService, 失败时退出."""
-    container = make_app_container()
+    container: Container = make_app_container()
     try:
         return container, container.get(QualityPatrolService)
     except Exception as exc:

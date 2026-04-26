@@ -15,7 +15,10 @@ from ditto_analytics.expression.ast import (
     UnaryOpNode,
 )
 from ditto_analytics.expression.codegen import compile_expression
-from ditto_analytics.expression.diagnostics import SourcePosition, Span
+from ditto_analytics.expression.diagnostics import (
+    SourcePosition,
+    Span,
+)
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 _ZERO_POS = SourcePosition(offset=0, line=1, column=1)
@@ -187,6 +190,28 @@ class TestCompileExpressionAPI:
             span=_ZERO_SPAN,
         )
         with pytest.raises(Exception, match="unknown operator"):
+            _compile(node)
+
+    def test_unknown_literal_node_raises(self) -> None:
+        """未知字面量 AST 节点应在 _compile 中直接抛出错误."""
+        from dataclasses import dataclass
+        from typing import cast as _cast
+
+        from ditto_analytics.expression.ast import (
+            ExpressionNode as _ExpressionNode,
+        )
+        from ditto_analytics.expression.diagnostics import (
+            ExpressionCompileError,
+        )
+
+        @dataclass(frozen=True)
+        class _FakeNode:
+            span: Span = _ZERO_SPAN
+
+        node = _cast(  # type: ignore[invalid-argument]
+            _ExpressionNode, _FakeNode()
+        )
+        with pytest.raises(ExpressionCompileError):
             _compile(node)
 
 

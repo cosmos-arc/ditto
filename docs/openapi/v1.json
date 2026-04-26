@@ -3101,6 +3101,62 @@
           }
         }
       }
+    },
+    "/api/v1/trade/deviation": {
+      "get": {
+        "tags": [
+          "trade"
+        ],
+        "summary": "Get Deviation",
+        "description": "信号-成交偏差报告.",
+        "operationId": "get_deviation_api_v1_trade_deviation_get",
+        "parameters": [
+          {
+            "name": "strategy_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "策略 ID",
+              "title": "Strategy Id"
+            },
+            "description": "策略 ID"
+          },
+          {
+            "name": "signal_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "信号日期 (YYYY-MM-DD)",
+              "title": "Signal Date"
+            },
+            "description": "信号日期"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse_DeviationResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

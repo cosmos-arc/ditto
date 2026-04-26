@@ -21,7 +21,6 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.protocols import CommodityFetcher
 from ditto_infra.foundation import logger
 from ditto_kernel.instrument import InstrumentIngestParams
 
@@ -30,6 +29,9 @@ from ditto_app.process.ingestion.auto_init import resolve_identifier_with_auto_i
 from ditto_app.process.ingestion.backfill_handler import BackfillContext
 from ditto_app.process.ingestion.backfill_handler import (
     backfill_adj_factor as _backfill_adj_factor,
+)
+from ditto_app.process.ingestion.commodity_fetcher import (
+    CommoditySource,
 )
 from ditto_app.process.ingestion.commodity_fetcher import (
     fetch_commodity_daily as _fetch_commodity_daily,
@@ -113,7 +115,7 @@ class IngestionCoordinator:
         services: IngestionServices,
         *,
         fetchers: SourceFetchers,
-        fred_source: CommodityFetcher | None = None,
+        fred_source: CommoditySource | None = None,
         config: IngestionCoordinatorConfig | None = None,
     ) -> None:
         """初始化 IngestionCoordinator。"""

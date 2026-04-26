@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from ditto_data.services.metadata_service import MetadataService
 
@@ -50,7 +49,7 @@ class CreateCustomUniverseHandler:
     def __init__(self, metadata_service: MetadataService) -> None:
         self._service = metadata_service
 
-    def handle(self, command: CreateCustomUniverseCommand) -> dict[str, Any]:
+    def handle(self, command: CreateCustomUniverseCommand) -> dict[str, str | None]:
         """创建自定义 universe 并返回详情."""
         self._service.create_universe(
             universe_id=command.universe_id,
@@ -76,7 +75,7 @@ class UpdateCustomUniverseHandler:
     def __init__(self, metadata_service: MetadataService) -> None:
         self._service = metadata_service
 
-    def handle(self, command: UpdateCustomUniverseCommand) -> dict[str, Any]:
+    def handle(self, command: UpdateCustomUniverseCommand) -> dict[str, str | None]:
         """更新自定义 universe 元数据（预设 universe 不可修改）。"""
         existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:

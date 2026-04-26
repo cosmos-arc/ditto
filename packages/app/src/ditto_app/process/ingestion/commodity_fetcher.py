@@ -9,10 +9,34 @@
 
 from __future__ import annotations
 
+from typing import Protocol
+
 import polars as pl
 from ditto_data.models import METAL_CODE_ALIASES, VIX_CODE_TO_INSTRUMENT_ID
-from ditto_data.sources.protocols import CommodityFetcher, MacroFetcher
 from ditto_infra.foundation import logger
+
+
+class _MetalSource(Protocol):
+    """Minimized protocol for metal data fetching."""
+
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame: ...
+
+
+class CommoditySource(Protocol):
+    """Minimized protocol for commodity data fetching."""
+
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame: ...
+
 
 __all__ = ["fetch_commodity_daily"]
 
@@ -20,8 +44,8 @@ __all__ = ["fetch_commodity_daily"]
 def fetch_commodity_daily(
     trade_date: str,
     *,
-    primary_source: MacroFetcher,
-    fred_source: CommodityFetcher | None = None,
+    primary_source: _MetalSource,
+    fred_source: CommoditySource | None = None,
 ) -> pl.DataFrame:
     """
     获取商品数据（原油、贵金属、VIX）并合并.

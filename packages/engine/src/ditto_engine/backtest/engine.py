@@ -429,8 +429,8 @@ class EngineLoop:
         try:
             ctx.slice_ = self._data_feed.get_slice(last_date)
         except Exception:
-            logger.warning("Flush: failed to get slice for {}", last_date)
-            return
+            logger.exception("Flush: unexpected error getting slice for {}", last_date)
+            raise
         ctx.account_view = self._brokerage.get_account()
 
         for step in self._steps:

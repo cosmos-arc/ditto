@@ -149,7 +149,7 @@ def compile_expression(
 
 
 def _build_expression(node: ExpressionNode, context: _CodegenContext) -> pl.Expr:
-    literal_or_ref = _compile_literal_or_reference(node)
+    literal_or_ref = _compile_literal_or_reference(node, context)
     if literal_or_ref is not None:
         return literal_or_ref
     if isinstance(node, UnaryOpNode):
@@ -166,25 +166,34 @@ def _build_expression(node: ExpressionNode, context: _CodegenContext) -> pl.Expr
     )
 
 
-def _compile_literal_or_reference(node: ExpressionNode) -> pl.Expr | None:
-    compiled: pl.Expr | None = None
+def _compile_literal_or_reference(
+    node: ExpressionNode, context: _CodegenContext
+) -> pl.Expr | None:
+    """
+    Compile literal/reference nodes to polars expressions.
+
+    Compound nodes (UnaryOp, BinaryOp, Call) return None,
+    signaling the caller to use the general _build_expression path.
+    """
+    if isinstance(node, UnaryOpNode | BinaryOpNode | CallNode):
+        return None
+
+    col_name: str | None = None
     match node:
         case IdentifierNode(name=name):
-            compiled = pl.col(name)
+            col_name = name
         case ColumnRefNode(column=column):
-            compiled = pl.col(column)
+            col_name = column
         case FeatureRefNode(name=name):
-            compiled = pl.col(name)
+            col_name = name
         case NumberNode(value=value):
             if float(value).is_integer():
-                compiled = pl.lit(int(value))
-            else:
-                compiled = pl.lit(value)
+                return pl.lit(int(value))
+            return pl.lit(value)
         case StringNode(value=value):
-            compiled = pl.lit(value)
-        case _:
-            pass
-    return compiled
+            return pl.lit(value)
+
+    return pl.col(col_name) if col_name else None
 
 
 def _compile_unary_node(node: UnaryOpNode, context: _CodegenContext) -> pl.Expr:

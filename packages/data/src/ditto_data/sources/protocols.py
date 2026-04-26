@@ -216,16 +216,3 @@ class MacroFetcher(Protocol):
     ) -> pl.DataFrame:
         """获取金属日线数据."""
         ...
-
-
-class CommodityFetcher(Protocol):
-    """外部商品数据源（如 FRED），仅提供 fetch_commodities 能力."""
-
-    def fetch_commodities(
-        self,
-        codes: list[str],
-        start_date: str,
-        end_date: str,
-    ) -> pl.DataFrame:
-        """获取商品日线数据."""
-        ...

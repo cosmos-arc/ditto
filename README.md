@@ -17,7 +17,7 @@
 - **数据质量** — 多源校验、PIT 安全、L1-L4 检查器
 - **衍生数据** — 物化编排 + 发布安全（Shadow Diff / Certification）
 - **任务调度** — Prefect 3（摄取/回填/修补/物化/发布）
-- **CLI** — Typer 命令行（ditto init/ingest/backfill/query）
+- **CLI** — Typer 命令行（ditto init db / ingest / backfill / query / strategy / ops）
 - **策略 API** — FastAPI 路由（策略 CRUD + 发布 + 回测结果查询 + 成交审计）
 - **人工执行闭环** — 信号快照 → 交易意图 → 成交录入 → 实际持仓/P&L → 回测vs实际对比
 - **交易 API** — FastAPI 路由（意图查询/成交录入/持仓查询/P&L 汇总/信号查询/对比报告）
@@ -56,12 +56,13 @@
 **依赖方向**（import-linter 强制检查）：
 
 ```
-interfaces → app → engine → data → infra
+interfaces → app → engine → kernel
+interfaces → app → data → kernel, infra
 interfaces → analytics → kernel
 interfaces → data → kernel, infra
 app → data, engine, analytics, kernel, infra
-engine → kernel, data.errors, data.provider (Protocol)
-analytics → kernel, data.errors, infra (logger)
+engine → kernel
+analytics → kernel, infra (logger)
 data → kernel, infra
 ```
 
@@ -110,7 +111,7 @@ ditto/
 │   │   └── src/ditto_data/
 │   │       ├── services/        # 域服务（13 Facade + audit/derived/metadata/strategy）
 │   │       ├── sources/         # 数据源（Tushare/FRED/TDX）
-│   │       ├── models/          # 数据模型（14 模块）
+│   │       ├── models/          # 数据模型（13 模块）
 │   │       ├── storage/         # 存储引擎（Reader/Writer CQRS）
 │   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
 │   │       ├── quality/         # 数据质量（L1-L4 检查器）
@@ -121,15 +122,16 @@ ditto/
 │   │       └── di/              # DI 注册
 │   ├── kernel/                  # 共享内核（零依赖）
 │   │   └── src/ditto_kernel/
-│   │       ├── identity.py      # 标识类型
-│   │       ├── enums.py         # 枚举
+│   │       ├── identity.py      # 标识类型（InstrumentId）
+│   │       ├── instrument.py    # 工具注册参数
+│   │       ├── market.py        # 市场数据类型
+│   │       ├── order.py         # 订单类型
+│   │       ├── strategy.py      # 策略规格类型
 │   │       ├── clock.py         # 时钟
 │   │       ├── events.py        # 事件
-│   │       ├── specs.py         # 规约
 │   │       ├── quality.py       # 数据质量值对象
 │   │       ├── research.py      # 研究数据集类型
 │   │       ├── exceptions.py    # 共享异常
-│   │       ├── types.py         # 工具类型
 │   │       └── math.py          # 数学工具函数
 │   └── infra/                   # 基础设施
 │       └── src/ditto_infra/
