@@ -298,10 +298,11 @@ def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
                 failed_rules=failed_rules,
                 error_count=len(issues),
             )
-    except Exception:
-        logger.warning(
+    except Exception as exc:
+        logger.exception(
             "Failed to send DQ alert via AlertManager",
             event="dq_alert_failed",
+            error=str(exc),
         )
 
 
