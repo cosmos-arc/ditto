@@ -193,6 +193,14 @@ ditto_engine/
 - BacktestReport 包含 NAV / 收益 / 回撤 / Sharpe / Calmar / CVaR 等指标
 - RunManifest 记录运行清单（规则引用、输入引用、配置哈希）
 - ExecutionAuditCollector 收集账户快照/成交/风控审计
+
+#### execution_delay 语义
+
+- 基于调仓日（rebalance day）计数，非自然日
+- daily rebalance 模式下 1 execution_delay = 1 交易日
+- weekly/monthly rebalance 模式下延迟效果与自然日不对应
+- 尾部 flush 使用 last_date，为"最佳努力"执行，非 PIT 精确
+
 - 详见 v3 设计文档 §7, §8
 
 ### Risk（风险管理）

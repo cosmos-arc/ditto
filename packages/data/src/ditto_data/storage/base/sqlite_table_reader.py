@@ -12,13 +12,18 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class SqliteTableReader:
-    """通用 SQLite PIT 表读取器，通过 spec 参数化表结构和查询逻辑。"""
+    """通用 SQLite PIT 表读取器，通过 spec 参数化表结构和查询逻辑."""
+
+    _MIN_PIT_COLUMNS = 2
 
     def __init__(self, spec: SqliteTableSpec, client: SQLiteClient) -> None:
         self._spec = spec
         self._client = client
+        if len(spec.pit_columns) < self._MIN_PIT_COLUMNS:
+            n = len(spec.pit_columns)
+            raise ValueError(f"pit_columns needs >= {self._MIN_PIT_COLUMNS}, got {n}")
         cols = ", ".join(spec.all_columns)
-        pit_from = spec.pit_columns[-2]
+        pit_from = spec.pit_columns[-self._MIN_PIT_COLUMNS]
         pit_to = spec.pit_columns[-1]
         order_col = spec.order_by_column or spec.date_column
         order_clause = f"ORDER BY {order_col} DESC" if order_col else ""

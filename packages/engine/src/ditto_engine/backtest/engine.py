@@ -420,8 +420,13 @@ class EngineLoop:
 
         跳过 DataFetchStep / RiskScanStep / StrategyStep，
         执行 PlanningStep -> PreTradeStep -> ExecutionStep -> AuditStep。
+        尾部 flush 为"最佳努力"执行，非 PIT 精确。
         """
         last_date = self._trading_days[-1] if self._trading_days else ""
+        logger.warning(
+            "Flush: delayed signal on last_date={} (best-effort execution)",
+            last_date,
+        )
         ctx = StepContext(date=last_date, is_rebalance_day=True)
         ctx.target_portfolio = signal
 
