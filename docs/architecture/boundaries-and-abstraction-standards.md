@@ -1,7 +1,7 @@
 # Ditto 分层、模块化、命名与抽象层级规范
 
 > 日期：2026-04-24
-> 状态：Draft
+> 状态：Accepted
 > 适用对象：后续 agent、个人开发者、架构审查者
 > 关联材料：`CLAUDE.md`、各包 `CLAUDE.md`、`.importlinter`、`docs/reviews/audit/2026-04-24-current-full-project-audit.md`
 
