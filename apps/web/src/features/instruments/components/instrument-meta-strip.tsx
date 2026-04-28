@@ -9,7 +9,7 @@ interface InstrumentMetaStripProps {
 }
 
 export function InstrumentMetaStrip({ id }: InstrumentMetaStripProps) {
-	const { data, isLoading, isError, refetch } = useInstrumentDetail(id);
+	const { data, isLoading, refetch } = useInstrumentDetail(id);
 
 	if (isLoading) {
 		return (

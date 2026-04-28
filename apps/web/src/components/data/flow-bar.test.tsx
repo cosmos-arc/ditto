@@ -168,7 +168,7 @@ describe("FlowBar", () => {
 	});
 
 	it("wraps chart palette colors when segments exceed palette length", () => {
-		const segments = Array.from({ length: 8 }, (_, i) => ({
+		const segments = Array.from({ length: 8 }, () => ({
 			value: 10,
 		}));
 		render(<FlowBar segments={segments} />);

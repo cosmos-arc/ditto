@@ -72,6 +72,25 @@ Page Pattern Library 解决的是"同一类骨架下，页面到底该怎么组�
 
 Ditto 必须明确区分对象浏览、对象管理、对象构建、对象监控。
 
+### 原则 5：动作必须放在正确层级
+
+Pattern 可以决定主动作语气，但不能改变全局 chrome 合同。
+
+| Action | Placement |
+|---|---|
+| Global command/search | Header utility |
+| Copilot | Header utility |
+| Notifications | Header utility |
+| Help | Header utility |
+| Account/view preferences | Header utility |
+| Export table | Data toolbar |
+| Refresh table | Data toolbar or workspace toolbar |
+| Filter table/list | Data toolbar |
+| Column configuration | Data toolbar |
+| Run backtest / execute screening | Workspace toolbar |
+| Save/publish strategy | Studio header or workspace toolbar |
+| Settings/config validation | Config workspace toolbar |
+
 ---
 
 ## 4. Pattern 01 — Global Command Center

@@ -32,15 +32,15 @@
   - var(--shell-header-height) confirmed used
   - Overlay components extracted to CSS classes
   - Delete dialog uses --risk-critical-* tokens
-  - Toast uses oklch() for icon background
+  - Toast uses direct OKLCH for icon background
 
   Review Pass 2 fixes:
   - color-mix(in oklch, white N%, transparent) → var(--overlay-N) tokens (4 instances)
   - Deprecated --font-size-18 → --font-size-16 on .overlay-close
   - Badge sizing: hardcoded values → --badge-sm-*, --badge-md-* tokens
   - Status dot: hardcoded 6px → var(--status-dot-size)
-  - Hardcoded oklch() for system-* backgrounds → var(--system-healthy-bg), var(--system-degraded-bg)
-  - Toast icon background: oklch(from ...) → var(--system-healthy-bg)
+  - Hardcoded direct OKLCH for system-* backgrounds → var(--system-healthy-bg), var(--system-degraded-bg)
+  - Toast icon background: relative token color → var(--system-healthy-bg)
   - font-family: monospace audit — already using var(--font-family-code/numeric)
 
   Visualization + Premium Pass (v1.3):
@@ -151,7 +151,7 @@
     .shell-studio {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 240px 1fr 300px;
-      grid-template-rows: var(--shell-header-height) auto 1fr var(--shell-status-bar-height);
+      grid-template-rows: var(--shell-header-height) auto minmax(0, 1fr) minmax(128px, 15vh);
       grid-template-areas:
         "rail    header    header    header"
         "rail    header2   header2   header2"
@@ -275,7 +275,7 @@
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
       white-space: nowrap;
       background: linear-gradient(
         to right,
@@ -542,24 +542,26 @@
 
     /* ── Factor Pipeline Visual ── */
     .pipeline-visual {
-      display: flex;
-      align-items: center;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-4);
       padding: var(--space-8) 0;
-      flex-wrap: nowrap;
     }
 
     .pipeline-node {
       display: flex;
       align-items: center;
       gap: var(--space-4);
-      padding: var(--space-4) var(--space-8);
+      padding: var(--space-4) var(--space-6);
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
       font-size: var(--font-size-12);
       color: var(--text-secondary);
       white-space: nowrap;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
     .pipeline-node.active {
       border-color: var(--brand-accent);
@@ -572,10 +574,7 @@
     }
 
     .pipeline-arrow {
-      color: var(--text-tertiary);
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
+      display: none;
     }
     .pipeline-arrow svg {
       width: 12px;
@@ -1054,6 +1053,9 @@
       font-size: var(--font-size-12);
       line-height: 1.7;
     }
+    .logs-body[aria-hidden="true"] {
+      display: none;
+    }
 
     .log-line {
       display: flex;
@@ -1158,8 +1160,8 @@
       [data-overlay="overlay-delete-strategy"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1751,7 +1753,7 @@
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .perf-metric-value.positive { color: var(--market-up-fg); }
     .perf-metric-value.negative { color: var(--market-down-fg); }
@@ -1999,32 +2001,27 @@
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Studio Header ═══ -->
-    <header class="studio-header" data-contract-slot="header">
+    <header class="shell-header studio-header" data-contract-slot="header">
       <span class="header-title">Strategy Studio</span>
       <div class="strategy-name">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon">
@@ -2041,17 +2038,34 @@
         </label>
       </div>
       <div class="header-spacer"></div>
-      <div class="studio-actions" role="toolbar" aria-label="策略操作">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+      <div class="studio-actions header-actions" role="toolbar" aria-label="策略操作">
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         
@@ -2741,42 +2755,42 @@
             <div class="perf-metrics-grid">
               <div class="perf-metric-card" data-tooltip="年化收益率 18.4%，策略历史最高 22.1%" data-mouse-glow="true">
                 <span class="perf-metric-label">年化收益</span>
-                <span class="perf-metric-value positive tabular-nums"><span data-ticker="18.4" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="%">18.4%</span></span>
+                <span class="perf-metric-value positive tabular-nums"><span>+18.4%</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--market-up-fg)" stroke-width="1" points="0,14 5,12 10,10 15,11 20,8 25,7 30,5 35,6 40,3"/>
                 </svg>
               </div>
               <div class="perf-metric-card" data-tooltip="夏普比率 1.42，优于基准 1.18" data-mouse-glow="true">
                 <span class="perf-metric-label">夏普比率</span>
-                <span class="perf-metric-value tabular-nums"><span data-ticker="1.42" data-decimals="2">1.42</span></span>
+                <span class="perf-metric-value tabular-nums"><span>1.42</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,12 5,10 10,11 15,8 20,9 25,6 30,7 35,5 40,4"/>
                 </svg>
               </div>
               <div class="perf-metric-card" data-tooltip="最大回撤 -12.8%，发生于 2022-10" data-mouse-glow="true">
                 <span class="perf-metric-label">最大回撤</span>
-                <span class="perf-metric-value negative tabular-nums"><span data-ticker="12.8" data-decimals="1" data-ticker-prefix="-" data-ticker-suffix="%">-12.8%</span></span>
+                <span class="perf-metric-value negative tabular-nums"><span>-12.8%</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--market-down-fg)" stroke-width="1" points="0,4 5,5 10,8 15,12 20,10 25,7 30,9 35,6 40,5"/>
                 </svg>
               </div>
               <div class="perf-metric-card" data-tooltip="信息比率 0.86，超额收益稳定" data-mouse-glow="true">
                 <span class="perf-metric-label">信息比率</span>
-                <span class="perf-metric-value tabular-nums"><span data-ticker="0.86" data-decimals="2">0.86</span></span>
+                <span class="perf-metric-value tabular-nums"><span>0.86</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,13 5,10 10,12 15,8 20,10 25,6 30,8 35,5 40,4"/>
                 </svg>
               </div>
               <div class="perf-metric-card" data-tooltip="Calmar 比率 1.44，回撤修复快" data-mouse-glow="true">
                 <span class="perf-metric-label">Calmar</span>
-                <span class="perf-metric-value tabular-nums"><span data-ticker="1.44" data-decimals="2">1.44</span></span>
+                <span class="perf-metric-value tabular-nums"><span>1.44</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,14 5,11 10,9 15,10 20,7 25,8 30,5 35,6 40,3"/>
                 </svg>
               </div>
               <div class="perf-metric-card" data-tooltip="月度胜率 56.2%，共 60 个调仓周期" data-mouse-glow="true">
                 <span class="perf-metric-label">胜率</span>
-                <span class="perf-metric-value tabular-nums"><span data-ticker="56.2" data-decimals="1" data-ticker-suffix="%">56.2%</span></span>
+                <span class="perf-metric-value tabular-nums"><span>56.2%</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,10 5,8 10,9 15,7 20,8 25,6 30,7 35,5 40,6"/>
                 </svg>
@@ -2792,12 +2806,12 @@
     </aside>
 
     <!-- ═══ Bottom Logs Panel ═══ -->
-    <div class="studio-logs" role="log" aria-label="策略日志">
+    <div class="studio-logs" role="log" aria-label="策略日志" data-tabs="strategy-logs">
       <div class="logs-header">
         <div class="logs-tabs">
-          <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0">校验结果</span>
-          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0">Dry Run</span>
-          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0">编译日志</span>
+          <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation">校验结果</span>
+          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="dry-run" data-log-tab="dry-run">Dry Run</span>
+          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="compile" data-log-tab="compile">编译日志</span>
         </div>
         <div class="logs-spacer"></div>
         <div class="logs-meta">
@@ -2808,7 +2822,7 @@
           通过
         </span>
       </div>
-      <div class="logs-body">
+      <div class="logs-body" data-tab-panel="validation" aria-hidden="false">
         <div class="log-line">
           <span class="log-time tabular-nums">14:32:08</span>
           <span class="log-level success">PASS</span>
@@ -2838,6 +2852,40 @@
           <span class="log-time tabular-nums">14:32:03</span>
           <span class="log-level info">INFO</span>
           <span class="log-msg">预处理管道校验 — 去极值: MAD, 标准化: Z-Score, 中性化: 行业中性</span>
+        </div>
+      </div>
+      <div class="logs-body" data-tab-panel="dry-run" aria-hidden="true">
+        <div class="log-line">
+          <span class="log-time tabular-nums">14:34:12</span>
+          <span class="log-level info">DRY</span>
+          <span class="log-msg">Dry Run 启动 — 样本窗口 2026-03-01 至 2026-03-29，股票池沪深300</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time tabular-nums">14:34:13</span>
+          <span class="log-level success">PASS</span>
+          <span class="log-msg">订单预演完成 — 目标持仓 86 只，预计换手 18.6%，现金留存 2.4%</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time tabular-nums">14:34:14</span>
+          <span class="log-level warn">WARN</span>
+          <span class="log-msg">流动性检查 — 2 只股票成交额低于阈值，已降低目标权重</span>
+        </div>
+      </div>
+      <div class="logs-body" data-tab-panel="compile" aria-hidden="true">
+        <div class="log-line">
+          <span class="log-time tabular-nums">14:35:01</span>
+          <span class="log-level info">BUILD</span>
+          <span class="log-msg">编译策略模块 strategy.py — Python 3.12 sandbox</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time tabular-nums">14:35:02</span>
+          <span class="log-level success">PASS</span>
+          <span class="log-msg">类型签名检查通过 — factors(), preprocess(), risk_rules(), rebalance()</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time tabular-nums">14:35:03</span>
+          <span class="log-level success">PASS</span>
+          <span class="log-msg">编译日志完成 — 无语法错误，无未绑定变量</span>
         </div>
       </div>
     </div>
@@ -2886,7 +2934,7 @@
     <!-- Overlay 1: 策略保存 — Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-save-strategy">
       <label class="overlay-dismiss" for="overlay-save-strategy" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存策略">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存策略">
         <div class="overlay-header">
           <span class="overlay-title">保存策略</span>
           <label for="overlay-save-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2928,7 +2976,7 @@
     <!-- Overlay 2: 回测参数配置 — Sheet (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-backtest-config">
       <label class="overlay-dismiss" for="overlay-backtest-config" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
         <div class="overlay-header">
           <span class="overlay-title">回测参数配置</span>
           <label for="overlay-backtest-config" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2985,7 +3033,7 @@
     <!-- Overlay 3: 因子预处理预览 — Drawer (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-factor-preview">
       <label class="overlay-dismiss" for="overlay-factor-preview" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
         <div class="overlay-header">
           <span class="overlay-title">因子预处理预览</span>
           <label for="overlay-factor-preview" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3058,7 +3106,7 @@
     <!-- Overlay 5: 确认策略删除 — Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-delete-strategy">
       <label class="overlay-dismiss" for="overlay-delete-strategy" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="alertdialog" aria-label="确认删除策略">
+      <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-label="确认删除策略">
         <div class="overlay-header">
           <span class="overlay-title">确认删除策略</span>
           <label for="overlay-delete-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3461,10 +3509,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-delete-strategy">
       <div class="gallery-card__label">保存策略 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存策略">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存策略">
           <div class="overlay-header">
             <span class="overlay-title">保存策略</span>
           </div>
@@ -3500,10 +3548,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-save-strategy">
       <div class="gallery-card__label">回测参数配置 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="回测参数配置">
           <div class="overlay-header">
             <span class="overlay-title">回测参数配置</span>
           </div>
@@ -3555,10 +3603,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-validation-toast">
       <div class="gallery-card__label">因子预处理预览 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="因子预处理预览">
           <div class="overlay-header">
             <span class="overlay-title">因子预处理预览</span>
           </div>
@@ -3609,10 +3657,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-backtest-config">
       <div class="gallery-card__label">策略校验结果 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="alert" aria-label="校验结果">
+        <div class="overlay-surface overlay-surface--sheet" role="alert" aria-label="校验结果">
           <div class="toast-result-body">
             <div class="toast-result-icon">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--system-healthy-fg)" stroke-width="2"><path d="M4 10l3 3 9-9"/></svg>
@@ -3626,10 +3674,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-factor-preview">
       <div class="gallery-card__label">确认删除策略 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="alertdialog" aria-label="确认删除策略">
+        <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-label="确认删除策略">
           <div class="overlay-header">
             <span class="overlay-title">确认删除策略</span>
           </div>

@@ -3,5 +3,5 @@ import { PlatformPage } from "@/features/platform";
 
 export const Route = createFileRoute("/platform/")({
 	component: PlatformPage,
-	handle: { title: "平台管理" },
+	staticData: { title: "平台管理" },
 });

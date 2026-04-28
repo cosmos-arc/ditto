@@ -98,10 +98,11 @@
     .shell-hub {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr;
-      grid-template-rows: var(--shell-header-height) auto auto 1fr auto;
+      grid-template-rows: var(--shell-header-height) auto auto auto 1fr auto;
       grid-template-areas:
         "rail  header"
         "rail  meta"
+        "rail  context"
         "rail  tabs"
         "rail  main"
         "rail  bottom";
@@ -350,7 +351,7 @@
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12), 0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      box-shadow: 0 2px 8px oklch(from var(--neutral-0) l c h / 0.12), 0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
     .metric-card::after {
       content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
@@ -397,6 +398,18 @@
       font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
       color: var(--text-secondary); flex: 1;
     }
+    .diagnostic-detail-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 var(--space-6);
+      color: var(--brand-accent);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-3);
+      cursor: pointer;
+    }
+    .diagnostic-detail-trigger:hover { background: var(--interaction-hover-subtle-bg); }
     .panel-body { flex: 1; overflow: auto; padding: var(--space-10) var(--space-12); }
 
     /* ── 2x2 Diagnostics Grid ── */
@@ -452,11 +465,14 @@
     }
 
     /* ── Tab Panels ── */
+    .tab-group { display: contents; }
     .tab-panels { display: contents; }
     .tab-panel {
       display: none; flex-direction: column;
+      grid-area: main;
       height: 100%; overflow: hidden; min-height: 0;
     }
+    .tab-panel > .hub-main { flex: 1; }
     @keyframes tab-panel-enter {
       from { opacity: 0; transform: translateY(3px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -586,7 +602,7 @@
     .data-table thead th { border-bottom: 1px solid color-mix(in oklch, var(--border-subtle) 60%, transparent); }
 
     /* Context strip above tabs */
-    .context-strip { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-12); font-size: var(--font-size-11); color: var(--text-tertiary); border-bottom: 1px solid color-mix(in oklch, var(--border-subtle) 40%, transparent); }
+    .context-strip { grid-area: context; display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-12); font-size: var(--font-size-11); color: var(--text-tertiary); border-bottom: 1px solid color-mix(in oklch, var(--border-subtle) 40%, transparent); }
     .context-strip-item { display: flex; align-items: center; gap: var(--space-4); }
     .context-sep { color: var(--border-subtle); }
 
@@ -608,7 +624,80 @@
     .chart-min-h { width: 100%; min-height: 60px; }
     .chart-mt-svg { width: 100%; margin-top: var(--space-8); opacity: 0.8; }
     .overlay-btn-default { background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary); }
-    .overlay-sheet { border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .overlay-surface { border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .overlay-surface .overlay-header,
+    .overlay-backdrop .overlay-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-8);
+      padding-bottom: var(--space-10);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: var(--space-10);
+    }
+    .overlay-title {
+      color: var(--text-primary);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+    }
+    .overlay-body {
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+    }
+    .overlay-body h4 {
+      margin: var(--space-10) 0 var(--space-6);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+    .overlay-field {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-12);
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+    }
+    .overlay-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-6);
+      margin-top: var(--space-12);
+    }
+    .overlay-backdrop {
+      width: min(420px, calc(100vw - 32px));
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--card-radius);
+      box-shadow: 0 12px 40px color-mix(in oklch, black 45%, transparent);
+      padding: var(--space-16);
+      position: relative;
+    }
+    .gallery-card__preview--overlay .overlay-backdrop {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      max-height: none;
+    }
+    .form-textarea {
+      width: 100%;
+      resize: vertical;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+      color: var(--text-primary);
+      padding: var(--space-8);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
+    }
+    .chart-decay-label {
+      fill: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
     .tbl-separator { border-top: 2px solid var(--border-subtle); }
 
     /* ── Rail logo brand glow ── */
@@ -618,6 +707,28 @@
     @keyframes dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
     /* ── Reduced motion ── */
+    @media (max-height: 820px) {
+      .shell-hub {
+        grid-template-rows: var(--shell-header-height) auto auto 1fr auto;
+        grid-template-areas:
+          "rail  header"
+          "rail  meta"
+          "rail  tabs"
+          "rail  main"
+          "rail  bottom";
+      }
+      .context-strip { display: none; }
+      .hub-main {
+        gap: var(--space-10);
+        padding: var(--space-12) var(--space-16);
+      }
+      .metrics-grid { gap: var(--space-8); }
+      .metric-card { padding: var(--space-8) var(--space-10); }
+      .diagnostics-grid { gap: var(--space-10); }
+      .panel-header { padding: var(--space-6) var(--space-10); }
+      .panel-body { padding: var(--space-8) var(--space-10); }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .btn, .hub-tab, .meta-chip, .metric-card,
       .factor-card, .data-table tr:hover td {
@@ -649,35 +760,30 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Factor Analysis · Compact · 动量</div>
 
-  <div class="shell-hub">
+  <div class="object-shell shell-hub">
     <!-- ══════════════════════════════════════════════
          Rail
          ══════════════════════════════════════════════ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ══════════════════════════════════════════════
@@ -698,28 +804,37 @@
         <div class="spacer"></div>
 
         <div class="header-actions" role="toolbar" aria-label="页面操作">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 10.5a7.5 7.5 0 11-5-7.1A7.5 7.5 0 0017.5 10.5z"/></svg>
-              </button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2m0 12v2m-8-8h2m12 0h2m-2.5-5.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-              </button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
+        </div>
           <div class="meta-sep-line"></div>
-          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知">
+          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" data-shell-utility="notifications">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
             <span class="badge-dot"></span>
           </div>
-          <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">陈</div>
+          
         </div>
 
         <div class="header-ctas">
@@ -797,13 +912,13 @@
         <label for="fact-turnover" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-turnover">换手</label>
       </div>
 
-      <div class="tab-panels" id="main-content" data-contract-slot="main">
+      <div class="tab-panels" id="main-content">
 
         <!-- ══════════════════════════════════════════════
              Tab 1: IC (信息系数)
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="fact-ic" data-tab-panel="fact-ic">
-          <div class="hub-main">
+          <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- KPI Strip: 5 metrics -->
@@ -843,6 +958,7 @@
                   <div class="panel-header">
                     <span class="panel-title">IC 时间序列</span>
                     <span class="fs-10 c-tertiary">日频 · 250D</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
                   </div>
                   <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
@@ -866,6 +982,7 @@
                   <div class="panel-header">
                     <span class="panel-title">IC 分位数分布</span>
                     <span class="fs-10 c-tertiary">Q1-Q5 分组</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
                   </div>
                   <div class="panel-body flex-center-end">
                     <div class="flex-col-4">
@@ -901,6 +1018,7 @@
                   <div class="panel-header">
                     <span class="panel-title">IC 滚动窗口</span>
                     <span class="fs-10 c-tertiary">60D / 120D / 250D</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
                   </div>
                   <div class="panel-body flex-center">
                     <svg viewBox="0 0 280 100" class="chart-svg">
@@ -919,6 +1037,7 @@
                 <div class="panel" aria-label="IC 统计摘要（点击放大）">
                   <div class="panel-header">
                     <span class="panel-title">IC 统计摘要</span>
+                    <label for="overlay-diagnostic-detail" class="diagnostic-detail-trigger">详情</label>
                   </div>
                   <div class="panel-body">
                     <div class="stats-row">
@@ -971,7 +1090,7 @@
             </div>
 
             <!-- Sidebar -->
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">IC 分析概况</div>
                 <div class="flex-col-6-12">
@@ -1048,7 +1167,7 @@
              Tab 2: 收益 (Returns)
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="fact-returns" data-tab-panel="fact-returns">
-          <div class="hub-main">
+          <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- Factor Group Returns -->
@@ -1149,7 +1268,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">分组配置</div>
                 <div class="fs-12 c-secondary">5 分组 · 等权</div>
@@ -1197,7 +1316,7 @@
              Tab 3: 分布与相关
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="fact-dist" data-tab-panel="fact-dist">
-          <div class="hub-main">
+          <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <div class="diagnostics-grid">
@@ -1346,7 +1465,7 @@
                     <svg viewBox="0 0 280 50" class="chart-mt-svg">
                       <path d="M0 8 L40 12 L80 18 L120 25 L160 32 L200 38 L240 42 L280 45" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/>
                       <line x1="0" y1="25" x2="280" y2="25" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="3"/>
-                      <text x="130" y="22" fill="var(--text-tertiary)" font-size="8">50%</text>
+                      <text x="130" y="22" class="chart-decay-label">50%</text>
                     </svg>
                   </div>
                 </div>
@@ -1354,7 +1473,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">分布特征</div>
                 <div class="flex-col-6">
@@ -1414,7 +1533,7 @@
              Tab 4: 换手 (Turnover)
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="fact-turnover" data-tab-panel="fact-turnover">
-          <div class="hub-main">
+          <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- Turnover Time Series -->
@@ -1482,7 +1601,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">换手统计</div>
                 <div class="flex-col-6">
@@ -1534,6 +1653,115 @@
     </div>
 
   </div><!-- /shell-hub -->
+
+  <div class="overlay-backdrop" data-overlay="overlay-add-backtest">
+    <label class="overlay-dismiss" for="overlay-add-backtest" aria-label="关闭加入回测"></label>
+    <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入回测">
+      <div class="overlay-header">
+        <span class="overlay-title">加入回测</span>
+        <label for="overlay-add-backtest" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <h4>目标回测</h4>
+        <div class="overlay-field">
+          <span class="overlay-field-label">回测选择</span>
+          <span class="overlay-field-value">新建回测</span>
+        </div>
+        <h4>权重配置</h4>
+        <div class="overlay-field">
+          <span class="overlay-field-label">因子权重</span>
+          <span class="overlay-field-value numeric">0.20</span>
+        </div>
+        <div class="overlay-field">
+          <span class="overlay-field-label">排名方式</span>
+          <span class="overlay-field-value">等权</span>
+        </div>
+        <div class="overlay-actions">
+          <label for="overlay-add-backtest" class="overlay-btn overlay-btn-secondary">取消</label>
+          <button class="overlay-btn overlay-btn-primary">确认加入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-backdrop" data-overlay="overlay-add-experiment">
+    <label class="overlay-dismiss" for="overlay-add-experiment" aria-label="关闭加入实验"></label>
+    <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入实验">
+      <div class="overlay-header">
+        <span class="overlay-title">加入实验</span>
+        <label for="overlay-add-experiment" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <h4>目标实验</h4>
+        <div class="overlay-field">
+          <span class="overlay-field-label">实验选择</span>
+          <span class="overlay-field-value">新建实验</span>
+        </div>
+        <h4>变量角色</h4>
+        <div class="overlay-field">
+          <span class="overlay-field-label">角色分配</span>
+          <span class="overlay-field-value">实验组</span>
+        </div>
+        <div class="overlay-actions">
+          <label for="overlay-add-experiment" class="overlay-btn overlay-btn-secondary">取消</label>
+          <button class="overlay-btn overlay-btn-primary">确认加入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-backdrop" data-overlay="overlay-ai-analysis">
+    <label class="overlay-dismiss" for="overlay-ai-analysis" aria-label="关闭 AI 解读"></label>
+    <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读">
+      <div class="overlay-header">
+        <span class="overlay-title">AI 因子解读</span>
+        <label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <h4>解读维度</h4>
+        <div class="flex-wrap-gap">
+          <span class="meta-tag brand cursor-pointer">IC 分析</span>
+          <span class="meta-tag cursor-pointer">收益分析</span>
+          <span class="meta-tag cursor-pointer">风险分析</span>
+          <span class="meta-tag cursor-pointer">综合评估</span>
+        </div>
+        <h4>附加上下文</h4>
+        <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea chart-min-h"></textarea>
+        <div class="overlay-actions">
+          <label for="overlay-ai-analysis" class="overlay-btn overlay-btn-secondary">取消</label>
+          <button class="overlay-btn overlay-btn-primary">发送解读</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-backdrop" data-overlay="overlay-diagnostic-detail">
+    <label class="overlay-dismiss" for="overlay-diagnostic-detail" aria-label="关闭 2x2 诊断详情"></label>
+    <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="2x2 诊断详情">
+      <div class="overlay-header">
+        <span class="overlay-title">IC 时间序列 · 详情</span>
+        <label for="overlay-diagnostic-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
+      </div>
+      <div class="overlay-body">
+        <p class="mb-8-text">
+          IC 均值 <strong class="c-primary">0.082</strong> · IR <strong class="c-primary">1.45</strong> · 正占比 <strong class="c-primary">62.8%</strong>
+        </p>
+        <table class="data-table">
+          <thead><tr><th>时段</th><th class="numeric">IC 均值</th><th class="numeric">IC IR</th><th class="numeric">正占比</th></tr></thead>
+          <tbody>
+            <tr><td>最近 60D</td><td class="numeric c-up">0.095</td><td class="numeric">1.82</td><td class="numeric">68.3%</td></tr>
+            <tr><td>最近 120D</td><td class="numeric c-up">0.088</td><td class="numeric">1.62</td><td class="numeric">65.0%</td></tr>
+            <tr><td>最近 250D</td><td class="numeric c-up">0.082</td><td class="numeric">1.45</td><td class="numeric">62.8%</td></tr>
+            <tr><td>全样本</td><td class="numeric c-up">0.078</td><td class="numeric">1.38</td><td class="numeric">61.2%</td></tr>
+          </tbody>
+        </table>
+        <div class="overlay-actions">
+          <button class="overlay-btn overlay-btn-default">导出 CSV</button>
+          <label for="overlay-diagnostic-detail" class="overlay-btn overlay-btn-primary">关闭</label>
+        </div>
+      </div>
+    </div>
+  </div>
   </section>
 
   <!-- ══════════════════════════════════════════════
@@ -1745,10 +1973,10 @@
         <div class="gallery-cards">
 
           <!-- Overlay 1: Add to Backtest (Sheet) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-add-backtest">
             <div class="gallery-card__label">加入回测 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="加入回测">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入回测">
                 <div class="overlay-header">
                   <span class="overlay-title">加入回测</span>
                 </div>
@@ -1777,10 +2005,10 @@
           </div>
 
           <!-- Overlay 2: Add to Experiment (Sheet) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-add-experiment">
             <div class="gallery-card__label">加入实验 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="加入实验">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入实验">
                 <div class="overlay-header">
                   <span class="overlay-title">加入实验</span>
                 </div>
@@ -1805,10 +2033,10 @@
           </div>
 
           <!-- Overlay 3: AI Analysis (Sheet) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-ai-analysis">
             <div class="gallery-card__label">AI 解读 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="AI 解读">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读">
                 <div class="overlay-header">
                   <span class="overlay-title">AI 因子解读</span>
                 </div>
@@ -1832,7 +2060,7 @@
           </div>
 
           <!-- Overlay 4: Diagnostic Detail (Modal) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-diagnostic-detail">
             <div class="gallery-card__label">2x2 诊断详情 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
               <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="2x2 诊断详情">

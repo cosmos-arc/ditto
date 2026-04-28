@@ -3,13 +3,11 @@ import { ContextSection } from "@/components/domain/context-section";
 import { AlertRow } from "@/components/indicator/alert-row/alert-row";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
-import type { TrendDirection } from "@/types";
 
 export function AlertsAndIndicesSection() {
 	const {
 		data: alertsData,
 		isLoading: alertsLoading,
-		isError: alertsError,
 		refetch: refetchAlerts,
 	} = useHomeAlerts();
 

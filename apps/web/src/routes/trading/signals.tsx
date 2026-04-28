@@ -3,5 +3,5 @@ import { SignalsPage } from "@/features/trading";
 
 export const Route = createFileRoute("/trading/signals")({
 	component: SignalsPage,
-	handle: { title: "信号收件箱" },
+	staticData: { title: "信号收件箱" },
 });

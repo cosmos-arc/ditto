@@ -1,0 +1,187 @@
+{
+  "id": "a-shares",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-04-28",
+  "route": "/markets/a-shares",
+  "pagePattern": "analytical-overview",
+  "shellFamily": "radar",
+  "prototypeRef": "docs/designs/specs/prototypes/page-a-shares.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/markets",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "missing"
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "strip",
+      "required": true,
+      "prototypeSelector": ".shell-strip",
+      "reactSelector": "[data-slot='strip']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".shell-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "right-rail",
+      "required": true,
+      "prototypeSelector": ".radar-right-rail",
+      "reactSelector": "[data-slot='right-rail']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    },
+    {
+      "name": "tab-band",
+      "required": true,
+      "prototypeSelector": ".radar-tab-band",
+      "reactSelector": "[data-slot='tab-band']",
+      "a11yRole": "navigation",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "market-paused"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": false,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "strip": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1032,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "right-rail": {
+        "width": 320,
+        "height": 720,
+        "strategy": "fixed-width"
+      },
+      "tab-band": {
+        "width": 1536,
+        "height": 56,
+        "strategy": "content-driven"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  },
+  "overlays": [
+    {
+      "id": "a-shares.northbound-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-northbound-detail']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "a-shares.sector-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-sector-detail']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "a-shares.filter-panel",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-filter-panel']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "a-shares.ai-analysis",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-ai-analysis']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

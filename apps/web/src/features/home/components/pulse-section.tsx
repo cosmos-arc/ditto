@@ -9,7 +9,7 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
  * surface-strip bg, 10px font on items, horizontal flex with separators.
  */
 export function PulseSection() {
-	const { data, isLoading, isError, refetch } = useHomePulse();
+	const { data, isLoading, refetch } = useHomePulse();
 
 	if (isLoading) {
 		return (
@@ -37,7 +37,7 @@ export function PulseSection() {
 						<span className="inline-block size-1.5 rounded-full bg-(--color-system-healthy-fg) animate-[dot-live-pulse_3s_ease-in-out_infinite]" />
 						<span className="font-data">{data?.date ?? "—"}</span>
 						<span>·</span>
-						<span>{data?.session === "continuous" ? "盘中交易" : data?.session === "pre" ? "盘前" : "已收盘"}</span>
+						<span>{data?.session === "continuous" ? "盘中交易" : data?.session === "pre_market" ? "盘前" : "已收盘"}</span>
 					</div>
 
 					<PulseSeparator />

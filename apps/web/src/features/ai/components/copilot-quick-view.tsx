@@ -22,7 +22,6 @@ export function CopilotQuickView() {
 	const {
 		data,
 		isLoading,
-		isError,
 		refetch,
 	} = useCopilotQuickView();
 

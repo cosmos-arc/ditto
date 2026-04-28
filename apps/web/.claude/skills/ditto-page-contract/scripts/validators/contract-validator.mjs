@@ -394,7 +394,70 @@ function checkSubSlotsSelectorFormat(contract) {
 }
 
 /**
- * #12 generated artifact 语法检查
+ * #12 overlay registry checks
+ *
+ * BLOCK: required overlay must point to a prototype selector.
+ * BLOCK: overlay kind must be known.
+ * WARN: implemented landing pages should name the React component for default-flow overlays.
+ */
+function checkOverlayContracts(contract) {
+  const overlays = contract.overlays ?? [];
+
+  if (overlays.length === 0) {
+    return { pass: true, message: "No overlays defined (optional)", level: "INFO" };
+  }
+
+  const knownKinds = new Set(["drawer", "sheet", "modal", "alert-dialog", "toast", "inline"]);
+  const blockingErrors = [];
+  const warnings = [];
+  const isImplementedRoute = contract.landing?.reactRouteStatus === "implemented";
+
+  for (const overlay of overlays) {
+    if (!knownKinds.has(overlay.kind)) {
+      blockingErrors.push(`Overlay "${overlay.id}" has invalid kind: "${overlay.kind}"`);
+    }
+
+    if (
+      overlay.requiredInDefaultFlow === true &&
+      (!overlay.prototypeSelector || overlay.prototypeSelector.trim().length === 0)
+    ) {
+      blockingErrors.push(`Required overlay "${overlay.id}" missing prototypeSelector`);
+    }
+
+    if (
+      overlay.requiredInDefaultFlow === true &&
+      isImplementedRoute &&
+      (!overlay.reactComponent || overlay.reactComponent.trim().length === 0)
+    ) {
+      warnings.push(`Required overlay "${overlay.id}" missing reactComponent`);
+    }
+  }
+
+  if (blockingErrors.length > 0) {
+    return {
+      pass: false,
+      message: `Overlay contract errors:\n${blockingErrors.join("\n")}`,
+      level: "BLOCK",
+    };
+  }
+
+  if (warnings.length > 0) {
+    return {
+      pass: true,
+      message: `WARN: ${warnings.join("; ")}`,
+      level: "WARN",
+    };
+  }
+
+  return {
+    pass: true,
+    message: `All ${overlays.length} overlay contract(s) passed registry checks`,
+    level: "INFO",
+  };
+}
+
+/**
+ * #13 generated artifact 语法检查
  *
  * 对 generate.mjs 产出的 .generated.mjs 和 .generated.ts 文件
  * 执行 node --check / tsc --noEmit 确保语法正确。
@@ -612,6 +675,7 @@ export async function validateContract(contract, ctx) {
     checkShellFamily(contract),
     checkPagePattern(contract),
     checkSubSlotsSelectorFormat(contract),
+    checkOverlayContracts(contract),
     await checkGeneratedArtifacts(contract, ctx),
     checkContractStatus(contract),
     checkA11yRoles(contract),

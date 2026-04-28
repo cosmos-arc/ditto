@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, withQueryParams } from "@/lib/api-client";
 import type {
 	GetMarketCalendarResponse,
 	PaginatedRequest,
@@ -9,6 +9,8 @@ export function useMarketCalendar(params?: PaginatedRequest) {
 	return useQuery({
 		queryKey: ["markets", "calendar", params],
 		queryFn: () =>
-			apiClient.get<GetMarketCalendarResponse>("/market/calendar", params),
+			apiClient.get<GetMarketCalendarResponse>(
+				withQueryParams("/market/calendar", params),
+			),
 	});
 }

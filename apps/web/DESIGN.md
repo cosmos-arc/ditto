@@ -119,11 +119,6 @@ colors:
       muted:   "oklch(0.660 0.040 74)"
       line:    "oklch(0.620 0.040 74)"
       subtle:  "oklch(0.760 0.055 74 / 0.08)"
-    ai:
-      fg:      "oklch(0.680 0.110 310)"    # Magenta hue 310
-      muted:   "oklch(0.580 0.085 310)"
-      line:    "oklch(0.510 0.075 310)"
-      subtle:  "oklch(0.680 0.110 310 / 0.08)"
 
   # ── L7 Domain Business Colors: Market (CN default: red=up, green=down) ──
   market:
@@ -368,7 +363,7 @@ atmosphere:
 
 **Core Principle**: > Visuals serve judgment first, operation second, aesthetics last. Beauty emerges from efficiency, not from decoration overlaid on efficiency.
 
-**Product Positioning**: Personal quantitative research and live-trading professional workstation. Terminal-style workspace with high information density. Covers Home, Markets, Research, Trading, AI, Platform — six business domains.
+**Product Positioning**: Personal quantitative research and live-trading professional workstation. Terminal-style workspace with high information density. Covers Home, Markets, Research, Trading, and Platform as five product domains; AI is embedded intelligence surfaced through Home, Platform Agents, and the global Copilot sidecar.
 
 **Reference Aesthetics**: Linear / Vercel / Raycast — modern SaaS clean style with balanced density. Graphite Studio direction.
 
@@ -399,7 +394,8 @@ Used for accent warmth in home and trading domains. Conveys premium quality with
 | research | 300 | Purple | Thinking, exploration |
 | platform | 235 | Lapis | Order, control |
 | home | 74 | Brass | Warm welcome |
-| ai | 310 | Magenta | Intelligent creation |
+
+AI is not a product domain signature. Copilot and Agent experiences inherit the current page domain and use model / agent capability tokens for confidence, evidence, and approval states.
 
 ### Rules
 
@@ -466,6 +462,13 @@ Used for accent warmth in home and trading domains. Conveys premium quality with
 └──────────────────────────────────────────────┘
 ```
 
+### Shell Chrome
+
+- Rail is domain navigation only: Home, Markets, Research, Trading, Platform.
+- Header utilities are fixed and global: command, Copilot, notifications, help, account.
+- Theme and density live inside Account / View Preferences, not as permanent header segments.
+- Local filter/search/export/columns actions belong to workspace or data toolbars.
+
 ### Page Types
 
 | Type | Pattern | Examples |
@@ -473,7 +476,7 @@ Used for accent warmth in home and trading domains. Conveys premium quality with
 | Dashboard | Banner + grid panels | Home, Trading Overview, Risk Center |
 | List | Table + filters + detail | Strategy List, Factor List, Experiment List |
 | Detail | Object center + context rail | Instrument Hub, Strategy Detail, Backtest Result |
-| Builder | Editor + preview + config | Strategy Studio, AI Copilot |
+| Builder | Editor + preview + config | Strategy Studio, Copilot Sidecar |
 | Console | Terminal + activity + logs | Agent Console, Platform Settings |
 
 ### Workspace Rules
@@ -659,7 +662,7 @@ Applied via `data-density` attribute: `<div data-density="compact">`.
 
 1. **No hex or RGB color values** — use OKLCH tokens only.
 2. **No cross-domain color reuse** — market-down green ≠ system-healthy green.
-3. **No inline styles** — use Tailwind CSS utility classes.
+3. **No feature-level inline styles** — use Tailwind CSS utility classes; dynamic chart / progress dimensions belong in allowlisted primitives.
 4. **No `@apply` outside `globals.css` or shadcn components**.
 5. **No hardcoded pixel values** — use design token references.
 6. **No `any` type or `@ts-ignore`** — use `unknown` + type guard.
@@ -690,8 +693,8 @@ Applied via `data-density` attribute: `<div data-density="compact">`.
 | **Strip** | Horizontal bar (toolbar, scope strip). |
 | **Pulse** | Status/activity feed in sidebar or dedicated section. |
 | **Density** | Spacing/size preset (dense/compact/comfortable). |
-| **Domain** | Business area (trading/markets/research/ai/platform/home). |
-| **Signature** | Domain-specific accent color (Brass, Cyan, Purple, Lapis, Magenta). |
+| **Domain** | Business area (home/markets/research/trading/platform). |
+| **Signature** | Domain-specific accent color (Brass, Cyan, Purple, Lapis). |
 | **Chromatic Atmosphere** | Sub-perceptual background color temperature shift. |
 | **Token** | CSS custom property for design values. |
 | **SSOT** | Single Source of Truth — `src/styles/design-tokens/`. |

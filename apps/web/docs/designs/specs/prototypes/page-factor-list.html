@@ -54,6 +54,20 @@
       letter-spacing: 0.02em;
     }
 
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      border-radius: var(--radius-4);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+
+    .skip-link:focus { left: var(--space-16); }
+
     .header-subtitle {
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-regular);
@@ -64,6 +78,38 @@
 
     .header-title-group { display: flex; align-items: baseline; }
     .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header"
+        "rail toolbar toolbar"
+        "rail summary detail"
+        "rail table   detail";
+      contain: paint;
+    }
+
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+
+    .shell-catalog .shell-header::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 28%, transparent) 50%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .shell-catalog .catalog-detail {
+      box-shadow: inset 4px 0 10px -6px var(--overlay-3);
+    }
 
     .catalog-table-inner {
       height: 100%;
@@ -94,27 +140,45 @@
     .health-pill.healthy { background: var(--market-up-bg); color: var(--market-up-fg); }
     .health-pill.degraded { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
     .health-pill.down { background: var(--market-down-bg); color: var(--market-down-fg); }
+    .health-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      margin-right: var(--space-4);
+      opacity: 0.78;
+    }
 
     /* ── Health summary strip ── */
     .health-summary {
-      display: flex;
+      grid-area: summary;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       align-items: center;
-      gap: var(--space-16);
+      gap: var(--space-12);
       padding: var(--space-6) var(--density-gutter);
       background: var(--surface-strip);
       border-bottom: 1px solid var(--border-subtle);
-      height: var(--density-strip-height);
+      min-height: var(--density-strip-height);
     }
 
     .health-summary-item {
       display: flex;
       align-items: center;
-      gap: var(--space-4);
+      gap: var(--space-6);
+      min-width: 0;
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
     }
 
+    .health-summary-item .hs-label { white-space: nowrap; }
+
     .health-summary-item .hs-value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--text-secondary);
@@ -127,14 +191,147 @@
       width: 1px;
       height: 10px;
       background: var(--border-subtle);
+      display: none;
     }
+
+    .factor-name-stack { display: flex; flex-direction: column; gap: 1px; }
+    .factor-name-stack .cell-ticker { line-height: 1.2; }
+    .factor-meta { color: var(--text-tertiary); font-size: var(--font-size-10); line-height: 1.2; }
+    .metric-delta { margin-right: var(--space-4); color: currentColor; font-size: var(--font-size-10); }
+    .decay-ok { color: var(--system-healthy-fg); }
+    .decay-watch { color: var(--risk-medium-fg); }
+    .decay-risk { color: var(--system-down-fg); }
+    .data-table tr.row { cursor: pointer; }
+    .data-table tr.row:focus-visible { outline: 1px solid var(--brand-accent); outline-offset: -1px; }
+    .data-table th.sorted { color: var(--text-secondary); }
+    .col-factor-name { width: 22%; }
+    .col-factor-family, .col-factor-health, .col-factor-ic, .col-factor-ir, .col-factor-decay { width: 10%; }
+    .col-factor-strategies, .col-factor-action { width: 12%; }
+    .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
+    .row-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 var(--space-6);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: var(--font-size-12);
+    }
+    .row-action:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .row-action.primary { color: var(--brand-accent); }
+
+    .catalog-detail .context-section { flex: 0 0 auto; }
+    .catalog-detail .context-section:nth-child(3) { flex: 0 0 auto; min-height: 118px; }
+    .catalog-detail .context-section:nth-child(4) { flex: 0 0 auto; }
+    .catalog-detail .context-section-body { flex: 0 0 auto; overflow: visible; }
+    .catalog-detail .context-section:nth-child(3) .context-section-body { padding-bottom: var(--space-8); }
+    .catalog-detail .context-section:nth-child(4) .context-section-body { padding-bottom: var(--space-8); }
+    .detail-ticker {
+      font-size: var(--font-size-20);
+      line-height: 1.15;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .detail-hero {
+      display: grid;
+      gap: var(--space-10);
+      padding: var(--space-2) 0 var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .detail-title-line { display: grid; gap: var(--space-6); }
+    .detail-live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      min-height: 24px;
+      padding: 0 var(--space-8);
+      border-radius: var(--radius-12);
+      background: var(--system-healthy-bg);
+      color: var(--system-healthy-fg);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      justify-self: start;
+    }
+    .detail-live-chip::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: var(--data-freshness-live);
+    }
+    .detail-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+    .detail-kpi {
+      padding: var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-muted);
+    }
+    .detail-kpi-label { display: block; color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .detail-kpi-value {
+      display: block;
+      margin-top: var(--space-2);
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-14);
+      font-weight: var(--font-weight-semibold);
+    }
+    .ic-sparkline {
+      width: 100%;
+      height: 58px;
+      color: var(--brand-accent);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .ic-sparkline .spark-area { fill: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
+    .ic-sparkline .spark-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .quality-bars { display: grid; gap: var(--space-8); }
+    .quality-row { display: grid; grid-template-columns: 76px 1fr 44px; gap: var(--space-8); align-items: center; font-size: var(--font-size-11); color: var(--text-tertiary); }
+    .quality-track { height: 4px; border-radius: var(--radius-4); background: var(--surface-muted); overflow: hidden; }
+    .quality-fill { height: 100%; background: color-mix(in oklch, var(--brand-accent) 64%, transparent); border-radius: inherit; }
+    .quality-fill.w-92 { width: 92%; }
+    .quality-fill.w-87 { width: 87%; }
+    .quality-fill.w-76 { width: 76%; }
+    .detail-actions { display: grid; gap: var(--space-8); }
+    .detail-actions .btn,
+    .detail-actions .row-action { width: 100%; }
+    .detail-actions .row-action {
+      border: 1px solid var(--border-default);
+      color: var(--text-secondary);
+    }
+    .detail-actions .row-action:hover {
+      border-color: var(--brand-accent);
+      color: var(--brand-accent);
+    }
+    .batch-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-12);
+      background: var(--brand-accent-subtle);
+      border-bottom: 1px solid var(--brand-accent);
+    }
+    .batch-bar .batch-count {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      color: var(--brand-accent);
+    }
+    .batch-bar .batch-spacer { flex: 1; }
 
     /* ── Overlay activation ── */
     :root:has(#overlay-factor-compare:checked)
       [data-overlay="overlay-factor-compare"] { display: flex; }
 
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlays .overlay-backdrop { justify-content: flex-end; }
+    .overlays .overlay-surface {
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: var(--radius-8) 0 0 var(--radius-8);
+    }
+
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -153,6 +350,7 @@
     .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
     .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
+    .ov-label-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; }
     .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
     .overlay-field-label { color: var(--text-tertiary); }
     .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
@@ -184,6 +382,17 @@
     }
     .stale-banner-text { font-size: var(--font-size-12); color: var(--system-degraded-fg); }
 
+    @media (max-height: 800px) {
+      .catalog-detail .context-section-header { padding-block: var(--space-6); }
+      .catalog-detail .context-section:nth-child(3) { min-height: 104px; }
+      .detail-kpi { padding: var(--space-6); }
+      .ic-sparkline { height: 48px; }
+      .quality-bars { gap: var(--space-6); }
+      .detail-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .detail-actions .btn,
+      .detail-actions .row-action { width: auto; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .btn { transition: none !important; }
     }
@@ -203,35 +412,31 @@
     <a class="skip-link" href="#main-content">跳至主要内容</a>
     <div class="style-label">Graphite Studio — 因子列表 · Compact · A股</div>
 
-    <div class="shell-catalog">
+    <div class="shell-catalog catalog-shell">
       <!-- ═══ Rail ═══ -->
       <nav class="shell-rail" aria-label="主导航">
         <div class="rail-logo">D</div>
         <div class="rail-nav" role="list">
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页" data-rail-domain="home">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="市场">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="市场" data-rail-domain="markets">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
           </div>
-          <div class="rail-icon active" role="listitem" tabindex="0" aria-label="研究" aria-current="page">
+          <div class="rail-icon active" role="listitem" tabindex="0" aria-label="研究" aria-current="page" data-rail-domain="research">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易" data-rail-domain="trading">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI" data-rail-domain="platform">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           </div>
           <div class="rail-icon" role="listitem" tabindex="0" aria-label="运维">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
           </div>
         </div>
-        <div class="rail-bottom" role="list">
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-          </div>
-        </div>
+        
       </nav>
 
       <!-- ═══ Header ═══ -->
@@ -245,27 +450,43 @@
           <label for="overlay-factor-compare" class="btn ov-label-btn">因子对比</label>
         </div>
         <div class="header-btn-group">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
-          <button class="header-action-btn" title="通知" aria-label="通知">
+        </div>
+          <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           </button>
-          <button class="header-avatar" aria-label="用户菜单">C</button>
+          
         </div>
-      </header>
+      
+      <div class="header-actions header-utility-bar">
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+      </div>
+    </header>
 
       <!-- ═══ Filter Toolbar ═══ -->
-      <div class="filter-toolbar">
+      <div class="filter-toolbar" data-contract-slot="header">
         <div class="filter-group">
           <span class="filter-label">搜索:</span>
           <input type="text" class="filter-search" placeholder="搜索因子名称...">
@@ -289,29 +510,33 @@
           <button class="filter-chip">失效</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count">共 <span>7 个因子</span></span>
+        <span class="filter-count">共 <span>12 个因子</span></span>
       </div>
 
       <!-- ═══ Health Summary ═══ -->
-      <div class="health-summary">
+      <div class="health-summary" aria-label="因子健康摘要">
         <div class="health-summary-item">
           <span class="hs-label">正常</span>
-          <span class="hs-value positive">4</span>
+          <span class="hs-value positive">7</span>
         </div>
         <div class="health-separator"></div>
         <div class="health-summary-item">
           <span class="hs-label">衰减</span>
-          <span class="hs-value">2</span>
+          <span class="hs-value">3</span>
         </div>
         <div class="health-separator"></div>
         <div class="health-summary-item">
           <span class="hs-label">失效</span>
-          <span class="hs-value negative">1</span>
+          <span class="hs-value negative">2</span>
         </div>
         <div class="health-separator"></div>
         <div class="health-summary-item">
           <span class="hs-label">平均 IC</span>
-          <span class="hs-value positive">0.045</span>
+          <span class="hs-value positive">0.041</span>
+        </div>
+        <div class="health-summary-item">
+          <span class="hs-label">覆盖策略</span>
+          <span class="hs-value">31</span>
         </div>
       </div>
 
@@ -320,80 +545,216 @@
         <div class="catalog-table-inner" id="main-content">
           <div class="table-container">
             <table class="data-table" aria-label="因子列表">
-              <caption class="sr-only">因子列表：共 7 个因子</caption>
+              <caption class="sr-only">因子列表：共 12 个因子</caption>
+              <colgroup>
+                <col class="col-factor-name">
+                <col class="col-factor-family">
+                <col class="col-factor-ic">
+                <col class="col-factor-ir">
+                <col class="col-factor-decay">
+                <col class="col-factor-health">
+                <col class="col-factor-strategies">
+                <col class="col-factor-action">
+              </colgroup>
               <thead>
                 <tr>
-                  <th scope="col">名称 <span class="sort-icon">▲</span></th>
+                  <th scope="col" class="sorted">名称 <span class="sort-icon">▲</span></th>
                   <th scope="col">家族</th>
                   <th scope="col" class="right">IC <span class="sort-icon"></span></th>
                   <th scope="col" class="right">IR <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">衰减率 <span class="sort-icon"></span></th>
                   <th scope="col">健康状态</th>
                   <th scope="col" class="right">关联策略数 <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">操作</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="row selected">
-                  <td class="cell-ticker">MOM_20D</td>
+                <tr class="row selected" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">MOM_20D</span>
+                      <span class="factor-meta">20 日价格动量 · 日频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">动量</span></td>
-                  <td class="right numeric">0.062</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>0.062</td>
                   <td class="right numeric cell-change-up">1.85</td>
+                  <td class="right numeric decay-ok">-3.2%</td>
                   <td><span class="health-pill healthy">正常</span></td>
                   <td class="right numeric">5</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action primary">对比</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">EP_TTM</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">EP_TTM</span>
+                      <span class="factor-meta">滚动市盈率倒数 · 月频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">价值</span></td>
-                  <td class="right numeric">0.058</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>0.058</td>
                   <td class="right numeric cell-change-up">1.62</td>
+                  <td class="right numeric decay-ok">-4.8%</td>
                   <td><span class="health-pill healthy">正常</span></td>
                   <td class="right numeric">3</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action primary">对比</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">VOL_20D</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">VOL_20D</span>
+                      <span class="factor-meta">20 日波动率反向 · 日频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">波动率</span></td>
-                  <td class="right numeric">0.041</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>0.041</td>
                   <td class="right numeric">1.20</td>
+                  <td class="right numeric decay-watch">-12.4%</td>
                   <td><span class="health-pill degraded">衰减</span></td>
                   <td class="right numeric">2</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">ROE_STABLE</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">ROE_STABLE</span>
+                      <span class="factor-meta">稳定 ROE · 季频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">质量</span></td>
-                  <td class="right numeric">0.039</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>0.039</td>
                   <td class="right numeric">1.05</td>
+                  <td class="right numeric decay-ok">-2.1%</td>
                   <td><span class="health-pill healthy">正常</span></td>
                   <td class="right numeric">4</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">GROWTH_REV</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">GROWTH_REV</span>
+                      <span class="factor-meta">营收增速反转 · 季频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">成长</span></td>
-                  <td class="right numeric">0.028</td>
+                  <td class="right numeric"><span class="metric-delta">▲</span>0.028</td>
                   <td class="right numeric cell-change-down">0.62</td>
+                  <td class="right numeric decay-watch">-14.6%</td>
                   <td><span class="health-pill degraded">衰减</span></td>
                   <td class="right numeric">1</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">BP_LF</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">BP_LF</span>
+                      <span class="factor-meta">最近一期账面市值比 · 月频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">价值</span></td>
-                  <td class="right numeric">0.022</td>
+                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>0.022</td>
                   <td class="right numeric">0.48</td>
+                  <td class="right numeric decay-risk">-28.0%</td>
                   <td><span class="health-pill down">失效</span></td>
                   <td class="right numeric">0</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">TURNOVER</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">TURNOVER</span>
+                      <span class="factor-meta">换手率反向 · 日频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">流动性</span></td>
-                  <td class="right numeric">0.035</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>0.035</td>
                   <td class="right numeric cell-change-up">0.98</td>
+                  <td class="right numeric decay-ok">-6.5%</td>
                   <td><span class="health-pill healthy">正常</span></td>
                   <td class="right numeric">2</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">REV_3M</span>
+                      <span class="factor-meta">三月反转 · 日频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">动量</span></td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>0.033</td>
+                  <td class="right numeric">0.91</td>
+                  <td class="right numeric decay-ok">-5.9%</td>
+                  <td><span class="health-pill healthy">正常</span></td>
+                  <td class="right numeric">2</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">SIZE_LOG</span>
+                      <span class="factor-meta">流通市值对数 · 日频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">规模</span></td>
+                  <td class="right numeric"><span class="metric-delta">▲</span>0.031</td>
+                  <td class="right numeric">0.86</td>
+                  <td class="right numeric decay-ok">-7.1%</td>
+                  <td><span class="health-pill healthy">正常</span></td>
+                  <td class="right numeric">3</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">LIQ_20D</span>
+                      <span class="factor-meta">成交额流动性 · 日频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">流动性</span></td>
+                  <td class="right numeric"><span class="metric-delta">▲</span>0.029</td>
+                  <td class="right numeric">0.74</td>
+                  <td class="right numeric decay-watch">-13.8%</td>
+                  <td><span class="health-pill degraded">衰减</span></td>
+                  <td class="right numeric">1</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">EARN_QUALITY</span>
+                      <span class="factor-meta">盈利质量 · 季频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">质量</span></td>
+                  <td class="right numeric"><span class="metric-delta">▲</span>0.027</td>
+                  <td class="right numeric">0.69</td>
+                  <td class="right numeric decay-ok">-4.2%</td>
+                  <td><span class="health-pill healthy">正常</span></td>
+                  <td class="right numeric">4</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="factor-name-stack">
+                      <span class="cell-ticker">BETA_CN</span>
+                      <span class="factor-meta">沪深 300 Beta · 日频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">风险</span></td>
+                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>0.018</td>
+                  <td class="right numeric">0.36</td>
+                  <td class="right numeric decay-risk">-31.2%</td>
+                  <td><span class="health-pill down">失效</span></td>
+                  <td class="right numeric">0</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-factor-compare" class="row-action">对比</label></span></td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="table-footer">
             <div class="table-footer-info">
-              <span>共 7 个因子</span>
+              <span>共 12 个因子</span>
               <span>更新于 2026-04-21 09:00</span>
             </div>
             <div class="table-footer-actions">
@@ -410,36 +771,67 @@
             <span class="context-section-title">因子详情</span>
           </div>
           <div class="context-section-body">
-            <div class="detail-header">
-              <div class="detail-ticker">MOM_20D</div>
-              <div class="detail-meta">
-                <span><span class="meta-label">家族</span><span class="meta-value">动量</span></span>
-                <span><span class="meta-label">频率</span><span class="meta-value">日频</span></span>
+            <div class="detail-hero">
+              <div class="detail-title-line">
+                <div class="detail-ticker">MOM_20D</div>
+                <div class="detail-meta">
+                  <span><span class="meta-label">家族</span><span class="meta-value">动量</span></span>
+                  <span><span class="meta-label">频率</span><span class="meta-value">日频</span></span>
+                </div>
+              </div>
+              <span class="detail-live-chip">Health Engine 正常</span>
+              <div class="detail-kpi-grid">
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">IC Mean</span>
+                  <span class="detail-kpi-value">0.062</span>
+                </div>
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">IC IR</span>
+                  <span class="detail-kpi-value">1.85</span>
+                </div>
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">Decay 60D</span>
+                  <span class="detail-kpi-value">-3.2%</span>
+                </div>
+                <div class="detail-kpi">
+                  <span class="detail-kpi-label">覆盖策略</span>
+                  <span class="detail-kpi-value">5</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
         <div class="context-section">
           <div class="context-section-header">
-            <span class="context-section-title">绩效指标</span>
+            <span class="context-section-title">近 60 日 IC</span>
           </div>
           <div class="context-section-body">
-            <div class="detail-section">
-              <div class="overlay-field">
-                <span class="overlay-field-label">IC Mean</span>
-                <span class="overlay-field-value">0.062</span>
+            <svg class="ic-sparkline" viewBox="0 0 260 64" role="img" aria-label="MOM_20D 近 60 日 IC 稳定为正">
+              <path class="spark-area" d="M0 48 L24 42 L48 45 L72 34 L96 38 L120 30 L144 32 L168 26 L192 29 L216 22 L240 24 L260 18 L260 64 L0 64 Z"/>
+              <path class="spark-line" d="M0 48 L24 42 L48 45 L72 34 L96 38 L120 30 L144 32 L168 26 L192 29 L216 22 L240 24 L260 18"/>
+            </svg>
+          </div>
+        </div>
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">质量分解</span>
+          </div>
+          <div class="context-section-body">
+            <div class="quality-bars">
+              <div class="quality-row">
+                <span>稳定性</span>
+                <span class="quality-track"><span class="quality-fill w-92"></span></span>
+                <span class="numeric">92</span>
               </div>
-              <div class="overlay-field">
-                <span class="overlay-field-label">IC IR</span>
-                <span class="overlay-field-value">1.85</span>
+              <div class="quality-row">
+                <span>单调性</span>
+                <span class="quality-track"><span class="quality-fill w-87"></span></span>
+                <span class="numeric">87</span>
               </div>
-              <div class="overlay-field">
-                <span class="overlay-field-label">Rank IC</span>
-                <span class="overlay-field-value">0.058</span>
-              </div>
-              <div class="overlay-field">
-                <span class="overlay-field-label">Turnover</span>
-                <span class="overlay-field-value">32%</span>
+              <div class="quality-row">
+                <span>拥挤度</span>
+                <span class="quality-track"><span class="quality-fill w-76"></span></span>
+                <span class="numeric">76</span>
               </div>
             </div>
           </div>
@@ -460,13 +852,131 @@
             </div>
           </div>
         </div>
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">操作</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-actions">
+              <button class="btn btn-primary w-full">打开因子详情</button>
+              <label for="overlay-factor-compare" class="row-action primary">加入对比</label>
+            </div>
+          </div>
+        </div>
       </aside>
+    </div>
+
+    <!-- ═══ Overlay Containers ═══ -->
+    <div class="overlays">
+      <div class="overlay-backdrop" data-overlay="overlay-factor-compare">
+        <label class="overlay-dismiss" for="overlay-factor-compare" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="因子对比">
+          <div class="overlay-header">
+            <span class="overlay-title">因子对比</span>
+            <label for="overlay-factor-compare" class="overlay-close" aria-label="关闭">&#10005;</label>
+          </div>
+          <div class="overlay-body">
+            <p>MOM_20D 与 EP_TTM 已加入对比，适合检查组合内相关性、衰减率和策略重叠。</p>
+
+            <h4>对比因子</h4>
+            <div class="sv-pad-6-0">
+              <div class="overlay-field">
+                <span class="overlay-field-label">因子 A</span>
+                <span class="overlay-field-value">MOM_20D · IC 0.062</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">因子 B</span>
+                <span class="overlay-field-value">EP_TTM · IC 0.058</span>
+              </div>
+            </div>
+
+            <h4>相关性分析</h4>
+            <div class="overlay-field">
+              <span class="overlay-field-label">Pearson R</span>
+              <span class="overlay-field-value">0.23</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">Spearman R</span>
+              <span class="overlay-field-value">0.18</span>
+            </div>
+            <div class="overlay-field">
+              <span class="overlay-field-label">策略重叠</span>
+              <span class="overlay-field-value">2 / 6</span>
+            </div>
+
+            <h4>衰减趋势</h4>
+            <svg class="ic-sparkline" viewBox="0 0 260 64" role="img" aria-label="两因子衰减趋势对比">
+              <path class="spark-area" d="M0 50 L32 44 L64 40 L96 34 L128 36 L160 28 L192 30 L224 24 L260 20 L260 64 L0 64 Z"/>
+              <path class="spark-line" d="M0 50 L32 44 L64 40 L96 34 L128 36 L160 28 L192 30 L224 24 L260 20"/>
+            </svg>
+
+            <div class="overlay-actions">
+              <label for="overlay-factor-compare" class="overlay-btn overlay-btn-secondary ov-label-btn">关闭</label>
+              <label for="overlay-factor-compare" class="overlay-btn overlay-btn-primary ov-label-btn">导出报告</label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- ═══ States Gallery ═══ -->
   <section id="states-gallery" class="proto-section">
     <div class="gallery-grid">
+      <div class="gallery-group" data-component="filter-bar">
+        <div class="gallery-group__label">筛选工具栏</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-text"></div>
+                  <div class="skeleton skeleton-text-sm"></div>
+                  <div class="skeleton skeleton-text-sm"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-title">暂无可筛选因子</div>
+                  <div class="state-empty-desc">Factor Library 尚未同步可用因子</div>
+                  <button class="state-empty-cta">打开 Factor Library</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">筛选项加载失败</div>
+                  <div class="state-error-desc">无法读取因子家族与健康状态聚合</div>
+                  <button class="state-error-retry">重试</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="batch-bar">
+                  <span class="batch-count">已选筛选：动量 / 正常 / IC 降序</span>
+                  <span class="batch-spacer"></span>
+                  <button class="btn btn-sm">清除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="gallery-group" data-component="factor-table">
         <div class="gallery-group__label">因子表格</div>
         <div class="gallery-cards">
@@ -586,10 +1096,10 @@
         <div class="gallery-cards">
 
           <!-- Factor Compare Drawer -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-factor-compare">
             <div class="gallery-card__label">因子对比 (Drawer)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="因子对比">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="因子对比">
                 <div class="overlay-header">
                   <span class="overlay-title">因子对比</span>
                   <button class="overlay-close" aria-label="关闭">x</button>
@@ -652,5 +1162,6 @@
     </div>
   </section>
 
+  <input type="checkbox" id="overlay-factor-compare" class="overlay-radio sr-only">
 </body>
 </html>

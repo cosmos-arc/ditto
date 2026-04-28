@@ -1,12 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, extname, basename } from "node:path";
+import { join, extname, basename, relative } from "node:path";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 const SRC_ROOT = join(import.meta.dirname, "../../");
+
+const INLINE_STYLE_PATTERN = /style=\{\{/g;
+
+const FEATURE_INLINE_STYLE_ALLOWLIST = new Set([
+	"features/shell/components/noise-layer.tsx",
+	"features/shell/components/rail.tsx",
+]);
+
+const COMPONENT_INLINE_STYLE_ALLOWLIST = new Set([
+	"components/chart/area-chart.tsx",
+	"components/chart/line-chart.tsx",
+	"components/data/flow-bar.tsx",
+	"components/indicator/confidence-bar/confidence-bar.tsx",
+]);
+
+function relativeSourcePath(filePath: string): string {
+	return relative(SRC_ROOT, filePath);
+}
 
 function readAllFiles(
 	dir: string,
@@ -103,6 +121,60 @@ describe("Legacy token compliance", () => {
 			totalRefs.length,
 			`Total files still referencing legacy tokens: ${totalRefs.length}`,
 		).toBe(0);
+	});
+});
+
+/* ------------------------------------------------------------------ */
+/*  4. Inline style boundaries                                         */
+/* ------------------------------------------------------------------ */
+
+describe("Inline style compliance", () => {
+	const featureFiles = readAllFiles(join(SRC_ROOT, "features"), [".tsx"], [
+		"node_modules",
+		".test.",
+	]);
+
+	const componentFiles = readAllFiles(join(SRC_ROOT, "components"), [".tsx"], [
+		"node_modules",
+		".test.",
+	]);
+
+	it("keeps feature source files free of local inline styles", () => {
+		const violations: string[] = [];
+
+		for (const [filePath, content] of featureFiles) {
+			const relPath = relativeSourcePath(filePath);
+			if (FEATURE_INLINE_STYLE_ALLOWLIST.has(relPath)) continue;
+
+			const matches = content.match(INLINE_STYLE_PATTERN);
+			if (matches) {
+				violations.push(`${relPath}: style={{ (${matches.length}x)`);
+			}
+		}
+
+		expect(
+			violations.join("\n"),
+			`${violations.length} feature files with inline styles:\n`,
+		).toBe("");
+	});
+
+	it("keeps shared inline styles constrained to dynamic rendering primitives", () => {
+		const violations: string[] = [];
+
+		for (const [filePath, content] of componentFiles) {
+			const relPath = relativeSourcePath(filePath);
+			if (COMPONENT_INLINE_STYLE_ALLOWLIST.has(relPath)) continue;
+
+			const matches = content.match(INLINE_STYLE_PATTERN);
+			if (matches) {
+				violations.push(`${relPath}: style={{ (${matches.length}x)`);
+			}
+		}
+
+		expect(
+			violations.join("\n"),
+			`${violations.length} component files with unapproved inline styles:\n`,
+		).toBe("");
 	});
 });
 

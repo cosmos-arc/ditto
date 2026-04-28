@@ -22,7 +22,7 @@ const STATUS_LABEL_MAP: Record<PipelineStatus, string> = {
 };
 
 export function PipelineTable() {
-	const { data, isLoading, isError, refetch } = usePipelines();
+	const { data, isLoading, refetch } = usePipelines();
 
 	return (
 		<ContextSection title="Pipelines & Jobs" count={data?.total} data-info-level="l1" data-info-unit="pipelines">

@@ -92,6 +92,11 @@
       "description": "Blueprint 文档引用"
     },
 
+    "landing": {
+      "$ref": "#/definitions/landingStatus",
+      "description": "React route / feature / contract / overlay / visual audit readiness"
+    },
+
     "viewports": {
       "type": "array",
       "items": {
@@ -136,6 +141,12 @@
     "interactions": {
       "type": "array",
       "items": { "$ref": "#/definitions/interaction" }
+    },
+
+    "overlays": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/overlayContract" },
+      "description": "页面默认流程中可触发的 drawer/sheet/modal/toast 等覆盖层"
     },
 
     "flags": {
@@ -192,6 +203,79 @@
   },
 
   "definitions": {
+    "landingStatus": {
+      "type": "object",
+      "required": [
+        "reactRouteStatus",
+        "featureModule",
+        "contractStatus",
+        "overlayStatus",
+        "visualAuditStatus"
+      ],
+      "properties": {
+        "reactRouteStatus": {
+          "type": "string",
+          "enum": ["missing", "scaffolded", "implemented"]
+        },
+        "featureModule": { "type": "string" },
+        "contractStatus": {
+          "type": "string",
+          "enum": ["missing", "draft", "generated", "verified"]
+        },
+        "overlayStatus": {
+          "type": "string",
+          "enum": ["none", "gallery-only", "triggerable", "implemented"]
+        },
+        "visualAuditStatus": {
+          "type": "string",
+          "enum": ["missing", "baseline", "pass"]
+        }
+      }
+    },
+
+    "overlayContract": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "blocking",
+        "requiredInDefaultFlow",
+        "trigger",
+        "prototypeSelector",
+        "reactComponent",
+        "closeBehavior"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["drawer", "sheet", "modal", "alert-dialog", "toast", "inline"]
+        },
+        "blocking": { "type": "boolean" },
+        "requiredInDefaultFlow": { "type": "boolean" },
+        "trigger": { "$ref": "#/definitions/overlayTrigger" },
+        "prototypeSelector": { "type": "string" },
+        "reactComponent": { "type": "string" },
+        "closeBehavior": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["escape", "outside-click", "primary-action"]
+          },
+          "minItems": 1
+        }
+      }
+    },
+
+    "overlayTrigger": {
+      "type": "object",
+      "required": ["slot", "action"],
+      "properties": {
+        "slot": { "type": "string" },
+        "action": { "type": "string" }
+      }
+    },
+
     "slotMapping": {
       "type": "object",
       "required": ["name", "required", "prototypeSelector", "reactSelector"],

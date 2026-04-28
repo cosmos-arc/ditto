@@ -1,5 +1,5 @@
-import { usePlatformHealth, useProviders, usePipelines, usePlatformAlerts } from "../hooks";
 import { OpsConsoleLayout, StatusBar } from "@/features/shell";
+import { ConfidenceBar } from "@/components/indicator";
 import { Panel, PanelHeader, PanelBody } from "@/features/shell/components/panel";
 import { HealthStrip } from "./health-strip";
 import { ProviderTable } from "./provider-table";
@@ -80,12 +80,12 @@ export function PlatformPage() {
 												{res.value}
 											</span>
 										</div>
-										<div className="h-1 w-full overflow-hidden rounded-full bg-(--color-border-subtle)">
-											<div
-												className={`h-full rounded-full ${res.severity === "critical" ? "bg-(--color-risk-critical-fg)" : "bg-(--color-system-healthy-fg)"}`}
-												style={{ width: `${res.width}%` }}
-											/>
-										</div>
+										<ConfidenceBar
+											value={res.width}
+											color={res.severity === "critical" ? "danger" : "success"}
+											size="sm"
+											aria-label={`${res.label} usage`}
+										/>
 									</div>
 								))}
 							</div>

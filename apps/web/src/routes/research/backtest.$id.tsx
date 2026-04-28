@@ -3,5 +3,5 @@ import { BacktestPage } from "@/features/backtest";
 
 export const Route = createFileRoute("/research/backtest/$id")({
 	component: BacktestPage,
-	handle: { title: "回测结果" },
+	staticData: { title: "回测结果" },
 });

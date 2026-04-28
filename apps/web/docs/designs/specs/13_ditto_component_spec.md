@@ -141,6 +141,9 @@ Shell Components 是构成页面壳层和全站工作区结构的组件。
 - Rail
 - Workspace Header
 - Global Header
+- Header Utility Bar
+- Global Command Button
+- View Preferences Menu
 - Context Strip / Pulse Strip
 - Context Bar（Radar Shell 专用，双层 Context 的上层）
 - Scope Strip（Radar Shell 专用，双层 Context 的下层）
@@ -233,6 +236,7 @@ Workspace Components 是页面内部组织节奏的中层组件。
 - Panel
 - Section Header
 - Toolbar
+- Workspace Toolbar
 - Scope Tabs
 - Filter Bar
 - Summary Strip
@@ -457,6 +461,7 @@ Toolbar 在 Ditto 中非常关键，不应退化为按钮堆积条。
 - Filter Chip
 - Sparkline
 - Distribution Strip
+- Data Toolbar
 - Market Card（Radar Shell 专用）
 - Cross-Market Matrix（Radar Shell 专用）
 - Macro Driver Block（Radar Shell 专用）

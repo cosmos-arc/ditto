@@ -14,7 +14,7 @@ const SIDE_VARIANT: Record<string, "trade" | "risk"> = {
 };
 
 export function BacktestTrades({ jobId }: BacktestTradesProps) {
-	const { data, isLoading, isError, refetch } = useBacktestResult(jobId);
+	const { data, isLoading, refetch } = useBacktestResult(jobId);
 
 	return (
 		<ContextSection title="交易记录" count={data?.trades.length}>

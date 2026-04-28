@@ -3,5 +3,5 @@ import { ScreenerPage } from "@/features/screener";
 
 export const Route = createFileRoute("/markets/screener")({
 	component: ScreenerPage,
-	handle: { title: "市场筛选" },
+	staticData: { title: "市场筛选" },
 });

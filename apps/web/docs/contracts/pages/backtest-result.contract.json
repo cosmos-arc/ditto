@@ -1,0 +1,204 @@
+{
+  "id": "backtest-result",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-04-28",
+  "route": "/research/backtest/$id",
+  "pagePattern": "object-hub",
+  "shellFamily": "object-hub",
+  "prototypeRef": "docs/designs/specs/prototypes/page-backtest-result.html",
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/backtest",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "missing"
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "meta",
+      "required": true,
+      "prototypeSelector": ".object-meta",
+      "reactSelector": "[data-slot='meta']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "tabs",
+      "required": true,
+      "prototypeSelector": ".object-tabs",
+      "reactSelector": "[data-slot='tabs']",
+      "a11yRole": "navigation",
+      "responsiveBehavior": {
+        "compact": "reflow"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".object-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "bottom",
+      "required": true,
+      "prototypeSelector": ".object-bottom",
+      "reactSelector": "[data-slot='bottom']",
+      "a11yRole": "region",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "not-found"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": false,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "meta": {
+        "width": 1536,
+        "height": 112,
+        "strategy": "content-driven"
+      },
+      "tabs": {
+        "width": 1536,
+        "height": 48,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1536,
+        "height": 590,
+        "strategy": "content-driven"
+      },
+      "bottom": {
+        "width": 1536,
+        "height": 140,
+        "strategy": "content-driven"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  },
+  "overlays": [
+    {
+      "id": "backtest-result.export",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-export']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "backtest-result.enable-signal",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-enable-signal']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "backtest-result.ai-analysis",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-ai-analysis']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "backtest-result.compare-toast",
+      "kind": "toast",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-compare-toast']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "backtest-result.compare",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-compare']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

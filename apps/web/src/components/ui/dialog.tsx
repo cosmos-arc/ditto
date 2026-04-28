@@ -19,19 +19,36 @@ function DialogTrigger({
 	);
 }
 
+function CloseIcon() {
+	return (
+		<svg width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+			<path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+		</svg>
+	);
+}
+
 function DialogClose({
+	className,
+	children,
+	"aria-label": ariaLabel = "Close",
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
 	return (
 		<DialogPrimitive.Close
 			data-slot="dialog-close"
+			aria-label={ariaLabel}
 			className={cn(
-				"absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity",
-				"hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+				"absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-(--radius-md)",
+				"text-(--color-foreground-tertiary) transition-colors",
+				"hover:bg-(--color-interaction-hover-subtle-bg) hover:text-(--color-foreground)",
+				"focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)",
 				"disabled:pointer-events-none",
+				className,
 			)}
 			{...props}
-		/>
+		>
+			{children ?? <CloseIcon />}
+		</DialogPrimitive.Close>
 	);
 }
 
@@ -49,7 +66,7 @@ function DialogOverlay({
 		<DialogPrimitive.Overlay
 			data-slot="dialog-overlay"
 			className={cn(
-				"fixed inset-0 z-50 bg-black/50",
+				"fixed inset-0 z-50 bg-(--color-surface-overlay) opacity-[var(--opacity-overlay)]",
 				"data-[state=open]:animate-in data-[state=open]:fade-in-0",
 				"data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
 				className,
@@ -80,9 +97,7 @@ function DialogContent({
 				{...props}
 			>
 				{children}
-				<DialogClose className="absolute top-4 right-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-					&times;
-				</DialogClose>
+				<DialogClose aria-label="Close" />
 			</DialogPrimitive.Content>
 		</DialogPortal>
 	);
@@ -128,7 +143,7 @@ function DialogTitle({
 		<DialogPrimitive.Title
 			data-slot="dialog-title"
 			className={cn(
-				"text-lg font-semibold leading-none tracking-tight text-(--color-foreground-primary)",
+				"text-lg font-semibold leading-none tracking-tight text-(--color-foreground)",
 				className,
 			)}
 			{...props}

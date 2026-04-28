@@ -89,6 +89,312 @@
   };
 
   /* ══════════════════════════════════════════════
+   * 1b. Filter Chips
+   *     Container: .filter-group
+   *     Buttons:   .filter-chip
+   * ══════════════════════════════════════════════ */
+  var FilterChips = {
+    init: function () {
+      document.querySelectorAll('.filter-group').forEach(function (group) {
+        var chips = Array.from(group.querySelectorAll('.filter-chip'));
+        if (!chips.length) return;
+
+        chips.forEach(function (chip) {
+          chip.setAttribute('aria-pressed', chip.classList.contains('active') ? 'true' : 'false');
+        });
+
+        group.addEventListener('click', function (e) {
+          var chip = e.target.closest('.filter-chip');
+          if (!chip || !group.contains(chip)) return;
+
+          chips.forEach(function (item) {
+            item.classList.remove('active');
+            item.setAttribute('aria-pressed', 'false');
+          });
+          chip.classList.add('active');
+          chip.setAttribute('aria-pressed', 'true');
+
+          group.dispatchEvent(new CustomEvent('ditto:filter-chip-change', {
+            detail: { value: chip.textContent.trim() },
+            bubbles: true,
+          }));
+        });
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 1c. ScreenerWorkflow
+   *     Root: [data-screener-workflow]
+   *     Adds visible draft/apply/sort/compare state for screener prototypes
+   * ══════════════════════════════════════════════ */
+  var ScreenerWorkflow = {
+    init: function () {
+      document.querySelectorAll('[data-screener-workflow]').forEach(function (root) {
+        var state = {
+          universe: ScreenerWorkflow._activeChipText(root, '股票池') || '沪深300',
+          hasValuationCondition: false,
+          compareTickers: ScreenerWorkflow._readInitialCompareTickers(root),
+        };
+
+        ScreenerWorkflow._syncFilterDraft(root, state);
+        ScreenerWorkflow._setupFilter(root, state);
+        ScreenerWorkflow._setupSort(root);
+        ScreenerWorkflow._setupCompare(root, state);
+      });
+    },
+
+    _setupFilter: function (root, state) {
+      root.addEventListener('ditto:filter-chip-change', function (event) {
+        var group = event.target.closest('.filter-group');
+        if (!group || !root.contains(group)) return;
+        var label = ScreenerWorkflow._groupLabel(group);
+        if (label === '股票池') {
+          state.universe = event.detail.value;
+        }
+        ScreenerWorkflow._syncFilterDraft(root, state);
+      });
+
+      root.addEventListener('click', function (event) {
+        var action = event.target.closest('[data-filter-action]');
+        if (!action || !root.contains(action)) return;
+        var type = action.getAttribute('data-filter-action');
+
+        if (type === 'add-condition') {
+          state.hasValuationCondition = true;
+          ScreenerWorkflow._syncFilterDraft(root, state);
+          return;
+        }
+
+        if (type === 'apply') {
+          ScreenerWorkflow._applyFilter(root, state);
+        }
+      });
+    },
+
+    _setupSort: function (root) {
+      root.addEventListener('click', function (event) {
+        var option = event.target.closest('[data-sort-option]');
+        if (option && root.contains(option)) {
+          ScreenerWorkflow._selectSortOption(root, option);
+          return;
+        }
+
+        var action = event.target.closest('[data-sort-action]');
+        if (!action || !root.contains(action)) return;
+        if (action.getAttribute('data-sort-action') === 'apply') {
+          ScreenerWorkflow._applySort(root);
+        } else {
+          var first = root.querySelector('[data-sort-option="change"]');
+          if (first) ScreenerWorkflow._selectSortOption(root, first);
+          ScreenerWorkflow._applySort(root);
+        }
+      });
+    },
+
+    _setupCompare: function (root, state) {
+      ScreenerWorkflow._decorateCompareTable(root, state);
+
+      root.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-compare-add]');
+        if (!button || !root.contains(button)) return;
+
+        var row = button.closest('tr.row');
+        if (!row) return;
+        var ticker = button.getAttribute('data-compare-add');
+        if (!ticker || state.compareTickers[ticker]) return;
+
+        state.compareTickers[ticker] = true;
+        var nameCell = row.children[1];
+        var changeCell = row.querySelector('.cell-change-up, .cell-change-down');
+        var name = nameCell ? nameCell.textContent.trim() : ticker;
+        var change = changeCell ? changeCell.textContent.trim() : '';
+
+        ScreenerWorkflow._appendCompareItem(root, ticker, name, change);
+        ScreenerWorkflow._syncCompareCount(root, state);
+        button.setAttribute('aria-pressed', 'true');
+        button.textContent = '已加入';
+      });
+
+      ScreenerWorkflow._syncCompareCount(root, state);
+    },
+
+    _syncFilterDraft: function (root, state) {
+      var active = root.querySelector('[data-active-conditions]');
+      if (active) {
+        active.innerHTML = '';
+        active.appendChild(ScreenerWorkflow._conditionChip('universe', '股票池 = ' + state.universe));
+        if (state.hasValuationCondition) {
+          active.appendChild(ScreenerWorkflow._conditionChip('valuation', 'PE < 20'));
+        }
+      }
+
+      var count = state.hasValuationCondition ? 2 : 1;
+      ScreenerWorkflow._setText(root, '[data-filter-status]', '草稿 ' + count + ' 条');
+      ScreenerWorkflow._setText(root, '[data-filter-draft]', '股票池 = ' + state.universe + ' · PE < 20');
+    },
+
+    _applyFilter: function (root, state) {
+      var count = state.hasValuationCondition ? 126 : 188;
+      var conditionCount = state.hasValuationCondition ? 2 : 1;
+      var conditionLabel = state.hasValuationCondition ? '股票池/估值' : '股票池';
+
+      ScreenerWorkflow._setText(root, '.filter-count', '共 ' + count + ' 只');
+      ScreenerWorkflow._setText(root, '[data-filter-applied-at]', '已应用');
+      ScreenerWorkflow._setText(root, '[data-filter-preview-count]', count + ' 只');
+      ScreenerWorkflow._setText(root, '[data-screener-scope] .screener-insight-value', state.universe + ' · A股 · ' + count + ' 只');
+      ScreenerWorkflow._setText(root, '[data-screener-filters] .screener-insight-value', conditionCount + ' 条激活 · ' + conditionLabel);
+      ScreenerWorkflow._setText(root, '.table-footer-info span', '显示 1-22 / 共 ' + count + ' 只 · 第 1/6 页');
+    },
+
+    _selectSortOption: function (root, option) {
+      var options = Array.from(root.querySelectorAll('[data-sort-option]'));
+      var rank = 2;
+
+      options.forEach(function (item) {
+        var rankEl = item.querySelector('.sort-item-rank');
+        item.classList.remove('sort-item--active');
+        item.setAttribute('aria-pressed', 'false');
+        if (rankEl) rankEl.textContent = String(rank++);
+      });
+
+      option.classList.add('sort-item--active');
+      option.setAttribute('aria-pressed', 'true');
+      var firstRank = option.querySelector('.sort-item-rank');
+      if (firstRank) firstRank.textContent = '1';
+    },
+
+    _applySort: function (root) {
+      var active = root.querySelector('[data-sort-option].sort-item--active');
+      if (!active) return;
+
+      root.querySelectorAll('.data-table th.sorted').forEach(function (th) {
+        th.classList.remove('sorted');
+        var icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '';
+      });
+
+      var target = active.getAttribute('data-sort-target');
+      var th = target ? root.querySelector('.data-table th' + target) : null;
+      if (th) {
+        th.classList.add('sorted');
+        var icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = '▼';
+      }
+
+      var label = active.getAttribute('data-sort-label') || '涨跌幅';
+      ScreenerWorkflow._setText(root, '[data-screener-rank] .screener-insight-value', '排序: ' + label + ' → 涨跌幅 → 信号强度');
+    },
+
+    _decorateCompareTable: function (root, state) {
+      var table = root.querySelector('.data-table[data-compare-source]');
+      if (!table || table.querySelector('th.col-compare-action')) return;
+
+      var headerRow = table.querySelector('thead tr');
+      if (headerRow) {
+        var th = document.createElement('th');
+        th.scope = 'col';
+        th.className = 'col-compare-action';
+        th.textContent = '操作';
+        headerRow.appendChild(th);
+      }
+
+      table.querySelectorAll('tbody tr.row').forEach(function (row) {
+        var tickerEl = row.querySelector('.cell-ticker');
+        if (!tickerEl) return;
+        var ticker = tickerEl.textContent.trim();
+        var nameCell = row.children[1];
+        var name = nameCell ? nameCell.textContent.trim() : ticker;
+        var selected = Boolean(state.compareTickers[ticker]);
+
+        var td = document.createElement('td');
+        td.className = 'col-compare-action';
+
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'compare-add-btn';
+        button.setAttribute('data-compare-add', ticker);
+        button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        button.setAttribute('aria-label', (selected ? '已加入对比 ' : '加入对比 ') + name);
+        button.textContent = selected ? '已加入' : '+ 对比';
+
+        td.appendChild(button);
+        row.appendChild(td);
+      });
+    },
+
+    _appendCompareItem: function (root, ticker, name, change) {
+      var detailBody = root.querySelector('.catalog-detail details[open] .context-section-body');
+      if (detailBody) {
+        var detailItem = document.createElement('div');
+        detailItem.className = 'compare-item';
+        detailItem.innerHTML =
+          '<div class="compare-item-info"><div><div class="compare-item-name">' + name +
+          '</div><div class="compare-item-code">' + ticker +
+          '</div></div></div><div class="compare-item-actions"><span class="compare-item-remove" role="button" tabindex="0" aria-label="移除' +
+          name + '">&times;</span></div>';
+        var cta = detailBody.querySelector('.compare-cta');
+        detailBody.insertBefore(detailItem, cta || null);
+      }
+
+      var compareList = root.querySelector('.compare-list');
+      if (compareList) {
+        var row = document.createElement('div');
+        row.className = 'compare-row';
+        row.innerHTML =
+          '<span class="compare-row-ticker">' + ticker +
+          '</span><span class="compare-row-name">' + name +
+          '</span><span class="text-up">' + change + '</span>';
+        compareList.appendChild(row);
+      }
+    },
+
+    _syncCompareCount: function (root, state) {
+      var count = Object.keys(state.compareTickers).length;
+      root.querySelectorAll('[data-compare-count]').forEach(function (el) {
+        el.textContent = String(count);
+      });
+    },
+
+    _readInitialCompareTickers: function (root) {
+      var tickers = {};
+      root.querySelectorAll('.compare-item-code, .compare-row-ticker').forEach(function (el) {
+        var ticker = el.textContent.trim();
+        if (ticker) tickers[ticker] = true;
+      });
+      return tickers;
+    },
+
+    _activeChipText: function (root, label) {
+      var groups = Array.from(root.querySelectorAll('.filter-group'));
+      for (var i = 0; i < groups.length; i++) {
+        if (ScreenerWorkflow._groupLabel(groups[i]) !== label) continue;
+        var active = groups[i].querySelector('.filter-chip.active');
+        if (active) return active.textContent.trim().replace('▾', '').trim();
+      }
+      return '';
+    },
+
+    _groupLabel: function (group) {
+      var label = group.querySelector('.filter-label');
+      return label ? label.textContent.replace(':', '').trim() : '';
+    },
+
+    _conditionChip: function (name, text) {
+      var chip = document.createElement('span');
+      chip.className = 'condition-chip';
+      chip.setAttribute('data-condition-chip', name);
+      chip.textContent = text;
+      return chip;
+    },
+
+    _setText: function (root, selector, text) {
+      var el = root.querySelector(selector);
+      if (el) el.textContent = text;
+    },
+  };
+
+  /* ══════════════════════════════════════════════
    * 2. Sparkline — data-sparkline='{"data":[...]}'
    * ══════════════════════════════════════════════ */
   var Sparkline = {
@@ -234,7 +540,7 @@
         txt.setAttribute('dominant-baseline', 'central');
         txt.setAttribute('fill', cssVar('--text-primary', 'oklch(0.9 0 0)'));
         txt.setAttribute('font-size', Math.max(10, size * 0.2));
-        txt.setAttribute('font-family', 'var(--font-family-mono)');
+        txt.setAttribute('font-family', 'var(--font-family-numeric)');
         txt.textContent = label;
         svg.appendChild(txt);
       }
@@ -739,6 +1045,7 @@
     '[data-tab-target] { cursor:pointer; }',
     '[data-tab-target].active { color:var(--brand-accent); }',
     '[data-tab-panel][aria-hidden="true"] { display:none; }',
+    '.filter-chip[aria-pressed="true"] { border-color:var(--brand-accent); }',
     '/* Tooltip */',
     '.ditto-tooltip { position:fixed; z-index:9999; padding:6px 10px; border-radius:6px;',
     '  background:var(--surface-overlay, oklch(0.260 0.008 253));',
@@ -754,6 +1061,8 @@
   /* ── Auto-initialize ── */
   function init() {
     Tabs.init();
+    FilterChips.init();
+    ScreenerWorkflow.init();
     Sparkline.init();
     DonutGauge.init();
     HeatGrid.init();

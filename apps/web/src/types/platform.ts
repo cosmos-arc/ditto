@@ -1,7 +1,7 @@
 import type {
 	HealthStatus,
+	PaginatedRequest,
 	PaginatedResponse,
-	Priority,
 	Severity,
 } from "./common";
 

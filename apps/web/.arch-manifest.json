@@ -4,10 +4,16 @@
   "mode": "create",
   "startedAt": "2026-04-18T00:00:00Z",
   "lastAudit": {
-    "date": "2026-04-20",
-    "score": "9.5/10",
-    "previousScore": "9.3/10",
-    "improvement": "+0.2",
+    "date": "2026-04-27",
+    "score": "remediated",
+    "previousDate": "2026-04-20",
+    "previousScore": "9.5/10",
+    "improvement": "route / contract / overlay drift closed",
+    "routeCoverageStatus": "PASS: 27/27 IA routes covered by React routes and scripts/audit-route-coverage.mjs",
+    "generatedContractCount": 27,
+    "overlayRegistryStatus": "PASS: contract schema, generated runtime types, and OverlayProvider are aligned for declared required overlays",
+    "domainModelStatus": "PASS: five product domains; AI is embedded intelligence plus global Copilot sidecar",
+    "coreUiTokenStatus": "PASS: Button, Badge, Tabs, Dialog, and Sheet use Ditto semantic tokens",
     "constitutionCompliance": "20 PASS / 3 SHOULD / 0 FAIL",
     "p0Issues": 0,
     "p0Fixed": 0,
@@ -27,6 +33,30 @@
     "rootCause": "上次 11 P1 全部修复落地。7 文件未提交变更质量良好。仅发现 2 个低级 P1（watchlist Shell 归属分歧、00 文档壳层数描述）+ 6 个 P2。",
     "crossDocContracts": "C1-C6 全部 PASS",
     "skillImprovements": []
+  },
+  "consistencyRemediation": {
+    "plan": "docs/plans/2026-04-27-consistency-remediation-plan.md",
+    "completedAt": "2026-04-27",
+    "iaRouteCount": 27,
+    "generatedContractCount": 27,
+    "generatedArtifactStatus": "idempotent after regeneration; artifacts remain modified until the remediation branch is committed",
+    "routeCoverageStatus": "audited",
+    "editionPrototypeCount": 29,
+    "deprecatedPrototypePages": ["ai-overview", "ai-copilot"],
+    "overlayRegistryStatus": "contract-driven",
+    "verificationCommands": [
+      "bun run check",
+      "bun run audit:routes",
+      "bun run generate-contracts",
+      "git diff --exit-code src/features/shell/page-contracts.generated.ts scripts/visual-audit.config.generated.mjs"
+    ]
+  },
+  "prototypeInventory": {
+    "activeRoutePrototypeCount": 27,
+    "archivedSpecimenCount": 2,
+    "auxiliarySpecimenCount": 1,
+    "archivedPrototypePages": ["ai-overview", "ai-copilot"],
+    "auxiliaryPrototypePages": ["token-showcase"]
   },
   "upstream": {
     "discovery": {

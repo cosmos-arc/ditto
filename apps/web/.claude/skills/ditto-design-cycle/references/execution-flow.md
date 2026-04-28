@@ -27,8 +27,14 @@
    - view-states radio checked → 截图（状态画廊）
    - view-overlays radio checked → 截图（弹层画廊）
 9. page.evaluate() 提取关键元素 computed styles
-10. 多视口检测（详见 [viewport.md](viewport.md)）
-11. 跨页结构化 metrics 提取 + 一致性基线：
+10. **交互元素自动发现**（供 Phase 8 Gate 4 消费）：
+    - 扫描所有 `<input type="radio">` / `<input type="checkbox">` + 关联 `<label>`
+    - 扫描所有 tab group（`.tab-group` 内的 tab label + tab panel）
+    - 扫描所有 overlay 触发器（`onclick` 引用 overlay radio / `[data-overlay]` 属性）
+    - 扫描所有可 hover 交互元素（`[tabindex="0"]`、`.treemap-cell-iv`、`.queue-item` 等）
+    - 输出「交互元素清单」JSON（元素选择器 + 类型 + 预期行为 + 关联 radio id）
+11. 多视口检测（详见 [viewport.md](viewport.md)）
+12. 跨页结构化 metrics 提取 + 一致性基线：
     - 读取 manifest，遍历 status != "done" 的页面
     - 提取 shell / components / typography / colors metrics
     - 比对所有页面 metrics，标记偏离值
@@ -190,6 +196,14 @@
 ### Step 8.0: PRE-SCORE GATES（评分前置门禁） [sonnet]
 
 > **以下门禁全部通过后才能进行五维度评分。任何一项不通过 = 布局错误，必须先修复。**
+>
+> **必须先运行脚本化门禁**：
+>
+> ```bash
+> bun run prototype:gates -- --prototype docs/designs/specs/prototypes/<page>.html
+> ```
+>
+> 命令 exit code 非 0 时，STOP 修复，不进入评分。输出截图和报告在 `test-results/ditto-design-cycle-gates/`。
 
 #### Gate 0: 原型工具 UI 隔离
 - `.proto-nav` 不可见（`getBoundingClientRect().height === 0` 或不在 default-view 中）
@@ -207,12 +221,19 @@
 - rail / header / main / sidebar 高度 > 0
 
 #### Gate 3: 浏览器视觉验证
-- **必须执行 `browser_take_screenshot`** 并对截图进行视觉检查
+- 脚本必须生成 VP-STANDARD / VP-COMPACT fullPage 截图
+- **必须基于脚本输出截图继续进行人工/AI 视觉检查**
 - 检查页面整体布局是否符合预期
 - 检查无元素错位/重叠/溢出
 - 检查原型工具 UI 未污染产品视图
 
-**失败处理**：Gate 0-2 不通过 → STOP 修复。Gate 3 不通过 → 视觉问题严重程度扣除 1-3 分。
+#### Gate 4: 交互功能完整性
+- 读取 Phase 1 步骤 10 产出的「交互元素清单」
+- 对清单中每个交互元素执行 Playwright 验证（详见 [review-scoring.md](review-scoring.md) Gate 4）
+- Tab 切换、Overlay 开闭、Toggle 切换、三区切换、Hover 反馈逐一验证
+- ≥ 50% 通过 → 降分（扣 1-2 分）；< 50% → STOP 修复
+
+**失败处理**：Gate 0-2 不通过 → STOP 修复。Gate 3 不通过 → 视觉问题严重程度扣除 1-3 分。Gate 4 不通过（< 50%）→ STOP 修复。Gate 4 不通过（≥ 50%）→ 扣除 1-2 分。
 
 ### Step 8.1: 零 Inline Style 门禁 [sonnet]
 

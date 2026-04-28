@@ -5,7 +5,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function ProviderTable() {
-	const { data, isLoading, isError, refetch } = useProviders();
+	const { data, isLoading, refetch } = useProviders();
 
 	return (
 		<ContextSection title="Data Providers" count={data?.providers.length} data-info-level="l1" data-info-unit="providers">
@@ -33,7 +33,7 @@ export function ProviderTable() {
 													? "degraded"
 													: "error"
 										}
-										label={provider.statusText ?? provider.status}
+										label={provider.status}
 										size="sm"
 									/>
 								</div>

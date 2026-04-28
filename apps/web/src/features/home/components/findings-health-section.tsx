@@ -5,12 +5,11 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function FindingsAndHealthSection() {
-	const {
-		data: findingsData,
-		isLoading: findingsLoading,
-		isError: findingsError,
-		refetch: refetchFindings,
-	} = useAgentFindings();
+		const {
+			data: findingsData,
+			isLoading: findingsLoading,
+			refetch: refetchFindings,
+		} = useAgentFindings();
 
 	const {
 		data: healthData,

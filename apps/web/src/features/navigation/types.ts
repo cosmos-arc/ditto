@@ -1,4 +1,4 @@
-/** 6 大业务域定义 */
+/** 5 大产品业务域定义；AI 作为嵌入式能力存在，不再作为独立产品域。 */
 export interface Domain {
 	/** 域标识 */
 	readonly id: DomainId;
@@ -13,7 +13,6 @@ export type DomainId =
 	| "markets"
 	| "research"
 	| "trading"
-	| "ai"
 	| "platform";
 
 /** 所有域配置 */
@@ -22,6 +21,5 @@ export const DOMAINS: readonly Domain[] = [
 	{ id: "markets", label: "市场", path: "/markets" },
 	{ id: "research", label: "研究", path: "/research" },
 	{ id: "trading", label: "交易", path: "/trading" },
-	{ id: "ai", label: "AI", path: "/ai" },
 	{ id: "platform", label: "平台", path: "/platform" },
 ] as const;

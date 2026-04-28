@@ -13,9 +13,9 @@ const sheetVariants = cva(
 				top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
 				bottom:
 					"inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-				left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
+				left: "inset-y-0 left-0 h-full w-(--width-drawer) max-w-(--width-drawer) border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
 				right:
-					"inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+					"inset-y-0 right-0 h-full w-(--width-drawer) max-w-(--width-drawer) border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
 			},
 		},
 		defaultVariants: {
@@ -34,16 +34,35 @@ function SheetTrigger({
 	return <DialogPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
 
+function CloseIcon() {
+	return (
+		<svg width={16} height={16} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+			<path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+		</svg>
+	);
+}
+
 function SheetClose({
+	className,
+	children,
+	"aria-label": ariaLabel = "Close",
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
 	return (
 		<DialogPrimitive.Close
 			data-slot="sheet-close"
-			aria-label="Close"
-			className="absolute top-4 right-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+			aria-label={ariaLabel}
+			className={cn(
+				"absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-(--radius-md)",
+				"text-(--color-foreground-tertiary) transition-colors",
+				"hover:bg-(--color-interaction-hover-subtle-bg) hover:text-(--color-foreground)",
+				"focus:outline-none focus:ring-2 focus:ring-(--color-focus-ring)",
+				className,
+			)}
 			{...props}
-		/>
+		>
+			{children ?? <CloseIcon />}
+		</DialogPrimitive.Close>
 	);
 }
 
@@ -61,7 +80,7 @@ function SheetOverlay({
 		<DialogPrimitive.Overlay
 			data-slot="sheet-overlay"
 			className={cn(
-				"fixed inset-0 z-50 bg-black/50",
+				"fixed inset-0 z-50 bg-(--color-surface-overlay) opacity-[var(--opacity-overlay)]",
 				"data-[state=open]:animate-in data-[state=open]:fade-in-0",
 				"data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
 				className,
@@ -100,7 +119,7 @@ function SheetContent({
 			>
 				{children}
 				{showClose && (
-					<SheetClose>&times;</SheetClose>
+					<SheetClose aria-label="Close" />
 				)}
 			</DialogPrimitive.Content>
 		</SheetPortal>
@@ -147,7 +166,7 @@ function SheetTitle({
 		<DialogPrimitive.Title
 			data-slot="sheet-title"
 			className={cn(
-				"text-lg font-semibold leading-none tracking-tight text-(--color-foreground-primary)",
+				"text-lg font-semibold leading-none tracking-tight text-(--color-foreground)",
 				className,
 			)}
 			{...props}

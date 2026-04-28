@@ -4,7 +4,10 @@ import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
-const RUN_VARIANT: Record<string, "healthy" | "degraded" | "warning" | "error"> = {
+const RUN_VARIANT: Record<
+	string,
+	"healthy" | "degraded" | "warning" | "error" | "default"
+> = {
 	completed: "healthy",
 	running: "healthy",
 	pending: "default",
@@ -20,7 +23,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export function RecentRuns() {
-	const { data, isLoading, isError, refetch } = useResearchRuns();
+	const { data, isLoading, refetch } = useResearchRuns();
 
 	return (
 		<ContextSection title="近期运行" count={data?.total}>

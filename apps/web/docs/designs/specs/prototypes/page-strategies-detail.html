@@ -610,6 +610,12 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .chart-axis-label {
+      fill: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+    }
+
     /* ── Status Badge ── */
     .status-badge {
       display: inline-flex;
@@ -682,6 +688,10 @@
     }
 
     /* ── Tab Panels ── */
+    .tab-group {
+      display: contents;
+    }
+
     .tab-panels {
       display: contents;
     }
@@ -691,6 +701,9 @@
       height: 100%;
       overflow: hidden;
       min-height: 0;
+    }
+    .tab-panel > .hub-main {
+      flex: 1;
     }
 
     @keyframes tab-panel-enter {
@@ -954,7 +967,7 @@
     }
 
     /* Inline style cleanup */
-    .sd-panel-merge { margin-top: var(--rhythm-merge-gap); flex-shrink: 0; }
+    .sd-panel-merge { margin-top: var(--rhythm-merge-gap); flex: 0 0 auto; }
     .sd-panel-body-flex { display: flex; gap: var(--space-12); padding: var(--space-8) var(--space-12); }
     .sd-flex-center-gap4-text12 { display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-12); }
     .sd-flex-between-center { display: flex; align-items: center; justify-content: space-between; }
@@ -996,7 +1009,7 @@
     .sd-divider-v { width: 1px; background: var(--border-subtle); }
     .sd-font-numeric { font-family: var(--font-family-numeric); }
     .sd-text10 { font-size: var(--font-size-10); }
-    .sd-shrink0 { flex-shrink: 0; }
+    .sd-shrink0 { flex: 0 0 auto; }
     .sd-flex1 { flex: 1; }
     .sd-flex1-minh0 { flex: 1; min-height: 0; }
     .sd-flex1-merge { flex: 1; margin-top: var(--rhythm-merge-gap); }
@@ -1049,35 +1062,30 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Strategy Detail · Compact · 多因子</div>
 
-  <div class="shell-hub">
+  <div class="shell-hub object-shell">
     <!-- ══════════════════════════════════════════════
          Rail
          ══════════════════════════════════════════════ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ══════════════════════════════════════════════
@@ -1099,28 +1107,37 @@
         <div class="spacer"></div>
 
         <div class="header-actions" role="toolbar" aria-label="页面操作">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 10.5a7.5 7.5 0 11-5-7.1A7.5 7.5 0 0017.5 10.5z"/></svg>
-              </button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2m0 12v2m-8-8h2m12 0h2m-2.5-5.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-              </button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
+        </div>
           <div class="meta-sep-line"></div>
-          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知">
+          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" data-shell-utility="notifications">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
             <span class="badge-dot"></span>
           </div>
-          <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">陈</div>
+          
         </div>
 
         <div class="header-ctas">
@@ -1197,42 +1214,42 @@
         <label for="strat-versions" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-versions">版本</label>
       </div>
 
-      <div class="tab-panels" id="main-content" data-contract-slot="main">
+      <div class="tab-panels" id="main-content">
 
         <!-- ══════════════════════════════════════════════
              Tab 1: Overview
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="strat-overview" data-tab-panel="strat-overview">
-          <div class="hub-main">
+          <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- KPI Strip: 5 metrics -->
               <div class="metrics-grid">
                 <div class="metric-card">
                   <span class="metric-label">Sharpe</span>
-                  <span class="metric-value" data-ticker="1.82" data-ticker-prefix="" data-decimals="2">0.00</span>
+                  <span class="metric-value">1.82</span>
                   <span class="metric-change up">
                     <svg class="sparkline-placeholder" viewBox="0 0 80 28"><path d="M0 24 L12 20 L24 16 L36 14 L48 10 L60 6 L72 8 L80 4" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5" opacity="0.6"/></svg>
                   </span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">年化收益</span>
-                  <span class="metric-value" data-ticker="18.2" data-ticker-prefix="+" data-ticker-suffix="%" data-decimals="1">+0.0%</span>
+                  <span class="metric-value">+18.2%</span>
                   <span class="metric-change up">▲ +2.3% <span class="metric-change-time">30D</span></span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">最大回撤</span>
-                  <span class="metric-value" data-ticker="-12.3" data-ticker-prefix="" data-ticker-suffix="%" data-decimals="1">0.0%</span>
+                  <span class="metric-value">-12.3%</span>
                   <span class="metric-change down">▼ -1.8% <span class="metric-change-time">30D</span></span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">胜率</span>
-                  <span class="metric-value" data-ticker="58.2" data-ticker-prefix="" data-ticker-suffix="%" data-decimals="1">0.0%</span>
+                  <span class="metric-value">58.2%</span>
                   <span class="metric-change up">▲ +1.5% <span class="metric-change-time">30D</span></span>
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">换手率</span>
-                  <span class="metric-value" data-ticker="3.2" data-ticker-prefix="" data-ticker-suffix="x" data-decimals="1">0.0x</span>
+                  <span class="metric-value">3.2x</span>
                   <span class="metric-change down">▼ +0.4x <span class="metric-change-time">30D</span></span>
                 </div>
               </div>
@@ -1286,9 +1303,9 @@
                       </linearGradient>
                     </defs>
                     <!-- Y-axis labels -->
-                    <text x="0" y="14" fill="var(--text-tertiary)" font-size="9" font-family="var(--font-family-numeric)">1.08</text>
-                    <text x="0" y="64" fill="var(--text-tertiary)" font-size="9" font-family="var(--font-family-numeric)">1.04</text>
-                    <text x="0" y="94" fill="var(--text-tertiary)" font-size="9" font-family="var(--font-family-numeric)">1.02</text>
+                    <text x="0" y="14" class="chart-axis-label">1.08</text>
+                    <text x="0" y="64" class="chart-axis-label">1.04</text>
+                    <text x="0" y="94" class="chart-axis-label">1.02</text>
                     <!-- Grid lines -->
                     <line x1="28" y1="15" x2="400" y2="15" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
                     <line x1="28" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/>
@@ -1302,7 +1319,7 @@
                     <!-- Benchmark -->
                     <path d="M28 85 L68 82 L108 80 L148 78 L188 76 L228 74 L268 72 L308 70 L348 68 L388 66 L400 65" fill="none" stroke="var(--text-tertiary)" stroke-width="1" stroke-dasharray="3"/>
                     <!-- Benchmark label -->
-                    <text x="402" y="68" fill="var(--text-tertiary)" font-size="8" font-family="var(--font-family-numeric)">HS300</text>
+                    <text x="398" y="68" class="chart-axis-label" text-anchor="end">HS300</text>
                   </svg>
                 </div>
               </div>
@@ -1357,7 +1374,7 @@
             </div>
 
             <!-- Sidebar -->
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">关联 Universe</div>
                 <div class="sd-label-secondary-mb4">沪深300 指数成分股</div>
@@ -1402,7 +1419,6 @@
                   </div>
                 </div>
                 </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1411,7 +1427,7 @@
              Tab 2: Config
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="strat-config" data-tab-panel="strat-config">
-          <div class="hub-main">
+          <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- Factor List -->
@@ -1547,7 +1563,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">Universe 详情</div>
                 <div class="sd-label-secondary-mb4">沪深300 指数</div>
@@ -1591,7 +1607,7 @@
              Tab 3: Backtests (with inline compare)
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="strat-backtests" data-tab-panel="strat-backtests">
-          <div class="hub-main">
+          <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- Compare selection bar -->
@@ -1728,7 +1744,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">配置差异摘要</div>
                 <div class="sd-text12-secondary-col-gap6">
@@ -1759,7 +1775,7 @@
              Tab 4: Signals
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="strat-signals" data-tab-panel="strat-signals">
-          <div class="hub-main">
+          <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- Signal Stats -->
@@ -1846,7 +1862,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">置信度分布</div>
                 <div class="sd-flex-col-gap6">
@@ -1875,7 +1891,7 @@
              Tab 5: Versions
              ══════════════════════════════════════════════ -->
         <div class="tab-panel" data-panel="strat-versions" data-tab-panel="strat-versions">
-          <div class="hub-main">
+          <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- Version Timeline -->
@@ -1917,7 +1933,7 @@
 
             </div>
 
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">版本对比</div>
                 <div class="sd-text12-secondary-col-gap6">
@@ -1980,6 +1996,7 @@
       </div>
     </div>
 
+  </div><!-- /shell-hub -->
   </section>
 
   <!-- ══════════════════════════════════════════════
@@ -2205,7 +2222,7 @@
         <div class="gallery-cards">
 
           <!-- Overlay 1: Delete Strategy (Modal) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-delete-strategy">
             <div class="gallery-card__label">删除策略 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
               <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="删除策略">
@@ -2230,10 +2247,10 @@
           </div>
 
           <!-- Overlay 2: Submit Backtest (Sheet) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-submit-backtest">
             <div class="gallery-card__label">提交回测 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="提交回测">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="提交回测">
                 <div class="overlay-header">
                   <span class="overlay-title">回测参数配置</span>
                 </div>
@@ -2272,7 +2289,7 @@
           </div>
 
           <!-- Overlay 3: Copy Strategy (Modal) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-copy-strategy">
             <div class="gallery-card__label">复制策略 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
               <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="复制策略">
@@ -2294,7 +2311,7 @@
           </div>
 
           <!-- Overlay 4: Version Rollback (Modal) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-version-rollback">
             <div class="gallery-card__label">版本回滚 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
               <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="版本回滚">

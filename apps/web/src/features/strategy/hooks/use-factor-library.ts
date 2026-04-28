@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, withQueryParams } from "@/lib/api-client";
 import type {
 	GetFactorLibraryResponse,
 	PaginatedRequest,
@@ -9,6 +9,8 @@ export function useFactorLibrary(params?: PaginatedRequest) {
 	return useQuery({
 		queryKey: ["factor-library", params],
 		queryFn: () =>
-			apiClient.get<GetFactorLibraryResponse>("/factor-library", params),
+			apiClient.get<GetFactorLibraryResponse>(
+				withQueryParams("/factor-library", params),
+			),
 	});
 }

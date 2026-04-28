@@ -45,11 +45,11 @@
 
   /* ── Heatmap ── */
   /* Sequential scale: single-direction magnitude (5 steps) */
-  --heatmap-1-bg:                oklch(from var(--market-down-fg) l c h / 0.06);
-  --heatmap-2-bg:                oklch(from var(--market-down-fg) l c h / 0.15);
+  --heatmap-1-bg:                oklch(from var(--market-down-fg) l c h / 0.12);
+  --heatmap-2-bg:                oklch(from var(--market-down-fg) l c h / 0.24);
   --heatmap-3-bg:                oklch(1 0 0 / 0.00);              /* neutral midpoint */
-  --heatmap-4-bg:                oklch(from var(--market-up-fg) l c h / 0.15);
-  --heatmap-5-bg:                oklch(from var(--market-up-fg) l c h / 0.30);
+  --heatmap-4-bg:                oklch(from var(--market-up-fg) l c h / 0.24);
+  --heatmap-5-bg:                oklch(from var(--market-up-fg) l c h / 0.42);
 
   /* ── Asset Class Colors (7 qualitative colors, Paul Tol bright, colorblind-safe) ── */
   --asset-equity:                oklch(0.623 0.127 252);     /* blue */

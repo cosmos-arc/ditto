@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { CopilotSidecar } from "@/features/copilot";
 import { Rail } from "./rail";
 import { ShellHeader } from "./header";
 import { NoiseLayer } from "./noise-layer";
@@ -12,6 +13,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
 	const activeDomain = useActiveDomain();
+	const [isCopilotOpen, setIsCopilotOpen] = useState(false);
 	useAtmosphere();
 
 	useEffect(() => {
@@ -30,11 +32,12 @@ export function AppShell({ children }: AppShellProps) {
 				<Rail />
 			</div>
 			<div className="col-start-2">
-				<ShellHeader />
+				<ShellHeader onOpenCopilot={() => setIsCopilotOpen(true)} />
 			</div>
 			<div className="relative col-start-2 row-start-2 min-h-0 overflow-hidden">
 				{children}
 			</div>
+			<CopilotSidecar open={isCopilotOpen} onOpenChange={setIsCopilotOpen} />
 			<NoiseLayer />
 		</div>
 	);

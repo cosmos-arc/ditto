@@ -1,7 +1,6 @@
 import type {
 	GetOrderDetailResponse,
 	GetOrdersResponse,
-	Order,
 } from "@/types";
 
 export const mockOrders: GetOrdersResponse = {

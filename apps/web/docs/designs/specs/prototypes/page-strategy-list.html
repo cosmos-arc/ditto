@@ -46,9 +46,41 @@
       border: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-8);
       border-radius: var(--radius-4); pointer-events: none; letter-spacing: 0.02em;
     }
+    .skip-link {
+      position: absolute; left: -9999px; top: 0; z-index: 999;
+      padding: var(--space-4) var(--space-8); border-radius: var(--radius-4);
+      background: var(--surface-overlay); color: var(--text-primary);
+      font-size: var(--font-size-12);
+    }
+    .skip-link:focus { left: var(--space-16); }
     .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0.01em; }
     .header-title-group { display: flex; align-items: baseline; }
     .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
+
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header"
+        "rail toolbar toolbar"
+        "rail summary detail"
+        "rail table   detail";
+      contain: paint;
+    }
+    .shell-catalog .shell-header {
+      background: var(--surface-frosted);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: relative;
+    }
+    .shell-catalog .shell-header::after {
+      content: '';
+      position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+      background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 28%, transparent) 50%, transparent 100%);
+      pointer-events: none;
+    }
+    .shell-catalog .catalog-detail {
+      box-shadow: inset 4px 0 10px -6px var(--overlay-3);
+    }
 
     .catalog-table-inner { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
     .catalog-table-inner .table-container { flex: 1; overflow-y: auto; background: var(--surface-app); }
@@ -60,29 +92,100 @@
       font-weight: var(--font-weight-medium); padding: 1px var(--space-8);
       border-radius: var(--radius-12); white-space: nowrap;
     }
-    .status-pill.active { background: var(--market-up-bg); color: var(--market-up-fg); }
+    .status-pill.active { background: var(--system-healthy-bg); color: var(--system-healthy-fg); }
     .status-pill.paused { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
     .status-pill.draft { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
     .status-pill.archived { background: transparent; color: var(--text-tertiary); }
 
     /* ── Performance summary strip ── */
     .perf-summary {
-      display: flex; align-items: center; gap: var(--space-16);
+      grid-area: summary; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: center; gap: var(--space-12);
       padding: var(--space-6) var(--density-gutter);
       background: var(--surface-strip); border-bottom: 1px solid var(--border-subtle);
-      height: var(--density-strip-height);
+      min-height: var(--density-strip-height);
     }
-    .perf-item { display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-10); color: var(--text-tertiary); }
-    .perf-item .perf-value { font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary); }
+    .perf-item { min-width: 0; display: flex; align-items: center; gap: var(--space-6); font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .perf-item .perf-label { white-space: nowrap; }
+    .perf-item .perf-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-family-numeric); font-size: var(--font-size-12); color: var(--text-secondary); }
+    .perf-item .perf-value.strategy-name { font-family: var(--font-family-ui); font-weight: var(--font-weight-medium); color: var(--text-primary); }
     .perf-item .perf-value.positive { color: var(--market-up-fg); }
     .perf-item .perf-value.negative { color: var(--market-down-fg); }
-    .perf-separator { width: 1px; height: 10px; background: var(--border-subtle); }
+    .perf-separator { display: none; }
+
+    .strategy-name-stack { display: flex; flex-direction: column; gap: 1px; }
+    .strategy-name-stack .cell-ticker { line-height: 1.2; }
+    .strategy-meta { font-size: var(--font-size-10); color: var(--text-tertiary); line-height: 1.2; }
+    .metric-delta { margin-right: var(--space-4); color: currentColor; font-size: var(--font-size-10); }
+    .metric-risk { color: var(--risk-medium-fg); }
+    .data-table tr.row { cursor: pointer; }
+    .col-strategy-name { width: 22%; }
+    .col-strategy-type, .col-strategy-status, .col-strategy-sharpe, .col-strategy-mdd { width: 10%; }
+    .col-strategy-return, .col-strategy-action { width: 12%; }
+    .col-strategy-run { width: 14%; }
+    .data-table tr.row:focus-visible { outline: 1px solid var(--brand-accent); outline-offset: -1px; }
+    .data-table th.sorted { color: var(--text-secondary); }
+    .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
+    .row-action {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 24px; padding: 0 var(--space-6); border-radius: var(--radius-4);
+      color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-12);
+    }
+    .row-action:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .row-action.danger:hover { color: var(--risk-high-fg); }
+
+    .catalog-detail .context-section { flex: 0 0 auto; }
+    .catalog-detail .context-section:nth-child(3) { flex: 1 1 auto; min-height: 0; }
+    .catalog-detail .context-section-body { flex: 0 0 auto; overflow: visible; }
+    .catalog-detail .context-section:nth-child(3) .context-section-body { overflow-y: auto; }
+    .detail-ticker {
+      font-size: var(--font-size-20); line-height: 1.15; letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .detail-hero {
+      display: grid; gap: var(--space-10);
+      padding: var(--space-2) 0 var(--space-8);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .detail-title-line { display: grid; gap: var(--space-6); }
+    .detail-live-chip {
+      display: inline-flex; align-items: center; gap: var(--space-4);
+      min-height: 24px; padding: 0 var(--space-8); border-radius: var(--radius-12);
+      background: var(--system-healthy-bg); color: var(--system-healthy-fg);
+      font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
+      justify-self: start;
+    }
+    .detail-live-chip::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; opacity: var(--data-freshness-live);
+    }
+    .detail-kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); }
+    .detail-kpi {
+      padding: var(--space-8); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4); background: var(--surface-muted);
+    }
+    .detail-kpi-label { display: block; color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .detail-kpi-value { display: block; margin-top: var(--space-2); color: var(--text-primary); font-family: var(--font-family-numeric); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); }
+    .equity-sparkline {
+      width: 100%; height: 56px; color: var(--brand-accent);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .equity-sparkline .spark-area { fill: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
+    .equity-sparkline .spark-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .detail-actions { display: grid; gap: var(--space-8); }
+    .detail-actions .btn, .detail-actions .row-action { width: 100%; }
+    .detail-actions .row-action {
+      border: 1px solid var(--border-default); color: var(--text-secondary);
+    }
+    .detail-actions .row-action:hover {
+      border-color: var(--brand-accent); color: var(--brand-accent);
+    }
 
     /* ── Overlay activation ── */
     :root:has(#overlay-strategy-clone:checked) [data-overlay="overlay-strategy-clone"] { display: flex; }
     :root:has(#overlay-strategy-delete:checked) [data-overlay="overlay-strategy-delete"] { display: flex; }
 
-    .overlay-sheet .overlay-header, .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header, .overlay-surface .overlay-header {
       display: flex; align-items: center; justify-content: space-between;
       padding-bottom: var(--space-12); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-12);
     }
@@ -97,6 +200,7 @@
     .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
     .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
     .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
+    .ov-label-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; }
     .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
     .overlay-field-label { color: var(--text-tertiary); }
     .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
@@ -116,6 +220,11 @@
 
     .checkbox { width: var(--checkbox-size); height: var(--checkbox-size); border: 1px solid var(--border-default); border-radius: var(--radius-2); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .checkbox.checked { background: var(--brand-accent); border-color: var(--brand-accent); }
+    .skeleton-bar { height: 12px; width: 100%; }
+    .state-loading .skeleton-bar:nth-child(2) { width: 86%; }
+    .state-loading .skeleton-bar:nth-child(3) { width: 72%; }
+    .state-loading .skeleton-bar:nth-child(4) { width: 94%; }
+    .state-loading .skeleton-bar:nth-child(5) { width: 64%; }
 
     @media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } }
   </style>
@@ -134,35 +243,31 @@
     <a class="skip-link" href="#main-content">跳至主要内容</a>
     <div class="style-label">Graphite Studio — 策略列表 · Compact · A股</div>
 
-    <div class="shell-catalog">
+    <div class="shell-catalog catalog-shell">
       <!-- ═══ Rail ═══ -->
       <nav class="shell-rail" aria-label="主导航">
         <div class="rail-logo">D</div>
         <div class="rail-nav" role="list">
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页" data-rail-domain="home">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="市场">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="市场" data-rail-domain="markets">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
           </div>
-          <div class="rail-icon active" role="listitem" tabindex="0" aria-label="研究" aria-current="page">
+          <div class="rail-icon active" role="listitem" tabindex="0" aria-label="研究" aria-current="page" data-rail-domain="research">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易" data-rail-domain="trading">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI" data-rail-domain="platform">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           </div>
           <div class="rail-icon" role="listitem" tabindex="0" aria-label="运维">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
           </div>
         </div>
-        <div class="rail-bottom" role="list">
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-          </div>
-        </div>
+        
       </nav>
 
       <!-- ═══ Header ═══ -->
@@ -176,24 +281,40 @@
           <button class="btn btn-primary">新建策略</button>
         </div>
         <div class="header-btn-group">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
-          <button class="header-action-btn" title="通知" aria-label="通知">
+        </div>
+          <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           </button>
-          <button class="header-avatar" aria-label="用户菜单">C</button>
+          
         </div>
-      </header>
+      
+      <div class="header-actions header-utility-bar">
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+      </div>
+    </header>
 
       <!-- ═══ Filter Toolbar ═══ -->
       <div class="filter-toolbar" data-contract-slot="header">
@@ -219,29 +340,30 @@
           <button class="filter-chip">草稿</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count">共 <span>6 个策略</span></span>
+        <span class="filter-count">共 <span>12 个策略</span></span>
       </div>
 
       <!-- ═══ Performance Summary ═══ -->
-      <div class="perf-summary">
+      <div class="perf-summary" aria-label="策略绩效摘要">
         <div class="perf-item">
           <span class="perf-label">运行中</span>
-          <span class="perf-value positive">3</span>
+          <span class="perf-value positive">5</span>
         </div>
-        <div class="perf-separator"></div>
         <div class="perf-item">
           <span class="perf-label">平均 Sharpe</span>
-          <span class="perf-value positive">1.42</span>
+          <span class="perf-value positive">1.51</span>
         </div>
-        <div class="perf-separator"></div>
         <div class="perf-item">
           <span class="perf-label">平均年化</span>
-          <span class="perf-value positive">18.6%</span>
+          <span class="perf-value positive">19.0%</span>
         </div>
-        <div class="perf-separator"></div>
         <div class="perf-item">
           <span class="perf-label">最大回撤</span>
-          <span class="perf-value negative">-12.3%</span>
+          <span class="perf-value negative">-14.7%</span>
+        </div>
+        <div class="perf-item">
+          <span class="perf-label">最佳策略</span>
+          <span class="perf-value strategy-name">Alpha-Momentum-v3</span>
         </div>
       </div>
 
@@ -250,72 +372,216 @@
         <div class="catalog-table-inner" id="main-content">
           <div class="table-container">
             <table class="data-table" aria-label="策略列表">
-              <caption class="sr-only">策略列表：共 6 个策略</caption>
+              <caption class="sr-only">策略列表：共 12 个策略</caption>
+              <colgroup>
+                <col class="col-strategy-name">
+                <col class="col-strategy-type">
+                <col class="col-strategy-status">
+                <col class="col-strategy-sharpe">
+                <col class="col-strategy-return">
+                <col class="col-strategy-mdd">
+                <col class="col-strategy-run">
+                <col class="col-strategy-action">
+              </colgroup>
               <thead>
                 <tr>
-                  <th scope="col">名称 <span class="sort-icon">▲</span></th>
+                  <th scope="col" class="sorted">名称 <span class="sort-icon">▲</span></th>
                   <th scope="col">类型</th>
                   <th scope="col">状态</th>
                   <th scope="col" class="right">Sharpe <span class="sort-icon"></span></th>
                   <th scope="col" class="right">年化收益 <span class="sort-icon"></span></th>
+                  <th scope="col" class="right">MDD <span class="sort-icon"></span></th>
                   <th scope="col" class="right">最近运行</th>
+                  <th scope="col" class="right">操作</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="row selected">
-                  <td class="cell-ticker">Alpha-Momentum-v3</td>
+                <tr class="row selected" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Alpha-Momentum-v3</span>
+                      <span class="strategy-meta">v3.8 · 6 因子 · A股动量</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">Alpha</span></td>
                   <td><span class="status-pill active">运行中</span></td>
                   <td class="right numeric cell-change-up">1.85</td>
-                  <td class="right numeric cell-change-up">24.3%</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>24.3%</td>
+                  <td class="right numeric metric-risk">-8.2%</td>
                   <td class="right numeric">2026-04-21</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">Multi-Factor-Enhanced</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Multi-Factor-Enhanced</span>
+                      <span class="strategy-meta">v2.4 · 质量/价值/动量</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">多因子</span></td>
                   <td><span class="status-pill active">运行中</span></td>
                   <td class="right numeric cell-change-up">1.62</td>
-                  <td class="right numeric cell-change-up">21.8%</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>21.8%</td>
+                  <td class="right numeric metric-risk">-9.7%</td>
                   <td class="right numeric">2026-04-21</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">Sector-Rotation</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">ETF-Rotation-Plus</span>
+                      <span class="strategy-meta">v1.9 · ETF 轮动 · 周频</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">行业轮动</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric cell-change-up">1.47</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>19.4%</td>
+                  <td class="right numeric metric-risk">-10.1%</td>
+                  <td class="right numeric">2026-04-21</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Sector-Rotation</span>
+                      <span class="strategy-meta">v2.1 · 申万一级 · 月频</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">行业轮动</span></td>
                   <td><span class="status-pill active">运行中</span></td>
                   <td class="right numeric">1.35</td>
-                  <td class="right numeric cell-change-up">16.2%</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>16.2%</td>
+                  <td class="right numeric metric-risk">-11.4%</td>
                   <td class="right numeric">2026-04-20</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">Timing-Macro</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Intraday-Reversion</span>
+                      <span class="strategy-meta">v1.3 · 日内反转 · T+1 校验</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">择时</span></td>
+                  <td><span class="status-pill active">运行中</span></td>
+                  <td class="right numeric">1.28</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>13.4%</td>
+                  <td class="right numeric metric-risk">-6.8%</td>
+                  <td class="right numeric">2026-04-21</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">CSI500-Quality</span>
+                      <span class="strategy-meta">v1.7 · 质量增强 · 中证500</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">多因子</span></td>
+                  <td><span class="status-pill paused">已暂停</span></td>
+                  <td class="right numeric">1.14</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>11.9%</td>
+                  <td class="right numeric metric-risk">-9.6%</td>
+                  <td class="right numeric">2026-04-18</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Timing-Macro</span>
+                      <span class="strategy-meta">v4.0 · 宏观择时 · 风控中</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">择时</span></td>
                   <td><span class="status-pill paused">已暂停</span></td>
                   <td class="right numeric">0.92</td>
                   <td class="right numeric">12.1%</td>
+                  <td class="right numeric metric-risk">-12.3%</td>
                   <td class="right numeric">2026-04-15</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">Low-Vol-Alpha</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Risk-Parity-CN</span>
+                      <span class="strategy-meta">v2.0 · 风险平价 · 月调仓</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">多因子</span></td>
+                  <td><span class="status-pill paused">已暂停</span></td>
+                  <td class="right numeric">0.88</td>
+                  <td class="right numeric">9.2%</td>
+                  <td class="right numeric metric-risk">-4.9%</td>
+                  <td class="right numeric">2026-04-13</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Low-Vol-Alpha</span>
+                      <span class="strategy-meta">v0.9 · 低波 Alpha · 草稿</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">Alpha</span></td>
                   <td><span class="status-pill draft">草稿</span></td>
                   <td class="right numeric cell-change-down">0.68</td>
                   <td class="right numeric">8.5%</td>
+                  <td class="right numeric metric-risk">-5.4%</td>
                   <td class="right numeric">2026-04-10</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
                 </tr>
-                <tr class="row">
-                  <td class="cell-ticker">ML-Ensemble-v2</td>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Event-Driven-AI</span>
+                      <span class="strategy-meta">v0.4 · 事件驱动 · 待验证</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">Alpha</span></td>
+                  <td><span class="status-pill draft">草稿</span></td>
+                  <td class="right numeric">1.05</td>
+                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>15.1%</td>
+                  <td class="right numeric metric-risk">-14.7%</td>
+                  <td class="right numeric">2026-04-09</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">ML-Ensemble-v2</span>
+                      <span class="strategy-meta">v2.0 · 集成学习 · 版本封存</span>
+                    </div>
+                  </td>
                   <td><span class="cell-badge sector">多因子</span></td>
                   <td><span class="status-pill draft">草稿</span></td>
                   <td class="right numeric">1.10</td>
                   <td class="right numeric">14.6%</td>
+                  <td class="right numeric metric-risk">-13.2%</td>
                   <td class="right numeric">2026-04-08</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                </tr>
+                <tr class="row" tabindex="0">
+                  <td>
+                    <div class="strategy-name-stack">
+                      <span class="cell-ticker">Dividend-LowVol</span>
+                      <span class="strategy-meta">v1.1 · 红利低波 · 归档</span>
+                    </div>
+                  </td>
+                  <td><span class="cell-badge sector">Alpha</span></td>
+                  <td><span class="status-pill archived">归档</span></td>
+                  <td class="right numeric">0.74</td>
+                  <td class="right numeric">7.8%</td>
+                  <td class="right numeric metric-risk">-5.8%</td>
+                  <td class="right numeric">2026-03-28</td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="table-footer">
             <div class="table-footer-info">
-              <span>共 6 个策略</span>
+              <span>共 12 个策略</span>
             </div>
             <div class="table-footer-actions">
               <span class="pagination-ellipsis">...</span>
@@ -331,36 +597,69 @@
             <span class="context-section-title">策略详情</span>
           </div>
           <div class="context-section-body">
-            <div class="detail-header">
-              <div class="detail-ticker">Alpha-Momentum-v3</div>
+            <div class="detail-hero">
+              <div class="detail-title-line">
+                <div class="detail-ticker">Alpha-Momentum-v3</div>
+                <span class="detail-live-chip">运行中</span>
+              </div>
               <div class="detail-meta">
                 <span><span class="meta-label">类型</span><span class="meta-value">Alpha</span></span>
-                <span><span class="meta-label">状态</span><span class="meta-value">运行中</span></span>
+                <span><span class="meta-label">版本</span><span class="meta-value">v3.8</span></span>
+              </div>
+              <svg class="equity-sparkline" viewBox="0 0 240 56" role="img" aria-label="策略净值曲线">
+                <path class="spark-area" d="M0 44 L18 38 L36 41 L54 31 L72 34 L90 25 L108 28 L126 19 L144 21 L162 14 L180 18 L198 10 L216 13 L240 6 L240 56 L0 56 Z"></path>
+                <path class="spark-line" d="M0 44 L18 38 L36 41 L54 31 L72 34 L90 25 L108 28 L126 19 L144 21 L162 14 L180 18 L198 10 L216 13 L240 6"></path>
+              </svg>
+              <div class="strategy-meta">最近运行 2026-04-21 14:35 · 数据同步 18 秒前 · 无风控阻断</div>
+            </div>
+          </div>
+        </div>
+        <div class="context-section">
+          <div class="context-section-header">
+            <span class="context-section-title">关键指标</span>
+          </div>
+          <div class="context-section-body">
+            <div class="detail-kpi-grid">
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">Sharpe</span>
+                <span class="detail-kpi-value">1.85</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">年化收益</span>
+                <span class="detail-kpi-value">24.3%</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">最大回撤</span>
+                <span class="detail-kpi-value">-8.2%</span>
+              </div>
+              <div class="detail-kpi">
+                <span class="detail-kpi-label">Calmar</span>
+                <span class="detail-kpi-value">2.96</span>
               </div>
             </div>
           </div>
         </div>
         <div class="context-section">
           <div class="context-section-header">
-            <span class="context-section-title">绩效</span>
+            <span class="context-section-title">运行上下文</span>
           </div>
           <div class="context-section-body">
             <div class="detail-section">
               <div class="overlay-field">
-                <span class="overlay-field-label">Sharpe</span>
-                <span class="overlay-field-value">1.85</span>
+                <span class="overlay-field-label">Universe</span>
+                <span class="overlay-field-value">沪深300</span>
               </div>
               <div class="overlay-field">
-                <span class="overlay-field-label">年化收益</span>
-                <span class="overlay-field-value">24.3%</span>
+                <span class="overlay-field-label">调仓频率</span>
+                <span class="overlay-field-value">周频</span>
               </div>
               <div class="overlay-field">
-                <span class="overlay-field-label">最大回撤</span>
-                <span class="overlay-field-value">-8.2%</span>
+                <span class="overlay-field-label">交易约束</span>
+                <span class="overlay-field-value">T+1 / 涨跌停</span>
               </div>
               <div class="overlay-field">
-                <span class="overlay-field-label">Calmar</span>
-                <span class="overlay-field-value">2.96</span>
+                <span class="overlay-field-label">下游信号</span>
+                <span class="overlay-field-value">43 条 / 今日</span>
               </div>
             </div>
           </div>
@@ -372,17 +671,170 @@
           <div class="context-section-body">
             <div class="detail-actions">
               <button class="btn btn-primary w-full">运行回测</button>
-              <button class="btn w-full">克隆策略</button>
+              <label for="overlay-strategy-clone" class="row-action">克隆策略</label>
+              <label for="overlay-strategy-delete" class="row-action danger">删除策略</label>
             </div>
           </div>
         </div>
       </aside>
+    </div>
+
+    <!-- ═══ Overlay Containers ═══ -->
+    <div class="overlays">
+      <div class="overlay-backdrop" data-overlay="overlay-strategy-clone">
+        <label class="overlay-dismiss" for="overlay-strategy-clone" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略克隆">
+          <div class="overlay-header">
+            <span class="overlay-title">克隆策略</span>
+            <label for="overlay-strategy-clone" class="overlay-close" aria-label="关闭">&#10005;</label>
+          </div>
+          <div class="overlay-body">
+            <p>将基于当前策略创建一份可编辑副本，原策略和历史回测保持不变。</p>
+            <div class="sv-pad-section">
+              <div class="overlay-field">
+                <span class="overlay-field-label">原策略</span>
+                <span class="overlay-field-value">Alpha-Momentum-v3</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">版本</span>
+                <span class="overlay-field-value">v3.8</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">最近 Sharpe</span>
+                <span class="overlay-field-value">1.85</span>
+              </div>
+            </div>
+            <h4>新策略名称</h4>
+            <div class="sv-pad-6-0">
+              <input type="text" value="Alpha-Momentum-v3-copy" class="ov-input">
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-strategy-clone" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+              <label for="overlay-strategy-clone" class="overlay-btn overlay-btn-primary ov-label-btn">创建副本</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay-backdrop" data-overlay="overlay-strategy-delete">
+        <label class="overlay-dismiss" for="overlay-strategy-delete" aria-label="关闭"></label>
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略删除确认">
+          <div class="overlay-header">
+            <span class="overlay-title">确认删除策略</span>
+            <label for="overlay-strategy-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
+          </div>
+          <div class="overlay-body">
+            <p>确定要删除 Timing-Macro？关联回测记录和信号历史将被保留，但策略配置无法恢复。</p>
+            <div class="sv-pad-section">
+              <div class="overlay-field">
+                <span class="overlay-field-label">关联回测</span>
+                <span class="overlay-field-value">12 次</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">关联信号</span>
+                <span class="overlay-field-value">86 条</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">当前状态</span>
+                <span class="overlay-field-value">已暂停</span>
+              </div>
+            </div>
+            <div class="overlay-actions">
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-danger ov-label-btn">确认删除</label>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- ═══ States Gallery ═══ -->
   <section id="states-gallery" class="proto-section">
     <div class="gallery-grid">
+      <div class="gallery-group" data-component="filter-bar">
+        <div class="gallery-group__label">筛选工具栏</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Empty Filter State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="empty">
+                <div class="state-empty">
+                  <div class="state-empty-title">未设置筛选条件</div>
+                  <div class="state-empty-desc">默认展示全部策略，可按类型、状态或创建时间缩小范围</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Failed State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="failed">
+                <div class="state-error">
+                  <div class="state-error-icon">!</div>
+                  <div class="state-error-title">筛选条件同步失败</div>
+                  <div class="state-error-desc">已保留本地筛选，可稍后重试同步</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Selected State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="selected">
+                <div class="batch-bar">
+                  <span class="batch-count">类型: Alpha · 状态: 运行中</span>
+                  <span class="batch-spacer"></span>
+                  <button class="btn btn-sm">清除筛选</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="perf-summary">
+        <div class="gallery-group__label">绩效摘要</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">Loading State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="loading">
+                <div class="state-loading">
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                  <div class="skeleton skeleton-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">Stale State</div>
+            <div class="gallery-card__preview">
+              <div class="state-variant-content" data-state="stale">
+                <div class="stale-banner">
+                  <span class="stale-dot-indicator"></span>
+                  <span class="stale-banner-text">绩效摘要已过期 · 最后同步 45 分钟前</span>
+                  <button class="btn btn-sm">刷新</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="gallery-group" data-component="strategy-table">
         <div class="gallery-group__label">策略表格</div>
         <div class="gallery-cards">
@@ -479,10 +931,10 @@
         <div class="gallery-group__label">弹层设计</div>
         <div class="gallery-cards">
 
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-strategy-clone">
             <div class="gallery-card__label">策略克隆 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="策略克隆">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略克隆">
                 <div class="overlay-header">
                   <span class="overlay-title">克隆策略</span>
                   <button class="overlay-close" aria-label="关闭">x</button>
@@ -516,10 +968,10 @@
             </div>
           </div>
 
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-strategy-delete">
             <div class="gallery-card__label">策略删除 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="策略删除确认">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="策略删除确认">
                 <div class="overlay-header">
                   <span class="overlay-title">确认删除策略</span>
                   <button class="overlay-close" aria-label="关闭">x</button>
@@ -554,5 +1006,7 @@
     </div>
   </section>
 
+  <input type="checkbox" id="overlay-strategy-clone" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-strategy-delete" class="overlay-radio sr-only">
 </body>
 </html>

@@ -1,5 +1,3 @@
-import type { SparklinePoint } from "./common";
-
 // === Request Types ===
 
 export type GetInstrumentRequest = {

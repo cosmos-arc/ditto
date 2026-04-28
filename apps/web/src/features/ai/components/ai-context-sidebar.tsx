@@ -1,4 +1,5 @@
 import { ContextSection } from "@/components/domain/context-section";
+import { ConfidenceBar, type Segment } from "@/components/indicator";
 
 /** Mock data — will be replaced with real API hooks */
 const STATUS_STATS = [
@@ -12,6 +13,12 @@ const CONFIDENCE_TIERS = [
 	{ label: "中置信 (50-79)", count: 4, level: "medium" as const },
 	{ label: "低置信 (0-49)", count: 3, level: "low" as const },
 ] as const;
+
+const CONFIDENCE_SEGMENTS = [
+	{ value: 42, color: "success", label: "高置信 42%" },
+	{ value: 33, color: "warning", label: "中置信 33%" },
+	{ value: 25, color: "danger", label: "低置信 25%" },
+] as const satisfies readonly Segment[];
 
 const ALERTS = [
 	{ severity: "critical" as const, title: "情绪 Alpha v2 IC 持续衰减", time: "2小时" },
@@ -40,19 +47,19 @@ const NAV_LINKS = [
 ] as const;
 
 const DOT_COLORS: Record<string, string> = {
-	high: "bg-green-500",
-	medium: "bg-yellow-500",
-	low: "bg-red-400",
-	critical: "bg-red-500",
-	warning: "bg-yellow-500",
+	high: "bg-(--color-system-healthy-fg)",
+	medium: "bg-(--color-system-degraded-fg)",
+	low: "bg-(--color-risk-critical-fg)",
+	critical: "bg-(--color-system-down-fg)",
+	warning: "bg-(--color-system-degraded-fg)",
 	brand: "text-(--color-accent)",
 	default: "text-(--color-foreground)",
-	warning_text: "text-yellow-400",
+	warning_text: "text-(--color-system-degraded-fg)",
 };
 
 const VALUE_COLORS: Record<string, string> = {
 	brand: "text-(--color-accent)",
-	warning: "text-yellow-400",
+	warning: "text-(--color-system-degraded-fg)",
 	default: "text-(--color-foreground)",
 };
 
@@ -96,13 +103,11 @@ export function AiContextSidebar() {
 							</span>
 						</div>
 					))}
-					<div className="mt-2 h-2 overflow-hidden rounded-full bg-(--color-surface-2)">
-						<div className="flex h-full">
-							<div className="bg-green-500" style={{ width: "42%" }} />
-							<div className="bg-yellow-500" style={{ width: "33%" }} />
-							<div className="bg-red-400" style={{ width: "25%" }} />
-						</div>
-					</div>
+					<ConfidenceBar
+						value={100}
+						segments={CONFIDENCE_SEGMENTS}
+						aria-label="置信度分布"
+					/>
 					<div className="flex text-xs text-(--color-foreground-tertiary)">
 						<span className="flex-1">42%</span>
 						<span className="flex-1">33%</span>

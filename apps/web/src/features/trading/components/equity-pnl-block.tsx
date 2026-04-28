@@ -5,7 +5,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function EquityPnlBlock() {
-	const { data, isLoading, isError, refetch } = useEquity();
+	const { data, isLoading, refetch } = useEquity();
 
 	return (
 		<ContextSection title="权益 & 盈亏" data-info-level="l1" data-info-unit="equity-pnl">

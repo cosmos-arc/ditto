@@ -48,9 +48,7 @@ describe("CommandCenterLayout", () => {
 	});
 
 	it("omits optional slots when not provided", () => {
-		const { container } = render(
-			<CommandCenterLayout main={<span>Main</span>} />,
-		);
+		render(<CommandCenterLayout main={<span>Main</span>} />);
 		expect(screen.getByText("Main")).toBeInTheDocument();
 		expect(screen.queryByText("Pulse")).not.toBeInTheDocument();
 		expect(screen.queryByText("Sidebar")).not.toBeInTheDocument();

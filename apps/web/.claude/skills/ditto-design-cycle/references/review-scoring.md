@@ -11,6 +11,14 @@
 ## PRE-SCORE GATES（评分前置门禁）
 
 > **宏观布局正确是评分的前提。以下门禁全部通过后才能进行五维度评分。任何一项不通过 = 布局错误，不计分。**
+>
+> **可执行门禁**：
+>
+> ```bash
+> bun run prototype:gates -- --prototype docs/designs/specs/prototypes/<page>.html
+> ```
+>
+> 该命令必须在评分前运行；exit code 非 0 表示存在阻断问题，不能继续评分。
 
 ### Gate 0: 原型工具 UI 隔离（P0）
 
@@ -46,12 +54,77 @@
 | 无元素错位/重叠/溢出 | 截图检查 |
 | 原型工具 UI 未污染产品视图 | 截图中无 proto-nav/style-label |
 
-### 失败处理
+### Gate 4: 交互功能完整性（P0）
+
+> **所有可交互元素必须真实可用，不能只是视觉存在。** 仅靠 DOM 结构和 CSS 规则推断交互功能是不够的——必须在浏览器中实际触发并验证状态变化。
+
+#### 验证范围
+
+```
+交互元素清单（Playwright 程序化验证）：
+├─ 1. Tab 切换：每个 tab-group 的所有 tab label 必须可点击，点击后对应面板可见
+├─ 2. Overlay 开闭：每个 overlay 的触发器和关闭机制必须工作
+├─ 3. Toggle 开关：radio/checkbox 驱动的视图切换（如 Treemap↔Heatmap）必须实际生效
+├─ 4. Hover 反馈：可交互元素（treemap cell、queue item 等）必须有 hover 视觉响应
+└─ 5. 状态视图切换：三区 radio（default/states/overlays）必须正确切换可见性
+```
+
+#### 验证方法
+
+> 以下验证通过 Playwright `page.evaluate()` 程序化执行，不需要截图或 vision 模型。
+
+```javascript
+// 通用模式：验证 CSS :has() 驱动的状态切换
+async function verifyToggle(page, radioId, expectedVisibleSelector, expectedHiddenSelector) {
+  // 初始状态检查
+  const beforeVisible = await page.$eval(expectedVisibleSelector, el =>
+    getComputedStyle(el).display !== 'none');
+  if (!beforeVisible) return { pass: false, reason: `${expectedVisibleSelector} not visible initially` };
+
+  // 切换状态
+  await page.evaluate(id => {
+    document.getElementById(id).checked = true;
+    // 触发 change 事件确保 :has() 重算
+    document.getElementById(id).dispatchEvent(new Event('change', { bubbles: true }));
+  }, radioId);
+
+  // 验证切换结果
+  const afterVisible = await page.$eval(expectedVisibleSelector, el =>
+    getComputedStyle(el).display !== 'none');
+  const afterHidden = await page.$eval(expectedHiddenSelector, el =>
+    getComputedStyle(el).display === 'none');
+
+  return { pass: afterVisible && afterHidden };
+}
+```
+
+#### 量化检查项
+
+| 检查项 | 验证方法 | 通过标准 |
+|--------|---------|---------|
+| Tab 面板切换 | 逐一点击 tab label，检查对应面板 `display !== 'none'` | 每个 tab 点击后面板切换正确 |
+| Overlay 打开 | 触发 overlay 打开操作（radio checked / click handler），检查 overlay `display !== 'none'` | overlay 可见 |
+| Overlay 关闭 | 触发关闭操作（关闭按钮 / ESC / radio unchecked），检查 overlay `display === 'none'` | overlay 不可见 |
+| Toggle 视图切换 | 设置 radio checked，检查目标视图 `display !== 'none'` 且旧视图 `display === 'none'` | 视图正确切换 |
+| 三区 radio 切换 | 切换 default/states/overlays radio，检查对应 zone 可见 | zone 正确切换 |
+| Hover 视觉反馈 | `page.hover(el)` 后检查 `getComputedStyle()` 是否有变化（opacity/border/shadow 等） | 至少 1 个 computed style 值变化 |
+| 交互元素可达性 | `querySelectorAll('button, [role="button"], label[for], [tabindex]')` | 所有元素 `pointer-events !== 'none'`（非禁用态） |
+
+#### 实施要求
+
+1. **Phase 1 自动发现**：在基线采集中自动扫描所有交互元素（radio group、tab label、overlay trigger），生成「交互元素清单」
+2. **Phase 8 Gate 4 验证**：在评分前对清单中的每个元素执行上述验证
+3. **验证脚本化**：鼓励将验证逻辑封装为可复用脚本，避免人工遗漏
+4. **部分失败降级**：若 ≥ 50% 交互元素通过 → 降分处理（扣除 1-2 分）；< 50% → STOP 修复
+
+#### 失败处理
 
 - Gate 0 不通过：**STOP**，修复原型工具 UI 隔离后再评分
 - Gate 1 不通过：**STOP**，修复 CSS 加载问题（通常是 HTTP 服务器目录错误）
 - Gate 2 不通过：**STOP**，修复 shell 布局后再评分
 - Gate 3 不通过：**降分处理**，根据视觉问题严重程度扣除 1-3 分
+- Gate 4 不通过（< 50%）：**STOP**，修复交互功能后再评分
+- Gate 4 不通过（≥ 50%）：**降分处理**，扣除 1-2 分
 
 ---
 

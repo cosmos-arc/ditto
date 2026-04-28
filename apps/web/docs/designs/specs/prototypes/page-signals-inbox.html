@@ -128,14 +128,15 @@
     .shell-signals {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr var(--shell-signals-detail-width);
-      grid-template-rows: var(--shell-header-height) var(--density-strip-height) 1fr;
+      grid-template-rows: var(--shell-header-height) var(--density-strip-height) minmax(0, 1fr);
       grid-template-areas:
         "rail header  header"
         "rail scope   scope"
         "rail main    detail";
-      min-height: 100vh;
+      height: calc(100vh - var(--shell-status-bar-height));
+      min-height: 0;
       width: 100vw;
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     /* ── Rail ── */
@@ -296,7 +297,7 @@
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
       white-space: nowrap;
     }
 
@@ -638,7 +639,7 @@
     .detail-confidence-fill {
       height: 100%;
       border-radius: 3px;
-      background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(1 0 0)));
+      background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(from var(--neutral-950) l c h)));
     }
 
     .detail-confidence-value {
@@ -990,8 +991,13 @@
     .shell-signals:has(#tab-ordered:checked) label[for="tab-ordered"] .tab-count { color: var(--brand-accent); background: var(--brand-accent-subtle); }
 
     /* Tab panel needs column flex for stacked header + table layout */
-    .tab-panel { display: none; flex-direction: column; }
-    .tab-panel.active-by-default { display: flex; }
+    .shell-signals .tab-panel {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .shell-signals:has(#tab-pending:checked) .tab-panel.active-by-default { display: flex; }
 
     /* ══════════════════════════════════════════════
      * Overlay Activation Rules (prototype-toggles.css)
@@ -1006,8 +1012,8 @@
       [data-overlay="overlay-signal-confirm-to-order"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1644,13 +1650,13 @@
     }
 
     /* ── 3. Overlay Accent Border (matches factor-analysis) ── */
-    .overlay-sheet {
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
     /* ── 4. Confidence Bar Gradient Enhancement ── */
     .confidence-fill.high {
-      background: linear-gradient(90deg, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 60%, oklch(1 0 0)));
+      background: linear-gradient(90deg, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 60%, oklch(from var(--neutral-950) l c h)));
     }
     .confidence-fill.low {
       opacity: 0.7;
@@ -1742,7 +1748,7 @@
 
     /* ── 14. Signal Strength Bar Gradient ── */
     .signal-strength-bar.active {
-      background: linear-gradient(to top, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 70%, oklch(1 0 0)));
+      background: linear-gradient(to top, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 70%, oklch(from var(--neutral-950) l c h)));
     }
 
     /* ── 15. font-size-9 fallback fix ── */
@@ -1800,7 +1806,7 @@
 
     /* ── 5. Confidence Bar Medium Gradient (visual parity with .high) ── */
     .confidence-fill.medium {
-      background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 60%, oklch(1 0 0)));
+      background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 60%, oklch(from var(--neutral-950) l c h)));
     }
 
     /* ── 6. Time Column De-emphasis (scannability) ── */
@@ -1822,8 +1828,8 @@
       background: color-mix(in oklch, var(--brand-accent) 3%, var(--interaction-hover-subtle-bg));
     }
 
-    /* ── 9. Overlay Drawer Accent Border (parity with overlay-sheet) ── */
-    .overlay-drawer {
+    /* ── 9. Overlay Drawer Accent Border (parity with overlay surface) ── */
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
@@ -1841,6 +1847,13 @@
     /* ── 12. Status Bar Top Accent (brand continuity with shell top line) ── */
     .status-bar {
       border-top: 1px solid color-mix(in oklch, var(--brand-accent) 15%, var(--border-subtle));
+    }
+
+    #default-view > .shell-signals.shell-ops {
+      flex: 0 0 calc(100vh - var(--shell-status-bar-height));
+      height: calc(100vh - var(--shell-status-bar-height)) !important;
+      min-height: 0;
+      overflow: hidden;
     }
   </style>
 </head>
@@ -1860,34 +1873,31 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label" aria-hidden="true">Graphite Studio — Signals Inbox · Compact · A股</div>
 
-  <div class="shell-signals">
+  <div class="shell-signals shell-ops">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="AI" title="AI" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -1895,26 +1905,39 @@
       <span class="header-title">信号收件箱<span class="header-subtitle">交易控制中心</span></span>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <div class="header-btn-badge" tabindex="0" role="button" aria-label="信号队列（12 条待复核）" title="信号队列">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12M8 4v12M12 4v12"/></svg>
           <span class="badge-count">12</span>
         </div>
-        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知" data-shell-utility="notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
         </div>
-        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+        
       </div>
     </header>
 
@@ -2009,7 +2032,7 @@
             </thead>
             <tbody>
               <!-- Row 1: selected -->
-              <tr class="row selected unread" role="row" aria-selected="true" tabindex="0" data-reveal="fade-up" data-reveal-delay="0">
+              <tr class="row selected unread" role="row" aria-selected="true" tabindex="0">
                 <td class="cell-time">14:32:08</td>
                 <td>
                   <span class="cell-ticker">600519</span>
@@ -2020,7 +2043,7 @@
                   <div aria-label="优先级 P1" class="priority-badge p1">P1</div>
                   <span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span>
                 </td>
-                <td class="cell-numeric"><span data-ticker="5.0" data-decimals="1" data-ticker-suffix="%">5.0%</span></td>
+                <td class="cell-numeric"><span>5.0%</span></td>
                 <td>
                   <div class="confidence-cell" data-confidence="0.82" data-confidence-label="High"></div>
                 </td>
@@ -2029,7 +2052,7 @@
               </tr>
 
               <!-- Row 2 -->
-              <tr class="row unread" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="80">
+              <tr class="row unread" role="row" tabindex="0">
                 <td class="cell-time">14:30:45</td>
                 <td>
                   <span class="cell-ticker">300750</span>
@@ -2040,7 +2063,7 @@
                   <div aria-label="优先级 P2" class="priority-badge p2">P2</div>
                   <span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span>
                 </td>
-                <td class="cell-numeric"><span data-ticker="3.2" data-decimals="1" data-ticker-prefix="-" data-ticker-suffix="%">-3.2%</span></td>
+                <td class="cell-numeric"><span>-3.2%</span></td>
                 <td>
                   <div class="confidence-cell" data-confidence="0.65" data-confidence-label="Medium"></div>
                 </td>
@@ -2049,7 +2072,7 @@
               </tr>
 
               <!-- Row 3 -->
-              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="160">
+              <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:28:33</td>
                 <td>
                   <span class="cell-ticker">000858</span>
@@ -2066,7 +2089,7 @@
               </tr>
 
               <!-- Row 4 -->
-              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="240">
+              <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:25:12</td>
                 <td>
                   <span class="cell-ticker">601318</span>
@@ -2074,7 +2097,7 @@
                 </td>
                 <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
                 <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
-                <td class="cell-numeric"><span data-ticker="4.5" data-decimals="1" data-ticker-prefix="-" data-ticker-suffix="%">-4.5%</span></td>
+                <td class="cell-numeric"><span>-4.5%</span></td>
                 <td>
                   <div class="confidence-cell" data-confidence="0.40" data-confidence-label="Low"></div>
                 </td>
@@ -2083,7 +2106,7 @@
               </tr>
 
               <!-- Row 5: 涨跌停阻断 -->
-              <tr class="row blocked" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="320">
+              <tr class="row blocked" role="row" tabindex="0">
                 <td class="cell-time">14:22:50</td>
                 <td>
                   <span class="cell-ticker">002594</span>
@@ -2100,7 +2123,7 @@
               </tr>
 
               <!-- Row 6 -->
-              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="400">
+              <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:18:07</td>
                 <td>
                   <span class="cell-ticker">603259</span>
@@ -2117,7 +2140,7 @@
               </tr>
 
               <!-- Row 7 -->
-              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="480">
+              <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:15:22</td>
                 <td>
                   <span class="cell-ticker">600036</span>
@@ -2137,7 +2160,7 @@
               </tr>
 
               <!-- Row 8 -->
-              <tr class="row" role="row" tabindex="0" data-reveal="fade-up" data-reveal-delay="560">
+              <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">14:10:55</td>
                 <td>
                   <span class="cell-ticker">000001</span>
@@ -2153,6 +2176,74 @@
                   </div>
                 </td>
                 <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+                <td><span class="status-pill pending">待复核</span></td>
+              </tr>
+
+              <!-- Row 9 -->
+              <tr class="row" role="row" tabindex="0">
+                <td class="cell-time">14:08:39</td>
+                <td>
+                  <span class="cell-ticker">601888</span>
+                  <span class="cell-name">中国中免</span>
+                </td>
+                <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
+                <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+                <td class="cell-numeric">2.4%</td>
+                <td>
+                  <div class="confidence-cell" data-confidence="0.71" data-confidence-label="Medium"></div>
+                </td>
+                <td><span class="risk-badge warn"><span class="risk-badge-icon">!</span> 警告</span></td>
+                <td><span class="status-pill pending">待复核</span></td>
+              </tr>
+
+              <!-- Row 10 -->
+              <tr class="row" role="row" tabindex="0">
+                <td class="cell-time">14:06:11</td>
+                <td>
+                  <span class="cell-ticker">688981</span>
+                  <span class="cell-name">中芯国际</span>
+                </td>
+                <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
+                <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+                <td class="cell-numeric">1.8%</td>
+                <td>
+                  <div class="confidence-cell" data-confidence="0.64" data-confidence-label="Medium"></div>
+                </td>
+                <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+                <td><span class="status-pill pending">待复核</span></td>
+              </tr>
+
+              <!-- Row 11 -->
+              <tr class="row" role="row" tabindex="0">
+                <td class="cell-time">14:03:44</td>
+                <td>
+                  <span class="cell-ticker">600276</span>
+                  <span class="cell-name">恒瑞医药</span>
+                </td>
+                <td><span class="source-badge strategy"><span class="source-badge-dot"></span>策略信号</span></td>
+                <td><span class="side-badge sell"><span class="side-badge-sym">▼</span> 卖出</span></td>
+                <td class="cell-numeric">-1.2%</td>
+                <td>
+                  <div class="confidence-cell" data-confidence="0.69" data-confidence-label="Medium"></div>
+                </td>
+                <td><span class="risk-badge pass"><span class="risk-badge-icon">✓</span> 通过</span></td>
+                <td><span class="status-pill pending">待复核</span></td>
+              </tr>
+
+              <!-- Row 12 -->
+              <tr class="row" role="row" tabindex="0">
+                <td class="cell-time">14:01:27</td>
+                <td>
+                  <span class="cell-ticker">512880</span>
+                  <span class="cell-name">证券 ETF</span>
+                </td>
+                <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
+                <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
+                <td class="cell-numeric">2.0%</td>
+                <td>
+                  <div class="confidence-cell" data-confidence="0.55" data-confidence-label="Medium"></div>
+                </td>
+                <td><span class="risk-badge warn"><span class="risk-badge-icon">!</span> 警告</span></td>
                 <td><span class="status-pill pending">待复核</span></td>
               </tr>
             </tbody>
@@ -2454,11 +2545,11 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">建议权重</span>
-            <span class="detail-value numeric" data-ticker="5.0" data-decimals="1" data-ticker-suffix="%">5.0%</span>
+            <span class="detail-value numeric">5.0%</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">建议价格</span>
-            <span class="detail-value numeric" data-ticker="1586.00" data-decimals="2" data-ticker-prefix="¥">1,586.00</span>
+            <span class="detail-value numeric">¥1,586.00</span>
           </div>
         </div>
 
@@ -2644,7 +2735,7 @@
     <!-- Overlay A: 订单确认面板 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
       <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="订单确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="订单确认">
         <div class="overlay-header">
           <span class="overlay-title">订单确认</span>
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
@@ -2725,7 +2816,7 @@
     <!-- Overlay B: AI 解读信号 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-ai-read">
       <label class="overlay-dismiss" for="overlay-ai-read" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="AI 解读信号">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读信号">
         <div class="overlay-header">
           <span class="overlay-title">AI 解读信号</span>
           <label for="overlay-ai-read" class="overlay-close" aria-label="关闭">✕</label>
@@ -2776,7 +2867,7 @@
     <!-- Overlay C: 批量确认 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-confirm">
       <label class="overlay-dismiss" for="overlay-batch-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="批量确认信号">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量确认信号">
         <div class="overlay-header">
           <span class="overlay-title">批量确认信号</span>
           <label for="overlay-batch-confirm" class="overlay-close" aria-label="关闭">✕</label>
@@ -2793,11 +2884,11 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">总建议权重</span>
-            <span class="overlay-field-value tnum" data-ticker="12.0" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="%">+12.0%</span>
+            <span class="overlay-field-value tnum">+12.0%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">预估总金额</span>
-            <span class="overlay-field-value tnum" data-ticker="528400.00" data-decimals="2" data-ticker-prefix="¥">¥528,400.00</span>
+            <span class="overlay-field-value tnum">¥528,400.00</span>
           </div>
 
           <h4>风控批量检查</h4>
@@ -2825,7 +2916,7 @@
     <!-- Overlay D: 信号确认→生成订单 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-signal-confirm-to-order">
       <label class="overlay-dismiss" for="overlay-signal-confirm-to-order" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="信号确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="信号确认">
         <div class="overlay-header">
           <span class="overlay-title">确认信号并生成订单</span>
           <label for="overlay-signal-confirm-to-order" class="overlay-close" aria-label="关闭">✕</label>
@@ -3177,10 +3268,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-order-confirm">
       <div class="gallery-card__label">订单确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="订单确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="订单确认">
           <div class="overlay-header">
             <span class="overlay-title">订单确认</span>
             <span class="overlay-close" aria-label="关闭">✕</span>
@@ -3259,10 +3350,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-ai-read">
       <div class="gallery-card__label">AI 解读信号 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="AI 解读信号">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读信号">
           <div class="overlay-header">
             <span class="overlay-title">AI 解读信号</span>
             <span class="overlay-close" aria-label="关闭">✕</span>
@@ -3311,10 +3402,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-batch-confirm">
       <div class="gallery-card__label">批量确认信号 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="批量确认信号">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量确认信号">
           <div class="overlay-header">
             <span class="overlay-title">批量确认信号</span>
             <span class="overlay-close" aria-label="关闭">✕</span>
@@ -3361,10 +3452,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-signal-confirm-to-order">
       <div class="gallery-card__label">信号确认→生成订单 (Modal)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="信号确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="信号确认">
           <div class="overlay-header">
             <span class="overlay-title">确认信号并生成订单</span>
             <span class="overlay-close" aria-label="关闭">✕</span>

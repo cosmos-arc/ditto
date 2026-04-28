@@ -161,6 +161,16 @@ HTML 骨架：
 
 **注意**: 全部 10 项检查必须用 DOM 解析器或 Playwright page.evaluate()，禁止正则做 HTML 结构验证。
 
+### 7b. PRE-SCORE GATES 脚本化验证（CREATE 后必须执行）
+
+生成或修复原型后，必须运行：
+
+```bash
+bun run prototype:gates -- --prototype docs/designs/specs/prototypes/<page>.html
+```
+
+该命令验证原型工具 UI 隔离、CSS/token 资源加载、shell 结构、视口完整性、fixed/sticky 遮挡，并输出 fullPage 截图作为 Phase 8 评分证据。exit code 非 0 时不得 commit/tag `round-0`。
+
 ### 8. git add → commit → tag review/<task>/round-0
 
 ---

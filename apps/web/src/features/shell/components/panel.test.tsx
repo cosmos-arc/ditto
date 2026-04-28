@@ -17,14 +17,14 @@ describe("Panel", () => {
 	});
 
 	it("applies flex-col layout", () => {
-		const { container } = render(<Panel />);
+		const { container } = render(<Panel>{null}</Panel>);
 		const panel = container.firstChild as HTMLElement;
 		expect(panel.className).toContain("flex");
 		expect(panel.className).toContain("flex-col");
 	});
 
 	it("accepts className prop for grid-area placement", () => {
-		const { container } = render(<Panel className="col-span-2" />);
+		const { container } = render(<Panel className="col-span-2">{null}</Panel>);
 		const panel = container.firstChild as HTMLElement;
 		expect(panel.className).toContain("col-span-2");
 	});

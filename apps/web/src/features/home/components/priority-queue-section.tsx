@@ -31,7 +31,7 @@ const BADGE_COLOR: Record<string, string> = {
  * Each item has: colored priority bar | title+badges | meta | footer (domain + time)
  */
 export function PriorityQueueSection() {
-	const { data, isLoading, isError, refetch } = usePendingActions();
+	const { data, isLoading, refetch } = usePendingActions();
 
 	return (
 		<Panel data-testid="priority-queue" data-info-level="l1" data-info-unit="priority-queue" className="h-[192px] flex-none">

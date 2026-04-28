@@ -11,7 +11,7 @@ function Separator() {
 }
 
 export function AiPulseStrip() {
-	const { data, isLoading, isError, refetch } = useAiPulse();
+	const { data, isLoading, refetch } = useAiPulse();
 
 	if (isLoading) {
 		return (

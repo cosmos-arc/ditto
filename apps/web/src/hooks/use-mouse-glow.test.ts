@@ -38,7 +38,7 @@ describe("useMouseGlow", () => {
 			currentTarget: element,
 			clientX: 200,
 			clientY: 150,
-		} as React.MouseEvent<HTMLElement>);
+		} as unknown as React.MouseEvent<HTMLElement>);
 
 		expect(element.style.getPropertyValue("--_glow-x")).toBe("100px");
 		expect(element.style.getPropertyValue("--_glow-y")).toBe("100px");
@@ -67,7 +67,7 @@ describe("useMouseGlow", () => {
 			currentTarget: element,
 			clientX: 200,
 			clientY: 150,
-		} as React.MouseEvent<HTMLElement>);
+		} as unknown as React.MouseEvent<HTMLElement>);
 
 		expect(element.style.getPropertyValue("--_glow-x")).toBe("100px");
 
@@ -100,7 +100,7 @@ describe("useMouseGlow", () => {
 			currentTarget: element,
 			clientX: 400,
 			clientY: 300,
-		} as React.MouseEvent<HTMLElement>);
+		} as unknown as React.MouseEvent<HTMLElement>);
 
 		expect(element.style.getPropertyValue("--_glow-x")).toBe("400px");
 		expect(element.style.getPropertyValue("--_glow-y")).toBe("300px");

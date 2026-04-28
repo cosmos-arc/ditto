@@ -9,27 +9,43 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 
 /* ── Default column definitions ── */
 
-const DEFAULT_COL_DEF: Partial<ColDef> = {
-	cellStyle: {
-		display: "flex",
-		alignItems: "center",
-	},
-};
+const DEFAULT_CELL_STYLE = {
+	display: "flex",
+	alignItems: "center",
+} as const;
 
-const DEFAULT_NUMERIC_COL_DEF: Partial<ColDef> = {
+const DEFAULT_NUMERIC_CELL_STYLE = {
+	...DEFAULT_CELL_STYLE,
+	justifyContent: "flex-end",
+	fontFamily: "var(--font-data), sans-serif",
+	fontFeatureSettings: "'tnum' 1",
+} as const;
+
+const DEFAULT_COL_DEF = {
+	cellStyle: {
+		...DEFAULT_CELL_STYLE,
+	},
+} satisfies ColDef<object>;
+
+const DEFAULT_NUMERIC_COL_DEF = {
 	...DEFAULT_COL_DEF,
 	type: "numericColumn",
 	cellStyle: {
-		...DEFAULT_COL_DEF.cellStyle,
-		justifyContent: "flex-end",
-		fontFamily: "var(--font-data), sans-serif",
-		fontFeatureSettings: "'tnum' 1",
+		...DEFAULT_NUMERIC_CELL_STYLE,
 	},
-};
+} satisfies ColDef<object>;
+
+function createDefaultColDef<TData extends object>(): ColDef<TData> {
+	return {
+		cellStyle: {
+			...DEFAULT_CELL_STYLE,
+		},
+	};
+}
 
 /* ── Props ── */
 
-interface DittoGridProps<TData = Record<string, unknown>> {
+interface DittoGridProps<TData extends object = object> {
 	readonly columnDefs: ColDef<TData>[];
 	readonly rowData: TData[];
 	readonly className?: string;
@@ -39,7 +55,7 @@ interface DittoGridProps<TData = Record<string, unknown>> {
 
 /* ── Component ── */
 
-function DittoGrid<TData = Record<string, unknown>>({
+function DittoGrid<TData extends object = object>({
 	columnDefs,
 	rowData,
 	className,
@@ -51,6 +67,7 @@ function DittoGrid<TData = Record<string, unknown>>({
 		const api = gridRef.current?.api;
 		if (!api) return;
 		const csv = api.getDataAsCsv();
+		if (!csv) return;
 		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement("a");
@@ -71,7 +88,7 @@ function DittoGrid<TData = Record<string, unknown>>({
 					ref={gridRef}
 					columnDefs={columnDefs}
 					rowData={rowData}
-					defaultColDef={DEFAULT_COL_DEF}
+					defaultColDef={createDefaultColDef<TData>()}
 					theme={dittoTheme}
 					rowSelection="single"
 					suppressCellFocus

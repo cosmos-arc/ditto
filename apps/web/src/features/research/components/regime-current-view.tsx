@@ -11,13 +11,6 @@ const STATE_VARIANT_MAP: Record<string, "regime-on" | "regime-off" | "regime-mix
 	transition: "regime-mixed",
 };
 
-const STATE_LABEL_MAP: Record<string, string> = {
-	risk_on: "Risk On",
-	risk_off: "Risk Off",
-	volatile: "Volatile",
-	transition: "Transition",
-};
-
 export function RegimeCurrentView() {
 	const { data, isLoading, refetch } = useRegimeCurrent();
 

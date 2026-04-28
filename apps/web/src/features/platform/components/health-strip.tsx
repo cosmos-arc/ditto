@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function HealthStrip() {
-	const { data, isLoading, isError, refetch } = usePlatformHealth();
+	const { data, isLoading, refetch } = usePlatformHealth();
 
 	if (isLoading) {
 		return (

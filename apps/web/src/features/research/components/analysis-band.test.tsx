@@ -78,7 +78,7 @@ describe("AnalysisBand", () => {
 		expect(cells).toHaveLength(25);
 	});
 
-	it("heatmap cells use heatmap color tokens", async () => {
+	it("heatmap cells expose correlation tone classes and labels", async () => {
 		const user = userEvent.setup();
 		render(<AnalysisBand />);
 
@@ -87,9 +87,8 @@ describe("AnalysisBand", () => {
 		const panel = screen.getByRole("tabpanel");
 		const firstCell = panel.querySelector("[data-heatmap-cell]");
 		expect(firstCell).toBeInTheDocument();
-		// Cell should have a background color from heatmap-0 through heatmap-4 tokens
-		const style = (firstCell as HTMLElement).style.backgroundColor;
-		expect(style).toBeTruthy();
+		expect(firstCell).toHaveAttribute("data-correlation-tone");
+		expect(firstCell).toHaveAttribute("aria-label", expect.stringContaining("相关系数"));
 	});
 
 	it("switches to 笔记 tab and renders note items", async () => {

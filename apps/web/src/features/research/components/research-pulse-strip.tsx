@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function ResearchPulseStrip() {
-	const { data, isLoading, isError, refetch } = useResearchPulse();
+	const { data, isLoading, refetch } = useResearchPulse();
 
 	if (isLoading) {
 		return (

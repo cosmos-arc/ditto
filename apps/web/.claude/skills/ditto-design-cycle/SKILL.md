@@ -95,7 +95,7 @@ UI 创建与设计审查编排。两种模式：**创建模式**（`--create`，
 /ditto-design-cycle page-cross-market.html --level best
 /ditto-design-cycle page-cross-market.html --ui     # 单角色审查
 /ditto-design-cycle page-cross-market.html --polish # 仅精修
-/ditto-design-cycle page-cross-market.html --iterate --goal 8.5 --max-rounds 3
+/ditto-design-cycle page-cross-market.html --iterate --goal 8.5 --max-rounds 3 --level best
 /ditto-design-cycle page-cross-market.html --sync   # 反向同步
 /ditto-design-cycle page-cross-market.html --baseline prototype-v2.html
 /ditto-design-cycle --cleanup cross-market          # 清理历史 tag

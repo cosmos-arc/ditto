@@ -1,20 +1,53 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 type RequestOptions = {
-	method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-	body?: unknown;
-	headers?: Record<string, string>;
-	signal?: AbortSignal;
+	readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+	readonly body?: unknown;
+	readonly headers?: Record<string, string>;
+	readonly signal?: AbortSignal;
 };
 
 class ApiError extends Error {
-	constructor(
-		public readonly status: number,
-		message: string,
-	) {
+	readonly status: number;
+
+	constructor(status: number, message: string) {
 		super(message);
+		this.status = status;
 		this.name = "ApiError";
 	}
+}
+
+function serializeQueryValue(value: unknown): string | undefined {
+	if (value == null) return undefined;
+	if (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean"
+	) {
+		return String(value);
+	}
+	return JSON.stringify(value);
+}
+
+function withQueryParams<TParams extends object>(
+	path: string,
+	params?: TParams,
+): string {
+	if (!params) return path;
+
+	const searchParams = new URLSearchParams();
+	for (const key of Object.keys(params)) {
+		const serializedValue = serializeQueryValue(params[key as keyof TParams]);
+		if (serializedValue !== undefined) {
+			searchParams.set(key, serializedValue);
+		}
+	}
+
+	const queryString = searchParams.toString();
+	if (!queryString) return path;
+
+	const separator = path.includes("?") ? "&" : "?";
+	return `${path}${separator}${queryString}`;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -53,4 +86,4 @@ export const apiClient = {
 	delete: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "DELETE" }),
 } as const;
 
-export { ApiError };
+export { ApiError, withQueryParams };

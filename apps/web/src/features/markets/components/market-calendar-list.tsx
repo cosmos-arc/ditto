@@ -2,12 +2,6 @@ import { useMarketCalendar } from "../hooks";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
-const IMPORTANCE_VARIANT: Record<string, "warning" | "default"> = {
-	high: "warning",
-	medium: "default",
-	low: "default",
-};
-
 export function MarketCalendarList() {
 	const { data, isLoading, refetch } = useMarketCalendar();
 

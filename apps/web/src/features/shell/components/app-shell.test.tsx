@@ -79,8 +79,6 @@ describe("AppShell", () => {
 
 	it("places children in a content area with min-h-0 and overflow-hidden", () => {
 		const { container } = render(<AppShell>content</AppShell>);
-		// Find the content div — it has grid-area:content
-		const contentDiv = container.querySelector('[class*="content"]');
 		// The content wrapper should have min-h-0 and overflow-hidden
 		const contentArea = container.querySelector('[class*="min-h-0"]');
 		expect(contentArea).toBeInTheDocument();
@@ -98,5 +96,12 @@ describe("AppShell", () => {
 		const shell = container.firstElementChild;
 		expect(shell?.className).toContain("grid-rows-[var(--height-header)_1fr]");
 		expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
+	});
+
+	it("maps research strategy routes to the research domain", () => {
+		mockUseLocation.mockReturnValue({ pathname: "/research/strategies/strat-001" });
+		render(<AppShell>content</AppShell>);
+
+		expect(document.documentElement).toHaveAttribute("data-domain", "research");
 	});
 });

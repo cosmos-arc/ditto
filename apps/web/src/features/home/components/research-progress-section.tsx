@@ -17,7 +17,6 @@ export function ResearchProgressSection() {
 	const {
 		data: findingsData,
 		isLoading,
-		isError,
 		refetch,
 	} = useAgentFindings();
 

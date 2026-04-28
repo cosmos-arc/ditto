@@ -17,7 +17,7 @@ const STATUS_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"
 };
 
 export function StrategyHeader({ id }: StrategyHeaderProps) {
-	const { data, isLoading, isError, refetch } = useStrategy(id);
+	const { data, isLoading, refetch } = useStrategy(id);
 
 	if (isLoading) {
 		return <LoadingSkeleton variant="panel" className="h-16" />;

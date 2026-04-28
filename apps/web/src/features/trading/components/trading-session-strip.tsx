@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function TradingSessionStrip() {
-	const { data, isLoading, isError, refetch } = useTradingSession();
+	const { data, isLoading, refetch } = useTradingSession();
 
 	if (isLoading) {
 		return (

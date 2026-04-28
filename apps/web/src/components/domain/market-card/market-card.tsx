@@ -43,7 +43,6 @@ function MarketCard({
 	className,
 	...props
 }: MarketCardProps) {
-	const trend = change > 0 ? "up" : change < 0 ? "down" : "flat";
 	const changeStr = `${change > 0 ? "+" : ""}${change.toFixed(2)}%`;
 
 	return (

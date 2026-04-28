@@ -104,6 +104,25 @@ Ditto 的专业感，很大程度来自联动：
 - 大量彩色标签
 - 悬浮奇效
 
+### 原则 6：表格动作归属 Data Toolbar
+
+Table View 的本地动作必须在 Data Toolbar 或 Workspace Toolbar 中表达，不进入全局 Header Utility。
+
+| Action | Placement |
+|---|---|
+| Global command/search | Header utility |
+| Copilot | Header utility |
+| Notifications | Header utility |
+| Help | Header utility |
+| Account/view preferences | Header utility |
+| Export table | Data toolbar |
+| Refresh table | Data toolbar or workspace toolbar |
+| Filter table/list | Data toolbar |
+| Column configuration | Data toolbar |
+| Run backtest / execute screening | Workspace toolbar |
+| Save/publish strategy | Studio header or workspace toolbar |
+| Settings/config validation | Config workspace toolbar |
+
 ---
 
 ## 3. Data Views 分类体系

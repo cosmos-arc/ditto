@@ -553,7 +553,7 @@
     /* ── Activity Stack section title — 14px for typographic ladder ── */
     .activity-stack .context-section-title {
       font-size: var(--font-size-14);
-      letter-spacing: 0.01em;
+      letter-spacing: 0;
     }
 
     /* ── Queue review item ── */
@@ -628,10 +628,12 @@
       color: var(--text-tertiary);
     }
 
-    /* ── Analysis Band body: flex column so chart flex:1 works ── */
+    /* ── Analysis Band body: compact split layout so each tab fits 180px band ── */
     .analysis-band-body {
       display: none;
-      flex-direction: column;
+      grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+      gap: var(--space-12);
+      align-items: stretch;
     }
 
     /* ── Analysis Band tab:has() activation ── */
@@ -639,7 +641,7 @@
     .analysis-band:has(#analysis-tab-width:checked) .analysis-band-body[data-panel="analysis-width"],
     .analysis-band:has(#analysis-tab-corr:checked) .analysis-band-body[data-panel="analysis-corr"],
     .analysis-band:has(#analysis-tab-notes:checked) .analysis-band-body[data-panel="analysis-notes"] {
-      display: flex;
+      display: grid;
     }
 
     .analysis-band:has(#analysis-tab-ic:checked) label[for="analysis-tab-ic"],
@@ -653,9 +655,12 @@
 
     /* ── Analysis Band metrics ── */
     .analysis-metrics {
-      display: flex;
-      gap: var(--space-16);
-      margin-bottom: var(--space-12);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-8) var(--space-12);
+      align-content: start;
+      margin-bottom: 0;
+      min-width: 0;
     }
 
     .analysis-metric {
@@ -669,15 +674,15 @@
       font-weight: var(--font-weight-regular);
       color: var(--text-tertiary);
       white-space: nowrap;
-      letter-spacing: 0.01em;
+      letter-spacing: 0;
     }
 
     .analysis-metric-value {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-16);
+      font-size: var(--font-size-14);
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
 
     .analysis-metric-value.ok {
@@ -696,6 +701,7 @@
       border-radius: var(--radius-6);
       position: relative;
       overflow: hidden;
+      height: 100%;
       min-height: 0;
     }
 
@@ -1122,8 +1128,8 @@
       [data-overlay="overlay-review-action"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1411,7 +1417,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: var(--font-size-8);
+      font-size: var(--font-size-10);
       font-family: var(--font-family-numeric);
       color: var(--text-secondary);
       transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
@@ -1676,7 +1682,7 @@
       font-size: var(--font-size-14);
       font-weight: var(--font-weight-semibold);
       font-variant-numeric: tabular-nums;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .report-card-tags {
       display: flex;
@@ -1894,7 +1900,7 @@
     /* ── Queue review: consistent tag sizing with report tags ── */
     .queue-review-badge {
       font-size: var(--font-size-10);
-      letter-spacing: 0.01em;
+      letter-spacing: 0;
     }
 
     /* ── Correlation matrix cell: enhanced tooltip hover ── */
@@ -1917,7 +1923,7 @@
     /* ── Scope strip value: micro font-feature for numbers ── */
     .scope-strip .pulse-value {
       font-family: var(--font-family-numeric);
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
     }
 
     /* ── Panel elevation tiers ── */
@@ -1957,10 +1963,164 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
+    /* ── R12 Fix: bottom analysis tabs fit inside the compact 180px band ── */
+    .analysis-band .chart-placeholder-label {
+      top: var(--space-6);
+      left: var(--space-10);
+    }
+    .analysis-band .chart-placeholder-sublabel {
+      top: var(--space-6);
+      right: var(--space-10);
+      max-width: 48%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .analysis-band .chart-grid {
+      top: var(--space-24);
+      bottom: var(--space-8);
+      height: auto;
+    }
+    .analysis-band .chart-svg-overlay {
+      inset: var(--space-24) 0 var(--space-8) 0;
+      height: auto;
+    }
+    .analysis-band .chart-x-labels {
+      bottom: var(--space-2);
+      left: var(--space-10);
+      right: var(--space-10);
+    }
+    .analysis-band .width-chart {
+      position: absolute;
+      top: var(--space-32);
+      right: var(--space-10);
+      bottom: var(--space-8);
+      left: var(--space-10);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-content: center;
+      gap: var(--space-8) var(--space-20);
+      padding: 0;
+    }
+    .analysis-band .width-row {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) 30px;
+      gap: var(--space-6);
+      min-height: 16px;
+    }
+    .analysis-band .width-row-label {
+      width: auto;
+      text-align: left;
+    }
+    .analysis-band .width-row-track {
+      height: 5px;
+    }
+    .analysis-band .width-row-value {
+      width: auto;
+    }
+    .analysis-band .corr-heatmap {
+      position: absolute;
+      inset: calc(var(--space-24) + var(--space-6)) var(--space-10) var(--space-12);
+      display: grid;
+      grid-template-columns: max-content 88px minmax(108px, 136px);
+      column-gap: var(--space-16);
+      align-items: center;
+      justify-content: center;
+    }
+    .analysis-band .corr-matrix-5x5 {
+      grid-template-columns: repeat(5, 14px);
+      grid-template-rows: repeat(5, 14px);
+      gap: 2px;
+    }
+    .analysis-band .corr-cell {
+      color: transparent;
+      font-size: 0;
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-subtle) 55%, transparent);
+    }
+    .analysis-band .corr-cell:hover {
+      transform: scale(1.08);
+    }
+    .analysis-band .corr-cell.diag::after {
+      content: '';
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: color-mix(in oklch, var(--text-tertiary) 42%, transparent);
+    }
+    .analysis-band .corr-cell.strong-pos {
+      color: transparent;
+      font-size: 0;
+      box-shadow:
+        inset 0 0 0 1px color-mix(in oklch, var(--brand-accent) 44%, transparent),
+        0 0 10px color-mix(in oklch, var(--brand-accent) 14%, transparent);
+    }
+    .analysis-band .corr-cell.strong-pos::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      box-shadow: 0 0 8px color-mix(in oklch, var(--brand-accent) 36%, transparent);
+    }
+    .analysis-band .corr-labels {
+      display: none;
+    }
+    .analysis-band .corr-legend {
+      align-self: center;
+      margin-left: 0;
+    }
+    .analysis-band .corr-legend-bar {
+      width: 52px;
+    }
+    .analysis-band .corr-callout {
+      border-left: 1px solid var(--border-subtle);
+      padding-left: var(--space-10);
+      min-width: 0;
+    }
+    .analysis-band .corr-callout-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-2);
+    }
+    .analysis-band .corr-callout-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--brand-accent);
+      white-space: nowrap;
+    }
+    .analysis-band .corr-callout-note {
+      margin-top: var(--space-2);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+    .analysis-band .analysis-notes {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-6) var(--space-12);
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      padding: 0;
+    }
+    .analysis-band .analysis-notes-item {
+      min-width: 0;
+      padding: var(--space-4) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+    }
+    .analysis-band .analysis-notes-title,
+    .analysis-band .analysis-notes-body {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     /* ── Context section header: subtle weight emphasis ── */
     .activity-stack .context-section-title {
       font-size: var(--font-size-14);
-      letter-spacing: 0.01em;
+      letter-spacing: 0;
       font-weight: var(--font-weight-semibold);
     }
 
@@ -1984,7 +2144,7 @@
     }
     /* ── Page-specific utilities ── */
     .tab-panel-scroll { padding: var(--space-12); overflow: auto; }
-    .research-tab-bar { gap: var(--space-4); padding: var(--space-6) var(--space-12); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
+    .research-tab-bar { display: none; }
     /* Inline style cleanup */
     [data-tab-panel][aria-hidden="true"] { display: none; }
     [data-tab-panel][aria-hidden="false"] { display: contents; }
@@ -2021,52 +2181,58 @@
     <nav class="shell-rail">
       <div class="rail-logo">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" title="Home">
+        <div class="rail-icon" title="Home" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" title="Markets">
+        <div class="rail-icon" title="Markets" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon active" title="Research">
+        <div class="rail-icon active" title="Research" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" title="Trading">
+        <div class="rail-icon" title="Trading" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" title="AI">
+        <div class="rail-icon" title="AI" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" title="Platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" title="Settings">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
       <span class="header-title">Research <span class="header-subtitle">研究工作区</span></span>
       <div class="header-spacer"></div>
-      <div class="header-search">
+      <div class="header-search" data-shell-utility="command" data-search-scope="global">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         搜索因子、回测、实验……
         <kbd>⌘K</kbd>
       </div>
       <div class="header-actions">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <!-- Overlay triggers: New Backtest / New Strategy / New Experiment -->
@@ -2076,17 +2242,17 @@
         <label for="overlay-new-strategy" class="header-btn header-btn-secondary overlay-trigger">新建策略</label>
         
         <label for="overlay-new-experiment" class="header-btn header-btn-secondary overlay-trigger">新建实验</label>
-        <span class="header-btn header-btn-ghost">进入因子分析</span>
-        <div class="header-action-btn" title="Notifications">
+        <a href="page-factor-analysis.html" class="header-btn header-btn-ghost">进入因子分析</a>
+        <div class="header-action-btn" title="Notifications" data-shell-utility="notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
         </div>
-        <div class="header-avatar">C</div>
+        
       </div>
     </header>
 
     <!-- ═══ Scope Strip (Research context) ═══ -->
-    <div class="scope-strip" data-contract-slot="scope-strip">
+    <div class="scope-strip" data-contract-slot="strip">
       <!-- Health group -->
       <div class="pulse-item ic-pulse" data-tooltip="当前活跃因子总数 · 近期呈上升趋势">
         <span class="pulse-label">活跃因子</span>
@@ -2314,7 +2480,7 @@
 
 
     <!-- ═══ Main Content — Factor Monitor Table ═══ -->
-    <div class="main-content">
+    <div class="main-content" data-contract-slot="main">
       <div class="monitor-panel" data-glow>
         <div class="panel-header">
           <span class="panel-title">因子监控 <span class="panel-subtitle" data-tooltip="正常 8 · 验证中 1 · 退化 2 · 异常 1">12 因子</span></span>
@@ -2521,7 +2687,7 @@
     
 
     <!-- ═══ Activity Stack (300px right) ═══ -->
-    <div class="activity-stack" data-contract-slot="activity-stack">
+    <div class="activity-stack right-rail" data-contract-slot="activity" role="complementary" aria-label="研究活动与复审队列">
       <!-- Section 1: 最近运行 -->
       <div class="context-section" data-reveal="fade-up" data-reveal-delay="100">
         <div class="context-section-header">
@@ -2641,7 +2807,7 @@
     
 
     <!-- ═══ Analysis Band (220px bottom) ═══ -->
-    <div class="analysis-band" data-contract-slot="analysis-band">
+    <div class="analysis-band" data-contract-slot="analysis">
       <input type="radio" id="analysis-tab-ic" name="analysis-tab" checked class="sr-only">
       <input type="radio" id="analysis-tab-width" name="analysis-tab" class="sr-only">
       <input type="radio" id="analysis-tab-corr" name="analysis-tab" class="sr-only">
@@ -2847,6 +3013,11 @@
               <div class="corr-legend-bar"></div>
               <span>+1</span>
             </div>
+            <div class="corr-callout">
+              <div class="corr-callout-label">强相关焦点</div>
+              <div class="corr-callout-value">动量 / 情绪 0.72</div>
+              <div class="corr-callout-note">已高于 0.60 警戒线</div>
+            </div>
           </div>
         </div>
       </div>
@@ -3007,7 +3178,7 @@
     <!-- Overlay A: New Backtest (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-new-backtest">
       <label class="overlay-dismiss" for="overlay-new-backtest" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建回测">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建回测">
         <div class="overlay-header">
           <span class="overlay-title">新建回测</span>
           <label for="overlay-new-backtest" class="overlay-close" aria-label="关闭">✕</label>
@@ -3056,7 +3227,7 @@
     <!-- Overlay B: New Strategy (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-new-strategy">
       <label class="overlay-dismiss" for="overlay-new-strategy" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建策略">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建策略">
         <div class="overlay-header">
           <span class="overlay-title">新建策略</span>
           <label for="overlay-new-strategy" class="overlay-close" aria-label="关闭">✕</label>
@@ -3103,7 +3274,7 @@
     <!-- Overlay C: New Experiment (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-new-experiment">
       <label class="overlay-dismiss" for="overlay-new-experiment" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建实验">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建实验">
         <div class="overlay-header">
           <span class="overlay-title">新建实验</span>
           <label for="overlay-new-experiment" class="overlay-close" aria-label="关闭">✕</label>
@@ -3146,7 +3317,7 @@
     <!-- Overlay D: Run Detail (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-run-detail">
       <label class="overlay-dismiss" for="overlay-run-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="运行详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="运行详情">
         <div class="overlay-header">
           <span class="overlay-title">运行详情</span>
           <label for="overlay-run-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -3217,7 +3388,7 @@
     <!-- Overlay E: Review Action (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-review-action">
       <label class="overlay-dismiss" for="overlay-review-action" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审核操作">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="审核操作">
         <div class="overlay-header">
           <span class="overlay-title">审核操作</span>
           <label for="overlay-review-action" class="overlay-close" aria-label="关闭">✕</label>
@@ -3603,10 +3774,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-new-backtest">
       <div class="gallery-card__label">新建回测 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建回测">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建回测">
           <div class="overlay-header">
             <span class="overlay-title">新建回测</span>
           </div>
@@ -3650,10 +3821,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-new-strategy">
       <div class="gallery-card__label">新建策略 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建策略">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建策略">
           <div class="overlay-header">
             <span class="overlay-title">新建策略</span>
           </div>
@@ -3694,10 +3865,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-new-experiment">
       <div class="gallery-card__label">新建实验 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建实验">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建实验">
           <div class="overlay-header">
             <span class="overlay-title">新建实验</span>
           </div>
@@ -3734,10 +3905,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-run-detail">
       <div class="gallery-card__label">运行详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="运行详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="运行详情">
           <div class="overlay-header">
             <span class="overlay-title">运行详情</span>
           </div>
@@ -3802,10 +3973,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-review-action">
       <div class="gallery-card__label">审核操作 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审核操作">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="审核操作">
           <div class="overlay-header">
             <span class="overlay-title">审核操作</span>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Metric } from "@/components/data";
 
 /* ── Types ── */
@@ -27,15 +27,20 @@ const IC_METRICS = [
 
 const BARS: readonly number[] = [0.65, 0.42, 0.78, 0.35, 0.91, 0.55];
 
-const HEATMAP_LEVELS = 5;
-const HEATMAP_SIZE = 5;
+const CORRELATION_FACTORS = [
+	{ label: "动量12M", short: "动" },
+	{ label: "价值PE", short: "价" },
+	{ label: "低波动", short: "低" },
+	{ label: "北向持仓", short: "北" },
+	{ label: "情绪Alpha", short: "情" },
+] as const;
 
-const HEATMAP_DATA: readonly (readonly number[])[] = [
-	[4, 2, 0, 1, 3],
-	[2, 4, 1, 0, 2],
-	[0, 1, 4, 3, 1],
-	[1, 0, 3, 4, 2],
-	[3, 2, 1, 2, 4],
+const CORRELATION_MATRIX: readonly (readonly number[])[] = [
+	[1.0, -0.12, -0.18, 0.25, 0.72],
+	[-0.12, 1.0, 0.31, 0.08, -0.05],
+	[-0.18, 0.31, 1.0, 0.14, -0.22],
+	[0.25, 0.08, 0.14, 1.0, 0.38],
+	[0.72, -0.05, -0.22, 0.38, 1.0],
 ];
 
 const NOTES: readonly { readonly id: string; readonly text: string; readonly time: string }[] = [
@@ -92,30 +97,79 @@ function FactorBreadthPanel() {
 	);
 }
 
+function correlationCellClass(value: number, row: number, col: number): string {
+	if (row === col) {
+		return "self bg-(--color-surface-2) text-(--color-foreground-muted) ring-1 ring-(--color-border-subtle)";
+	}
+	if (value >= 0.65) {
+		return "signal accent bg-(--color-accent)/20 text-(--color-accent) ring-1 ring-(--color-accent)/35";
+	}
+	if (value >= 0.3) {
+		return "moderate bg-(--color-accent)/10 text-(--color-foreground-secondary)";
+	}
+	if (value <= -0.3) {
+		return "negative bg-(--color-status-led-critical)/16 text-(--color-status-led-critical)";
+	}
+	if (value <= -0.1) {
+		return "negative-muted bg-(--color-status-led-critical)/8 text-(--color-foreground-tertiary)";
+	}
+	return "muted bg-(--color-surface-1) text-(--color-foreground-muted)";
+}
+
+function correlationCellText(value: number, row: number, col: number): string {
+	if (row === col) return "•";
+	if (Math.abs(value) >= 0.65) return value.toFixed(2);
+	return "";
+}
+
 function CorrelationPanel() {
 	return (
 		<div className="p-3">
-			<div
-				className="grid"
-				style={{
-					gridTemplateColumns: `repeat(${HEATMAP_SIZE}, 2rem)`,
-					gap: "2px",
-				}}
-			>
-				{Array.from({ length: HEATMAP_SIZE * HEATMAP_SIZE }, (_, idx) => {
-					const row = Math.floor(idx / HEATMAP_SIZE);
-					const col = idx % HEATMAP_SIZE;
-					const level = HEATMAP_DATA[row]?.[col] ?? 0;
-					return (
-						<div
-							key={`hm-${row}-${col}`}
-							data-heatmap-cell=""
-							className="h-8 w-8 rounded-sm"
-							style={{ backgroundColor: `var(--color-heatmap-${level})` }}
-							aria-label={`相关度 ${row + 1}-${col + 1}: 等级${level}`}
-						/>
-					);
-				})}
+			<div className="mb-2 flex items-center justify-between gap-3">
+				<span className="text-xs text-(--color-foreground-tertiary)">强相关焦点</span>
+				<span className="font-data text-xs tabular-nums text-(--color-accent)">动量/情绪 0.72</span>
+			</div>
+			<div className="flex items-center gap-4">
+				<div className="grid grid-cols-[2rem_repeat(5,1.75rem)] gap-1 font-data text-xs">
+					<div aria-hidden="true" />
+					{CORRELATION_FACTORS.map((factor) => (
+						<div key={`x-${factor.label}`} className="text-center text-(--color-foreground-tertiary)">
+							{factor.short}
+						</div>
+					))}
+					{CORRELATION_MATRIX.map((row, rowIdx) => (
+						<Fragment key={`row-${CORRELATION_FACTORS[rowIdx]?.label ?? rowIdx}`}>
+							<div className="flex items-center text-(--color-foreground-tertiary)">
+								{CORRELATION_FACTORS[rowIdx]?.short}
+							</div>
+							{row.map((value, colIdx) => {
+								const rowLabel = CORRELATION_FACTORS[rowIdx]?.label ?? `因子 ${rowIdx + 1}`;
+								const colLabel = CORRELATION_FACTORS[colIdx]?.label ?? `因子 ${colIdx + 1}`;
+								const toneClass = correlationCellClass(value, rowIdx, colIdx);
+								return (
+									<div
+										key={`hm-${rowIdx}-${colIdx}`}
+										data-heatmap-cell=""
+										data-correlation-tone={toneClass.split(" ")[0]}
+										className={[
+											"flex h-7 w-7 items-center justify-center rounded-[3px] text-xs tabular-nums transition-transform hover:scale-110",
+											toneClass,
+										].join(" ")}
+										aria-label={`${rowLabel} vs ${colLabel}: 相关系数 ${value.toFixed(2)}`}
+										title={`${rowLabel} vs ${colLabel} · 相关系数 ${value.toFixed(2)}`}
+									>
+										{correlationCellText(value, rowIdx, colIdx)}
+									</div>
+								);
+							})}
+						</Fragment>
+					))}
+				</div>
+				<div className="flex items-center gap-1 font-data text-xs text-(--color-foreground-tertiary)">
+					<span>-1</span>
+					<div className="h-1.5 w-14 rounded-full bg-linear-to-r from-(--color-status-led-critical)/35 via-(--color-surface-1) to-(--color-accent)/45" />
+					<span>+1</span>
+				</div>
 			</div>
 		</div>
 	);

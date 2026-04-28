@@ -2,7 +2,6 @@ import { useExperiments, useReviewQueue } from "../hooks";
 import { ContextSection } from "@/components/domain/context-section";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 const STATUS_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"> = {
 	completed: "healthy",

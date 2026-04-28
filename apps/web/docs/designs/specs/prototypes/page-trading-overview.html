@@ -291,13 +291,28 @@
      * Trading Variant: 4-row override (banner + no analysis band)
      * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
-      grid-template-rows: var(--shell-header-height) auto auto 1fr;
+      height: calc(100vh - 1.5rem);
+      min-height: calc(100vh - 1.5rem);
+      overflow: hidden;
+      grid-template-rows:
+        var(--shell-header-height)
+        var(--density-strip-height, 32px)
+        var(--density-strip-height, 32px)
+        var(--density-strip-height, 32px)
+        auto
+        minmax(0, 1fr);
       grid-template-areas:
         "rail header   header"
-        "rail strip    strip"
+        "rail session  session"
+        "rail margin   margin"
+        "rail pipeline pipeline"
         "rail banner   banner"
         "rail main     activity";
     }
+
+    .shell-analytical.trading-variant .session-strip { grid-area: session; }
+    .shell-analytical.trading-variant .margin-strip { grid-area: margin; }
+    .shell-analytical.trading-variant .pipeline-strip { grid-area: pipeline; }
 
     /* Banner grid area */
     .trading-banner {
@@ -551,7 +566,7 @@
       font-weight: var(--font-weight-semibold);
       color: var(--market-up-fg);
       font-feature-settings: 'tnum' 1, 'zero' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
 
     .equity-pct {
@@ -1075,7 +1090,7 @@
 
     /* ── Status bar (terminal DNA) ── */
     .shell-analytical.trading-variant {
-      padding-bottom: 1.5rem;
+      padding-bottom: 0;
     }
     .status-bar {
       position: fixed;
@@ -1144,9 +1159,9 @@
     /* ══════════════════════════════════════════════
      * Tab Activation Rules (prototype-toggles.css)
      * ══════════════════════════════════════════════ */
-    .tab-group:has(#trading-mode:checked)
+    :root:has(#trading-mode:checked)
       [data-panel="trading-mode"] { display: block; }
-    .tab-group:has(#review-mode:checked)
+    :root:has(#review-mode:checked)
       [data-panel="review-mode"] { display: block; }
 
     /* Tab pill styling — reuses order-tab visual language */
@@ -1168,8 +1183,8 @@
       background: color-mix(in oklch, var(--interaction-hover-subtle-bg) 50%, transparent);
     }
     /* Active state driven by :has() */
-    .tab-group:has(#trading-mode:checked) label[for="trading-mode"],
-    .tab-group:has(#review-mode:checked) label[for="review-mode"] {
+    :root:has(#trading-mode:checked) label[for="trading-mode"],
+    :root:has(#review-mode:checked) label[for="review-mode"] {
       color: var(--text-primary);
       background: var(--interaction-hover-subtle-bg);
     }
@@ -1202,8 +1217,8 @@
       [data-overlay="overlay-limit-status"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1643,7 +1658,7 @@
     /* Risk monitoring — severity header accent */
     .context-section.section-risk .context-section-header {
       border-bottom: 2px solid transparent;
-      border-image: linear-gradient(90deg, var(--risk-critical-fg), color-mix(in oklch, var(--risk-critical-fg) 30%, transparent) 1;
+      border-image: linear-gradient(90deg, var(--risk-critical-fg), color-mix(in oklch, var(--risk-critical-fg) 30%, transparent)) 1;
     }
 
     /* Risk progress bar with gradient fill */
@@ -1927,8 +1942,8 @@
     }
 
     /* ── A2. Overlay accent border (Brand DNA #3) ── */
-    .overlay-sheet,
-    .overlay-drawer {
+    .overlay-surface,
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
@@ -1941,6 +1956,15 @@
     /* ── A4. Status bar top accent (brand gradient ::before) ── */
     .status-bar {
       position: relative;
+    }
+    #default-view > .status-bar {
+      position: relative !important;
+      bottom: auto !important;
+      flex: 0 0 1.5rem !important;
+      height: 1.5rem !important;
+      margin-left: var(--shell-rail-width);
+      width: calc(100vw - var(--shell-rail-width));
+      overflow: hidden !important;
     }
     .status-bar::before {
       content: '';
@@ -1972,14 +1996,14 @@
     .trading-mode-tab:nth-child(3) { animation-delay: 70ms; }
 
     /* ── B2. Active tab subtle brand tint background (6% brand accent) ── */
-    .tab-group:has(#trading-mode:checked) label[for="trading-mode"],
-    .tab-group:has(#review-mode:checked) label[for="review-mode"] {
+    :root:has(#trading-mode:checked) label[for="trading-mode"],
+    :root:has(#review-mode:checked) label[for="review-mode"] {
       background: color-mix(in oklch, var(--brand-accent) 6%, var(--interaction-hover-subtle-bg));
     }
 
     /* ── B3. Active tab brand gradient indicator ::after ── */
-    .tab-group:has(#trading-mode:checked) label[for="trading-mode"]::after,
-    .tab-group:has(#review-mode:checked) label[for="review-mode"]::after {
+    :root:has(#trading-mode:checked) label[for="trading-mode"]::after,
+    :root:has(#review-mode:checked) label[for="review-mode"]::after {
       content: '';
       position: absolute;
       bottom: -1px;
@@ -2133,27 +2157,23 @@
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <button class="rail-icon" aria-label="Home" title="Home">
+        <button class="rail-icon" aria-label="Home" title="Home" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </button>
-        <button class="rail-icon" aria-label="Markets" title="Markets">
+        <button class="rail-icon" aria-label="Markets" title="Markets" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </button>
-        <button class="rail-icon" aria-label="Research" title="Research">
+        <button class="rail-icon" aria-label="Research" title="Research" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </button>
-        <button class="rail-icon active" aria-label="Trading" aria-current="page" title="Trading">
+        <button class="rail-icon active" aria-label="Trading" aria-current="page" title="Trading" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </button>
-        <button class="rail-icon" aria-label="Platform" title="Platform">
+        <button class="rail-icon" aria-label="Platform" title="Platform" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </button>
       </div>
-      <div class="rail-bottom">
-        <button class="rail-icon" aria-label="Settings" title="Settings">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </button>
-      </div>
+      
       <!-- R1: Rail right edge ambient light -->
       <div class="ambient-rail" aria-hidden="true"></div>
     </nav>
@@ -2182,7 +2202,7 @@
       </button>
 
       <!-- Search -->
-      <div class="header-search">
+      <div class="header-search" data-shell-utility="command" data-search-scope="global">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         搜索...
         <kbd>⌘K</kbd>
@@ -2190,16 +2210,26 @@
 
       <!-- Actions -->
       <div class="header-actions">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <label for="overlay-limit-status" class="header-limit-btn" title="涨跌停标的状态概览">
@@ -2208,16 +2238,16 @@
         </label>
         
         <label for="overlay-pause-trading" class="btn-danger-sm" aria-label="暂停交易">暂停交易</label>
-        <button class="header-action-btn" title="Notifications" aria-label="通知">
+        <button class="header-action-btn" title="Notifications" aria-label="通知" data-shell-utility="notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
         </button>
-        <button class="header-avatar" aria-label="用户菜单">C</button>
+        
       </div>
     </header>
 
     <!-- ═══ Session Strip (with Trading Phase Indicator) ═══ -->
-    <div class="scope-strip" role="status" aria-label="交易会话状态">
+    <div class="scope-strip session-strip" role="status" aria-label="交易会话状态" data-contract-slot="session-strip">
       <div class="scope-phase">
         <span class="phase-dot"></span>
         连续竞价
@@ -2256,7 +2286,7 @@
     </div>
 
     <!-- ═══ Session Strip: 两融数据行 ═══ -->
-    <div class="scope-strip" role="status" aria-label="两融数据">
+    <div class="scope-strip margin-strip" role="status" aria-label="两融数据" data-contract-slot="margin-strip">
       <div class="scope-metric" data-tooltip="融资买入余额">
         <span class="scope-metric-label">融资余额</span>
         <span class="scope-metric-value up">+¥1.2亿</span>
@@ -2579,10 +2609,10 @@
         
 
         <!-- Panel 3: 订单状态 (~27%) -->
-        <div class="panel panel-orders" role="region" aria-label="订单状态" data-contract-slot="order-status" data-reveal="fade-up" data-reveal-delay="2">
+        <div class="panel panel-orders" role="region" aria-label="订单状态" data-contract-slot="order-status" data-tabs="order-status-tabs" data-reveal="fade-up" data-reveal-delay="2">
           <div class="panel-header">
             <span class="panel-title">订单</span>
-            <div class="order-tabs" role="tablist" data-tabs="trading-tabs">
+            <div class="order-tabs" role="tablist">
               <button class="order-tab active" role="tab" aria-selected="true" data-tab-target="positions">待成交 <span class="tab-count">2</span></button>
               <button class="order-tab" role="tab" aria-selected="false" data-tab-target="orders">已成交 <span class="tab-count">5</span></button>
               <button class="order-tab" role="tab" aria-selected="false" data-tab-target="fills">已撤单 <span class="tab-count">1</span></button>
@@ -2610,7 +2640,7 @@
               <span class="order-time">8分钟前</span>
             </div>
             </div>
-            <div data-tab-panel="orders" hidden>
+            <div data-tab-panel="orders">
             <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交" data-tooltip="限价买入比亚迪，成交价 ¥288.00">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">002594</span>
@@ -2628,7 +2658,7 @@
               <span class="order-time">45分钟前</span>
             </div>
             </div>
-            <div data-tab-panel="fills" hidden>
+            <div data-tab-panel="fills">
             <div class="order-row order-cancelled" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单" data-tooltip="限价卖出中国平安，已撤单">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">601318</span>
@@ -2819,7 +2849,7 @@
     </div>
 
     <!-- ═══ Activity Stack (300px right side) ═══ -->
-    <div class="activity-stack" role="complementary" aria-label="活动面板">
+    <div class="activity-stack" role="complementary" aria-label="活动面板" data-contract-slot="sidebar">
       <div class="context-rail">
 
         <!-- Section 1: 风控监控 -->
@@ -3006,7 +3036,7 @@
     <!-- Overlay A: 暂停交易确认 (Modal 破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-pause-trading">
       <label class="overlay-dismiss" for="overlay-pause-trading" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认">
         <div class="overlay-header">
           <span class="overlay-title text-danger">确认暂停交易</span>
           <label for="overlay-pause-trading" class="overlay-close" aria-label="关闭">✕</label>
@@ -3030,7 +3060,7 @@
     <!-- Overlay B: 持仓详情 (Sheet) -->
     <div class="overlay-backdrop" data-overlay="overlay-position-detail">
       <label class="overlay-dismiss" for="overlay-position-detail" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="持仓详情">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="持仓详情">
         <div class="overlay-header">
           <span class="overlay-title">持仓详情 — 贵州茅台 (600519)</span>
           <label for="overlay-position-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -3094,7 +3124,7 @@
     <!-- Overlay C: 风控预警详情 (Drawer) -->
     <div class="overlay-backdrop" data-overlay="overlay-risk-alert-detail">
       <label class="overlay-dismiss" for="overlay-risk-alert-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="风控预警详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="风控预警详情">
         <div class="overlay-header">
           <span class="overlay-title">风控预警详情</span>
           <label for="overlay-risk-alert-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -3146,7 +3176,7 @@
     <!-- Overlay D: 涨跌停标的状态概览 (Sheet) -->
     <div class="overlay-backdrop" data-overlay="overlay-limit-status">
       <label class="overlay-dismiss" for="overlay-limit-status" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="涨跌停标的状态概览">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="涨跌停标的状态概览">
         <div class="overlay-header">
           <span class="overlay-title">涨跌停标的状态概览</span>
           <label for="overlay-limit-status" class="overlay-close" aria-label="关闭">✕</label>
@@ -3688,10 +3718,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-pause-trading">
       <div class="gallery-card__label">暂停交易确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认">
           <div class="overlay-header">
             <span class="overlay-title text-danger">确认暂停交易</span>
           </div>
@@ -3712,10 +3742,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-position-detail">
       <div class="gallery-card__label">持仓详情 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="持仓详情">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="持仓详情">
           <div class="overlay-header">
             <span class="overlay-title">持仓详情 — 贵州茅台 (600519)</span>
           </div>
@@ -3773,10 +3803,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-risk-alert-detail">
       <div class="gallery-card__label">风控预警详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="风控预警详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="风控预警详情">
           <div class="overlay-header">
             <span class="overlay-title">风控预警详情</span>
           </div>
@@ -3822,10 +3852,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-limit-status">
       <div class="gallery-card__label">涨跌停标的状态概览 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="涨跌停标的状态概览">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="涨跌停标的状态概览">
           <div class="overlay-header">
             <span class="overlay-title">涨跌停标的状态概览</span>
           </div>
@@ -3858,5 +3888,6 @@
   <input type="checkbox" id="overlay-pause-trading" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-position-detail" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-risk-alert-detail" class="overlay-radio sr-only">
+  <input type="checkbox" id="overlay-limit-status" class="overlay-radio sr-only">
 </body>
 </html>

@@ -5,7 +5,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function MacroDriversBar() {
-	const { data, isLoading, isError, refetch } = useMacroDrivers();
+	const { data, isLoading, refetch } = useMacroDrivers();
 
 	return (
 		<ContextSection title="宏观驱动" data-info-level="l2" data-info-unit="macro-drivers">
@@ -35,12 +35,8 @@ export function MacroDriversBar() {
 									{indicator.change.toFixed(2)}
 								</span>
 								<Sparkline
-									data={indicator.sparkline}
-									color={
-										indicator.change >= 0
-											? "var(--color-system-healthy)"
-											: "var(--color-system-down)"
-									}
+									data={indicator.sparkline.map((point) => point.value)}
+									color={indicator.change >= 0 ? "up" : "down"}
 									width={120}
 									height={32}
 								/>

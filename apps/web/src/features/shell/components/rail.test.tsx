@@ -43,15 +43,15 @@ describe("Rail", () => {
 		expect(screen.getByText("D")).toBeInTheDocument();
 	});
 
-	it("renders navigation links for all 6 domains", () => {
+	it("renders navigation links for all 5 product domains", () => {
 		render(<Rail />);
 		// Each domain has a Link with aria-label
 		expect(screen.getByLabelText("首页")).toBeInTheDocument();
 		expect(screen.getByLabelText("市场")).toBeInTheDocument();
 		expect(screen.getByLabelText("研究")).toBeInTheDocument();
 		expect(screen.getByLabelText("交易")).toBeInTheDocument();
-		expect(screen.getByLabelText("AI")).toBeInTheDocument();
 		expect(screen.getByLabelText("平台")).toBeInTheDocument();
+		expect(screen.queryByLabelText("AI")).not.toBeInTheDocument();
 	});
 
 	it("marks home as active when pathname is /", () => {
@@ -84,10 +84,13 @@ describe("Rail", () => {
 		expect(marketsLink?.className).not.toContain("bg-[color-mix(in_oklch,var(--color-accent)_10%,transparent)]");
 	});
 
-	it("renders placeholder icons at the bottom (settings and user)", () => {
+	it("does not render settings, user, theme, or density controls in the rail", () => {
 		render(<Rail />);
-		expect(screen.getByLabelText("设置")).toBeInTheDocument();
-		expect(screen.getByLabelText("用户")).toBeInTheDocument();
+
+		expect(screen.queryByLabelText("设置")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("用户")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("密度切换")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("主题切换")).not.toBeInTheDocument();
 	});
 
 	it("renders links with correct href paths", () => {
@@ -96,8 +99,8 @@ describe("Rail", () => {
 		expect(screen.getByTestId("link-/markets")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/research")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/trading")).toBeInTheDocument();
-		expect(screen.getByTestId("link-/ai")).toBeInTheDocument();
 		expect(screen.getByTestId("link-/platform")).toBeInTheDocument();
+		expect(screen.queryByTestId("link-/ai")).not.toBeInTheDocument();
 	});
 
 	it("applies background and border styles", () => {

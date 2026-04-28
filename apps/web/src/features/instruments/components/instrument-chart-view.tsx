@@ -1,6 +1,6 @@
 import { useInstrumentChart } from "../hooks/use-instrument-chart";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
-import { DittoErrorBoundary } from "@/lib/error-boundary";
+import { ErrorState } from "@/lib/error-boundary";
 import { ContextSection } from "@/components/domain/context-section";
 
 interface InstrumentChartViewProps {
@@ -15,11 +15,7 @@ export function InstrumentChartView({ id }: InstrumentChartViewProps) {
 	}
 
 	if (isError) {
-		return (
-			<DittoErrorBoundary
-				fallbackProps={{ onRetry: () => void refetch() }}
-			/>
-		);
+		return <ErrorState onRetry={() => void refetch()} />;
 	}
 
 	if (!data?.bars.length) {

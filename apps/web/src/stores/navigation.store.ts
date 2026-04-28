@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { DomainId } from "@/types";
+import type { DomainId } from "@/features/navigation";
 
 type NavigationState = {
 	readonly railCollapsed: boolean;

@@ -123,7 +123,7 @@
         "rail strip  strip"
         "rail kpi    trace"
         "rail table   trace";
-      min-height: 100vh;
+      min-height: calc(100vh - var(--shell-status-bar-height));
       width: 100vw;
       overflow-y: auto;
     }
@@ -445,6 +445,9 @@
       min-height: 0;
     }
 
+    [data-tab-panel] { display: none; }
+    [data-tab-panel="all"] { display: block; }
+
     /* ── Brand anchor: table header bottom accent ── */
     .ledger-table thead {
       border-bottom: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
@@ -488,13 +491,23 @@
       margin-left: var(--space-2);
     }
 
+    .main-ledger-table th:nth-child(1) { width: 10%; }
+    .main-ledger-table th:nth-child(2) { width: 14%; }
+    .main-ledger-table th:nth-child(3) { width: 8%; }
+    .main-ledger-table th:nth-child(4) { width: 8%; }
+    .main-ledger-table th:nth-child(5) { width: 11%; }
+    .main-ledger-table th:nth-child(6) { width: 11%; }
+    .main-ledger-table th:nth-child(7) { width: 7%; }
+    .main-ledger-table th:nth-child(8) { width: 15%; }
+    .main-ledger-table th:nth-child(9) { width: 16%; }
+
     .ledger-table th.right { text-align: right; }
     .ledger-table th.numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
 
     .ledger-table td {
       font-size: var(--font-size-12);
       color: var(--text-primary);
-      padding: var(--density-cell-padding-y) var(--density-cell-padding-x);
+      padding: var(--space-4) var(--density-cell-padding-x);
       border-bottom: 1px solid var(--border-subtle);
       white-space: nowrap;
       overflow: hidden;
@@ -505,7 +518,7 @@
     .ledger-table td.numeric { font-family: var(--font-family-numeric); font-feature-settings: 'tnum' 1; }
 
     .ledger-table tbody tr {
-      height: var(--density-row-height);
+      height: calc(var(--space-24) + var(--space-4));
       transition:
         background var(--motion-duration-fast) var(--motion-easing-standard),
         box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
@@ -1111,7 +1124,7 @@
       right: 0;
       display: flex;
       align-items: center;
-      height: 1.5rem;
+      height: var(--shell-status-bar-height);
       padding: 0 var(--space-8);
       background: var(--surface-app);
       backdrop-filter: blur(8px);
@@ -1235,8 +1248,8 @@
       [data-overlay="overlay-batch-cancel"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1499,6 +1512,7 @@
 
     /* ── KPI sparkline (execution metrics) ── */
     .kpi-strip {
+      grid-area: kpi;
       display: flex;
       align-items: center;
       gap: var(--space-16);
@@ -1636,10 +1650,10 @@
      * ══════════════════════════════════════════════ */
 
     /* Brand DNA #3: Overlay accent border — all sheets and drawers */
-    .overlay-sheet {
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
-    .overlay-drawer {
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
@@ -1859,32 +1873,28 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Execution Ledger · Compact · A股</div>
 
-  <div class="shell-ledger">
+  <div class="shell-ledger catalog-shell" data-tabs="order-tabs">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -1922,16 +1932,29 @@
       </div>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <button class="filter-btn" tabindex="0" aria-label="刷新订单" title="刷新">
@@ -1941,10 +1964,10 @@
         <div class="header-action-btn" tabindex="0" role="button" aria-label="导出订单" title="导出">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10m0 0l-3-3m3 3l3-3M3 17h14"/></svg>
         </div>
-        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知" data-shell-utility="notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
         </div>
-        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+        
       </div>
     </header>
 
@@ -1972,27 +1995,27 @@
         <label for="orders-pending" class="status-tab label-tab" role="tab">
           <span class="tab-dot pending" aria-hidden="true"></span>
           待提交
-          <span class="tab-count" data-counter="2" data-counter-decimals="0">2</span>
+          <span class="tab-count">2</span>
         </label>
         <label for="orders-submitted" class="status-tab label-tab" role="tab">
           <span class="tab-dot submitted" aria-hidden="true"></span>
           已提交
-          <span class="tab-count" data-counter="5" data-counter-decimals="0">5</span>
+          <span class="tab-count">5</span>
         </label>
         <label for="orders-partial" class="status-tab label-tab" role="tab">
           <span class="tab-dot partial" aria-hidden="true"></span>
           部分成交
-          <span class="tab-count" data-counter="1" data-counter-decimals="0">1</span>
+          <span class="tab-count">1</span>
         </label>
-        <label for="orders-done" class="status-tab label-tab active" role="tab" aria-selected="true">
+        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true">
           <span class="tab-dot done" aria-hidden="true"></span>
           已完成
-          <span class="tab-count" data-counter="148" data-counter-decimals="0">148</span>
+          <span class="tab-count">148</span>
         </label>
         <label for="orders-failed" class="status-tab label-tab" role="tab">
           <span class="tab-dot failed" aria-hidden="true"></span>
           失败/撤单
-          <span class="tab-count" data-counter="12" data-counter-decimals="0">12</span>
+          <span class="tab-count">12</span>
         </label>
       </div>
       <div class="status-strip-spacer"></div>
@@ -2007,7 +2030,7 @@
     <div class="kpi-strip" data-reveal="fade-up" data-reveal-delay="50" role="region" aria-label="执行概览">
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-counter="168" data-counter-decimals="0">168</span></div>
+          <div class="kpi-value"><span>168</span></div>
           <div class="kpi-label">今日订单</div>
         </div>
         <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
@@ -2019,7 +2042,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-counter="12800000" data-counter-decimals="2" data-counter-prefix="¥">12,800,000.00</span><span class="kpi-unit">M</span></div>
+          <div class="kpi-value"><span>¥12.80</span><span class="kpi-unit">M</span></div>
           <div class="kpi-label">成交额</div>
         </div>
         <span class="kpi-change up">+8.3%</span>
@@ -2027,7 +2050,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-counter="88.1" data-counter-decimals="1" data-counter-suffix="%">88.1</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-value"><span>88.1</span><span class="kpi-unit">%</span></div>
           <div class="kpi-label">成交率</div>
         </div>
         <svg class="kpi-sparkline" viewBox="0 0 56 24" fill="none" aria-hidden="true">
@@ -2039,7 +2062,7 @@
       <div class="kpi-sep"></div>
       <div class="kpi-item">
         <div>
-          <div class="kpi-value"><span data-counter="-0.04" data-counter-decimals="2" data-counter-suffix="%">-0.04</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-value"><span>-0.04</span><span class="kpi-unit">%</span></div>
           <div class="kpi-label">平均滑点</div>
         </div>
         <span class="kpi-change down">改善</span>
@@ -2061,10 +2084,10 @@
       <div class="tab-panel" data-panel="orders-done">
 
     <!-- ═══ Orders Ledger Table ═══ -->
-    <div class="ledger-table-area" id="main-content" data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
+    <div class="ledger-table-area catalog-main" id="main-content" data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
       <!-- JS Tab Panel: 全部 (default visible) -->
-      <div data-tab-panel="all">
-      <table class="ledger-table" aria-label="订单账本">
+      <div data-tab-panel="all" data-tab-display="block">
+      <table class="ledger-table main-ledger-table" aria-label="订单账本">
         <thead>
           <tr>
             <th scope="col" class="col-wide">订单ID</th>
@@ -2088,7 +2111,7 @@
             </td>
             <td class="numeric">200</td>
             <td class="numeric">1,725.00</td>
-            <td class="numeric" data-tooltip="滑点 -0.09% · 较委托价节省 ¥300"><span data-counter="1723.50" data-counter-decimals="2">1,723.50</span></td>
+            <td class="numeric" data-tooltip="滑点 -0.09% · 较委托价节省 ¥300"><span>1,723.50</span></td>
             <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
               <span class="order-status filled" data-tooltip="订单已全部成交 · 200/200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
@@ -2104,7 +2127,7 @@
             </td>
             <td class="numeric">500</td>
             <td class="numeric">198.80</td>
-            <td class="numeric" data-tooltip="滑点 +0.20% · 高于委托价 ¥0.40/股"><span data-counter="199.20" data-counter-decimals="2">199.20</span></td>
+            <td class="numeric" data-tooltip="滑点 +0.20% · 高于委托价 ¥0.40/股"><span>199.20</span></td>
             <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
               <span class="order-status filled" data-tooltip="订单已全部成交 · 500/500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
@@ -2120,7 +2143,7 @@
             </td>
             <td class="numeric">1,000</td>
             <td class="numeric">265.00</td>
-            <td class="numeric" data-tooltip="滑点 -0.08% · 已成交 350/1,000 股"><span data-counter="264.80" data-counter-decimals="2">264.80</span></td>
+            <td class="numeric" data-tooltip="滑点 -0.08% · 已成交 350/1,000 股"><span>264.80</span></td>
             <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
             <td>
               <span class="order-status partial" data-tooltip="部分成交 · 350/1,000 股 · 等待剩余"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
@@ -2152,7 +2175,7 @@
             </td>
             <td class="numeric">800</td>
             <td class="numeric">45.20</td>
-            <td class="numeric" data-tooltip="滑点 -0.11% · 市价即时成交"><span data-counter="45.15" data-counter-decimals="2">45.15</span></td>
+            <td class="numeric" data-tooltip="滑点 -0.11% · 市价即时成交"><span>45.15</span></td>
             <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
               <span class="order-status filled" data-tooltip="订单已全部成交 · 800/800 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
@@ -2184,7 +2207,7 @@
             </td>
             <td class="numeric">1,500</td>
             <td class="numeric">27.90</td>
-            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span data-counter="27.85" data-counter-decimals="2">27.85</span></td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span>27.85</span></td>
             <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
               <span class="order-status filled" data-tooltip="订单已全部成交 · 1,500/1,500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
@@ -2232,19 +2255,147 @@
             </td>
             <td class="numeric">1,200</td>
             <td class="numeric">28.10</td>
-            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span data-counter="28.05" data-counter-decimals="2">28.05</span></td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 市价即时成交"><span>28.05</span></td>
             <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
             <td>
               <span class="order-status filled" data-tooltip="订单已全部成交 · 1,200/1,200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
             </td>
             <td class="cell-time">10:22:18</td>
           </tr>
+          <!-- Row 11: Pending -->
+          <tr class="row-pending" tabindex="0" role="row" data-order-id="ORD-20240401-011">
+            <td class="cell-numeric"><span data-tooltip="海尔智家 · 买入 400 股 · 待提交">ORD-011</span></td>
+            <td class="cell-name">海尔智家</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">400</td>
+            <td class="numeric">28.50</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status pending" data-tooltip="策略引擎生成 · 等待盘中确认"><span class="status-dot-inline" aria-hidden="true"></span> 待提交</span>
+            </td>
+            <td class="cell-time">—</td>
+          </tr>
+          <!-- Row 12: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-012">
+            <td class="cell-numeric"><span data-tooltip="中际旭创 · 卖出 200 股 · 限价">ORD-012</span></td>
+            <td class="cell-name">中际旭创</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">200</td>
+            <td class="numeric">178.20</td>
+            <td class="numeric" data-tooltip="滑点 +0.22% · 高于委托价 ¥0.40/股"><span>178.60</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 200/200 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:23:44</td>
+          </tr>
+          <!-- Row 13: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-013">
+            <td class="cell-numeric"><span data-tooltip="工业富联 · 买入 600 股 · 限价">ORD-013</span></td>
+            <td class="cell-name">工业富联</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">600</td>
+            <td class="numeric">45.60</td>
+            <td class="numeric" data-tooltip="滑点 -0.18% · 较委托价节省 ¥48"><span>45.52</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 600/600 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:24:02</td>
+          </tr>
+          <!-- Row 14: Submitted -->
+          <tr class="row-submitted" tabindex="0" role="row" data-order-id="ORD-20240401-014">
+            <td class="cell-numeric"><span data-tooltip="中国船舶 · 卖出 300 股 · 等待成交">ORD-014</span></td>
+            <td class="cell-name">中国船舶</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">300</td>
+            <td class="numeric">38.20</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status submitted" data-tooltip="已报券商 · 等待撮合 · 等待 42秒"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span>
+            </td>
+            <td class="cell-time">10:24:05</td>
+          </tr>
+          <!-- Row 15: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-015">
+            <td class="cell-numeric"><span data-tooltip="立讯精密 · 买入 700 股 · 市价">ORD-015</span></td>
+            <td class="cell-name">立讯精密</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">700</td>
+            <td class="numeric">39.80</td>
+            <td class="numeric" data-tooltip="滑点 -0.20% · 市价即时成交"><span>39.72</span></td>
+            <td><span class="order-type-tag" data-tooltip="市价订单：以最优价格立即成交">市价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 700/700 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:25:17</td>
+          </tr>
+          <!-- Row 16: Filled -->
+          <tr class="row-filled" tabindex="0" role="row" data-order-id="ORD-20240401-016">
+            <td class="cell-numeric"><span data-tooltip="万华化学 · 卖出 500 股 · 限价">ORD-016</span></td>
+            <td class="cell-name">万华化学</td>
+            <td>
+              <span class="order-side sell"><span class="side-arrow" aria-hidden="true"></span> 卖出</span>
+            </td>
+            <td class="numeric">500</td>
+            <td class="numeric">83.10</td>
+            <td class="numeric" data-tooltip="滑点 +0.30% · 高于委托价 ¥0.25/股"><span>83.35</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status filled" data-tooltip="订单已全部成交 · 500/500 股"><span class="status-dot-inline" aria-hidden="true"></span> 已完成</span>
+            </td>
+            <td class="cell-time">10:27:41</td>
+          </tr>
+          <!-- Row 17: Failed -->
+          <tr class="row-failed" tabindex="0" role="row" data-order-id="ORD-20240401-017">
+            <td class="cell-numeric"><span data-tooltip="汇川技术 · 买入 400 股 · 券商拒单">ORD-017</span></td>
+            <td class="cell-name">汇川技术</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">400</td>
+            <td class="numeric">64.20</td>
+            <td class="cell-disabled">—</td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status failed" data-tooltip="券商拒单 · 可调整价格后重试"><span class="status-dot-inline" aria-hidden="true"></span> 已拒单</span>
+            </td>
+            <td class="cell-time">10:29:03</td>
+          </tr>
+          <!-- Row 18: Partial fill -->
+          <tr class="row-partial" tabindex="0" role="row" data-order-id="ORD-20240401-018">
+            <td class="cell-numeric"><span data-tooltip="中芯国际 · 买入 1,000 股 · 部分成交 60%">ORD-018</span></td>
+            <td class="cell-name">中芯国际</td>
+            <td>
+              <span class="order-side buy"><span class="side-arrow" aria-hidden="true"></span> 买入</span>
+            </td>
+            <td class="numeric">1,000</td>
+            <td class="numeric">52.30</td>
+            <td class="numeric" data-tooltip="滑点 -0.38% · 已成交 600/1,000 股"><span>52.10</span></td>
+            <td><span class="order-type-tag" data-tooltip="限价订单：指定价格买入/卖出">限价</span></td>
+            <td>
+              <span class="order-status partial" data-tooltip="部分成交 · 600/1,000 股 · 等待剩余"><span class="status-dot-inline" aria-hidden="true"></span> 部分成交</span>
+            </td>
+            <td class="cell-time">10:31:26</td>
+          </tr>
         </tbody>
       </table>
       </div><!-- /data-tab-panel="all" -->
 
       <!-- JS Tab Panel: 待处理 -->
-      <div data-tab-panel="pending">
+      <div data-tab-panel="pending" data-tab-display="block">
       <table class="ledger-table" aria-label="待处理订单">
         <thead>
           <tr>
@@ -2313,7 +2464,7 @@
       </div><!-- /data-tab-panel="pending" -->
 
       <!-- JS Tab Panel: 已成 -->
-      <div data-tab-panel="filled">
+      <div data-tab-panel="filled" data-tab-display="block">
       <table class="ledger-table" aria-label="已成订单">
         <thead>
           <tr>
@@ -2414,7 +2565,7 @@
       </div><!-- /data-tab-panel="filled" -->
 
       <!-- JS Tab Panel: 撤单 -->
-      <div data-tab-panel="cancelled">
+      <div data-tab-panel="cancelled" data-tab-display="block">
       <table class="ledger-table" aria-label="已撤单订单">
         <thead>
           <tr>
@@ -2459,7 +2610,7 @@
     
 
     <!-- ═══ Order Trace Panel (340px) ═══ -->
-    <aside class="order-trace" id="order-trace" data-contract-slot="execution-trace" data-reveal="fade-right" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
+    <aside class="order-trace catalog-detail" id="order-trace" data-contract-slot="execution-trace" data-reveal="fade-right" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
       <!-- Trace Header -->
       <div class="trace-header">
         <div class="trace-title">
@@ -2498,19 +2649,19 @@
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">委托价格</span>
-                <span class="order-info-value"><span data-counter="1725.00" data-counter-decimals="2">1,725.00</span></span>
+                <span class="order-info-value"><span>1,725.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">成交均价</span>
-                <span class="order-info-value"><span data-counter="1723.50" data-counter-decimals="2">1,723.50</span></span>
+                <span class="order-info-value"><span>1,723.50</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">委托金额</span>
-                <span class="order-info-value"><span data-counter="345000.00" data-counter-decimals="2" data-counter-prefix="¥">345,000.00</span></span>
+                <span class="order-info-value"><span>¥345,000.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">成交金额</span>
-                <span class="order-info-value"><span data-counter="344700.00" data-counter-decimals="2" data-counter-prefix="¥">344,700.00</span></span>
+                <span class="order-info-value"><span>¥344,700.00</span></span>
               </div>
               <div class="order-info-item">
                 <span class="order-info-label">账户</span>
@@ -2586,19 +2737,19 @@
           <div class="trace-section-body">
             <div class="fee-row">
               <span class="fee-label">佣金</span>
-              <span class="fee-value"><span data-counter="172.35" data-counter-decimals="2" data-counter-prefix="¥">172.35</span></span>
+              <span class="fee-value"><span>¥172.35</span></span>
             </div>
             <div class="fee-row">
               <span class="fee-label">过户费</span>
-              <span class="fee-value"><span data-counter="17.24" data-counter-decimals="2" data-counter-prefix="¥">17.24</span></span>
+              <span class="fee-value"><span>¥17.24</span></span>
             </div>
             <div class="fee-row">
               <span class="fee-label">印花税</span>
-              <span class="fee-value"><span data-counter="344.70" data-counter-decimals="2" data-counter-prefix="¥">344.70</span></span>
+              <span class="fee-value"><span>¥344.70</span></span>
             </div>
             <div class="fee-row fee-total">
               <span class="fee-label">费用合计</span>
-              <span class="fee-value"><span data-counter="534.29" data-counter-decimals="2" data-counter-prefix="¥">534.29</span></span>
+              <span class="fee-value"><span>¥534.29</span></span>
             </div>
           </div>
         </div>
@@ -2902,7 +3053,7 @@
     <!-- Overlay A: 撤单确认 Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-cancel-confirm">
       <label class="overlay-dismiss" for="overlay-cancel-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
         <div class="overlay-header">
           <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           <label for="overlay-cancel-confirm" class="overlay-close" aria-label="关闭">✕</label>
@@ -2939,7 +3090,7 @@
     <!-- Overlay B: 重试提交 Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-retry-submit">
       <label class="overlay-dismiss" for="overlay-retry-submit" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="重试提交">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="重试提交">
         <div class="overlay-header">
           <span class="overlay-title">重试提交</span>
           <label for="overlay-retry-submit" class="overlay-close" aria-label="关闭">✕</label>
@@ -2989,7 +3140,7 @@
     <!-- Overlay C: 订单详情 Drawer (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-detail">
       <label class="overlay-dismiss" for="overlay-order-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="订单详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="订单详情">
         <div class="overlay-header">
           <span class="overlay-title">订单详情</span>
           <label for="overlay-order-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -3080,7 +3231,7 @@
     <!-- Overlay D: 批量撤单确认 Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-cancel">
       <label class="overlay-dismiss" for="overlay-batch-cancel" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
         <div class="overlay-header">
           <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
           <label for="overlay-batch-cancel" class="overlay-close" aria-label="关闭">✕</label>
@@ -3489,10 +3640,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-cancel-confirm">
       <div class="gallery-card__label">撤单确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
           <div class="overlay-header">
             <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           </div>
@@ -3526,10 +3677,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-retry-submit">
       <div class="gallery-card__label">重试提交 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="重试提交">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="重试提交">
           <div class="overlay-header">
             <span class="overlay-title">重试提交</span>
           </div>
@@ -3576,10 +3727,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-order-detail">
       <div class="gallery-card__label">订单详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="订单详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="订单详情">
           <div class="overlay-header">
             <span class="overlay-title">订单详情</span>
           </div>
@@ -3667,10 +3818,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-batch-cancel">
       <div class="gallery-card__label">批量撤单确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
           <div class="overlay-header">
             <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
           </div>

@@ -8,7 +8,7 @@ interface BacktestReturnsViewProps {
 }
 
 export function BacktestReturnsView({ jobId }: BacktestReturnsViewProps) {
-	const { data, isLoading, isError, refetch } = useBacktestResult(jobId);
+	const { data, isLoading, refetch } = useBacktestResult(jobId);
 
 	if (isLoading) {
 		return <LoadingSkeleton variant="table" rows={6} />;

@@ -308,7 +308,7 @@ export type LargeOrder = {
 
 export type NorthboundFlow = {
 	readonly date: string;
-	readonly沪股通: number;
+	readonly 沪股通: number;
 	readonly 深股通: number;
 	readonly total: number;
 };

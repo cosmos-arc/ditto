@@ -32,6 +32,41 @@
   border:  0;
 }
 
+.view-preferences {
+  position: relative;
+}
+
+.view-preferences-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--space-6));
+  right: 0;
+  min-width: 180px;
+  padding: var(--space-8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-8);
+  background: var(--surface-overlay);
+  z-index: 40;
+}
+
+.view-preferences[data-open="true"] .view-preferences-menu {
+  display: block;
+}
+
+.view-preferences-section + .view-preferences-section {
+  margin-top: var(--space-8);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.view-preferences-label {
+  display: block;
+  margin-bottom: var(--space-4);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-10);
+  font-weight: var(--font-weight-medium);
+}
+
 /* ── 1. View-Level Zone Navigation ─────────────
  *
  * HTML pattern:
@@ -60,11 +95,23 @@
   display: none;
 }
 
+/* Proto-nav is always visible for zone switching */
+
+/* Hide style-label when default-view is active */
+:root:has(#view-default:checked) #default-view > .style-label {
+  display: none !important;
+}
+
+/* Hide proto-nav when default-view is active (Gate 0: prototype tooling must not pollute product view) */
+:root:has(#view-default:checked) .proto-nav {
+  display: none !important;
+}
+
 /* Default view: flex column, constrained height */
 :root:has(#view-default:checked) #default-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 43px);
+  height: 100vh;
   overflow: hidden;
 }
 
@@ -336,8 +383,8 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
   z-index: 100;
+  background: var(--surface-overlay, #0e0e0e);
   align-items: center;
   justify-content: center;
 }
@@ -356,38 +403,37 @@
   border: none;
 }
 
-/* Sheet — centered modal */
-.overlay-sheet {
-  background: var(--surface-elevated, #1e1e1e);
-  border: 1px solid var(--border-subtle, #2a2a2a);
-  border-radius: var(--panel-radius, 8px);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.2);
-  padding: var(--space-16, 24px);
-  width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
-  overflow-y: auto;
+/* Shared overlay grammar */
+.overlay-surface {
   position: relative;
+  overflow-y: auto;
+  border: 1px solid var(--border-default, #2a2a2a);
+  border-radius: var(--panel-radius, 8px);
+  background: var(--surface-modal, #1e1e1e);
+  color: var(--text-secondary, #aaa);
+  padding: var(--space-16, 24px);
 }
 
-/* Drawer — right-aligned slide-over */
-.overlay-drawer {
-  background: var(--surface-elevated, #1e1e1e);
-  border: 1px solid var(--border-subtle, #2a2a2a);
-  border-radius: var(--panel-radius, 8px) 0 0 var(--panel-radius, 8px);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
-  padding: var(--space-16, 24px);
+.overlay-surface--drawer {
+  margin-left: auto;
   width: var(--shell-drawer-width, 440px);
+  height: 100%;
   max-height: 100%;
-  overflow-y: auto;
-  position: relative;
+  border-radius: var(--panel-radius, 8px) 0 0 var(--panel-radius, 8px);
+}
+
+.overlay-surface--sheet {
+  width: min(520px, calc(100vw - var(--space-32, 48px)));
+  max-height: calc(100vh - var(--space-32, 48px));
+}
+
+.overlay-surface--modal {
+  width: min(440px, calc(100vw - var(--space-32, 48px)));
+  max-height: calc(100vh - var(--space-32, 48px));
 }
 
 /* Contained overlay preview in gallery */
-.gallery-card__preview--overlay .overlay-sheet,
-.gallery-card__preview--overlay .overlay-drawer {
+.gallery-card__preview--overlay .overlay-surface {
   width: 100%;
   max-width: 100%;
   height: auto;

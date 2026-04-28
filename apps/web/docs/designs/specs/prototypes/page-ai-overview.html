@@ -935,8 +935,8 @@
     .toast-card .toast-close:hover { color: var(--text-secondary); }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1116,6 +1116,21 @@
     }
 
     /* ── Sidebar: Layout helpers ── */
+    .ai-shell .context-rail {
+      height: auto;
+      min-height: 100%;
+      overflow: visible;
+    }
+
+    .ai-shell .context-section {
+      flex: 0 0 auto;
+    }
+
+    .ai-shell .context-section-body {
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
     .ai-sidebar-fixed { flex: 0 0 auto; }
     .ai-sidebar-nav-body { padding-bottom: var(--space-12); }
 
@@ -1486,6 +1501,24 @@
     .svg-sprite-source { position: absolute; }
     .ai-tab-nav { padding-bottom: var(--space-4); flex-shrink: 0; }
 
+    .ai-main > [data-tab-panel] {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .ai-main > [data-tab-panel="overview"] {
+      display: flex;
+      flex-direction: column;
+      gap: var(--density-gutter);
+      overflow: hidden;
+    }
+
+    .ai-main > [data-tab-panel][aria-hidden="true"] {
+      display: none;
+    }
+
     /* ── AI Tab Navigation (distinct from status badges) ── */
     .ai-tab-btn {
       display: inline-flex;
@@ -1590,14 +1623,14 @@
       </div>
       <div class="header-actions">
         <!-- AI CTAs -->
-        <span class="queue-batch-btn" title="新建 Copilot 会话">
+        <label for="overlay-new-session-toast" class="queue-batch-btn" title="新建 Copilot 会话">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-btn-icon"><path d="M10 3a7 7 0 00-7 7h3l-3.5 4L-1 10h3a7 7 0 1112 4.9"/></svg>
           Copilot 会话
-        </span>
-        <span class="queue-batch-btn" title="新建 Agent Plan">
+        </label>
+        <label for="overlay-new-plan-toast" class="queue-batch-btn" title="新建 Agent Plan">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-btn-icon"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           Agent Plan
-        </span>
+        </label>
 
         <div class="theme-switcher">
           <div class="switcher-group" role="group" aria-label="密度">
@@ -1658,10 +1691,10 @@
     </div>
 
     <!-- ====== Main Content ====== -->
-    <div class="ai-main">
+    <div class="ai-main" data-tabs="ai-tabs">
 
       <!-- Tab Navigation Bar -->
-      <div data-tabs="ai-tabs" class="flex-row-center gap-4 border-b-subtle ai-tab-nav">
+      <div class="flex-row-center gap-4 border-b-subtle ai-tab-nav">
         <button data-tab-target="overview" class="ai-tab-btn tab-button" aria-selected="true">
           概览
         </button>

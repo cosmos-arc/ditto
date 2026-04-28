@@ -3,5 +3,5 @@ import { HomePage } from "@/features/home";
 
 export const Route = createFileRoute("/")({
 	component: HomePage,
-	handle: { title: "首页" },
+	staticData: { title: "首页" },
 });

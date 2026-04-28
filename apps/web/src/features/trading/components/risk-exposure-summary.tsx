@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function RiskExposureSummary() {
-	const { data, isLoading, isError, refetch } = useRiskExposure();
+	const { data, isLoading, refetch } = useRiskExposure();
 
 	return (
 		<ContextSection title="敞口概览">

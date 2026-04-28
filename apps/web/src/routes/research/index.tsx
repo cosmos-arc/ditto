@@ -3,5 +3,5 @@ import { ResearchPage } from "@/features/research";
 
 export const Route = createFileRoute("/research/")({
 	component: ResearchPage,
-	handle: { title: "研究" },
+	staticData: { title: "研究" },
 });

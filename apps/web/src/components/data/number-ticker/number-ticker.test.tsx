@@ -44,17 +44,6 @@ function triggerViewportEntry(): void {
 	});
 }
 
-/* ── Helper: advance RAF ── */
-
-function advanceRaf(timestamp: number): void {
-	act(() => {
-		const rafCallback = vi.mocked(requestAnimationFrame).mock.calls[0]?.[0];
-		if (rafCallback) {
-			rafCallback(timestamp);
-		}
-	});
-}
-
 /* ── Tests ── */
 
 describe("NumberTicker", () => {

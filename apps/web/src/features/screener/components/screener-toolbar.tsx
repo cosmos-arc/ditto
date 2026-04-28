@@ -6,7 +6,7 @@ import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { useScreenerStore } from "../stores/screener.store";
 
 export function ScreenerToolbar() {
-	const { data, isLoading, isError, refetch } = useScreenerPresets();
+	const { data, isLoading, refetch } = useScreenerPresets();
 	const { activeFilters, removeFilter, clearFilters } = useScreenerStore();
 
 	return (

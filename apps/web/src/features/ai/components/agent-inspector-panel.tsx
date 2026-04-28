@@ -11,6 +11,7 @@ interface AgentInspectorPanelProps {
 const STATUS_DOT: Record<RunStatus, string> = {
 	running: "bg-(--color-led-success)",
 	completed: "bg-(--color-accent)",
+	warning: "bg-(--color-led-warning)",
 	pending: "bg-(--color-foreground-tertiary)",
 	failed: "bg-(--color-led-error)",
 	cancelled: "bg-(--color-foreground-tertiary)",

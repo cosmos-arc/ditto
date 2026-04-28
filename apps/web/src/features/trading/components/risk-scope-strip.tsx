@@ -4,7 +4,7 @@ import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { Metric } from "@/components/data/metric/metric";
 
 export function RiskScopeStrip() {
-	const { data, isLoading, isError, refetch } = useRiskSummary();
+	const { data, isLoading, refetch } = useRiskSummary();
 
 	if (isLoading) {
 		return (

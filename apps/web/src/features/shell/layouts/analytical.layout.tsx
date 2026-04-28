@@ -38,7 +38,7 @@ export function AnalyticalLayout({
 			? "grid-cols-[1fr_var(--activity-width)]"
 			: "grid-cols-[1fr_var(--width-activity)]"
 		: "grid-cols-[1fr]";
-	const rows = buildRows(hasBanner, hasAnalysis, hasActivity);
+	const rows = buildRows(hasBanner, hasAnalysis);
 	const areas = buildAreas(hasBanner, hasAnalysis, hasActivity);
 
 	return (
@@ -80,7 +80,7 @@ export function AnalyticalLayout({
 	);
 }
 
-function buildRows(hasBanner: boolean, hasAnalysis: boolean, hasActivity: boolean): string {
+function buildRows(hasBanner: boolean, hasAnalysis: boolean): string {
 	if (hasBanner && hasAnalysis) {
 		return "grid-rows-[auto_auto_1fr_var(--height-analysis-band)]";
 	}

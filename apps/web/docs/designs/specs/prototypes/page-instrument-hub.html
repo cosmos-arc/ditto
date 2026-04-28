@@ -125,18 +125,18 @@
     .shell-hub {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr;
-      grid-template-rows: var(--shell-header-height) auto auto 1fr auto;
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr) auto var(--status-bar-height);
       grid-template-areas:
         "rail  header"
         "rail  meta"
         "rail  tabs"
         "rail  main"
-        "rail  bottom";
+        "rail  bottom"
+        "rail  status";
       min-height: 100vh;
       width: 100vw;
       overflow-y: auto;
       position: relative;
-      padding-bottom: 1.5rem;
       box-sizing: border-box;
     }
 
@@ -251,7 +251,7 @@
       font-size: var(--font-size-24);
       font-weight: var(--font-weight-semibold);
       color: var(--market-up-fg);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       line-height: 1.2;
       animation: price-breathe 3s ease-in-out infinite;
     }
@@ -574,7 +574,7 @@
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12),
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--surface-app) 60%, transparent),
                   0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
 
@@ -720,7 +720,13 @@
     }
 
     /* ── TradingView Chart Container ── */
-    #tv-chart-container {
+    .tv-chart-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .market-chart-canvas {
+      display: block;
       width: 100%;
       height: 100%;
     }
@@ -1284,10 +1290,7 @@
      * Status bar (terminal DNA)
      * ══════════════════════════════════════════════ */
     .status-bar {
-      position: fixed;
-      bottom: 0;
-      left: var(--shell-rail-width);
-      right: 0;
+      grid-area: status;
       display: flex;
       align-items: center;
       height: var(--status-bar-height);
@@ -1301,7 +1304,7 @@
       color: var(--text-secondary);
       letter-spacing: 0.02em;
       user-select: none;
-      z-index: 25;
+      z-index: 3;
     }
 
     .status-indicator {
@@ -1356,6 +1359,79 @@
       }
       .metric-card:hover { transform: none; }
       .signal-item:hover, .research-item:hover { transform: none; }
+    }
+
+    @media (max-height: 820px) {
+      .shell-hub {
+        grid-template-rows: var(--shell-header-height) auto 40px minmax(0, 1fr) minmax(128px, 15vh) var(--status-bar-height);
+      }
+
+      .hub-main {
+        gap: var(--space-8);
+        padding: var(--space-8) var(--density-gutter);
+      }
+
+      .metrics-grid {
+        gap: var(--space-8);
+      }
+
+      .metric-card {
+        min-height: 74px;
+        padding: var(--space-8) var(--space-10);
+      }
+
+      .metric-sparkline {
+        width: 44px;
+        height: 18px;
+      }
+
+      .overview-chart-panel {
+        order: 2;
+        min-height: 180px;
+      }
+
+      .industry-rank-panel {
+        order: 3;
+        max-height: 110px;
+        overflow: hidden;
+      }
+
+      .industry-rank-panel .rank-row {
+        padding: var(--space-4) 0;
+      }
+
+      .industry-rank-panel .rank-row:nth-child(n+4) {
+        display: none;
+      }
+
+      .flow-panel {
+        order: 4;
+        max-height: 92px;
+        overflow: hidden;
+      }
+
+      .flow-summary {
+        padding: var(--space-8) var(--space-12);
+      }
+
+      .bottom-tabs {
+        padding: 0 var(--space-12);
+      }
+
+      .bottom-content {
+        max-height: 92px;
+        padding: var(--space-6) var(--space-12);
+      }
+
+      .timeline-item {
+        padding: var(--space-4) 0;
+      }
+
+      .timeline-desc {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
 
     /* ══════════════════════════════════════════════
@@ -1426,8 +1502,8 @@
       [data-overlay="overlay-halt-detail"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1473,7 +1549,7 @@
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-default);
       border-radius: var(--radius-8);
-      box-shadow: 0 4px 16px oklch(0 0 0 / 0.3);
+      box-shadow: var(--interaction-dragging-shadow);
       padding: var(--space-6);
       display: none;
       flex-direction: column;
@@ -1489,7 +1565,7 @@
       background: var(--surface-panel-elevated);
       border: 1px solid var(--border-default);
       border-radius: var(--radius-8);
-      box-shadow: 0 4px 16px oklch(0 0 0 / 0.3);
+      box-shadow: var(--interaction-dragging-shadow);
       padding: var(--space-6);
       flex-direction: column;
       gap: var(--space-2);
@@ -1531,7 +1607,7 @@
       font-weight: var(--font-weight-medium);
       padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-4);
-      background: oklch(from var(--system-degraded-fg) l c h / 0.1);
+      background: color-mix(in oklch, var(--system-degraded-fg) 10%, transparent);
       color: var(--system-degraded-fg);
     }
 
@@ -1681,9 +1757,9 @@
       flex-shrink: 0;
     }
     .announce-tag.annual { background: var(--brand-accent-subtle); color: var(--brand-accent); }
-    .announce-tag.dividend { background: oklch(from var(--market-up-fg) l c h / 0.1); color: var(--market-up-fg); }
+    .announce-tag.dividend { background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); color: var(--market-up-fg); }
     .announce-tag.board { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
-    .announce-tag.shareholder { background: oklch(from var(--system-degraded-fg) l c h / 0.1); color: var(--system-degraded-fg); }
+    .announce-tag.shareholder { background: color-mix(in oklch, var(--system-degraded-fg) 10%, transparent); color: var(--system-degraded-fg); }
     .announce-body { flex: 1; min-width: 0; }
     .announce-title {
       font-size: var(--font-size-12);
@@ -1739,9 +1815,9 @@
       border-radius: var(--radius-2);
       margin-left: var(--space-6);
     }
-    .corp-tag.dividend { background: oklch(from var(--market-up-fg) l c h / 0.1); color: var(--market-up-fg); }
-    .corp-tag.unlock { background: oklch(from var(--risk-high-fg) l c h / 0.1); color: var(--risk-high-fg); }
-    .corp-tag.change { background: oklch(from var(--system-degraded-fg) l c h / 0.1); color: var(--system-degraded-fg); }
+    .corp-tag.dividend { background: color-mix(in oklch, var(--market-up-fg) 10%, transparent); color: var(--market-up-fg); }
+    .corp-tag.unlock { background: color-mix(in oklch, var(--risk-high-fg) 10%, transparent); color: var(--risk-high-fg); }
+    .corp-tag.change { background: color-mix(in oklch, var(--system-degraded-fg) 10%, transparent); color: var(--system-degraded-fg); }
 
     /* ══════════════════════════════════════════════
      * Extracted inline style classes — Iteration 9.5
@@ -1870,6 +1946,17 @@
     .toolbar-color-pick--down  { background: var(--market-down-fg); }
     .toolbar-sep { height: 1px; background: var(--border-subtle); margin: var(--space-2) 0; }
     .toolbar-colors { display: flex; gap: var(--space-2); padding: var(--space-2); }
+    .gallery-floating-toolbar {
+      width: max-content;
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-8);
+      box-shadow: var(--interaction-dragging-shadow);
+    }
 
     /* ── Skeleton state helpers ── */
     .skel-row { flex-direction: row; gap: var(--space-12); }
@@ -1880,7 +1967,7 @@
 
     /* ── MA60 color token ── */
     /* MA60 technical indicator color — warm amber, intentionally distinct from brand-accent */
-    .ma60-color { color: oklch(0.75 0.12 85); }
+    .ma60-color { color: var(--amber-500); }
 
     /* ── Relative position context ── */
     .pos-relative { position: relative; }
@@ -2100,35 +2187,30 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Instrument Hub · Compact · A股</div>
 
-  <div class="shell-hub">
+  <div class="object-shell shell-hub">
     <!-- ══════════════════════════════════════════════
          Rail
          ══════════════════════════════════════════════ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="市场" title="市场">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ══════════════════════════════════════════════
@@ -2154,10 +2236,10 @@
             -->
           </div>
           <div class="object-price-row">
-            <span class="object-price" aria-label="当前价格 ¥1,856.00"><span data-ticker="1856.00" data-ticker-prefix="¥" data-decimals="2">¥0.00</span></span>
+            <span class="object-price" aria-label="当前价格 ¥1,856.00">¥1,856.00</span>
             <span class="object-change" aria-label="涨跌幅 +2.35%">
               <span class="object-change-arrow">&#9650;</span>
-              <span class="object-change-value"><span data-ticker="2.35" data-ticker-prefix="+" data-ticker-suffix="%" data-decimals="2">+0.00%</span></span>
+              <span class="object-change-value">+2.35%</span>
               <span class="object-change-amount">+42.60</span>
             </span>
           </div>
@@ -2168,28 +2250,37 @@
 
         <!-- Header actions -->
         <div class="header-actions" role="toolbar" aria-label="页面操作">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 10.5a7.5 7.5 0 11-5-7.1A7.5 7.5 0 0017.5 10.5z"/></svg>
-              </button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2m0 12v2m-8-8h2m12 0h2m-2.5-5.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-              </button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
+        </div>
           <div class="meta-sep-line"></div>
-          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知">
+          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" data-shell-utility="notifications">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
             <span class="badge-dot"></span>
           </div>
-          <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">陈</div>
+          
         </div>
 
         <!-- CTAs -->
@@ -2297,31 +2388,31 @@
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="0">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[31.2,30.5,29.8,28.4,29.1,28.9,28.6],"series":"down","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="滚动市盈率，基于过去12个月每股收益" data-tooltip-pos="top">PE (TTM)</span>
-            <span class="metric-value"><span data-counter="28.6" data-counter-suffix="x" data-counter-decimals="1">28.6x</span></span>
+            <span class="metric-value"><span data-counter-duration="1" data-counter="28.6" data-counter-suffix="x" data-counter-decimals="1">28.6x</span></span>
             <span class="metric-change down">-1.2x</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="40">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.2,10.8,10.5,10.1,10.6,10.4,10.3],"series":"down","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="市净率 = 总市值 / 净资产" data-tooltip-pos="top">PB</span>
-            <span class="metric-value"><span data-counter="10.3" data-counter-suffix="x" data-counter-decimals="1">10.3x</span></span>
+            <span class="metric-value"><span data-counter-duration="1" data-counter="10.3" data-counter-suffix="x" data-counter-decimals="1">10.3x</span></span>
             <span class="metric-change down">-0.4x</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="80">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[30.2,31.5,32.1,33.5,34.8,35.2,36.1],"series":"up","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="净资产收益率 = 净利润 / 股东权益" data-tooltip-pos="top">ROE</span>
-            <span class="metric-value"><span data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span>
+            <span class="metric-value"><span data-counter-duration="1" data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span>
             <span class="metric-change up">+0.8%</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="120">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[11.8,12.5,13.2,14.1,15.0,15.6,16.2],"series":"up","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="营业总收入同比增速" data-tooltip-pos="top">营收增速</span>
-            <span class="metric-value"><span data-counter="16.2" data-counter-suffix="%" data-counter-decimals="1">16.2%</span></span>
+            <span class="metric-value"><span data-counter-duration="1" data-counter="16.2" data-counter-suffix="%" data-counter-decimals="1">16.2%</span></span>
             <span class="metric-change up">+2.1%</span>
           </div>
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="160">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[13.5,14.2,15.0,16.8,17.5,18.6,19.8],"series":"up","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="归母净利润同比增速" data-tooltip-pos="top">净利润增速</span>
-            <span class="metric-value"><span data-counter="19.8" data-counter-suffix="%" data-counter-decimals="1">19.8%</span></span>
+            <span class="metric-value"><span data-counter-duration="1" data-counter="19.8" data-counter-suffix="%" data-counter-decimals="1">19.8%</span></span>
             <span class="metric-change up">+3.4%</span>
           </div>
         </div>
@@ -2332,7 +2423,7 @@
         
 
         <!-- Industry Rank (overview section) -->
-        <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent">
+        <div class="panel panel-shrink industry-rank-panel" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent">
           <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
           <div class="pad-panel-x">
             <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-100"></div></div></div>
@@ -2349,7 +2440,7 @@
         
 
         <!-- Price Chart -->
-        <div class="chart-panel panel" data-reveal="fade-up" data-reveal-delay="40">
+        <div class="chart-panel panel overview-chart-panel" data-reveal="fade-up" data-reveal-delay="40">
           <div class="panel-header">
             <span class="panel-title">价格走势</span>
             <div class="chart-toolbar">
@@ -2362,7 +2453,7 @@
             </div>
           </div>
           <div class="chart-body">
-            <div id="tv-chart-container" aria-label="价格走势图"></div>
+            <div id="tv-chart-container-overview" class="tv-chart-container" aria-label="价格走势图"></div>
           </div>
         </div>
 
@@ -2375,7 +2466,7 @@
           <div class="flow-summary" data-mouse-glow="true" data-mouse-glow-size="200px" data-mouse-glow-color="up">
             <div class="flow-item" data-reveal="fade-up" data-reveal-delay="0">
               <span class="flow-label" data-tooltip="单笔成交额 > 100万" data-tooltip-pos="top">主力净流入</span>
-              <span class="flow-value inflow"><span data-counter="8.73" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+8.73亿</span></span>
+              <span class="flow-value inflow"><span data-counter-duration="1" data-counter="8.73" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+8.73亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill inflow flow-fill-w-36"></div>
                 <div class="flow-bar-center"></div>
@@ -2383,7 +2474,7 @@
             </div>
             <div class="flow-item" data-reveal="fade-up" data-reveal-delay="40">
               <span class="flow-label" data-tooltip="单笔成交额 > 500万" data-tooltip-pos="top">超大单净流入</span>
-              <span class="flow-value inflow"><span data-counter="5.21" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+5.21亿</span></span>
+              <span class="flow-value inflow"><span data-counter-duration="1" data-counter="5.21" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+5.21亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill inflow flow-fill-w-29"></div>
                 <div class="flow-bar-center"></div>
@@ -2391,7 +2482,7 @@
             </div>
             <div class="flow-item" data-reveal="fade-up" data-reveal-delay="80">
               <span class="flow-label" data-tooltip="单笔成交额 4-100万" data-tooltip-pos="top">中单净流入</span>
-              <span class="flow-value inflow"><span data-counter="3.52" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+3.52亿</span></span>
+              <span class="flow-value inflow"><span data-counter-duration="1" data-counter="3.52" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+3.52亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill inflow flow-fill-w-20"></div>
                 <div class="flow-bar-center"></div>
@@ -2399,7 +2490,7 @@
             </div>
             <div class="flow-item" data-reveal="fade-up" data-reveal-delay="120">
               <span class="flow-label" data-tooltip="单笔成交额 < 4万" data-tooltip-pos="top">小单净流出</span>
-              <span class="flow-value outflow"><span data-counter="1.86" data-counter-prefix="-" data-counter-suffix="亿" data-counter-decimals="2">-1.86亿</span></span>
+              <span class="flow-value outflow"><span data-counter-duration="1" data-counter="1.86" data-counter-prefix="-" data-counter-suffix="亿" data-counter-decimals="2">-1.86亿</span></span>
               <div class="flow-bar">
                 <div class="flow-bar-fill outflow flow-fill-w-11"></div>
                 <div class="flow-bar-center"></div>
@@ -2442,7 +2533,7 @@
             </div>
           </div>
           <div class="chart-body panel-grow">
-            <div id="tv-chart-container" aria-label="K线图"></div>
+            <div id="tv-chart-container-kline" class="tv-chart-container" aria-label="K线图"></div>
           </div>
         </div>
         <!-- 技术指标叠加区 -->
@@ -2580,11 +2671,11 @@
           <div class="panel">
             <div class="panel-header"><span class="panel-title">杜邦分析</span></div>
             <div class="roe-breakdown">
-              <div class="roe-detail"><span class="text-tertiary" data-tooltip="净资产收益率 = 净利率 x 资产周转率 x 权益乘数" data-tooltip-pos="top">ROE</span><span class="text-primary"><span data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span></div>
-              <div class="roe-detail"><span class="text-tertiary">= 净利率</span><span class="text-market-up"><span data-counter="55.2" data-counter-suffix="%" data-counter-decimals="1">55.2%</span></span></div>
-              <div class="roe-detail"><span class="text-tertiary">x 资产周转率</span><span><span data-counter="0.58" data-counter-suffix="x" data-counter-decimals="2">0.58x</span></span></div>
-              <div class="roe-detail"><span class="text-tertiary">x 权益乘数</span><span><span data-counter="1.13" data-counter-suffix="x" data-counter-decimals="2">1.13x</span></span></div>
-              <div class="roe-total"><span class="text-tertiary">同行ROE中位数</span><span class="text-secondary-c"><span data-counter="18.5" data-counter-suffix="%" data-counter-decimals="1">18.5%</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary" data-tooltip="净资产收益率 = 净利率 x 资产周转率 x 权益乘数" data-tooltip-pos="top">ROE</span><span class="text-primary"><span data-counter-duration="1" data-counter="36.1" data-counter-suffix="%" data-counter-decimals="1">36.1%</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary">= 净利率</span><span class="text-market-up"><span data-counter-duration="1" data-counter="55.2" data-counter-suffix="%" data-counter-decimals="1">55.2%</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary">x 资产周转率</span><span><span data-counter-duration="1" data-counter="0.58" data-counter-suffix="x" data-counter-decimals="2">0.58x</span></span></div>
+              <div class="roe-detail"><span class="text-tertiary">x 权益乘数</span><span><span data-counter-duration="1" data-counter="1.13" data-counter-suffix="x" data-counter-decimals="2">1.13x</span></span></div>
+              <div class="roe-total"><span class="text-tertiary">同行ROE中位数</span><span class="text-secondary-c"><span data-counter-duration="1" data-counter="18.5" data-counter-suffix="%" data-counter-decimals="1">18.5%</span></span></div>
             </div>
           </div>
         </div>
@@ -2833,7 +2924,7 @@
       </div><!-- /tab-panels -->
 
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
-      <aside class="hub-sidebar" aria-label="标的辅助信息">
+      <aside class="hub-sidebar" data-contract-slot="sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
         <section class="context-section pos-relative" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent" data-reveal="fade-up" data-reveal-delay="120">
           <div class="context-header">
@@ -3031,6 +3122,24 @@
       </div>
     </footer>
 
+    <!-- Status Bar -->
+    <div class="status-bar" role="status" aria-label="系统状态">
+      <span class="status-indicator"></span>
+      <span>行情延迟</span>
+      <span class="status-healthy text-mono">&lt;3s</span>
+      <span class="status-sep">|</span>
+      <span>数据源</span>
+      <span class="status-muted">Wind · 东方财富</span>
+      <span class="status-sep">|</span>
+      <span>上次刷新</span>
+      <span class="status-muted text-mono">15:00:02</span>
+      <span class="status-spacer"></span>
+      <span class="status-kbd">?</span>
+      <span>快捷键</span>
+      <span class="status-sep">|</span>
+      <span>标的详情</span>
+    </div>
+
     <!-- ── State Variants: 13. Timeline / Filings ── -->
     
     
@@ -3087,7 +3196,7 @@
     <!-- Overlay 2: News Detail (Drawer) -->
     <div class="overlay-backdrop" data-overlay="overlay-news-detail">
       <label class="overlay-dismiss" for="overlay-news-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="新闻详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="新闻详情">
         <div class="overlay-header">
           <span class="overlay-title">新闻详情</span>
           <label for="overlay-news-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3122,7 +3231,7 @@
     <!-- Overlay 3: Announcement Detail (Drawer) -->
     <div class="overlay-backdrop" data-overlay="overlay-announcement-detail">
       <label class="overlay-dismiss" for="overlay-announcement-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="公告详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="公告详情">
         <div class="overlay-header">
           <span class="overlay-title">公告详情</span>
           <label for="overlay-announcement-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3151,7 +3260,7 @@
     <!-- Overlay 4: Add to Watchlist (Sheet) -->
     <div class="overlay-backdrop" data-overlay="overlay-add-watchlist">
       <label class="overlay-dismiss" for="overlay-add-watchlist" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="加入观察/标的池">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入观察/标的池">
         <div class="overlay-header">
           <span class="overlay-title">加入观察 / 标的池</span>
           <label for="overlay-add-watchlist" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3188,7 +3297,7 @@
     <!-- Overlay 5: Send to Research (Sheet) -->
     <div class="overlay-backdrop" data-overlay="overlay-send-research">
       <label class="overlay-dismiss" for="overlay-send-research" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="发送到研究">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="发送到研究">
         <div class="overlay-header">
           <span class="overlay-title">发送到研究</span>
           <label for="overlay-send-research" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3222,7 +3331,7 @@
     <!-- Overlay 6: Halt Detail (Modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-halt-detail">
       <label class="overlay-dismiss" for="overlay-halt-detail" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="停牌详情">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="停牌详情">
         <div class="overlay-header">
           <span class="overlay-title">停牌详情</span>
           <label for="overlay-halt-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3267,80 +3376,49 @@
 
   </div>
 
-  <!-- Status Bar -->
-  <div class="status-bar" role="status" aria-label="系统状态">
-    <span class="status-indicator"></span>
-    <span>行情延迟</span>
-    <span class="status-healthy text-mono">&lt;3s</span>
-    <span class="status-sep">|</span>
-    <span>数据源</span>
-    <span class="status-muted">Wind · 东方财富</span>
-    <span class="status-sep">|</span>
-    <span>上次刷新</span>
-    <span class="status-muted text-mono">15:00:02</span>
-    <span class="status-spacer"></span>
-    <span class="status-kbd">?</span>
-    <span>快捷键</span>
-    <span class="status-sep">|</span>
-    <span>标的详情</span>
-  </div>
-
   <!-- Theme Switcher Script -->
   <script src="shared/theme-switcher.js"></script>
   <script src="shared/prototype-interactions.js"></script>
 
-  <!-- TradingView Lightweight Charts -->
-  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <!-- Local SVG market chart renderer: no network dependency for gate-stable prototypes -->
   <script>
   (function() {
     'use strict';
-    const container = document.getElementById('tv-chart-container');
-    if (!container) return;
+    const containers = document.querySelectorAll('.tv-chart-container');
+    if (!containers.length) return;
 
     // Read Design Tokens from CSS custom properties
     const cs = getComputedStyle(document.documentElement);
     const tk = (v) => cs.getPropertyValue(v).trim();
     const tokens = {
-      surfaceApp:   tk('--surface-app')       || 'oklch(0.166 0.010 253)',
-      surfacePanel: tk('--surface-panel-base') || 'oklch(0.184 0.011 253)',
-      surfaceOverlay: tk('--surface-overlay')  || 'oklch(0.255 0.006 253)',
-      borderSubtle: tk('--border-subtle')      || 'oklch(0.255 0.006 253)',
-      textTertiary: tk('--text-tertiary')      || 'oklch(0.555 0.007 253)',
-      marketUp:     tk('--market-up-fg')       || 'oklch(0.670 0.170 20)',
-      marketDown:   tk('--market-down-fg')     || 'oklch(0.680 0.120 155)',
-      brandAccent:  tk('--brand-accent')       || 'oklch(0.700 0.120 235)',
+      surfaceApp:   tk('--surface-app')       || 'var(--surface-app)',
+      surfacePanel: tk('--surface-panel-base') || 'var(--surface-panel-base)',
+      borderSubtle: tk('--border-subtle')      || 'var(--border-subtle)',
+      textTertiary: tk('--text-tertiary')      || 'var(--text-tertiary)',
+      marketUp:     tk('--market-up-fg')       || 'var(--market-up-fg)',
+      marketDown:   tk('--market-down-fg')     || 'var(--market-down-fg)',
+      brandAccent:  tk('--brand-accent')       || 'var(--brand-accent)',
+      chartNeutral: tk('--chart-series-neutral') || tk('--text-secondary') || 'var(--text-secondary)',
+      ma60:         tk('--amber-500')           || 'var(--amber-500)',
     };
 
-    const chart = LightweightCharts.createChart(container, {
-      layout: {
-        background: { type: 'solid', color: tokens.surfaceApp },
-        textColor: tokens.textTertiary,
-        fontSize: 12,
-        fontFamily: tk('--font-family-numeric') || '"JetBrains Mono", monospace',
-      },
-      grid: {
-        vertLines: { color: tokens.borderSubtle },
-        horzLines: { color: tokens.borderSubtle },
-      },
-      crosshair: {
-        mode: LightweightCharts.CrosshairMode.Normal,
-        vertLine: { color: tokens.brandAccent.replace('oklch', 'oklch').replace(')', ' / 0.4)'), width: 1, style: 2, labelBackgroundColor: tokens.surfaceOverlay },
-        horzLine: { color: tokens.brandAccent.replace('oklch', 'oklch').replace(')', ' / 0.4)'), width: 1, style: 2, labelBackgroundColor: tokens.surfaceOverlay },
-      },
-      rightPriceScale: {
-        borderColor: tokens.borderSubtle,
-        textColor: tokens.textTertiary,
-      },
-      timeScale: {
-        borderColor: tokens.borderSubtle,
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
-      handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
-    });
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const width = 720;
+    const height = 360;
+    const plot = { left: 42, top: 20, right: 56, bottom: 56 };
+    const volumeHeight = 52;
 
-    // Generate realistic A-share price data (3 months, ~60 trading days)
+    function seededRandom(seed) {
+      let value = seed % 2147483647;
+      return function next() {
+        value = value * 16807 % 2147483647;
+        return (value - 1) / 2147483646;
+      };
+    }
+
+    const random = seededRandom(600519);
+
+    // Generate realistic A-share price data (3 months, trading days only)
     function generateOHLC(basePrice, days, volatility) {
       const data = [];
       let price = basePrice * 0.92;
@@ -3349,12 +3427,13 @@
         const d = new Date(start);
         d.setDate(d.getDate() + Math.floor(i * 1.4));
         if (d.getDay() === 0 || d.getDay() === 6) continue;
-        const change = (Math.random() - 0.47) * volatility * price;
+        const trend = i > days * 0.55 ? 0.006 : 0.0015;
+        const change = (random() - 0.47 + trend) * volatility * price;
         const open = price;
         const close = price + change;
-        const high = Math.max(open, close) + Math.random() * volatility * price * 0.5;
-        const low = Math.min(open, close) - Math.random() * volatility * price * 0.5;
-        const vol = Math.floor(80000 + Math.random() * 200000);
+        const high = Math.max(open, close) + random() * volatility * price * 0.5;
+        const low = Math.min(open, close) - random() * volatility * price * 0.5;
+        const vol = Math.floor(80000 + random() * 200000);
         data.push({ time: d.toISOString().split('T')[0], open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2), volume: vol });
         price = close;
       }
@@ -3362,28 +3441,6 @@
     }
 
     const ohlcData = generateOHLC(1856, 90, 0.018);
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: tokens.marketUp,
-      downColor: tokens.marketDown,
-      borderUpColor: tokens.marketUp,
-      borderDownColor: tokens.marketDown,
-      wickUpColor: tokens.marketUp.replace(')', ' / 0.6)'),
-      wickDownColor: tokens.marketDown.replace(')', ' / 0.6)'),
-    });
-    candleSeries.setData(ohlcData);
-
-    // Volume series
-    const volumeSeries = chart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: '',
-    });
-    volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-    const volData = ohlcData.map(d => ({
-      time: d.time,
-      value: d.volume,
-      color: d.close >= d.open ? tokens.marketUp.replace(')', ' / 0.2)') : tokens.marketDown.replace(')', ' / 0.2)'),
-    }));
-    volumeSeries.setData(volData);
 
     // MA lines
     function calcMA(data, period) {
@@ -3396,29 +3453,195 @@
       return result;
     }
 
-    const ma20 = chart.addLineSeries({
-      color: tokens.brandAccent.replace(')', ' / 0.6)'),
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-    });
-    ma20.setData(calcMA(ohlcData, 20));
+    function createSvg(tag, attrs) {
+      const node = document.createElementNS(svgNS, tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        node.setAttribute(key, String(value));
+      }
+      return node;
+    }
 
-    const ma60 = chart.addLineSeries({
-      color: 'oklch(0.75 0.12 85 / 0.5)',
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-    });
-    ma60.setData(calcMA(ohlcData, 60));
+    function priceScale(data) {
+      const highs = data.map((d) => d.high);
+      const lows = data.map((d) => d.low);
+      const max = Math.max(...highs);
+      const min = Math.min(...lows);
+      const pad = (max - min) * 0.08;
+      return { min: min - pad, max: max + pad };
+    }
 
-    chart.timeScale().fitContent();
+    function renderChart(container) {
+      const data = ohlcData;
+      const svg = createSvg('svg', {
+        class: 'market-chart-canvas',
+        viewBox: `0 0 ${width} ${height}`,
+        preserveAspectRatio: 'none',
+        role: 'img',
+        'aria-label': container.getAttribute('aria-label') || '行情走势图',
+      });
+      container.replaceChildren(svg);
 
-    // Resize handling
-    const ro = new ResizeObserver(() => {
-      chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-    });
-    ro.observe(container);
+      const chartWidth = width - plot.left - plot.right;
+      const chartHeight = height - plot.top - plot.bottom;
+      const priceAreaHeight = chartHeight - volumeHeight - 14;
+      const scale = priceScale(data);
+      const maxVolume = Math.max(...data.map((d) => d.volume));
+      const candleStep = chartWidth / data.length;
+      const candleWidth = Math.max(3, candleStep * 0.58);
+      const xForIndex = (index) => plot.left + index * candleStep + candleStep / 2;
+      const yForPrice = (price) => plot.top + (scale.max - price) / (scale.max - scale.min) * priceAreaHeight;
+      const yForVolume = (volume) => height - plot.bottom - (volume / maxVolume) * volumeHeight;
+
+      svg.appendChild(createSvg('rect', {
+        x: plot.left,
+        y: plot.top,
+        width: chartWidth,
+        height: chartHeight,
+        rx: 4,
+        fill: tokens.surfaceApp,
+      }));
+
+      for (let i = 0; i <= 4; i++) {
+        const y = plot.top + i * priceAreaHeight / 4;
+        const price = scale.max - i * (scale.max - scale.min) / 4;
+        svg.appendChild(createSvg('line', {
+          x1: plot.left,
+          y1: y,
+          x2: width - plot.right,
+          y2: y,
+          stroke: tokens.borderSubtle,
+          'stroke-width': 1,
+          opacity: 0.48,
+        }));
+        const label = createSvg('text', {
+          x: width - plot.right + 8,
+          y: y + 4,
+          fill: tokens.textTertiary,
+          'font-size': 11,
+          'font-family': tk('--font-family-numeric') || 'monospace',
+        });
+        label.textContent = price.toFixed(0);
+        svg.appendChild(label);
+      }
+
+      for (let i = 0; i <= 5; i++) {
+        const x = plot.left + i * chartWidth / 5;
+        svg.appendChild(createSvg('line', {
+          x1: x,
+          y1: plot.top,
+          x2: x,
+          y2: height - plot.bottom,
+          stroke: tokens.borderSubtle,
+          'stroke-width': 1,
+          opacity: 0.25,
+        }));
+      }
+
+      const volumeBaseline = height - plot.bottom;
+      data.forEach((d, index) => {
+        const x = xForIndex(index);
+        const up = d.close >= d.open;
+        const color = up ? tokens.marketUp : tokens.marketDown;
+        const highY = yForPrice(d.high);
+        const lowY = yForPrice(d.low);
+        const openY = yForPrice(d.open);
+        const closeY = yForPrice(d.close);
+        const top = Math.min(openY, closeY);
+        const bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
+
+        svg.appendChild(createSvg('rect', {
+          x: x - candleWidth / 2,
+          y: yForVolume(d.volume),
+          width: candleWidth,
+          height: Math.max(1, volumeBaseline - yForVolume(d.volume)),
+          fill: color,
+          opacity: 0.18,
+        }));
+        svg.appendChild(createSvg('line', {
+          x1: x,
+          y1: highY,
+          x2: x,
+          y2: lowY,
+          stroke: color,
+          'stroke-width': 1,
+          opacity: 0.78,
+        }));
+        svg.appendChild(createSvg('rect', {
+          x: x - candleWidth / 2,
+          y: top,
+          width: candleWidth,
+          height: bodyHeight,
+          rx: 1,
+          fill: up ? 'transparent' : color,
+          stroke: color,
+          'stroke-width': 1,
+          opacity: 0.92,
+        }));
+      });
+
+      drawLine(calcMA(data, 20), tokens.brandAccent, 0.82);
+      drawLine(calcMA(data, 60), tokens.ma60, 0.58);
+
+      const last = data[data.length - 1];
+      const lastX = xForIndex(data.length - 1);
+      const lastY = yForPrice(last.close);
+      svg.appendChild(createSvg('line', {
+        x1: plot.left,
+        y1: lastY,
+        x2: width - plot.right,
+        y2: lastY,
+        stroke: tokens.brandAccent,
+        'stroke-width': 1,
+        'stroke-dasharray': '4 4',
+        opacity: 0.45,
+      }));
+      svg.appendChild(createSvg('circle', {
+        cx: lastX,
+        cy: lastY,
+        r: 3.5,
+        fill: tokens.brandAccent,
+        opacity: 0.9,
+      }));
+
+      const pricePill = createSvg('text', {
+        x: width - plot.right + 8,
+        y: lastY - 8,
+        fill: tokens.brandAccent,
+        'font-size': 11,
+        'font-family': tk('--font-family-numeric') || 'monospace',
+        'font-weight': 600,
+      });
+      pricePill.textContent = last.close.toFixed(2);
+      svg.appendChild(pricePill);
+
+      const legend = createSvg('text', {
+        x: plot.left,
+        y: height - 20,
+        fill: tokens.chartNeutral,
+        'font-size': 11,
+        'font-family': tk('--font-family-numeric') || 'monospace',
+      });
+      legend.textContent = 'MA20   MA60   VOL · 2026 Q1';
+      svg.appendChild(legend);
+
+      function drawLine(points, color, opacity) {
+        if (points.length < 2) return;
+        const path = points.map((point, index) => {
+          const sourceIndex = data.findIndex((d) => d.time === point.time);
+          const command = index === 0 ? 'M' : 'L';
+          return `${command}${xForIndex(sourceIndex)},${yForPrice(point.value)}`;
+        }).join(' ');
+        svg.appendChild(createSvg('path', {
+          d: path,
+          fill: 'none',
+          stroke: color,
+          'stroke-width': 1.4,
+          opacity,
+        }));
+      }
+    }
+
+    containers.forEach(renderChart);
   })();
   </script>
 
@@ -3913,10 +4136,43 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-chart-toolbar">
+      <div class="gallery-card__label">绘图工具栏 (Floating Toolbar)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay center-content">
+        <div class="gallery-floating-toolbar" role="toolbar" aria-label="图表绘图工具">
+          <div class="toolbar-btn active" title="选择" tabindex="0">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2l12 8-12 8V2z"/></svg>
+          </div>
+          <div class="toolbar-btn" title="趋势线" tabindex="0">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17L17 3"/></svg>
+          </div>
+          <div class="toolbar-btn" title="水平线" tabindex="0">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10h14"/></svg>
+          </div>
+          <div class="toolbar-btn" title="斐波那契" tabindex="0">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17h14M3 12h14M3 7h14M3 2h14"/></svg>
+          </div>
+          <div class="toolbar-btn" title="标注" tabindex="0">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10M10 16v1"/><circle cx="10" cy="3" r="1" fill="currentColor"/></svg>
+          </div>
+          <div class="toolbar-sep"></div>
+          <div class="toolbar-colors">
+            <div class="toolbar-color-pick toolbar-color-pick--accent"></div>
+            <div class="toolbar-color-pick toolbar-color-pick--up"></div>
+            <div class="toolbar-color-pick toolbar-color-pick--down"></div>
+          </div>
+          <div class="toolbar-sep"></div>
+          <div class="toolbar-btn" title="清除全部" tabindex="0">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l12 12M16 4L4 16"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-news-detail">
       <div class="gallery-card__label">新闻详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="新闻详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="新闻详情">
           <div class="overlay-header">
             <span class="overlay-title">新闻详情</span>
           </div>
@@ -3948,10 +4204,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-announcement-detail">
       <div class="gallery-card__label">公告详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="公告详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="公告详情">
           <div class="overlay-header">
             <span class="overlay-title">公告详情</span>
           </div>
@@ -3977,10 +4233,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-add-watchlist">
       <div class="gallery-card__label">加入观察/标的池 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="加入观察/标的池">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="加入观察/标的池">
           <div class="overlay-header">
             <span class="overlay-title">加入观察 / 标的池</span>
           </div>
@@ -4014,10 +4270,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-send-research">
       <div class="gallery-card__label">发送到研究 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="发送到研究">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="发送到研究">
           <div class="overlay-header">
             <span class="overlay-title">发送到研究</span>
           </div>
@@ -4048,10 +4304,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-halt-detail">
       <div class="gallery-card__label">停牌详情 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="停牌详情">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="停牌详情">
           <div class="overlay-header">
             <span class="overlay-title">停牌详情</span>
           </div>

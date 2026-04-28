@@ -1,6 +1,5 @@
 import type {
 	ApprovalStatus,
-	FilterCondition,
 	PaginatedRequest,
 	PaginatedResponse,
 	RunStatus,
@@ -85,6 +84,8 @@ export type ResearchPulseResponse = {
 	readonly failedFactors: number;
 	readonly reviewQueueLength: number;
 };
+
+export type GetResearchPulseResponse = ResearchPulseResponse;
 
 /** 因子列表 */
 export type Factor = {

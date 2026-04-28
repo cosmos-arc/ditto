@@ -16,7 +16,7 @@ const SIGNAL_VARIANT: Record<string, "trade" | "research" | "risk"> = {
 };
 
 export function SignalsSection() {
-	const { data, isLoading, isError, refetch } = useRecentSignals();
+	const { data, isLoading, refetch } = useRecentSignals();
 
 	return (
 		<ContextSection title="近期信号" count={data?.signals.length}>

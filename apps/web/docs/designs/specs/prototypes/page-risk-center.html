@@ -21,8 +21,8 @@
   - stress-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
   - incident-timeline: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
-  data-contract-slots: 5
-  - risk-strip, risk-gauges, risk-dashboard, analysis-band, regime-indicator
+  data-contract-slots: 6
+  - risk-strip, risk-gauges, risk-dashboard, right-rail, analysis-band, regime-indicator
 
   Coverage Score: 100%
 -->
@@ -762,7 +762,11 @@
     /* ══════════════════════════════════════════════
      * Tab Activation Rules (prototype-toggles.css)
      * ══════════════════════════════════════════════ */
-    .shell-analytical:has(#risk-summary:checked) [data-panel="risk-summary"] { display: block; }
+    .shell-analytical:has(#risk-summary:checked) [data-panel="risk-summary"] {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      min-height: 100%;
+    }
     .shell-analytical:has(#risk-stress:checked) [data-panel="risk-stress"] { display: block; }
     .shell-analytical:has(#risk-incidents:checked) [data-panel="risk-incidents"] { display: block; }
 
@@ -802,8 +806,8 @@
       [data-overlay="overlay-rule-editor"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -857,15 +861,22 @@
 
     /* Override shared grid for risk-center tabs + panels layout */
     .shell-analytical {
-      grid-template-rows: var(--shell-header-height) auto auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto auto minmax(0, 1fr) 1.5rem;
       grid-template-areas:
         "rail header   header"
         "rail strip    strip"
+        "rail gauges   gauges"
         "rail tabs     tabs"
-        "rail panels   panels";
+        "rail panels   panels"
+        "rail status   status";
+      overflow: hidden;
     }
+    .shell-analytical .risk-strip-band { grid-area: gauges; }
     .shell-analytical .risk-tab-bar { grid-area: tabs; }
-    .shell-analytical .tab-panels { grid-area: panels; min-height: 0; overflow: hidden; }
+    .shell-analytical .tab-panels { grid-area: panels; min-height: 0; overflow-y: auto; }
+    .shell-analytical .tab-panel > .main-content,
+    .shell-analytical .tab-panel > .analysis-band { grid-area: auto; }
+    .shell-analytical .status-bar { grid-area: status; }
 
     /* ══════════════════════════════════════════════
      * Noise texture + ambient light
@@ -1176,7 +1187,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-20);
       font-weight: var(--font-weight-semibold);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       line-height: 1.2;
       font-feature-settings: 'tnum' 1;
     }
@@ -1279,10 +1290,10 @@
      * ══════════════════════════════════════════════ */
 
     /* Brand DNA #3: Overlay accent border */
-    .overlay-sheet {
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
-    .overlay-drawer {
+    .overlay-surface {
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
@@ -1440,7 +1451,7 @@
     /* ── C. Risk metrics scannable — key numbers prominent ── */
     .risk-strip-value {
       font-weight: var(--font-weight-semibold);
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
     }
 
     /* ── C. Status indicator iconography consistency ── */
@@ -1470,7 +1481,11 @@
       pointer-events: none;
     }
     .status-bar {
-      position: fixed;
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      z-index: 1;
     }
 
     /* ── D. Row hover with subtle brand touch (3% brand accent) ── */
@@ -1533,30 +1548,26 @@
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" title="Home">
+        <div class="rail-icon" title="Home" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" title="Markets">
+        <div class="rail-icon" title="Markets" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" title="Research">
+        <div class="rail-icon" title="Research" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" title="Trading">
+        <div class="rail-icon" title="Trading" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" title="Platform">
+        <div class="rail-icon" title="Platform" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
         <div class="rail-icon active" title="Risk">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l7 12H3L10 2z"/><line x1="10" y1="7" x2="10" y2="10"/><circle cx="10" cy="12" r="0.5" fill="currentColor"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" title="Settings">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -1583,7 +1594,7 @@
       </div>
 
       <!-- Search -->
-      <div class="header-search">
+      <div class="header-search" data-shell-utility="command" data-search-scope="global">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         搜索指标...
         <kbd>⌘K</kbd>
@@ -1591,16 +1602,30 @@
 
       <!-- Actions -->
       <div class="header-actions">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <span class="btn-cta-sm">运行压力测试</span>
@@ -1610,7 +1635,7 @@
         <div class="header-action-btn" title="刷新">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><polyline points="14 5 15.5 7.5 12.5 7.5"/><polyline points="6 15 4.5 12.5 7.5 12.5"/></svg>
         </div>
-        <div class="header-avatar">C</div>
+        
       </div>
     </header>
 
@@ -1634,27 +1659,27 @@
     <div class="scope-strip" data-contract-slot="risk-strip">
       <div class="risk-strip-metric">
         <span class="risk-strip-label">VaR(95%)</span>
-        <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400"><span data-ticker="1.23" data-decimals="2" data-ticker-suffix="%">1.23%</span></span>
+        <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400">1.23%</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">最大回撤</span>
-        <span class="risk-strip-value warn" data-tooltip="最大回撤 3.45%，距阈值 5% 剩 1.55pp" data-tooltip-delay="400"><span data-ticker="3.45" data-decimals="2" data-ticker-suffix="%">3.45%</span></span>
+        <span class="risk-strip-value warn" data-tooltip="最大回撤 3.45%，距阈值 5% 剩 1.55pp" data-tooltip-delay="400">3.45%</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">Beta</span>
-        <span class="risk-strip-value neutral" data-tooltip="组合 Beta 系数，限制 1.1" data-tooltip-delay="400"><span data-ticker="0.87" data-decimals="2">0.87</span></span>
+        <span class="risk-strip-value neutral" data-tooltip="组合 Beta 系数，限制 1.1" data-tooltip-delay="400">0.87</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">总仓位</span>
-        <span class="risk-strip-value ok" data-tooltip="总仓位占比，限制 90%" data-tooltip-delay="400"><span data-ticker="72.3" data-decimals="1" data-ticker-suffix="%">72.3%</span></span>
+        <span class="risk-strip-value ok" data-tooltip="总仓位占比，限制 90%" data-tooltip-delay="400">72.3%</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">净敞口</span>
-        <span class="risk-strip-value neutral" data-tooltip="净多空敞口，中性地带" data-tooltip-delay="400"><span data-ticker="45.1" data-decimals="1" data-ticker-suffix="%">45.1%</span></span>
+        <span class="risk-strip-value neutral" data-tooltip="净多空敞口，中性地带" data-tooltip-delay="400">45.1%</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
@@ -1664,12 +1689,12 @@
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">突破数</span>
-        <span class="risk-strip-value ok" data-tooltip="当前无指标突破风控线" data-tooltip-delay="400"><span data-ticker="0" data-decimals="0">0</span></span>
+        <span class="risk-strip-value ok" data-tooltip="当前无指标突破风控线" data-tooltip-delay="400">0</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
         <span class="risk-strip-label">夏普比率</span>
-        <span class="risk-strip-value ok" data-tooltip="风险调整后收益，>1.0 为优" data-tooltip-delay="400"><span data-ticker="1.42" data-decimals="2">1.42</span></span>
+        <span class="risk-strip-value ok" data-tooltip="风险调整后收益，>1.0 为优" data-tooltip-delay="400">1.42</span>
       </div>
     </div>
 
@@ -1781,7 +1806,7 @@
         </div>
 
         <!-- ─── Right: Activity Stack (breaches + stress test) ─── -->
-        <div class="activity-stack">
+        <div class="activity-stack" data-contract-slot="right-rail" role="complementary" aria-label="风险活动面板">
           <div class="context-rail risk-activity">
 
             <!-- JS Tabs: Breaches / Stress -->
@@ -2103,42 +2128,42 @@
           </div>
           <div class="stress-bar-chart">
             <div class="stress-bar-item" data-tooltip="极端下跌 -15%: 预计亏损 -8.23%，未突破风控线" data-tooltip-delay="300">
-              <span class="stress-bar-value"><span data-counter="-8.23" data-counter-decimals="2" data-counter-suffix="%">-8.23%</span></span>
+              <span class="stress-bar-value">-8.23%</span>
               <div class="stress-bar pass stress-bar-h55">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">极端下跌</span>
             </div>
             <div class="stress-bar-item" data-tooltip="利率上行 +100bp: 预计亏损 -3.17%，未突破风控线" data-tooltip-delay="300">
-              <span class="stress-bar-value"><span data-counter="-3.17" data-counter-decimals="2" data-counter-suffix="%">-3.17%</span></span>
+              <span class="stress-bar-value">-3.17%</span>
               <div class="stress-bar pass stress-bar-h21">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">利率上行</span>
             </div>
             <div class="stress-bar-item" data-tooltip="流动性危机: 预计亏损 -14.82%，突破风控线 -12%" data-tooltip-delay="300">
-              <span class="stress-bar-value fail"><span data-counter="-14.82" data-counter-decimals="2" data-counter-suffix="%">-14.82%</span></span>
+              <span class="stress-bar-value fail">-14.82%</span>
               <div class="stress-bar fail stress-bar-h99">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">流动性危机</span>
             </div>
             <div class="stress-bar-item" data-tooltip="黑天鹅事件: 预计亏损 -11.50%，临界接近风控线" data-tooltip-delay="300">
-              <span class="stress-bar-value"><span data-counter="-11.50" data-counter-decimals="2" data-counter-suffix="%">-11.50%</span></span>
+              <span class="stress-bar-value">-11.50%</span>
               <div class="stress-bar pass stress-bar-h77">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">黑天鹅</span>
             </div>
             <div class="stress-bar-item" data-tooltip="行业崩盘 -20%: 预计亏损 -16.33%，大幅突破风控线" data-tooltip-delay="300">
-              <span class="stress-bar-value fail"><span data-counter="-16.33" data-counter-decimals="2" data-counter-suffix="%">-16.33%</span></span>
+              <span class="stress-bar-value fail">-16.33%</span>
               <div class="stress-bar fail stress-bar-h100">
                 <div class="stress-bar-limit"></div>
               </div>
               <span class="stress-bar-label">行业崩盘</span>
             </div>
             <div class="stress-bar-item" data-tooltip="尾部风险 +3σ: 预计亏损 -9.87%，未突破风控线" data-tooltip-delay="300">
-              <span class="stress-bar-value"><span data-counter="-9.87" data-counter-decimals="2" data-counter-suffix="%">-9.87%</span></span>
+              <span class="stress-bar-value">-9.87%</span>
               <div class="stress-bar pass stress-bar-h66">
                 <div class="stress-bar-limit"></div>
               </div>
@@ -2287,24 +2312,24 @@
 
     </div><!-- /tab-panels -->
 
-  </div>
+    <!-- Status Bar -->
+    <div class="status-bar" role="status" aria-label="系统状态">
+      <span class="status-indicator"></span>
+      <span>风控实时</span>
+      <span class="status-sep">|</span>
+      <span>最后刷新: 2 秒前</span>
+      <span class="status-sep">|</span>
+      <span>组合: <span class="status-val">主策略组合</span></span>
+      <span class="status-sep">|</span>
+      <span>场景: <span class="status-val">标准风控</span></span>
+      <span class="status-spacer"></span>
+      <span class="status-kbd">R</span>
+      <span>刷新</span>
+      <span class="status-dot-sep">·</span>
+      <span class="status-kbd">⌘K</span>
+      <span>搜索</span>
+    </div>
 
-  <!-- Status Bar -->
-  <div class="status-bar" role="status" aria-label="系统状态">
-    <span class="status-indicator"></span>
-    <span>风控实时</span>
-    <span class="status-sep">|</span>
-    <span>最后刷新: 2 秒前</span>
-    <span class="status-sep">|</span>
-    <span>组合: <span class="status-val">主策略组合</span></span>
-    <span class="status-sep">|</span>
-    <span>场景: <span class="status-val">标准风控</span></span>
-    <span class="status-spacer"></span>
-    <span class="status-kbd">R</span>
-    <span>刷新</span>
-    <span class="status-dot-sep">·</span>
-    <span class="status-kbd">⌘K</span>
-    <span>搜索</span>
   </div>
 
   <!-- ═══ Overlay Containers ═══ -->
@@ -2313,7 +2338,7 @@
     <!-- Overlay A: Stress Test Config (Sheet 居中) -->
     <div class="overlay-backdrop" data-overlay="overlay-stress-config">
       <label class="overlay-dismiss" for="overlay-stress-config" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">压力测试配置</span>
           <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
@@ -2360,7 +2385,7 @@
     <!-- Overlay B: Breach Detail (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-breach-detail">
       <label class="overlay-dismiss" for="overlay-breach-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-label="违规详情" aria-modal="true">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-label="违规详情" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">违规详情</span>
           <label for="overlay-breach-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -2409,7 +2434,7 @@
     <!-- Overlay C: Rule Editor (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-rule-editor">
       <label class="overlay-dismiss" for="overlay-rule-editor" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
         <div class="overlay-header">
           <span class="overlay-title">调整风控规则</span>
           <label for="overlay-rule-editor" class="overlay-close" aria-label="关闭">✕</label>
@@ -2762,10 +2787,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-stress-config">
       <div class="gallery-card__label">压力测试配置 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">压力测试配置</span>
           </div>
@@ -2809,10 +2834,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-breach-detail">
       <div class="gallery-card__label">违规详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-label="违规详情" aria-modal="true">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-label="违规详情" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">违规详情</span>
           </div>
@@ -2858,10 +2883,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-rule-editor">
       <div class="gallery-card__label">调整风控规则 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
           <div class="overlay-header">
             <span class="overlay-title">调整风控规则</span>
           </div>

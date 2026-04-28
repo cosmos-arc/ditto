@@ -22,7 +22,7 @@ interface OrdersListProps {
 }
 
 export function OrdersList({ onSelectOrder }: OrdersListProps) {
-	const { data, isLoading, isError, refetch } = useOrders();
+	const { data, isLoading, refetch } = useOrders();
 
 	return (
 		<ContextSection title="订单台账" count={data?.total} data-info-level="l1" data-info-unit="orders-list">

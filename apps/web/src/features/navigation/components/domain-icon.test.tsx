@@ -8,7 +8,6 @@ const ALL_DOMAIN_IDS: DomainId[] = [
 	"markets",
 	"research",
 	"trading",
-	"ai",
 	"platform",
 ];
 

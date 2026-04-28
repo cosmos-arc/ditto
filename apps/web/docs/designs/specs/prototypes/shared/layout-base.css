@@ -254,6 +254,12 @@ button {
   gap: var(--space-8);
 }
 
+.header-utility-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
 .header-action-btn {
   width: var(--header-btn-size);
   height: var(--header-btn-size);
@@ -269,6 +275,25 @@ button {
 }
 
 .header-action-btn:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--icon-primary);
+}
+
+.header-utility-btn {
+  width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-6);
+  color: var(--icon-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.header-utility-btn:hover {
   background: var(--interaction-hover-subtle-bg);
   color: var(--icon-primary);
 }
@@ -490,7 +515,7 @@ button {
 .queue-disclosure {
   list-style: none;
   cursor: pointer;
-  font-size: var(--font-size-11);
+  font-size: var(--font-size-12);
   color: var(--text-tertiary);
   padding: var(--space-2) 0;
   user-select: none;
@@ -1048,7 +1073,7 @@ button {
 .context-section-title {
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

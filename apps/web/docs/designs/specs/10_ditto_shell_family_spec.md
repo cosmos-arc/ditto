@@ -19,7 +19,7 @@
 > - §4.2 Shell 定位同步更新
 >
 > **上游**：[00 视觉宪章](./00_ditto_visual_constitution.md)、[01 产品信息架构](./01_product_information_architecture.md)
-> **下游**：[11 Page Pattern Library](./11_ditto_page_pattern_library.md)、[13 Component Spec](./13_ditto_component_spec.md)
+> **下游**：[11 Page Pattern Library](./11_ditto_page_pattern_library.md)、[13 Component Spec](./13_ditto_component_spec.md)、[19 Shell Chrome Contract](./19_ditto_shell_chrome_contract.md)
 > **职责**：定义全站 7 类壳层与页面骨架家族
 >
 > 适用范围：Ditto 全站一级工作区与对象页
@@ -460,6 +460,11 @@ Ditto 全站建议固定为 **7 类基础壳层**：
 ## 5. 全站统一壳层元素
 
 虽然 Ditto 有 7 类 Shell，但它们仍共享一套顶层语法。
+
+### 5.0 Shell Chrome Contract
+
+所有 Shell Family 都继承 [19 Shell Chrome Contract](./19_ditto_shell_chrome_contract.md) 中定义的全局 chrome 规则。
+Shell Family 差异从全局 Rail、Header Utility Bar 与视图偏好层之下开始。
 
 ### 5.1 全局 Rail
 

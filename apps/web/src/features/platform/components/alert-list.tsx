@@ -13,7 +13,7 @@ function formatTime(isoString: string): string {
 }
 
 export function AlertList() {
-	const { data, isLoading, isError, refetch } = usePlatformAlerts();
+	const { data, isLoading, refetch } = usePlatformAlerts();
 
 	const activeAlerts = data?.items.filter((a) => a.status === "active") ?? [];
 

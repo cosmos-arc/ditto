@@ -1,5 +1,4 @@
 import type {
-	FilterCondition,
 	OrderSide,
 	OrderStatus,
 	OrderType,
@@ -186,6 +185,8 @@ export type SignalsQueueResponse = {
 	readonly ordered: number;
 };
 
+export type GetSignalsQueueResponse = SignalsQueueResponse;
+
 /** 订单汇总计数 */
 export type OrdersSummaryResponse = {
 	readonly pending: number;
@@ -194,6 +195,8 @@ export type OrdersSummaryResponse = {
 	readonly filled: number;
 	readonly failed: number;
 };
+
+export type GetOrdersSummaryResponse = OrdersSummaryResponse;
 
 /** 归因分析 */
 export type AttributionSector = {

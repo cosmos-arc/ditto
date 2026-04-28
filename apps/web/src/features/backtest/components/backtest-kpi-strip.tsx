@@ -8,7 +8,7 @@ interface BacktestKpiStripProps {
 }
 
 export function BacktestKpiStrip({ jobId }: BacktestKpiStripProps) {
-	const { data, isLoading, isError, refetch } = useBacktestResult(jobId);
+	const { data, isLoading, refetch } = useBacktestResult(jobId);
 
 	if (isLoading) {
 		return (

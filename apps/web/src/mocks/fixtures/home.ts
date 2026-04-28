@@ -3,7 +3,7 @@ import type {
 	DecisionBannerResponse,
 	PendingAction,
 	HomeAlert,
-	AgentFinding,
+	HomeAgentFinding,
 	DataHealthProvider,
 	MarketIndex,
 	RecentSignal,
@@ -116,7 +116,7 @@ export const mockHomeAlerts: readonly HomeAlert[] = [
 	},
 ];
 
-export const mockAgentFindings: readonly AgentFinding[] = [
+export const mockAgentFindings: readonly HomeAgentFinding[] = [
 	{
 		text: "情绪 Alpha v2 模型漂移检测 — 近 5 日 IC 从 0.041 降至 0.028，需关注。",
 		source: "模型监控 · 2小时前",

@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@/components/data";
 import { DataTable } from "@/components/data";
 import { ContextSection } from "@/components/domain/context-section";
+import { ConfidenceBar, type ConfidenceColor } from "@/components/indicator";
 import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useFactors } from "../hooks";
 import type { Factor } from "@/types";
 
-const HEALTH_VARIANT: Record<string, "healthy" | "warning" | "error"> = {
+const HEALTH_VARIANT: Record<string, "healthy" | "warning" | "error" | "default"> = {
 	completed: "healthy",
 	running: "healthy",
 	pending: "default",
@@ -56,11 +57,11 @@ const LEVEL_COLORS: Record<SignalLevel, string> = {
 	dim: "text-(--color-foreground-muted)",
 };
 
-const LEVEL_BAR_COLORS: Record<SignalLevel, string> = {
-	strong: "bg-(--color-market-up)",
-	normal: "bg-(--color-accent)",
-	muted: "bg-(--color-foreground-secondary)",
-	dim: "bg-(--color-foreground-muted)",
+const LEVEL_BAR_COLORS: Record<SignalLevel, ConfidenceColor> = {
+	strong: "success",
+	normal: "brand",
+	muted: "neutral",
+	dim: "neutral",
 };
 
 // --- Status bar helpers ---
@@ -132,16 +133,19 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 		width: "12%",
 		accessor: (row) => {
 			const level = getIcLevel(row.ic);
-			const barWidth = Math.min(Math.abs(row.ic) / 0.1, 1) * 100;
 			return (
 				<div data-testid={`ic-${row.id}`} data-level={level} className="flex flex-col gap-0.5">
 					<span className={cn("font-data tabular-nums", LEVEL_COLORS[level])}>
 						{row.ic.toFixed(3)}
 					</span>
-					<div
+					<ConfidenceBar
 						data-testid={`ic-bar-${row.id}`}
-						className={cn("h-0.5 rounded-full", LEVEL_BAR_COLORS[level])}
-						style={{ width: `${barWidth}%` }}
+						value={Math.abs(row.ic)}
+						max={0.1}
+						color={LEVEL_BAR_COLORS[level]}
+						size="sm"
+						className="ml-auto w-12"
+						aria-label={`IC strength ${row.ic.toFixed(3)}`}
 					/>
 				</div>
 			);
@@ -234,7 +238,7 @@ const COLUMNS: readonly ColumnDef<Factor>[] = [
 ] as const;
 
 export function FactorTable() {
-	const { data, isLoading, isError, refetch } = useFactors();
+	const { data, isLoading, refetch } = useFactors();
 
 	return (
 		<ContextSection title="因子监控" count={data?.total}>

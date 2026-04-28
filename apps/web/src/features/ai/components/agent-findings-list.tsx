@@ -35,7 +35,6 @@ export function AgentFindingsList() {
 	const {
 		data,
 		isLoading,
-		isError,
 		refetch,
 	} = useAgentFindings();
 

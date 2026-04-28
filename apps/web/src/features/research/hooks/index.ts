@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, withQueryParams } from "@/lib/api-client";
 import type {
 	ResearchPulseResponse,
 	GetFactorsResponse,
@@ -19,7 +19,7 @@ export function useResearchPulse() {
 export function useFactors(params?: PaginatedRequest) {
 	return useQuery({
 		queryKey: ["research", "factors", params],
-		queryFn: () => apiClient.get<GetFactorsResponse>("/factors", params),
+		queryFn: () => apiClient.get<GetFactorsResponse>(withQueryParams("/factors", params)),
 	});
 }
 

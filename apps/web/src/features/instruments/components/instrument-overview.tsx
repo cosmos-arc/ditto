@@ -8,7 +8,7 @@ interface InstrumentOverviewProps {
 }
 
 export function InstrumentOverview({ id }: InstrumentOverviewProps) {
-	const { data, isLoading, isError, refetch } = useInstrumentFundamentals(id);
+	const { data, isLoading, refetch } = useInstrumentFundamentals(id);
 
 	return (
 		<div className="flex flex-col gap-[var(--section-gap)] p-[var(--density-panel-padding)]">

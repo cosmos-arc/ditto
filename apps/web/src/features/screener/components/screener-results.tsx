@@ -5,7 +5,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function ScreenerResults() {
-	const { data, isLoading, isError, refetch } = useScreenerResults();
+	const { data, isLoading, refetch } = useScreenerResults();
 	const { selectedIds, toggleSelect } = useScreenerStore();
 
 	return (

@@ -12,7 +12,7 @@ const PRIORITY_VARIANT: Record<string, "critical" | "warning" | "default"> = {
 };
 
 export function ActionsSection() {
-	const { data, isLoading, isError, refetch } = usePendingActions();
+	const { data, isLoading, refetch } = usePendingActions();
 
 	return (
 		<ContextSection title="待处理事项" count={data?.actions.length}>

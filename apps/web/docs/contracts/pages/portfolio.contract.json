@@ -1,0 +1,170 @@
+{
+  "id": "portfolio",
+  "version": 1,
+  "status": "draft",
+  "createdAt": "2026-04-27",
+  "updatedAt": "2026-04-28",
+  "route": "/trading/portfolio",
+  "pagePattern": "analytical-overview",
+  "shellFamily": "analytical",
+  "prototypeRef": "docs/designs/specs/prototypes/page-portfolio.html",
+  "landing": {
+    "reactRouteStatus": "missing",
+    "featureModule": "src/features/trading",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "missing"
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
+  "slots": [
+    {
+      "name": "strip",
+      "required": true,
+      "prototypeSelector": ".shell-strip",
+      "reactSelector": "[data-slot='strip']",
+      "a11yRole": "banner",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "main",
+      "required": true,
+      "prototypeSelector": ".shell-main",
+      "reactSelector": "[data-slot='main']",
+      "a11yRole": "main"
+    },
+    {
+      "name": "activity",
+      "required": true,
+      "prototypeSelector": ".shell-activity",
+      "reactSelector": "[data-slot='activity']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
+    },
+    {
+      "name": "analysis",
+      "required": true,
+      "prototypeSelector": ".shell-analysis",
+      "reactSelector": "[data-slot='analysis']",
+      "a11yRole": "complementary",
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
+    }
+  ],
+  "states": {
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "no-positions"
+    ]
+  },
+  "flags": {
+    "hasStatusBar": true,
+    "sidebarCollapsible": false
+  },
+  "metrics": {
+    "capturedAt": "2026-04-27",
+    "viewport": "1536x900",
+    "baseline": {
+      "strip": {
+        "width": 1536,
+        "height": 72,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 980,
+        "height": 720,
+        "strategy": "content-driven"
+      },
+      "activity": {
+        "width": 280,
+        "height": 720,
+        "strategy": "fixed-width"
+      },
+      "analysis": {
+        "width": 280,
+        "height": 720,
+        "strategy": "fixed-width"
+      }
+    }
+  },
+  "visualThresholds": {
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "missingSelectors": 0,
+    "targetMismatch": 0,
+    "pixelDiffRatio": 0.02
+  },
+  "overlays": [
+    {
+      "id": "portfolio.position-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-position-detail']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "portfolio.trade-detail",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-trade-detail']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "portfolio.confirm-close-all",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-confirm-close-all']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
+}

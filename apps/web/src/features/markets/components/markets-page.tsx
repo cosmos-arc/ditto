@@ -15,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 function MarketContextBar() {
 	// L1: first-screen primary context metrics
 
-	const { data, isLoading, isError, refetch } = useMarketContext();
+	const { data, isLoading, refetch } = useMarketContext();
 
 	if (isLoading) return <LoadingSkeleton variant="metric" className="h-8" />;
 
@@ -67,9 +67,16 @@ const CORRELATION_MATRIX: ReadonlyArray<ReadonlyArray<number>> = [
 	[0.35, 0.28, 0.45, 1.00],
 ];
 
-function correlationCellClass(value: number): string {
-	if (value >= 0.7) return "bg-(--color-accent)/15 text-(--color-accent) accent";
-	if (value >= 0.4) return "bg-(--color-accent)/8 text-(--color-foreground-secondary) moderate";
+function correlationCellClass(value: number, rowIdx: number, colIdx: number): string {
+	if (rowIdx === colIdx) {
+		return "bg-(--color-surface-2) text-(--color-foreground-muted) ring-1 ring-(--color-border-subtle) self";
+	}
+	if (value >= 0.7) {
+		return "bg-(--color-accent)/18 text-(--color-accent) ring-1 ring-(--color-accent)/30 accent";
+	}
+	if (value >= 0.4) {
+		return "bg-(--color-accent)/8 text-(--color-foreground-secondary) moderate";
+	}
 	return "bg-(--color-surface-1) text-(--color-foreground-muted) muted";
 }
 
@@ -104,7 +111,18 @@ function CrossMarketMatrix() {
 				data-testid="cross-market-matrix"
 				className="overflow-x-auto pb-2"
 			>
+				<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+					<div className="text-xs text-(--color-foreground-tertiary)">
+						强相关焦点 <span className="font-data text-(--color-accent)">沪深300/创业板 0.85</span>
+					</div>
+					<div className="flex items-center gap-1 font-data text-xs text-(--color-foreground-tertiary)">
+						<span>0</span>
+						<div className="h-1.5 w-20 rounded-full bg-linear-to-r from-(--color-surface-1) via-(--color-accent)/12 to-(--color-accent)/45" />
+						<span>+1</span>
+					</div>
+				</div>
 				<table className="w-full table-fixed border-collapse text-sm">
+					<caption className="sr-only">跨市场相关性矩阵，颜色越亮表示正相关越强</caption>
 					<thead>
 						<tr>
 							<th className="p-1.5 text-left font-medium text-(--color-foreground-muted)" aria-label="行标签" />
@@ -115,24 +133,26 @@ function CrossMarketMatrix() {
 							))}
 						</tr>
 					</thead>
-					<tbody>
-						{CORRELATION_MATRIX.map((row, rowIdx) => (
-							<tr key={CORRELATION_LABELS[rowIdx]}>
-								<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">
-									{CORRELATION_LABELS[rowIdx]}
-								</td>
-								{row.map((value, colIdx) => (
-									<td
-										key={`${rowIdx}-${colIdx}`}
-										data-testid={`corr-${rowIdx}-${colIdx}`}
-										className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums ${correlationCellClass(value)}`}
-									>
-										{value.toFixed(2)}
+						<tbody>
+							{CORRELATION_MATRIX.map((row, rowIdx) => (
+								<tr key={CORRELATION_LABELS[rowIdx]}>
+									<td className="p-1.5 font-medium text-(--color-foreground-tertiary)">
+										{CORRELATION_LABELS[rowIdx]}
 									</td>
-								))}
-							</tr>
-						))}
-					</tbody>
+									{row.map((value, colIdx) => (
+										<td
+											key={`${rowIdx}-${colIdx}`}
+											data-testid={`corr-${rowIdx}-${colIdx}`}
+											className={`rounded-(--radius-sm) p-1.5 text-center font-data tabular-nums transition-transform hover:scale-105 ${correlationCellClass(value, rowIdx, colIdx)}`}
+											aria-label={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]}: 相关系数 ${value.toFixed(2)}`}
+											title={`${CORRELATION_LABELS[rowIdx]} vs ${CORRELATION_LABELS[colIdx]} · 相关系数 ${value.toFixed(2)}`}
+										>
+											{value.toFixed(2)}
+										</td>
+									))}
+								</tr>
+							))}
+						</tbody>
 				</table>
 			</div>
 		</ContextSection>

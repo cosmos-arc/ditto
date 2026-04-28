@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { LineChart } from "./line-chart";
 import { AreaChart } from "./area-chart";
 import type { SparklinePoint } from "@/types";
@@ -33,7 +33,7 @@ function mockResizeObserver(): () => void {
 	};
 	globalThis.ResizeObserver = observer as unknown as typeof ResizeObserver;
 	return () => {
-		delete globalThis.ResizeObserver;
+		Reflect.deleteProperty(globalThis, "ResizeObserver");
 	};
 }
 

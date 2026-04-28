@@ -63,7 +63,6 @@ export function CopilotChatView({ sessionId }: CopilotChatViewProps) {
 	const {
 		data,
 		isLoading,
-		isError,
 		refetch,
 	} = useCopilotMessages(sessionId);
 

@@ -14,7 +14,7 @@ describe("ConfidenceBar", () => {
 	// ── Rendering ──
 
 	it("renders track and fill elements", () => {
-		const { container } = render(<ConfidenceBar value={72} />);
+		render(<ConfidenceBar value={72} />);
 		const track = screen.getByTestId("confidence-track");
 		expect(track).toBeInTheDocument();
 		expect(track).toHaveAttribute("data-slot", "confidence-track");

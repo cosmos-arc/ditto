@@ -2,10 +2,10 @@ import type {
 	EquityPoint,
 	GetSignalDetailResponse,
 	GetSignalsResponse,
-	OrdersSummaryResponse,
+	GetOrdersSummaryResponse,
 	Position,
 	RiskSummaryResponse,
-	SignalsQueueResponse,
+	GetSignalsQueueResponse,
 	TradingSessionResponse,
 } from "@/types";
 
@@ -123,14 +123,14 @@ export const mockRiskSummary: RiskSummaryResponse = {
 	breachCount: 0,
 };
 
-export const mockSignalsQueue: SignalsQueueResponse = {
+export const mockSignalsQueue: GetSignalsQueueResponse = {
 	pending: 5,
 	confirmed: 12,
 	ignored: 3,
 	ordered: 8,
 };
 
-export const mockOrdersSummary: OrdersSummaryResponse = {
+export const mockOrdersSummary: GetOrdersSummaryResponse = {
 	pending: 2,
 	submitted: 1,
 	partial: 1,

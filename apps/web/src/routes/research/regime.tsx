@@ -3,5 +3,5 @@ import { RegimePage } from "@/features/research";
 
 export const Route = createFileRoute("/research/regime")({
 	component: RegimePage,
-	handle: { title: "Regime Monitor" },
+	staticData: { title: "Regime Monitor" },
 });

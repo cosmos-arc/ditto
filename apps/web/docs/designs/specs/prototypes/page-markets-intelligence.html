@@ -147,6 +147,22 @@
      * ══════════════════════════════════════════════ */
     body { overflow-y: auto; }
 
+    .shell-intel {
+      height: 100vh;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .shell-intel .shell-body {
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .shell-intel .shell-header {
+      flex-shrink: 0;
+    }
+
     /* ── Rail Logo (page-specific branding) ── */
     .shell-intel .rail-logo {
       width: var(--rail-logo-size);
@@ -159,7 +175,7 @@
       font-weight: var(--font-weight-semibold);
       font-size: var(--font-size-14);
       color: var(--brand-accent);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
 
     /* ── Header: frosted glass + signature gradient line (page-specific) ── */
@@ -243,7 +259,7 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .header-action-btn {
       width: var(--header-btn-size);
@@ -297,8 +313,7 @@
       padding: var(--space-4) var(--density-gutter);
       border-bottom: 1px solid var(--border-subtle);
       background: var(--surface-app);
-      position: sticky;
-      top: var(--shell-header-height);
+      flex-shrink: 0;
       z-index: 15;
     }
 
@@ -334,7 +349,7 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
 
     /* ══════════════════════════════════════════════
@@ -343,24 +358,32 @@
     .intel-workspace {
       display: grid;
       grid-template-columns: 1fr 320px;
+      grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "main analysis-rail"
+        "analysis analysis-rail";
       flex: 1;
       min-height: 0;
     }
 
     .intel-main {
+      grid-area: main;
       padding: var(--space-12) var(--density-gutter);
       display: flex;
       flex-direction: column;
       gap: var(--space-12);
+      min-height: 0;
       overflow-y: auto;
     }
 
     /* ── Right Rail (sticky) ── */
     .intel-right-rail {
+      grid-area: analysis-rail;
       background: var(--surface-panel-base);
       border-left: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
+      min-height: 0;
       overflow-y: auto;
     }
 
@@ -423,7 +446,7 @@
       font-feature-settings: 'tnum' 1;
       font-weight: var(--font-weight-medium);
       font-size: var(--font-size-12);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .stock-quick-change.up { color: var(--market-up-fg); }
     .stock-quick-change.down { color: var(--market-down-fg); }
@@ -516,7 +539,7 @@
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
       font-feature-settings: 'tnum' 1, 'zero' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       text-rendering: optimizeLegibility;
     }
     .intel-table td:first-child {
@@ -568,7 +591,7 @@
     }
     .kpi-card:hover {
       border-color: var(--border-default);
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+      box-shadow: 0 2px 8px oklch(from var(--neutral-0) l c h / 0.12);
     }
     .kpi-label {
       font-size: var(--font-size-10);
@@ -583,7 +606,7 @@
       font-weight: var(--font-weight-semibold);
       color: var(--text-primary);
       font-feature-settings: 'tnum' 1, 'zero' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       font-variant-numeric: tabular-nums;
     }
     .kpi-change {
@@ -591,7 +614,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .kpi-change.up { color: var(--market-up-fg); }
     .kpi-change.down { color: var(--market-down-fg); }
@@ -614,7 +637,7 @@
       flex-shrink: 0;
       width: 3rem;
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .news-body { flex: 1; min-width: 0; }
     .news-headline {
@@ -654,7 +677,7 @@
       font-family: var(--font-family-numeric);
       color: var(--text-tertiary);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       flex-shrink: 0;
       width: 3rem;
     }
@@ -684,6 +707,42 @@
       gap: 2px;
       font-size: var(--font-size-12);
     }
+    .correlation-matrix-meta {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: var(--space-16);
+      margin-bottom: var(--space-10);
+    }
+    .correlation-matrix-focus {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+    .correlation-matrix-focus strong {
+      color: var(--market-up-fg);
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-semibold);
+    }
+    .correlation-matrix-scale {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .correlation-matrix-scale-bar {
+      width: 88px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--market-down-fg) 24%, transparent),
+        var(--surface-panel-base),
+        color-mix(in oklch, var(--market-up-fg) 34%, transparent)
+      );
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-subtle) 48%, transparent);
+    }
     .correlation-cell {
       display: flex;
       align-items: center;
@@ -692,8 +751,9 @@
       border-radius: var(--radius-2);
       font-family: var(--font-family-numeric);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       font-weight: var(--font-weight-medium);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-subtle) 34%, transparent);
     }
     .correlation-cell.header {
       font-family: var(--font-family-ui);
@@ -707,9 +767,13 @@
       font-family: var(--font-family-ui);
       color: var(--text-secondary);
     }
-    .correlation-cell.strong { background: color-mix(in oklch, var(--market-up-fg) 15%, transparent); color: var(--market-up-fg); }
+    .correlation-cell.self {
+      background: color-mix(in oklch, var(--surface-muted) 68%, transparent);
+      color: var(--text-quaternary);
+    }
+    .correlation-cell.strong { background: color-mix(in oklch, var(--market-up-fg) 18%, transparent); color: var(--market-up-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--market-up-fg) 38%, transparent); }
     .correlation-cell.moderate { background: color-mix(in oklch, var(--market-up-fg) 8%, transparent); color: var(--market-up-fg); }
-    .correlation-cell.weak { color: var(--text-tertiary); }
+    .correlation-cell.weak { background: color-mix(in oklch, var(--surface-muted) 36%, transparent); color: var(--text-tertiary); }
     .correlation-cell.negative { background: color-mix(in oklch, var(--market-down-fg) 12%, transparent); color: var(--market-down-fg); }
 
     /* ══════════════════════════════════════════════
@@ -913,7 +977,7 @@
     }
     .sector-linkage-item:hover {
       border-color: var(--border-default);
-      box-shadow: 0 2px 8px oklch(0 0 0 / 0.12);
+      box-shadow: 0 2px 8px oklch(from var(--neutral-0) l c h / 0.12);
     }
     .sector-linkage-name {
       font-size: var(--font-size-12);
@@ -975,15 +1039,23 @@
      * Analysis Band (bottom strip)
      * ══════════════════════════════════════════════ */
     .analysis-band {
+      grid-area: analysis;
       border-top: 1px solid var(--border-subtle);
       background: var(--surface-panel-base);
-      padding: var(--space-10) var(--density-gutter);
-      display: flex;
-      gap: var(--space-16);
+      padding: var(--space-8) var(--density-gutter);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--space-12);
+      min-height: 96px;
+      max-height: 128px;
+      overflow: hidden;
     }
     .analysis-band-section {
-      flex: 1;
+      min-width: 0;
+      border-right: 1px solid var(--overlay-4);
+      padding-right: var(--space-12);
     }
+    .analysis-band-section:last-child { border-right: none; padding-right: 0; }
     .analysis-band-title {
       font-size: var(--font-size-10);
       font-weight: var(--font-weight-semibold);
@@ -995,7 +1067,7 @@
     .analysis-band-text {
       font-size: var(--font-size-12);
       color: var(--text-secondary);
-      line-height: 1.5;
+      line-height: 1.45;
     }
     .analysis-band-text strong {
       color: var(--text-primary);
@@ -1064,8 +1136,8 @@
       [data-overlay="overlay-send-to-copilot"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1113,7 +1185,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
       padding: var(--space-8) var(--space-16);
-      box-shadow: 0 8px 32px oklch(0 0 0 / 0.4);
+      box-shadow: 0 8px 32px oklch(from var(--neutral-0) l c h / 0.40);
       z-index: 1100;
       display: none;
       align-items: center;
@@ -1200,7 +1272,7 @@
     .font-numeric {
       font-family: var(--font-family-numeric);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .text-up { color: var(--market-up-fg); }
     .text-down { color: var(--market-down-fg); }
@@ -1410,6 +1482,110 @@
       background: linear-gradient(to left, var(--market-down-fg), color-mix(in oklch, var(--market-down-fg) 30%, transparent));
     }
 
+    .direction-symbol {
+      display: inline-flex;
+      width: 1em;
+      margin-right: var(--space-4);
+      color: currentColor;
+      font-size: var(--font-size-10);
+      line-height: 1;
+    }
+
+    .heatmap-intel-card {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: var(--space-14);
+      padding: var(--space-10) var(--space-12);
+      background: var(--surface-panel-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+    }
+
+    .heatmap-intel-card svg {
+      display: block;
+    }
+
+    .heatmap-reading-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+    }
+
+    .heatmap-rule-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-6);
+    }
+
+    .heatmap-rule {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      line-height: 1.4;
+      background: var(--overlay-2);
+    }
+
+    .heatmap-rule strong {
+      color: var(--text-secondary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .heatmap-legend {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: var(--space-4);
+      max-width: 360px;
+    }
+
+    .heatmap-legend-stop {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      white-space: nowrap;
+    }
+
+    .heatmap-legend-stop::before {
+      content: "";
+      height: 6px;
+      border-radius: var(--radius-3);
+      background: var(--heatmap-stop-color);
+    }
+
+    .heatmap-legend-stop[data-tone="strong-out"] {
+      --heatmap-stop-color: color-mix(in oklch, var(--market-down-fg) 45%, transparent);
+    }
+
+    .heatmap-legend-stop[data-tone="out"] {
+      --heatmap-stop-color: color-mix(in oklch, var(--market-down-fg) 24%, transparent);
+    }
+
+    .heatmap-legend-stop[data-tone="flat"] {
+      --heatmap-stop-color: var(--overlay-6);
+    }
+
+    .heatmap-legend-stop[data-tone="in"] {
+      --heatmap-stop-color: color-mix(in oklch, var(--market-up-fg) 24%, transparent);
+    }
+
+    .heatmap-legend-stop[data-tone="strong-in"] {
+      --heatmap-stop-color: color-mix(in oklch, var(--market-up-fg) 45%, transparent);
+    }
+
+    .heatmap-reading-hint {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      line-height: 1.45;
+    }
+
     /* ── Mini trend indicator ── */
     .trend-indicator {
       display: inline-flex;
@@ -1504,13 +1680,13 @@
       padding: var(--space-8) var(--space-10);
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
-    .macro-card:hover { border-color: var(--border-default); box-shadow: 0 1px 4px oklch(0 0 0 / 0.08); }
+    .macro-card:hover { border-color: var(--border-default); box-shadow: 0 1px 4px oklch(from var(--neutral-0) l c h / 0.08); }
     .macro-card-time {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       margin-bottom: var(--space-4);
     }
     .macro-card-name {
@@ -1523,7 +1699,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       font-feature-settings: 'tnum' 1;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
       margin-top: var(--space-4);
     }
     .macro-card-value.up { color: var(--market-up-fg); font-weight: var(--font-weight-medium); }
@@ -1720,36 +1896,32 @@
   <a class="skip-link" href="#main-content">跳至主要内容</a>
   <div class="style-label">Graphite Studio — 市场情报 · Compact · A股</div>
 
-  <div class="shell-intel">
+  <div class="shell-intel intel-shell">
 
     <!-- ===== Rail (sticky left) ===== -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
       <div class="rail-nav" role="list">
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page">
+        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" role="listitem" tabindex="0" aria-label="平台">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom" role="list">
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ===== Shell Body ===== -->
@@ -1761,18 +1933,31 @@
         <span class="header-subtitle">Markets · Intelligence</span>
         <div class="header-spacer"></div>
         <div class="header-actions">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
+        </div>
           <div class="header-action-btn" title="时间框架">
             <span class="header-timeframe">1D</span>
           </div>
@@ -1780,11 +1965,11 @@
           <label for="overlay-custom-filter" class="header-action-btn cursor-pointer" title="筛选">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
           </label>
-          <button class="header-action-btn" title="通知" aria-label="通知">
+          <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
             <span class="badge-dot" aria-hidden="true"></span>
           </button>
-          <div class="header-avatar" aria-label="用户菜单">C</div>
+          
         </div>
       </header>
 
@@ -1822,22 +2007,22 @@
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="沪深港通北向资金今日净买入金额" data-tooltip-pos="top">北向资金</div>
-                  <div class="kpi-value text-up" data-ticker="12.4" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿" data-counter="12.4" data-counter-decimals="1" data-counter-prefix="+" data-counter-suffix="亿">+12.4亿</div>
+                  <div class="kpi-value text-up">+12.4亿</div>
                   <div class="kpi-change up" data-tooltip="较昨日多流入 4.2 亿，连续 3 日净买入" data-tooltip-pos="bottom">净买入</div>
                 </div>
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="全市场大单主力资金净流入额（单笔 > 50 万）" data-tooltip-pos="top">主力资金</div>
-                  <div class="kpi-value text-up" data-ticker="86.7" data-decimals="1" data-ticker-prefix="+" data-ticker-suffix="亿" data-counter="86.7" data-counter-decimals="1" data-counter-prefix="+" data-counter-suffix="亿">+86.7亿</div>
+                  <div class="kpi-value text-up">+86.7亿</div>
                   <div class="kpi-change up" data-tooltip="近 5 日均值 +62 亿，今日显著高于均值" data-tooltip-pos="bottom">净流入</div>
                 </div>
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="沪深两市融资融券余额（截至昨日收盘）" data-tooltip-pos="top">融资余额</div>
-                  <div class="kpi-value" data-ticker="18432" data-decimals="0" data-ticker-suffix="亿" data-counter="18432" data-counter-decimals="0" data-counter-suffix="亿">18,432亿</div>
+                  <div class="kpi-value">18,432亿</div>
                   <div class="kpi-change up" data-tooltip="连续 8 日增加，杠杆资金持续入场" data-tooltip-pos="bottom">+52.3亿</div>
                 </div>
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="沪深两市今日累计成交金额（实时）" data-tooltip-pos="top">成交额</div>
-                  <div class="kpi-value" data-ticker="9856" data-decimals="0" data-ticker-suffix="亿" data-counter="9856" data-counter-decimals="0" data-counter-suffix="亿">9,856亿</div>
+                  <div class="kpi-value">9,856亿</div>
                   <div class="kpi-change down" data-tooltip="较昨日同期下降 12.3%，缩量整理" data-tooltip-pos="bottom">-12.3%</div>
                 </div>
               </div>
@@ -1859,92 +2044,92 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="up">
                       <td class="font-numeric">1</td>
                       <td>科技</td>
-                      <td class="up">+12.3亿</td>
-                      <td class="up">+2.8%</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+12.3亿</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+2.8%</td>
                       <td>186/54</td>
                       <td>中芯国际</td>
                       <td><span class="cell-badge up">强势流入</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="up">
                       <td class="font-numeric">2</td>
                       <td>消费</td>
-                      <td class="up">+8.5亿</td>
-                      <td class="up">+1.9%</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+8.5亿</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+1.9%</td>
                       <td>142/68</td>
                       <td>贵州茅台</td>
                       <td><span class="cell-badge up">持续流入</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="up">
                       <td class="font-numeric">3</td>
                       <td>新能源</td>
-                      <td class="up">+6.2亿</td>
-                      <td class="up">+1.4%</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+6.2亿</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+1.4%</td>
                       <td>98/82</td>
                       <td>宁德时代</td>
                       <td><span class="cell-badge up">温和流入</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="up">
                       <td class="font-numeric">4</td>
                       <td>医药</td>
-                      <td class="up">+4.1亿</td>
-                      <td class="up">+0.9%</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+4.1亿</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+0.9%</td>
                       <td>110/95</td>
                       <td>迈瑞医疗</td>
                       <td><span class="cell-badge neutral">均衡</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="up">
                       <td class="font-numeric">5</td>
                       <td>制造</td>
-                      <td class="up">+2.8亿</td>
-                      <td class="up">+0.6%</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+2.8亿</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+0.6%</td>
                       <td>88/76</td>
                       <td>比亚迪</td>
                       <td><span class="cell-badge neutral">均衡</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="up">
                       <td class="font-numeric">6</td>
                       <td>公用</td>
-                      <td class="up">+1.5亿</td>
-                      <td class="up">+0.3%</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+1.5亿</td>
+                      <td class="up"><span class="direction-symbol" aria-hidden="true">▲</span>+0.3%</td>
                       <td>45/38</td>
                       <td>长江电力</td>
                       <td><span class="cell-badge neutral">均衡</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="down">
                       <td class="font-numeric">7</td>
                       <td>地产</td>
-                      <td class="down">-1.2亿</td>
-                      <td class="down">-0.3%</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-1.2亿</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-0.3%</td>
                       <td>32/88</td>
                       <td>万科A</td>
                       <td><span class="cell-badge down">流出</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="down">
                       <td class="font-numeric">8</td>
                       <td>金融</td>
-                      <td class="down">-3.2亿</td>
-                      <td class="down">-0.7%</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-3.2亿</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-0.7%</td>
                       <td>42/96</td>
                       <td>招商银行</td>
                       <td><span class="cell-badge down">持续流出</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="down">
                       <td class="font-numeric">9</td>
                       <td>钢铁</td>
-                      <td class="down">-2.1亿</td>
-                      <td class="down">-0.5%</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-2.1亿</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-0.5%</td>
                       <td>18/62</td>
                       <td>宝钢股份</td>
                       <td><span class="cell-badge down">流出</span></td>
                     </tr>
-                    <tr>
+                    <tr class="flow-sector-row" data-flow-direction="down">
                       <td class="font-numeric">10</td>
                       <td>煤炭</td>
-                      <td class="down">-1.8亿</td>
-                      <td class="down">-0.4%</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-1.8亿</td>
+                      <td class="down"><span class="direction-symbol" aria-hidden="true">▼</span>-0.4%</td>
                       <td>15/48</td>
                       <td>中国神华</td>
                       <td><span class="cell-badge down">流出</span></td>
@@ -1956,7 +2141,26 @@
               <!-- Sector Heatmap -->
               <div data-reveal="fade-up" data-reveal-delay="150">
                 <div class="section-title">板块热力图</div>
-                <svg data-heatgrid='{"rows":5,"cols":8,"cellSize":18,"gap":2,"labels":["科技","消费","新能源","医药","制造","公用","地产","金融","钢铁","煤炭","有色","化工","建材","汽车","传媒","通信","农业","纺织","食品","家电","电子","计算机","军工","环保","交运","商贸","休闲","综合","轻工","电气","机械","医药","银行","非银","石油","综合","煤炭","钢铁","有色","化工"]}' aria-label="板块热力图"></svg>
+                <div class="heatmap-intel-card">
+                  <svg class="heatgrid-map" data-heatgrid='{"rows":5,"cols":8,"cellSize":18,"gap":2,"data":[0.92,0.84,0.78,0.67,0.59,0.52,0.18,0.12,0.24,0.22,0.48,0.54,0.62,0.71,0.66,0.58,0.44,0.36,0.57,0.63,0.76,0.82,0.68,0.49,0.31,0.38,0.46,0.51,0.55,0.73,0.64,0.41,0.16,0.2,0.28,0.35,0.26,0.3,0.43,0.5],"labels":["科技","消费","新能源","医药","制造","公用","地产","金融","钢铁","煤炭","有色","化工","建材","汽车","传媒","通信","农业","纺织","食品","家电","电子","计算机","军工","环保","交运","商贸","休闲","综合","轻工","电气","机械","医药","银行","非银","石油","综合","煤炭","钢铁","有色","化工"]}' aria-label="板块热力图"></svg>
+                  <div class="heatmap-reading-panel">
+                    <div class="heatmap-rule-row" aria-label="热力图读图规则">
+                      <span class="heatmap-rule" data-heatmap-size><strong>Size</strong> 成交额权重</span>
+                      <span class="heatmap-rule" data-heatmap-color><strong>Color</strong> 净流入强度</span>
+                      <span class="heatmap-rule" data-heatmap-scope><strong>Scope</strong> 申万一级</span>
+                    </div>
+                    <div class="heatmap-legend" aria-label="净流入色阶">
+                      <span class="heatmap-legend-stop" data-tone="strong-out">强流出</span>
+                      <span class="heatmap-legend-stop" data-tone="out">流出</span>
+                      <span class="heatmap-legend-stop" data-tone="flat">均衡</span>
+                      <span class="heatmap-legend-stop" data-tone="in">流入</span>
+                      <span class="heatmap-legend-stop" data-tone="strong-in">强流入</span>
+                    </div>
+                    <div class="heatmap-reading-hint">
+                      红绿深浅表达资金强度，方向同时在榜单中用 ▲/▼ 标记，避免只依赖颜色判断。
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Big Order Tracking -->
@@ -2020,22 +2224,22 @@
               <div class="kpi-row" data-reveal="fade-up">
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="消费者物价指数同比涨幅（3月）" data-tooltip-pos="top">CPI 同比</div>
-                  <div class="kpi-value" data-ticker="102.3" data-decimals="1" data-counter="102.3" data-counter-decimals="1">102.3</div>
+                  <div class="kpi-value">102.3</div>
                   <div class="kpi-change up" data-tooltip="高于预期 101.8，通胀温和回升" data-tooltip-pos="bottom">+0.7%</div>
                 </div>
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="工业品出厂价格指数同比变动（3月）" data-tooltip-pos="top">PPI 同比</div>
-                  <div class="kpi-value" data-ticker="98.5" data-decimals="1" data-counter="98.5" data-counter-decimals="1">98.5</div>
+                  <div class="kpi-value">98.5</div>
                   <div class="kpi-change down" data-tooltip="低于预期 99.2，工业品价格仍承压" data-tooltip-pos="bottom">-1.5%</div>
                 </div>
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="制造业采购经理指数（3月官方），50 为荣枯线" data-tooltip-pos="top">PMI</div>
-                  <div class="kpi-value text-up" data-ticker="51.2" data-decimals="1" data-counter="51.2" data-counter-decimals="1">51.2</div>
+                  <div class="kpi-value text-up">51.2</div>
                   <div class="kpi-change up" data-tooltip="超预期 50.8，连续 3 月站上荣枯线" data-tooltip-pos="bottom">+0.4</div>
                 </div>
                 <div class="kpi-card" data-mouse-glow="true">
                   <div class="kpi-label" data-tooltip="广义货币供应量同比增速（2月）" data-tooltip-pos="top">M2 增速</div>
-                  <div class="kpi-value" data-ticker="7.8" data-decimals="1" data-ticker-suffix="%" data-counter="7.8" data-counter-decimals="1" data-counter-suffix="%">7.8%</div>
+                  <div class="kpi-value">7.8%</div>
                   <div class="kpi-change down" data-tooltip="低于预期 8.0%，信贷投放节奏放缓" data-tooltip-pos="bottom">-0.3%</div>
                 </div>
               </div>
@@ -2306,22 +2510,22 @@
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="过去 24 小时抓取的新闻总数" data-tooltip-pos="top">24h 新闻</div>
-                  <div class="kpi-value" data-counter="1247" data-counter-decimals="0">1,247</div>
+                  <div class="kpi-value">1,247</div>
                   <div class="kpi-change up">+18% vs 昨日</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="NLP 模型判定为正面情绪的新闻占比" data-tooltip-pos="top">正面情绪</div>
-                  <div class="kpi-value text-up" data-counter="42.3" data-counter-decimals="1" data-counter-suffix="%">42.3%</div>
+                  <div class="kpi-value text-up">42.3%</div>
                   <div class="kpi-change up">+5.1pp</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="NLP 模型判定为负面情绪的新闻占比" data-tooltip-pos="top">负面情绪</div>
-                  <div class="kpi-value text-down" data-counter="31.2" data-counter-decimals="1" data-counter-suffix="%">31.2%</div>
+                  <div class="kpi-value text-down">31.2%</div>
                   <div class="kpi-change down">+2.3pp</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="当日活跃热点话题数量" data-tooltip-pos="top">活跃热点</div>
-                  <div class="kpi-value" data-counter="8" data-counter-decimals="0">8</div>
+                  <div class="kpi-value">8</div>
                   <div class="kpi-change up">+3 新增</div>
                 </div>
               </div>
@@ -2485,22 +2689,22 @@
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="与当前关联标的平均相关性系数" data-tooltip-pos="top">平均相关性</div>
-                  <div class="kpi-value" data-counter="0.67" data-counter-decimals="2">0.67</div>
+                  <div class="kpi-value">0.67</div>
                   <div class="kpi-change up">+0.05</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="强相关标的数量（系数 > 0.7）" data-tooltip-pos="top">强关联标的</div>
-                  <div class="kpi-value" data-counter="12" data-counter-decimals="0">12</div>
+                  <div class="kpi-value">12</div>
                   <div class="kpi-change up">+3 只</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="板块联动强度指数" data-tooltip-pos="top">联动指数</div>
-                  <div class="kpi-value" data-counter="73.5" data-counter-decimals="1">73.5</div>
+                  <div class="kpi-value">73.5</div>
                   <div class="kpi-change down">-2.8</div>
                 </div>
                 <div class="kpi-card">
                   <div class="kpi-label" data-tooltip="产业链传导活跃度评分" data-tooltip-pos="top">传导活跃度</div>
-                  <div class="kpi-value" data-counter="68.0" data-counter-decimals="1">68.0</div>
+                  <div class="kpi-value">68.0</div>
                   <div class="kpi-change up">+4.2</div>
                 </div>
               </div>
@@ -2509,6 +2713,14 @@
               <div data-reveal="fade-up" data-reveal-delay="50">
                 <div class="section-title">标的相关性矩阵</div>
                 <div class="panel">
+                  <div class="correlation-matrix-meta">
+                    <div class="correlation-matrix-focus">强相关焦点 <strong>宁德时代 / 比亚迪 0.82</strong></div>
+                    <div class="correlation-matrix-scale" aria-label="相关系数色阶">
+                      <span>-1</span>
+                      <div class="correlation-matrix-scale-bar"></div>
+                      <span>+1</span>
+                    </div>
+                  </div>
                   <div class="correlation-grid">
                     <div class="correlation-cell header"></div>
                     <div class="correlation-cell header">贵州茅台</div>
@@ -2518,7 +2730,7 @@
                     <div class="correlation-cell header">美的集团</div>
 
                     <div class="correlation-cell label">贵州茅台</div>
-                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell self">1.00</div>
                     <div class="correlation-cell weak">0.23</div>
                     <div class="correlation-cell weak">0.31</div>
                     <div class="correlation-cell moderate">0.56</div>
@@ -2526,7 +2738,7 @@
 
                     <div class="correlation-cell label">宁德时代</div>
                     <div class="correlation-cell weak">0.23</div>
-                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell self">1.00</div>
                     <div class="correlation-cell strong">0.82</div>
                     <div class="correlation-cell weak">0.18</div>
                     <div class="correlation-cell weak">0.27</div>
@@ -2534,7 +2746,7 @@
                     <div class="correlation-cell label">比亚迪</div>
                     <div class="correlation-cell weak">0.31</div>
                     <div class="correlation-cell strong">0.82</div>
-                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell self">1.00</div>
                     <div class="correlation-cell weak">0.21</div>
                     <div class="correlation-cell weak">0.33</div>
 
@@ -2542,7 +2754,7 @@
                     <div class="correlation-cell moderate">0.56</div>
                     <div class="correlation-cell weak">0.18</div>
                     <div class="correlation-cell weak">0.21</div>
-                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell self">1.00</div>
                     <div class="correlation-cell moderate">0.45</div>
 
                     <div class="correlation-cell label">美的集团</div>
@@ -2550,7 +2762,7 @@
                     <div class="correlation-cell weak">0.27</div>
                     <div class="correlation-cell weak">0.33</div>
                     <div class="correlation-cell moderate">0.45</div>
-                    <div class="correlation-cell strong">1.00</div>
+                    <div class="correlation-cell self">1.00</div>
                   </div>
                 </div>
               </div>
@@ -2649,7 +2861,7 @@
         </main>
 
         <!-- ===== Right Rail ===== -->
-        <aside class="intel-right-rail" aria-label="侧边面板">
+        <aside class="intel-right-rail" data-contract-slot="right-rail" aria-label="侧边面板">
 
           <!-- Section: 关联标的 -->
           <div class="rail-section">
@@ -2777,11 +2989,11 @@
         </aside>
 
       <!-- ===== Analysis Band (bottom) ===== -->
-      <div class="analysis-band">
+      <div class="analysis-band" data-contract-slot="analysis">
         <div class="analysis-band-section">
           <div class="analysis-band-title" data-tooltip="基于多维度资金面数据的综合趋势判断" data-tooltip-pos="top">趋势判断</div>
           <div class="analysis-band-text">
-            资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振市场情绪，但中美利差走阔值得关注。
+            资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振风险偏好。
           </div>
         </div>
         <div class="analysis-band-section">
@@ -2791,24 +3003,9 @@
           </div>
         </div>
         <div class="analysis-band-section">
-          <div class="analysis-band-title" data-tooltip="需要关注的潜在风险事件和时间节点" data-tooltip-pos="top">备注</div>
+          <div class="analysis-band-title" data-tooltip="需要关注的潜在风险事件和时间节点" data-tooltip-pos="top">行动窗口</div>
           <div class="analysis-band-text">
-            14:00 社融数据发布后可能引发资金面波动，建议关注 <strong>金融板块</strong>走势变化。
-          </div>
-          <div class="analysis-band-text">
-            资金面 <strong class="up">偏多</strong>，北向与主力资金共振流入科技板块；宏观 PMI <strong class="up">超预期</strong>提振市场情绪，但中美利差走阔值得关注。
-          </div>
-        </div>
-        <div class="analysis-band-section">
-          <div class="analysis-band-title" data-tooltip="与历史均值和近期数据的横向对比" data-tooltip-pos="top">对比参考</div>
-          <div class="analysis-band-text">
-            近5日资金净流入合计 <strong class="up">+386亿</strong>，高于20日均值 +215亿；板块集中度提升，科技+消费占比 62%。
-          </div>
-        </div>
-        <div class="analysis-band-section">
-          <div class="analysis-band-title" data-tooltip="需要关注的潜在风险事件和时间节点" data-tooltip-pos="top">备注</div>
-          <div class="analysis-band-text">
-            14:00 社融数据发布后可能引发资金面波动，建议关注 <strong>金融板块</strong>走势变化。
+            14:00 社融数据公布前维持观察；若金融继续流出，降低指数 beta，保留科技强势股观察位。
           </div>
         </div>
       </div>
@@ -2842,7 +3039,7 @@
     <!-- Overlay A: 情报详情 (Drawer — right slide) -->
     <div class="overlay-backdrop" data-overlay="overlay-intelligence-detail">
       <label class="overlay-dismiss" for="overlay-intelligence-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="情报详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="情报详情">
         <div class="overlay-header">
           <span class="overlay-title">情报详情</span>
           <label for="overlay-intelligence-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2887,7 +3084,7 @@
     <!-- Overlay B: 自定义筛选 (Sheet — centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-custom-filter">
       <label class="overlay-dismiss" for="overlay-custom-filter" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="自定义筛选">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="自定义筛选">
         <div class="overlay-header">
           <span class="overlay-title">自定义筛选</span>
           <label for="overlay-custom-filter" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2962,7 +3159,7 @@
     <!-- Overlay D: 删除标注确认 (Sheet — centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-delete-confirm">
       <label class="overlay-dismiss" for="overlay-delete-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
         <div class="overlay-header">
           <span class="overlay-title">删除标注</span>
           <label for="overlay-delete-confirm" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -2996,7 +3193,7 @@
     <!-- Overlay E: 发送到 Copilot (Drawer — right slide) -->
     <div class="overlay-backdrop" data-overlay="overlay-send-to-copilot">
       <label class="overlay-dismiss" for="overlay-send-to-copilot" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="发送到 Copilot">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到 Copilot">
         <div class="overlay-header">
           <span class="overlay-title">发送到 Copilot</span>
           <label for="overlay-send-to-copilot" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3388,10 +3585,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-intelligence-detail">
       <div class="gallery-card__label">情报详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="情报详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="情报详情">
           <div class="overlay-header">
             <span class="overlay-title">情报详情</span>
           </div>
@@ -3430,10 +3627,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-custom-filter">
       <div class="gallery-card__label">自定义筛选 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="自定义筛选">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="自定义筛选">
           <div class="overlay-header">
             <span class="overlay-title">自定义筛选</span>
           </div>
@@ -3494,10 +3691,20 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-bookmark-success">
+      <div class="gallery-card__label">收藏成功 (Toast)</div>
+      <div class="gallery-card__preview gallery-card__preview--overlay">
+        <div class="overlay-toast" role="status" aria-label="收藏成功">
+          <div class="toast-icon">&#10003;</div>
+          <span class="toast-text">已收藏到情报库</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-card" data-overlay-ref="overlay-delete-confirm">
       <div class="gallery-card__label">删除标注确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="删除标注确认">
           <div class="overlay-header">
             <span class="overlay-title">删除标注</span>
           </div>
@@ -3526,10 +3733,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-send-to-copilot">
       <div class="gallery-card__label">发送到 Copilot (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="发送到 Copilot">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到 Copilot">
           <div class="overlay-header">
             <span class="overlay-title">发送到 Copilot</span>
           </div>

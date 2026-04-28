@@ -18,7 +18,7 @@ const STATUS_VARIANT: Record<string, "healthy" | "warning" | "default" | "degrad
 };
 
 export function SignalsList() {
-	const { data, isLoading, isError, refetch } = useSignals({ tab: "pending" });
+	const { data, isLoading, refetch } = useSignals({ tab: "pending" });
 
 	return (
 		<ContextSection title="信号队列" count={data?.total} data-info-level="l1" data-info-unit="signals-list">

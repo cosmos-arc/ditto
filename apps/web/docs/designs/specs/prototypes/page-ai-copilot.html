@@ -291,6 +291,75 @@
       animation: dot-pulse 3s ease-in-out infinite;
     }
 
+    .mode-context-panels {
+      flex-shrink: 0;
+      padding: var(--space-8) var(--density-gutter);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 76%, var(--surface-app));
+    }
+
+    .mode-context-panel {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-12);
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding: var(--space-8) var(--space-10);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-elevated);
+    }
+
+    .mode-context-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .mode-context-kicker {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-quaternary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .mode-context-title {
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .mode-context-desc {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      line-height: 1.45;
+    }
+
+    .mode-context-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: var(--space-4);
+      min-width: 220px;
+    }
+
+    .mode-context-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: var(--space-2) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--badge-md-radius);
+      background: var(--surface-strip);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
+    }
+
     /* ══════════════════════════════════════════════
      * Sessions Sidebar (left, 220px)
      * ══════════════════════════════════════════════ */
@@ -1097,13 +1166,12 @@
      * Status bar (terminal DNA)
      * ══════════════════════════════════════════════ */
     .status-bar {
-      position: fixed;
-      bottom: 0;
-      left: var(--shell-rail-width);
-      right: 0;
+      position: static;
       display: flex;
       align-items: center;
       height: 1.5rem;
+      width: calc(100% - var(--shell-rail-width));
+      margin-left: var(--shell-rail-width);
       padding: 0 var(--space-8);
       background: var(--surface-app);
       backdrop-filter: blur(8px);
@@ -1116,6 +1184,13 @@
       letter-spacing: 0.02em;
       user-select: none;
       z-index: 25;
+    }
+
+    #default-view > .status-bar {
+      position: static;
+      height: 1.5rem !important;
+      flex-shrink: 0;
+      overflow: hidden !important;
     }
 
     .status-indicator {
@@ -1381,9 +1456,9 @@
      * ══════════════════════════════════════════════ */
 
     /* Default: Market Analysis panel visible */
-    .tab-group:has(#copilot-market-analysis:checked)
+    .shell-copilot:has(#copilot-market-analysis:checked)
       [data-panel="copilot-market-analysis"] { display: flex; }
-    .tab-group:has(#copilot-market-analysis:checked)
+    .shell-copilot:has(#copilot-market-analysis:checked)
       [data-tab="copilot-market-analysis"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
@@ -1391,9 +1466,9 @@
     }
 
     /* Stock Discovery */
-    .tab-group:has(#copilot-stock-discovery:checked)
+    .shell-copilot:has(#copilot-stock-discovery:checked)
       [data-panel="copilot-stock-discovery"] { display: flex; }
-    .tab-group:has(#copilot-stock-discovery:checked)
+    .shell-copilot:has(#copilot-stock-discovery:checked)
       [data-tab="copilot-stock-discovery"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
@@ -1401,9 +1476,9 @@
     }
 
     /* Strategy Draft */
-    .tab-group:has(#copilot-strategy-draft:checked)
+    .shell-copilot:has(#copilot-strategy-draft:checked)
       [data-panel="copilot-strategy-draft"] { display: flex; }
-    .tab-group:has(#copilot-strategy-draft:checked)
+    .shell-copilot:has(#copilot-strategy-draft:checked)
       [data-tab="copilot-strategy-draft"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
@@ -1411,9 +1486,9 @@
     }
 
     /* Factor Discovery */
-    .tab-group:has(#copilot-factor-discovery:checked)
+    .shell-copilot:has(#copilot-factor-discovery:checked)
       [data-panel="copilot-factor-discovery"] { display: flex; }
-    .tab-group:has(#copilot-factor-discovery:checked)
+    .shell-copilot:has(#copilot-factor-discovery:checked)
       [data-tab="copilot-factor-discovery"] {
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
@@ -1442,8 +1517,8 @@
       [data-overlay="overlay-session-template"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2137,9 +2212,9 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — AI Copilot · Compact · A股</div>
 
-  <div class="shell-copilot">
+  <div class="shell-copilot shell-studio">
     <!-- ======== Rail ======== -->
-    <nav class="shell-rail" aria-label="主导航">
+    <nav class="shell-rail" data-contract-slot="rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
         <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
@@ -2166,7 +2241,7 @@
     </nav>
 
     <!-- ======== Header ======== -->
-    <header class="shell-header">
+    <header class="shell-header" data-contract-slot="header">
       <span class="header-title">AI Copilot<span class="header-subtitle">智能工作台</span></span>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
@@ -2217,19 +2292,19 @@
              class="tab-radio sr-only">
 
       <div class="mode-tabs">
-        <label for="copilot-market-analysis" class="mode-tab active" role="tab" data-tab="copilot-market-analysis" tabindex="0">
+        <label for="copilot-market-analysis" id="copilot-tab-market-analysis" class="mode-tab" role="tab" data-tab="copilot-market-analysis" tabindex="0" aria-controls="panel-copilot-market-analysis">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
           市场分析
         </label>
-        <label for="copilot-stock-discovery" class="mode-tab" role="tab" data-tab="copilot-stock-discovery" tabindex="0">
+        <label for="copilot-stock-discovery" id="copilot-tab-stock-discovery" class="mode-tab" role="tab" data-tab="copilot-stock-discovery" tabindex="0" aria-controls="panel-copilot-stock-discovery">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           个股发现
         </label>
-        <label for="copilot-strategy-draft" class="mode-tab" role="tab" data-tab="copilot-strategy-draft" tabindex="0">
+        <label for="copilot-strategy-draft" id="copilot-tab-strategy-draft" class="mode-tab" role="tab" data-tab="copilot-strategy-draft" tabindex="0" aria-controls="panel-copilot-strategy-draft">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
           策略草案
         </label>
-        <label for="copilot-factor-discovery" class="mode-tab" role="tab" data-tab="copilot-factor-discovery" tabindex="0">
+        <label for="copilot-factor-discovery" id="copilot-tab-factor-discovery" class="mode-tab" role="tab" data-tab="copilot-factor-discovery" tabindex="0" aria-controls="panel-copilot-factor-discovery">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M8 8h4M8 12h4"/></svg>
           因子发现
         </label>
@@ -2242,7 +2317,7 @@
     </div>
 
     <!-- ======== Sessions Sidebar (220px) ======== -->
-    <aside class="copilot-sessions" aria-label="会话列表">
+    <aside class="copilot-sessions" data-contract-slot="sessions" aria-label="会话列表">
       <div class="sessions-search">
         <div class="sessions-search-input">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
@@ -2332,6 +2407,57 @@
           <button data-tab-target="conversation" class="copilot-tab-btn active">对话</button>
           <button data-tab-target="analysis" class="copilot-tab-btn">分析步骤</button>
           <button data-tab-target="recommendations" class="copilot-tab-btn">推荐结论</button>
+        </div>
+
+        <div class="mode-context-panels" aria-label="AI 模式上下文">
+          <section class="mode-context-panel" id="panel-copilot-market-analysis" data-panel="copilot-market-analysis" role="tabpanel" aria-labelledby="copilot-tab-market-analysis">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">市场分析 · 市场结构扫描</strong>
+              <span class="mode-context-desc">聚合指数、行业轮动与风格暴露，优先回答宏观结构和因子表现。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="市场分析关注点">
+              <span class="mode-context-pill">市场结构</span>
+              <span class="mode-context-pill">风格因子</span>
+              <span class="mode-context-pill">证据链</span>
+            </div>
+          </section>
+          <section class="mode-context-panel" id="panel-copilot-stock-discovery" data-panel="copilot-stock-discovery" role="tabpanel" aria-labelledby="copilot-tab-stock-discovery">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">个股发现 · 候选池筛选</strong>
+              <span class="mode-context-desc">从财务质量、资金流和估值约束生成候选个股，并保留可追溯筛选理由。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="个股发现关注点">
+              <span class="mode-context-pill">高股息</span>
+              <span class="mode-context-pill">低波动</span>
+              <span class="mode-context-pill">资金净流入</span>
+            </div>
+          </section>
+          <section class="mode-context-panel" id="panel-copilot-strategy-draft" data-panel="copilot-strategy-draft" role="tabpanel" aria-labelledby="copilot-tab-strategy-draft">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">策略草案 · 规则组装</strong>
+              <span class="mode-context-desc">把因子假设转成可编辑的入场、调仓、风控和回测参数草案。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="策略草案关注点">
+              <span class="mode-context-pill">入场条件</span>
+              <span class="mode-context-pill">调仓频率</span>
+              <span class="mode-context-pill">风控约束</span>
+            </div>
+          </section>
+          <section class="mode-context-panel" id="panel-copilot-factor-discovery" data-panel="copilot-factor-discovery" role="tabpanel" aria-labelledby="copilot-tab-factor-discovery">
+            <div class="mode-context-copy">
+              <span class="mode-context-kicker">当前模式</span>
+              <strong class="mode-context-title">因子发现 · 假设生成</strong>
+              <span class="mode-context-desc">从新闻、龙虎榜和财报线索提取可验证因子，并输出初始 IC / IR 验证路径。</span>
+            </div>
+            <div class="mode-context-metrics" aria-label="因子发现关注点">
+              <span class="mode-context-pill">新闻线索</span>
+              <span class="mode-context-pill">龙虎榜</span>
+              <span class="mode-context-pill">财报异动</span>
+            </div>
+          </section>
         </div>
 
         <!-- Tab Panel: Conversation (existing content) -->
@@ -2716,7 +2842,7 @@
     </main>
 
     <!-- ======== Context Sidebar (280px) ======== -->
-    <aside class="copilot-context" aria-label="上下文面板">
+    <aside class="copilot-context" data-contract-slot="sidebar" aria-label="上下文面板">
       <div class="context-rail">
         <!-- Section 1: Related Objects -->
         <div class="context-section">
@@ -2825,23 +2951,19 @@
             <span class="context-section-title">可执行操作</span>
           </div>
           <div class="context-section-body">
-            <div class="action-card" tabindex="0" role="button">
+            <label for="overlay-send-workspace" class="action-card" tabindex="0" role="button">
               <span class="action-card-icon brand">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
               </span>
               <div class="action-card-body">
-                <label for="overlay-send-workspace" class="overlay-label-action">
-                  <span class="action-card-title">发送到因子分析</span>
-                  <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
-                </label>
+                <span class="action-card-title">发送到因子分析</span>
+                <span class="action-card-desc">LOWVOL_PREM + ROE_STABILITY</span>
               </div>
               <span class="action-card-arrow">
-                <label for="overlay-send-workspace" class="overlay-label-btn">
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
-                </label>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
               </span>
-            </div>
-            <div class="action-card" tabindex="0" role="button">
+            </label>
+            <label for="overlay-send-workspace" class="action-card" tabindex="0" role="button">
               <span class="action-card-icon green">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
               </span>
@@ -2852,8 +2974,8 @@
               <span class="action-card-arrow">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
               </span>
-            </div>
-            <div class="action-card" tabindex="0" role="button">
+            </label>
+            <label for="overlay-save-conclusion" class="action-card" tabindex="0" role="button">
               <span class="action-card-icon amber">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l5 5-9 9H3v-5l9-9z"/></svg>
               </span>
@@ -2864,7 +2986,7 @@
               <span class="action-card-arrow">
                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4l6 6-6 6"/></svg>
               </span>
-            </div>
+            </label>
           </div>
         </div>
       </div>
@@ -2877,7 +2999,7 @@
     <!-- Overlay A: 保存结论 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-save-conclusion">
       <label class="overlay-dismiss" for="overlay-save-conclusion" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存结论">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存结论">
         <div class="overlay-header">
           <span class="overlay-title">保存结论</span>
           <button onclick="document.getElementById('overlay-save-conclusion').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
@@ -2917,7 +3039,7 @@
     <!-- Overlay B: 发送到工作区 (Drawer 右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-send-workspace">
       <label class="overlay-dismiss" for="overlay-send-workspace" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
         <div class="overlay-header">
           <span class="overlay-title">发送到工作区</span>
           <button onclick="document.getElementById('overlay-send-workspace').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
@@ -2971,7 +3093,7 @@
     <!-- Overlay C: 会话模板 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-session-template">
       <label class="overlay-dismiss" for="overlay-session-template" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="会话模板">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="会话模板">
         <div class="overlay-header">
           <span class="overlay-title">新建对话</span>
           <button onclick="document.getElementById('overlay-session-template').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
@@ -3347,7 +3469,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">保存结论 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="保存结论">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存结论">
           <div class="overlay-header">
             <span class="overlay-title">保存结论</span>
           </div>
@@ -3387,7 +3509,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">发送到工作区 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
           <div class="overlay-header">
             <span class="overlay-title">发送到工作区</span>
           </div>
@@ -3441,7 +3563,7 @@
     <div class="gallery-card">
       <div class="gallery-card__label">新建对话 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="会话模板">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="会话模板">
           <div class="overlay-header">
             <span class="overlay-title">新建对话</span>
           </div>

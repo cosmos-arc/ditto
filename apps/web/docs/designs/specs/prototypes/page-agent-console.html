@@ -26,7 +26,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="ai">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="platform">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -95,20 +95,20 @@
 
     /* ══════════════════════════════════════════════
      * Studio Shell — Agent Console
-     * Grid: Rail (56px) | Main (1fr) | Detail Panel (340px)
+     * Grid: Rail (56px) | Main (1fr) | Detail Panel (368px)
      * Rows: Header (var(--shell-header-height)) | Tabs (auto) | Content (1fr)
      * ══════════════════════════════════════════════ */
     .shell-agent {
       display: grid;
-      grid-template-columns: var(--shell-rail-width) 1fr 340px;
+      grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 368px;
       grid-template-rows: var(--shell-header-height) auto 1fr;
       grid-template-areas:
         "rail header header"
         "rail tabs   tabs"
         "rail main   detail";
-      min-height: 100vh;
+      min-height: 0;
       width: 100vw;
-      overflow-y: auto;
+      overflow: hidden;
       position: relative;
     }
 
@@ -213,11 +213,11 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 4px;
+      height: 1px;
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(from var(--brand-accent) l c h / 0.60) 50%,
+        oklch(from var(--brand-signature-line) l c h / 0.28) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -636,11 +636,15 @@
     }
 
     .detail-header-meta {
-      display: flex;
-      align-items: center;
-      gap: var(--space-8);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4) var(--space-10);
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
+    }
+
+    .detail-header-meta > .meta-sep-char {
+      display: none;
     }
 
     .detail-section {
@@ -682,7 +686,7 @@
     .detail-section-title {
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
-      color: var(--text-tertiary);
+      color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -702,21 +706,27 @@
       display: flex;
       align-items: center;
       gap: var(--space-8);
-      padding: var(--space-8);
+      padding: var(--space-8) var(--space-10);
+      border: 1px solid var(--border-subtle);
+      border-left-width: 2px;
+      border-left-color: transparent;
       border-radius: var(--radius-4);
-      margin-bottom: var(--space-8);
+      margin-bottom: var(--space-6);
     }
 
     .agent-status-block.running {
-      background: var(--agent-running-bg);
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
+      border-left-color: var(--brand-accent);
     }
 
     .agent-status-block.idle {
-      background: var(--surface-panel-elevated);
+      background: transparent;
     }
 
     .agent-status-block.waiting {
-      background: var(--agent-waiting-approval-bg);
+      background: color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);
+      border-left-color: var(--system-degraded-fg);
     }
 
     .agent-status-dot {
@@ -828,9 +838,10 @@
 
     .tool-trace-tool {
       font-family: var(--font-family-code);
-      font-size: var(--font-size-12);
+      font-size: var(--font-size-10);
       color: var(--brand-accent);
-      background: var(--brand-accent-subtle);
+      background: var(--surface-strip);
+      border: 1px solid var(--border-subtle);
       padding: 0 var(--space-4);
       border-radius: var(--radius-2);
     }
@@ -945,19 +956,39 @@
       padding: var(--space-8) var(--space-12);
       border-top: 1px solid var(--border-subtle);
       display: flex;
-      gap: var(--space-8);
+      gap: var(--space-6);
       flex-shrink: 0;
+    }
+
+    .detail-actions .btn-ghost {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 28px;
+      justify-content: center;
+      padding: 0 var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      background: transparent;
+      border-color: var(--border-subtle);
+    }
+
+    .agent-detail .confidence-badge,
+    .agent-detail .confidence-label {
+      font-size: var(--font-size-10);
     }
 
     /* ── Status Bar ── */
     .status-bar {
-      position: fixed;
+      position: relative;
       bottom: 0;
-      left: var(--shell-rail-width);
-      right: 0;
+      left: auto;
+      right: auto;
       display: flex;
       align-items: center;
       height: 1.5rem;
+      flex: 0 0 1.5rem;
+      width: calc(100vw - var(--shell-rail-width));
+      margin-left: var(--shell-rail-width);
       padding: 0 var(--space-8);
       background: var(--surface-app);
       backdrop-filter: blur(8px);
@@ -1002,6 +1033,16 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
+    #default-view > .status-bar {
+      position: relative;
+      bottom: auto;
+      left: auto;
+      right: auto;
+      height: 1.5rem !important;
+      flex: 0 0 1.5rem !important;
+      overflow: hidden !important;
+    }
+
     /* ── Animations ── */
     @keyframes dot-pulse {
       0%, 100% { opacity: 1; }
@@ -1037,6 +1078,34 @@
     }
     .detail-section:last-child {
       flex: 0 0 auto;
+    }
+
+    .agent-detail > .detail-section-current,
+    .agent-detail > .detail-section-resource,
+    .agent-detail > .detail-section-artifacts {
+      flex: 0 0 auto;
+    }
+
+    .agent-detail > .detail-section-trace {
+      flex: 1 1 0;
+      min-height: 128px;
+    }
+
+    .detail-section-current .detail-section-body,
+    .detail-section-resource .detail-section-body {
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    .detail-section-trace .detail-section-body,
+    .detail-section-artifacts .detail-section-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .detail-section-artifacts .detail-section-body {
+      max-height: 96px;
     }
 
     /* ══════════════════════════════════════════════
@@ -1099,8 +1168,8 @@
       [data-overlay="overlay-tool-trace"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1576,11 +1645,11 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 3px;
+      height: 1px;
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(from var(--brand-accent) l c h / 0.60) 50%,
+        oklch(from var(--brand-signature-line) l c h / 0.28) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -1710,32 +1779,28 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Agent Console · Compact</div>
 
-  <div class="shell-agent">
+  <div class="shell-agent studio-shell">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -1743,29 +1808,46 @@
       <span class="header-title">Agent Console<span class="header-subtitle">智能体工作台</span></span>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
         
         <label for="overlay-plan-create" class="btn-cta cursor-pointer" tabindex="0" aria-label="新建计划">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
           新建计划
         </label>
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
-        <div class="header-search" tabindex="0" role="search" aria-label="搜索">
+        <div class="header-search" tabindex="0" role="search" aria-label="搜索" data-workspace-action="filter">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           <span class="text-tertiary-hint">搜索计划...</span>
           <kbd>Ctrl+K</kbd>
         </div>
-        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+        
       </div>
     </header>
 
@@ -1791,10 +1873,10 @@
       <div class="tab-panels">
 
         <!-- ═══ Panel: Plans (default) ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main">
+        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-tabs="agent-status-filter">
 
           <!-- Status Filter Tabs -->
-          <div data-tabs="agent-status-filter" class="flex-row-center gap-4 mb-6">
+          <div class="flex-row-center gap-4 mb-6">
             <span data-tab-target="all" class="agent-filter-tab active" aria-selected="true">全部</span>
             <span data-tab-target="running" class="agent-filter-tab" aria-selected="false">运行中</span>
             <span data-tab-target="completed" class="agent-filter-tab" aria-selected="false">已完成</span>
@@ -2409,7 +2491,7 @@
     </div><!-- /tab-group -->
 
     <!-- ═══ Detail / Tool Trace Panel (340px) ═══ -->
-    <div class="agent-detail">
+    <div class="agent-detail" data-contract-slot="detail">
       <!-- Detail Header -->
       <div class="detail-header" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-accent) l c h / 0.03)" data-mouse-glow-size="160px">
         <div class="detail-header-title">Alpha 因子挖掘计划</div>
@@ -2421,14 +2503,14 @@
           <span class="meta-sep-char">|</span>
           <span>2026-04-01 14:28</span>
           <span class="meta-sep-char">|</span>
-          <span>已运行 <span data-ticker="8" data-decimals="0" data-ticker-suffix=" 分钟">8</span></span>
+          <span>已运行 8 分钟</span>
           <span class="meta-sep-char">|</span>
-          <span><span data-ticker="4832" data-decimals="0">4832</span> 行数据</span>
+          <span>4,832 行数据</span>
         </div>
       </div>
 
       <!-- Section 1: Current Agent Status -->
-      <div class="detail-section">
+      <div class="detail-section detail-section-current">
         <div class="detail-section-header">
           <span class="detail-section-title">当前 Agent</span>
         </div>
@@ -2453,7 +2535,7 @@
       </div>
 
       <!-- Section 1.5: Resource Monitor -->
-      <div class="detail-section detail-section-fixed">
+      <div class="detail-section detail-section-fixed detail-section-resource">
         <div class="detail-section-header">
           <span class="detail-section-title">资源监控</span>
           <span class="panel-count panel-count-sm">实时</span>
@@ -2462,19 +2544,19 @@
           <!-- Donut Gauge Visual -->
           <div class="flex-row-center gap-12 resource-center-row">
             <div class="metric-center">
-              <svg data-donut='{"value":0.45,"label":"45%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="CPU使用率"></svg>
+              <svg data-donut='{"value":0.45,"label":"45%","color":"var(--system-healthy-fg)","size":56}' aria-label="CPU使用率"></svg>
               <span class="resource-label">CPU</span>
             </div>
             <div class="metric-center">
-              <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(0.746 0.165 50)","size":56}' aria-label="内存使用率"></svg>
+              <svg data-donut='{"value":0.72,"label":"72%","color":"var(--system-degraded-fg)","size":56}' aria-label="内存使用率"></svg>
               <span class="resource-label">MEM</span>
             </div>
             <div class="metric-center">
-              <svg data-donut='{"value":0.38,"label":"38%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="GPU使用率"></svg>
+              <svg data-donut='{"value":0.38,"label":"38%","color":"var(--system-healthy-fg)","size":56}' aria-label="GPU使用率"></svg>
               <span class="resource-label">GPU</span>
             </div>
             <div class="metric-center">
-              <svg data-donut='{"value":0.23,"label":"23%","color":"oklch(0.55 0.15 155)","size":56}' aria-label="API调用率"></svg>
+              <svg data-donut='{"value":0.23,"label":"23%","color":"var(--system-healthy-fg)","size":56}' aria-label="API调用率"></svg>
               <span class="resource-label">API</span>
             </div>
           </div>
@@ -2510,7 +2592,7 @@
       </div>
 
       <!-- Section 2: Tool Trace -->
-      <div class="detail-section">
+      <div class="detail-section detail-section-trace">
         <div class="detail-section-header">
           <span class="detail-section-title">Tool 调用记录</span>
           <span class="panel-count panel-count-sm">6 次</span>
@@ -2592,7 +2674,7 @@
       </div>
 
       <!-- Section 3: Artifacts -->
-      <div class="detail-section">
+      <div class="detail-section detail-section-artifacts">
         <div class="detail-section-header">
           <span class="detail-section-title">产出物</span>
         </div>
@@ -2673,13 +2755,13 @@
     <span class="status-indicator" aria-hidden="true"></span>
     <span class="status-live">实时</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="2" data-decimals="0">2</span> 计划运行中</span>
+    <span>2 计划运行中</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="3" data-decimals="0">3</span> 发现待审</span>
+    <span>3 发现待审</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="2" data-decimals="0">2</span> 审批待批</span>
+    <span>2 审批待批</span>
     <span class="status-sep">|</span>
-    <span><span data-ticker="156" data-decimals="0">156</span> Tasks · <span data-ticker="94.7" data-decimals="1">94.7</span>% 成功率</span>
+    <span>156 Tasks · 94.7% 成功率</span>
     <span class="status-sep">|</span>
     <span>14:36:42 CST</span>
     <span class="status-spacer"></span>
@@ -2694,7 +2776,7 @@
     <!-- Overlay A: 审批确认 Confirm Dialog (Sheet, centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-approval-confirm">
       <label class="overlay-dismiss" for="overlay-approval-confirm" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审批确认">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="审批确认">
         <div class="overlay-header">
           <span class="overlay-title">审批确认</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-approval-confirm').checked=false" aria-label="关闭">&#10005;</button>
@@ -2735,7 +2817,7 @@
     <!-- Overlay B: Plan 创建 Sheet (centered modal) -->
     <div class="overlay-backdrop" data-overlay="overlay-plan-create">
       <label class="overlay-dismiss" for="overlay-plan-create" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建 Plan">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建 Plan">
         <div class="overlay-header">
           <span class="overlay-title">新建计划</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-plan-create').checked=false" aria-label="关闭">&#10005;</button>
@@ -2800,7 +2882,7 @@
     <!-- Overlay C: Run 重跑确认 Modal (centered confirm) -->
     <div class="overlay-backdrop" data-overlay="overlay-run-rerun">
       <label class="overlay-dismiss" for="overlay-run-rerun" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="确认重跑">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认重跑">
         <div class="overlay-header">
           <span class="overlay-title">确认重跑</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-run-rerun').checked=false" aria-label="关闭">&#10005;</button>
@@ -2839,7 +2921,7 @@
     <!-- Overlay D: Tool Trace Drawer (right-aligned) -->
     <div class="overlay-backdrop" data-overlay="overlay-tool-trace">
       <label class="overlay-dismiss" for="overlay-tool-trace" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="Tool Trace 详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="Tool Trace 详情">
         <div class="overlay-header">
           <span class="overlay-title">Tool 调用详情</span>
           <button type="button" class="overlay-close" onclick="document.getElementById('overlay-tool-trace').checked=false" aria-label="关闭">&#10005;</button>
@@ -3221,10 +3303,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-plan-create">
       <div class="gallery-card__label">审批确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="审批确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="审批确认">
           <div class="overlay-header">
             <span class="overlay-title">审批确认</span>
           </div>
@@ -3262,10 +3344,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-run-rerun">
       <div class="gallery-card__label">新建 Plan (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="新建 Plan">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建 Plan">
           <div class="overlay-header">
             <span class="overlay-title">新建计划</span>
           </div>
@@ -3327,10 +3409,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-approval-confirm">
       <div class="gallery-card__label">确认重跑 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="确认重跑">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认重跑">
           <div class="overlay-header">
             <span class="overlay-title">确认重跑</span>
           </div>
@@ -3366,10 +3448,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-tool-trace">
       <div class="gallery-card__label">Tool 调用详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="Tool Trace 详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="Tool Trace 详情">
           <div class="overlay-header">
             <span class="overlay-title">Tool 调用详情</span>
           </div>

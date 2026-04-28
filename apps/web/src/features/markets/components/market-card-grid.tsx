@@ -4,8 +4,15 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
+function normalizeRegimeTag(regimeTag: string): "on" | "off" | "mixed" {
+	if (regimeTag === "on" || regimeTag === "off" || regimeTag === "mixed") {
+		return regimeTag;
+	}
+	return "mixed";
+}
+
 export function MarketCardGrid() {
-	const { data, isLoading, isError, refetch } = useMarketOverview();
+	const { data, isLoading, refetch } = useMarketOverview();
 
 	if (isLoading) {
 		return (
@@ -25,8 +32,8 @@ export function MarketCardGrid() {
 						<ScrollReveal key={card.indexCode} stagger={index % 3}>
 							<MarketCard
 								name={card.name}
-								regime={card.regimeTag}
-								index={card.price}
+								regime={normalizeRegimeTag(card.regimeTag)}
+								index={card.price.toLocaleString()}
 								change={card.change}
 								judgment={card.driver}
 							/>

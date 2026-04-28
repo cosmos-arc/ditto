@@ -20,7 +20,6 @@ export function AgentQuickView() {
 	const {
 		data,
 		isLoading,
-		isError,
 		refetch,
 	} = useAgentQuickView();
 

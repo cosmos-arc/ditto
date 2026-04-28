@@ -22,7 +22,6 @@ export function CopilotSessionList() {
 	const {
 		data,
 		isLoading,
-		isError,
 		refetch,
 	} = useCopilotSessions();
 

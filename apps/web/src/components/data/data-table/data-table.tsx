@@ -5,31 +5,34 @@ import { cn } from "@/lib/utils";
 
 type SortDirection = "asc" | "desc";
 
-interface ColumnDef<T> {
+interface ColumnDef<TRow extends object> {
 	readonly id: string;
 	readonly header: string;
 	readonly width?: string;
-	readonly accessor: keyof T | ((row: T) => React.ReactNode);
+	readonly accessor: keyof TRow | ((row: TRow) => React.ReactNode);
 	readonly align?: "left" | "center" | "right";
 	readonly numeric?: boolean;
 	readonly sortable?: boolean;
 	readonly className?: string;
 }
 
-interface DataTableProps<T> {
-	readonly columns: readonly ColumnDef<T>[];
-	readonly data: readonly T[];
-	readonly rowKey?: keyof T;
-	readonly onRowClick?: (row: T) => void;
+interface DataTableProps<TRow extends object> {
+	readonly columns: readonly ColumnDef<TRow>[];
+	readonly data: readonly TRow[];
+	readonly rowKey?: keyof TRow;
+	readonly onRowClick?: (row: TRow) => void;
 	readonly selectedId?: string;
 	readonly density?: "default" | "comfortable" | "dense";
-	readonly rowClassName?: (row: T) => string;
+	readonly rowClassName?: (row: TRow) => string;
 	readonly className?: string;
 }
 
 /* ── Cell renderer ── */
 
-function renderCell<T>(row: T, accessor: ColumnDef<T>["accessor"]): React.ReactNode {
+function renderCell<TRow extends object>(
+	row: TRow,
+	accessor: ColumnDef<TRow>["accessor"],
+): React.ReactNode {
 	if (typeof accessor === "function") return accessor(row);
 	const value = row[accessor];
 	if (typeof value === "number") return value.toLocaleString("en-US");
@@ -38,12 +41,12 @@ function renderCell<T>(row: T, accessor: ColumnDef<T>["accessor"]): React.ReactN
 
 /* ── Sort logic ── */
 
-function sortData<T>(
-	data: readonly T[],
+function sortData<TRow extends object>(
+	data: readonly TRow[],
 	columnId: string | null,
 	direction: SortDirection | null,
-	columns: readonly ColumnDef<T>[],
-): readonly T[] {
+	columns: readonly ColumnDef<TRow>[],
+): readonly TRow[] {
 	if (!columnId || !direction) return data;
 
 	const col = columns.find((c) => c.id === columnId);
@@ -66,16 +69,16 @@ function sortData<T>(
 
 /* ── Component ── */
 
-function DataTable<T extends Record<string, unknown>>({
+function DataTable<TRow extends object>({
 	columns,
 	data,
-	rowKey = "id" as keyof T,
+	rowKey = "id" as keyof TRow,
 	onRowClick,
 	selectedId,
 	density,
 	rowClassName,
 	className,
-}: DataTableProps<T>) {
+}: DataTableProps<TRow>) {
 	const [sortColumn, setSortColumn] = useState<string | null>(null);
 	const [sortDirection, setSortDirection] = useState<SortDirection | null>(null);
 

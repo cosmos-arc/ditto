@@ -1,11 +1,8 @@
 import type {
-	DrawdownPoint,
 	GetRiskBreachesResponse,
 	GetRiskDrawdownResponse,
 	GetRiskExposureResponse,
 	GetRiskVarResponse,
-	RiskBreach,
-	VarPoint,
 } from "@/types";
 
 export const mockRiskVar: GetRiskVarResponse = {

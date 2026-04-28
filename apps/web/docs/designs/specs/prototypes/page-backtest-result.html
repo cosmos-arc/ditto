@@ -22,9 +22,9 @@
 
   State Variants: 6 components × multi-state
   - kpi-strip: default[covered] loading[covered] failed[covered]
-  - nav-chart: default[covered] loading[covered] failed[covered]
-  - trade-table: default[covered] loading[covered] empty[covered] failed[covered]
-  - risk-charts: default[covered] loading[covered] failed[covered]
+  - nav-chart: default[covered] loading[covered] failed[covered] running[covered] partial[covered]
+  - trade-table: default[covered] loading[covered] empty[covered] failed[covered] running[covered] partial[covered]
+  - risk-charts: default[covered] loading[covered] failed[covered] partial[covered]
   - attribution-charts: default[covered] loading[covered] failed[covered]
   - holdings-chart: default[covered] loading[covered] failed[covered]
 
@@ -64,11 +64,11 @@
     /* ═══ Shell Hub Layout ═══ */
     .shell-hub { display: grid; grid-template-columns: var(--shell-rail-width) 1fr; grid-template-rows: var(--shell-header-height) auto auto 1fr auto; grid-template-areas: "rail header" "rail meta" "rail tabs" "rail main" "rail bottom"; min-height: 100vh; width: 100vw; overflow-y: auto; position: relative; padding-bottom: 1.5rem; box-sizing: border-box; }
     .shell-hub::before { content: ''; position: absolute; inset: 0; background: var(--surface-app); filter: url(#noise-filter); opacity: 0.018; pointer-events: none; z-index: 0; }
-    .shell-hub::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%, color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%, color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%, transparent 100%); pointer-events: none; z-index: 2; }
+    .shell-hub::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-accent) 8%, transparent) 5%, color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%, color-mix(in oklch, var(--brand-accent) 8%, transparent) 95%, transparent 100%); pointer-events: none; z-index: 2; }
     .shell-hub > * { position: relative; z-index: 1; }
 
     .shell-hub .shell-header { grid-area: header; background: var(--surface-frosted); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: none; position: relative; }
-    .shell-hub .shell-header::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%, color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%, color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%, transparent 100%); pointer-events: none; }
+    .shell-hub .shell-header::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 12%, transparent) 5%, color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%, color-mix(in oklch, var(--brand-signature-line) 12%, transparent) 95%, transparent 100%); pointer-events: none; }
 
     .object-header { display: flex; align-items: center; gap: var(--space-12); flex: 1; min-width: 0; }
     .object-identity { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
@@ -149,8 +149,10 @@
     .sidebar-title { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-tertiary); margin-bottom: var(--space-8); }
 
     /* ═══ Tab Panels ═══ */
+    .tab-group { display: contents; }
     .tab-panels { display: contents; }
-    .tab-panel { display: none; flex-direction: column; height: 100%; overflow: hidden; min-height: 0; }
+    .tab-panel { grid-area: main; display: none; flex-direction: column; height: 100%; overflow: hidden; min-height: 0; }
+    .tab-panel > .hub-main { flex: 1; }
     @keyframes tab-panel-enter { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
     .tab-group:has(#bt-overview:checked) [data-panel="bt-overview"],
     .tab-group:has(#bt-returns:checked) [data-panel="bt-returns"],
@@ -212,8 +214,13 @@
     .flex-col-8 { display: flex; flex-direction: column; gap: var(--space-8); }
     .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--rhythm-breath-gap); flex-shrink: 0; }
     .panel-flex { flex: 1; }
-    .panel-shrink { flex-shrink: 0; }
+    .panel-shrink { flex: 0 0 auto; }
     .chart-svg { width: 100%; opacity: 0.85; }
+    .chart-meta { display: inline-flex; align-items: center; gap: var(--space-8); color: var(--text-tertiary); font-size: var(--font-size-10); }
+    .chart-key { display: inline-flex; align-items: center; gap: var(--space-3); white-space: nowrap; }
+    .chart-key::before { content: ''; width: 7px; height: 2px; border-radius: 2px; background: var(--text-tertiary); }
+    .chart-key.accent::before { background: var(--brand-accent); }
+    .chart-key.down::before { background: var(--market-down-fg); }
     .numeric-secondary { font-family: var(--font-family-numeric); color: var(--text-secondary); }
     .fs-10 { font-size: var(--font-size-10); }
     .fs-11 { font-size: var(--font-size-11); }
@@ -230,12 +237,29 @@
     .dd-value { color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium); }
     .dd-date { color: var(--text-tertiary); font-size: var(--font-size-10); }
     .sidebar-hint { font-size: var(--font-size-12); color: var(--text-tertiary); text-align: center; padding: var(--space-8); }
+    .overlay-surface .overlay-header, .overlay-backdrop .overlay-header, .overlay-fullscreen .overlay-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); padding-bottom: var(--space-10); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-10); }
+    .overlay-title { color: var(--text-primary); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); }
+    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
+    .overlay-body h4 { margin: var(--space-10) 0 var(--space-4); color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); }
+    .overlay-body h4:first-child { margin-top: 0; }
     .overlay-body-text { font-size: var(--font-size-12); color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--space-8); }
     .overlay-body-text p { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
+    .overlay-field { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
+    .overlay-field-label { color: var(--text-tertiary); }
+    .overlay-field-value { color: var(--text-primary); font-family: var(--font-family-numeric); }
+    .overlay-actions { display: flex; justify-content: flex-end; gap: var(--space-6); margin-top: var(--space-12); }
+    .overlay-btn { display: inline-flex; align-items: center; justify-content: center; height: var(--btn-height); padding: 0 var(--btn-padding-x); border: 1px solid var(--border-default); border-radius: var(--btn-radius); font-size: var(--btn-font-size); color: var(--text-secondary); background: var(--surface-panel-elevated); cursor: pointer; }
+    .overlay-btn-primary { color: var(--text-inverse); background: var(--brand-accent); border-color: var(--brand-accent); }
+    .overlay-btn-secondary { color: var(--text-secondary); background: var(--surface-panel-base); }
+    .overlay-backdrop { width: min(420px, calc(100vw - 32px)); background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); box-shadow: 0 12px 40px color-mix(in oklch, black 45%, transparent); padding: var(--space-16); position: relative; }
+    .gallery-card__preview--overlay .overlay-backdrop,
+    .gallery-card__preview--overlay .overlay-fullscreen { width: 100%; max-width: 100%; height: auto; max-height: none; }
     .overlay-confirm-box { padding: var(--space-8); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); margin-bottom: var(--space-8); }
     .toast-card { background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-12); }
     .toast-link { color: var(--brand-accent); cursor: pointer; margin-left: auto; }
     .overlay-btn-default { background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary); }
+    .overlay-backdrop--toast { align-items: flex-start; justify-content: flex-end; padding: var(--space-16); background: transparent; pointer-events: none; }
+    .overlay-backdrop--toast .toast-card { min-width: 320px; pointer-events: auto; box-shadow: 0 12px 32px color-mix(in oklch, black 30%, transparent); }
     .cursor-pointer { cursor: pointer; }
     .format-tags { display: flex; gap: var(--space-4); margin-bottom: var(--space-10); }
     .mt-4 { margin-top: var(--space-4); }
@@ -266,7 +290,7 @@
     .bar-tertiary-9 { width: 9%; background: var(--text-tertiary); }
 
     /* ── Compare View Overlay ── */
-    .overlay-fullscreen { background: var(--surface-app); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); display: flex; flex-direction: column; overflow: hidden; }
+    .overlay-fullscreen { width: min(1080px, calc(100vw - 48px)); height: min(720px, calc(100vh - 48px)); background: var(--surface-app); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); display: flex; flex-direction: column; overflow: hidden; }
     .compare-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-10) var(--space-16); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
     .compare-header-left { display: flex; align-items: center; gap: var(--space-8); }
     .compare-title { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
@@ -325,18 +349,18 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Backtest Result · Compact · 多因子</div>
 
-  <div class="shell-hub">
+  <div class="object-shell shell-hub">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg></div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg></div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg></div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg></div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg></div>
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="研究" title="研究" data-rail-domain="research"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg></div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg></div>
+        <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg></div>
       </div>
-      <div class="rail-bottom"><div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg></div></div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -351,21 +375,34 @@
         </div>
         <div class="spacer"></div>
         <div class="header-actions" role="toolbar" aria-label="页面操作">
-          <div class="theme-switcher">
-            <div class="switcher-group" role="group" aria-label="密度">
-              <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+          <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
-            <div class="switcher-sep"></div>
-            <div class="switcher-group" role="group" aria-label="主题">
-              <button class="switcher-btn" data-set-theme="dark" aria-pressed="true"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 10.5a7.5 7.5 0 11-5-7.1A7.5 7.5 0 0017.5 10.5z"/></svg></button>
-              <button class="switcher-btn" data-set-theme="light" aria-pressed="false"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2m0 12v2m-8-8h2m12 0h2m-2.5-5.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg></button>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
             </div>
           </div>
+        </div>
           <div class="meta-sep-line"></div>
-          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg><span class="badge-dot"></span></div>
-          <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">陈</div>
+          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" data-shell-utility="notifications"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg><span class="badge-dot"></span></div>
+          
         </div>
         <div class="header-ctas">
           <label for="overlay-enable-signal" class="btn btn-primary cursor-pointer"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>启用信号</label>
@@ -408,11 +445,11 @@
         <label for="bt-diagnostics" class="hub-tab" role="tab" tabindex="0">诊断</label>
       </div>
 
-      <div class="tab-panels" id="main-content" data-contract-slot="main">
+      <div class="tab-panels" id="main-content">
 
         <!-- ═══ Tab 1: Overview ═══ -->
         <div class="tab-panel" data-panel="bt-overview">
-          <div class="hub-main">
+          <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
               <!-- KPI Strip: 6 metrics -->
@@ -429,7 +466,11 @@
               <div class="panel panel-flex">
                 <div class="panel-header flex-between">
                   <span class="panel-title">净值曲线 + 回撤</span>
-                  <span class="chart-legend">基准: 沪深300</span>
+                  <span class="chart-meta" aria-label="图例">
+                    <span class="chart-key accent">策略净值</span>
+                    <span class="chart-key">沪深300</span>
+                    <span class="chart-key down">回撤</span>
+                  </span>
                 </div>
                 <div class="panel-body flex-center">
                   <svg viewBox="0 0 400 140" class="chart-svg">
@@ -467,7 +508,7 @@
             </div>
 
             <!-- Sidebar -->
-            <div class="hub-sidebar">
+            <div class="hub-sidebar" data-contract-slot="sidebar">
               <div class="sidebar-section">
                 <div class="sidebar-title">回测配置</div>
                 <div class="flex-col-6">
@@ -505,7 +546,7 @@
 
         <!-- ═══ Tab 2: Returns ═══ -->
         <div class="tab-panel" data-panel="bt-returns">
-          <div class="hub-main">
+          <div class="object-main hub-main">
             <div class="hub-object-view">
               <div class="panel panel-flex">
                 <div class="panel-header"><span class="panel-title">超额收益曲线</span><span class="chart-legend">vs 沪深300</span></div>
@@ -555,7 +596,7 @@
 
         <!-- ═══ Tab 3: Risk ═══ -->
         <div class="tab-panel" data-panel="bt-risk">
-          <div class="hub-main"><div class="hub-object-view">
+          <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">回撤曲线</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><defs><linearGradient id="dd2-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="20" x2="400" y2="20" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10 L400 100 L0 100 Z" fill="url(#dd2-g)"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10" fill="none" stroke="var(--market-down-fg)" stroke-width="1.5"/></svg></div></div>
             <div class="grid-2col">
               <div class="panel"><div class="panel-header"><span class="panel-title">VaR / CVaR</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">VaR (95%)</div><div class="stat-value">-1.85%</div></div><div class="stat-item"><div class="stat-label">VaR (99%)</div><div class="stat-value">-2.82%</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">CVaR (95%)</div><div class="stat-value c-down">-2.45%</div></div><div class="stat-item"><div class="stat-label">CVaR (99%)</div><div class="stat-value c-down">-3.52%</div></div></div></div></div>
@@ -566,7 +607,7 @@
 
         <!-- ═══ Tab 4: Trades ═══ -->
         <div class="tab-panel" data-panel="bt-trades">
-          <div class="hub-main"><div class="hub-object-view">
+          <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header flex-between"><span class="panel-title">交易明细</span><span class="chart-legend">最近 10 笔</span></div>
               <table class="data-table"><thead><tr><th>时间</th><th>标的</th><th>方向</th><th class="numeric">数量</th><th class="numeric">价格</th><th class="numeric">金额</th><th>成本</th></tr></thead>
                 <tbody>
@@ -583,7 +624,7 @@
 
         <!-- ═══ Tab 5: Holdings Analysis ═══ -->
         <div class="tab-panel" data-panel="bt-holdings">
-          <div class="hub-main"><div class="hub-object-view">
+          <div class="object-main hub-main"><div class="hub-object-view">
             <div class="grid-2col">
               <!-- 持仓分布饼图 -->
               <div class="panel panel-shrink"><div class="panel-header"><span class="panel-title">持仓分布</span><span class="chart-legend">按行业</span></div>
@@ -651,7 +692,7 @@
 
         <!-- ═══ Tab 6: Attribution ═══ -->
         <div class="tab-panel" data-panel="bt-attribution">
-          <div class="hub-main"><div class="hub-object-view">
+          <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">因子暴露时间序列</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><line x1="0" y1="50" x2="400" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 40 L40 38 L80 35 L120 32 L160 30 L200 28 L240 32 L280 35 L320 30 L360 28 L400 25" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/><path d="M0 55 L40 58 L80 60 L120 62 L160 58 L200 55 L240 60 L280 62 L320 58 L360 55 L400 52" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/></svg></div></div>
             <div class="panel panel-shrink"><div class="panel-header"><span class="panel-title">因子收益贡献</span></div>
               <table class="data-table"><thead><tr><th>因子</th><th class="numeric">暴露</th><th class="numeric">贡献</th><th>评价</th></tr></thead>
@@ -669,7 +710,7 @@
 
         <!-- ═══ Tab 7: Diagnostics ═══ -->
         <div class="tab-panel" data-panel="bt-diagnostics">
-          <div class="hub-main"><div class="hub-object-view">
+          <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">换手率分析</span><span class="chart-legend">月度</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><defs><linearGradient id="to-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.1"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38 L400 100 L0 100 Z" fill="url(#to-g)"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/></svg></div></div>
             <div class="grid-2col">
               <div class="panel"><div class="panel-header"><span class="panel-title">持仓周期分布</span></div><div class="panel-body"><div class="stats-row"><div class="stat-item"><div class="stat-label">平均持仓</div><div class="stat-value">22 天</div></div><div class="stat-item"><div class="stat-label">中位数</div><div class="stat-value">18 天</div></div></div><div class="stats-row"><div class="stat-item"><div class="stat-label">< 30天</div><div class="stat-value">68%</div></div><div class="stat-item"><div class="stat-label">> 60天</div><div class="stat-value">15%</div></div></div></div></div>
@@ -690,6 +731,45 @@
       <div class="bottom-item"><span class="bottom-item-label">引擎版本</span><span class="bottom-item-value">v2.1</span></div>
     </div>
   </div><!-- /shell-hub -->
+
+  <div class="overlays">
+    <div class="overlay-backdrop" data-overlay="overlay-export">
+      <label class="overlay-dismiss" for="overlay-export" aria-label="关闭导出报告"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="导出报告">
+        <div class="overlay-header"><span class="overlay-title">导出报告</span><label for="overlay-export" class="overlay-close" aria-label="关闭">&#10005;</label></div>
+        <div class="overlay-body"><h4>导出格式</h4><div class="format-tags"><span class="meta-tag brand cursor-pointer">PDF</span><span class="meta-tag cursor-pointer">Excel</span><span class="meta-tag cursor-pointer">CSV</span></div><h4>内容范围</h4><div class="overlay-field"><span class="overlay-field-label">包含范围</span><span class="overlay-field-value">全部 Tab + 图表</span></div><div class="overlay-field"><span class="overlay-field-label">成本明细</span><span class="overlay-field-value">含印花税 / 佣金 / 滑点</span></div><div class="overlay-actions"><label for="overlay-export" class="overlay-btn overlay-btn-secondary">取消</label><button class="overlay-btn overlay-btn-primary">导出</button></div></div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-enable-signal">
+      <label class="overlay-dismiss" for="overlay-enable-signal" aria-label="关闭启用信号确认"></label>
+      <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="启用信号">
+        <div class="overlay-header"><span class="overlay-title">确认启用信号</span><label for="overlay-enable-signal" class="overlay-close" aria-label="关闭">&#10005;</label></div>
+        <div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value c-up">1.82 通过</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value c-up">18.2% 通过</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value">-12.3% 通过</span></div></div><div class="overlay-actions"><label for="overlay-enable-signal" class="overlay-btn overlay-btn-secondary">取消</label><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-ai-analysis">
+      <label class="overlay-dismiss" for="overlay-ai-analysis" aria-label="关闭 AI 解读"></label>
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读">
+        <div class="overlay-header"><span class="overlay-title">AI 回测分析</span><label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">&#10005;</label></div>
+        <div class="overlay-body"><div class="overlay-body-text"><div><strong class="c-primary">摘要</strong><div class="mt-4">策略 v3.2 整体表现优秀，Sharpe 1.82 显著超越基准。动量因子贡献最大（+8.2%），换手率因子产生负贡献（-1.2%）。</div></div><div><strong class="c-primary">风险</strong><div class="mt-4">最大回撤集中在 2025-08-12 至 2025-09-18，建议复核该段行业敞口与交易成本。</div></div><div><strong class="c-primary">建议</strong><div class="mt-4">降低换手率因子权重或加入成本约束，优先保留动量与质量因子贡献。</div></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-default">复制</button><label for="overlay-ai-analysis" class="overlay-btn overlay-btn-primary">关闭</label></div></div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop overlay-backdrop--toast" data-overlay="overlay-compare-toast">
+      <div class="toast-card"><span class="status-badge success">✓</span><span class="c-secondary">已加入对比队列（1/5）</span><label for="overlay-compare" class="toast-link">查看对比 →</label></div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-compare">
+      <label class="overlay-dismiss" for="overlay-compare" aria-label="关闭对比视图"></label>
+      <div class="overlay-fullscreen compare-view" role="dialog" aria-modal="true" aria-label="Backtest Compare">
+        <div class="compare-header"><div class="compare-header-left"><span class="compare-title">Backtest Compare</span><span class="compare-count">3 runs selected</span></div><div class="compare-header-right"><button class="btn cursor-pointer">导出</button><label for="overlay-compare" class="btn btn-primary cursor-pointer">关闭</label></div></div>
+        <div class="compare-runs"><span class="compare-run-chip active">v3.2 超参A</span><span class="compare-run-chip active">v3.2 超参B</span><span class="compare-run-chip">v3.1 baseline</span><span class="compare-run-chip compare-add-chip">+ 添加</span></div>
+        <div class="compare-body"><div class="compare-section"><div class="compare-section-title">核心指标对比</div><table class="data-table tbl-sm"><thead><tr><th>指标</th><th class="numeric">v3.2 A</th><th class="numeric">v3.2 B</th><th class="numeric">v3.1</th></tr></thead><tbody><tr><td class="c-primary">Sharpe</td><td class="numeric c-up">1.82 <span class="compare-best">Best</span></td><td class="numeric">1.65</td><td class="numeric">1.48</td></tr><tr><td class="c-primary">年化收益</td><td class="numeric c-up">18.2% <span class="compare-best">Best</span></td><td class="numeric">15.8%</td><td class="numeric">12.4%</td></tr><tr><td class="c-primary">最大回撤</td><td class="numeric">-12.3%</td><td class="numeric c-up">-10.8% <span class="compare-best">Best</span></td><td class="numeric">-14.2%</td></tr></tbody></table></div></div>
+      </div>
+    </div>
+  </div>
   </section>
 
   <!-- ═══ States Gallery ═══ -->
@@ -702,15 +782,20 @@
       <div class="gallery-group" data-component="nav-chart"><div class="gallery-group__label">净值曲线图</div><div class="gallery-cards">
         <div class="gallery-card"><div class="gallery-card__label">NAV · Loading</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="loading"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div></div>
         <div class="gallery-card"><div class="gallery-card__label">NAV · Error</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="failed"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">图表渲染失败</div><div class="state-error-desc">净值数据异常</div><button class="state-error-retry">重试</button></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">NAV · Running</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="running"><div class="state-loading"><div class="state-empty-title">回测运行中 · ETA 04:12</div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">NAV · Partial</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="partial"><div class="state-empty"><div class="state-empty-title">已生成 68% 净值序列</div><div class="state-empty-desc">最新交易日仍在补齐，灰色区间为待计算数据。</div></div></div></div></div>
       </div></div>
       <div class="gallery-group" data-component="trade-table"><div class="gallery-group__label">交易明细表</div><div class="gallery-cards">
         <div class="gallery-card"><div class="gallery-card__label">交易 · Loading</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="loading"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div></div>
         <div class="gallery-card"><div class="gallery-card__label">交易 · Empty</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="empty"><div class="state-empty"><div class="state-empty-icon">📋</div><div class="state-empty-title">回测期间无交易记录</div></div></div></div></div>
         <div class="gallery-card"><div class="gallery-card__label">交易 · Error</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="failed"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">交易记录加载失败</div><button class="state-error-retry">重试</button></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">交易 · Running</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="running"><div class="state-loading"><div class="state-empty-title">交易撮合中</div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">交易 · Partial</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="partial"><div class="state-empty"><div class="state-empty-title">仅显示前 500 笔</div><div class="state-empty-desc">完整交易明细生成中，已完成 842 / 1,240 笔。</div></div></div></div></div>
       </div></div>
       <div class="gallery-group" data-component="risk-charts"><div class="gallery-group__label">风险分析图表</div><div class="gallery-cards">
         <div class="gallery-card"><div class="gallery-card__label">风险 · Loading</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="loading"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div></div>
         <div class="gallery-card"><div class="gallery-card__label">风险 · Error</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="failed"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">风险数据加载失败</div><button class="state-error-retry">重试</button></div></div></div></div>
+        <div class="gallery-card"><div class="gallery-card__label">风险 · Partial</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="partial"><div class="state-empty"><div class="state-empty-title">部分风险指标计算中</div><div class="state-empty-desc">VaR / CVaR 已完成，蒙特卡洛压力路径仍在生成。</div></div></div></div></div>
       </div></div>
       <div class="gallery-group" data-component="attribution-charts"><div class="gallery-group__label">归因图表</div><div class="gallery-cards">
         <div class="gallery-card"><div class="gallery-card__label">归因 · Loading</div><div class="gallery-card__preview"><div class="state-variant-content" data-state="loading"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div></div>
@@ -728,15 +813,15 @@
     <div class="gallery-grid gallery-grid--overlays">
       <div class="gallery-group" data-component="overlays"><div class="gallery-group__label">弹层设计</div><div class="gallery-cards">
         <!-- Export Report -->
-        <div class="gallery-card"><div class="gallery-card__label">导出报告 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="导出报告"><div class="overlay-header"><span class="overlay-title">导出报告</span></div><div class="overlay-body"><h4>导出格式</h4><div class="format-tags"><span class="meta-tag brand cursor-pointer">PDF</span><span class="meta-tag cursor-pointer">Excel</span><span class="meta-tag cursor-pointer">CSV</span></div><h4>内容范围</h4><div class="overlay-field"><span class="overlay-field-label">包含</span><span class="overlay-field-value">全部 Tab + 图表</span></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">导出</button></div></div></div></div></div>
+        <div class="gallery-card" data-overlay-ref="overlay-export"><div class="gallery-card__label">导出报告 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="导出报告"><div class="overlay-header"><span class="overlay-title">导出报告</span></div><div class="overlay-body"><h4>导出格式</h4><div class="format-tags"><span class="meta-tag brand cursor-pointer">PDF</span><span class="meta-tag cursor-pointer">Excel</span><span class="meta-tag cursor-pointer">CSV</span></div><h4>内容范围</h4><div class="overlay-field"><span class="overlay-field-label">包含</span><span class="overlay-field-value">全部 Tab + 图表</span></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">导出</button></div></div></div></div></div>
         <!-- Enable Signal -->
-        <div class="gallery-card"><div class="gallery-card__label">启用信号确认 (Modal)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-modal" role="dialog" aria-modal="true" aria-label="启用信号"><div class="overlay-header"><span class="overlay-title">确认启用信号</span></div><div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value numeric c-up">1.82 ✓</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value numeric c-up">18.2% ✓</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value numeric">-12.3% ✓</span></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div></div></div></div>
+        <div class="gallery-card" data-overlay-ref="overlay-enable-signal"><div class="gallery-card__label">启用信号确认 (Modal)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-modal" role="dialog" aria-modal="true" aria-label="启用信号"><div class="overlay-header"><span class="overlay-title">确认启用信号</span></div><div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value numeric c-up">1.82 ✓</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value numeric c-up">18.2% ✓</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value numeric">-12.3% ✓</span></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div></div></div></div>
         <!-- AI Analysis -->
-        <div class="gallery-card"><div class="gallery-card__label">AI 解读 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="AI 解读"><div class="overlay-header"><span class="overlay-title">AI 回测分析</span></div><div class="overlay-body"><div class="overlay-body-text"><div><strong class="c-primary">摘要</strong><div class="mt-4">策略 v3.2 整体表现优秀，Sharpe 1.82 显著超越基准。动量因子贡献最大（+8.2%），但换手率因子产生负贡献（-1.2%）。</div></div><div><strong class="c-primary">建议</strong><div class="mt-4">考虑降低换手率因子权重或移除，以减少交易成本侵蚀。</div></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-default">复制</button><button class="overlay-btn overlay-btn-primary">关闭</button></div></div></div></div></div>
+        <div class="gallery-card" data-overlay-ref="overlay-ai-analysis"><div class="gallery-card__label">AI 解读 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读"><div class="overlay-header"><span class="overlay-title">AI 回测分析</span></div><div class="overlay-body"><div class="overlay-body-text"><div><strong class="c-primary">摘要</strong><div class="mt-4">策略 v3.2 整体表现优秀，Sharpe 1.82 显著超越基准。动量因子贡献最大（+8.2%），但换手率因子产生负贡献（-1.2%）。</div></div><div><strong class="c-primary">建议</strong><div class="mt-4">考虑降低换手率因子权重或移除，以减少交易成本侵蚀。</div></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-default">复制</button><button class="overlay-btn overlay-btn-primary">关闭</button></div></div></div></div></div>
         <!-- Compare Toast -->
-        <div class="gallery-card"><div class="gallery-card__label">加入对比 (Toast)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="toast-card"><span class="status-badge success">✓</span><span class="c-secondary">已加入对比队列（1/5）</span><span class="toast-link">查看对比 →</span></div></div></div>
+        <div class="gallery-card" data-overlay-ref="overlay-compare-toast"><div class="gallery-card__label">加入对比 (Toast)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="toast-card"><span class="status-badge success">✓</span><span class="c-secondary">已加入对比队列（1/5）</span><span class="toast-link">查看对比 →</span></div></div></div>
         <!-- Compare View (Fullscreen Overlay) -->
-        <div class="gallery-card"><div class="gallery-card__label">Compare 视图 (全屏覆盖)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-fullscreen compare-view">
+        <div class="gallery-card" data-overlay-ref="overlay-compare"><div class="gallery-card__label">Compare 视图 (全屏覆盖)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-fullscreen compare-view">
             <div class="compare-header">
               <div class="compare-header-left"><span class="compare-title">Backtest Compare</span><span class="compare-count">3 runs selected</span></div>
               <div class="compare-header-right"><button class="btn cursor-pointer">导出</button><button class="btn btn-primary cursor-pointer">关闭</button></div>

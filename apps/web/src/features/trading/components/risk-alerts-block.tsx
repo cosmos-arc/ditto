@@ -5,7 +5,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function RiskAlertsBlock() {
-	const { data: risk, isLoading: riskLoading, isError: riskError, refetch: riskRefetch } = useRiskSummary();
+	const { data: risk, isLoading: riskLoading, refetch: riskRefetch } = useRiskSummary();
 	const { data: signals } = useSignalsQueue();
 	const { data: orders } = useOrdersSummary();
 

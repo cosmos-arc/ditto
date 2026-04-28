@@ -14,6 +14,7 @@ export { useRiskExposure } from "./hooks/use-risk-exposure";
 export { useRiskBreaches } from "./hooks/use-risk-breaches";
 
 export { TradingPage } from "./components/trading-page";
+export { PortfolioPage } from "./components/portfolio-page";
 export { TradingSessionStrip } from "./components/trading-session-strip";
 export { EquityPnlBlock } from "./components/equity-pnl-block";
 export { PositionsSummary } from "./components/positions-summary";

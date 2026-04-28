@@ -54,15 +54,22 @@ export const useUIPreferences = create<UIPreferences>()(
 				sidebarCollapsed: false,
 
 				setTheme: (theme: Theme) => {
+					const { density, sidebarCollapsed } = get();
 					set({ theme });
+					applyAttributesToDom(theme, density, sidebarCollapsed);
 				},
 
 				setDensity: (density: Density) => {
+					const { theme, sidebarCollapsed } = get();
 					set({ density });
+					applyAttributesToDom(theme, density, sidebarCollapsed);
 				},
 
 				toggleSidebarCollapsed: () => {
-					set({ sidebarCollapsed: !get().sidebarCollapsed });
+					const { theme, density, sidebarCollapsed } = get();
+					const nextSidebarCollapsed = !sidebarCollapsed;
+					set({ sidebarCollapsed: nextSidebarCollapsed });
+					applyAttributesToDom(theme, density, nextSidebarCollapsed);
 				},
 
 				applyThemeToDom: () => {

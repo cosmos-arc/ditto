@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/status/status-badge/status-badge";
 import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
-const STATUS_VARIANT_MAP: Record<string, "live" | "warning" | "default"> = {
+const STATUS_VARIANT_MAP: Record<string, "live" | "warning" | "default" | "error"> = {
 	running: "live",
 	pending: "warning",
 	completed: "default",
@@ -22,7 +22,6 @@ export function AgentPlansList() {
 	const {
 		data,
 		isLoading,
-		isError,
 		refetch,
 	} = useAgentPlans();
 

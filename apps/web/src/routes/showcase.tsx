@@ -9,7 +9,7 @@ import { StaleIndicator } from "@/lib/stale-indicator";
 
 export const Route = createFileRoute("/showcase")({
 	component: ShowcasePage,
-	handle: { title: "组件展示" },
+	staticData: { title: "组件展示" },
 });
 
 const STATUS_VARIANTS = [

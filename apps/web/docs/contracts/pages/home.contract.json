@@ -3,19 +3,33 @@
   "version": 1,
   "status": "draft",
   "createdAt": "2026-04-16",
-  "updatedAt": "2026-04-16",
-
+  "updatedAt": "2026-04-28",
   "route": "/",
   "pagePattern": "global-command-center",
   "shellFamily": "command-center",
   "prototypeRef": "docs/designs/specs/prototypes/page-home.html",
-  "blueprintRefs": ["02_core_page_blueprints.md#home-command-center"],
-
-  "viewports": [
-    { "width": 1536, "height": 900, "role": "primary" },
-    { "width": 1366, "height": 768, "role": "compact" }
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#home-command-center"
   ],
-
+  "landing": {
+    "reactRouteStatus": "implemented",
+    "featureModule": "src/features/home",
+    "contractStatus": "draft",
+    "overlayStatus": "triggerable",
+    "visualAuditStatus": "missing"
+  },
+  "viewports": [
+    {
+      "width": 1536,
+      "height": 900,
+      "role": "primary"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "role": "compact"
+    }
+  ],
   "slots": [
     {
       "name": "pulse",
@@ -24,9 +38,16 @@
       "prototypeSelector": ".shell-pulse",
       "reactSelector": "[data-slot='pulse-strip']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 },
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
       "a11yRole": "banner",
-      "responsiveBehavior": { "compact": "collapsed" }
+      "responsiveBehavior": {
+        "compact": "collapsed"
+      }
     },
     {
       "name": "main",
@@ -35,7 +56,12 @@
       "prototypeSelector": ".shell-main",
       "reactSelector": "[data-slot='main']",
       "layoutStrategy": "content-driven",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 },
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
       "a11yRole": "main"
     },
     {
@@ -45,12 +71,18 @@
       "prototypeSelector": ".shell-sidebar",
       "reactSelector": "[data-slot='sidebar-rail']",
       "layoutStrategy": "fixed-width",
-      "threshold": { "x": 4, "y": 4, "widthRatio": 0.03, "heightRatio": 0.05 },
+      "threshold": {
+        "x": 4,
+        "y": 4,
+        "widthRatio": 0.03,
+        "heightRatio": 0.05
+      },
       "a11yRole": "complementary",
-      "responsiveBehavior": { "compact": "overlay" }
+      "responsiveBehavior": {
+        "compact": "overlay"
+      }
     }
   ],
-
   "subSlots": [
     {
       "name": "decision-banner",
@@ -58,7 +90,10 @@
       "infoLevel": "l2",
       "prototypeSelector": ".decision-banner",
       "reactSelector": "[data-slot='decision-banner']",
-      "threshold": { "widthRatio": 0.05, "heightRatio": 0.05 }
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
     },
     {
       "name": "priority-queue",
@@ -66,7 +101,10 @@
       "infoLevel": "l2",
       "prototypeSelector": ".panel-grow",
       "reactSelector": "[data-testid='priority-queue']",
-      "threshold": { "widthRatio": 0.05, "heightRatio": 0.05 }
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
     },
     {
       "name": "secondary",
@@ -74,44 +112,135 @@
       "infoLevel": "l0",
       "prototypeSelector": ".shell-secondary",
       "reactSelector": "[data-slot='home-secondary']",
-      "threshold": { "widthRatio": 0.05, "heightRatio": 0.05 }
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
     }
   ],
-
   "states": {
-    "universal": ["loading", "empty", "error", "stale"],
-    "pageSpecific": ["no-alerts", "has-critical"]
+    "universal": [
+      "loading",
+      "empty",
+      "error",
+      "stale"
+    ],
+    "pageSpecific": [
+      "no-alerts",
+      "has-critical"
+    ]
   },
-
   "interactions": [
     {
       "id": "sidebar-collapse",
       "trigger": "sidebar-toggle",
-      "affectedSlots": ["sidebar", "main"],
+      "affectedSlots": [
+        "sidebar",
+        "main"
+      ],
       "expectedBehavior": "sidebar width changes and main area expands"
     }
   ],
-
   "flags": {
     "hasStatusBar": false,
     "sidebarCollapsible": true
   },
-
   "metrics": {
     "capturedAt": "2026-04-16",
     "viewport": "1536x900",
     "baseline": {
-      "pulse": { "width": 1536, "height": 0, "strategy": "content-driven" },
-      "main": { "width": 1200, "height": 0, "strategy": "content-driven" },
-      "sidebar": { "width": 260, "height": 900, "strategy": "fixed-width" }
+      "pulse": {
+        "width": 1536,
+        "height": 0,
+        "strategy": "content-driven"
+      },
+      "main": {
+        "width": 1200,
+        "height": 0,
+        "strategy": "content-driven"
+      },
+      "sidebar": {
+        "width": 260,
+        "height": 900,
+        "strategy": "fixed-width"
+      }
     }
   },
-
   "visualThresholds": {
     "consoleErrors": 0,
     "pageErrors": 0,
     "missingSelectors": 0,
     "targetMismatch": 0,
     "pixelDiffRatio": 0.02
-  }
+  },
+  "overlays": [
+    {
+      "id": "home.signal-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-signal-detail']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "home.order-confirm",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-order-confirm']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "home.edit-workspace",
+      "kind": "sheet",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-edit-workspace']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "home.ai-advice",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "[data-overlay='overlay-ai-advice']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    }
+  ]
 }

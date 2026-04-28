@@ -3,5 +3,5 @@ import { FactorPage } from "@/features/research";
 
 export const Route = createFileRoute("/research/factors/$id")({
 	component: FactorPage,
-	handle: { title: "因子分析" },
+	staticData: { title: "因子分析" },
 });

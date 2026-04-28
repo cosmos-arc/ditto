@@ -164,50 +164,83 @@
       pointer-events: none;
     }
 
-    /* ── Noise texture overlay — signature graphite feel ── */
-    .shell-catalog::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      opacity: 0.018;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      background-repeat: repeat;
-      background-size: 256px 256px;
-    }
-
-    /* ── Status bar — bottom ambient glow ── */
-    .shell-catalog::after {
-      content: '';
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      z-index: 1;
-      pointer-events: none;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent) 70%,
-        transparent 100%
-      );
-      opacity: 0.35;
-    }
-
     /* ══════════════════════════════════════════════
      * Calendar Workspace Layout
      * ══════════════════════════════════════════════ */
 
+    .shell-catalog.catalog-shell {
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail header  header"
+        "rail toolbar toolbar"
+        "rail insight detail"
+        "rail table   detail";
+      contain: paint;
+    }
+
+    .calendar-reading-strip {
+      grid-area: insight;
+      display: grid;
+      grid-template-columns: minmax(14rem, 1.2fr) repeat(4, minmax(0, 1fr));
+      gap: var(--space-8);
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-app);
+      min-height: 0;
+    }
+
+    .calendar-reading-item {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
+    }
+
+    .calendar-reading-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .calendar-reading-value {
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .calendar-legend-scale {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-2);
+      height: 4px;
+      margin-top: var(--space-2);
+    }
+
+    .calendar-legend-stop {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2);
+    }
+
+    .calendar-legend-stop[data-step="high"] { background: color-mix(in oklch, var(--risk-high-fg) 38%, transparent); }
+    .calendar-legend-stop[data-step="medium"] { background: color-mix(in oklch, var(--system-degraded-fg) 34%, transparent); }
+    .calendar-legend-stop[data-step="low"] { background: color-mix(in oklch, var(--text-tertiary) 30%, transparent); }
+    .calendar-legend-stop[data-step="actual"] { background: color-mix(in oklch, var(--market-up-fg) 30%, var(--market-down-fg) 18%); }
+
     /* ── Workspace body: two-column split ── */
     .workspace-body {
+      grid-area: table;
       display: flex;
       flex: 1;
       overflow: hidden;
       position: relative;
+      min-height: 0;
     }
 
     .workspace-left {
@@ -216,14 +249,18 @@
       flex-direction: column;
       overflow: hidden;
       border-right: 1px solid var(--border-subtle);
+      min-width: 0;
+      min-height: 0;
     }
 
     .workspace-right {
-      width: 320px;
-      flex-shrink: 0;
+      grid-area: detail;
+      width: auto;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      background: var(--surface-panel-base);
+      border-left: 1px solid var(--border-subtle);
     }
 
     /* ── View switcher tabs (inside header area) ── */
@@ -311,6 +348,7 @@
       flex-direction: column;
       overflow: hidden;
       padding: var(--space-12);
+      min-height: 0;
     }
 
     .calendar-header-row {
@@ -382,8 +420,11 @@
     .cal-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 2px;
+      gap: 1px;
       flex: 1;
+      min-height: 0;
+      border: 1px solid var(--border-subtle);
+      background: var(--border-subtle);
     }
 
     /* ── Calendar day cell ── */
@@ -391,11 +432,13 @@
       position: relative;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: flex-start;
-      padding: var(--space-4) var(--space-2);
-      min-height: 56px;
-      border-radius: var(--radius-4);
+      gap: var(--space-3);
+      padding: var(--space-6);
+      min-height: 52px;
+      border-radius: 0;
+      background: var(--surface-app);
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -420,12 +463,27 @@
       box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent);
     }
 
+    .cal-day[data-impact="high"] {
+      box-shadow: inset 2px 0 0 color-mix(in oklch, var(--risk-high-fg) 78%, transparent);
+    }
+
+    .cal-day[data-impact="medium"] {
+      box-shadow: inset 2px 0 0 color-mix(in oklch, var(--system-degraded-fg) 74%, transparent);
+    }
+
+    .cal-day-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      min-height: 16px;
+    }
+
     .cal-day-num {
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--text-primary);
       font-feature-settings: 'tnum' 1;
-      margin-bottom: var(--space-2);
     }
 
     .cal-day.outside .cal-day-num {
@@ -456,6 +514,45 @@
     .cal-dot--dividend { background: color-mix(in oklch, var(--system-healthy-fg) 70%, var(--brand-accent)); }
     .cal-dot--earnings { background: color-mix(in oklch, var(--market-down-fg) 50%, var(--system-healthy-fg)); }
 
+    .cal-event-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .cal-event-tag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      min-width: 0;
+      padding: 1px var(--space-4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-3);
+      background: var(--surface-panel-base);
+      color: var(--text-secondary);
+      font-size: var(--font-size-10);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-event-tag[data-event-type="ipo"] { color: var(--brand-accent); }
+    .cal-event-tag[data-event-type="lockup"] { color: var(--market-down-fg); }
+    .cal-event-tag[data-event-type="option"],
+    .cal-event-tag[data-event-type="future"] { color: var(--system-degraded-fg); }
+    .cal-event-tag[data-event-type="economic"],
+    .cal-event-tag[data-event-type="dividend"] { color: var(--system-healthy-fg); }
+    .cal-event-tag[data-event-type="earnings"] { color: color-mix(in oklch, var(--market-down-fg) 55%, var(--system-healthy-fg)); }
+
+    .cal-impact-symbol {
+      flex-shrink: 0;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
     /* ══════════════════════════════════════════════
      * Event List (v1.1)
      * ══════════════════════════════════════════════ */
@@ -464,6 +561,8 @@
       border-top: 1px solid var(--border-subtle);
       padding: var(--space-12);
       overflow-y: auto;
+      flex: 0 0 min(34%, 300px);
+      max-height: min(34%, 300px);
     }
 
     .event-list-header {
@@ -488,7 +587,8 @@
 
     /* ── Event row ── */
     .event-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 42px max-content minmax(0, 1fr) 58px;
       align-items: center;
       gap: var(--space-8);
       padding: var(--space-6) var(--space-8);
@@ -584,6 +684,7 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
+      justify-content: flex-end;
     }
 
     .importance-dot {
@@ -599,6 +700,12 @@
     .importance-label {
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
+    }
+
+    .impact-symbol {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      line-height: 1;
     }
 
     /* ══════════════════════════════════════════════
@@ -669,6 +776,19 @@
       margin-bottom: var(--space-4);
     }
 
+    .timeline-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-6);
+    }
+
+    .timeline-impact-symbol {
+      flex-shrink: 0;
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+
     .timeline-item-region {
       display: inline-flex;
       font-size: var(--font-size-10);
@@ -729,9 +849,9 @@
       [data-overlay="overlay-intelligence"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header,
-    .overlay-modal .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header,
+    .overlay-backdrop .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -921,7 +1041,7 @@
     }
 
     /* ── Detail panel brand touchpoint ── */
-    .overlay-drawer::before {
+    .overlay-surface::before {
       content: '';
       position: absolute;
       top: 0;
@@ -1002,35 +1122,31 @@
   <a class="skip-link" href="#main-content">跳至主要内容</a>
   <div class="style-label">Graphite Studio — 市场日历 · Compact · A股</div>
 
-  <div class="shell-catalog">
+  <div class="shell-catalog catalog-shell">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
       <div class="rail-nav" role="list">
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page">
+        <div class="rail-icon active" role="listitem" tabindex="0" aria-label="市场" aria-current="page" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
+        <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" role="listitem" tabindex="0" aria-label="运维">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom" role="list">
-        <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -1057,28 +1173,44 @@
         </div>
       </div>
       <div class="header-btn-group-right">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
-        <button class="header-action-btn" title="通知" aria-label="通知">
+        <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
           <span class="badge-dot"></span>
         </button>
-        <button class="header-avatar" aria-label="用户菜单">C</button>
+        
+      </div>
+    
+      <div class="header-actions header-utility-bar">
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
       </div>
     </header>
 
     <!-- ═══ Filter Bar ═══ -->
-    <div class="filter-toolbar" data-contract-slot="filter-bar" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true">
+    <div class="filter-toolbar" data-contract-slot="filter-bar" data-reveal="fade-up" data-reveal-delay="0">
       <div class="filter-group">
         <span class="filter-label">事件类型:</span>
         <button class="filter-chip active" data-tooltip="新股申购">新股申购</button>
@@ -1109,14 +1241,44 @@
       <button class="btn btn-ghost">重置</button>
     </div>
 
-    <!-- ═══ Workspace Body (two-column) ═══ -->
-    <div class="workspace-body" id="main-content">
+    <!-- ═══ Calendar Reading Strip ═══ -->
+    <div class="calendar-reading-strip" data-contract-slot="calendar-reading">
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">窗口</span>
+        <span class="calendar-reading-value" data-calendar-horizon>未来 10 日 · 7 事件 · 3 关键日</span>
+      </div>
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">影响</span>
+        <span class="calendar-reading-value" data-calendar-impact>高影响4 · 中3 · 低0</span>
+      </div>
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">颜色</span>
+        <span class="calendar-reading-value" data-calendar-color>红涨绿跌: 公布值偏离</span>
+        <span class="calendar-legend-scale" aria-hidden="true">
+          <span class="calendar-legend-stop" data-step="high"></span>
+          <span class="calendar-legend-stop" data-step="medium"></span>
+          <span class="calendar-legend-stop" data-step="low"></span>
+          <span class="calendar-legend-stop" data-step="actual"></span>
+        </span>
+      </div>
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">下一簇</span>
+        <span class="calendar-reading-value">04-17 期权 + 股指双交割</span>
+      </div>
+      <div class="calendar-reading-item">
+        <span class="calendar-reading-label">去向</span>
+        <span class="calendar-reading-value" data-calendar-destination>点击事件: 详情 / 提醒 / AI</span>
+      </div>
+    </div>
+
+    <!-- ═══ Workspace Body ═══ -->
+    <div class="workspace-body catalog-main catalog-table" id="main-content" data-contract-slot="main">
 
       <!-- ─── Left Panel: Calendar + Event List ─── -->
       <div class="workspace-left">
 
         <!-- Calendar Month View -->
-        <div class="calendar-section" data-reveal="fade-up" data-reveal-delay="50" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
+        <div class="calendar-section" data-reveal="fade-up" data-reveal-delay="50">
           <div class="calendar-header-row">
             <span class="calendar-title">A 股事件日历</span>
             <div class="calendar-nav">
@@ -1145,7 +1307,10 @@
             <div class="cal-day"><span class="cal-day-num">1</span></div>
             <div class="cal-day"><span class="cal-day-num">2</span></div>
             <div class="cal-day"><span class="cal-day-num">3</span></div>
-            <div class="cal-day" data-tooltip="04/04 · 财报披露"><span class="cal-day-num">4</span><div class="cal-dots"><span class="cal-dot cal-dot--earnings"></span></div></div>
+            <div class="cal-day" data-event-count="1" data-impact="medium" data-tooltip="04/04 · 财报披露">
+              <div class="cal-day-head"><span class="cal-day-num">4</span><span class="cal-impact-symbol">◆</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="earnings">财报窗口</span></div>
+            </div>
             <div class="cal-day"><span class="cal-day-num">5</span></div>
 
             <!-- Week 2: Apr 6 - Apr 12 -->
@@ -1159,20 +1324,41 @@
 
             <!-- Week 3: Apr 13 - Apr 19 -->
             <div class="cal-day"><span class="cal-day-num">13</span></div>
-            <div class="cal-day selected" data-tooltip="04/14 · 新股申购: 华海半导体"><span class="cal-day-num">14</span><div class="cal-dots"><span class="cal-dot cal-dot--ipo"></span></div></div>
-            <div class="cal-day" data-tooltip="04/15 · 限售解禁: 宁德时代 ¥45.2亿"><span class="cal-day-num">15</span><div class="cal-dots"><span class="cal-dot cal-dot--lockup"></span></div></div>
+            <div class="cal-day selected" data-event-count="1" data-impact="medium" data-tooltip="04/14 · 新股申购: 华海半导体">
+              <div class="cal-day-head"><span class="cal-day-num">14</span><span class="cal-impact-symbol">◆</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="ipo">新股 华海</span></div>
+            </div>
+            <div class="cal-day" data-event-count="1" data-impact="high" data-tooltip="04/15 · 限售解禁: 宁德时代 ¥45.2亿">
+              <div class="cal-day-head"><span class="cal-day-num">15</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="lockup">解禁 宁德</span></div>
+            </div>
             <div class="cal-day"><span class="cal-day-num">16</span></div>
-            <div class="cal-day today" data-tooltip="04/17 · 期权交割 + 期货交割"><span class="cal-day-num">17</span><div class="cal-dots"><span class="cal-dot cal-dot--option"></span><span class="cal-dot cal-dot--future"></span></div></div>
-            <div class="cal-day" data-tooltip="04/18 · 经济数据: 一季度GDP"><span class="cal-day-num">18</span><div class="cal-dots"><span class="cal-dot cal-dot--economic"></span></div></div>
+            <div class="cal-day today" data-event-count="2" data-impact="high" data-tooltip="04/17 · 期权交割 + 期货交割">
+              <div class="cal-day-head"><span class="cal-day-num">17</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack">
+                <span class="cal-event-tag" data-event-type="option">期权交割</span>
+                <span class="cal-event-tag" data-event-type="future">IF 交割</span>
+              </div>
+            </div>
+            <div class="cal-day" data-event-count="1" data-impact="high" data-tooltip="04/18 · 经济数据: 一季度GDP">
+              <div class="cal-day-head"><span class="cal-day-num">18</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="economic">GDP 预期</span></div>
+            </div>
             <div class="cal-day"><span class="cal-day-num">19</span></div>
 
             <!-- Week 4: Apr 20 - Apr 26 -->
-            <div class="cal-day" data-tooltip="04/20 · 除权除息: 贵州茅台"><span class="cal-day-num">20</span><div class="cal-dots"><span class="cal-dot cal-dot--dividend"></span></div></div>
+            <div class="cal-day" data-event-count="1" data-impact="medium" data-tooltip="04/20 · 除权除息: 贵州茅台">
+              <div class="cal-day-head"><span class="cal-day-num">20</span><span class="cal-impact-symbol">◆</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="dividend">茅台除息</span></div>
+            </div>
             <div class="cal-day"><span class="cal-day-num">21</span></div>
             <div class="cal-day"><span class="cal-day-num">22</span></div>
             <div class="cal-day"><span class="cal-day-num">23</span></div>
             <div class="cal-day"><span class="cal-day-num">24</span></div>
-            <div class="cal-day" data-tooltip="04/25 · 财报: 创业板业绩预告截止"><span class="cal-day-num">25</span><div class="cal-dots"><span class="cal-dot cal-dot--earnings"></span></div></div>
+            <div class="cal-day" data-event-count="1" data-impact="high" data-tooltip="04/25 · 财报: 创业板业绩预告截止">
+              <div class="cal-day-head"><span class="cal-day-num">25</span><span class="cal-impact-symbol">▲</span></div>
+              <div class="cal-event-stack"><span class="cal-event-tag" data-event-type="earnings">业绩预告</span></div>
+            </div>
             <div class="cal-day"><span class="cal-day-num">26</span></div>
 
             <!-- Week 5: Apr 27 - May 3 -->
@@ -1187,14 +1373,14 @@
         </div>
 
         <!-- Event List -->
-        <div class="event-list-section" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
+        <div class="event-list-section" data-reveal="fade-up" data-reveal-delay="100">
           <div class="event-list-header">
             <span class="event-list-title">事件列表</span>
-            <span class="event-list-count">共 <span data-counter="7" data-counter-decimals="0">7</span> 个事件</span>
+            <span class="event-list-count">共 7 个事件</span>
           </div>
 
           <!-- Event 1: 新股申购 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="120">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="ipo" data-impact="medium" data-reveal="fade-up" data-reveal-delay="120">
             <div class="event-date">
               <span class="event-date-day">14</span>
               04月
@@ -1205,13 +1391,14 @@
               <div class="event-subtitle">申购代码: 787XXX</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">◆</span>
               <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
               <span class="importance-label">中</span>
             </div>
           </label>
 
           <!-- Event 2: 限售解禁 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="140">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="lockup" data-impact="high" data-reveal="fade-up" data-reveal-delay="140">
             <div class="event-date">
               <span class="event-date-day">15</span>
               04月
@@ -1222,13 +1409,14 @@
               <div class="event-subtitle">解禁市值: ¥45.2亿</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">▲</span>
               <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
 
           <!-- Event 3: 期权交割日 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="160">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="option" data-impact="medium" data-reveal="fade-up" data-reveal-delay="160">
             <div class="event-date">
               <span class="event-date-day">17</span>
               04月
@@ -1239,13 +1427,14 @@
               <div class="event-subtitle">当月合约到期</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">◆</span>
               <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
               <span class="importance-label">中</span>
             </div>
           </label>
 
           <!-- Event 4: 股指期货交割 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="180">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="future" data-impact="high" data-reveal="fade-up" data-reveal-delay="180">
             <div class="event-date">
               <span class="event-date-day">17</span>
               04月
@@ -1256,13 +1445,14 @@
               <div class="event-subtitle">股指期货当月合约到期</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">▲</span>
               <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
 
           <!-- Event 5: 经济数据 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="200">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="economic" data-impact="high" data-reveal="fade-up" data-reveal-delay="200">
             <div class="event-date">
               <span class="event-date-day">18</span>
               04月
@@ -1273,13 +1463,14 @@
               <div class="event-subtitle">预期: 5.2%</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">▲</span>
               <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
           </label>
 
           <!-- Event 6: 除权除息 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="220">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="dividend" data-impact="medium" data-reveal="fade-up" data-reveal-delay="220">
             <div class="event-date">
               <span class="event-date-day">20</span>
               04月
@@ -1290,13 +1481,14 @@
               <div class="event-subtitle">每股派息 ¥27.53</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">◆</span>
               <span class="importance-dot importance-dot--medium" data-tooltip="中重要性事件"></span>
               <span class="importance-label">中</span>
             </div>
           </label>
 
           <!-- Event 7: 财报披露 -->
-          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-reveal="fade-up" data-reveal-delay="240">
+          <label for="overlay-event-detail" class="event-row" role="button" tabindex="0" data-event-type="earnings" data-impact="high" data-reveal="fade-up" data-reveal-delay="240">
             <div class="event-date">
               <span class="event-date-day">25</span>
               04月
@@ -1307,6 +1499,7 @@
               <div class="event-subtitle">强制披露截止日</div>
             </div>
             <div class="event-importance">
+              <span class="impact-symbol">▲</span>
               <span class="importance-dot importance-dot--high" data-tooltip="高重要性事件"></span>
               <span class="importance-label">高</span>
             </div>
@@ -1314,9 +1507,11 @@
         </div>
       </div>
 
+    </div><!-- /.workspace-body -->
+
       <!-- ─── Right Panel: Economic Data Timeline ─── -->
-      <div class="workspace-right">
-        <div class="timeline-section" data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)">
+      <div class="workspace-right catalog-detail" data-contract-slot="right-rail">
+        <div class="timeline-section" data-reveal="fade-up" data-reveal-delay="150">
           <div class="timeline-header">
             <div class="timeline-title">经济数据时间线</div>
             <div class="timeline-subtitle">即将发布的重要宏观数据</div>
@@ -1324,19 +1519,22 @@
           <div class="timeline-body">
 
             <!-- Timeline 1 -->
-            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="200" data-tooltip="社融规模 · 前值 2.42万亿 · 预期 2.80万亿">
+            <div class="timeline-item" tabindex="0" data-impact="high" data-reveal="fade-up" data-reveal-delay="200" data-tooltip="社融规模 · 前值 2.42万亿 · 预期 2.80万亿">
               <div class="timeline-item-date">04-17 周五 09:30</div>
-              <div class="timeline-item-title">中国 3月社会融资规模</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">中国 3月社会融资规模</div>
+                <span class="timeline-impact-symbol">▲</span>
+              </div>
               <div class="timeline-item-region">CN</div>
               <div class="timeline-data">
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">前值</div>
-                  <div class="timeline-data-value" data-ticker="2.42" data-ticker-suffix="万亿">2.42万亿</div>
+                  <div class="timeline-data-value">2.42万亿</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-up" data-ticker="2.80" data-ticker-suffix="万亿">2.80万亿</div>
+                  <div class="timeline-data-value text-up">2.80万亿</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1347,9 +1545,12 @@
             </div>
 
             <!-- Timeline 2 -->
-            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="240" data-tooltip="一季度 GDP · 前值 5.4% · 预期 5.2% · 高重要性">
+            <div class="timeline-item" tabindex="0" data-impact="high" data-reveal="fade-up" data-reveal-delay="240" data-tooltip="一季度 GDP · 前值 5.4% · 预期 5.2% · 高重要性">
               <div class="timeline-item-date">04-18 周六 10:00</div>
-              <div class="timeline-item-title">中国 一季度 GDP</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">中国 一季度 GDP</div>
+                <span class="timeline-impact-symbol">▲</span>
+              </div>
               <div class="timeline-item-region">CN</div>
               <div class="timeline-data">
                 <div class="timeline-data-cell">
@@ -1370,9 +1571,12 @@
             </div>
 
             <!-- Timeline 3 -->
-            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="280" data-tooltip="美国零售销售 · 前值 -0.1% · 预期 +0.3%">
+            <div class="timeline-item" tabindex="0" data-impact="medium" data-reveal="fade-up" data-reveal-delay="280" data-tooltip="美国零售销售 · 前值 -0.1% · 预期 +0.3%">
               <div class="timeline-item-date">04-20 周一 20:30</div>
-              <div class="timeline-item-title">美国 3月零售销售环比</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">美国 3月零售销售环比</div>
+                <span class="timeline-impact-symbol">◆</span>
+              </div>
               <div class="timeline-item-region">US</div>
               <div class="timeline-data">
                 <div class="timeline-data-cell">
@@ -1393,9 +1597,12 @@
             </div>
 
             <!-- Timeline 4 -->
-            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="320" data-tooltip="工业利润同比 · 前值 +3.8% · 预期 +4.2%">
+            <div class="timeline-item" tabindex="0" data-impact="medium" data-reveal="fade-up" data-reveal-delay="320" data-tooltip="工业利润同比 · 前值 +3.8% · 预期 +4.2%">
               <div class="timeline-item-date">04-22 周三 09:30</div>
-              <div class="timeline-item-title">中国 3月工业利润同比</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">中国 3月工业利润同比</div>
+                <span class="timeline-impact-symbol">◆</span>
+              </div>
               <div class="timeline-item-region">CN</div>
               <div class="timeline-data">
                 <div class="timeline-data-cell">
@@ -1416,9 +1623,12 @@
             </div>
 
             <!-- Timeline 5 -->
-            <div class="timeline-item" tabindex="0" data-reveal="fade-up" data-reveal-delay="360" data-tooltip="核心 PCE · 前值 2.8% · 预期 2.6% · 通胀关键指标">
+            <div class="timeline-item" tabindex="0" data-impact="high" data-reveal="fade-up" data-reveal-delay="360" data-tooltip="核心 PCE · 前值 2.8% · 预期 2.6% · 通胀关键指标">
               <div class="timeline-item-date">04-25 周六 20:30</div>
-              <div class="timeline-item-title">美国 核心 PCE物价指数同比</div>
+              <div class="timeline-title-row">
+                <div class="timeline-item-title">美国 核心 PCE物价指数同比</div>
+                <span class="timeline-impact-symbol">▲</span>
+              </div>
               <div class="timeline-item-region">US</div>
               <div class="timeline-data">
                 <div class="timeline-data-cell">
@@ -1442,8 +1652,6 @@
         </div>
       </div>
 
-    </div><!-- /.workspace-body -->
-
   </div><!-- /.shell-catalog -->
 
   <!-- ═══ Overlay Containers ═══ -->
@@ -1452,7 +1660,7 @@
     <!-- Overlay A: 事件详情 (Drawer 右侧滑出) -->
     <div class="overlay-backdrop" data-overlay="overlay-event-detail">
       <label class="overlay-dismiss" for="overlay-event-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="事件详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="事件详情">
         <div class="overlay-header">
           <span class="overlay-title">事件详情</span>
           <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -1506,7 +1714,7 @@
     <!-- Overlay B: 日历提醒设置 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-reminder">
       <label class="overlay-dismiss" for="overlay-reminder" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
         <div class="overlay-header">
           <span class="overlay-title">日历提醒设置</span>
           <label for="overlay-reminder" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -1811,10 +2019,10 @@
         <div class="gallery-cards">
 
           <!-- Overlay 1: 事件详情 (Drawer) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-event-detail">
             <div class="gallery-card__label">事件详情 (Drawer)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="事件详情">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="事件详情">
                 <div class="overlay-header">
                   <span class="overlay-title">事件详情</span>
                 </div>
@@ -1855,10 +2063,10 @@
           </div>
 
           <!-- Overlay 2: 日历提醒设置 (Sheet) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-reminder">
             <div class="gallery-card__label">日历提醒设置 (Sheet)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="日历提醒设置">
                 <div class="overlay-header">
                   <span class="overlay-title">日历提醒设置</span>
                 </div>
@@ -1906,7 +2114,7 @@
           </div>
 
           <!-- Overlay 3: 跳转 Intelligence (Modal) -->
-          <div class="gallery-card">
+          <div class="gallery-card" data-overlay-ref="overlay-intelligence">
             <div class="gallery-card__label">跳转 Intelligence (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
               <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="跳转 Intelligence">

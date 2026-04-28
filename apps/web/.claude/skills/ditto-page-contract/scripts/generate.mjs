@@ -112,6 +112,32 @@ function generateTS(contracts) {
   lines.push("export type ShellFamily = (typeof SHELL_FAMILIES)[number];");
   lines.push("export type PrototypeSource = (typeof PROTOTYPE_SOURCES)[number];");
   lines.push("");
+  lines.push("export type PageLandingRouteStatus = \"missing\" | \"scaffolded\" | \"implemented\";");
+  lines.push("export type PageLandingContractStatus = \"missing\" | \"draft\" | \"generated\" | \"verified\";");
+  lines.push("export type PageLandingOverlayStatus = \"none\" | \"gallery-only\" | \"triggerable\" | \"implemented\";");
+  lines.push("export type PageLandingVisualAuditStatus = \"missing\" | \"baseline\" | \"pass\";");
+  lines.push("export type PageOverlayKind = \"drawer\" | \"sheet\" | \"modal\" | \"alert-dialog\" | \"toast\" | \"inline\";");
+  lines.push("export type PageOverlayCloseBehavior = \"escape\" | \"outside-click\" | \"primary-action\";");
+  lines.push("");
+  lines.push("export interface PageLandingStatus {");
+  lines.push("  reactRouteStatus: PageLandingRouteStatus;");
+  lines.push("  featureModule: string;");
+  lines.push("  contractStatus: PageLandingContractStatus;");
+  lines.push("  overlayStatus: PageLandingOverlayStatus;");
+  lines.push("  visualAuditStatus: PageLandingVisualAuditStatus;");
+  lines.push("}");
+  lines.push("");
+  lines.push("export interface PageOverlayContract {");
+  lines.push("  id: string;");
+  lines.push("  kind: PageOverlayKind;");
+  lines.push("  blocking: boolean;");
+  lines.push("  requiredInDefaultFlow: boolean;");
+  lines.push("  trigger: { slot: string; action: string };");
+  lines.push("  prototypeSelector: string;");
+  lines.push("  reactComponent: string;");
+  lines.push("  closeBehavior: PageOverlayCloseBehavior[];");
+  lines.push("}");
+  lines.push("");
 
   // PageContract interface
   lines.push("export interface PageContract {");
@@ -126,6 +152,8 @@ function generateTS(contracts) {
   lines.push("  sidebarCollapsible?: boolean;");
   lines.push("  a11yRoles?: Record<string, string>;");
   lines.push("  responsiveBehavior?: Record<string, string>;");
+  lines.push("  landing?: PageLandingStatus;");
+  lines.push("  overlays?: PageOverlayContract[];");
   lines.push("}");
   lines.push("");
 
@@ -156,6 +184,12 @@ function generateTS(contracts) {
     }
     if (c.flags?.sidebarCollapsible) {
       lines.push("    sidebarCollapsible: true,");
+    }
+    if (c.landing) {
+      pushJsonProperty(lines, "landing", c.landing);
+    }
+    if (c.overlays) {
+      pushJsonProperty(lines, "overlays", c.overlays);
     }
 
     // a11y roles from slots
@@ -193,6 +227,15 @@ function generateTS(contracts) {
   lines.push("");
 
   return lines.join("\n");
+}
+
+function pushJsonProperty(lines, propertyName, value) {
+  const literalLines = JSON.stringify(value, null, 2).split("\n");
+  lines.push(`    ${propertyName}: ${literalLines[0]}`);
+  for (const line of literalLines.slice(1)) {
+    lines.push(`    ${line}`);
+  }
+  lines[lines.length - 1] = `${lines.at(-1)},`;
 }
 
 /* ------------------------------------------------------------------ */

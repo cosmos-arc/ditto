@@ -12,7 +12,6 @@ export function GlobalAlertsSection() {
 	const {
 		data: alertsData,
 		isLoading,
-		isError,
 		refetch,
 	} = useHomeAlerts();
 

@@ -4,7 +4,7 @@ import { LoadingSkeleton } from "@/components/data/skeleton/loading-skeleton";
 import { DittoErrorBoundary } from "@/lib/error-boundary";
 
 export function FactorBrowser() {
-	const { data, isLoading, isError, refetch } = useFactorLibrary();
+	const { data, isLoading, refetch } = useFactorLibrary();
 
 	return (
 		<ContextSection title="因子库" count={data?.total}>

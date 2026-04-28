@@ -68,6 +68,27 @@
       pointer-events: none;
     }
 
+    /* ── Gate 0: Hide prototype tooling in default-view ── */
+    #default-view > .style-label { display: none !important; }
+    body:has(#view-default:checked) > .proto-nav { display: none !important; }
+    body > .proto-nav { display: none !important; }
+
+    /* ── P0: Interactive elements must be >= 12px ── */
+    .btn-sm { font-size: var(--font-size-12) !important; }
+
+    /* ── P1: tabular-nums + slashed-zero for data components ── */
+    .badge-count,
+    .resource-value,
+    .event-time,
+    .status-indicator {
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    /* ── P1: Heading font-family for page title ── */
+    .header-title {
+      font-family: var(--font-family-heading);
+    }
+
     /* ── Skip link ── */
     .skip-link {
       position: absolute;
@@ -141,9 +162,7 @@
 
     /* Brand anchor: health strip accent light band */
     .shell-ops .ops-health {
-      border-bottom: 2px solid var(--brand-accent);
-      position: relative;
-      box-shadow: 0 2px 8px -2px color-mix(in oklch, var(--brand-accent) 12%, transparent);
+      border-bottom: 1px solid var(--border-subtle);
     }
     /* Health strip glow: box-shadow only — removed redundant ::after bar for restraint */
     /* (glow handled by box-shadow on .ops-health above) */
@@ -188,18 +207,9 @@
       border-bottom-color: var(--brand-accent);
     }
 
-    /* Panel tab entrance — stagger */
+    /* Panel tab — instant, no stagger (restraint) */
     .panel-tab {
-      animation: tab-fade-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
-    }
-    .panel-tabs .panel-tab:nth-child(1) { animation-delay: 50ms; }
-    .panel-tabs .panel-tab:nth-child(2) { animation-delay: 100ms; }
-    .panel-tabs .panel-tab:nth-child(3) { animation-delay: 150ms; }
-    .panel-tabs .panel-tab:nth-child(4) { animation-delay: 200ms; }
-
-    @keyframes tab-fade-in {
-      from { opacity: 0; transform: translateY(2px); }
-      to   { opacity: 1; transform: translateY(0); }
+      opacity: 1;
     }
 
     /* ── Header subtitle ── */
@@ -233,20 +243,6 @@
       font-weight: var(--font-weight-medium);
       color: var(--system-healthy-fg);
       border-left: 2px solid var(--system-healthy-fg);
-      position: relative;
-      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard),
-                  border-color var(--motion-duration-normal) var(--motion-easing-standard);
-    }
-    .env-badge::after {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: calc(var(--radius-4) + 2px);
-      box-shadow: 0 0 8px -4px color-mix(in oklch, var(--system-healthy-fg) 25%, transparent);
-      pointer-events: none;
-    }
-    .env-badge:hover {
-      box-shadow: 0 0 12px -4px color-mix(in oklch, var(--system-healthy-fg) 35%, transparent);
     }
 
     .env-badge-dot {
@@ -287,7 +283,7 @@
       background: var(--system-down-fg);
       min-width: 16px;
       height: 16px;
-      border-radius: 8px;
+      border-radius: var(--radius-8);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -327,6 +323,7 @@
     .health-metric-value {
       font-family: var(--font-family-numeric);
       font-weight: var(--font-weight-medium);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     /* Brand accent touchpoint: task-running value */
@@ -335,6 +332,13 @@
     }
 
     /* Brand accent touchpoint: panel-count severity */
+    .panel-count {
+      font-family: var(--font-family-ui);
+    }
+    .panel-count .status-value {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
     .panel-count-critical {
       background: var(--system-down-bg);
       color: var(--system-down-fg);
@@ -342,6 +346,10 @@
     .panel-count-healthy {
       background: var(--system-healthy-bg);
       color: var(--system-healthy-fg);
+    }
+    .panel-count-down {
+      background: var(--system-down-bg);
+      color: var(--system-down-fg);
     }
 
     .health-metric-value.ok     { color: var(--system-healthy-fg); }
@@ -393,7 +401,7 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
 
     .alert-desc {
@@ -431,14 +439,17 @@
     .quota-cell {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
 
     .quota-text {
-      font-family: var(--font-family-numeric);
-      font-variant-numeric: tabular-nums;
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       white-space: nowrap;
+    }
+    .quota-text .quota-value {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
     }
 
     .quota-text.ok       { color: var(--system-healthy-fg); }
@@ -449,20 +460,20 @@
       width: 80px;
       height: 4px;
       background: var(--neutral-200);
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       overflow: hidden;
       box-shadow: inset 0 1px 2px color-mix(in oklch, var(--neutral-0) 40%, transparent);
     }
 
     .quota-bar-fill {
       height: 100%;
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
-    .quota-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(1 0 0))); }
-    .quota-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, oklch(1 0 0))); }
-    .quota-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, oklch(1 0 0))); }
+    .quota-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, var(--surface-app))); }
+    .quota-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, var(--surface-app))); }
+    .quota-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, var(--surface-app))); }
 
     /* ── Task Row ── */
     .task-item {
@@ -492,7 +503,7 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
 
     .task-name {
@@ -525,6 +536,91 @@
     .task-item.failed   .task-status-icon { color: var(--system-down-fg); }
     .task-item.failed   .task-meta        { color: var(--system-down-fg); }
     .task-item.failed   .task-meta-error  { color: var(--system-down-fg); }
+
+    /* ── Task Summary Grid (Rail Section 1) ── */
+    .task-summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+      padding: var(--space-8) 0;
+    }
+    .task-summary-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-10) var(--space-8);
+      border-radius: var(--radius-6);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+    .task-summary-count {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-20);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1;
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+    .task-summary-unit {
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-regular);
+      color: var(--text-tertiary);
+    }
+    .task-summary-label {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+    .task-summary-card.ok .task-summary-count    { color: var(--system-healthy-fg); }
+    .task-summary-card.warn .task-summary-count   { color: var(--system-degraded-fg); }
+    .task-summary-card.down .task-summary-count   { color: var(--system-down-fg); }
+    .task-summary-card.brand .task-summary-count   { color: var(--brand-500); }
+
+    .next-event {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-8) 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .next-event-label {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+    }
+    .next-event-value {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+    }
+    .next-event-time {
+      font-family: var(--font-family-numeric);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    /* ── Resource Compact Row ── */
+    .resource-hint {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      margin-top: calc(var(--space-2) * -1);
+    }
+    .resource-compact-row {
+      display: flex;
+      gap: var(--space-8);
+      padding: var(--space-8) 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .resource-compact-item {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+    .resource-compact-item.ok   { color: var(--system-healthy-fg); }
+    .resource-compact-item.warn { color: var(--system-degraded-fg); }
+    .resource-compact-item.down { color: var(--system-down-fg); }
+    .resource-compact-label { font-family: var(--font-family-ui); }
+    .resource-compact-value { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums slashed-zero; }
 
     /* ── Resource Row ── */
     .resource-item {
@@ -565,20 +661,20 @@
     .resource-bar {
       height: 4px;
       background: var(--neutral-200);
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       overflow: hidden;
       box-shadow: inset 0 1px 2px color-mix(in oklch, var(--neutral-0) 40%, transparent);
     }
 
     .resource-bar-fill {
       height: 100%;
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
-    .resource-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, oklch(1 0 0))); }
-    .resource-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, oklch(1 0 0))); }
-    .resource-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, oklch(1 0 0))); }
+    .resource-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, var(--surface-app))); }
+    .resource-bar-fill.warn     { background: linear-gradient(90deg, var(--system-degraded-fg), color-mix(in oklch, var(--system-degraded-fg) 80%, var(--surface-app))); }
+    .resource-bar-fill.critical { background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, var(--surface-app))); }
 
     /* ── Event Row ── */
     .event-item {
@@ -624,7 +720,7 @@
     .cell-name     { font-weight: var(--font-weight-medium); }
     .cell-numeric  { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
     .cell-time     { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
-    .cell-disabled { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; color: var(--text-disabled); }
+    .cell-disabled { color: var(--text-disabled); }
 
     /* ── Sort indicator ── */
     .sort-indicator {
@@ -658,12 +754,16 @@
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       border-top: 1px solid var(--border-subtle);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       letter-spacing: 0.02em;
       user-select: none;
       z-index: 25;
+    }
+    .status-value {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
     .status-indicator {
       width: 6px; height: 6px;
@@ -794,11 +894,11 @@
     .health-trend {
       font-size: var(--font-size-12);
       margin-left: var(--space-2);
-      font-family: var(--font-family-numeric);
     }
-    .health-trend.up   { color: var(--market-up-fg); }
-    .health-trend.down { color: var(--market-down-fg); }
+    .health-trend.up   { color: var(--system-healthy-fg); }
+    .health-trend.down { color: var(--system-down-fg); }
     .health-trend.flat { color: var(--text-tertiary); }
+    .health-trend.warn { color: var(--system-degraded-fg); }
 
     /* ══════════════════════════════════════════════
      * R2: Timeline connector — event section
@@ -931,7 +1031,7 @@
       color: var(--system-down-fg);
     }
     .quota-bar-fill.critical {
-      background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, oklch(1 0 0))) !important;
+      background: linear-gradient(90deg, var(--system-down-fg), color-mix(in oklch, var(--system-down-fg) 80%, var(--surface-app))) !important;
     }
 
     /* ══════════════════════════════════════════════
@@ -1034,6 +1134,7 @@
       width: 40px;
       height: 14px;
       margin-left: var(--space-8);
+      background: transparent;
     }
     .sparkline path {
       fill: none;
@@ -1115,6 +1216,7 @@
     /* ── DQ Badge ── */
     .dq-badge {
       display: inline-block;
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       padding: 1px var(--space-4);
@@ -1123,15 +1225,15 @@
       vertical-align: middle;
     }
     .dq-badge.ok {
-      background: oklch(0.68 0.12 175 / 0.15);
+      background: oklch(from var(--system-healthy-fg) l c h / 0.15);
       color: var(--system-healthy-fg);
     }
     .dq-badge.warn {
-      background: oklch(0.77 0.14 80 / 0.15);
+      background: oklch(from var(--system-degraded-fg) l c h / 0.15);
       color: var(--system-degraded-fg);
     }
     .dq-badge.critical {
-      background: oklch(0.63 0.16 22 / 0.15);
+      background: oklch(from var(--system-down-fg) l c h / 0.15);
       color: var(--system-down-fg);
     }
 
@@ -1233,8 +1335,8 @@
       [data-overlay="overlay-task-detail"] { display: flex; }
 
     /* ── Overlay content refinement ── */
-    .overlay-sheet .overlay-header,
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header,
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1309,7 +1411,7 @@
      * Utility Classes — extracted from inline styles
      * ══════════════════════════════════════════════ */
 
-    /* Overlay label-as-button cursor (replaces style="cursor:pointer") */
+    /* Overlay label-as-button cursor (replaces former inline cursor style) */
     .overlay-btn-secondary,
     .overlay-btn-primary { cursor: pointer; }
 
@@ -1348,10 +1450,14 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
       padding: var(--space-8) var(--space-10);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
       line-height: 1.8;
+    }
+    .log-timestamp {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
     .overlay-warn-box {
       background: var(--surface-muted);
@@ -1367,7 +1473,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
       padding: var(--space-8);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
       line-height: 1.8;
@@ -1378,7 +1484,7 @@
     .overlay-field-value.color-healthy { color: var(--system-healthy-fg); }
 
     /* Overlay sheet narrow variant */
-    .overlay-sheet-narrow { max-width: 400px; }
+    .overlay-surface--narrow { max-width: 400px; }
 
     /* Status live inline color fix — already has .status-live class */
     .status-live-inline { color: var(--system-healthy-fg); }
@@ -1438,7 +1544,7 @@
     .state-error-icon-box {
       width: 20px;
       height: 20px;
-      font-size: 12px;
+      font-size: var(--font-size-12);
     }
     .state-error-text {
       color: var(--text-secondary);
@@ -1446,7 +1552,7 @@
     }
 
     /* Log line with healthy color */
-    .log-line-healthy { color: var(--system-healthy-fg); }
+    .log-line-healthy { color: var(--system-healthy-fg); font-family: var(--font-family-ui); }
 
     /* ══════════════════════════════════════════════
      * R3: Information Visualization — Health Gauges
@@ -1481,9 +1587,10 @@
     .health-gauge-label {
       position: absolute;
       font-family: var(--font-family-numeric);
-      font-size: 8px;
+      font-size: var(--font-size-10);
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     /* Overall health score ring — large variant */
@@ -1499,6 +1606,10 @@
     }
     .health-score-ring svg {
       transform: rotate(-90deg);
+    }
+    .health-score-ring svg text {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
     .health-score-ring-track {
       fill: none;
@@ -1532,7 +1643,7 @@
     .health-score-details {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
     .health-score-details-label {
       font-size: var(--font-size-12);
@@ -1540,15 +1651,17 @@
       color: var(--text-primary);
     }
     .health-score-details-sub {
+      font-family: var(--font-family-numeric);
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     /* API call mini chart — bar chart for hourly API call volume */
     .api-mini-chart {
       display: flex;
       align-items: flex-end;
-      gap: 2px;
+      gap: var(--space-2);
       height: 24px;
       padding: var(--space-2) 0;
     }
@@ -1571,7 +1684,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      border-radius: 2px;
+      border-radius: var(--radius-2);
       box-shadow: 0 0 6px 0 color-mix(in oklch, var(--system-down-fg) 30%, transparent);
       animation: bar-critical-pulse 2s ease-in-out infinite;
     }
@@ -1586,8 +1699,9 @@
       align-items: center;
       margin-left: var(--space-4);
     }
-    .health-inline-gauge svg {
-      transform: rotate(-90deg);
+    .health-inline-gauge svg text {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     /* ══════════════════════════════════════════════
@@ -1598,7 +1712,7 @@
     .topology-mini {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: var(--space-4);
       margin-left: var(--space-6);
       padding: 2px var(--space-4);
       background: var(--surface-elevated);
@@ -1630,8 +1744,8 @@
       animation: dot-critical-pulse 2s ease-in-out infinite;
     }
     @keyframes topo-warn-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.65; }
+      0%, 100% { opacity: var(--data-freshness-live, 1); }
+      50% { opacity: var(--data-freshness-aging, 0.65); }
     }
 
     /* Health score ring — glow based on score */
@@ -1768,6 +1882,10 @@
       vertical-align: middle;
       transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
+    .data-table td svg[data-donut] text {
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
     .data-table tr:hover td svg[data-donut] {
       transform: scale(1.1);
     }
@@ -1796,6 +1914,196 @@
       transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                   transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    /* ══════════════════════════════════════════════
+     * R7: Evidence strip — DQ history + incident timeline
+     * ══════════════════════════════════════════════ */
+    .shell-ops .tab-panels {
+      height: 100%;
+      min-height: 0;
+    }
+    .tab-group:has(#tab-providers:checked)
+      [data-panel="tab-providers"] {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .ops-evidence-strip {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+      gap: 0;
+      margin-top: var(--space-12);
+      border-top: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, var(--surface-strip) 0%, transparent 42%);
+    }
+    .ops-evidence-section {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-12);
+    }
+    .ops-evidence-section + .ops-evidence-section {
+      border-left: 1px solid var(--border-subtle);
+    }
+    .ops-evidence-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-12);
+      margin-bottom: var(--space-10);
+    }
+    .ops-evidence-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .ops-evidence-meta {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums slashed-zero;
+      white-space: nowrap;
+    }
+    .dq-history-grid {
+      flex: 1;
+      min-height: 112px;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-items: end;
+      gap: var(--space-6);
+      padding: var(--space-8) 0 var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      background:
+        linear-gradient(to bottom, transparent calc(25% - 1px), var(--border-subtle) 25%, transparent calc(25% + 1px)),
+        linear-gradient(to bottom, transparent calc(50% - 1px), var(--border-subtle) 50%, transparent calc(50% + 1px)),
+        linear-gradient(to bottom, transparent calc(75% - 1px), var(--border-subtle) 75%, transparent calc(75% + 1px));
+    }
+    .dq-point {
+      min-width: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-4);
+    }
+    .dq-bar {
+      width: min(100%, 18px);
+      border-radius: var(--radius-2) var(--radius-2) 0 0;
+      background: var(--system-healthy-fg);
+      opacity: 0.78;
+      box-shadow: 0 0 8px -5px color-mix(in oklch, var(--system-healthy-fg) 45%, transparent);
+    }
+    .dq-point.warn .dq-bar {
+      background: var(--system-degraded-fg);
+      box-shadow: 0 0 8px -5px color-mix(in oklch, var(--system-degraded-fg) 45%, transparent);
+    }
+    .dq-point.down .dq-bar {
+      background: var(--system-down-fg);
+      box-shadow: 0 0 8px -5px color-mix(in oklch, var(--system-down-fg) 45%, transparent);
+    }
+    .dq-point-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+    .dq-point-label {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-10);
+      color: var(--text-disabled);
+      font-variant-numeric: tabular-nums;
+    }
+    .dq-h-48 { height: 48%; }
+    .dq-h-52 { height: 52%; }
+    .dq-h-58 { height: 58%; }
+    .dq-h-62 { height: 62%; }
+    .dq-h-68 { height: 68%; }
+    .dq-h-72 { height: 72%; }
+    .dq-h-76 { height: 76%; }
+    .dq-h-80 { height: 80%; }
+    .dq-h-82 { height: 82%; }
+    .dq-h-84 { height: 84%; }
+    .dq-h-88 { height: 88%; }
+    .dq-signal-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-8);
+      padding-top: var(--space-10);
+    }
+    .dq-signal {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .dq-signal-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+    }
+    .dq-signal-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+    .dq-signal-value.ok { color: var(--system-healthy-fg); }
+    .dq-signal-value.warn { color: var(--system-degraded-fg); }
+    .dq-signal-value.down { color: var(--system-down-fg); }
+    .incident-stream {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .incident-row {
+      display: grid;
+      grid-template-columns: 56px 72px minmax(0, 1fr) 72px;
+      align-items: center;
+      gap: var(--space-8);
+      flex: 1;
+      min-height: 31px;
+      padding: var(--space-5) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: var(--font-size-12);
+    }
+    .incident-row:last-child {
+      border-bottom: none;
+    }
+    .incident-time,
+    .incident-status {
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums slashed-zero;
+      white-space: nowrap;
+    }
+    .incident-service {
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .incident-summary {
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .incident-row.critical .incident-status,
+    .incident-row.critical .incident-service {
+      color: var(--system-down-fg);
+    }
+    .incident-row.warning .incident-status,
+    .incident-row.warning .incident-service {
+      color: var(--system-degraded-fg);
+    }
+    .incident-row.ok .incident-status {
+      color: var(--system-healthy-fg);
+    }
   </style>
 </head>
 <body>
@@ -1803,14 +2111,6 @@
   <svg class="noise-svg-source" aria-hidden="true">
     <defs>
       <filter id="noise-filter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
-      <linearGradient id="spark-fill-ok" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="oklch(0.68 0.12 175)" stop-opacity="0.15"/>
-        <stop offset="100%" stop-color="oklch(0.68 0.12 175)" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="spark-fill-warn" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="oklch(0.77 0.14 80)" stop-opacity="0.15"/>
-        <stop offset="100%" stop-color="oklch(0.77 0.14 80)" stop-opacity="0"/>
-      </linearGradient>
     </defs>
   </svg>
   <!-- ═══ Zone Navigation Radios ═══ -->
@@ -1837,50 +2137,57 @@
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="首页" title="首页" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="市场" title="市场" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="研究" title="研究" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易">
+        <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </div>
-        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="运维" title="运维">
+        <div class="rail-icon active" tabindex="0" role="button" aria-current="page" aria-label="运维" title="运维" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" tabindex="0" role="button" aria-label="设置" title="设置">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">Platform<span class="header-subtitle">平台运维</span></span>
+      <span class="header-title">平台运维</span>
       <div class="env-badge">
         <span class="env-badge-dot"></span>
         生产环境
       </div>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <div class="btn btn-sm" tabindex="0" role="button" title="刷新">
@@ -1891,10 +2198,10 @@
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h14v12H3z"/><path d="M3 9h14M7 4v12M10 9v7"/></svg>
           <span class="badge-count">4</span>
         </div>
-        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知">
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知" data-shell-utility="notifications">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
         </div>
-        <div class="header-avatar" tabindex="0" role="button" aria-label="用户菜单">C</div>
+        
       </div>
     </header>
 
@@ -1944,7 +2251,7 @@
           <div class="health-inline-gauge">
             <svg data-donut='{"value":0.8,"size":16,"strokeWidth":2,"color":"var(--system-degraded-fg)","trackColor":"var(--border-subtle)","label":""}' width="16" height="16"></svg>
           </div>
-          <span class="health-metric-value warn">4/5</span><span class="health-trend down">↓</span> <svg data-sparkline='{"data":[5,5,5,4,5,4,5,4],"series":"down","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
+          <span class="health-metric-value warn">4/5</span><span class="health-trend warn">!</span> <svg data-sparkline='{"data":[5,5,5,4,5,4,5,4],"series":"down","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
         </div>
         <div class="health-metric" data-tooltip="运行中任务 2/4，1 个已失败" data-tooltip-pos="bottom">
           <span class="health-metric-dot brand"></span>
@@ -1984,9 +2291,9 @@
           <div class="panel-header">
             <div class="panel-tabs">
               <label for="tab-providers" class="panel-tab panel-tab-radio active" data-tab-label="tab-providers" data-tab-target="services" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
-              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" data-tab-target="performance" role="tab" aria-selected="false">管道与任务 <span class="panel-subtitle">运行中 2</span></label>
-              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" data-tab-target="logs" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical">4</span></label>
-              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" data-tab-target="resources" role="tab" aria-selected="false">资源/配额</label>
+              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" data-tab-target="performance" role="tab" aria-selected="false">任务执行 <span class="panel-subtitle">运行中 2</span></label>
+              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" data-tab-target="logs" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical"><span class="status-value">4</span></span></label>
+              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" data-tab-target="resources" role="tab" aria-selected="false">资源与配额</label>
             </div>
           </div>
           <div class="panel-body">
@@ -2017,10 +2324,10 @@
                         </span>
                       </td>
                       <td class="cell-numeric">99.8<span class="dq-badge ok">优</span></td>
-                      <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 5 L16 8 L24 4 L32 6 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
+                      <td class="cell-numeric">2s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 7 L8 5 L16 8 L24 4 L32 6 L40 7"/></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text critical" data-tooltip="配额将在约 3 小时后重置" data-tooltip-pos="bottom">4,820/5,000</span>
+                          <span class="quota-text critical" data-tooltip="配额将在约 3 小时后重置" data-tooltip-pos="bottom"><span class="quota-value">4,820/5,000</span></span>
                           <div class="quota-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="Tushare API 配额 96.4%"><div class="quota-bar-fill critical bar-w-96"></div></div>
                         </div>
                       </td>
@@ -2049,7 +2356,7 @@
                         </span>
                       </td>
                       <td class="cell-numeric">99.9<span class="dq-badge ok">优</span></td>
-                      <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 7 L8 6 L16 7 L24 5 L32 7 L40 6 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
+                      <td class="cell-numeric">1s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 7 L8 6 L16 7 L24 5 L32 7 L40 6"/></svg></td>
                       <td>
                         <span class="quota-text ok">无限制</span>
                       </td>
@@ -2078,10 +2385,10 @@
                         </span>
                       </td>
                       <td class="cell-numeric">97.2<span class="dq-badge warn">良</span></td>
-                      <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 14 L0 6 L8 7 L16 10 L24 12 L32 13 L40 13 L40 14Z" fill="url(#spark-fill-warn)"/><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
+                      <td class="cell-numeric cell-warn">45s<svg class="sparkline warn" viewBox="0 0 40 14"><path d="M0 6 L8 7 L16 10 L24 12 L32 13 L40 13"/></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text warn">8,200/10,000</span>
+                          <span class="quota-text warn"><span class="quota-value">8,200/10,000</span></span>
                           <div class="quota-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="东方财富 Choice API 配额 82%"><div class="quota-bar-fill warn bar-w-82"></div></div>
                         </div>
                       </td>
@@ -2110,10 +2417,10 @@
                         </span>
                       </td>
                       <td class="cell-numeric">99.5<span class="dq-badge ok">优</span></td>
-                      <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 14 L0 8 L8 7 L16 6 L24 8 L32 5 L40 7 L40 14Z" fill="url(#spark-fill-ok)"/><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
+                      <td class="cell-numeric">3s<svg class="sparkline ok" viewBox="0 0 40 14"><path d="M0 8 L8 7 L16 6 L24 8 L32 5 L40 7"/></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text ok">2,100/3,000</span>
+                          <span class="quota-text ok"><span class="quota-value">2,100/3,000</span></span>
                           <div class="quota-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="同花顺 iFind API 配额 70%"><div class="quota-bar-fill ok bar-w-70"></div></div>
                         </div>
                       </td>
@@ -2140,22 +2447,146 @@
                           <span class="status-dot-dot down"></span>
                           断开
                         </span>
-                        <span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span>
                       </td>
                       <td class="cell-disabled">—</td>
                       <td class="cell-disabled">—</td>
                       <td>
                         <span class="quota-text muted">—</span>
                       </td>
-                      <td class="cell-disabled">14:15:00</td>
-                      <td class="right cell-disabled">0</td>
-                      <td class="right cell-disabled">—</td>
+                      <td class="cell-disabled"><span class="cell-numeric">14:15:00</span></td>
+                      <td class="right cell-disabled"><span class="cell-numeric">0</span></td>
+                      <td class="right"><span class="row-action" tabindex="0" role="button" aria-label="重试连接聚宽">重试</span></td>
                     </tr>
                   </tbody>
                 </table>
 
                 <!-- State Variants: Data Providers -->
-                
+                <div class="ops-evidence-strip" data-ops-evidence-strip>
+                  <section class="ops-evidence-section" data-dq-score-history aria-label="数据质量评分历史">
+                    <div class="ops-evidence-header">
+                      <span class="ops-evidence-title">DQ 评分历史</span>
+                      <span class="ops-evidence-meta">12:00–14:45 · 15m bucket</span>
+                    </div>
+                    <div class="dq-history-grid" aria-label="最近 12 个数据质量评分采样点">
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-80"></div>
+                        <span class="dq-point-value">99.5</span>
+                        <span class="dq-point-label">12:00</span>
+                      </div>
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-84"></div>
+                        <span class="dq-point-value">99.7</span>
+                        <span class="dq-point-label">12:15</span>
+                      </div>
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-82"></div>
+                        <span class="dq-point-value">99.6</span>
+                        <span class="dq-point-label">12:30</span>
+                      </div>
+                      <div class="dq-point warn" data-dq-point>
+                        <div class="dq-bar dq-h-62"></div>
+                        <span class="dq-point-value">97.9</span>
+                        <span class="dq-point-label">12:45</span>
+                      </div>
+                      <div class="dq-point down" data-dq-point>
+                        <div class="dq-bar dq-h-48"></div>
+                        <span class="dq-point-value">96.8</span>
+                        <span class="dq-point-label">13:00</span>
+                      </div>
+                      <div class="dq-point warn" data-dq-point>
+                        <div class="dq-bar dq-h-58"></div>
+                        <span class="dq-point-value">97.4</span>
+                        <span class="dq-point-label">13:15</span>
+                      </div>
+                      <div class="dq-point warn" data-dq-point>
+                        <div class="dq-bar dq-h-68"></div>
+                        <span class="dq-point-value">98.2</span>
+                        <span class="dq-point-label">13:30</span>
+                      </div>
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-76"></div>
+                        <span class="dq-point-value">99.0</span>
+                        <span class="dq-point-label">13:45</span>
+                      </div>
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-80"></div>
+                        <span class="dq-point-value">99.3</span>
+                        <span class="dq-point-label">14:00</span>
+                      </div>
+                      <div class="dq-point warn" data-dq-point>
+                        <div class="dq-bar dq-h-72"></div>
+                        <span class="dq-point-value">98.7</span>
+                        <span class="dq-point-label">14:15</span>
+                      </div>
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-84"></div>
+                        <span class="dq-point-value">99.4</span>
+                        <span class="dq-point-label">14:30</span>
+                      </div>
+                      <div class="dq-point" data-dq-point>
+                        <div class="dq-bar dq-h-88"></div>
+                        <span class="dq-point-value">99.8</span>
+                        <span class="dq-point-label">14:45</span>
+                      </div>
+                    </div>
+                    <div class="dq-signal-row">
+                      <div class="dq-signal">
+                        <span class="dq-signal-label">缺失率</span>
+                        <span class="dq-signal-value ok">0.02%</span>
+                      </div>
+                      <div class="dq-signal">
+                        <span class="dq-signal-label">异常率</span>
+                        <span class="dq-signal-value warn">0.18%</span>
+                      </div>
+                      <div class="dq-signal">
+                        <span class="dq-signal-label">校验规则</span>
+                        <span class="dq-signal-value ok">48/50</span>
+                      </div>
+                      <div class="dq-signal">
+                        <span class="dq-signal-label">SLA</span>
+                        <span class="dq-signal-value down">1 breach</span>
+                      </div>
+                    </div>
+                  </section>
+                  <section class="ops-evidence-section" data-incident-history aria-label="事件历史">
+                    <div class="ops-evidence-header">
+                      <span class="ops-evidence-title">Incident History</span>
+                      <span class="ops-evidence-meta">5 events · latest first</span>
+                    </div>
+                    <div class="incident-stream">
+                      <div class="incident-row ok" data-incident-row>
+                        <span class="incident-time">14:32</span>
+                        <span class="incident-service">Tushare</span>
+                        <span class="incident-summary">日线同步完成 · 5,242 rows</span>
+                        <span class="incident-status">closed</span>
+                      </div>
+                      <div class="incident-row warning" data-incident-row>
+                        <span class="incident-time">14:20</span>
+                        <span class="incident-service">Quota</span>
+                        <span class="incident-summary">API 配额 96.4%，已进入降频阈值</span>
+                        <span class="incident-status">watch</span>
+                      </div>
+                      <div class="incident-row critical" data-incident-row>
+                        <span class="incident-time">13:54</span>
+                        <span class="incident-service">SSE L2</span>
+                        <span class="incident-summary">行情网关超时 45s，备用源接管</span>
+                        <span class="incident-status">open</span>
+                      </div>
+                      <div class="incident-row critical" data-incident-row>
+                        <span class="incident-time">12:32</span>
+                        <span class="incident-service">Model</span>
+                        <span class="incident-summary">情绪 Alpha v2 返回 503，重试 2 次</span>
+                        <span class="incident-status">open</span>
+                      </div>
+                      <div class="incident-row warning" data-incident-row>
+                        <span class="incident-time">14:15</span>
+                        <span class="incident-service">JoinQuant</span>
+                        <span class="incident-summary">Provider 断开，已发送告警</span>
+                        <span class="incident-status">queued</span>
+                      </div>
+                    </div>
+                  </section>
+                </div>
                 
                 
               </div>
@@ -2178,7 +2609,7 @@
                       <td class="cell-name">日线行情同步</td>
                       <td><span class="status-dot ok" data-tooltip="定时执行中，每 30 分钟同步一次"><span class="status-dot-dot ok"></span>运行中</span></td>
                       <td class="cell-time">14:30:00</td>
-                      <td class="cell-numeric">—</td>
+                      <td>—</td>
                       <td>定时（每 30 分钟）</td>
                       <td class="right">
                         
@@ -2189,7 +2620,7 @@
                       <td class="cell-name">财务数据更新</td>
                       <td><span class="status-dot warn" data-tooltip="手动触发，当前排队中第 2 位"><span class="status-dot-dot warn"></span>排队中</span></td>
                       <td class="cell-time">14:00:00</td>
-                      <td class="cell-numeric">12 分钟</td>
+                      <td><span class="cell-numeric">12</span> 分钟</td>
                       <td>手动触发</td>
                       <td class="right">
                         <label for="overlay-task-detail" class="row-action">详情</label>
@@ -2197,9 +2628,9 @@
                     </tr>
                     <tr data-reveal="fade-up" data-reveal-delay="250">
                       <td class="cell-name">因子计算 · 北向持仓变化率</td>
-                      <td><span class="status-dot warn" data-tooltip="依赖触发，计算进度 67%，已积压 15 分钟"><span class="status-dot-dot warn"></span>计算中 67%</span></td>
+                      <td><span class="status-dot warn" data-tooltip="依赖触发，运行进度 67%，已积压 15 分钟"><span class="status-dot-dot warn"></span>运行中 67%</span></td>
                       <td class="cell-time">14:28:00</td>
-                      <td class="cell-numeric">—</td>
+                      <td>—</td>
                       <td>依赖触发</td>
                       <td class="right">
                         <label for="overlay-task-detail" class="row-action">详情</label>
@@ -2209,7 +2640,7 @@
                       <td class="cell-name">模型评分 · 情绪 Alpha v2</td>
                       <td><span class="status-dot down" data-tooltip="服务返回 503，需重试"><span class="status-dot-dot down"></span>已失败</span></td>
                       <td class="cell-time">12:32:15</td>
-                      <td class="cell-numeric">2 分钟</td>
+                      <td><span class="cell-numeric">2</span> 分钟</td>
                       <td>手动触发</td>
                       <td class="right">
                         <label for="overlay-pipeline-rerun" class="row-action">重试</label>
@@ -2280,6 +2711,7 @@
                       <th scope="col">资源</th>
                       <th scope="col">使用量</th>
                       <th scope="col">占比</th>
+                      <th scope="col">进度</th>
                       <th scope="col">状态</th>
                     </tr>
                   </thead>
@@ -2290,7 +2722,7 @@
                       <td><svg data-donut='{"value":0.964,"size":28,"strokeWidth":3,"color":"var(--system-down-fg)","trackColor":"var(--border-subtle)","label":"96%"}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text critical">96.4%</span>
+                          <span class="quota-text critical"><span class="quota-value">96.4%</span></span>
                           <div class="quota-bar"><div class="quota-bar-fill critical bar-w-96"></div></div>
                         </div>
                       </td>
@@ -2298,11 +2730,11 @@
                     </tr>
                     <tr data-reveal="fade-up" data-reveal-delay="200">
                       <td class="cell-name">CPU 使用率</td>
-                      <td class="cell-numeric">—</td>
+                      <td>—</td>
                       <td><svg data-donut='{"value":0.23,"size":28,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text ok">23%</span>
+                          <span class="quota-text ok"><span class="quota-value">23%</span></span>
                           <div class="quota-bar"><div class="quota-bar-fill ok bar-w-23"></div></div>
                         </div>
                       </td>
@@ -2314,7 +2746,7 @@
                       <td><svg data-donut='{"value":0.26,"size":28,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text ok">26%</span>
+                          <span class="quota-text ok"><span class="quota-value">26%</span></span>
                           <div class="quota-bar"><div class="quota-bar-fill ok bar-w-26"></div></div>
                         </div>
                       </td>
@@ -2326,7 +2758,7 @@
                       <td><svg data-donut='{"value":0.25,"size":28,"strokeWidth":3,"color":"var(--system-healthy-fg)","trackColor":"var(--border-subtle)","label":""}' width="28" height="28"></svg></td>
                       <td>
                         <div class="quota-cell">
-                          <span class="quota-text ok">25%</span>
+                          <span class="quota-text ok"><span class="quota-value">25%</span></span>
                           <div class="quota-bar"><div class="quota-bar-fill ok bar-w-25"></div></div>
                         </div>
                       </td>
@@ -2349,105 +2781,61 @@
     <!-- ═══ Detail Panel (340px right side) ═══ -->
     <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-accent) l c h / 0.03)" data-mouse-glow-size="250px">
       <div class="context-rail" data-contract-slot="rail">
-        <!-- Section 1: 管道/任务 -->
+        <!-- Section 1: 任务概览（聚合摘要，非逐条重复 Tab 2） -->
         <div class="context-section" data-reveal="fade-up" data-reveal-delay="250">
           <div class="context-section-header">
-            <span class="context-section-title">管道与任务</span>
-            <span class="panel-count panel-count-healthy">运行中 2</span>
+            <span class="context-section-title">任务概览</span>
+            <span class="panel-count panel-count-healthy"><span class="status-value">4</span> 任务</span>
           </div>
           <div class="context-section-body">
-            <!-- Task 1: 日线行情同步 — running -->
-            <div class="task-item running" data-reveal="fade-up" data-reveal-delay="280">
-              <span class="task-status-icon">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
-              </span>
-              <div class="task-body">
-                <span class="task-name">日线行情同步</span>
-                <span class="task-meta">Tushare + Wind</span>
+            <div class="task-summary-grid" data-reveal="fade-up" data-reveal-delay="280">
+              <div class="task-summary-card ok">
+                <span class="task-summary-count">2</span>
+                <span class="task-summary-label">运行中</span>
               </div>
-              <span class="task-status running" data-tooltip="Tushare + Wind 日线数据同步中" data-tooltip-pos="left">运行中 · 剩余 2 分钟</span>
+              <div class="task-summary-card warn">
+                <span class="task-summary-count">1</span>
+                <span class="task-summary-label">排队中</span>
+              </div>
+              <div class="task-summary-card down">
+                <span class="task-summary-count">1</span>
+                <span class="task-summary-label">已失败</span>
+              </div>
+              <div class="task-summary-card brand">
+                <span class="task-summary-count">15<span class="task-summary-unit">min</span></span>
+                <span class="task-summary-label">最大积压</span>
+              </div>
             </div>
-            <!-- Task 2: 财务数据更新 — waiting -->
-            <div class="task-item waiting" data-reveal="fade-up" data-reveal-delay="340">
-              <span class="task-status-icon">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
-              </span>
-              <div class="task-body">
-                <span class="task-name">财务数据更新</span>
-                <span class="task-meta">东方财富 Choice</span>
-              </div>
-              <span class="task-status waiting" data-tooltip="等待东方财富 API 连接" data-tooltip-pos="left">排队中 · 第 2 位</span>
-            </div>
-            <!-- Task 3: 因子计算 — progress -->
-            <div class="task-item progress" data-reveal="fade-up" data-reveal-delay="400">
-              <span class="task-status-icon">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
-              </span>
-              <div class="task-body">
-                <span class="task-name">因子计算 · 北向持仓变化率</span>
-                <span class="task-meta">计算中 67%</span>
-              </div>
-              <span class="task-status progress" data-tooltip="北向持仓变化率因子计算 67%" data-tooltip-pos="left">计算中 · 积压 15 分钟</span>
-            </div>
-            <!-- Task 4: 模型评分 — failed -->
-            <div class="task-item failed" data-reveal="fade-up" data-reveal-delay="460">
-              <span class="task-status-icon">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 5l10 10M15 5L5 15"/></svg>
-              </span>
-              <div class="task-body">
-                <span class="task-name">模型评分 · 情绪 Alpha v2</span>
-                <span class="task-meta">服务返回 503</span>
-              </div>
-              <span class="task-status failed" data-tooltip="服务返回 503 错误，建议手动重试" data-tooltip-pos="left">已失败 · 需重试</span>
+            <!-- 下一个截止事件 -->
+            <div class="next-event" data-reveal="fade-up" data-reveal-delay="340">
+              <span class="next-event-label">下次定时</span>
+              <span class="next-event-value">日线行情同步 <span class="next-event-time">15:00:00</span></span>
             </div>
           </div>
         </div>
 
-        <!-- Section 2: 资源/配额 -->
+        <!-- Section 2: 配额预警（只展示需关注的项，非重复 Tab 4） -->
         <div class="context-section" data-reveal="fade-up" data-reveal-delay="350">
           <div class="context-section-header">
-            <span class="context-section-title">资源与配额</span>
+            <span class="context-section-title">配额预警</span>
+            <span class="panel-count panel-count-down"><span class="status-value">1</span> 项</span>
           </div>
           <div class="context-section-body">
-            <!-- API 配额 (Tushare) — critical -->
             <div class="resource-item" data-reveal="fade-up" data-reveal-delay="380">
               <div class="resource-header">
                 <span class="resource-label">API 配额 (Tushare)</span>
-                <span class="resource-value critical"><span data-counter="96.4" data-counter-decimals="1" data-counter-suffix="%">96.4%</span> — 4,820/5,000</span>
+                <span class="resource-value critical"><span data-counter="96.4" data-counter-decimals="1" data-counter-suffix="%">96.4%</span></span>
               </div>
               <div class="resource-bar" role="progressbar" aria-valuenow="96.4" aria-valuemin="0" aria-valuemax="100" aria-label="API 配额 (Tushare) 96.4%" data-tooltip="API 配额将在约 3 小时后重置" data-tooltip-pos="left">
                 <div class="resource-bar-fill critical bar-w-96"></div>
               </div>
+              <span class="resource-hint">剩余 180 次 · 约 3h 后重置</span>
             </div>
-            <!-- CPU 使用率 — ok -->
-            <div class="resource-item" data-reveal="fade-up" data-reveal-delay="530">
-              <div class="resource-header">
-                <span class="resource-label">CPU 使用率</span>
-                <span class="resource-value ok"><span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span></span>
-              </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="23" aria-valuemin="0" aria-valuemax="100" aria-label="CPU 使用率 23%" data-tooltip="CPU 负载正常，低于 50% 阈值" data-tooltip-pos="left">
-                <div class="resource-bar-fill ok bar-w-23"></div>
-              </div>
-            </div>
-            <!-- 内存使用 — ok -->
-            <div class="resource-item" data-reveal="fade-up" data-reveal-delay="430">
-              <div class="resource-header">
-                <span class="resource-label">内存使用</span>
-                <span class="resource-value ok"><span data-counter="4.2" data-counter-decimals="1">4.2</span> / 16 GB</span>
-              </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="26" aria-valuemin="0" aria-valuemax="100" aria-label="内存使用 26%" data-tooltip="内存使用 4.2GB / 16GB，充裕" data-tooltip-pos="left">
-                <div class="resource-bar-fill ok bar-w-26"></div>
-              </div>
-            </div>
-            <!-- 磁盘空间 — ok -->
-            <div class="resource-item">
-              <div class="resource-header">
-                <span class="resource-label">磁盘空间</span>
-                <span class="resource-value ok"><span data-counter="128" data-counter-decimals="0">128</span> / 512 GB</span>
-              </div>
-              <div class="resource-bar" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" aria-label="磁盘空间 25%" data-tooltip="磁盘使用 128GB / 512GB" data-tooltip-pos="left">
-                <div class="resource-bar-fill ok bar-w-25"></div>
-              </div>
+            <!-- 资源健康汇总（一行 compact） -->
+            <div class="resource-compact-row" data-reveal="fade-up" data-reveal-delay="430">
+              <span class="resource-compact-item ok">CPU 23%</span>
+              <span class="resource-compact-item ok"><span class="resource-compact-label">内存</span> <span class="resource-compact-value">26%</span></span>
+              <span class="resource-compact-item ok"><span class="resource-compact-label">磁盘</span> <span class="resource-compact-value">25%</span></span>
             </div>
           </div>
         </div>
@@ -2487,15 +2875,15 @@
   <!-- R1: Status Bar — terminal DNA -->
   <div class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator" aria-hidden="true" data-tooltip="系统运行正常，实时数据流已连接" data-tooltip-pos="top"></span>
-    <span class="status-live">LIVE</span>
+    <span class="status-live">实时</span>
     <span class="status-sep">│</span>
-    <span>4/5 数据源在线</span>
+    <span><span class="status-value">4/5</span> 数据源在线</span>
     <span class="status-sep">│</span>
-    <span>延迟 <span class="status-live status-live-inline" data-tooltip="平均 API 延迟 2 秒" data-tooltip-pos="top">2s</span></span>
+    <span>延迟 <span class="status-value status-live status-live-inline" data-tooltip="平均 API 延迟 2 秒" data-tooltip-pos="top">2s</span></span>
     <span class="status-sep">│</span>
-    <span>14:32:15 CST</span>
+    <span><span class="status-value">14:32:15</span> CST</span>
     <span class="status-sep">│</span>
-    <span>CPU <span data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span> · MEM <span data-counter="26" data-counter-decimals="0" data-counter-suffix="%">26%</span></span>
+    <span>CPU <span class="status-value" data-counter="23" data-counter-decimals="0" data-counter-suffix="%">23%</span> · 内存 <span class="status-value" data-counter="26" data-counter-decimals="0" data-counter-suffix="%">26%</span></span>
     <span class="status-spacer"></span>
     <span class="status-kbd">Ctrl+K</span> 搜索
   </div>
@@ -2513,7 +2901,7 @@
     <!-- Overlay A: 异常处理 Modal (居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-alert-handle">
       <label class="overlay-dismiss" for="overlay-alert-handle" aria-label="关闭"></label>
-      <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="异常处理">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="异常处理">
         <div class="overlay-header">
           <span class="overlay-title">异常处理</span>
           <label for="overlay-alert-handle" class="overlay-close" aria-label="关闭">✕</label>
@@ -2525,7 +2913,7 @@
           <h4>影响范围</h4>
           <div class="overlay-field">
             <span class="overlay-field-label">受影响服务</span>
-            <span class="overlay-field-value">行情数据同步 Pipeline</span>
+            <span class="overlay-field-value">行情数据同步管道</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">数据源</span>
@@ -2533,7 +2921,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">持续时间</span>
-            <span class="overlay-field-value color-down">38 分钟</span>
+            <span class="overlay-field-value color-down"><span class="status-value">38</span> 分钟</span>
           </div>
 
           <h4>根因分析</h4>
@@ -2551,9 +2939,9 @@
     <!-- Overlay B: Pipeline 重跑确认 Dialog (居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-pipeline-rerun">
       <label class="overlay-dismiss" for="overlay-pipeline-rerun" aria-label="关闭"></label>
-      <div class="overlay-sheet overlay-sheet-narrow" role="dialog" aria-modal="true" aria-label="确认重跑">
+      <div class="overlay-surface overlay-surface--sheet overlay-surface--narrow" role="dialog" aria-modal="true" aria-label="确认重跑">
         <div class="overlay-header">
-          <span class="overlay-title">确认重跑 Pipeline</span>
+          <span class="overlay-title">确认重跑管道</span>
           <label for="overlay-pipeline-rerun" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
@@ -2574,7 +2962,7 @@
     <!-- Overlay C: 任务详情 Drawer (右侧滑入) -->
     <div class="overlay-backdrop" data-overlay="overlay-task-detail">
       <label class="overlay-dismiss" for="overlay-task-detail" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="任务详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="任务详情">
         <div class="overlay-header">
           <span class="overlay-title">任务详情</span>
           <label for="overlay-task-detail" class="overlay-close" aria-label="关闭">✕</label>
@@ -2586,7 +2974,7 @@
             <span class="overlay-field-value">日线行情同步</span>
           </div>
           <div class="overlay-field">
-            <span class="overlay-field-label">Pipeline</span>
+            <span class="overlay-field-label">管道</span>
             <span class="overlay-field-value">daily-quote-sync</span>
           </div>
           <div class="overlay-field">
@@ -2609,21 +2997,21 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">开始时间</span>
-            <span class="overlay-field-value">14:30:00</span>
+            <span class="overlay-field-value"><span class="status-value">14:30:00</span></span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">预计剩余</span>
-            <span class="overlay-field-value">2 分钟</span>
+            <span class="overlay-field-value"><span class="status-value">2</span> 分钟</span>
           </div>
 
           <h4>运行日志</h4>
           <div class="overlay-log-box-compact">
-            <div>14:30:00 任务启动</div>
-            <div>14:30:01 连接 Tushare API...</div>
-            <div>14:30:03 获取日线数据 · 共 5,242 条</div>
-            <div>14:30:15 Tushare 同步完成 · 5,242/5,242</div>
-            <div>14:30:16 连接 Wind API...</div>
-            <div class="log-line-healthy">14:30:18 Wind 同步进行中 · 3,812/4,100</div>
+            <div><span class="log-timestamp">14:30:00</span> 任务启动</div>
+            <div><span class="log-timestamp">14:30:01</span> 连接 Tushare API...</div>
+            <div><span class="log-timestamp">14:30:03</span> 获取日线数据 · 共 5,242 条</div>
+            <div><span class="log-timestamp">14:30:15</span> Tushare 同步完成 · 5,242/5,242</div>
+            <div><span class="log-timestamp">14:30:16</span> 连接 Wind API...</div>
+            <div class="log-line-healthy"><span class="log-timestamp">14:30:18</span> Wind 同步进行中 · 3,812/4,100</div>
           </div>
 
           <div class="overlay-actions">
@@ -2813,7 +3201,7 @@
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           </div>
           <div class="state-stale-title">任务队列数据过期</div>
-          <div class="state-stale-desc">Pipeline 状态最后更新于 8 分钟前，运行中的任务可能已变化</div>
+          <div class="state-stale-desc">管道状态最后更新于 8 分钟前，运行中的任务可能已变化</div>
           <button class="state-stale-retry">立即刷新</button>
         </div>
       </div>
@@ -2950,10 +3338,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-pipeline-rerun">
       <div class="gallery-card__label">异常处理 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet" role="dialog" aria-modal="true" aria-label="异常处理">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="异常处理">
           <div class="overlay-header">
             <span class="overlay-title">异常处理</span>
           </div>
@@ -2964,7 +3352,7 @@
             <h4>影响范围</h4>
             <div class="overlay-field">
               <span class="overlay-field-label">受影响服务</span>
-              <span class="overlay-field-value">行情数据同步 Pipeline</span>
+              <span class="overlay-field-value">行情数据同步管道</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">数据源</span>
@@ -2972,7 +3360,7 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">持续时间</span>
-              <span class="overlay-field-value color-down">38 分钟</span>
+              <span class="overlay-field-value color-down"><span class="status-value">38</span> 分钟</span>
             </div>
 
             <h4>根因分析</h4>
@@ -2988,12 +3376,12 @@
       </div>
     </div>
 
-    <div class="gallery-card">
-      <div class="gallery-card__label">确认重跑 Pipeline (Sheet)</div>
+    <div class="gallery-card" data-overlay-ref="overlay-alert-handle">
+      <div class="gallery-card__label">确认重跑管道 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-sheet overlay-sheet-narrow" role="dialog" aria-modal="true" aria-label="确认重跑">
+        <div class="overlay-surface overlay-surface--sheet overlay-surface--narrow" role="dialog" aria-modal="true" aria-label="确认重跑">
           <div class="overlay-header">
-            <span class="overlay-title">确认重跑 Pipeline</span>
+            <span class="overlay-title">确认重跑管道</span>
           </div>
           <div class="overlay-body">
             <p class="overlay-text-secondary">
@@ -3011,10 +3399,10 @@
       </div>
     </div>
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-task-detail">
       <div class="gallery-card__label">任务详情 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="任务详情">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="任务详情">
           <div class="overlay-header">
             <span class="overlay-title">任务详情</span>
           </div>
@@ -3025,7 +3413,7 @@
               <span class="overlay-field-value">日线行情同步</span>
             </div>
             <div class="overlay-field">
-              <span class="overlay-field-label">Pipeline</span>
+              <span class="overlay-field-label">管道</span>
               <span class="overlay-field-value">daily-quote-sync</span>
             </div>
             <div class="overlay-field">
@@ -3048,11 +3436,11 @@
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">开始时间</span>
-              <span class="overlay-field-value">14:30:00</span>
+              <span class="overlay-field-value"><span class="status-value">14:30:00</span></span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">预计剩余</span>
-              <span class="overlay-field-value">2 分钟</span>
+              <span class="overlay-field-value"><span class="status-value">2</span> 分钟</span>
             </div>
 
             <h4>运行日志</h4>

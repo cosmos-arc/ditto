@@ -32,9 +32,19 @@ describe("useUIPreferences store", () => {
 		expect(useUIPreferences.getState().theme).toBe("light");
 	});
 
+	it("setTheme syncs the DOM without a separate stale apply call", () => {
+		useUIPreferences.getState().setTheme("light");
+		expect(document.documentElement).toHaveAttribute("data-theme", "light");
+	});
+
 	it("setDensity updates density value", () => {
 		useUIPreferences.getState().setDensity("dense");
 		expect(useUIPreferences.getState().density).toBe("dense");
+	});
+
+	it("setDensity syncs the DOM without a separate stale apply call", () => {
+		useUIPreferences.getState().setDensity("dense");
+		expect(document.documentElement).toHaveAttribute("data-density", "dense");
 	});
 
 	it("setDensity cycles through all values", () => {

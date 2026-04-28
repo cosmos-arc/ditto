@@ -3,5 +3,5 @@ import { CalendarPage } from "@/features/markets";
 
 export const Route = createFileRoute("/markets/calendar")({
 	component: CalendarPage,
-	handle: { title: "事件日历" },
+	staticData: { title: "事件日历" },
 });

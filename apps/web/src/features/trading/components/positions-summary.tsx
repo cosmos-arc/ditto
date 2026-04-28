@@ -146,7 +146,7 @@ function SummaryFooter({ positions }: { readonly positions: readonly Position[] 
 }
 
 export function PositionsSummary() {
-	const { data, isLoading, isError, refetch } = usePositions();
+	const { data, isLoading, refetch } = usePositions();
 
 	return (
 		<div data-slot="positions-summary" data-info-level="l1" data-info-unit="positions-summary">

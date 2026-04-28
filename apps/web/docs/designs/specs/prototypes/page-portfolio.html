@@ -45,6 +45,18 @@
 
   <style>
     .style-label { position: fixed; top: var(--space-8); right: var(--space-8); z-index: 999; font-family: var(--font-family-ui); font-size: var(--font-size-10); color: var(--brand-signature-fg); background: var(--surface-overlay); border: 1px solid var(--border-subtle); padding: var(--space-3) var(--space-8); border-radius: var(--radius-4); pointer-events: none; letter-spacing: 0.02em; }
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: var(--space-4) var(--space-8);
+      background: var(--surface-overlay);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      border-radius: var(--radius-4);
+    }
+    .skip-link:focus { left: var(--space-16); }
     .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0.01em; }
     .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
     .header-title-group { display: flex; align-items: baseline; }
@@ -62,9 +74,10 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 20%, color-mix(in oklch, var(--brand-signature-line) 40%, transparent) 50%, color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 80%, transparent 100%);
+      background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 16%, transparent) 5%, color-mix(in oklch, var(--brand-signature-line) 40%, transparent) 50%, color-mix(in oklch, var(--brand-signature-line) 16%, transparent) 95%, transparent 100%);
       pointer-events: none;
     }
+    .shell-analytical .shell-body { display: contents; }
 
     .shell-analytical .rail-logo {
       width: var(--rail-logo-size);
@@ -77,7 +90,7 @@
       font-weight: var(--font-weight-semibold);
       font-size: var(--font-size-14);
       color: var(--brand-accent);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
     .shell-analytical .rail-nav { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
     .shell-analytical .rail-bottom { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -176,6 +189,16 @@
     .data-table td:last-child { text-align: right; }
     .data-table td.name-cell { color: var(--text-primary); font-family: var(--font-family-ui); font-weight: var(--font-weight-medium); }
     .data-table td.code-cell { color: var(--text-tertiary); font-size: var(--font-size-11); }
+    .row-trigger {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      color: inherit;
+      cursor: pointer;
+      border-radius: var(--radius-2);
+      transition: color 0.15s ease;
+    }
+    .row-trigger:hover { color: var(--brand-accent); }
     .text-up { color: var(--market-up-fg); }
     .text-down { color: var(--market-down-fg); }
     .text-flat { color: var(--text-tertiary); }
@@ -216,7 +239,8 @@
     .attribution-card-title { font-size: var(--font-size-13); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-10); }
     .attribution-time-selector { display: flex; gap: var(--space-2); margin-bottom: var(--space-10); }
     .attribution-time-btn {
-      font-size: var(--font-size-11);
+      min-height: 24px;
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-4);
@@ -271,34 +295,188 @@
     .activity-header { padding: var(--space-10) var(--space-12); border-bottom: 1px solid var(--border-subtle); }
     .activity-header-title { font-size: var(--font-size-13); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
     .activity-header-subtitle { font-size: var(--font-size-11); color: var(--text-tertiary); margin-top: var(--space-2); }
-    .activity-body { flex: 1; padding: var(--space-8); display: flex; flex-direction: column; }
-    .pnl-chart-placeholder {
+    .activity-body { flex: 1; min-height: 0; padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-8); }
+    .pnl-chart {
       flex: 1;
-      background: var(--surface-secondary);
+      min-height: 0;
+      background:
+        linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 5%, transparent), transparent 42%),
+        var(--surface-secondary);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
+      padding: var(--space-8);
       display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding: var(--space-12);
-      gap: 2px;
+      flex-direction: column;
+      gap: var(--space-6);
     }
-    .pnl-bar {
-      width: 8px;
-      border-radius: 2px 2px 0 0;
-      flex-shrink: 0;
+    .pnl-chart-svg {
+      flex: 1;
+      min-height: 180px;
+      width: 100%;
+      color: var(--brand-accent);
+    }
+    .pnl-grid-line {
+      stroke: var(--border-subtle);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+    .pnl-baseline {
+      stroke: var(--text-tertiary);
+      stroke-width: 1;
+      stroke-dasharray: 5 5;
+      opacity: 0.55;
+      vector-effect: non-scaling-stroke;
+    }
+    .pnl-area {
+      fill: color-mix(in oklch, var(--brand-accent) 18%, transparent);
+    }
+    .pnl-line {
+      fill: none;
+      stroke: var(--brand-accent);
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+    .pnl-drawdown {
+      fill: none;
+      stroke: var(--market-down-fg);
+      stroke-width: 1.4;
+      opacity: 0.78;
+      vector-effect: non-scaling-stroke;
+    }
+    .pnl-point {
+      fill: var(--brand-accent);
+      stroke: var(--surface-secondary);
+      stroke-width: 2;
+      vector-effect: non-scaling-stroke;
+    }
+    .pnl-axis-labels {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+    }
+    .pnl-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+    }
+    .pnl-stat {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-muted) 55%, transparent);
+      padding: var(--space-6);
+    }
+    .pnl-stat-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+    .pnl-stat-value {
+      margin-top: var(--space-2);
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      font-family: var(--font-family-numeric);
     }
 
     /* ═══ Analysis Band ═══ */
-    .analysis-band-body { display: flex; flex-direction: column; gap: var(--space-8); }
+    .analysis-band-body {
+      min-height: 0;
+      padding: var(--space-10) var(--density-gutter);
+      display: grid;
+      grid-template-columns: 1.05fr 1.25fr 0.9fr;
+      gap: var(--space-10);
+    }
     .risk-metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-8); }
     .risk-metric { padding: var(--space-8); background: color-mix(in oklch, var(--surface-muted) 50%, transparent); border-radius: var(--radius-4); }
     .risk-metric-label { font-size: var(--font-size-10); color: var(--text-tertiary); }
     .risk-metric-value { font-size: var(--font-size-13); font-weight: var(--font-weight-semibold); color: var(--text-primary); font-family: var(--font-family-numeric); margin-top: var(--space-2); }
+    .risk-metric-value.down { color: var(--market-down-fg); }
+    .analysis-panel {
+      min-height: 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: color-mix(in oklch, var(--surface-panel-base) 78%, transparent);
+      padding: var(--space-8);
+    }
+    .analysis-panel-title {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-8);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      margin-bottom: var(--space-8);
+    }
+    .analysis-panel-note {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-regular);
+      font-family: var(--font-family-numeric);
+    }
+    .exposure-heat {
+      display: grid;
+      grid-template-columns: 1.45fr 1.05fr 0.82fr 0.72fr 0.62fr;
+      gap: var(--space-4);
+    }
+    .exposure-tile {
+      min-height: 54px;
+      border-radius: var(--radius-4);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: color-mix(in oklch, var(--brand-accent) 7%, var(--surface-secondary));
+    }
+    .exposure-tile.positive { background: color-mix(in oklch, var(--market-up-fg) 10%, var(--surface-secondary)); }
+    .exposure-tile.negative { background: color-mix(in oklch, var(--market-down-fg) 10%, var(--surface-secondary)); }
+    .exposure-name {
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+    }
+    .exposure-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+    }
+    .rule-list {
+      display: grid;
+      gap: var(--space-6);
+    }
+    .rule-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: var(--space-6);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+    }
+    .rule-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--market-up-fg);
+      box-shadow: 0 0 8px color-mix(in oklch, var(--market-up-fg) 38%, transparent);
+    }
+    .rule-dot.warn {
+      background: var(--risk-medium-fg);
+      box-shadow: 0 0 8px color-mix(in oklch, var(--risk-medium-fg) 34%, transparent);
+    }
+    .rule-value {
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+    }
 
     /* ═══ Drawer Overlay ═══ */
-    .overlay-drawer { display: none; position: fixed; inset: 0; z-index: 100; }
-    .overlay-drawer .overlay-dismiss { position: absolute; inset: 0; cursor: pointer; }
-    .overlay-drawer .drawer-sheet {
+    .overlay-surface { display: none; position: fixed; inset: 0; z-index: 100; }
+    :root:has(#overlay-position-detail:checked) [data-overlay="overlay-position-detail"],
+    :root:has(#overlay-trade-detail:checked) [data-overlay="overlay-trade-detail"] {
+      display: block;
+    }
+    .overlay-surface .overlay-dismiss { position: absolute; inset: 0; cursor: pointer; }
+    .overlay-surface .overlay-surface--drawer {
       position: absolute;
       right: 0;
       top: 0;
@@ -308,11 +486,11 @@
       border-left: 1px solid var(--border-subtle);
       overflow-y: auto;
       padding: var(--space-16);
-      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
+      box-shadow: -8px 0 32px oklch(from var(--neutral-0) l c h / 0.30);
     }
     .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-16); }
     .drawer-title { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
-    .drawer-close { cursor: pointer; font-size: var(--font-size-14); color: var(--text-tertiary); background: none; border: none; padding: var(--space-4); border-radius: var(--radius-4); }
+    .drawer-close { min-height: 24px; cursor: pointer; font-size: var(--font-size-14); color: var(--text-tertiary); background: none; border: none; padding: var(--space-4); border-radius: var(--radius-4); }
     .drawer-close:hover { color: var(--text-secondary); }
     .drawer-field { display: flex; justify-content: space-between; padding: var(--space-8) 0; border-bottom: 1px solid var(--border-subtle); font-size: var(--font-size-12); }
     .drawer-field-label { color: var(--text-tertiary); }
@@ -320,13 +498,16 @@
     .drawer-section-title { font-size: var(--font-size-12); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-top: var(--space-16); margin-bottom: var(--space-8); }
 
     /* ═══ Modal Overlay ═══ */
-    .overlay-modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 100; align-items: center; justify-content: center; }
-    .overlay-modal .overlay-dismiss { position: absolute; inset: 0; cursor: pointer; }
-    .overlay-modal .modal-sheet {
+    .overlay-backdrop { display: none; position: fixed; inset: 0; background: var(--surface-overlay); z-index: 100; align-items: center; justify-content: center; }
+    :root:has(#overlay-confirm-close-all:checked) [data-overlay="overlay-confirm-close-all"] {
+      display: flex;
+    }
+    .overlay-backdrop .overlay-dismiss { position: absolute; inset: 0; cursor: pointer; }
+    .overlay-backdrop .overlay-surface--modal {
       background: var(--surface-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-8);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 32px oklch(from var(--neutral-0) l c h / 0.40);
       padding: var(--space-16);
       width: 100%;
       max-width: 420px;
@@ -334,12 +515,12 @@
     }
     .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-12); }
     .modal-title { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
-    .modal-close { cursor: pointer; font-size: var(--font-size-14); color: var(--text-tertiary); background: none; border: none; }
+    .modal-close { min-height: 24px; cursor: pointer; font-size: var(--font-size-14); color: var(--text-tertiary); background: none; border: none; }
     .modal-body { color: var(--text-secondary); font-size: var(--font-size-12); }
     .modal-body .risk-semantic { color: var(--risk-high-fg); font-weight: var(--font-weight-medium); }
     .modal-body .highlight-value { font-family: var(--font-family-numeric); color: var(--text-primary); font-weight: var(--font-weight-semibold); }
     .modal-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
-    .modal-btn { padding: var(--space-4) var(--space-12); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); font-family: var(--font-family-ui); }
+    .modal-btn { min-height: 24px; padding: var(--space-4) var(--space-12); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); font-family: var(--font-family-ui); }
     .modal-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
     .modal-btn-secondary { background: transparent; color: var(--text-secondary); }
     .modal-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
@@ -351,6 +532,7 @@
     .sk-w-60 { width: 60%; margin-bottom: var(--space-4); }
     .sk-w-50 { width: 50%; margin-bottom: var(--space-4); }
     .factor-name-cell { color: var(--text-primary); font-family: var(--font-family-ui); }
+    .ov-label-btn { min-height: 24px; }
     .donut-chart-pie { background: conic-gradient(var(--market-up-fg) 0% 28%, var(--brand-accent) 28% 48%, color-mix(in oklch, var(--market-up-fg) 70%, transparent) 48% 62%, color-mix(in oklch, var(--brand-accent) 60%, transparent) 62% 78%, var(--market-down-fg) 78% 88%, color-mix(in oklch, var(--text-tertiary) 30%, transparent) 88% 100%); }
     .legend-dot-up { background: var(--market-up-fg); }
     .legend-dot-accent { background: var(--brand-accent); }
@@ -364,36 +546,6 @@
     .bar-w-18 { width: 18%; }
     .bar-w-13 { width: 13%; }
     .mt-12 { margin-top: var(--space-12); }
-    .pnl-bar-up-40 { height: 35%; background: var(--market-up-fg); opacity: 0.4; }
-    .pnl-bar-up-42 { height: 42%; background: var(--market-up-fg); opacity: 0.4; }
-    .pnl-bar-down-38 { height: 38%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-50 { height: 50%; background: var(--market-up-fg); opacity: 0.4; }
-    .pnl-bar-up-55 { height: 55%; background: var(--market-up-fg); opacity: 0.5; }
-    .pnl-bar-down-48 { height: 48%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-60 { height: 60%; background: var(--market-up-fg); opacity: 0.5; }
-    .pnl-bar-up-65 { height: 65%; background: var(--market-up-fg); opacity: 0.5; }
-    .pnl-bar-down-58 { height: 58%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-70 { height: 70%; background: var(--market-up-fg); opacity: 0.5; }
-    .pnl-bar-down-62 { height: 62%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-75 { height: 75%; background: var(--market-up-fg); opacity: 0.6; }
-    .pnl-bar-down-68 { height: 68%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-72 { height: 72%; background: var(--market-up-fg); opacity: 0.5; }
-    .pnl-bar-up-80 { height: 80%; background: var(--market-up-fg); opacity: 0.6; }
-    .pnl-bar-down-78 { height: 78%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-85 { height: 85%; background: var(--market-up-fg); opacity: 0.6; }
-    .pnl-bar-up-82 { height: 82%; background: var(--market-up-fg); opacity: 0.6; }
-    .pnl-bar-down-76 { height: 76%; background: var(--market-down-fg); opacity: 0.4; }
-    .pnl-bar-up-90 { height: 90%; background: var(--market-up-fg); opacity: 0.7; }
-    .pnl-bar-up-88 { height: 88%; background: var(--market-up-fg); opacity: 0.7; }
-    .pnl-bar-up-92 { height: 92%; background: var(--market-up-fg); opacity: 0.7; }
-    .pnl-bar-down-85 { height: 85%; background: var(--market-down-fg); opacity: 0.5; }
-    .pnl-bar-up-95 { height: 95%; background: var(--market-up-fg); opacity: 0.7; }
-    .pnl-bar-down-90 { height: 90%; background: var(--market-down-fg); opacity: 0.5; }
-    .pnl-bar-up-100 { height: 100%; background: var(--market-up-fg); opacity: 0.8; }
-    .pnl-bar-up-96 { height: 96%; background: var(--market-up-fg); opacity: 0.7; }
-    .pnl-bar-down-93 { height: 93%; background: var(--market-down-fg); opacity: 0.5; }
-    .pnl-bar-up-98 { height: 98%; background: var(--market-up-fg); opacity: 0.8; }
-    .pnl-bar-up-95b { height: 95%; background: var(--market-up-fg); opacity: 0.7; }
   </style>
 </head>
 <body>
@@ -421,30 +573,26 @@
       <nav class="shell-rail" aria-label="主导航">
         <div class="rail-logo">D</div>
         <div class="rail-nav" role="list">
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="首页" data-rail-domain="home">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="市场">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="市场" data-rail-domain="markets">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="研究" data-rail-domain="research">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           </div>
-          <div class="rail-icon active" role="listitem" tabindex="0" aria-label="交易" aria-current="page">
+          <div class="rail-icon active" role="listitem" tabindex="0" aria-label="交易" aria-current="page" data-rail-domain="trading">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
           </div>
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI">
+          <div class="rail-icon" role="listitem" tabindex="0" aria-label="AI" data-rail-domain="platform">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           </div>
           <div class="rail-icon" role="listitem" tabindex="0" aria-label="平台">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
           </div>
         </div>
-        <div class="rail-bottom" role="list">
-          <div class="rail-icon" role="listitem" tabindex="0" aria-label="设置">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-          </div>
-        </div>
+        
       </nav>
 
       <!-- ===== Shell Body ===== -->
@@ -456,18 +604,35 @@
           <span class="header-subtitle">Trading · Portfolio</span>
           <div class="header-spacer"></div>
           <div class="header-actions">
-            <div class="theme-switcher">
-              <div class="switcher-group" role="group" aria-label="密度">
-                <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-                <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-                <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-              </div>
-              <div class="switcher-sep"></div>
-              <div class="switcher-group" role="group" aria-label="主题">
-                <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-                <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
-              </div>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        </button>
+            <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
             </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
+          </div>
+        </div>
             <div class="header-action-btn" title="导出">
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3v8l4 4 4-4V3"/><path d="M3 17h14"/></svg>
             </div>
@@ -475,7 +640,7 @@
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a7 7 0 100 14 7 7 0 000-14z"/><path d="M10 7v4m0 2v.01"/></svg>
             </div>
             <div class="header-timestamp">15:00 CST</div>
-            <div class="header-avatar" aria-label="用户菜单">C</div>
+            
           </div>
         </header>
 
@@ -554,7 +719,7 @@
                 </thead>
                 <tbody>
                   <tr>
-                    <td class="name-cell">贵州茅台</td>
+                    <td class="name-cell"><label for="overlay-position-detail" class="row-trigger">贵州茅台</label></td>
                     <td class="code-cell">600519.SH</td>
                     <td>多</td>
                     <td>200</td>
@@ -700,7 +865,7 @@
                 <tbody>
                   <tr>
                     <td>14:52:30</td>
-                    <td class="name-cell">贵州茅台</td>
+                    <td class="name-cell"><label for="overlay-trade-detail" class="row-trigger">贵州茅台</label></td>
                     <td class="text-up">买入</td>
                     <td>100</td>
                     <td>1,756.80</td>
@@ -888,44 +1053,43 @@
         </div><!-- /main-content -->
 
         <!-- ===== Activity Stack (PnL Chart) ===== -->
-        <div class="activity-stack" data-contract-slot="activity">
+        <div class="activity-stack" data-contract-slot="right-rail">
           <div class="activity-header">
             <div class="activity-header-title">PnL 曲线</div>
             <div class="activity-header-subtitle">近 30 日 · 累计收益率</div>
           </div>
           <div class="activity-body">
-            <div class="pnl-chart-placeholder">
-              <!-- CSS-only bar chart for PnL -->
-              <div class="pnl-bar pnl-bar-up-40"></div>
-              <div class="pnl-bar pnl-bar-up-42"></div>
-              <div class="pnl-bar pnl-bar-down-38"></div>
-              <div class="pnl-bar pnl-bar-up-50"></div>
-              <div class="pnl-bar pnl-bar-up-55"></div>
-              <div class="pnl-bar pnl-bar-down-48"></div>
-              <div class="pnl-bar pnl-bar-up-60"></div>
-              <div class="pnl-bar pnl-bar-up-65"></div>
-              <div class="pnl-bar pnl-bar-down-58"></div>
-              <div class="pnl-bar pnl-bar-up-70"></div>
-              <div class="pnl-bar pnl-bar-down-62"></div>
-              <div class="pnl-bar pnl-bar-up-75"></div>
-              <div class="pnl-bar pnl-bar-down-68"></div>
-              <div class="pnl-bar pnl-bar-up-72"></div>
-              <div class="pnl-bar pnl-bar-up-80"></div>
-              <div class="pnl-bar pnl-bar-down-78"></div>
-              <div class="pnl-bar pnl-bar-up-85"></div>
-              <div class="pnl-bar pnl-bar-up-82"></div>
-              <div class="pnl-bar pnl-bar-down-76"></div>
-              <div class="pnl-bar pnl-bar-up-90"></div>
-              <div class="pnl-bar pnl-bar-up-88"></div>
-              <div class="pnl-bar pnl-bar-up-92"></div>
-              <div class="pnl-bar pnl-bar-down-85"></div>
-              <div class="pnl-bar pnl-bar-up-95"></div>
-              <div class="pnl-bar pnl-bar-down-90"></div>
-              <div class="pnl-bar pnl-bar-up-100"></div>
-              <div class="pnl-bar pnl-bar-up-96"></div>
-              <div class="pnl-bar pnl-bar-down-93"></div>
-              <div class="pnl-bar pnl-bar-up-98"></div>
-              <div class="pnl-bar pnl-bar-up-95b"></div>
+            <div class="pnl-chart" aria-label="近 30 日组合 PnL 曲线">
+              <svg class="pnl-chart-svg" viewBox="0 0 260 300" role="img" aria-label="累计收益率上涨至 7.18%，最大回撤 3.24%">
+                <line class="pnl-grid-line" x1="0" y1="44" x2="260" y2="44"></line>
+                <line class="pnl-grid-line" x1="0" y1="108" x2="260" y2="108"></line>
+                <line class="pnl-grid-line" x1="0" y1="172" x2="260" y2="172"></line>
+                <line class="pnl-grid-line" x1="0" y1="236" x2="260" y2="236"></line>
+                <line class="pnl-baseline" x1="0" y1="208" x2="260" y2="208"></line>
+                <path class="pnl-area" d="M0 226 C20 218 32 230 48 214 C70 190 84 198 102 174 C122 146 142 158 162 122 C184 94 204 118 222 78 C238 58 248 66 260 48 L260 300 L0 300 Z"></path>
+                <path class="pnl-line" d="M0 226 C20 218 32 230 48 214 C70 190 84 198 102 174 C122 146 142 158 162 122 C184 94 204 118 222 78 C238 58 248 66 260 48"></path>
+                <path class="pnl-drawdown" d="M0 252 C24 248 42 258 58 242 C78 230 92 236 110 218 C134 205 152 212 170 192 C196 182 214 196 232 176 C246 166 254 170 260 164"></path>
+                <circle class="pnl-point" cx="260" cy="48" r="4"></circle>
+              </svg>
+              <div class="pnl-axis-labels">
+                <span>03-22</span>
+                <span>04-05</span>
+                <span>04-21</span>
+              </div>
+            </div>
+            <div class="pnl-stats">
+              <div class="pnl-stat">
+                <div class="pnl-stat-label">累计</div>
+                <div class="pnl-stat-value text-up">+7.18%</div>
+              </div>
+              <div class="pnl-stat">
+                <div class="pnl-stat-label">超额</div>
+                <div class="pnl-stat-value text-up">+1.42%</div>
+              </div>
+              <div class="pnl-stat">
+                <div class="pnl-stat-label">回撤</div>
+                <div class="pnl-stat-value text-down">-3.24%</div>
+              </div>
             </div>
           </div>
         </div>
@@ -936,18 +1100,66 @@
             <div class="analysis-band-tab active">风险指标</div>
           </div>
           <div class="analysis-band-body">
-            <div class="risk-metrics-row">
-              <div class="risk-metric">
-                <div class="risk-metric-label">日波动率</div>
-                <div class="risk-metric-value">1.24%</div>
+            <div class="analysis-panel">
+              <div class="analysis-panel-title">组合风险 <span class="analysis-panel-note">实时快照</span></div>
+              <div class="risk-metrics-row">
+                <div class="risk-metric">
+                  <div class="risk-metric-label">日波动率</div>
+                  <div class="risk-metric-value">1.24%</div>
+                </div>
+                <div class="risk-metric">
+                  <div class="risk-metric-label">Beta</div>
+                  <div class="risk-metric-value">0.87</div>
+                </div>
+                <div class="risk-metric">
+                  <div class="risk-metric-label">VaR 95%</div>
+                  <div class="risk-metric-value down">-38,240</div>
+                </div>
               </div>
-              <div class="risk-metric">
-                <div class="risk-metric-label">Beta (vs 沪深300)</div>
-                <div class="risk-metric-value">0.87</div>
+            </div>
+            <div class="analysis-panel">
+              <div class="analysis-panel-title">集中度热区 <span class="analysis-panel-note">行业权重 / 今日贡献</span></div>
+              <div class="exposure-heat" aria-label="行业集中度热区">
+                <div class="exposure-tile positive">
+                  <span class="exposure-name">消费</span>
+                  <span class="exposure-value">28% · +0.12</span>
+                </div>
+                <div class="exposure-tile positive">
+                  <span class="exposure-name">新能源</span>
+                  <span class="exposure-value">20% · +0.09</span>
+                </div>
+                <div class="exposure-tile">
+                  <span class="exposure-name">科技</span>
+                  <span class="exposure-value">16% · +0.05</span>
+                </div>
+                <div class="exposure-tile positive">
+                  <span class="exposure-name">金融</span>
+                  <span class="exposure-value">14% · +0.06</span>
+                </div>
+                <div class="exposure-tile negative">
+                  <span class="exposure-name">医药</span>
+                  <span class="exposure-value">10% · -0.04</span>
+                </div>
               </div>
-              <div class="risk-metric">
-                <div class="risk-metric-label">VaR (95%, 1D)</div>
-                <div class="risk-metric-value down">-38,240</div>
+            </div>
+            <div class="analysis-panel">
+              <div class="analysis-panel-title">交易约束 <span class="analysis-panel-note">A 股规则</span></div>
+              <div class="rule-list">
+                <div class="rule-item">
+                  <span class="rule-dot warn"></span>
+                  <span>T+1 冻结</span>
+                  <span class="rule-value">900 股</span>
+                </div>
+                <div class="rule-item">
+                  <span class="rule-dot"></span>
+                  <span>可卖市值</span>
+                  <span class="rule-value">2.34M</span>
+                </div>
+                <div class="rule-item">
+                  <span class="rule-dot"></span>
+                  <span>风险中心联动</span>
+                  <span class="rule-value">正常</span>
+                </div>
               </div>
             </div>
           </div>
@@ -957,9 +1169,9 @@
     </div><!-- /shell-analytical -->
 
     <!-- ═══ Overlay: Position Detail (Drawer) ═══ -->
-    <div class="overlay-drawer" data-overlay="overlay-position-detail">
+    <div class="overlay-backdrop" data-overlay="overlay-position-detail">
       <label class="overlay-dismiss" for="overlay-position-detail" aria-label="关闭"></label>
-      <div class="drawer-sheet" role="dialog" aria-modal="true" aria-label="持仓详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="持仓详情">
         <div class="drawer-header">
           <span class="drawer-title">贵州茅台 — 持仓详情</span>
           <label for="overlay-position-detail" class="drawer-close">✕</label>
@@ -984,9 +1196,9 @@
     </div>
 
     <!-- ═══ Overlay: Trade Detail (Drawer) ═══ -->
-    <div class="overlay-drawer" data-overlay="overlay-trade-detail">
+    <div class="overlay-backdrop" data-overlay="overlay-trade-detail">
       <label class="overlay-dismiss" for="overlay-trade-detail" aria-label="关闭"></label>
-      <div class="drawer-sheet" role="dialog" aria-modal="true" aria-label="成交详情">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="成交详情">
         <div class="drawer-header">
           <span class="drawer-title">贵州茅台 — 成交详情</span>
           <label for="overlay-trade-detail" class="drawer-close">✕</label>
@@ -1011,9 +1223,9 @@
     </div>
 
     <!-- ═══ Overlay: Confirm Close All (Modal) ═══ -->
-    <div class="overlay-modal" data-overlay="overlay-confirm-close-all">
+    <div class="overlay-backdrop" data-overlay="overlay-confirm-close-all">
       <label class="overlay-dismiss" for="overlay-confirm-close-all" aria-label="关闭"></label>
-      <div class="modal-sheet" role="dialog" aria-modal="true" aria-label="确认全部平仓">
+      <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="确认全部平仓">
         <div class="modal-header">
           <span class="modal-title">确认全部平仓</span>
           <label for="overlay-confirm-close-all" class="modal-close">✕</label>
@@ -1089,9 +1301,9 @@
       <div class="gallery-group">
         <div class="gallery-group__label">Overlays</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">持仓详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击持仓行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="drawer-sheet"><div class="drawer-header"><span class="drawer-title">持仓详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">PnL</span><span class="drawer-field-value text-up">+15,360.00</span></div><div class="drawer-field"><span class="drawer-field-label">策略</span><span class="drawer-field-value">消费龙头动量 v2</span></div></div></div></div>
-          <div class="gallery-card"><div class="gallery-card__label">成交详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击成交行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="drawer-sheet"><div class="drawer-header"><span class="drawer-title">成交详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">方向</span><span class="drawer-field-value text-up">买入</span></div><div class="drawer-field"><span class="drawer-field-label">金额</span><span class="drawer-field-value">175,680.00</span></div></div></div></div>
-          <div class="gallery-card"><div class="gallery-card__label">确认全部平仓 (Modal)</div><div class="gallery-card__trigger">触发：点击「全部平仓」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="modal-sheet"><div class="modal-header"><span class="modal-title">确认全部平仓</span><span class="modal-close">✕</span></div><div class="modal-body"><p class="risk-semantic">确认平仓所有持仓？</p><div class="drawer-field"><span class="drawer-field-label">持仓总市值</span><span class="drawer-field-value highlight-value">2,691,090.50</span></div><div class="modal-actions"><div class="modal-btn modal-btn-secondary">取消</div><div class="modal-btn modal-btn-danger">确认平仓</div></div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-position-detail"><div class="gallery-card__label">持仓详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击持仓行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer"><div class="drawer-header"><span class="drawer-title">持仓详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">PnL</span><span class="drawer-field-value text-up">+15,360.00</span></div><div class="drawer-field"><span class="drawer-field-label">策略</span><span class="drawer-field-value">消费龙头动量 v2</span></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-trade-detail"><div class="gallery-card__label">成交详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击成交行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer"><div class="drawer-header"><span class="drawer-title">成交详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">方向</span><span class="drawer-field-value text-up">买入</span></div><div class="drawer-field"><span class="drawer-field-label">金额</span><span class="drawer-field-value">175,680.00</span></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-confirm-close-all"><div class="gallery-card__label">确认全部平仓 (Modal)</div><div class="gallery-card__trigger">触发：点击「全部平仓」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--modal"><div class="modal-header"><span class="modal-title">确认全部平仓</span><span class="modal-close">✕</span></div><div class="modal-body"><p class="risk-semantic">确认平仓所有持仓？</p><div class="drawer-field"><span class="drawer-field-label">持仓总市值</span><span class="drawer-field-value highlight-value">2,691,090.50</span></div><div class="modal-actions"><div class="modal-btn modal-btn-secondary">取消</div><div class="modal-btn modal-btn-danger">确认平仓</div></div></div></div></div></div>
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ interface RiskBreachesListProps {
 }
 
 export function RiskBreachesList({ onSelectBreach }: RiskBreachesListProps) {
-	const { data, isLoading, isError, refetch } = useRiskBreaches();
+	const { data, isLoading, refetch } = useRiskBreaches();
 
 	return (
 		<ContextSection title="风控告警" count={data?.total} data-info-level="l1" data-info-unit="risk-breaches-list">

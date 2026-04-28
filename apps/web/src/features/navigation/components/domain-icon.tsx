@@ -26,8 +26,6 @@ function iconChildren(domainId: DomainId): React.ReactNode {
 					<path d="M3 10h14M7 6v10M13 6v10" />
 				</>
 			);
-		case "ai":
-			return <path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z" />;
 		case "platform":
 			return (
 				<>

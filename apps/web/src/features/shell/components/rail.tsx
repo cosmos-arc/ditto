@@ -18,40 +18,8 @@ function isDomainActive(domainId: DomainId, pathname: string): boolean {
 }
 
 /**
- * Settings icon for the rail bottom.
- */
-function SettingsIcon() {
-	return (
-		<svg
-			width={18}
-			height={18}
-			viewBox="0 0 20 20"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth={1.5}
-			aria-hidden="true"
-		>
-			<circle cx="10" cy="10" r="2.5" />
-			<path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5" />
-		</svg>
-	);
-}
-
-/**
- * User icon for the rail bottom.
- */
-function UserIcon() {
-	return (
-		<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-			<circle cx="10" cy="7.5" r="3.5" />
-			<path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7" strokeLinecap="round" />
-		</svg>
-	);
-}
-
-/**
  * Rail -- 56px left-side icon navigation bar.
- * Contains: Logo, domain navigation icons, settings/user icons.
+ * Contains: Logo and top-level domain navigation icons.
  * Right ambient light bar is rendered as the last child (moved from NoiseLayer
  * to match prototype structure).
  */
@@ -81,6 +49,7 @@ export function Rail() {
 							key={domain.id}
 							to={domain.path}
 							aria-label={domain.label}
+							data-rail-domain={domain.id}
 							className={[
 								"relative flex h-9 w-9 items-center justify-center rounded-(--radius-md) text-(--color-foreground-tertiary) transition-colors",
 								active
@@ -98,24 +67,6 @@ export function Rail() {
 						</Link>
 					);
 				})}
-			</div>
-
-			{/* Bottom actions */}
-			<div className="flex flex-col items-center gap-1">
-				<button
-					type="button"
-					aria-label="设置"
-					className="flex h-9 w-9 items-center justify-center rounded-(--radius-md) text-(--color-foreground-tertiary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-				>
-					<SettingsIcon />
-				</button>
-				<button
-					type="button"
-					aria-label="用户"
-					className="flex h-9 w-9 items-center justify-center rounded-(--radius-md) text-(--color-foreground-tertiary) transition-colors hover:bg-(--color-interaction-hover-subtle-bg)"
-				>
-					<UserIcon />
-				</button>
 			</div>
 
 			{/* Right ambient light bar -- vertical brand glow along right edge of rail */}

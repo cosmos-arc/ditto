@@ -129,15 +129,17 @@
     .shell-regime {
       display: grid;
       grid-template-columns: var(--shell-rail-width) 1fr var(--shell-activity-width);
-      grid-template-rows: var(--shell-header-height) auto auto 1fr;
+      grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr) 1.5rem;
       grid-template-areas:
         "rail header   header"
         "rail strip    strip"
         "rail tabs     tabs"
-        "rail panels   panels";
+        "rail panels   panels"
+        "rail status   status";
+      height: 100vh;
       min-height: 100vh;
       width: 100vw;
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     .shell-regime .shell-rail {
@@ -208,6 +210,7 @@
       background-repeat: no-repeat;
       background-position: 0 100%;
       padding-bottom: 2px;
+      letter-spacing: 0;
     }
 
     /* ── Header: Selector ── */
@@ -350,7 +353,14 @@
       display: none;
       height: 100%;
       overflow-y: auto;
-      padding-bottom: 2rem;
+      padding-bottom: 0;
+    }
+
+    .shell-regime .tab-panel > .main-content {
+      display: block;
+      height: 100%;
+      min-height: 0;
+      padding: var(--density-gutter);
     }
 
     /* ══════════════════════════════════════════════
@@ -372,7 +382,7 @@
       [data-overlay="overlay-ai-regime"] { display: flex; }
 
     /* ── Overlay content ── */
-    .overlay-drawer .overlay-header {
+    .overlay-surface .overlay-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -422,7 +432,7 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0;
     }
 
     .regime-indicator-time {
@@ -500,7 +510,7 @@
       font-weight: var(--font-weight-semibold);
       font-feature-settings: 'tnum' 1;
       color: var(--market-up-fg);
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
 
     .regime-gauge-unit {
@@ -556,11 +566,19 @@
     /* ── Regime Chart (CSS-only placeholder) ── */
     .regime-chart {
       flex: 1;
-      min-height: 160px;
+      min-height: 0;
+      height: 100%;
       position: relative;
       overflow: hidden;
       background: var(--chart-bg);
       border-radius: var(--radius-6);
+    }
+
+    .chart-panel-body {
+      flex: 1;
+      min-height: 160px;
+      position: relative;
+      overflow: hidden;
     }
 
     .chart-grid-lines {
@@ -619,7 +637,7 @@
     /* Simulated regime timeline line */
     .regime-timeline-line {
       position: absolute;
-      bottom: 25%;
+      bottom: 58%;
       left: 8%;
       right: 8%;
       height: 2px;
@@ -673,10 +691,10 @@
     /* Crosshair */
     .chart-crosshair {
       position: absolute;
-      top: 20%;
+      top: 42%;
       left: 72%;
       width: 1px;
-      height: 60%;
+      height: 36%;
       background: var(--chart-crosshair);
       pointer-events: none;
     }
@@ -921,10 +939,8 @@
 
     /* ── Status bar (terminal DNA) ── */
     .status-bar {
-      position: fixed;
-      bottom: 0;
-      left: var(--shell-rail-width);
-      right: 0;
+      grid-area: status;
+      position: relative;
       display: flex;
       align-items: center;
       height: 1.5rem;
@@ -937,9 +953,9 @@
       font-size: var(--font-size-10);
       font-feature-settings: 'tnum' 1;
       color: var(--text-tertiary);
-      letter-spacing: 0.02em;
+      letter-spacing: 0;
       user-select: none;
-      z-index: 25;
+      z-index: 5;
     }
 
     /* Brand accent bottom bar */
@@ -1011,17 +1027,39 @@
     .regime-layout {
       display: grid;
       grid-template-columns: 1fr var(--shell-activity-width);
+      grid-template-areas: "main rail";
       gap: var(--density-gutter);
       height: 100%;
       min-height: 0;
     }
 
     .regime-main-col {
+      grid-area: main;
       display: flex;
       flex-direction: column;
       gap: var(--density-gutter);
       min-height: 0;
       overflow: hidden;
+    }
+
+    .regime-layout > .activity-stack {
+      grid-area: rail;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .regime-layout .context-rail {
+      height: auto;
+      min-height: 100%;
+      overflow: visible;
+    }
+
+    .regime-layout .context-section {
+      flex: 0 0 auto;
+    }
+
+    #default-view > .state-variant-pad {
+      display: none;
     }
 
     .regime-panel-fixed { flex: 0 0 auto; }
@@ -1167,6 +1205,29 @@
     .th-width-140 { width: 140px; }
     .th-width-100 { width: 100px; }
     .th-width-80 { width: 80px; }
+    .th-width-fit { width: 136px; }
+
+    [data-panel="strategy-impact"] .data-table th:nth-child(n+2):nth-child(-n+5) {
+      text-align: right;
+    }
+
+    [data-panel="strategy-impact"] .data-table th:nth-child(6),
+    [data-panel="strategy-impact"] .data-table td:nth-child(6) {
+      width: 136px;
+    }
+
+    [data-panel="strategy-impact"] .fit-bar {
+      min-width: 0;
+      width: 100%;
+    }
+
+    [data-panel="strategy-impact"] .fit-bar__track {
+      min-width: 24px;
+    }
+
+    [data-panel="strategy-impact"] .fit-bar__value {
+      flex: 0 0 20px;
+    }
 
     /* ── AI Suggestion callout ── */
     .ai-callout {
@@ -1183,7 +1244,7 @@
       font-weight: var(--font-weight-medium);
       color: var(--brand-accent);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0;
       white-space: nowrap;
       margin-top: 1px;
     }
@@ -1436,7 +1497,7 @@
       border-radius: var(--radius-4);
       font-size: var(--font-size-10);
       font-weight: var(--font-weight-medium);
-      letter-spacing: 0.02em;
+      letter-spacing: 0;
     }
     .regime-state-badge--bull {
       background: var(--market-up-bg);
@@ -1569,7 +1630,7 @@
       border-radius: 50%;
       border: 2px solid var(--surface-panel-base);
       z-index: 3;
-      bottom: 30%;
+      bottom: calc(58% - 3px);
     }
     .chart-event-marker--risk-on {
       background: var(--market-up-fg);
@@ -1587,7 +1648,7 @@
 
     /* ── Chart tooltip positions ── */
     .chart-tooltip--regime {
-      top: 22%;
+      top: 30%;
       left: 55%;
     }
     .chart-tooltip__tertiary {
@@ -1805,7 +1866,7 @@
       background: oklch(from var(--market-down-fg) l c h / 0.18);
     }
     .heatgrid-legend-swatch--mixed {
-      background: oklch(1 0 0 / 0.02);
+      background: oklch(from var(--neutral-950) l c h / 0.02);
       border: 1px solid var(--border-subtle);
     }
     .heatgrid-legend-swatch--risk-on {
@@ -1999,9 +2060,9 @@
       box-shadow: 0 0 20px -6px color-mix(in oklch, var(--market-up-fg) 12%, transparent);
     }
 
-    /* Regime status name: tighter letter-spacing for anchor feel */
+    /* Regime status name: preserve native glyph spacing for scan stability */
     .regime-status-name {
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
     }
 
     /* Status strip: subtle brand tint background */
@@ -2034,6 +2095,23 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
+    [data-panel="strategy-impact"] tr.strategy-row {
+      display: table-row;
+      padding: 0;
+      border-bottom: 0;
+    }
+
+    [data-panel="strategy-impact"] tr.strategy-row:hover {
+      margin: 0;
+      padding: 0;
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .shell-regime:has(#strategy-impact:checked) [data-panel="strategy-impact"] [data-reveal] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
     /* Timeline connector hover: opacity instead of brand color */
     .switch-item:hover::before {
       opacity: 0.5;
@@ -2061,25 +2139,25 @@
 
   <div class="style-label">Graphite Studio — Regime Monitor · Compact · A股</div>
 
-  <div class="shell-regime">
+  <div class="shell-analytical shell-regime">
 
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
       <div class="rail-nav">
-        <div class="rail-icon" title="Home">
+        <div class="rail-icon" title="Home" data-rail-domain="home">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg>
         </div>
-        <div class="rail-icon" title="Markets">
+        <div class="rail-icon" title="Markets" data-rail-domain="markets">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
         </div>
-        <div class="rail-icon active" title="Research">
+        <div class="rail-icon active" title="Research" data-rail-domain="research">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         </div>
-        <div class="rail-icon" title="Trading">
+        <div class="rail-icon" title="Trading" data-rail-domain="trading">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
         </div>
-        <div class="rail-icon" title="AI">
+        <div class="rail-icon" title="AI" data-rail-domain="platform">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </div>
         <div class="rail-icon" title="Platform">
@@ -2089,11 +2167,7 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l7 12H3L10 2z"/><line x1="10" y1="7" x2="10" y2="10"/><circle cx="10" cy="12" r="0.5" fill="currentColor"/></svg>
         </div>
       </div>
-      <div class="rail-bottom">
-        <div class="rail-icon" title="Settings">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5l-1.4 1.4M6.9 13.1L5.5 14.5m9-9l-1.4 1.4M6.9 6.9L5.5 5.5"/></svg>
-        </div>
-      </div>
+      
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -2110,7 +2184,7 @@
       </div>
 
       <!-- Search -->
-      <div class="header-search">
+      <div class="header-search" data-shell-utility="command" data-search-scope="global">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
         搜索 Regime...
         <kbd>⌘K</kbd>
@@ -2118,23 +2192,37 @@
 
       <!-- Actions -->
       <div class="header-actions">
-        <div class="theme-switcher">
-          <div class="switcher-group" role="group" aria-label="密度">
-            <button class="switcher-btn" data-set-density="dense" aria-pressed="false">紧</button>
-            <button class="switcher-btn" data-set-density="compact" aria-pressed="true">标</button>
-            <button class="switcher-btn" data-set-density="comfortable" aria-pressed="false">松</button>
-          </div>
-          <div class="switcher-sep"></div>
-          <div class="switcher-group" role="group" aria-label="主题">
-            <button class="switcher-btn" data-set-theme="dark" aria-pressed="true">暗</button>
-            <button class="switcher-btn" data-set-theme="light" aria-pressed="false">亮</button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <div class="view-preferences" data-open="false">
+          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
+          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">密度</span>
+              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
+              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
+              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
+            </div>
+            <div class="view-preferences-section">
+              <span class="view-preferences-label">主题</span>
+              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
+              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
+            </div>
           </div>
         </div>
         <label for="overlay-ai-regime" class="btn-cta-sm label-clickable">AI 解读</label>
         <div class="header-action-btn" title="刷新">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><polyline points="14 5 15.5 7.5 12.5 7.5"/><polyline points="6 15 4.5 12.5 7.5 12.5"/></svg>
         </div>
-        <div class="header-avatar">C</div>
+        
       </div>
     </header>
 
@@ -2307,8 +2395,8 @@
             </div>
 
             <!-- Right: Drivers Panel -->
-            <div class="activity-stack">
-              <div class="context-rail" data-contract-slot="rail">
+            <div class="activity-stack" data-contract-slot="right-rail" role="complementary" aria-label="Regime 驱动与概率面板">
+              <div class="context-rail">
 
                 <!-- Section: Key Drivers -->
                 <div class="context-section" data-reveal="fade-right">
@@ -2452,7 +2540,7 @@
                     <span class="context-section-count">近 4 周</span>
                   </div>
                   <div class="heatgrid-body">
-                    <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["oklch(from var(--market-down-fg) l c h / 0.10)","oklch(from var(--market-down-fg) l c h / 0.18)","oklch(1 0 0 / 0.02)","oklch(from var(--market-up-fg) l c h / 0.12)","oklch(from var(--market-up-fg) l c h / 0.22)","oklch(from var(--market-up-fg) l c h / 0.32)","oklch(from var(--market-up-fg) l c h / 0.45)"]}' aria-label="市场状态矩阵"></svg>
+                    <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["oklch(from var(--market-down-fg) l c h / 0.10)","oklch(from var(--market-down-fg) l c h / 0.18)","oklch(from var(--neutral-950) l c h / 0.02)","oklch(from var(--market-up-fg) l c h / 0.12)","oklch(from var(--market-up-fg) l c h / 0.22)","oklch(from var(--market-up-fg) l c h / 0.32)","oklch(from var(--market-up-fg) l c h / 0.45)"]}' aria-label="市场状态矩阵"></svg>
                     <div class="heatgrid-legend">
                       <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--risk-off"></span>Risk-Off</span>
                       <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--mixed"></span>Mixed</span>
@@ -2670,7 +2758,7 @@
                 <th scope="col" class="th-width-100">近 3 月</th>
                 <th scope="col" class="th-width-80">Sharpe</th>
                 <th scope="col" class="th-width-100">最大回撤</th>
-                <th scope="col" class="th-width-80">适配度</th>
+                <th scope="col" class="th-width-fit">适配度</th>
                 <th scope="col">调整建议</th>
               </tr>
             </thead>
@@ -2760,25 +2848,25 @@
 
     </div><!-- /tab-panels -->
 
-  </div><!-- /shell-regime -->
+    <!-- Status Bar -->
+    <div class="status-bar" role="status" aria-label="Regime 系统状态">
+      <span class="status-indicator" data-tooltip="系统健康 — Regime Engine 运行正常"></span>
+      <span>REGIME LIVE</span>
+      <span class="status-sep">|</span>
+      <span>最后刷新: 5s ago</span>
+      <span class="status-sep">|</span>
+      <span>组合: 主策略组合</span>
+      <span class="status-sep">|</span>
+      <span>Engine: v2.4.1</span>
+      <span class="status-spacer"></span>
+      <span class="status-kbd">R</span>
+      <span>刷新</span>
+      <span class="status-dot-sep">·</span>
+      <span class="status-kbd">⌘K</span>
+      <span>搜索</span>
+    </div>
 
-  <!-- Status Bar -->
-  <div class="status-bar">
-    <span class="status-indicator" data-tooltip="系统健康 — Regime Engine 运行正常"></span>
-    <span>REGIME LIVE</span>
-    <span class="status-sep">|</span>
-    <span>最后刷新: 5s ago</span>
-    <span class="status-sep">|</span>
-    <span>组合: 主策略组合</span>
-    <span class="status-sep">|</span>
-    <span>Engine: v2.4.1</span>
-    <span class="status-spacer"></span>
-    <span class="status-kbd">R</span>
-    <span>刷新</span>
-    <span class="status-dot-sep">·</span>
-    <span class="status-kbd">⌘K</span>
-    <span>搜索</span>
-  </div>
+  </div><!-- /shell-regime -->
 
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">
@@ -2786,7 +2874,7 @@
     <!-- Overlay: AI Regime Drawer -->
     <div class="overlay-backdrop" data-overlay="overlay-ai-regime">
       <label class="overlay-dismiss" for="overlay-ai-regime" aria-label="关闭"></label>
-      <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="AI Regime 解读">
+      <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="AI Regime 解读">
         <div class="overlay-header">
           <span class="overlay-title">AI Regime 解读</span>
           <label for="overlay-ai-regime" class="overlay-close" aria-label="关闭">✕</label>
@@ -3245,10 +3333,10 @@
           <div class="gallery-group__label">弹层设计</div>
           <div class="gallery-cards">
 
-    <div class="gallery-card">
+    <div class="gallery-card" data-overlay-ref="overlay-ai-regime">
       <div class="gallery-card__label">AI Regime 解读 (Drawer)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-drawer" role="dialog" aria-modal="true" aria-label="AI Regime 解读">
+        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="AI Regime 解读">
           <div class="overlay-header">
             <span class="overlay-title">AI Regime 解读</span>
           </div>
