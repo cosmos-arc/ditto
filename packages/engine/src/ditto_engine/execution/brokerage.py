@@ -11,8 +11,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.account import Account, AccountView
 from ditto_engine.accounting.fills import FillEvent
@@ -23,6 +23,8 @@ from ditto_engine.accounting.order_book import (
     OrderTicket,
     StateTransitionError,
 )
+from ditto_engine.accounting.position import Position
+from ditto_engine.exceptions import EngineError
 from ditto_engine.execution.fills import Filled, NoFill
 from ditto_engine.execution.reality import BrokerageModel
 from ditto_engine.execution.reality.constants import (
@@ -31,6 +33,7 @@ from ditto_engine.execution.reality.constants import (
     DEFAULT_MIN_COMMISSION,
 )
 from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_engine.execution.reality.settlement import SettlementModel
 from ditto_engine.execution.rules import (
     FeeSchedule,
     InstrumentDefinition,
@@ -135,6 +138,47 @@ def _default_rules_getter(
     )
 
 
+def _is_order_executable(
+    ticket: OrderTicket,
+    position: Position | None,
+    settlement_model: SettlementModel,
+    instrument_id: InstrumentId,
+    trade_date: str,
+    trading_rule: TradingRuleSet,
+) -> bool:
+    """
+    检查订单是否可执行 — 结算可交易性 + 卖出可用份额检查。
+
+    Args:
+        ticket: 待检查的订单票据
+        position: 当前持仓（可为 None）
+        settlement_model: 结算模型（需支持 is_tradable）
+        instrument_id: 标的 ID
+        trade_date: 交易日
+        trading_rule: 交易规则
+
+    Returns:
+        True 表示订单可以继续执行流程
+
+    """
+    # Settlement check
+    if not settlement_model.is_tradable(
+        instrument_id,
+        trade_date,
+        ticket.order.direction,
+        position,
+        trading_rule,
+    ):
+        return False
+
+    # 卖出时检查可用份额（position 存在时）
+    return not (
+        ticket.order.direction == OrderSide.SELL
+        and position is not None
+        and ticket.leaves_quantity > position.available_quantity
+    )
+
+
 # ---------------------------------------------------------------------------
 # BacktestBrokerage
 # ---------------------------------------------------------------------------
@@ -204,80 +248,94 @@ class BacktestBrokerage:
         self._thaw_frozen(trade_date)
 
         for ticket in self._account.order_book.get_pending():
-            iid = ticket.order.instrument_id
-            market = bars.get(iid)
-            if market is None:
-                continue
-
-            # 获取三层规则
-            definition, trading_rule, fee_schedule = self._rules_getter(
-                iid,
+            fill = self._process_single_ticket(
+                ticket,
+                bars,
                 trade_date,
+                step_time,
             )
-
-            # Settlement check
-            position = self._account.positions.get(iid)
-            if not self._model.settlement_model.is_tradable(
-                iid,
-                trade_date,
-                ticket.order.direction,
-                position,
-                trading_rule,
-            ):
-                # 不可交易: 保持 SUBMITTED, 下 step 再试
-                continue
-
-            # 卖出时检查可用份额
-            if (
-                ticket.order.direction == OrderSide.SELL
-                and position is not None
-                and ticket.leaves_quantity > position.available_quantity
-            ):
-                # 可用份额不足: 保持 SUBMITTED, 等解冻后重试
-                continue
-
-            # Compute slippage
-            slippage = self._model.slippage_model.estimate(
-                ticket.order,
-                market,
-                definition,
-            )
-
-            # Try fill
-            outcome = self._model.fill_model.try_fill(
-                ticket.order,
-                market,
-                definition,
-                trading_rule,
-            )
-
-            if isinstance(outcome, Filled):
-                fill_event = self._build_fill_event(
-                    ticket,
-                    outcome,
-                    slippage,
-                    step_time,
-                    fee_schedule,
-                )
-                settle_date = self._model.settlement_model.settle_date(
-                    trade_date,
-                    trading_rule,
-                )
-                self._apply_fill(ticket, fill_event, settle_date)
-                events.append(fill_event)
-
-            elif isinstance(outcome, NoFill):
-                if not outcome.can_retry:
-                    order_evt = OrderEvent(
-                        order_id=ticket.order.order_id,
-                        status=OrderStatus.INVALID,
-                        message=outcome.reason,
-                        timestamp=step_time,
-                    )
-                    self._account.order_book.update(ticket.with_invalid(order_evt))
-                # can_retry=True: 保持 SUBMITTED, 下 step 再试
+            if fill is not None:
+                events.append(fill)
 
         return tuple(events)
+
+    def _process_single_ticket(
+        self,
+        ticket: OrderTicket,
+        bars: dict[InstrumentId, MarketSnapshot],
+        trade_date: str,
+        step_time: datetime,
+    ) -> FillEvent | None:
+        """
+        处理单个待成交订单，返回成交事件或 None。
+
+        封装了规则获取、可执行性检查、滑点计算、成交尝试、
+        成交后处理的完整流程。
+        """
+        iid = ticket.order.instrument_id
+        market = bars.get(iid)
+        if market is None:
+            return None
+
+        # 获取三层规则
+        definition, trading_rule, fee_schedule = self._rules_getter(
+            iid,
+            trade_date,
+        )
+
+        # 可执行性检查（结算 + 卖出可用份额）
+        position = self._account.positions.get(iid)
+        if not _is_order_executable(
+            ticket,
+            position,
+            self._model.settlement_model,
+            iid,
+            trade_date,
+            trading_rule,
+        ):
+            return None
+
+        # Compute slippage
+        slippage = self._model.slippage_model.estimate(
+            ticket.order,
+            market,
+            definition,
+        )
+
+        # Try fill
+        outcome = self._model.fill_model.try_fill(
+            ticket.order,
+            market,
+            definition,
+            trading_rule,
+        )
+
+        if isinstance(outcome, Filled):
+            fill_event = self._build_fill_event(
+                ticket,
+                outcome,
+                slippage,
+                step_time,
+                fee_schedule,
+            )
+            settle_date = self._model.settlement_model.settle_date(
+                trade_date,
+                trading_rule,
+            )
+            self._apply_fill(ticket, fill_event, settle_date)
+            return fill_event
+
+        if isinstance(outcome, NoFill) and not outcome.can_retry:
+            order_evt = OrderEvent(
+                order_id=ticket.order.order_id,
+                status=OrderStatus.INVALID,
+                message=outcome.reason,
+                timestamp=step_time,
+            )
+            self._account.order_book.update(ticket.with_invalid(order_evt))
+        # can_retry=True: 保持 SUBMITTED, 下 step 再试
+
+        return None
 
     # -- internals ----------------------------------------------------------
 
@@ -294,6 +352,17 @@ class BacktestBrokerage:
         order = ticket.order
 
         fill_qty = ticket.leaves_quantity
+
+        # 防御性检查：V1 fill model 合约为 all-or-nothing，
+        # filled.fill_event.filled_quantity 应等于 leaves_quantity。
+        # 如 V2 引入部分成交模型，需重构 fill model contract。
+        model_qty = filled.fill_event.filled_quantity
+        if model_qty != fill_qty:
+            raise EngineError(
+                f"Fill model returned qty {model_qty} != leaves qty {fill_qty} "
+                + f"for order {order.order_id}. V1 fill model is all-or-nothing; "
+                + "partial fills require fill model contract refactoring."
+            )
         cumulative = ticket.filled_quantity + fill_qty
         leaves = order.quantity - cumulative
 

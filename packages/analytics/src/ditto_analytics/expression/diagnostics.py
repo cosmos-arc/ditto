@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ditto_analytics.exceptions import AnalyticsError
+
 __all__ = [
     "CompileDiagnostic",
     "ExpressionCompileError",
@@ -48,7 +50,7 @@ class CompileDiagnostic:
     suggestions: tuple[str, ...] = ()
 
 
-class ExpressionCompileError(Exception):
+class ExpressionCompileError(AnalyticsError):
     """Raised when expression compilation fails with a structured diagnostic."""
 
     def __init__(self, diagnostic: CompileDiagnostic) -> None:

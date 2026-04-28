@@ -32,7 +32,7 @@ from ditto_engine.backtest.statistics import (
     _sortino_ratio,
     compute_portfolio_statistics,
 )
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # _daily_returns_from_navs

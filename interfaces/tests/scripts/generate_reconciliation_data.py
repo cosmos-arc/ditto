@@ -40,7 +40,7 @@ def generate_reconciliation_parquet(as_of_date: str) -> int:
     """生成对账预期 Parquet 文件."""
     import keyring
     from ditto_data.config import DataSourceSettings
-    from ditto_data.sources import TushareSource
+    from ditto_data.sources.tushare.tushare_source import TushareSource
     from keyring.errors import KeyringError
 
     # 获取 Token

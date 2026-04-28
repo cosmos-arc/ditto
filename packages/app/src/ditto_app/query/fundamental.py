@@ -84,7 +84,11 @@ class FundamentalQueryFacade:
         return self._service.get_dividend(instrument_id, as_of_date)
 
     def list_corporate_actions(
-        self, instrument_id: int, start_date: date, end_date: date
+        self,
+        instrument_id: int,
+        start_date: date,
+        end_date: date,
+        as_of_date: date | None = None,
     ) -> pl.DataFrame:
         """
         查询公司行动数据.
@@ -93,9 +97,12 @@ class FundamentalQueryFacade:
             instrument_id: 标的 ID
             start_date: 开始日期
             end_date: 结束日期
+            as_of_date: PIT 查询日期（可选）
 
         Returns:
             公司行动 DataFrame
 
         """
-        return self._service.list_corporate_actions(instrument_id, start_date, end_date)
+        return self._service.list_corporate_actions(
+            instrument_id, start_date, end_date, as_of_date
+        )

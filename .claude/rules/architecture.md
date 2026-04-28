@@ -73,6 +73,9 @@ ditto_infra       → (无业务依赖)                                         
 ditto_engine      → ditto_data (仅 errors/provider)                        ❌ (beyond)
 ditto_data        → ditto_engine                                            ❌
 ditto_data        → ditto_interfaces                                        ❌
+ditto_analytics   → ditto_engine                                            ❌
+ditto_analytics   → ditto_interfaces                                        ❌
+ditto_analytics   → ditto_app                                               ❌
 ditto_infra       → 其他层                                                  ❌
 ```
 
@@ -82,7 +85,7 @@ ditto_infra       → 其他层                                                 
 
 使用 **Import Linter** 进行架构约束检查,配置位于 [.importlinter](../../.importlinter)。
 
-共 24 条合约（0 broken, 0 warnings）。
+共 34 条合约（0 broken, 0 warnings）。
 
 **检查类型：**
 1. **分层架构** (`layers`): Interfaces → App → Engine → Data → Infra
@@ -133,13 +136,13 @@ store = BarsStore(...)  # ❌
 
 ```python
 # ❌ 禁止：ditto_data/models/__init__.py 中 re-export kernel 类型
-from ditto_kernel.enums import AssetClass, Exchange
+from ditto_kernel.instrument import AssetClass, Exchange
 
 # ❌ 禁止：消费者通过中间包间接导入
 from ditto_data.models import AssetClass  # 看不出 AssetClass 来自 kernel
 
 # ✅ 正确：消费者直接从来源包导入
-from ditto_kernel.enums import AssetClass
+from ditto_kernel.instrument import AssetClass
 ```
 
 **适用范围**：所有 ditto 内部包之间的 re-export 均被禁止。包内子模块聚合见 [python.md](../python.md) Re-export 规范。
@@ -174,7 +177,7 @@ from ditto_kernel.enums import AssetClass
 5. **纯值语义**：不含序列化、持久化关注点
 
 **红线**：
-- kernel 类型数量控制在 20 个以内
+- 不设硬性数量上限（每个新增类型须在 PR 中说明理由）
 - 不允许 `import polars` / `import orjson` 等第三方库
 - pyproject.toml 不声明运行时依赖
 

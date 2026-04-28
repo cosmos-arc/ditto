@@ -6,6 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_data.storage.capital.specs import VALUATION_METRICS_SPEC
 from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
     ValuationMetricsReader,
 )
@@ -41,7 +42,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def reader(in_memory_db: SQLiteClient) -> ValuationMetricsReader:
     """创建 ValuationMetricsReader 实例."""
-    return ValuationMetricsReader(client=in_memory_db)
+    return ValuationMetricsReader(VALUATION_METRICS_SPEC, in_memory_db)
 
 
 def test_get_returns_data(

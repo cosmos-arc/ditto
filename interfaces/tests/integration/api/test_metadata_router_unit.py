@@ -1,26 +1,28 @@
 """Tests for Metadata API router.
 
-使用 FastAPI TestClient 测试路由，mock MetadataService.
+使用 FastAPI TestClient 测试路由，mock MetadataQueryFacade.
 """
 
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.services.metadata_service import MetadataService
+from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_interfaces.api.errors import APIError
 from ditto_interfaces.api.routes.metadata import router
+from ditto_interfaces.middleware import api_error_handler
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def mock_metadata_service() -> MagicMock:
-    """创建 mock MetadataService."""
-    return MagicMock(spec=MetadataService)
+def mock_facade() -> MagicMock:
+    """创建 mock MetadataQueryFacade."""
+    return MagicMock(spec=MetadataQueryFacade)
 
 
 @pytest.fixture
-def app(mock_metadata_service: MagicMock) -> FastAPI:
+def app(mock_facade: MagicMock) -> FastAPI:
     """创建测试 FastAPI 应用."""
     app = FastAPI()
 
@@ -34,14 +36,17 @@ def app(mock_metadata_service: MagicMock) -> FastAPI:
         scope = Scope.APP
 
         @provide
-        def get_metadata_service(self) -> MetadataService:
-            """返回 mock MetadataService."""
-            return mock_metadata_service
+        def metadata_query_facade(self) -> MetadataQueryFacade:
+            """返回 mock MetadataQueryFacade."""
+            return mock_facade
 
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
 
     app.include_router(router, prefix="/api/v1")
+
+    # 注册 APIError 异常处理器
+    app.add_exception_handler(APIError, api_error_handler)
 
     return app
 
@@ -59,11 +64,11 @@ class TestGetInstrumentById:
     def test_get_instrument_found(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试获取存在的标的."""
         # Arrange
-        mock_metadata_service.get_instrument.return_value = {
+        mock_facade.get_instrument.return_value = {
             "instrument_id": 1,
             "ticker": "600000",
             "name": "浦发银行",
@@ -78,7 +83,7 @@ class TestGetInstrumentById:
 
         # Assert
         assert response.status_code == 200
-        data = response.json()
+        data = response.json()["data"]
         assert data["instrument_id"] == 1
         assert data["ticker"] == "600000"
         assert data["name"] == "浦发银行"
@@ -90,11 +95,11 @@ class TestGetInstrumentById:
     def test_get_instrument_not_found(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试获取不存在的标的."""
         # Arrange
-        mock_metadata_service.get_instrument.return_value = None
+        mock_facade.get_instrument.return_value = None
 
         # Act
         response = client.get("/api/v1/metadata/instruments/99999")
@@ -105,7 +110,7 @@ class TestGetInstrumentById:
     def test_get_instrument_with_invalid_id(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试无效的 instrument_id 格式."""
         # Act
@@ -122,11 +127,11 @@ class TestListInstruments:
     def test_list_instruments_default_params(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试默认参数查询."""
         # Arrange
-        mock_metadata_service.find_securities.return_value = pl.DataFrame(
+        mock_facade.find_securities.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 2],
                 "ticker": ["600000", "000001"],
@@ -148,15 +153,20 @@ class TestListInstruments:
         assert len(data["data"]) == 2
         assert data["data"][0]["ticker"] == "600000"
         assert data["data"][1]["ticker"] == "000001"
+        # 验证分页信息
+        assert "pagination" in data
+        assert data["pagination"]["total"] == 2
+        assert data["pagination"]["limit"] == 20  # 默认 limit
+        assert data["pagination"]["offset"] == 0
 
     def test_list_instruments_with_asset_class_filter(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试按资产类别过滤."""
         # Arrange
-        mock_metadata_service.find_securities.return_value = pl.DataFrame(
+        mock_facade.find_securities.return_value = pl.DataFrame(
             {
                 "instrument_id": [1],
                 "ticker": ["600000"],
@@ -178,18 +188,18 @@ class TestListInstruments:
         assert data["data"][0]["asset_class"] == "stock"
 
         # 验证 service 被正确调用
-        mock_metadata_service.find_securities.assert_called_once()
-        call_kwargs = mock_metadata_service.find_securities.call_args.kwargs
+        mock_facade.find_securities.assert_called_once()
+        call_kwargs = mock_facade.find_securities.call_args.kwargs
         assert call_kwargs["asset_class"] == "stock"
 
     def test_list_instruments_with_exchange_filter(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试按交易所过滤."""
         # Arrange
-        mock_metadata_service.find_securities.return_value = pl.DataFrame(
+        mock_facade.find_securities.return_value = pl.DataFrame(
             {
                 "instrument_id": [1],
                 "ticker": ["600000"],
@@ -210,17 +220,17 @@ class TestListInstruments:
         assert len(data["data"]) == 1
 
         # 验证 service 被正确调用
-        call_kwargs = mock_metadata_service.find_securities.call_args.kwargs
+        call_kwargs = mock_facade.find_securities.call_args.kwargs
         assert call_kwargs["exchange"] == "SSE"
 
     def test_list_instruments_with_is_active_filter(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试按活跃状态过滤."""
         # Arrange
-        mock_metadata_service.find_securities.return_value = pl.DataFrame(
+        mock_facade.find_securities.return_value = pl.DataFrame(
             {
                 "instrument_id": [1],
                 "ticker": ["600000"],
@@ -239,17 +249,17 @@ class TestListInstruments:
         assert response.status_code == 200
 
         # 验证 service 被正确调用
-        call_kwargs = mock_metadata_service.find_securities.call_args.kwargs
+        call_kwargs = mock_facade.find_securities.call_args.kwargs
         assert call_kwargs["is_active"] is True
 
     def test_list_instruments_with_limit(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试限制返回数量."""
         # Arrange
-        mock_metadata_service.find_securities.return_value = pl.DataFrame(
+        mock_facade.find_securities.return_value = pl.DataFrame(
             {
                 "instrument_id": [1],
                 "ticker": ["600000"],
@@ -266,15 +276,17 @@ class TestListInstruments:
 
         # Assert
         assert response.status_code == 200
+        data = response.json()
+        assert data["pagination"]["limit"] == 10
 
     def test_list_instruments_empty_result(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试空结果."""
         # Arrange
-        mock_metadata_service.find_securities.return_value = pl.DataFrame()
+        mock_facade.find_securities.return_value = pl.DataFrame()
 
         # Act
         response = client.get("/api/v1/metadata/instruments")
@@ -288,7 +300,7 @@ class TestListInstruments:
     def test_list_instruments_with_invalid_asset_class(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试无效的资产类别."""
         # Act
@@ -300,7 +312,7 @@ class TestListInstruments:
     def test_list_instruments_with_invalid_limit(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试无效的 limit 值."""
         # Act
@@ -312,11 +324,11 @@ class TestListInstruments:
     def test_list_instruments_with_limit_too_large(
         self,
         client: TestClient,
-        mock_metadata_service: MagicMock,
+        mock_facade: MagicMock,
     ) -> None:
         """测试 limit 超过最大值."""
         # Act
-        response = client.get("/api/v1/metadata/instruments?limit=1001")
+        response = client.get("/api/v1/metadata/instruments?limit=101")
 
-        # Assert - FastAPI 验证 limit 范围
+        # Assert - FastAPI 验证 limit 范围 (max=100)
         assert response.status_code == 422

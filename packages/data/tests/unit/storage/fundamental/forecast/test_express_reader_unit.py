@@ -8,8 +8,11 @@ from pathlib import Path
 import polars as pl
 import pytest
 from ditto_data.storage.fundamental.forecast.express_reader import ExpressReader
+from ditto_data.storage.fundamental.specs import EXPRESS_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = EXPRESS_SPEC
 
 
 @pytest.fixture
@@ -37,7 +40,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def express_reader(in_memory_db: SQLitePool) -> ExpressReader:
     """Provide ExpressReader with in-memory database."""
-    return ExpressReader(SQLiteClient(in_memory_db))
+    return ExpressReader(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit

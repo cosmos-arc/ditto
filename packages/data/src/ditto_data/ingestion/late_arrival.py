@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from datetime import date
 
+from ditto_data.errors import LateArrivalRejectedError
 from ditto_data.models.ingestion import (
     DataLateArrivalPolicy,
     LateArrivalCheckResult,
-    LateArrivalRejectedError,
 )
 
 __all__ = [

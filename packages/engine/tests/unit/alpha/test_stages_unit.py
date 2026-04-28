@@ -106,10 +106,10 @@ class TestUniverseStage:
         self,
         empty_context: StrategyContext,
     ) -> None:
-        """frame 中没有 instrument_id 列时应由 Polars 抛出错误。"""
+        """frame 中没有 instrument_id 列时应由 validate_frame 抛出 ValueError。"""
         stage = UniverseStage(instrument_ids=frozenset({1}))
         bad_frame = pl.DataFrame({"name": ["a", "b"]})
-        with pytest.raises(pl.ColumnNotFoundError):
+        with pytest.raises(ValueError, match="missing required columns"):
             stage.process(bad_frame, empty_context)
 
 

@@ -2,8 +2,8 @@
 
 import pytest
 from ditto_interfaces.jobs.flows.deploy import (
-    SCHEDULE_DAILY_INGESTION,
     SCHEDULE_DAILY_REPAIR,
+    SCHEDULE_EOD,
     FlowDeploymentConfig,
     _get_flow,
     _get_flow_configs,
@@ -24,6 +24,12 @@ class TestGetFlow:
         assert callable(flow)
         assert flow.__name__ == "daily_ingestion_flow"  # type: ignore[attr-defined]
 
+    def test_get_flow_returns_eod_flow(self):
+        """测试获取 EOD flow。"""
+        flow = _get_flow("eod_flow")
+        assert callable(flow)
+        assert flow.__name__ == "eod_flow"  # type: ignore[attr-defined]
+
     def test_get_flow_raises_for_unknown_flow(self):
         """测试获取未知 flow 时抛出异常。"""
         with pytest.raises(ValueError, match="Unknown flow"):
@@ -38,18 +44,20 @@ class TestGetFlowConfigs:
         """测试返回配置列表。"""
         configs = _get_flow_configs()
         assert isinstance(configs, list)
-        assert len(configs) == 5
+        assert len(configs) == 7
 
     def test_get_flow_configs_contains_all_flows(self):
         """测试包含所有 flow 配置。"""
         configs = _get_flow_configs()
         deployment_names = [c.deployment_name for c in configs]
         expected = [
+            "eod-pipeline-prod",
             "daily-ingestion-prod",
             "daily-repair-prod",
             "retry-failed-prod",
             "backfill-prod",
             "repair-holes-prod",
+            "backtest-prod",
         ]
         assert deployment_names == expected
 
@@ -76,11 +84,11 @@ class TestGetFlowConfigs:
 class TestScheduleDefinitions:
     """测试 Cron 调度定义."""
 
-    def test_schedule_daily_ingestion_cron_and_timezone(self):
-        """测试每日增量摄取调度: 交易日 18:30, Asia/Shanghai。"""
-        assert SCHEDULE_DAILY_INGESTION is not None
-        assert SCHEDULE_DAILY_INGESTION.cron == "30 18 * * 1-5"
-        assert SCHEDULE_DAILY_INGESTION.timezone == "Asia/Shanghai"
+    def test_schedule_eod_cron_and_timezone(self):
+        """测试 EOD 编排调度: 交易日 19:45, Asia/Shanghai。"""
+        assert SCHEDULE_EOD is not None
+        assert SCHEDULE_EOD.cron == "45 19 * * 1-5"
+        assert SCHEDULE_EOD.timezone == "Asia/Shanghai"
 
     def test_schedule_daily_repair_cron_and_timezone(self):
         """测试每日修补调度: 每日 02:00, Asia/Shanghai。"""
@@ -99,13 +107,15 @@ class TestScheduleAssignment:
         config_map = {c.deployment_name: c for c in configs}
 
         # 自动调度的部署
-        assert config_map["daily-ingestion-prod"].schedule is SCHEDULE_DAILY_INGESTION
+        assert config_map["eod-pipeline-prod"].schedule is SCHEDULE_EOD
         assert config_map["daily-repair-prod"].schedule is SCHEDULE_DAILY_REPAIR
 
-        # 手动触发的部署
+        # 手动触发的部署（daily_ingestion_flow 改为手动触发，由 EOD 编排）
+        assert config_map["daily-ingestion-prod"].schedule is None
         assert config_map["retry-failed-prod"].schedule is None
         assert config_map["backfill-prod"].schedule is None
         assert config_map["repair-holes-prod"].schedule is None
+        assert config_map["backtest-prod"].schedule is None
 
 
 @pytest.mark.unit
@@ -213,7 +223,7 @@ class TestDeployAllFlows:
         mock_config.description = "Test description"
         mock_config.tags = ["test"]
         mock_config.parameters = {}
-        mock_config.schedule = SCHEDULE_DAILY_INGESTION
+        mock_config.schedule = SCHEDULE_EOD
         # _resolve_flow 检查 hasattr(flow, "name") 和 hasattr(flow, "to_deployment")
         # Mock 对象自动创建这些属性，所以 _resolve_flow 会直接返回 config.flow
         mock_config.flow.to_deployment.return_value = mocker.Mock()
@@ -229,7 +239,7 @@ class TestDeployAllFlows:
             description="Test description",
             tags=["test"],
             parameters={},
-            schedule=SCHEDULE_DAILY_INGESTION,
+            schedule=SCHEDULE_EOD,
         )
 
     def test_deploy_all_flows_with_image(self, mocker: MockerFixture):
@@ -348,3 +358,52 @@ class TestFlowDeploymentContracts:
         # 参数名必须是 "config"，匹配 backfill_flow 签名
         assert "config" in backfill_config.parameters
         assert "backfill_config" not in backfill_config.parameters
+
+    def test_eod_pipeline_uses_trade_date_parameter(self) -> None:
+        """EOD flow 应使用 trade_date 参数。"""
+        configs = _get_flow_configs()
+
+        eod_config = next(
+            (c for c in configs if c.deployment_name == "eod-pipeline-prod"),
+            None,
+        )
+        assert eod_config is not None
+        assert "trade_date" in eod_config.parameters
+
+
+@pytest.mark.unit
+class TestBackfillDateRange:
+    """测试全量回补日期范围配置外部化."""
+
+    def test_default_values(self, monkeypatch) -> None:
+        """未设置环境变量时应返回默认值."""
+        from ditto_interfaces.jobs.flows.deploy import _get_backfill_date_range
+
+        monkeypatch.delenv("DITTO_BACKFILL_START_DATE", raising=False)
+        monkeypatch.delenv("DITTO_BACKFILL_END_DATE", raising=False)
+        start, end = _get_backfill_date_range()
+        assert start == "2020-01-01"
+        assert end == "2024-12-31"
+
+    def test_custom_values_via_env(self, monkeypatch) -> None:
+        """设置环境变量应覆盖默认值."""
+        from ditto_interfaces.jobs.flows.deploy import _get_backfill_date_range
+
+        monkeypatch.setenv("DITTO_BACKFILL_START_DATE", "2019-06-01")
+        monkeypatch.setenv("DITTO_BACKFILL_END_DATE", "2025-12-31")
+        start, end = _get_backfill_date_range()
+        assert start == "2019-06-01"
+        assert end == "2025-12-31"
+
+    def test_backfill_config_uses_env_dates(self, monkeypatch) -> None:
+        """backfill 配置应使用环境变量中的日期."""
+        monkeypatch.setenv("DITTO_BACKFILL_START_DATE", "2021-01-01")
+        monkeypatch.setenv("DITTO_BACKFILL_END_DATE", "2023-06-30")
+        configs = _get_flow_configs()
+        backfill_config = next(
+            (c for c in configs if c.deployment_name == "backfill-prod"),
+            None,
+        )
+        assert backfill_config is not None
+        assert backfill_config.parameters["config"]["start_date"] == "2021-01-01"
+        assert backfill_config.parameters["config"]["end_date"] == "2023-06-30"

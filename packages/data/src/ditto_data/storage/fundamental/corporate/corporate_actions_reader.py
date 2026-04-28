@@ -1,88 +1,35 @@
-"""
-CorporateActions reader for CQRS pattern.
-
-Provides read-only access to corporate actions data (non-PIT).
-"""
-
-from __future__ import annotations
+"""CorporateActions reader for CQRS pattern."""
 
 from datetime import date
-from typing import Any
 
 import polars as pl
 from ditto_infra.foundation import logger, traced
 
+from ditto_data.storage.base.sqlite_table_reader import SqliteTableReader
+from ditto_data.storage.base.sqlite_table_spec import SqliteTableSpec
 from ditto_data.storage.sqlite_client import SQLiteClient
 
 
-class CorporateActionsReader:
-    """
-    Corporate actions data reader.
+class CorporateActionsReader(SqliteTableReader):
+    """Reader for corporate actions data."""
 
-    Provides read-only access to corporate actions data with date range
-    filtering support. This is a non-PIT table without effective_from/effective_to.
-
-    Attributes:
-        _client: SQLite client for database access.
-
-    """
-
-    def __init__(self, client: SQLiteClient) -> None:
-        """
-        Initialize CorporateActionsReader.
-
-        Args:
-            client: SQLite client instance.
-
-        """
-        self._client = client
+    def __init__(self, spec: SqliteTableSpec, client: SQLiteClient) -> None:
+        super().__init__(spec, client)
 
     @traced("data.corporate_actions_query")
-    def get(
+    def query(
         self,
-        instrument_id: int,
+        id_value: int | str,
         start_date: date | None = None,
         end_date: date | None = None,
+        as_of_date: date | None = None,
     ) -> pl.DataFrame:
-        """
-        Query corporate actions data with optional date range filtering.
-
-        Args:
-            instrument_id: Instrument identifier.
-            start_date: Optional start date filter (inclusive).
-            end_date: Optional end date filter (inclusive).
-
-        Returns:
-            DataFrame with corporate actions data. Returns empty DataFrame
-            if no data found.
-
-        """
+        """Query corporate actions with optional filters."""
         logger.debug(
             "Querying corporate actions",
-            instrument_id=instrument_id,
+            instrument_id=id_value,
             start_date=start_date,
             end_date=end_date,
+            as_of_date=as_of_date,
         )
-
-        conditions = ["instrument_id = ?"]
-        params: list[Any] = [instrument_id]
-
-        if start_date:
-            conditions.append("announcement_date >= ?")
-            params.append(start_date)
-
-        if end_date:
-            conditions.append("announcement_date <= ?")
-            params.append(end_date)
-
-        where_clause = f" WHERE {' AND '.join(conditions)}"
-
-        rows = self._client.fetchall(
-            f"""SELECT instrument_id, action_type, announcement_date,
-                       effective_date, description
-                FROM corporate_actions
-                {where_clause}
-                ORDER BY announcement_date DESC""",  # noqa: S608 - where_clause constructed from whitelisted conditions
-            params,
-        )
-        return pl.DataFrame(rows) if rows else pl.DataFrame()
+        return self.get_range(id_value, start_date, end_date, as_of_date)

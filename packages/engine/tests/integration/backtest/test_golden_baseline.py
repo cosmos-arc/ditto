@@ -1,14 +1,13 @@
-"""Golden test baseline — 回测关键指标回归基线.
+"""Golden test baseline — 回测关键指标回归基线 (inline-snapshot).
 
 使用确定性回测数据验证引擎输出的一致性，作为后续 Phase 迁移的回归安全网。
 任何破坏回测结果一致性的代码变更都会导致断言失败。
 
-基线值通过 3 日 / 5 日固定 parquet 数据 + etf_rotation 策略建立。
-如需更新基线，需确认行为变更的合理性后修改对应的期望值。
-
-运行方式:
+快照值通过 inline-snapshot 自动管理，更新方式:
   pixi run -e dev pytest packages/engine/tests/integration/ \\
-    backtest/test_golden_baseline.py -v
+    backtest/test_golden_baseline.py --snapshot-update -v
+
+基线值通过 3 日 / 5 日固定 parquet 数据 + etf_rotation 策略建立。
 """
 
 from __future__ import annotations
@@ -30,6 +29,7 @@ from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel
 from ditto_kernel.clock import SimulatedClock
+from inline_snapshot import snapshot
 
 from .conftest import INITIAL_CASH, build_test_data_feed, write_parquet_data
 
@@ -86,8 +86,9 @@ def _build_engine_with_audit(
     return engine, audit
 
 
+@pytest.mark.snapshot
 class TestGoldenBaseline:
-    """Golden test — 回测关键指标必须与基线一致。"""
+    """Golden test — 回测关键指标通过 inline-snapshot 锁定。"""
 
     def test_3day_etf_rotation_baseline(
         self,
@@ -97,7 +98,7 @@ class TestGoldenBaseline:
         pre_trade_check,
         fee_model,
     ) -> None:
-        """3 日 ETF 轮动回测 — 验证关键指标与基线一致。"""
+        """3 日 ETF 轮动回测 — 验证关键指标与快照一致。"""
         data_dir = write_parquet_data(tmp_path, three_day_data)
         engine, audit = _build_engine_with_audit(
             data_dir,
@@ -111,18 +112,13 @@ class TestGoldenBaseline:
         result = engine.run()
         report = build_report(audit, run_id=result.run_id)
 
-        # EngineResult 层级指标
-        assert result.final_nav == 999954.2841199999
-        assert result.total_trades == 7
-
-        # AlphaStatistics 层级指标
-        assert report.alpha_stats.annualized_return == pytest.approx(3.249402928305334)
-        assert report.alpha_stats.max_drawdown == pytest.approx(-8.0203602269124e-05)
-        assert report.alpha_stats.sharpe_ratio == pytest.approx(11.333292780046666)
-
-        # AggregatedTradeStatistics 层级指标
-        assert report.aggregated_trade_stats.total_trades == 3
-        assert report.aggregated_trade_stats.win_rate == 100.0
+        assert result.final_nav == snapshot(999954.2841199999)
+        assert result.total_trades == snapshot(7)
+        assert report.alpha_stats.annualized_return == snapshot(3.249402928305334)
+        assert report.alpha_stats.max_drawdown == snapshot(-8.0203602269124e-05)
+        assert report.alpha_stats.sharpe_ratio == snapshot(11.333292780046666)
+        assert report.aggregated_trade_stats.total_trades == snapshot(3)
+        assert report.aggregated_trade_stats.win_rate == snapshot(100.0)
 
     def test_5day_etf_rotation_baseline(
         self,
@@ -132,7 +128,7 @@ class TestGoldenBaseline:
         pre_trade_check,
         fee_model,
     ) -> None:
-        """5 日 ETF 轮动回测 — 验证关键指标与基线一致。"""
+        """5 日 ETF 轮动回测 — 验证关键指标与快照一致。"""
         data_dir = write_parquet_data(tmp_path, five_day_data)
         engine, audit = _build_engine_with_audit(
             data_dir,
@@ -146,15 +142,40 @@ class TestGoldenBaseline:
         result = engine.run()
         report = build_report(audit, run_id=result.run_id)
 
-        # EngineResult 层级指标
-        assert result.final_nav == pytest.approx(1001160.0580472726)
-        assert result.total_trades == 13
+        assert result.final_nav == snapshot(1001160.0580472726)
+        assert result.total_trades == snapshot(13)
+        assert report.alpha_stats.annualized_return == snapshot(9.626625991102312)
+        assert report.alpha_stats.max_drawdown == snapshot(-8.0203602269124e-05)
+        assert report.alpha_stats.sharpe_ratio == snapshot(20.634343104906)
+        assert report.aggregated_trade_stats.total_trades == snapshot(8)
+        assert report.aggregated_trade_stats.win_rate == snapshot(100.0)
 
-        # AlphaStatistics 层级指标
-        assert report.alpha_stats.annualized_return == pytest.approx(9.626625991102312)
-        assert report.alpha_stats.max_drawdown == pytest.approx(-8.0203602269124e-05)
-        assert report.alpha_stats.sharpe_ratio == pytest.approx(20.634343104906)
+    def test_3day_etf_trend_swing_baseline(
+        self,
+        tmp_path,
+        three_day_data,
+        etf_trend_swing_pipeline,
+        pre_trade_check,
+        fee_model,
+    ) -> None:
+        """3 日 ETF 趋势追踪回测 — 验证关键指标与快照一致。"""
+        data_dir = write_parquet_data(tmp_path, three_day_data)
+        engine, audit = _build_engine_with_audit(
+            data_dir,
+            etf_trend_swing_pipeline,
+            pre_trade_check,
+            fee_model,
+            start_date="2026-01-05",
+            end_date="2026-01-07",
+        )
 
-        # AggregatedTradeStatistics 层级指标
-        assert report.aggregated_trade_stats.total_trades == 8
-        assert report.aggregated_trade_stats.win_rate == 100.0
+        result = engine.run()
+        report = build_report(audit, run_id=result.run_id)
+
+        assert result.final_nav == snapshot(992355.3246009998)
+        assert result.total_trades == snapshot(6)
+        assert report.alpha_stats.annualized_return == snapshot(-60.51274261034244)
+        assert report.alpha_stats.max_drawdown == snapshot(-0.7347415775246444)
+        assert report.alpha_stats.sharpe_ratio == snapshot(-209.4552847593765)
+        assert report.aggregated_trade_stats.total_trades == snapshot(3)
+        assert report.aggregated_trade_stats.win_rate == snapshot(33.33333333333333)

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from enum import Enum, StrEnum
 from typing import Literal, NamedTuple, cast
 
-from ditto_kernel.enums import AssetClass
+from ditto_kernel.instrument import AssetClass
 
 # 资产类别类型别名
 type AssetClassType = Literal[
@@ -94,6 +94,9 @@ class Dataset(StrEnum):
     # Capital 域扩展
     CORPORATE_ACTIONS = "corporate_actions"
 
+    # Index 域（参考类数据）
+    INDEX_WEIGHT = "index_weight"
+
     @property
     def asset_class(self) -> AssetClass | None:
         """
@@ -121,7 +124,7 @@ class Dataset(StrEnum):
         if self in (Dataset.ETF_DAILY, Dataset.FUND_ADJ):
             return AssetClass.ETF
         # Index 数据集
-        if self == Dataset.INDEX_DAILY:
+        if self in (Dataset.INDEX_DAILY, Dataset.INDEX_WEIGHT):
             return AssetClass.INDEX
         return None
 
@@ -139,6 +142,7 @@ class Dataset(StrEnum):
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
             Dataset.INDEX_DAILY,
+            Dataset.INDEX_WEIGHT,
             Dataset.STOCK_STATUS,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
@@ -173,6 +177,11 @@ class Dataset(StrEnum):
 
         """
         return self.asset_class is not None
+
+    @classmethod
+    def all_datasets(cls) -> list[str]:
+        """返回所有已注册数据集的值列表。"""
+        return [d.value for d in cls]
 
     @classmethod
     def is_basic_dataset(cls, dataset: str) -> bool:
@@ -227,7 +236,7 @@ class Domain(StrEnum):
     """
     支持的数据域类型。
 
-    数据域枚举，用于 Port 层 IngestionCoordinator 路由和域级别数据管理。
+    数据域枚举，用于 App 层 IngestionCoordinator 路由和域级别数据管理。
     """
 
     METADATA = "metadata"

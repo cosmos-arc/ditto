@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -21,9 +22,11 @@ from ditto_interfaces.jobs.flows import (
     backfill_flow,
     daily_ingestion_flow,
     daily_repair_flow,
+    eod_flow,
     repair_holes_flow,
     retry_failed_flow,
 )
+from ditto_interfaces.jobs.flows.backtest import run_backtest_flow
 
 # ---------------------------------------------------------------------------
 # Cron 调度定义
@@ -32,10 +35,9 @@ from ditto_interfaces.jobs.flows import (
 # Cron 表达式遵循标准 5 字段格式: 分 时 日 月 周。
 # ---------------------------------------------------------------------------
 
-# T0 + T1: 交易日 18:30 — 每日增量摄取流程 (T0 元数据 → T1 日线 → T3 质检)
-# 选择 18:30 而非 8:00，因为 T0 耗时极短，合并调度更简单。
-# T0 任务在 flow 内部先于 T1 执行，无需拆分独立部署。
-SCHEDULE_DAILY_INGESTION: Schedule = Cron("30 18 * * 1-5", timezone="Asia/Shanghai")
+# EOD: 交易日 19:45 — 每日 EOD 编排流程 (摄取 → 物化 → 策略)
+# 统一入口，替代原有的独立 daily_ingestion_flow 定时调度。
+SCHEDULE_EOD: Schedule = Cron("45 19 * * 1-5", timezone="Asia/Shanghai")
 
 # T2: 每日 02:00 — 空洞扫描 + 回补（非交易日亦可运行，无副作用）
 SCHEDULE_DAILY_REPAIR: Schedule = Cron("0 2 * * *", timezone="Asia/Shanghai")
@@ -68,9 +70,11 @@ def _get_flow(name: str) -> Flow[Any, Any]:
     flow_map: dict[str, Flow[Any, Any]] = {
         "daily_ingestion_flow": daily_ingestion_flow,
         "daily_repair_flow": daily_repair_flow,
+        "eod_flow": eod_flow,
         "retry_failed_flow": retry_failed_flow,
         "backfill_flow": backfill_flow,
         "repair_holes_flow": repair_holes_flow,
+        "run_backtest_flow": run_backtest_flow,
     }
 
     if name not in flow_map:
@@ -106,16 +110,41 @@ def _resolve_flow(
     return cast(Flow[Any, Any], flow)
 
 
+def _get_backfill_date_range() -> tuple[str, str]:
+    """
+    获取全量回补的日期范围。
+
+    通过环境变量 DITTO_BACKFILL_START_DATE / DITTO_BACKFILL_END_DATE
+    外部化配置，未设置时保留与原硬编码一致的默认值。
+
+    Returns:
+        (start_date, end_date) 字符串元组，格式 YYYY-MM-DD。
+
+    """
+    start = os.environ.get("DITTO_BACKFILL_START_DATE", "2020-01-01")
+    end = os.environ.get("DITTO_BACKFILL_END_DATE", "2024-12-31")
+    return start, end
+
+
 def _get_flow_configs() -> list[FlowDeploymentConfig]:
     """获取所有 flow 部署配置。"""
+    backfill_start, backfill_end = _get_backfill_date_range()
     return [
+        FlowDeploymentConfig(
+            flow=lambda: _get_flow("eod_flow"),
+            deployment_name="eod-pipeline-prod",
+            description="EOD 编排流程 (摄取 → 物化 → 策略运行)",
+            parameters={"trade_date": "{{ date }}"},
+            tags=["production", "daily", "eod"],
+            schedule=SCHEDULE_EOD,
+        ),
         FlowDeploymentConfig(
             flow=lambda: _get_flow("daily_ingestion_flow"),
             deployment_name="daily-ingestion-prod",
             description="每日增量数据摄取流程 (T0 → T1 → T3)",
             parameters={"trade_date": "{{ date }}"},
             tags=["production", "daily", "ingestion"],
-            schedule=SCHEDULE_DAILY_INGESTION,
+            schedule=None,
         ),
         FlowDeploymentConfig(
             flow=lambda: _get_flow("daily_repair_flow"),
@@ -139,8 +168,8 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             parameters={
                 "config": {
                     "dataset": "stock_daily",
-                    "start_date": "2020-01-01",
-                    "end_date": "2024-12-31",
+                    "start_date": backfill_start,
+                    "end_date": backfill_end,
                 }
             },
             tags=["production", "backfill", "manual"],
@@ -151,6 +180,13 @@ def _get_flow_configs() -> list[FlowDeploymentConfig]:
             description="扫描并修补数据空洞",
             parameters={"dataset": "stock_daily"},
             tags=["production", "repair", "manual"],
+        ),
+        FlowDeploymentConfig(
+            flow=lambda: _get_flow("run_backtest_flow"),
+            deployment_name="backtest-prod",
+            description="异步回测执行 (R3 — Prefect Worker 调度)",
+            parameters={},
+            tags=["backtest", "manual"],
         ),
     ]
 
@@ -169,11 +205,13 @@ def deploy_all_flows(
         push: 是否推送镜像到注册表
 
     该函数会：
-    1. 部署每日增量摄取流程（定时: 交易日 18:30）
-    2. 部署每日修补流程（定时: 每日 02:00）
-    3. 部署重试失败流程（手动触发）
-    4. 部署全量回补流程（手动触发）
-    5. 部署修补空洞流程（手动触发）
+    1. 部署 EOD 编排流程（定时: 交易日 19:45）
+    2. 部署每日增量摄取流程（手动触发，由 EOD 编排）
+    3. 部署每日修补流程（定时: 每日 02:00）
+    4. 部署重试失败流程（手动触发）
+    5. 部署全量回补流程（手动触发）
+    6. 部署修补空洞流程（手动触发）
+    7. 部署异步回测流程（手动触发，R3）
 
     注意: Prefect 3.x 移除了 Deployment API，改用 flow.deploy()。
 

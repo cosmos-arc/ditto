@@ -1,0 +1,12 @@
+DQ Alert [{{ level | upper }}]
+
+Dataset: {{ dataset }}
+Trade Date: {{ trade_date }}
+Error Count: {{ error_count }}
+
+Failed Rules:
+{% for rule in failed_rules %}
+  - {{ rule }}
+{% endfor %}
+
+Timestamp: {{ timestamp }}

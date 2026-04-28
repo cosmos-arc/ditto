@@ -1,11 +1,6 @@
-"""Tests for DataSource base classes and exceptions."""
+"""Tests for DataSource exception classes."""
 
-from datetime import date
-
-import polars as pl
-import pytest
-from ditto_data.sources.base import (
-    DataSource,
+from ditto_data.errors import (
     DataSourceError,
     SourceAuthenticationError,
     SourceConfigurationError,
@@ -19,14 +14,16 @@ class TestDataSourceError:
     """Tests for DataSourceError base class."""
 
     def test_initialization_with_message_only(self) -> None:
-        """Test error initialization with message only."""
-        error = DataSourceError("Test error")
+        """Test error initialization with message and source."""
+        error = DataSourceError("Test error", source="test_source")
         assert str(error) == "Test error"
-        assert error.details == {}
+        assert error.source == "test_source"
+        assert error.details == {"source": "test_source"}
 
     def test_initialization_with_details(self) -> None:
         """Test error initialization with details."""
-        error = DataSourceError("Test error", details={"key": "value"})
+        error = DataSourceError("Test error", source="test", details={"key": "value"})
+        assert error.details is not None
         assert error.details["key"] == "value"
 
 
@@ -39,6 +36,7 @@ class TestSourceConfigurationError:
             message="Token not found",
             env_var="TUSHARE_TOKEN",
         )
+        assert error.details is not None
         assert error.details["env_var"] == "TUSHARE_TOKEN"
 
     def test_with_config_key(self) -> None:
@@ -47,6 +45,7 @@ class TestSourceConfigurationError:
             message="Invalid config",
             config_key="api_timeout",
         )
+        assert error.details is not None
         assert error.details["config_key"] == "api_timeout"
 
 
@@ -59,12 +58,12 @@ class TestSourceAuthenticationError:
             message="Authentication failed",
             source="tushare",
         )
-        assert error.details["source"] == "tushare"
+        assert error.source == "tushare"
 
     def test_without_source(self) -> None:
         """Test error without source parameter."""
         error = SourceAuthenticationError(message="Auth failed")
-        assert error.details == {}
+        assert error.source == "unknown"
 
 
 class TestSourceRateLimitError:
@@ -78,6 +77,7 @@ class TestSourceRateLimitError:
             limit=200,
             window=60,
         )
+        assert error.details is not None
         assert error.details["limit"] == 200
         assert error.details["window"] == 60
 
@@ -87,6 +87,7 @@ class TestSourceRateLimitError:
             message="Too many requests",
             limit=100,
         )
+        assert error.details is not None
         assert error.details["limit"] == 100
         assert "window" not in error.details
 
@@ -94,23 +95,25 @@ class TestSourceRateLimitError:
 class TestSourceFetchError:
     """Tests for SourceFetchError."""
 
-    def test_fetch_error_with_date(self) -> None:
-        """Test error includes fetch context."""
+    def test_fetch_error_basic(self) -> None:
+        """Test basic SourceFetchError creation."""
         error = SourceFetchError(
             message="Failed to fetch data",
             source="tushare",
-            dataset="etf_daily",
-            trade_date=date(2024, 12, 27),
+            details={"dataset": "etf_daily", "trade_date": "2024-12-27"},
         )
+        assert error.source == "tushare"
+        assert error.details is not None
         assert error.details["dataset"] == "etf_daily"
-        assert error.details["trade_date"] == "2024-12-27"
 
-    def test_fetch_error_with_original_error(self) -> None:
-        """Test error includes original error message."""
+    def test_fetch_error_with_details(self) -> None:
+        """Test error includes original error in details."""
         error = SourceFetchError(
             message="API error",
-            original_error="Connection timeout",
+            source="tushare",
+            details={"original_error": "Connection timeout"},
         )
+        assert error.details is not None
         assert error.details["original_error"] == "Connection timeout"
 
 
@@ -126,6 +129,7 @@ class TestSourceTransformationError:
             expected_columns=["source_ticker", "trade_date", "close"],
             actual_columns=["code", "date", "price"],
         )
+        assert error.details is not None
         assert error.details["expected_columns"] == [
             "source_ticker",
             "trade_date",
@@ -138,145 +142,4 @@ class TestSourceTransformationError:
         error = SourceTransformationError(
             message="Transform failed",
         )
-        assert error.details == {}
-
-
-class TestDataSourceABC:
-    """Tests for DataSource abstract base class."""
-
-    def test_cannot_instantiate_abstract_class(self) -> None:
-        """Test that DataSource cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            DataSource()  # type: ignore[abstract]
-
-    def test_subclass_must_implement_all_methods(self) -> None:
-        """Test subclass must implement all abstract methods."""
-
-        class IncompleteSource(DataSource):
-            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            # Missing fetch_etf_daily
-
-        with pytest.raises(TypeError):
-            IncompleteSource()  # type: ignore[abstract]
-
-    def test_complete_subclass_can_be_instantiated(self) -> None:
-        """Test complete subclass can be instantiated."""
-
-        class CompleteSourcer(DataSource):
-            def fetch_calendar(self, start_date: str, end_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_etf_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_basic(
-                self, source_ticker: str | None = None
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_daily(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_adj_factor(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_adj_factor_by_ticker(
-                self,
-                ts_code: str,
-                start_date: str,
-                end_date: str,
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_fund_adj(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_stock_status(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_balance_sheet(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_income_statement(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_cash_flow(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_dividend(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_valuation_metrics(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_margin_trading(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_pledge_ratio(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_macro_indicators(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_futures(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_corporate_actions(self, trade_date: str) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_index_basic(self) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_index_daily(
-                self,
-                trade_date: str,
-                ts_codes: list[str] | None = None,
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_sw_industry(self, level: int = 1) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_fx_daily(
-                self,
-                ts_codes: list[str],
-                start_date: str,
-                end_date: str,
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_commodities(
-                self,
-                codes: list[str],
-                start_date: str,
-                end_date: str,
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_metal_daily(
-                self,
-                codes: list[str],
-                start_date: str,
-                end_date: str,
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-            def fetch_st_history(
-                self,
-                ts_code: str | None = None,
-                start_date: str | None = None,
-                end_date: str | None = None,
-            ) -> pl.DataFrame:
-                return pl.DataFrame()
-
-        # Should not raise
-        source = CompleteSourcer()
-        assert isinstance(source, DataSource)
+        assert error.details == {"source": "unknown"}

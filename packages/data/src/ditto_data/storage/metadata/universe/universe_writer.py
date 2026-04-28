@@ -92,6 +92,87 @@ class UniverseWriter:
             universe_id=universe_id,
         )
 
+    @traced("data.universe_update_metadata")
+    def update_metadata(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+    ) -> bool:
+        """
+        更新证券域元数据（name, description）。
+
+        Args:
+            universe_id: 证券域唯一标识符
+            name: 新名称
+            description: 新描述
+
+        Returns:
+            是否成功更新（rowcount > 0）
+
+        """
+        logger.info(
+            "Updating universe metadata",
+            event="universe_update_metadata_start",
+            universe_id=universe_id,
+            name=name,
+        )
+
+        cursor = self._client.execute(
+            "UPDATE universe SET name = ?, description = ? WHERE universe_id = ?",
+            [name, description, universe_id],
+        )
+        self._client.commit()
+
+        updated = cursor.rowcount > 0
+
+        # 失效缓存
+        self._cache.invalidate_pattern("universe:*")
+
+        logger.info(
+            "Universe metadata updated",
+            event="universe_update_metadata_complete",
+            universe_id=universe_id,
+            updated=updated,
+        )
+
+        return updated
+
+    @traced("data.universe_delete")
+    def delete_universe(self, universe_id: str) -> None:
+        """
+        删除证券域及其所有成分股.
+
+        Args:
+            universe_id: 证券域唯一标识符
+
+        """
+        logger.info(
+            "Deleting universe",
+            event="universe_delete_start",
+            universe_id=universe_id,
+        )
+
+        self._client.execute(
+            "DELETE FROM universe_constituent WHERE universe_id = ?",
+            [universe_id],
+        )
+        self._client.execute(
+            "DELETE FROM universe WHERE universe_id = ?",
+            [universe_id],
+        )
+        self._client.commit()
+
+        # 失效缓存
+        self._cache.invalidate_pattern("universe:*")
+        self._cache.invalidate_pattern("universe:constituents:*")
+
+        logger.info(
+            "Universe deleted successfully",
+            event="universe_delete_complete",
+            universe_id=universe_id,
+        )
+
     @traced("data.universe_add_constituents")
     def add_constituents(
         self,

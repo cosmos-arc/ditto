@@ -66,6 +66,20 @@ class DataFeed(Protocol):
         """获取指定日期的市场数据切片。"""
         ...
 
+    def get_history(
+        self,
+        instrument_ids: list[InstrumentId],
+        as_of_date: str,
+        lookback_days: int,
+    ) -> pl.DataFrame:
+        """
+        获取指定标的历史行情窗口。
+
+        返回 as_of_date 之前 lookback_days 个交易日的 OHLCV 数据，
+        包含 trade_date 和 instrument_id 列用于分组和排序。
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Shared helper
@@ -223,3 +237,38 @@ class ProviderBackedDataFeed:
             bars=bars,
             benchmark_close=benchmark_close,
         )
+
+    def get_history(
+        self,
+        instrument_ids: list[InstrumentId],
+        as_of_date: str,
+        lookback_days: int,
+    ) -> pl.DataFrame:
+        """
+        获取指定标的历史行情窗口。
+
+        从预加载的 _bars_df 中过滤:
+        - instrument_id IN (instrument_ids)
+        - trade_date < as_of_date
+        - 按 trade_date desc 限制 lookback_days 行
+        返回按 (instrument_id, trade_date) 排序的 DataFrame。
+        """
+        df = self._load_bars()
+        if df.is_empty() or lookback_days <= 0:
+            return df.clear()
+
+        iid_values = [int(iid) for iid in instrument_ids]
+        filtered = df.filter(
+            (pl.col("instrument_id").is_in(iid_values))
+            # PIT: strict < 排除当日数据，防止未来数据泄露到因子回看窗口
+            & (pl.col("trade_date") < as_of_date),
+        )
+
+        # 按 instrument_id 分组，每组取最近 lookback_days 个交易日
+        result = (
+            filtered.sort(["instrument_id", "trade_date"])
+            .group_by("instrument_id", maintain_order=True)
+            .tail(lookback_days)
+        )
+
+        return result

@@ -16,7 +16,7 @@ class TestAssetClass:
 
     def test_asset_class_values(self) -> None:
         """验证 AssetClass 包含 stock, etf, index."""
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         assert AssetClass.STOCK.value == "stock"
         assert AssetClass.ETF.value == "etf"
@@ -27,7 +27,7 @@ class TestAssetClass:
 
     def test_asset_class_from_string(self) -> None:
         """验证可以从字符串创建 AssetClass."""
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         assert AssetClass("stock") == AssetClass.STOCK
         assert AssetClass("etf") == AssetClass.ETF
@@ -35,7 +35,7 @@ class TestAssetClass:
 
     def test_asset_class_invalid_value(self) -> None:
         """验证无效值会抛出异常."""
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         with pytest.raises(ValueError):
             AssetClass("invalid")
@@ -58,7 +58,7 @@ class TestInstrumentQuery:
     def test_custom_values(self) -> None:
         """验证自定义查询参数."""
         from ditto_interfaces.models.metadata import InstrumentQuery
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         query = InstrumentQuery(
             asset_class=AssetClass.STOCK,
@@ -105,8 +105,8 @@ class TestInstrument:
     def test_basic_instrument(self) -> None:
         """验证基本 Instrument 创建."""
         from ditto_interfaces.models.metadata import Instrument
-        from ditto_kernel.enums import AssetClass
         from ditto_kernel.identity import InstrumentId
+        from ditto_kernel.instrument import AssetClass
 
         instrument = Instrument(
             instrument_id=InstrumentId(1),
@@ -129,8 +129,8 @@ class TestInstrument:
     def test_instrument_with_optional_fields(self) -> None:
         """验证可选字段."""
         from ditto_interfaces.models.metadata import Instrument
-        from ditto_kernel.enums import AssetClass
         from ditto_kernel.identity import InstrumentId
+        from ditto_kernel.instrument import AssetClass
 
         # list_date 可以为 None
         instrument = Instrument(
@@ -148,8 +148,8 @@ class TestInstrument:
     def test_model_dump(self) -> None:
         """验证 model_dump 序列化."""
         from ditto_interfaces.models.metadata import Instrument
-        from ditto_kernel.enums import AssetClass
         from ditto_kernel.identity import InstrumentId
+        from ditto_kernel.instrument import AssetClass
 
         instrument = Instrument(
             instrument_id=InstrumentId(1),
@@ -178,7 +178,7 @@ class TestToInstrument:
     def test_convert_complete_row(self) -> None:
         """验证完整行转换."""
         from ditto_interfaces.models.metadata import to_instrument
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         row: dict[str, Any] = {
             "instrument_id": 1,
@@ -269,7 +269,7 @@ class TestToInstrumentList:
     def test_convert_single_row_dataframe(self) -> None:
         """验证单行 DataFrame 转换."""
         from ditto_interfaces.models.metadata import to_instrument_list
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         df = pl.DataFrame(
             {
@@ -293,7 +293,7 @@ class TestToInstrumentList:
     def test_convert_multiple_rows_dataframe(self) -> None:
         """验证多行 DataFrame 转换."""
         from ditto_interfaces.models.metadata import to_instrument_list
-        from ditto_kernel.enums import AssetClass
+        from ditto_kernel.instrument import AssetClass
 
         df = pl.DataFrame(
             {

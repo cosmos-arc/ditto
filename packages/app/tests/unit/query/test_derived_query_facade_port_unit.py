@@ -13,10 +13,12 @@ from ditto_app.query.derived import (
     SourceCompareRequest,
 )
 from ditto_data.services import (
+    DerivedSourceScope,
+)
+from ditto_data.services.derived import (
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedSeriesQuery,
-    DerivedSourceScope,
 )
 from pytest_mock import MockerFixture
 

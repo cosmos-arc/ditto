@@ -14,6 +14,7 @@ from ditto_interfaces.main import (
     health_check,
     root,
 )
+from ditto_kernel import __version__ as ditto_version
 from starlette.requests import Request
 
 
@@ -40,7 +41,7 @@ class TestFastAPIEndpoints:
     async def test_root_endpoint(self):
         """Test root endpoint returns expected message."""
         response = await root()
-        assert response == {"message": "Ditto Quant API", "version": "0.1.0"}
+        assert response == {"message": "Ditto Quant API", "version": ditto_version}
 
     @pytest.mark.asyncio
     async def test_health_check_endpoint(self):
@@ -57,7 +58,7 @@ class TestFastAPIEndpoints:
         """Test get status endpoint returns system status."""
         response = await get_status(_make_request())
         assert response["status"] == "running"
-        assert response["version"] == "0.1.0"
+        assert response["version"] == ditto_version
         assert "environment" in response
         assert response["features"]["data_collection"] is True
         assert response["features"]["data_validation"] is True

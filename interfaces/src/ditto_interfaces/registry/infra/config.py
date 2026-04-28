@@ -8,10 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_data.config import (
-    DataSourceSettings,
-    FileStorageSettings,
-)
+from ditto_data.config import DataSourceSettings, FileStorageSettings
+from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.quality.config import DQSettings
 from ditto_infra.foundation import logger
@@ -27,6 +25,7 @@ from ditto_infra.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
     SystemSettings,
+    TradingSettings,
 )
 from ditto_infra.services.notification import NotificationSettings
 
@@ -108,10 +107,15 @@ class ConfigProvider(Provider):
         return ConfigLoader(environment)
 
     @provide
-    def init_coordinator(self) -> ConfigInitCoordinator:
+    def init_coordinator(
+        self, data_store_settings: DataStoreSettings
+    ) -> ConfigInitCoordinator:
         """配置初始化协调器（注册所有 providers）."""
         coordinator = ConfigInitCoordinator()
-        coordinator.register(DataRootInitProvider())
+        coordinator.register(
+            DataRootInitProvider(data_store_settings.all_directories())
+        )
+        coordinator.register(DataSourceValidationProvider())
         coordinator.register(MetadataDbInitProvider())
         return coordinator
 
@@ -210,6 +214,16 @@ class ConfigProvider(Provider):
         """加载通知配置。"""
         values = load_env_file(config_loader, "notification")
         return NotificationSettings.model_validate(values)
+
+    @provide
+    def trading_settings(self) -> TradingSettings:
+        """加载交易配置（通过环境变量覆盖，无需配置文件）。"""
+        values: dict[str, Any] = {}
+        if override := os.getenv("DITTO_TRADING_CALENDAR_START"):
+            values["trading_calendar_start"] = override
+        if override := os.getenv("DITTO_TRADING_CALENDAR_END"):
+            values["trading_calendar_end"] = override
+        return TradingSettings(**values) if values else TradingSettings()
 
     @provide
     def runtime_flags(self, environment: Environment) -> RuntimeFlags:

@@ -11,7 +11,9 @@ from ditto_data.errors import (
     DerivedNotImplementedError,
     DerivedValidationError,
 )
-from ditto_kernel.specs import CalendarId, GrainId
+from ditto_kernel.market import CalendarId, GrainId
+
+from ditto_analytics.exceptions import AnalyticsError
 
 __all__ = [
     "DatasetSnapshot",
@@ -26,7 +28,7 @@ __all__ = [
 ]
 
 
-class LateArrivalError(Exception):
+class LateArrivalError(AnalyticsError):
     """Raised when late-arriving data is detected with REQUIRE_REBUILD policy."""
 
 

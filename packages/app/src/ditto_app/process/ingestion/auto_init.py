@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from ditto_data.errors import IdentifierNotFoundError
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.base import DataSource
+from ditto_data.sources.protocols import MetadataFetcher
 from ditto_infra.foundation import logger
 from ditto_kernel import AmbiguousTickerError
-from ditto_kernel.types import InstrumentIngestParams
+from ditto_kernel.instrument import InstrumentIngestParams
 
 from ditto_app.process.ingestion.coordinator_constants import (
     A_SHARE_CODE_LENGTH,
@@ -41,7 +41,7 @@ def resolve_identifier_with_auto_init(
     asset_class: str,
     dataset: str,
     metadata_service: MetadataService,
-    source: DataSource,
+    source: MetadataFetcher,
     source_name: str,
 ) -> str:
     """
@@ -98,7 +98,7 @@ def _auto_init_stock_instrument(
     dataset: str,
     original_error: IdentifierNotFoundError,
     metadata_service: MetadataService,
-    source: DataSource,
+    source: MetadataFetcher,
     source_name: str,
 ) -> str:
     """
@@ -162,7 +162,7 @@ def _fetch_and_register_stock(
     dataset: str,
     original_error: IdentifierNotFoundError,
     metadata_service: MetadataService,
-    source: DataSource,
+    source: MetadataFetcher,
     source_name: str,
 ) -> None:
     """从数据源获取股票基本信息并注册到元数据服务."""

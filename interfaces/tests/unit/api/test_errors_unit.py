@@ -58,13 +58,13 @@ class TestAPIError:
         assert error.status_code == 503
         assert error.error_code == "SERVICE_UNAVAILABLE"
 
-    def test_inherits_from_ditto_exception(self) -> None:
-        """验证继承自 DittoException."""
+    def test_inherits_from_ditto_error(self) -> None:
+        """验证继承自 DittoError."""
         from ditto_interfaces.api.errors import APIError
-        from ditto_interfaces.exceptions import DittoException
+        from ditto_kernel.exceptions import DittoError
 
         error = APIError("test")
-        assert isinstance(error, DittoException)
+        assert isinstance(error, DittoError)
         assert isinstance(error, Exception)
 
 
@@ -150,3 +150,184 @@ class TestRateLimitError:
 
         error = RateLimitError(retry_after=30)
         assert isinstance(error, APIError)
+
+
+@pytest.mark.unit
+class TestNotFoundError:
+    """测试 NotFoundError 资源不存在错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=404, error_code='NOT_FOUND'."""
+        from ditto_interfaces.api.errors import NotFoundError
+
+        error = NotFoundError("Strategy not found: missing")
+        assert error.status_code == 404
+        assert error.error_code == "NOT_FOUND"
+        assert error.message == "Strategy not found: missing"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, NotFoundError
+
+        assert issubclass(NotFoundError, APIError)
+
+
+@pytest.mark.unit
+class TestConflictError:
+    """测试 ConflictError 状态冲突错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=409, error_code='CONFLICT'."""
+        from ditto_interfaces.api.errors import ConflictError
+
+        error = ConflictError("Cannot cancel run in 'completed' status")
+        assert error.status_code == 409
+        assert error.error_code == "CONFLICT"
+        assert error.message == "Cannot cancel run in 'completed' status"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, ConflictError
+
+        assert issubclass(ConflictError, APIError)
+
+
+@pytest.mark.unit
+class TestForbiddenError:
+    """测试 ForbiddenError 禁止操作错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=403, error_code='FORBIDDEN'."""
+        from ditto_interfaces.api.errors import ForbiddenError
+
+        error = ForbiddenError("Cannot modify preset universe")
+        assert error.status_code == 403
+        assert error.error_code == "FORBIDDEN"
+        assert error.message == "Cannot modify preset universe"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, ForbiddenError
+
+        assert issubclass(ForbiddenError, APIError)
+
+
+@pytest.mark.unit
+class TestBadRequestError:
+    """测试 BadRequestError 参数错误."""
+
+    def test_error_properties(self) -> None:
+        """验证错误属性: status_code=400, error_code='BAD_REQUEST'."""
+        from ditto_interfaces.api.errors import BadRequestError
+
+        error = BadRequestError("Invalid parameter: limit must be positive")
+        assert error.status_code == 400
+        assert error.error_code == "BAD_REQUEST"
+        assert error.message == "Invalid parameter: limit must be positive"
+
+    def test_inherits_from_api_error(self) -> None:
+        """验证继承自 APIError."""
+        from ditto_interfaces.api.errors import APIError, BadRequestError
+
+        assert issubclass(BadRequestError, APIError)
+
+
+@pytest.mark.unit
+class TestRaiseBusinessError:
+    """测试 raise_business_error 映射函数."""
+
+    def test_not_found_maps_to_404(self) -> None:
+        """消息包含 'not found' → NotFoundError (404)."""
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
+
+        with pytest.raises(NotFoundError) as exc_info:
+            raise_business_error(ValueError("Run not found: missing"))
+        assert "not found" in exc_info.value.message.lower()
+        assert exc_info.value.__cause__ is not None
+
+    def test_not_found_case_insensitive(self) -> None:
+        """'Not Found' 大小写不敏感匹配."""
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
+
+        with pytest.raises(NotFoundError):
+            raise_business_error(ValueError("Strategy Not Found: abc"))
+
+    def test_conflict_keywords_matched(self) -> None:
+        """conflict_keywords 匹配时 → ConflictError (409)."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError) as exc_info:
+            raise_business_error(
+                ValueError("Invalid transition"),
+                conflict_keywords=("transition",),
+            )
+        assert "transition" in exc_info.value.message.lower()
+
+    def test_conflict_keyword_conflict(self) -> None:
+        """conflict_keywords='conflict' 匹配 → ConflictError."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError):
+            raise_business_error(
+                ValueError("Version conflict detected"),
+                conflict_keywords=("conflict",),
+            )
+
+    def test_default_is_bad_request(self) -> None:
+        """无匹配关键词 → BadRequestError (400)."""
+        from ditto_interfaces.api.errors import BadRequestError, raise_business_error
+
+        with pytest.raises(BadRequestError) as exc_info:
+            raise_business_error(ValueError("Something went wrong"))
+        assert exc_info.value.message == "Something went wrong"
+
+    def test_default_conflict_true(self) -> None:
+        """default_conflict=True → ConflictError 兜底."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError):
+            raise_business_error(
+                ValueError("Cannot cancel run in 'completed' status"),
+                default_conflict=True,
+            )
+
+    def test_default_conflict_not_found_takes_priority(self) -> None:
+        """'not found' 优先于 default_conflict=True."""
+        from ditto_interfaces.api.errors import NotFoundError, raise_business_error
+
+        with pytest.raises(NotFoundError):
+            raise_business_error(
+                ValueError("Run not found: missing"),
+                default_conflict=True,
+            )
+
+    def test_conflict_keywords_priority_over_default_conflict(self) -> None:
+        """conflict_keywords 匹配优先于 default_conflict 兜底."""
+        from ditto_interfaces.api.errors import ConflictError, raise_business_error
+
+        with pytest.raises(ConflictError) as exc_info:
+            raise_business_error(
+                ValueError("Invalid transition"),
+                conflict_keywords=("transition",),
+                default_conflict=True,
+            )
+        assert "transition" in exc_info.value.message.lower()
+
+    def test_exception_chain_preserved(self) -> None:
+        """from exc 链式异常保留."""
+        from ditto_interfaces.api.errors import BadRequestError, raise_business_error
+
+        original = ValueError("bad input")
+        with pytest.raises(BadRequestError) as exc_info:
+            raise_business_error(original)
+        assert exc_info.value.__cause__ is original
+
+    def test_empty_conflict_keywords_no_match(self) -> None:
+        """conflict_keywords=() 时不会匹配任何关键词."""
+        from ditto_interfaces.api.errors import BadRequestError, raise_business_error
+
+        with pytest.raises(BadRequestError):
+            raise_business_error(
+                ValueError("transition error"),
+                conflict_keywords=(),
+            )

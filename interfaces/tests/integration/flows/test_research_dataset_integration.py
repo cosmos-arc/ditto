@@ -26,7 +26,7 @@ from ditto_data.di import (
 )
 from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.services import DerivedCatalogService, ResearchCatalogService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_interfaces.jobs.flows.research import research_dataset_build_flow
@@ -36,7 +36,7 @@ from ditto_kernel.research import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial
 

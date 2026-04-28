@@ -10,8 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 __all__ = ["FillEvent"]
 

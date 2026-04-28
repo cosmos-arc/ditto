@@ -7,6 +7,7 @@ Ditto FastAPI 主应用.
 from __future__ import annotations
 
 # Standard library imports
+import os
 import time
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -25,6 +26,8 @@ from ditto_infra.foundation.config.environment import get_environment
 from ditto_infra.foundation.config.initializer import ConfigInitCoordinator, InitScope
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import Metrics, logger
+from ditto_kernel import __version__ as ditto_version
+from ditto_kernel.exceptions import DataError, DittoError
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,6 +35,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ditto_interfaces.api.routes import (
+    backtest,
     capital,
     commodity,
     fundamental,
@@ -40,12 +44,14 @@ from ditto_interfaces.api.routes import (
     macro,
     market,
     metadata,
-    portfolio,
     source,
+    strategy,
+    trade,
+    universe,
 )
-from ditto_interfaces.exceptions import DittoException
 from ditto_interfaces.middleware import (
-    ditto_exception_handler,
+    data_error_handler,
+    ditto_error_handler,
     general_exception_handler,
     http_exception_handler,
     validation_exception_handler,
@@ -164,7 +170,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Ditto Quant API",
     description="量化投资系统API",
-    version="0.1.0",
+    version=ditto_version,
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -176,16 +182,26 @@ app = FastAPI(
 container = make_async_app_container()
 setup_dishka(container=container, app=app)
 
-# 配置CORS
+# 配置 CORS（环境感知）
+_env = get_environment()
+if _env.is_production:
+    _cors_raw = os.environ.get("CORS_ORIGINS", "")
+    _cors_origins: list[str] = (
+        [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else []
+    )
+else:
+    _cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # 挂载业务路由
+app.include_router(backtest.router, prefix="/api/v1")
 app.include_router(capital.router, prefix="/api/v1")
 app.include_router(commodity.router, prefix="/api/v1")
 app.include_router(fundamental.router, prefix="/api/v1")
@@ -194,12 +210,13 @@ app.include_router(ingestion.router, prefix="/api/v1")
 app.include_router(macro.router, prefix="/api/v1")
 app.include_router(market.router, prefix="/api/v1")
 app.include_router(metadata.router, prefix="/api/v1")
-app.include_router(portfolio.router, prefix="/api/v1")
 app.include_router(source.router, prefix="/api/v1")
+app.include_router(strategy.router, prefix="/api/v1")
+app.include_router(trade.router, prefix="/api/v1")
+app.include_router(universe.router, prefix="/api/v1")
 
 # 调试路由： 条件注册（仅非生产环境）
-env = get_environment()
-if not env.is_production:
+if not _env.is_production:
     from ditto_interfaces.api.routes.debug import debug_router
 
     app.include_router(debug_router, prefix="/api/v1", tags=["debug"])
@@ -262,7 +279,7 @@ async def log_requests(
 async def root() -> dict[str, str]:
     """根路径."""
     logger.info("Root endpoint accessed")
-    return {"message": "Ditto Quant API", "version": "0.1.0"}
+    return {"message": "Ditto Quant API", "version": ditto_version}
 
 
 @app.get("/healthz")
@@ -286,13 +303,13 @@ async def get_status(request: Request) -> dict[str, Any]:
     logger.info("Status endpoint accessed")
     return {
         "status": "running",
-        "version": "0.1.0",
+        "version": ditto_version,
         "environment": request.app.state.settings.system.environment.value,
         "features": {
             "data_collection": True,
             "data_validation": True,
-            "backtest": False,
-            "trading": False,
+            "backtest": True,
+            "trading": True,
         },
         "observability": {
             "level": request.app.state.settings.observability.log_level,
@@ -301,8 +318,11 @@ async def get_status(request: Request) -> dict[str, Any]:
     }
 
 
-# 注册异常处理器
-app.add_exception_handler(DittoException, ditto_exception_handler)
+# 注册异常处理器（顺序：从具体到通用）
+
+
+app.add_exception_handler(DataError, data_error_handler)
+app.add_exception_handler(DittoError, ditto_error_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)

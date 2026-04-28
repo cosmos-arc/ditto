@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
-from ditto_data.services import IngestionLogService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_infra.foundation import logger
 

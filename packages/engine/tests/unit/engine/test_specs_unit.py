@@ -3,14 +3,16 @@
 from typing import get_args
 
 import pytest
-from ditto_kernel.specs import (
+from ditto_kernel.market import (
     CalendarId,
+    GrainId,
+    TimeSpec,
+)
+from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,
     ExecutionPolicy,
-    GrainId,
     MaterializationProfile,
-    TimeSpec,
 )
 
 

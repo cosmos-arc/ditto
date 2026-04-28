@@ -1,7 +1,7 @@
 # 架构决策记录 (Architecture Decision Records)
 
-**版本**: v0.3.0
-**最后更新**: 2026-04-03
+**版本**: v0.4.0
+**最后更新**: 2026-04-26
 **状态**: ✅ 稳定
 
 ## 概要
@@ -27,6 +27,9 @@ ADR 记录项目中的重要架构决策，每个 ADR 包含：
 | [0004](0004-domain-layer-subdomains.md) | Domain Layer 子领域分层定位 | Accepted | 2026-01-17 | 明确 dq/ml/factor 等 Domain Layer 的分层定位 |
 | [0005](0005-domain-restructure-fundamental-capital.md) | DataHub 域重构 - Fundamental 与 Capital 域拆分 | Accepted | 2026-01-30 | 将 Capital 域拆分为 Fundamental（企业基本面）和 Capital（资金与市场）两个独立域 |
 | [0006](0006-hybrid-plane-v2-accepted-deviations.md) | Hybrid Plane v2 — 已接受的设计偏离 | Accepted | 2026-04-03 | 记录 Hybrid Plane v2 重构中 6 项已接受的架构偏离决策 |
+| [0007](0007-datafeed-lookback-strategy.md) | 回测引擎 DataFeed 数据加载策略 | Accepted | 2026-04-13 | DataFeed start_date 向前扩展 max_lookback，EngineLoop 仅步进 config 区间 |
+| [0008](0008-strategy-artifact-io-layering.md) | 策略产物 I/O 分层 | Accepted | 2026-04-13 | 文件读取下沉到 Data 层 BacktestArtifactReader，App 层通过服务接口调用 |
+| [0009](0009-impact-model-governance.md) | 影响模型 ImpactModel 治理 | Accepted | 2026-04-13 | 非法值统一抛 ValueError，合法值限定为 none 和 volume_share |
 
 ## ADR 编号规则
 

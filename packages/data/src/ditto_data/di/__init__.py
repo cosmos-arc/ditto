@@ -17,6 +17,7 @@ from .metadata import MetadataProvider
 from .quality import QualityProvider
 from .runtime import RuntimeProvider
 from .sources import SourcesProvider
+from .trade import TradeProvider
 
 __all__ = [
     "CapitalProvider",
@@ -29,6 +30,7 @@ __all__ = [
     "QualityProvider",
     "RuntimeProvider",
     "SourcesProvider",
+    "TradeProvider",
     "get_data_providers",
     "parquet_store_pair",
     "sqlite_store_pair",

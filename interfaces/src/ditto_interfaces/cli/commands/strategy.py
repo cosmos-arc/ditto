@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typer
+from ditto_app.config import DEFAULT_INITIAL_CASH
 from ditto_app.process.execution.backtest_process import BacktestServiceConfig
 from ditto_app.process.execution.strategy_run_process import (
     StrategyRunMode,
@@ -85,7 +86,11 @@ def backtest(
     end_date: str = typer.Argument(..., help="结束日期 YYYY-MM-DD"),
     version: int | None = typer.Option(None, "--version", help="策略版本"),
     source: str = typer.Option("tushare", "--source", help="数据源名称"),
-    initial_cash: float = typer.Option(1_000_000.0, "--initial-cash", help="初始资金"),
+    initial_cash: float = typer.Option(
+        DEFAULT_INITIAL_CASH,
+        "--initial-cash",
+        help="初始资金",
+    ),
 ) -> None:
     """执行完整回测。"""
     config = BacktestServiceConfig(

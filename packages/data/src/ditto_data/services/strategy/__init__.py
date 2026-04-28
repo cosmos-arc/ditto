@@ -1,5 +1,9 @@
 """Strategy Data services."""
 
+from ditto_data.services.strategy.backtest_artifact_reader import (
+    BacktestArtifactReader,
+    BacktestArtifactReaderProtocol,
+)
 from ditto_data.services.strategy.instrument_rule_provider import (
     InstrumentRuleProvider,
 )
@@ -14,6 +18,8 @@ from ditto_data.services.strategy.strategy_run_service import (
 )
 
 __all__ = [
+    "BacktestArtifactReader",
+    "BacktestArtifactReaderProtocol",
     "InstrumentRuleProvider",
     "StrategyArtifactService",
     "StrategyCatalogService",

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.constants import (

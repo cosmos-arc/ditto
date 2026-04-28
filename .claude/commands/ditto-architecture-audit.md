@@ -9,8 +9,8 @@ implementation: .claude/commands/architecture-audit.py
 ## 审计范围
 
 - `packages/` - infra、kernel、data、analytics、engine、app
-- `apps/` - port、web
-- `tests/` - 单元测试、集成测试、fixtures
+- `interfaces/` - api、cli、jobs、registry、config
+- `packages/*/tests` + `interfaces/tests` - 单元测试、集成测试、fixtures
 
 ## 执行步骤
 
@@ -37,12 +37,12 @@ pixi run -e dev test --integration
 - 使用 `Grep` 检测死代码和未引用导出
 - 使用 `Grep` 追踪依赖链，检测循环依赖
 - 使用 `Read` 分析类/函数规模和结构
-- 从 port 层出发，检查是否存在**真正的层级穿透**：
+- 从 interfaces 层出发，检查是否存在**真正的层级穿透**：
 
 **层级穿透定义**（注意：Foundation 是横切层，可跨层访问）：
-- ❌ port → Store（应通过 Repository）
-- ❌ port → Source（应通过 Repository/Service）
-- ✅ port → foundation（**允许**，横切层）
+- ❌ interfaces → data.storage / data.runtime（应通过 data.services）
+- ❌ interfaces → data.sources（应通过 data.services，registry 例外）
+- ✅ interfaces → infra.foundation（**允许**，横切层）
 - ✅ interfaces → data → infra（正常依赖链）
 
 **工程实践检查**：
@@ -72,25 +72,25 @@ from pathlib import Path
 "
 
 # 搜索 TYPE_CHECKING 使用
-grep -r "TYPE_CHECKING" packages/ apps/ --include="*.py"
+grep -r "TYPE_CHECKING" packages/ interfaces/ --include="*.py"
 
 # 搜索空 TYPE_CHECKING 块
-grep -r "if TYPE_CHECKING:\s*pass" packages/ apps/ --include="*.py"
+grep -r "if TYPE_CHECKING:\s*pass" packages/ interfaces/ --include="*.py"
 
 # 搜索禁止的导入
-grep -r "import pandas\|import sqlalchemy" packages/ apps/ --include="*.py"
+grep -r "import pandas\|import sqlalchemy" packages/ interfaces/ --include="*.py"
 
 # 搜索 type:ignore 使用
-grep -r "# type: ignore" packages/ apps/ --include="*.py" | wc -l
+grep -r "# type: ignore" packages/ interfaces/ --include="*.py" | wc -l
 
 # 缩写使用规范检查
 # 检测非标准缩写和领域术语不一致
-grep -rE "\b(qty|vol|ohlcv|ticker)\b" packages/ apps/ --include="*.py" | \
+grep -rE "\b(qty|vol|ohlcv|ticker)\b" packages/ interfaces/ --include="*.py" | \
   grep -v "qty.*=.*quantity\|#.*qty\|\"qty\"\|'qty'"
 
 # 业务术语与技术术语混用检测
 # 检测类名中同时包含业务和技术术语的模式
-grep -rE "class.*Database.*Manager|class.*SQL.*Service|class.*Parquet.*Writer" packages/ apps/ --include="*.py"
+grep -rE "class.*Database.*Manager|class.*SQL.*Service|class.*Parquet.*Writer" packages/ interfaces/ --include="*.py"
 ```
 
 ### 5. 生成架构图
@@ -313,7 +313,7 @@ volume = 1000  # 标准金融术语
 
 🔴 Top 5 Issues:
   1. [ARCH-001] BarsRepository 职责过重 (1081行)
-  2. [NAM-001] Port层混用技术术语 `SQLBarLoader`
+  2. [NAM-001] Interfaces层混用技术术语 `SQLBarLoader`
   3. [ARCH-004] DQ Checkers hub: Any 类型污染
   4. [NAM-003] `BarData`/`KlineData`/`CandlestickData` 概念不统一
   5. [ENG-002] 5处异常处理缺失上下文

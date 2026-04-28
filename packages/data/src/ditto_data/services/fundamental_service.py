@@ -7,7 +7,7 @@ from datetime import date
 import polars as pl
 from ditto_infra.foundation import logger
 
-from ditto_data.services.ports import FundamentalReadPorts, FundamentalWritePorts
+from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 
 
 class FundamentalService:
@@ -20,22 +20,22 @@ class FundamentalService:
 
     def __init__(
         self,
-        read_ports: FundamentalReadPorts,
-        write_ports: FundamentalWritePorts,
+        read_ports: FundamentalReaders,
+        write_ports: FundamentalWriters,
     ) -> None:
         """
-        Initialize FundamentalService with CQRS Ports.
+        Initialize FundamentalService with CQRS Readers/Writers.
 
         Args:
-            read_ports: Fundamental 域读取端口（包含所有 Reader）.
-            write_ports: Fundamental 域写入端口（包含所有 Writer）.
+            read_ports: Fundamental 域读取依赖（包含所有 Reader）.
+            write_ports: Fundamental 域写入依赖（包含所有 Writer）.
 
         """
         self._read_ports = read_ports
         self._write_ports = write_ports
 
         logger.debug(
-            "FundamentalService initialized with CQRS Ports",
+            "FundamentalService initialized with CQRS Readers/Writers",
             event="fundamental_service_init_complete",
         )
 
@@ -80,11 +80,15 @@ class FundamentalService:
     # list_* - Multi record queries
 
     def list_corporate_actions(
-        self, instrument_id: int, start_date: date, end_date: date
+        self,
+        instrument_id: int,
+        start_date: date,
+        end_date: date,
+        as_of_date: date | None = None,
     ) -> pl.DataFrame:
-        """List corporate actions for instrument in date range."""
-        return self._read_ports.corporate_actions.get(
-            instrument_id, start_date, end_date
+        """List corporate actions for instrument in date range (with optional PIT)."""
+        return self._read_ports.corporate_actions.query(
+            instrument_id, start_date, end_date, as_of_date
         )
 
     # save_* - Write methods

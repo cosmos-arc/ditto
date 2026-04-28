@@ -28,9 +28,9 @@ from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.services import (
     DerivedCatalogService,
     DerivedQueryService,
-    DerivedSeriesQuery,
 )
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.services.derived import DerivedSeriesQuery
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.jobs.flows.materialization import (
     daily_materialization_flow,
@@ -38,7 +38,7 @@ from ditto_interfaces.jobs.flows.materialization import (
 )
 from ditto_interfaces.registry import ConfigProvider
 from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial
 

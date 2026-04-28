@@ -22,7 +22,8 @@ import pytest
 from ditto_data.models import OnDuplicate
 from ditto_data.quality import DQSpec, GoldenDatasetSpec, QualityEngine
 from ditto_data.services.market_service import MarketBarsQuery, MarketService
-from ditto_data.sources import TushareSource
+from ditto_data.sources.tushare.tushare_source import TushareSource
+from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
@@ -61,28 +62,28 @@ def pipeline_root(tmp_path: Path) -> Path:
 def stock_bars_reader(pipeline_root: Path) -> StockBarsReader:
     """创建 Stock 日线数据 Reader."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockBarsReader(data_root=pipeline_root)
+    return StockBarsReader(ParquetStore(pipeline_root))
 
 
 @pytest.fixture
 def stock_bars_writer(pipeline_root: Path) -> StockBarsWriter:
     """创建 Stock 日线数据 Writer."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockBarsWriter(data_root=pipeline_root)
+    return StockBarsWriter(ParquetStore(pipeline_root))
 
 
 @pytest.fixture
 def stock_adj_reader(pipeline_root: Path) -> StockAdjFactorReader:
     """创建 Stock 复权因子 Reader."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockAdjFactorReader(data_root=pipeline_root)
+    return StockAdjFactorReader(ParquetStore(pipeline_root))
 
 
 @pytest.fixture
 def stock_adj_writer(pipeline_root: Path) -> StockAdjFactorWriter:
     """创建 Stock 复权因子 Writer."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockAdjFactorWriter(data_root=pipeline_root)
+    return StockAdjFactorWriter(ParquetStore(pipeline_root))
 
 
 @pytest.fixture
@@ -120,9 +121,9 @@ def market_service(
         1000001: "600519"
     }
 
-    from ditto_data.services.ports import MarketReadPorts
+    from ditto_data.services.deps import MarketReaders
 
-    read_ports = MarketReadPorts(
+    read_ports = MarketReaders(
         stock_bars=stock_bars_reader,
         stock_status=MagicMock(),
         stock_adj=stock_adj_reader,

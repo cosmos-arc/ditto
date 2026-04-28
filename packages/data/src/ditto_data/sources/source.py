@@ -5,7 +5,8 @@ from __future__ import annotations
 from ditto_infra.foundation import logger
 
 from ditto_data.models.common import Source
-from ditto_data.sources.base import DataSource
+from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.tushare.tushare_source import TushareSource
 
 
 class DataSources:
@@ -18,8 +19,8 @@ class DataSources:
 
     def __init__(
         self,
-        tushare: DataSource,
-        fred: DataSource | None = None,
+        tushare: TushareSource,
+        fred: FredSource | None = None,
     ) -> None:
         """
         初始化 DataSources。
@@ -34,7 +35,7 @@ class DataSources:
         logger.debug("DataSources initialized", event="sources_init")
 
     @property
-    def tushare(self) -> DataSource:
+    def tushare(self) -> TushareSource:
         """
         Get Tushare data source.
 
@@ -45,7 +46,7 @@ class DataSources:
         return self._tushare
 
     @property
-    def fred(self) -> DataSource | None:
+    def fred(self) -> FredSource | None:
         """
         Get FRED data source.
 
@@ -55,7 +56,7 @@ class DataSources:
         """
         return self._fred
 
-    def get(self, name: str | Source) -> DataSource:
+    def get(self, name: str | Source) -> TushareSource | FredSource:
         """
         Get data source by name.
 
@@ -63,7 +64,7 @@ class DataSources:
             name: Source name (enum or string, e.g., "tushare", Source.TUSHARE).
 
         Returns:
-            DataSource instance.
+            TushareSource 或 FredSource 实例。
 
         Raises:
             ValueError: If source name is unknown or not configured.

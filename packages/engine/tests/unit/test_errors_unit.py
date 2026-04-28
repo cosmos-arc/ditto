@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from ditto_data.errors import (
-    DerivedDependencyError,
     DerivedError,
-    DerivedMaterializationError,
     DerivedNotFoundError,
     DerivedNotImplementedError,
     DerivedValidationError,
@@ -93,57 +91,6 @@ class TestDerivedVersionError:
 
 
 # ---------------------------------------------------------------------------
-# DerivedMaterializationError
-# ---------------------------------------------------------------------------
-
-
-class TestDerivedMaterializationError:
-    """Tests for DerivedMaterializationError."""
-
-    def test_inherits_from_derived_error(self) -> None:
-        """DerivedMaterializationError should be a subclass of DerivedError."""
-        assert issubclass(DerivedMaterializationError, DerivedError)
-
-    def test_construction(self) -> None:
-        """Should store derived_id, version, and reason."""
-        exc = DerivedMaterializationError(
-            derived_id="factor.alpha", version=2, reason="compile failed"
-        )
-        assert exc.derived_id == "factor.alpha"
-        assert exc.version == 2
-        assert exc.reason == "compile failed"
-        assert "factor.alpha" in str(exc)
-        assert "version=2" in str(exc)
-        assert "compile failed" in str(exc)
-
-
-# ---------------------------------------------------------------------------
-# DerivedDependencyError
-# ---------------------------------------------------------------------------
-
-
-class TestDerivedDependencyError:
-    """Tests for DerivedDependencyError."""
-
-    def test_inherits_from_derived_error(self) -> None:
-        """DerivedDependencyError should be a subclass of DerivedError."""
-        assert issubclass(DerivedDependencyError, DerivedError)
-
-    def test_construction(self) -> None:
-        """Should store derived_id, missing, and available."""
-        exc = DerivedDependencyError(
-            derived_id="factor.alpha",
-            missing=["market.close"],
-            available=["market.open", "market.high"],
-        )
-        assert exc.derived_id == "factor.alpha"
-        assert exc.missing == ["market.close"]
-        assert exc.available == ["market.open", "market.high"]
-        assert "factor.alpha" in str(exc)
-        assert "market.close" in str(exc)
-
-
-# ---------------------------------------------------------------------------
 # DerivedNotImplementedError
 # ---------------------------------------------------------------------------
 
@@ -221,8 +168,6 @@ class TestExceptionCatchability:
         exceptions = [
             DerivedNotFoundError(derived_id="x"),
             DerivedVersionError(derived_id="x", reason="r"),
-            DerivedMaterializationError(derived_id="x", version=1, reason="r"),
-            DerivedDependencyError(derived_id="x", missing=[], available=[]),
             DerivedNotImplementedError(feature="f"),
             DerivedValidationError(field="f", value="v", reason="r"),
         ]
@@ -230,8 +175,6 @@ class TestExceptionCatchability:
             [
                 DerivedNotFoundError,
                 DerivedVersionError,
-                DerivedMaterializationError,
-                DerivedDependencyError,
                 DerivedNotImplementedError,
                 DerivedValidationError,
             ],

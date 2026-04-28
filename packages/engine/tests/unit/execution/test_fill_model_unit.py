@@ -13,7 +13,7 @@ from ditto_engine.execution.reality.fill import (
 )
 from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_engine.execution.rules import InstrumentDefinition, TradingRuleSet
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test helpers

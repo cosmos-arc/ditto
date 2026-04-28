@@ -10,6 +10,7 @@ import pytest
 from ditto_data.storage.capital.pledge.pledge_ratio_writer import (
     PledgeRatioWriter,
 )
+from ditto_data.storage.capital.specs import PLEDGE_RATIO_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
@@ -40,7 +41,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def writer(in_memory_db: SQLiteClient) -> PledgeRatioWriter:
     """创建 PledgeRatioWriter 实例."""
-    return PledgeRatioWriter(client=in_memory_db)
+    return PledgeRatioWriter(PLEDGE_RATIO_SPEC, in_memory_db)
 
 
 def test_write_success(writer: PledgeRatioWriter) -> None:
@@ -148,7 +149,7 @@ def test_write_failure_rollback(writer: PledgeRatioWriter) -> None:
     mock_client.rollback = Mock()
 
     # 使用模拟客户端创建 Writer
-    mock_writer = PledgeRatioWriter(client=mock_client)
+    mock_writer = PledgeRatioWriter(PLEDGE_RATIO_SPEC, mock_client)
 
     # 由于模拟客户端会抛出异常，预期会传播异常
     with pytest.raises(RuntimeError, match="Database error"):

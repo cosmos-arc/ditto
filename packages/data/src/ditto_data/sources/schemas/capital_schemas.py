@@ -176,18 +176,20 @@ PLEDGE_RATIO_SOURCE_SCHEMA = SourceSchema(
 )
 
 # ============================================================================
-# 5. 公司行为 (非 PIT)
+# 5. 公司行为 (PIT)
 # ============================================================================
 
 CORPORATE_ACTIONS_SOURCE_SCHEMA = SourceSchema(
     dataset="corporate_actions",
-    key_columns=("instrument_id", "action_type", "announcement_date"),
+    key_columns=("instrument_id", "action_type", "action_date"),
     schema={
         "instrument_id": pl.String,
         "action_type": pl.String,
-        "announcement_date": pl.Date,
-        "effective_date": pl.Date,
+        "action_date": pl.Date,
+        "knowledge_date": pl.Date,
+        "effective_from": pl.Date,
+        "effective_to": pl.Date,
         "description": pl.String,
     },
-    pit_columns=(),
+    pit_columns=("effective_from", "effective_to"),
 )

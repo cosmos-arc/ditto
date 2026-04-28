@@ -14,7 +14,7 @@ from ditto_engine.execution.trade_builder import (
     TradeMatchingMethod,
     TradeRecord,
 )
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Helpers

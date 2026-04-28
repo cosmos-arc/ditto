@@ -1,0 +1,55 @@
+# 商品日线 DQ 规则
+dataset: commodity_daily
+description: "商品日线数据质量检查规则"
+
+# 技术类: 技术校验（写入时强制阻断）
+technical:
+  - rule: not_null
+    columns: [instrument_id, trade_date, open, high, low, close]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [instrument_id, trade_date]
+    message: "主键 (instrument_id, trade_date) 重复"
+
+  - rule: foreign_key
+    column: instrument_id
+    reference: instrument.instrument_id
+    message: "Instrument ID 不存在于证券主表"
+
+  - rule: type_check
+    columns:
+      instrument_id: int
+      trade_date: date
+      open: float
+      high: float
+      low: float
+      close: float
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
+  - rule: positive
+    columns: [open, high, low, close]
+    message: "OHLC 价格必须为正数"
+
+  - rule: expression
+    name: ohlc_consistency
+    expr: "high >= low AND high >= open AND high >= close AND low <= open AND low <= close"
+    message: "OHLC 关系不一致：high 应为最大值，low 应为最小值"
+
+  - rule: range_check
+    column: close
+    min_ratio: 0.90  # 商品日跌幅一般不超过 10%（涨跌停）
+    max_ratio: 1.11  # 商品日涨幅一般不超过 11%（涨跌停）
+    message: "收盘价涨跌幅超出商品正常范围"
+
+# 统计类: 统计异常（定时批量检查）
+statistical:
+  - rule: zscore
+    name: close_spike
+    column: close
+    window: 60
+    threshold: 5
+    group_by: instrument_id
+    message: "商品价格异常波动（Z-score > 5）"

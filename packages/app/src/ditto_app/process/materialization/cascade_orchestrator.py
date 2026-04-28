@@ -29,6 +29,7 @@ from ditto_data.models.derived import DerivedInvalidationRecord
 from ditto_data.services import DerivedCatalogService
 from ditto_infra.foundation import logger
 
+from ditto_app.exceptions import AppError
 from ditto_app.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
@@ -53,7 +54,7 @@ class CascadeStatus(StrEnum):
     DEAD_LETTER = "dead_letter"
 
 
-class CascadeDepthExceededError(Exception):
+class CascadeDepthExceededError(AppError):
     """Raised when cascade propagation exceeds the configured max depth."""
 
     def __init__(self, derived_id: str, depth: int) -> None:

@@ -41,7 +41,7 @@ class ComparisonWriter:
     def write_comparison(
         self,
         trade_date: str,
-        df: pl.DataFrame,
+        comparison_df: pl.DataFrame,
         dataset: str = "stock_daily",
     ) -> None:
         """
@@ -49,11 +49,11 @@ class ComparisonWriter:
 
         Args:
             trade_date: 交易日期
-            df: 对比结果 DataFrame（由 Port 层转换）
+            comparison_df: 对比结果 DataFrame（由 Port 层转换）
             dataset: 数据集标识
 
         """
-        if df.height == 0:
+        if comparison_df.height == 0:
             return  # 无数据，不存储
 
         # 按日期和数据集分区存储（避免多数据集覆盖）
@@ -63,7 +63,7 @@ class ComparisonWriter:
         file_path = dataset_path / f"{trade_date}.parquet"
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        df.write_parquet(file_path)
+        comparison_df.write_parquet(file_path)
 
         # 清理过期数据
         self._cleanup_old_data()

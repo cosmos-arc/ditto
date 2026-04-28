@@ -1,17 +1,22 @@
 """RunManifest / RuleRef / RuleRefCollector / serialize_manifest unit tests.
 
 Task 1B — RuleRefs + RunManifest (Phase 4 Part 03).
+Phase 0.9 — RunManifest Enrichment (InputRef + data fingerprints).
 """
 
 from __future__ import annotations
 
+import hashlib
+
 import orjson
 import pytest
 from ditto_engine.backtest.manifest import (
+    InputRef,
     RuleRef,
     RuleRefCollector,
     RunManifest,
     RunMode,
+    hash_spec,
     serialize_manifest,
 )
 from ditto_engine.execution.rules import (
@@ -492,3 +497,355 @@ class TestCollectorToManifestIntegration:
         first = serialize_manifest(manifest)
         second = serialize_manifest(manifest)
         assert first == second
+
+
+# ---------------------------------------------------------------------------
+# Phase 0.9: InputRef + RunManifest Enrichment tests
+# ---------------------------------------------------------------------------
+
+
+class TestInputRef:
+    """InputRef frozen dataclass — 输入数据引用含数据指纹."""
+
+    def test_frozen(self) -> None:
+        """InputRef 不可变."""
+        ref = InputRef(
+            instrument_id=1,
+            data_hash="sha256:abcd1234",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="parquet://data/bars/1",
+        )
+        with pytest.raises(AttributeError):
+            ref.data_hash = "changed"  # type: ignore[misc]
+
+    def test_all_fields(self) -> None:
+        """所有字段正确赋值."""
+        ref = InputRef(
+            instrument_id=510050,
+            data_hash="sha256:deadbeef",
+            date_range=("2025-01-01", "2025-06-30"),
+            source="parquet://data/bars/510050",
+        )
+        assert ref.instrument_id == 510050
+        assert ref.data_hash == "sha256:deadbeef"
+        assert ref.date_range == ("2025-01-01", "2025-06-30")
+        assert ref.source == "parquet://data/bars/510050"
+
+    def test_equality(self) -> None:
+        """相同字段 → 相等."""
+        r1 = InputRef(
+            instrument_id=1,
+            data_hash="sha256:abc",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="src",
+        )
+        r2 = InputRef(
+            instrument_id=1,
+            data_hash="sha256:abc",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="src",
+        )
+        assert r1 == r2
+
+    def test_hash_inequality(self) -> None:
+        """不同 data_hash → 不相等."""
+        r1 = InputRef(
+            instrument_id=1,
+            data_hash="sha256:aaa",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="src",
+        )
+        r2 = InputRef(
+            instrument_id=1,
+            data_hash="sha256:bbb",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="src",
+        )
+        assert r1 != r2
+
+
+class TestRunManifestEnrichment:
+    """Phase 0.9: RunManifest 新字段（向后兼容）."""
+
+    def test_new_fields_have_defaults(self) -> None:
+        """新字段均有默认值 — 向后兼容."""
+        manifest = RunManifest(
+            run_id="r",
+            strategy_id="s",
+            strategy_version="v",
+            mode=RunMode.RESEARCH,
+            created_at="2026-03-22T10:00:00Z",
+        )
+        assert manifest.input_ref_details == ()
+        assert manifest.universe_hash == ""
+        assert manifest.spec_hash == ""
+        assert manifest.dependency_versions == ()
+        assert manifest.random_seed is None
+
+    def test_input_ref_details_accepts_input_refs(self) -> None:
+        """input_ref_details 接受 InputRef 元组."""
+        refs = (
+            InputRef(
+                instrument_id=1,
+                data_hash="sha256:abc",
+                date_range=("2025-01-01", "2025-06-30"),
+                source="parquet://data/bars/1",
+            ),
+            InputRef(
+                instrument_id=2,
+                data_hash="sha256:def",
+                date_range=("2025-01-01", "2025-06-30"),
+                source="parquet://data/bars/2",
+            ),
+        )
+        manifest = RunManifest(
+            run_id="run-002",
+            strategy_id="strat",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            input_ref_details=refs,
+        )
+        assert len(manifest.input_ref_details) == 2
+        assert manifest.input_ref_details[0].instrument_id == 1
+        assert manifest.input_ref_details[1].data_hash == "sha256:def"
+
+    def test_new_hash_fields(self) -> None:
+        """universe_hash / spec_hash 可正确赋值."""
+        manifest = RunManifest(
+            run_id="r",
+            strategy_id="s",
+            strategy_version="v",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            universe_hash="uni_hash_123",
+            spec_hash="spec_hash_456",
+        )
+        assert manifest.universe_hash == "uni_hash_123"
+        assert manifest.spec_hash == "spec_hash_456"
+
+    def test_dependency_versions_and_random_seed(self) -> None:
+        """dependency_versions / random_seed 可正确赋值."""
+        manifest = RunManifest(
+            run_id="r",
+            strategy_id="s",
+            strategy_version="v",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            dependency_versions=("numpy==2.0", "polars==1.0"),
+            random_seed=42,
+        )
+        assert manifest.dependency_versions == ("numpy==2.0", "polars==1.0")
+        assert manifest.random_seed == 42
+
+
+class TestSerializeManifestEnrichment:
+    """Phase 0.9: serialize_manifest 包含新字段."""
+
+    def test_input_ref_details_in_serialized_output(self) -> None:
+        """input_ref_details 出现在序列化输出中."""
+        ref = InputRef(
+            instrument_id=1,
+            data_hash="sha256:abc123",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="parquet://data/bars/1",
+        )
+        manifest = RunManifest(
+            run_id="run-100",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            input_ref_details=(ref,),
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        assert "input_ref_details" in parsed
+        assert len(parsed["input_ref_details"]) == 1
+        assert parsed["input_ref_details"][0]["instrument_id"] == 1
+        assert parsed["input_ref_details"][0]["data_hash"] == "sha256:abc123"
+        assert parsed["input_ref_details"][0]["date_range"] == [
+            "2025-01-01",
+            "2025-12-31",
+        ]
+        assert parsed["input_ref_details"][0]["source"] == "parquet://data/bars/1"
+
+    def test_new_hash_fields_in_serialized_output(self) -> None:
+        """universe_hash / spec_hash 出现在序列化输出中."""
+        manifest = RunManifest(
+            run_id="run-200",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            universe_hash="uni_abc",
+            spec_hash="spec_def",
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        assert parsed["universe_hash"] == "uni_abc"
+        assert parsed["spec_hash"] == "spec_def"
+
+    def test_dependency_versions_in_serialized_output(self) -> None:
+        """dependency_versions 出现在序列化输出中."""
+        manifest = RunManifest(
+            run_id="run-300",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            dependency_versions=("numpy==2.0",),
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        assert parsed["dependency_versions"] == ["numpy==2.0"]
+
+    def test_random_seed_in_serialized_output(self) -> None:
+        """random_seed 出现在序列化输出中."""
+        manifest = RunManifest(
+            run_id="run-400",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            random_seed=42,
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        assert parsed["random_seed"] == 42
+
+    def test_random_seed_none_in_serialized_output(self) -> None:
+        """random_seed=None 时序列化为 null."""
+        manifest = RunManifest(
+            run_id="run-401",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        assert parsed["random_seed"] is None
+
+    def test_input_ref_details_sorted_by_instrument_id(self) -> None:
+        """input_ref_details 按 instrument_id 排序."""
+        refs = (
+            InputRef(
+                instrument_id=3,
+                data_hash="sha256:ccc",
+                date_range=("2025-01-01", "2025-12-31"),
+                source="src3",
+            ),
+            InputRef(
+                instrument_id=1,
+                data_hash="sha256:aaa",
+                date_range=("2025-01-01", "2025-06-30"),
+                source="src1",
+            ),
+        )
+        manifest = RunManifest(
+            run_id="run-500",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            input_ref_details=refs,
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        details = parsed["input_ref_details"]
+        assert details[0]["instrument_id"] == 1
+        assert details[1]["instrument_id"] == 3
+
+    def test_byte_level_stability_with_enrichment(self) -> None:
+        """含新字段时仍保持字节级稳定 (P2)."""
+        ref = InputRef(
+            instrument_id=1,
+            data_hash="sha256:stable",
+            date_range=("2025-01-01", "2025-12-31"),
+            source="src",
+        )
+        manifest = RunManifest(
+            run_id="run-600",
+            strategy_id="stable-test",
+            strategy_version="2.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            input_ref_details=(ref,),
+            universe_hash="uni",
+            spec_hash="spec",
+            dependency_versions=("pkg==1.0",),
+            random_seed=123,
+        )
+        first = serialize_manifest(manifest)
+        second = serialize_manifest(manifest)
+        assert first == second
+        assert first.encode("utf-8") == second.encode("utf-8")
+
+    def test_backward_compatible_serialization(self) -> None:
+        """旧字段（input_refs）仍然正确序列化."""
+        manifest = _make_manifest()
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+        # 旧字段仍存在
+        assert parsed["input_refs"] == [1, 2]
+        # 新字段使用默认值
+        assert parsed["input_ref_details"] == []
+        assert parsed["universe_hash"] == ""
+        assert parsed["spec_hash"] == ""
+        assert parsed["dependency_versions"] == []
+        assert parsed["random_seed"] is None
+
+
+class TestHashSpec:
+    """hash_spec 辅助函数 — 对策略规格做 SHA-256."""
+
+    def test_deterministic(self) -> None:
+        """相同输入 → 相同输出."""
+        h1 = hash_spec(
+            strategy_id="momentum",
+            strategy_version="1.0",
+            rebalance_freq="weekly",
+        )
+        h2 = hash_spec(
+            strategy_id="momentum",
+            strategy_version="1.0",
+            rebalance_freq="weekly",
+        )
+        assert h1 == h2
+
+    def test_different_input_different_hash(self) -> None:
+        """不同输入 → 不同输出."""
+        h1 = hash_spec(
+            strategy_id="momentum",
+            strategy_version="1.0",
+            rebalance_freq="weekly",
+        )
+        h2 = hash_spec(
+            strategy_id="mean_revert",
+            strategy_version="1.0",
+            rebalance_freq="weekly",
+        )
+        assert h1 != h2
+
+    def test_hash_length(self) -> None:
+        """返回前 16 位 hex."""
+        h = hash_spec(
+            strategy_id="test",
+            strategy_version="0.1",
+            rebalance_freq="daily",
+        )
+        assert len(h) == 16
+        # 验证是合法 hex
+        int(h, 16)
+
+    def test_matches_manual_sha256(self) -> None:
+        """与手动 SHA-256 计算一致."""
+        payload = "momentum|1.0|weekly"
+        expected = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+        result = hash_spec(
+            strategy_id="momentum",
+            strategy_version="1.0",
+            rebalance_freq="weekly",
+        )
+        assert result == expected

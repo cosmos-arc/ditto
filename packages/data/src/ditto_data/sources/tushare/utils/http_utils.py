@@ -112,14 +112,14 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
             raise SourceFetchError(
                 message=f"Tushare API 服务器错误 (API: {api_name})",
                 source="tushare",
-                original_error=str(error),
+                details={"original_error": str(error)},
             )
 
         # 其他 4xx 错误
         raise SourceFetchError(
             message=f"Tushare API 请求失败 (API: {api_name})",
             source="tushare",
-            original_error=str(error),
+            details={"original_error": str(error)},
         )
 
     # 处理网络错误
@@ -127,7 +127,7 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         raise SourceFetchError(
             message=f"Tushare API 网络错误 (API: {api_name})",
             source="tushare",
-            original_error=str(error),
+            details={"original_error": str(error)},
         )
 
     # 处理超时错误
@@ -135,14 +135,14 @@ def map_http_error(error: Exception, api_name: str) -> NoReturn:
         raise SourceFetchError(
             message=f"Tushare API 请求超时 (API: {api_name})",
             source="tushare",
-            original_error=str(error),
+            details={"original_error": str(error)},
         )
 
     # 未知错误
     raise SourceFetchError(
         message=f"Tushare API 未知错误 (API: {api_name})",
         source="tushare",
-        original_error=str(error),
+        details={"original_error": str(error)},
     )
 
 

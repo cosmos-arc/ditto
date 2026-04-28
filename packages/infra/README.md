@@ -1,8 +1,8 @@
 # ditto-infra
 
-**版本**: v0.1.1
-**最后更新**: 2026-03-24
-**状态**: ✅ 稳定
+**版本**: v0.2.0
+**最后更新**: 2026-04-27
+**状态**: 稳定
 
 ## 概要
 
@@ -41,20 +41,19 @@
 
 ```
 ditto_infra/
-├── foundation/           # 基础模块（原 foundation 包）
-│   ├── cache/           # 通用缓存
-│   ├── checksum/        # 校验和计算
-│   ├── concurrency/     # 并发控制
-│   ├── config/          # 配置管理
-│   ├── db/              # 数据库连接
-│   ├── observability/   # 可观测性
-│   └── util/            # 通用工具
-│       ├── dates.py         # 日期工具
-│       ├── io.py            # IO 工具
-│       ├── ticker_utils.py  # Ticker 工具
-│       └── checksum.py      # 校验和计算
-└── services/            # 基础服务
-    └── notification/    # 通知服务
+├── foundation/                    # 基础模块（原 foundation 包）
+│   ├── cache/                    # 通用缓存（DataCache）
+│   ├── checksum/                 # 校验和计算
+│   ├── concurrency/              # 并发控制（FileLockManager）
+│   ├── config/                   # 配置管理（Settings、路径、环境）
+│   │   └── providers/            # 配置提供者（校验、数据根路径）
+│   ├── db/                       # 数据库连接（SQLitePool）
+│   ├── observability/            # 可观测性（日志、追踪、指标、生命周期）
+│   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
+└── services/                     # 基础服务
+    └── notification/             # 通知服务（Telegram、Email、Webhook）
+        ├── channels/             # 通知渠道实现
+        └── templates/            # 通知模板
 ```
 
 ## 核心功能
@@ -65,9 +64,12 @@ ditto_infra/
 | `checksum` | 文件/数据校验和 |
 | `concurrency` | 文件锁、并发控制 |
 | `config` | 配置加载、环境管理、XDG 路径 |
+| `config/providers` | 配置提供者（校验、数据根路径） |
 | `db` | SQLite 连接池 |
-| `observability` | 日志、追踪、指标 |
+| `observability` | 日志、追踪、指标、生命周期 |
 | `notification` | Telegram、Email、Webhook 通知 |
+| `notification/channels` | 通知渠道实现 |
+| `notification/templates` | 通知模板 |
 
 ## 使用方式
 
@@ -88,6 +90,12 @@ from ditto_infra.services.notification import NotificationManager
 ```bash
 pixi run -e dev pytest packages/infra/tests/
 ```
+
+## 变更记录
+
+### v0.2.0 (2026-04-27)
+- 新增 config/providers/、notification/channels/、notification/templates/ 子目录
+- 扩展 observability 细节（日志/追踪/指标/生命周期）
 
 ## 历史说明
 

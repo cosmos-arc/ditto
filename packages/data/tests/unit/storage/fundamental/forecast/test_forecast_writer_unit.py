@@ -11,8 +11,11 @@ import pytest
 from ditto_data.storage.fundamental.forecast.forecast_writer import (
     ForecastWriter,
 )
+from ditto_data.storage.fundamental.specs import FORECAST_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import Metrics, SQLitePool
+
+SPEC = FORECAST_SPEC
 
 
 @pytest.fixture
@@ -40,7 +43,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def forecast_writer(in_memory_db: SQLitePool) -> ForecastWriter:
     """Provide ForecastWriter with in-memory database."""
-    return ForecastWriter(SQLiteClient(in_memory_db))
+    return ForecastWriter(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit
@@ -191,7 +194,7 @@ class TestForecastWriter:
         mock_client.executemany.side_effect = RuntimeError("Database error")
 
         # Create writer with mock client
-        mock_writer = ForecastWriter(mock_client)
+        mock_writer = ForecastWriter(SPEC, mock_client)
 
         # Act & Assert
         with pytest.raises(RuntimeError, match="Database error"):

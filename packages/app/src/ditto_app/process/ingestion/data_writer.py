@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Literal, cast
 
 import polars as pl
+from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models import Dataset, OnDuplicate
 from ditto_data.models.storage import WriteResult
 from ditto_data.services.capital_service import CapitalService
@@ -81,7 +82,7 @@ def _to_write_result(
         WriteResult 对象
 
     """
-    checksum = ChecksumCompute.from_dataframe(df, dataset)
+    checksum = ChecksumCompute.from_dataframe(df, dataset_sort_keys(dataset))
     return WriteResult(
         file_path=f"{dataset}/{year}",
         checksum=checksum,
@@ -532,7 +533,7 @@ class IngestionDataWriter:
         records = df.to_dicts()
         self._metadata_service.save_calendar(records=records)
         file_path = f"calendar_store:{trade_date}"
-        checksum = ChecksumCompute.from_dataframe(df, "calendar")
+        checksum = ChecksumCompute.from_dataframe(df, dataset_sort_keys("calendar"))
         return WriteResult(
             file_path=file_path,
             checksum=checksum,

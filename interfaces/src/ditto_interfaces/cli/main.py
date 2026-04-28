@@ -7,6 +7,7 @@ import typer
 from ditto_interfaces.cli.commands.backfill import app as backfill_app
 from ditto_interfaces.cli.commands.ingest import app as ingest_app
 from ditto_interfaces.cli.commands.init import app as init_app
+from ditto_interfaces.cli.commands.ops import app as ops_app
 from ditto_interfaces.cli.commands.query import app as query_app
 from ditto_interfaces.cli.commands.strategy import app as strategy_app
 
@@ -23,6 +24,7 @@ app.add_typer(ingest_app, name="ingest")
 app.add_typer(backfill_app, name="backfill")
 app.add_typer(query_app, name="query")
 app.add_typer(strategy_app, name="strategy")
+app.add_typer(ops_app, name="ops")
 
 
 @app.callback()

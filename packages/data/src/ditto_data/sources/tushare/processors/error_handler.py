@@ -65,6 +65,5 @@ def tushare_fetch_error_handler(
         raise SourceFetchError(
             message=f"Failed to fetch {dataset} from Tushare",
             source="tushare",
-            dataset=api_name,
-            original_error=str(e),
+            details={"dataset": api_name, "original_error": str(e)},
         ) from e

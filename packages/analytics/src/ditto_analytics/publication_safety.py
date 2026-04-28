@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ditto_kernel.specs import DerivedRole, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 type CompileFlagValue = str | int | float | bool
 type JsonPrimitive = None | bool | int | float | str

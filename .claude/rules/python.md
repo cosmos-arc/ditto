@@ -399,7 +399,7 @@ from ditto_interfaces.api.dependencies import get_hub  # 直接导入内部实�
 ```python
 # ❌ 跨包 re-export：任何包不得从另一个 ditto 包 re-export 符号
 # ditto_data/models/__init__.py
-from ditto_kernel.enums import AssetClass, Exchange  # 禁止
+from ditto_kernel.instrument import AssetClass, Exchange  # 禁止
 
 # ❌ Barrel + 内联定义混合：__init__.py 不应混合 re-export 和新符号定义
 from .margin import MarginReader
@@ -417,8 +417,8 @@ from ditto_data.storage.capital.margin import MarginReader
 
 ```python
 # ✅ 需要哪个包的类型就从哪个包导入
-from ditto_kernel.enums import AssetClass, Exchange
-from ditto_kernel.types import InstrumentId
+from ditto_kernel.instrument import AssetClass, Exchange
+from ditto_kernel.identity import InstrumentId
 
 # ❌ 不要通过中间包间接导入
 from ditto_data.models import AssetClass  # 跨包 re-export，依赖被隐藏
@@ -501,7 +501,7 @@ def process_data(data):
 
 #### 目录示例
 - `packages/foo/src/foo/py.typed`
-- `apps/xxx/src/xxx/py.typed`（若该 app 也会作为库被引用）
+- `interfaces/src/ditto_interfaces/py.typed`（interfaces 也会作为库被引用）
 
 #### 实施检查清单
 
@@ -651,11 +651,14 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 
 ### 代码重复检测
 
-在实现新功能前，必须检查 Data Service 是否已有类似实现"```bash
+在实现新功能前，必须检查 Data Service 是否已有类似实现：
+
+```bash
 # 检查 MetadataService 是否已有相关方法
-grep -r "def.*register" packages/data/src/ditto_data/domains/metadata/
+grep -r "def.*register" packages/data/src/ditto_data/services/metadata/
 ```
 
 **禁止重复实现：**
 - ❌ Interfaces 层重复实现 Service 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则
+```

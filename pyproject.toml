@@ -92,6 +92,8 @@ ignore = [
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+# SignalDelivery - 环境变量名（非实际密钥）是 Bandit S105 已知误报
+"interfaces/src/ditto_interfaces/registry/infra/signal_delivery.py" = ["S105"]
 # MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
 "packages/data/src/ditto_data/services/metadata_service.py" = ["PLR0913"]
 # DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数
@@ -106,6 +108,8 @@ unfixable = []
 "packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
+# Protocol 接口方法用 ``...`` 省略体是标准惯例，D102 不适用
+"packages/data/src/ditto_data/storage/base/protocols.py" = ["D102"]
 # 第三方 stub 文件包含 Any 类型签名，无法修改
 "typings/**/*.pyi" = ["ANN401"]
 
@@ -153,6 +157,9 @@ unfixable = []
 quote-style = "double"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.inline-snapshot]
+format-command = "ruff format --stdin-filename {filename}"
 
 [tool.ruff.lint.flake8-annotations]
 suppress-none-returning = true

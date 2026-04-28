@@ -8,7 +8,7 @@ from ditto_app.process.materialization.types import (
     MissingDependencyError,
     prepare_input_frame,
 )
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _make_spec(**overrides: object) -> DerivedSpec:

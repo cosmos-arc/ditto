@@ -116,7 +116,7 @@ class TestTushareExchangeTransformer:
 
     def test_implements_exchange_transformer_protocol(self) -> None:
         """验证 TushareExchangeTransformer 实现 ExchangeTransformer 协议."""
-        from ditto_data.sources import ExchangeTransformer
+        from ditto_data.sources.exchange_transformers import ExchangeTransformer
 
         transformer = TushareExchangeTransformer()
         # 验证实例满足协议（structural typing）

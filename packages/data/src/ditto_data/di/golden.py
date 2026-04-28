@@ -60,7 +60,7 @@ class GoldenDatasetProvider(Provider):
             return None
 
     @provide
-    def golden_dataset_spec(self, data_root: Path) -> GoldenDatasetSpec:
+    def golden_dataset_spec(self, data_root: Path) -> GoldenDatasetSpec | None:
         """
         加载黄金数据集配置。
 
@@ -72,7 +72,7 @@ class GoldenDatasetProvider(Provider):
             data_root: 数据根目录
 
         Returns:
-            GoldenDatasetSpec: 黄金数据集配置实例
+            GoldenDatasetSpec | None: 黄金数据集配置实例，无配置时返回 None
 
         """
         # 1. 加载默认配置

@@ -10,6 +10,7 @@ import pytest
 from ditto_data.storage.capital.margin.margin_trading_writer import (
     MarginTradingWriter,
 )
+from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
 
@@ -41,7 +42,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def writer(in_memory_db: SQLiteClient) -> MarginTradingWriter:
     """创建 MarginTradingWriter 实例."""
-    return MarginTradingWriter(client=in_memory_db)
+    return MarginTradingWriter(MARGIN_TRADING_SPEC, in_memory_db)
 
 
 def test_write_success(writer: MarginTradingWriter) -> None:
@@ -154,7 +155,7 @@ def test_write_failure_rollback(writer: MarginTradingWriter) -> None:
     mock_client.rollback = Mock()
 
     # 使用模拟客户端创建 Writer
-    mock_writer = MarginTradingWriter(client=mock_client)
+    mock_writer = MarginTradingWriter(MARGIN_TRADING_SPEC, mock_client)
 
     # 由于模拟客户端会抛出异常，预期会传播异常
     with pytest.raises(RuntimeError, match="Database error"):

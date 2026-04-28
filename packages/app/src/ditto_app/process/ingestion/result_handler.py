@@ -6,6 +6,7 @@ from collections import Counter
 
 import polars as pl
 from ditto_data.errors import SourceFetchError
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.models.ingestion import (
     IngestionLog,
     IngestionResult,
@@ -13,7 +14,6 @@ from ditto_data.models.ingestion import (
     ResultCounts,
 )
 from ditto_data.models.storage import WriteResult
-from ditto_data.services import IngestionLogService
 
 
 def count_results(

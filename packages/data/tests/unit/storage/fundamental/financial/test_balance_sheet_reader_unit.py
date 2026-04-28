@@ -10,8 +10,11 @@ import pytest
 from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
     BalanceSheetReader,
 )
+from ditto_data.storage.fundamental.specs import BALANCE_SHEET_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = BALANCE_SHEET_SPEC
 
 
 @pytest.fixture
@@ -41,7 +44,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def balance_sheet_reader(in_memory_db: SQLitePool) -> BalanceSheetReader:
     """Provide BalanceSheetReader with in-memory database."""
-    return BalanceSheetReader(SQLiteClient(in_memory_db))
+    return BalanceSheetReader(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit

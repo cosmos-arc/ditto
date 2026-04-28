@@ -21,6 +21,7 @@ from ditto_data.services.market_service import (
     MarketBarsQuery,
     MarketService,
 )
+from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
@@ -45,7 +46,7 @@ def stock_bars_reader(tmp_path: Path) -> StockBarsReader:
         StockBarsReader: Stock 日线数据 Reader 实例.
 
     """
-    return StockBarsReader(data_root=tmp_path)
+    return StockBarsReader(ParquetStore(tmp_path))
 
 
 @pytest.fixture
@@ -59,7 +60,7 @@ def stock_bars_writer(tmp_path: Path) -> StockBarsWriter:
         StockBarsWriter: Stock 日线数据 Writer 实例.
 
     """
-    return StockBarsWriter(data_root=tmp_path)
+    return StockBarsWriter(ParquetStore(tmp_path))
 
 
 @pytest.fixture
@@ -73,7 +74,7 @@ def stock_adj_reader(tmp_path: Path) -> StockAdjFactorReader:
         StockAdjFactorReader: Stock 复权因子 Reader 实例.
 
     """
-    return StockAdjFactorReader(data_root=tmp_path)
+    return StockAdjFactorReader(ParquetStore(tmp_path))
 
 
 @pytest.fixture
@@ -87,7 +88,7 @@ def stock_adj_writer(tmp_path: Path) -> StockAdjFactorWriter:
         StockAdjFactorWriter: Stock 复权因子 Writer 实例.
 
     """
-    return StockAdjFactorWriter(data_root=tmp_path)
+    return StockAdjFactorWriter(ParquetStore(tmp_path))
 
 
 @pytest.fixture
@@ -135,14 +136,15 @@ def market_service(
         MarketService: 配置好的 MarketService 实例（只读）.
 
     """
-    from ditto_data.services.ports import MarketReadPorts
+
+    from ditto_data.services.deps import MarketReaders
 
     # Mock 不需要的组件
     mock_stock_status_reader = MagicMock()
     mock_etf_bars_reader = MagicMock()
     mock_etf_status_reader = MagicMock()
 
-    read_ports = MarketReadPorts(
+    read_ports = MarketReaders(
         stock_bars=stock_bars_reader,
         stock_status=mock_stock_status_reader,
         stock_adj=stock_adj_reader,

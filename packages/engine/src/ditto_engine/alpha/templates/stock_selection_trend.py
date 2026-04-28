@@ -3,7 +3,7 @@ stock_selection_trend 策略模板 -- 多因子选股趋势追踪的标准 Pipel
 
 标准流程:
   MultiFactorSignal -> TrendFilter -> Scoring -> RiskLockFilter ->
-  Select(top_k) -> Allocate -> Constraint(max_weight)
+  Select(top_k) -> Allocate -> [Regime] -> Constraint(max_weight)
 
 提供:
 - StockSelectionTrendConfig: 策略模板运行时配置
@@ -20,6 +20,11 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_engine.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
+from ditto_engine.alpha.builtins.regime import RegimeConfig
+from ditto_engine.alpha.builtins.regime_allocation import (
+    RegimeAwareAllocationStage,
+)
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.context import StrategyContext
@@ -68,6 +73,7 @@ class StockSelectionTrendConfig:
         cash_target: 目标现金比例。
         trend_threshold: 趋势过滤阈值。
         rebalance_freq: 调仓频率 (``"daily"`` / ``"weekly"`` / ``"monthly"``)。
+        regime_config: Regime 评分配置（None = 不使用 regime 缩放）。
 
     """
 
@@ -80,6 +86,7 @@ class StockSelectionTrendConfig:
     cash_target: float = 0.0
     trend_threshold: float = 0.0
     rebalance_freq: str = "daily"
+    regime_config: RegimeConfig | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +198,7 @@ def get_param_constraints() -> tuple[ParamConstraint, ...]:
 @dataclass(frozen=True)
 class MultiFactorSignalStage:
     """
-    多因子加权信号 Stage — 从多个因子列计算加权综合信号.
+    多因子加权信号 Stage -- 从多个因子列计算加权综合信号.
 
     使用 rank-based 标准化: 对每个因子列独立做百分位排名 (0-1)，
     然后加权求和: score = sum(w_i * rank_i) / sum(w_i)
@@ -261,7 +268,7 @@ def build_stock_selection_trend_pipeline(
 
     流程:
       MultiFactorSignal -> TrendFilter -> Scoring -> RiskLockFilter ->
-      Select(top_k) -> Allocate -> Constraint(max_weight)
+      Select(top_k) -> Allocate -> [Regime] -> Constraint(max_weight)
 
     Args:
         config: 运行时配置。
@@ -294,6 +301,11 @@ def build_stock_selection_trend_pipeline(
     else:
         allocator = EqualWeightAllocator(cash_target=config.cash_target)
     stages.append(AllocationStage(allocator=allocator))
+
+    # Regime-aware allocation (optional, post-allocate)
+    if config.regime_config is not None:
+        stages.append(RegimeScoringStep(config.regime_config))
+        stages.append(RegimeAwareAllocationStage())
 
     # Constraint: MaxWeightConstraint (always present)
     constraint_list: list[Constraint] = [

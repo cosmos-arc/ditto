@@ -23,7 +23,7 @@ from ditto_data.models.derived import (
     DerivedDependencyRecord,
     DerivedInvalidationRecord,
 )
-from ditto_kernel.specs import MaterializationProfile
+from ditto_kernel.strategy import MaterializationProfile
 
 
 def _make_event(

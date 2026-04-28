@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_data.storage.metadata.universe.universe_writer import UniverseWriter
 
@@ -462,6 +462,64 @@ class TestGetFilteredUniverseMinListDays:
 
 
 # ============ T09: replace_constituents & set operations ============
+
+
+class TestUpdateMetadata:
+    """测试 UniverseWriter.update_metadata 元数据更新."""
+
+    def test_update_metadata_changes_name_and_description(
+        self,
+    ) -> None:
+        """update_metadata 应正确更新 name 和 description."""
+        mock_client = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 1
+        mock_client.execute.return_value = mock_cursor
+        mock_cache = MagicMock()
+        writer = UniverseWriter(mock_client, mock_cache)
+
+        result = writer.update_metadata("test_uv", "新名称", "新描述")
+
+        assert result is True
+        mock_client.execute.assert_called_once()
+        call_args = mock_client.execute.call_args
+        assert "UPDATE universe SET name = ?, description = ?" in call_args[0][0]
+        assert call_args[0][1] == ["新名称", "新描述", "test_uv"]
+        mock_client.commit.assert_called_once()
+        mock_cache.invalidate_pattern.assert_called_with("universe:*")
+
+    def test_update_metadata_nonexistent_returns_false(
+        self,
+    ) -> None:
+        """更新不存在的 universe 返回 False."""
+        mock_client = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 0
+        mock_client.execute.return_value = mock_cursor
+        mock_cache = MagicMock()
+        writer = UniverseWriter(mock_client, mock_cache)
+
+        result = writer.update_metadata("missing", "name", "desc")
+
+        assert result is False
+        mock_client.commit.assert_called_once()
+
+    def test_update_metadata_with_none_description(
+        self,
+    ) -> None:
+        """description 为 None 时仍能正确更新."""
+        mock_client = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 1
+        mock_client.execute.return_value = mock_cursor
+        mock_cache = MagicMock()
+        writer = UniverseWriter(mock_client, mock_cache)
+
+        result = writer.update_metadata("test_uv", "名称", None)
+
+        assert result is True
+        call_args = mock_client.execute.call_args
+        assert call_args[0][1][1] is None
 
 
 class TestReplaceConstituents:

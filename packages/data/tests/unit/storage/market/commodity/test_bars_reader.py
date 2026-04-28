@@ -4,6 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
+from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
@@ -15,8 +16,9 @@ class TestCommodityBarsStore:
 
     def test_write_and_read_commodity_bars(self, tmp_path: Path) -> None:
         """测试写入和读取商品行情数据."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         # 准备测试数据 - 使用 instrument_id 5_000_001 (大宗商品范围)
         df = pl.DataFrame(
@@ -42,8 +44,9 @@ class TestCommodityBarsStore:
 
     def test_read_by_instrument_id(self, tmp_path: Path) -> None:
         """测试按 instrument_id 过滤读取."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         # 写入多个商品的数据
         df = pl.DataFrame(
@@ -66,8 +69,9 @@ class TestCommodityBarsStore:
 
     def test_count_records(self, tmp_path: Path) -> None:
         """测试计数功能."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         df = pl.DataFrame(
             {
@@ -93,8 +97,9 @@ class TestCommodityBarsStore:
 
     def test_get_years(self, tmp_path: Path) -> None:
         """测试获取可用年份."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         # 写入 2023 年数据
         df_2023 = pl.DataFrame(
@@ -127,8 +132,9 @@ class TestCommodityBarsStore:
 
     def test_delete_records(self, tmp_path: Path) -> None:
         """测试删除记录."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         df = pl.DataFrame(
             {
@@ -154,8 +160,9 @@ class TestCommodityBarsStore:
 
     def test_list_instrument_ids(self, tmp_path: Path) -> None:
         """测试列出所有 instrument_id."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         df = pl.DataFrame(
             {
@@ -175,8 +182,9 @@ class TestCommodityBarsStore:
 
     def test_get_date_range(self, tmp_path: Path) -> None:
         """测试获取日期范围."""
-        writer = CommodityBarsWriter(tmp_path)
-        reader = CommodityBarsReader(tmp_path)
+        store = ParquetStore(tmp_path, YearlyPartition())
+        writer = CommodityBarsWriter(store)
+        reader = CommodityBarsReader(store)
 
         df = pl.DataFrame(
             {

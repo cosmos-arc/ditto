@@ -25,21 +25,23 @@ ditto_interfaces/
 │   ├── commands/      # 命令实现
 │   │   ├── factory.py # 命令工厂
 │   │   ├── init.py    # 初始化命令
+│   │   ├── ops.py     # 运维命令
 │   │   ├── strategy.py # 策略命令
-│   │   ├── ingest/    # 数据摄入命令
-│   │   ├── backfill/  # 回填命令
-│   │   └── query/     # 查询命令
+│   │   ├── ingest/    # 数据摄入命令（capital/fundamental/macro/market/metadata）
+│   │   ├── backfill/  # 回填命令（capital/fundamental/macro/market/metadata）
+│   │   └── query/     # 查询命令（capital/fundamental/macro/market/metadata）
 │   └── utils/         # CLI 工具（identifier/output/params/validation）
 ├── jobs/              # Prefect 任务
 │   ├── context.py     # 任务上下文
-│   ├── flows/         # Flow 定义
-│   └── tasks/         # Task 实现
-├── models/            # API 数据模型（Pydantic）
+│   ├── flows/         # Flow 定义（backfill/backtest/daily/deploy/eod/materialization/repair/research）
+│   └── tasks/         # Task 实现（aliases/dq_batch/monitoring/t0_meta）
+├── models/            # API 数据模型（Pydantic）（backtest/capital/commodity/fundamental/fx/ingestion/lineage/macro/market/metadata/strategy/trade/universe）
+├── services/          # 已清空（业务逻辑已迁入 ditto_app）
 ├── registry/          # DI 容器（Dishka Composition Root）
 │   ├── container.py   # 容器定义
 │   ├── init_providers.py  # Provider 初始化
 │   ├── contexts/      # DI 上下文（bundle/ingestion/materialization/query/strategy）
-│   └── infra/         # 基础设施配置（config/notification/observability）
+│   └── infra/         # 基础设施配置（config/notification/observability/signal_delivery）
 ├── config/            # 配置加载
 │   └── loader.py      # 环境配置加载器
 ├── middleware.py       # ASGI 中间件
@@ -126,6 +128,25 @@ ditto_interfaces/
 | 全局 State | `Depends(get_hub)` |
 | 直接返回 dict | Pydantic Model |
 | 裸 try/except | 自定义异常处理 |
+
+### API 路由分组
+
+| Prefix | Tag | 模块 | 说明 |
+|--------|-----|------|------|
+| `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 |
+| `/capital` | capital | `api/routes/capital.py` | Capital 域查询 |
+| `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询（POST 复用 `shared_bars.py`） |
+| `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询 |
+| `/fx` | fx | `api/routes/fx.py` | 外汇数据查询（POST 复用 `shared_bars.py`） |
+| `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 |
+| `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询 |
+| `/market` | market | `api/routes/market.py` | 行情数据查询 |
+| `/metadata` | metadata | `api/routes/metadata.py` | 元数据查询 |
+| `/source` | source | `api/routes/source.py` | Source 数据查询 |
+| `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 |
+| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） |
+| `/universes` | universes | `api/routes/universe.py` | Universe 管理 |
+| `/api/v1` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） |
 
 ## Prefect 规范
 

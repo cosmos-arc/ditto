@@ -1,0 +1,39 @@
+# 宏观指标 DQ 规则
+dataset: macro_indicators
+description: "宏观指标数据质量检查规则"
+
+# 技术类: 技术校验（写入时强制阻断）
+technical:
+  - rule: not_null
+    columns: [indicator_code, date, value]
+    message: "必填字段不能为空"
+
+  - rule: unique
+    columns: [indicator_code, date, knowledge_date]
+    message: "主键 (indicator_code, date, knowledge_date) 重复"
+
+  - rule: type_check
+    columns:
+      indicator_code: str
+      indicator_name: str
+      category: str
+      frequency: str
+      date: date
+      value: float
+      knowledge_date: date
+      source: str
+      unit: str
+    message: "字段类型不匹配"
+
+# 业务类: 业务规则（写入时警告但不阻断）
+business:
+  - rule: range_check
+    column: value
+    min: -1e15
+    max: 1e15
+    message: "指标值超出合理范围"
+
+  - rule: expression
+    name: valid_frequency
+    expr: "frequency IN ('daily', 'weekly', 'monthly', 'quarterly', 'annual')"
+    message: "数据频率不在已知范围内"

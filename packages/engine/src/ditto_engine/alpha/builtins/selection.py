@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import polars as pl
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 
 __all__ = ["SelectionStage"]
 
@@ -33,6 +34,7 @@ class SelectionStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """按 score 排序并截取 top K。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         if self.top_k <= 0 or frame.is_empty():
             return frame.clear()
 

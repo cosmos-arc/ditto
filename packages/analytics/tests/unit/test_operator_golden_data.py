@@ -24,7 +24,7 @@ from datetime import date
 
 import polars as pl
 from ditto_analytics.expression import ExpressionCompiler
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Test helpers

@@ -9,7 +9,7 @@ from ditto_data.models.ingestion import (
     ResultCounts,
     RetryResult,
 )
-from ditto_kernel.types import InstrumentIngestParams
+from ditto_kernel.instrument import InstrumentIngestParams
 
 # ---------------------------------------------------------------------------
 # InstrumentIngestParams

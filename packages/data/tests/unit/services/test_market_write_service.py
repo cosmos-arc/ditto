@@ -10,13 +10,11 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_data.errors import LateArrivalRejectedError
 from ditto_data.models import OnDuplicate
-from ditto_data.models.ingestion import (
-    DataLateArrivalPolicy,
-    LateArrivalRejectedError,
-)
+from ditto_data.models.ingestion import DataLateArrivalPolicy
+from ditto_data.services.deps import MarketWriters
 from ditto_data.services.market_write_service import MarketWriteService
-from ditto_data.services.ports import MarketWritePorts
 from ditto_infra.foundation.concurrency import FileLockManager
 
 
@@ -41,7 +39,7 @@ def market_write_service(
     lock_dir = tmp_path / "locks"
     lock_dir.mkdir(parents=True, exist_ok=True)
 
-    write_ports = MarketWritePorts(
+    write_ports = MarketWriters(
         stock_bars=mock_writers["stock_bars"],
         stock_status=mock_writers["stock_status"],
         stock_adj=mock_writers["stock_adj"],

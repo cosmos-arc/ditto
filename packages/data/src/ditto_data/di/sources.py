@@ -5,14 +5,35 @@ from collections.abc import Iterator
 from dishka import Provider, Scope, provide
 
 from ditto_data.config import DataSourceSettings
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.fred.fred_source import FredSource
+from ditto_data.sources.protocols import (
+    CapitalFetcher,
+    FundamentalFetcher,
+    MacroFetcher,
+    MarketFetcher,
+    MetadataFetcher,
+)
+from ditto_data.sources.registry import SourceRegistry
 from ditto_data.sources.source import DataSources
+from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.sources.tdx.transformer import TdxExchangeTransformer
 from ditto_data.sources.tushare.transformer import TushareExchangeTransformer
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
 __all__ = ["SourcesProvider"]
+
+_TUSHARE_PROTOCOLS: list[type] = [
+    MetadataFetcher,
+    MarketFetcher,
+    FundamentalFetcher,
+    CapitalFetcher,
+    MacroFetcher,
+]
+
+_FRED_PROTOCOLS: list[type] = [
+    MacroFetcher,
+]
 
 
 class SourcesProvider(Provider):
@@ -77,9 +98,34 @@ class SourcesProvider(Provider):
         return DataSources(tushare=tushare_source, fred=fred_source)
 
     @provide
+    def source_registry(
+        self,
+        tushare_source: TushareSource,
+        fred_source: FredSource | None,
+    ) -> SourceRegistry:
+        """
+        SourceRegistry — 按 Protocol 能力注册和查找数据源.
+
+        每个数据源按其实现的 Fetcher Protocol 注册，消费者通过
+        registry.get("tushare", MarketFetcher) 获取类型安全的实例。
+        """
+        registry = SourceRegistry()
+        for proto in _TUSHARE_PROTOCOLS:
+            registry.register("tushare", proto, tushare_source)
+        if fred_source is not None:
+            for proto in _FRED_PROTOCOLS:
+                registry.register("fred", proto, fred_source)
+        return registry
+
+    @provide
     def tushare_transformer(self) -> TushareExchangeTransformer:
         """Tushare 交易所转换器."""
         return TushareExchangeTransformer()
+
+    @provide
+    def tdx_source(self, data_source_settings: DataSourceSettings) -> TdxSource:
+        """通达信数据源 — 仅用于质量对账."""
+        return TdxSource(data_source_settings=data_source_settings)
 
     @provide
     def tdx_transformer(self) -> TdxExchangeTransformer:

@@ -15,8 +15,9 @@ from ditto_engine.accounting.order_book import (
     OrderSide,
     OrderType,
 )
+from ditto_engine.backtest.config import EngineConfig
 from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
-from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.backtest.engine import EngineLoop, EngineOptions
 from ditto_engine.events import (
     OrderFilled,
     OrderSubmitted,

@@ -7,7 +7,7 @@ from datetime import date
 import polars as pl
 from ditto_infra.foundation import logger
 
-from ditto_data.services.ports import CapitalReadPorts, CapitalWritePorts
+from ditto_data.services.deps import CapitalReaders, CapitalWriters
 
 
 class CapitalService:
@@ -20,8 +20,8 @@ class CapitalService:
 
     def __init__(
         self,
-        read_ports: CapitalReadPorts,
-        write_ports: CapitalWritePorts,
+        read_ports: CapitalReaders,
+        write_ports: CapitalWriters,
     ) -> None:
         """
         Initialize CapitalService.

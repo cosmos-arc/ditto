@@ -14,7 +14,7 @@ from ditto_analytics.materialization import (
     DerivedRunMode,
     DerivedRunTrigger,
 )
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _is_non_finite(v: object) -> bool:

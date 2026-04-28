@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.order_book import (
@@ -151,9 +151,14 @@ class SimpleExecutionPlanner:
 
     """
 
-    def __init__(self, default_lot_size: int = DEFAULT_LOT_SIZE) -> None:
+    def __init__(
+        self,
+        default_lot_size: int = DEFAULT_LOT_SIZE,
+        default_order_type: OrderType = OrderType.MARKET,
+    ) -> None:
         self._counter = 0
         self._default_lot_size = default_lot_size
+        self._default_order_type = default_order_type
 
     def plan(
         self,
@@ -480,14 +485,17 @@ class SimpleExecutionPlanner:
         instrument_id: InstrumentId,
         direction: OrderSide,
         quantity: int,
+        order_type: OrderType | None = None,
+        price: float | None = None,
     ) -> Order:
         """创建 Order 对象。"""
         return Order(
             order_id=self._next_id(),
             instrument_id=instrument_id,
-            order_type=OrderType.MARKET,
+            order_type=order_type or self._default_order_type,
             direction=direction,
             quantity=quantity,
+            price=price,
         )
 
     def _next_id(self) -> str:

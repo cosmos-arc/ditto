@@ -6,7 +6,7 @@ import pytest
 from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel, SimpleFeeModel
 from ditto_engine.execution.rules import FeeSchedule
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test helpers

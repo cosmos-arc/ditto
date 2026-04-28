@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ditto_kernel.enums import RiskScope
+from ditto_kernel.strategy import RiskScope
 
 
 class AuditRecordType(StrEnum):
@@ -19,6 +19,7 @@ class AuditRecordType(StrEnum):
 
     RISK_SCAN = "risk_scan"
     PRE_TRADE_DECISION = "pre_trade_decision"
+    TRADE_FILL = "trade_fill"
 
 
 @dataclass(frozen=True)
@@ -79,9 +80,39 @@ class PreTradeDecisionPayload:
     check_sequence: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class TradeFillPayload:
+    """
+    Trade Fill 成交审计记录 — Data 本地 DTO.
+
+    Attributes:
+        trade_date: 交易日期 (YYYY-MM-DD)
+        fill_id: 成交 ID
+        order_id: 关联订单 ID
+        instrument_id: 标的 ID
+        direction: 方向 (buy/sell)
+        filled_quantity: 成交数量
+        fill_price: 成交价格
+        fee: 手续费
+        slippage: 滑点
+
+    """
+
+    trade_date: str
+    fill_id: str
+    order_id: str
+    instrument_id: int
+    direction: str
+    filled_quantity: int
+    fill_price: float
+    fee: float
+    slippage: float
+
+
 __all__ = [
     "AuditRecordType",
     "PreTradeDecisionPayload",
     "RiskScanPayload",
     "RiskScope",
+    "TradeFillPayload",
 ]

@@ -37,12 +37,15 @@ from ditto_engine.alpha.templates import (
 from ditto_engine.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
+from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
+from ditto_kernel.strategy import ImpactModel
 
 from ditto_app.builders._spec_deserializer import (
     as_float_tuple,
     as_object_dict,
     as_sequence,
     as_str_tuple,
+    deserialize_regime_config,
     read_bool,
     read_float,
     read_int,
@@ -52,6 +55,10 @@ from ditto_app.builders._spec_deserializer import (
     read_required_str,
     read_str_value,
 )
+from ditto_app.process.execution.factor_bridge import (
+    CompiledExpressions,
+    FactorBridge,
+)
 
 __all__ = [
     "PublishedStrategyRuntime",
@@ -59,11 +66,26 @@ __all__ = [
 ]
 
 
-_DEFAULT_COMMISSION_RATE = 0.0003
 _DEFAULT_SLIPPAGE_BPS = 5.0
 _DEFAULT_TRAILING_STOP_PCT = 0.08
 _DEFAULT_MAX_WEIGHT = 0.15
 _DEFAULT_TOP_K = 10
+
+
+def _normalize_impact_model(raw: str | None) -> ImpactModel:
+    """
+    将 impact_model 字符串规范化为 ImpactModel 合法值.
+
+    Raises:
+        ValueError: raw 不为 None 且不是合法值时抛出.
+
+    """
+    if raw is None:
+        return ImpactModel.NONE
+    if raw in (ImpactModel.NONE, ImpactModel.VOLUME_SHARE):
+        return ImpactModel(raw)
+    msg = f"非法 impact_model 值: {raw!r}, 合法值: 'none', 'volume_share'"
+    raise ValueError(msg)
 
 
 # ===========================================================================
@@ -78,6 +100,7 @@ class PublishedStrategyRuntime:
     record: StrategySpecRecord
     spec: StrategySpec
     pipeline: StrategyPipeline
+    compiled_expressions: CompiledExpressions | None = None
 
 
 # ===========================================================================
@@ -113,7 +136,13 @@ class StrategyRuntimeBuilder:
 
         spec = self._deserialize_strategy_spec(record)
         pipeline = self._build_pipeline(spec)
-        return PublishedStrategyRuntime(record=record, spec=spec, pipeline=pipeline)
+        compiled = self._compile_signal_expressions(spec)
+        return PublishedStrategyRuntime(
+            record=record,
+            spec=spec,
+            pipeline=pipeline,
+            compiled_expressions=compiled,
+        )
 
     # ------------------------------------------------------------------
     # Deserialization
@@ -132,29 +161,47 @@ class StrategyRuntimeBuilder:
             scorer=self._deserialize_scorer(payload.get("scorer")),
             selector=self._deserialize_selector(payload.get("selector")),
             execution=self._deserialize_execution(payload.get("execution")),
-            constraints=tuple(
-                self._deserialize_constraint(item, index=index)
-                for index, item in enumerate(
-                    as_sequence(
-                        payload.get("constraints"),
-                        field_name="constraints",
-                    )
-                )
-            ),
+            constraints=self._deserialize_constraints(payload),
             benchmark=read_optional_str(payload.get("benchmark")),
             params=as_object_dict(payload.get("params"), field_name="params"),
-            param_constraints=tuple(
-                self._deserialize_param_constraint(item, index=index)
-                for index, item in enumerate(
-                    as_sequence(
-                        payload.get("param_constraints"),
-                        field_name="param_constraints",
-                    )
-                )
-            ),
+            param_constraints=self._deserialize_param_constraints(payload),
             tags=as_str_tuple(payload.get("tags"), field_name="tags") or record.tags,
+            signal_expressions=as_str_tuple(
+                payload.get("signal_expressions"),
+                field_name="signal_expressions",
+            ),
+            signal_weights=as_float_tuple(
+                payload.get("signal_weights"),
+                field_name="signal_weights",
+            ),
         )
         return self._inject_template_constraints(spec)
+
+    def _deserialize_constraints(
+        self, payload: dict[str, object]
+    ) -> tuple[ConstraintSpec, ...]:
+        """从 payload 中反序列化约束列表。"""
+        raw_items = as_sequence(
+            payload.get("constraints"),
+            field_name="constraints",
+        )
+        return tuple(
+            self._deserialize_constraint(item, index=index)
+            for index, item in enumerate(raw_items)
+        )
+
+    def _deserialize_param_constraints(
+        self, payload: dict[str, object]
+    ) -> tuple[ParamConstraint, ...]:
+        """从 payload 中反序列化参数约束列表。"""
+        raw_items = as_sequence(
+            payload.get("param_constraints"),
+            field_name="param_constraints",
+        )
+        return tuple(
+            self._deserialize_param_constraint(item, index=index)
+            for index, item in enumerate(raw_items)
+        )
 
     def _deserialize_scorer(self, raw_value: object) -> ScorerSpec:
         """恢复评分器配置。"""
@@ -192,14 +239,16 @@ class StrategyRuntimeBuilder:
         payload = as_object_dict(raw_value, field_name="execution.cost_model")
         return CostModelSpec(
             commission_rate=read_float(
-                payload.get("commission_rate", _DEFAULT_COMMISSION_RATE),
+                payload.get("commission_rate", DEFAULT_COMMISSION_RATE),
                 field_name="execution.cost_model.commission_rate",
             ),
             slippage_bps=read_float(
                 payload.get("slippage_bps", _DEFAULT_SLIPPAGE_BPS),
                 field_name="execution.cost_model.slippage_bps",
             ),
-            impact_model=(read_optional_str(payload.get("impact_model")) or "linear"),
+            impact_model=_normalize_impact_model(
+                read_optional_str(payload.get("impact_model"))
+            ),
         )
 
     def _deserialize_constraint(
@@ -271,6 +320,23 @@ class StrategyRuntimeBuilder:
         return spec
 
     # ------------------------------------------------------------------
+    # Signal expression compilation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _compile_signal_expressions(
+        spec: StrategySpec,
+    ) -> CompiledExpressions | None:
+        """若 spec 包含 signal_expressions 则编译并返回，否则返回 None。"""
+        if not spec.signal_expressions:
+            return None
+        bridge = FactorBridge()
+        return bridge.compile_and_validate(
+            expressions=spec.signal_expressions,
+            weights=spec.signal_weights or (1.0,) * len(spec.signal_expressions),
+        )
+
+    # ------------------------------------------------------------------
     # Pipeline construction
     # ------------------------------------------------------------------
 
@@ -321,6 +387,7 @@ class StrategyRuntimeBuilder:
                 params.get("max_positions"),
                 field_name="params.max_positions",
             ),
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     def _build_etf_trend_swing_config(
@@ -363,6 +430,7 @@ class StrategyRuntimeBuilder:
             ),
             signal_column=read_optional_str(params.get("signal_column"))
             or "signal_value",
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     def _build_stock_selection_trend_config(
@@ -401,6 +469,7 @@ class StrategyRuntimeBuilder:
             ),
             rebalance_freq=read_optional_str(params.get("rebalance_freq"))
             or self._resolve_rebalance_frequency(spec.execution.frequency),
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     def _build_stock_sector_rotation_config(
@@ -439,6 +508,7 @@ class StrategyRuntimeBuilder:
             ),
             rebalance_freq=read_optional_str(params.get("rebalance_freq"))
             or self._resolve_rebalance_frequency(spec.execution.frequency),
+            regime_config=deserialize_regime_config(params.get("regime_config")),
         )
 
     # ------------------------------------------------------------------

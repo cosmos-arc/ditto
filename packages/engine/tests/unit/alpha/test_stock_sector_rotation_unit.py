@@ -11,6 +11,9 @@ from __future__ import annotations
 import polars as pl
 import pytest
 from ditto_engine.alpha.builtins.filtering import RiskLockFilter
+from ditto_engine.alpha.builtins.regime import RegimeConfig, TrendIndicator
+from ditto_engine.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.alpha.pipeline import StrategyInputBundle
 from ditto_engine.alpha.specs import ParamConstraint
@@ -1202,3 +1205,28 @@ class TestPipelineE2E:
         assert "STOCK-TECH-002" in target.positions
         assert "STOCK-FIN-001" in target.positions
         assert "STOCK-FIN-002" in target.positions
+
+    def test_regime_config_inserts_scoring_step(
+        self,
+    ) -> None:
+        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        regime_config = RegimeConfig(
+            indicators=(TrendIndicator(threshold=0.01),),
+        )
+        config = StockSectorRotationConfig(regime_config=regime_config)
+        pipeline = build_stock_sector_rotation_pipeline(config)
+
+        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+
+        scoring_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeScoringStep)
+        )
+        aware_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeAwareAllocationStage)
+        )
+        assert scoring_idx < aware_idx

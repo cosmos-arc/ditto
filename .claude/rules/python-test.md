@@ -14,7 +14,6 @@ paths:
 | `pytest` | 测试框架 | 所有测试 |
 | `polars.testing` | DataFrame断言 | 数据处理验证 |
 | `polars.testing.parametric` | DataFrame生成 | Property测试 |
-| `pandera[polars]` | Schema验证 | 数据合同、运行时检查 |
 | `hypothesis` | Property-based测试 | 边界条件、数值计算 |
 | `pytest-mock` | Mock框架 | 需要验证调用的场景 |
 | `monkeypatch` | 简单替换 | 环境变量、属性替换 |

@@ -37,9 +37,17 @@ def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
 def _make_coordinator() -> ConfigInitCoordinator:
     """创建并注册所有初始化提供者的协调器。"""
     coordinator = ConfigInitCoordinator()
-    coordinator.register(DataRootInitProvider())
+    settings = _load_data_store_settings()
+    coordinator.register(DataRootInitProvider(settings.all_directories()))
     coordinator.register(MetadataDbInitProvider())
     return coordinator
+
+
+def _load_data_store_settings() -> DataStoreSettings:
+    environment = get_environment()
+    loader = ConfigLoader(environment)
+    values = load_env_file(loader, "data_store")
+    return DataStoreSettings.model_validate(values)
 
 
 @app.command()

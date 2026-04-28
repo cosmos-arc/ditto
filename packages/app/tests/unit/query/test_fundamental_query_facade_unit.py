@@ -89,5 +89,21 @@ class TestFundamentalQueryFacadeListCorporateActions:
 
         assert len(result) == 1
         service.list_corporate_actions.assert_called_once_with(
-            1, date(2024, 1, 1), date(2024, 12, 31)
+            1, date(2024, 1, 1), date(2024, 12, 31), None
+        )
+
+    def test_delegates_with_as_of_date(self) -> None:
+        service = MagicMock(spec=["list_corporate_actions"])
+        service.list_corporate_actions.return_value = pl.DataFrame(
+            {"action_type": ["split"]}
+        )
+        facade = FundamentalQueryFacade(fundamental_service=service)
+
+        result = facade.list_corporate_actions(
+            1, date(2024, 1, 1), date(2024, 12, 31), as_of_date=date(2024, 6, 30)
+        )
+
+        assert len(result) == 1
+        service.list_corporate_actions.assert_called_once_with(
+            1, date(2024, 1, 1), date(2024, 12, 31), date(2024, 6, 30)
         )

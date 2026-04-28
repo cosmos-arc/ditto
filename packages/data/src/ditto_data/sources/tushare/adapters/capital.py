@@ -523,8 +523,10 @@ class CapitalTushareAdapter(BaseTushareAdapter):
             DataFrame with columns:
             - source_ticker: 股票代码
             - action_type: 行为类型
-            - announcement_date: 公告日期
-            - effective_date: 生效日期
+            - action_date: 行为日期
+            - knowledge_date: 知识日期
+            - effective_from: 生效日期
+            - effective_to: 失效日期
             - description: 描述
 
         Raises:

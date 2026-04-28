@@ -1,0 +1,12 @@
+<b>DQ Alert [{{ level | upper }}]</b>
+
+<b>Dataset:</b> {{ dataset }}
+<b>Trade Date:</b> {{ trade_date }}
+<b>Error Count:</b> {{ error_count }}
+
+<b>Failed Rules:</b>
+{% for rule in failed_rules %}
+- {{ rule }}
+{% endfor %}
+
+<i>{{ timestamp }}</i>

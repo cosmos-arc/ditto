@@ -9,7 +9,7 @@ from datetime import date
 import polars as pl
 import pytest
 from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.ports import CapitalReadPorts, CapitalWritePorts
+from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from pytest_mock import MockerFixture
 
 
@@ -21,13 +21,13 @@ def _make_service(
     mock_index_reader: object | None = None,
 ) -> CapitalService:
     """Create a CapitalService with mocked dependencies."""
-    read_ports = CapitalReadPorts(
+    read_ports = CapitalReaders(
         margin_trading=mock_margin_reader or mocker.Mock(),
         pledge_ratio=mock_pledge_reader or mocker.Mock(),
         valuation_metrics=mock_valuation_reader or mocker.Mock(),
         index_composition=mock_index_reader or mocker.Mock(),
     )
-    write_ports = CapitalWritePorts(
+    write_ports = CapitalWriters(
         margin_trading=mocker.Mock(),
         pledge_ratio=mocker.Mock(),
         valuation_metrics=mocker.Mock(),

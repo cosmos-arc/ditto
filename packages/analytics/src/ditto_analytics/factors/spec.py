@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 __all__ = ["FactorContext", "FactorSpec"]
 
@@ -44,12 +45,16 @@ class FactorSpec:
         Unique identifier (e.g. ``"rsi_14"``).
     expression:
         DSL expression string compatible with the expression compiler.
+        Empty for ``computation_type="python"`` factors.
     dependencies:
         Tuple of dependency names (other factor ids or ``market.*`` columns).
     description:
         Human-readable description of the factor.
     calendar_context:
         Optional calendar context (special day flags, exchange, etc.).
+    computation_type:
+        ``"expression"`` (default) for DSL-based factors,
+        ``"python"`` for factors requiring Python computation.
 
     """
 
@@ -58,3 +63,4 @@ class FactorSpec:
     dependencies: tuple[str, ...] = ()
     description: str = ""
     calendar_context: FactorContext | None = None
+    computation_type: Literal["expression", "python"] = "expression"

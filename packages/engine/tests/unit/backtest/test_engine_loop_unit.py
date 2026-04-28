@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import MappingProxyType
+from typing import NamedTuple
 from unittest.mock import MagicMock, Mock
 
 import pytest
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.cash import CashBook
-from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.accounting.order_book import (
     Order,
     OrderBookReadOnly,
@@ -101,22 +102,6 @@ def _make_order(
     )
 
 
-def _make_fill(fill_id: str = "fill-001") -> FillEvent:
-    return FillEvent(
-        fill_id=fill_id,
-        order_id="order-001",
-        instrument_id=1,
-        direction=OrderSide.BUY,
-        filled_quantity=100,
-        fill_price=10.0,
-        fee=5.0,
-        slippage=0.001,
-        event_time=datetime(2026, 3, 1, 15, 0),
-        cumulative_quantity=100,
-        leaves_quantity=0,
-    )
-
-
 def _make_config() -> EngineConfig:
     return EngineConfig(
         start_date="2026-03-01",
@@ -168,6 +153,78 @@ def _make_engine_loop(
     )
 
 
+class _WiredMocks(NamedTuple):
+    """_make_wired_engine_loop 返回的 mock 引用集合."""
+
+    loop: EngineLoop
+    pipeline: Mock
+    brokerage: Mock
+    data_feed: Mock
+
+
+def _make_wired_engine_loop(
+    should_stop: Callable[[], bool] | None = None,
+) -> _WiredMocks:
+    """构建完整 mock 的 EngineLoop（3 天回测 + pipeline/planner/brokerage 配置）.
+
+    集中管理 TestThreeDayStep 和 TestCooperativeCancellation 共享的
+    mock setup，消除重复。
+    """
+    config = _make_config()
+    data_feed = Mock()
+    data_feed.trading_days.return_value = DAYS
+    data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+    pipeline = Mock()
+    pipeline.run.return_value = _make_target()
+
+    planner = Mock()
+    order = _make_order()
+    plan = Mock(
+        plan_id="plan-001",
+        trade_date="2026-03-01",
+        orders=(order,),
+        estimated_turnover=0.0,
+        estimated_cost=0.0,
+        blocked_orders=(),
+    )
+    planner.plan.return_value = plan
+
+    brokerage = Mock()
+    brokerage.get_account.return_value = _make_account_view()
+    brokerage.place_order.return_value = Mock()
+    brokerage.process_pending.return_value = ()
+
+    pre_trade_check = Mock()
+    pre_trade_check.check_order.return_value = OrderCheckResult(
+        decision=Decision.ACCEPT,
+        order_id="order-001",
+    )
+
+    fee_model = Mock()
+    fee_model.estimate.return_value = 5.0
+
+    loop = EngineLoop(
+        config=config,
+        pipeline=pipeline,
+        planner=planner,
+        brokerage=brokerage,
+        pre_trade_check=pre_trade_check,
+        data_feed=data_feed,
+        options=EngineOptions(
+            clock=_make_clock(),
+            fee_model=fee_model,
+            should_stop=should_stop,
+        ),
+    )
+    return _WiredMocks(
+        loop=loop,
+        pipeline=pipeline,
+        brokerage=brokerage,
+        data_feed=data_feed,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -178,57 +235,13 @@ class TestThreeDayStep:
 
     def test_three_day_step(self) -> None:
         """3 trading days → pipeline called 3 times, result has correct period."""
-        config = _make_config()
-        data_feed = Mock()
-        data_feed.trading_days.return_value = DAYS
-        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
-
-        pipeline = Mock()
-        target = _make_target()
-        pipeline.run.return_value = target
-
-        order = _make_order()
-        planner = Mock()
-        plan = Mock(
-            plan_id="plan-001",
-            trade_date="2026-03-01",
-            orders=(order,),
-            estimated_turnover=0.0,
-            estimated_cost=0.0,
-            blocked_orders=(),
-        )
-        planner.plan.return_value = plan
-
-        account_view = _make_account_view()
-        brokerage = Mock()
-        brokerage.get_account.return_value = account_view
-        brokerage.place_order.return_value = Mock()
-        brokerage.process_pending.return_value = ()
-
-        pre_trade_check = Mock()
-        pre_trade_check.check_order.return_value = OrderCheckResult(
-            decision=Decision.ACCEPT,
-            order_id="order-001",
-        )
-
-        fee_model = Mock()
-        fee_model.estimate.return_value = 5.0
-
-        loop = EngineLoop(
-            config=config,
-            pipeline=pipeline,
-            planner=planner,
-            brokerage=brokerage,
-            pre_trade_check=pre_trade_check,
-            data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
-        )
-        result = loop.run()
+        wired = _make_wired_engine_loop()
+        result = wired.loop.run()
 
         assert result.period == ("2026-03-01", "2026-03-03")
         assert result.run_id == "run-001"
-        assert pipeline.run.call_count == 3
-        assert brokerage.place_order.call_count == 3
+        assert wired.pipeline.run.call_count == 3
+        assert wired.brokerage.place_order.call_count == 3
 
 
 class TestNonRebalanceDaySkipsPipeline:
@@ -688,6 +701,7 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # 2026-03-02 is Monday; prev trading day 2026-03-01 is Sunday (ISO week 9 vs 9)
         # 但 2026-03-01 isocalendar() week 9, 2026-03-02 isocalendar() week 10
         assert loop._is_rebalance_day("2026-03-02") is True
@@ -696,6 +710,7 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # 2026-03-03 is Tuesday; prev trading day 2026-03-02 is Monday (same ISO week)
         assert loop._is_rebalance_day("2026-03-03") is False
 
@@ -705,20 +720,22 @@ class TestIsRebalanceDay:
         loop = _make_engine_loop(config=config)
         # 2026-03-01 is Sunday (ISO week 9), 2026-03-04 is Wednesday (ISO week 10)
         loop._trading_days = ("2026-03-01", "2026-03-04")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         assert loop._is_rebalance_day("2026-03-04") is True
 
-    def test_weekly_invalid_date_raises(self) -> None:
-        """date 不在 trading_days 中 → weekly 模式下 .index() 抛出 ValueError."""
+    def test_weekly_invalid_date_fallback(self) -> None:
+        """date 不在 trading_days 中 → weekly 模式下 fallback 为 daily (return True)."""
         config = replace(_make_config(), rebalance_freq="weekly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
-        with pytest.raises(ValueError):
-            loop._is_rebalance_day("not-a-date")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
+        assert loop._is_rebalance_day("not-a-date") is True
 
     def test_monthly_first_day_of_month(self) -> None:
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # First trading day in list → idx=0 → True
         assert loop._is_rebalance_day("2026-03-01") is True
 
@@ -727,6 +744,7 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # "2026-03-02" same month as "2026-03-01" (idx 0) → False
         assert loop._is_rebalance_day("2026-03-02") is False
 
@@ -735,19 +753,442 @@ class TestIsRebalanceDay:
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = ("2026-03-31", "2026-04-01")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         # "2026-04-01" has month_prefix "2026-04", prev "2026-03" different → True
         assert loop._is_rebalance_day("2026-04-01") is True
 
-    def test_monthly_date_not_in_trading_days_raises(self) -> None:
-        """date 不在 trading_days 中 → .index() 抛出 ValueError."""
+    def test_monthly_date_not_in_trading_days_fallback(self) -> None:
+        """date 不在 trading_days 中 → fallback 为 daily (return True)."""
         config = replace(_make_config(), rebalance_freq="monthly")
         loop = _make_engine_loop(config=config)
         loop._trading_days = tuple(DAYS)
-        with pytest.raises(ValueError):
-            loop._is_rebalance_day("2026-06-01")
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
+        assert loop._is_rebalance_day("2026-06-01") is True
 
     def test_unknown_freq_defaults_true(self) -> None:
         """未知 rebalance_freq → 默认返回 True."""
         config = replace(_make_config(), rebalance_freq="quarterly")
         loop = _make_engine_loop(config=config)
         assert loop._is_rebalance_day("2026-03-01") is True
+
+
+# ---------------------------------------------------------------------------
+# T10: StepChain 失败日志 + skipped_dates
+# ---------------------------------------------------------------------------
+
+
+class TestStepChainFailureLogging:
+    """Step 失败时记录 warning 日志 + 累积 skipped_dates."""
+
+    def test_step_failure_records_skipped_date(self) -> None:
+        """某个 Step 失败 → 该日期出现在 skipped_dates."""
+        from ditto_engine.backtest.steps import StepResult
+
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+        pipeline = Mock()
+        planner = Mock()
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        # 让第二个 trading day 的 DataFetchStep 失败
+        call_count = 0
+
+        def _mock_execute(ctx: object) -> StepResult:
+            nonlocal call_count
+            call_count += 1
+            # 第二次调用（对应第二天）失败
+            if call_count == 2:
+                return StepResult.fail("data fetch error")
+            return StepResult.ok()
+
+        # 替换 steps 的 execute 方法
+        mock_step = Mock()
+        mock_step.execute = _mock_execute
+        loop._steps = (mock_step,)
+
+        result = loop.run()
+
+        assert result.skipped_dates == ("2026-03-02",)
+
+    def test_all_steps_succeed_no_skipped_dates(self) -> None:
+        """所有 Step 成功 → skipped_dates 为空."""
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+        planner = Mock()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        result = loop.run()
+
+        assert result.skipped_dates == ()
+
+    def test_step_failure_logs_warning(self) -> None:
+        """Step 失败时 logger.warning 被调用."""
+        from unittest.mock import patch
+
+        from ditto_engine.backtest.steps import StepResult
+
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = ["2026-03-01"]
+        data_feed.get_slice.return_value = _make_slice("2026-03-01")
+
+        pipeline = Mock()
+        planner = Mock()
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        # 让 step 失败
+        mock_step = Mock()
+        mock_step.execute.return_value = StepResult.fail("test error msg")
+        loop._steps = (mock_step,)
+
+        with patch("ditto_engine.backtest.engine.logger") as mock_logger:
+            result = loop.run()
+
+        assert result.skipped_dates == ("2026-03-01",)
+        # _step 中的 warning: logger.warning(
+        #   "Step {} failed on {}: {}", step_name, date, errors)
+        step_warning_call = mock_logger.warning.call_args_list[0]
+        # args: ("Step {} failed on {}: {}", step_name, date, errors)
+        assert step_warning_call[0][2] == "2026-03-01"
+        assert "test error msg" in step_warning_call[0][3]
+        # run 结尾的 skipped_dates 摘要
+        summary_call = mock_logger.warning.call_args_list[-1]
+        assert summary_call[0][0] == "StepChain skipped {} date(s): {}"
+
+    def test_multiple_failures_all_recorded(self) -> None:
+        """多个日期失败 → 全部出现在 skipped_dates."""
+        from ditto_engine.backtest.steps import StepResult
+
+        config = _make_config()
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
+
+        pipeline = Mock()
+        planner = Mock()
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        fee_model = Mock()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+
+        # 让所有 step 失败
+        mock_step = Mock()
+        mock_step.execute.return_value = StepResult.fail("always fail")
+        loop._steps = (mock_step,)
+
+        result = loop.run()
+
+        assert result.skipped_dates == tuple(DAYS)
+
+
+# ---------------------------------------------------------------------------
+# T11: Cooperative cancellation via should_stop callback
+# ---------------------------------------------------------------------------
+
+
+class TestCooperativeCancellation:
+    """should_stop 回调实现协作式取消."""
+
+    def test_should_stop_halts_iteration(self) -> None:
+        """should_stop() 返回 True → EngineLoop 提前终止迭代."""
+        call_count = 0
+
+        def _should_stop() -> bool:
+            nonlocal call_count
+            call_count += 1
+            return call_count >= 2
+
+        wired = _make_wired_engine_loop(should_stop=_should_stop)
+        result = wired.loop.run()
+
+        assert result.cancelled is True
+        # 第 1 天正常执行，第 2 天 should_stop 返回 True → 跳过
+        assert wired.data_feed.get_slice.call_count == 1
+
+    def test_should_stop_never_triggered(self) -> None:
+        """should_stop() 始终返回 False → 正常执行全部天数."""
+        wired = _make_wired_engine_loop(should_stop=lambda: False)
+        result = wired.loop.run()
+
+        assert result.cancelled is False
+        assert wired.data_feed.get_slice.call_count == 3
+
+    def test_should_stop_none_runs_fully(self) -> None:
+        """should_stop=None → 正常执行全部天数."""
+        wired = _make_wired_engine_loop(should_stop=None)
+        result = wired.loop.run()
+
+        assert result.cancelled is False
+        assert wired.data_feed.get_slice.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# T12: execution_delay 延迟执行
+# ---------------------------------------------------------------------------
+
+
+class TestExecutionDelay:
+    """execution_delay 信号延迟执行测试."""
+
+    def _make_delay_loop(
+        self,
+        execution_delay: int = 1,
+        targets: list[TargetPortfolio] | None = None,
+    ) -> tuple[EngineLoop, Mock, Mock, Mock]:
+        """构建 execution_delay 测试用的 EngineLoop + 关键 mock。"""
+        config = replace(
+            _make_config(),
+            execution_delay=execution_delay,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        pipeline = Mock()
+        if targets is not None:
+            pipeline.run.side_effect = targets
+        else:
+            pipeline.run.return_value = _make_target()
+
+        order = _make_order()
+        planner = Mock()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(order,),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        )
+        return loop, pipeline, planner, brokerage
+
+    def test_delay_0_same_as_no_delay(self) -> None:
+        """execution_delay=0: 行为与不设置完全一致（3 天 3 次执行）."""
+        wired = _make_wired_engine_loop()
+        result = wired.loop.run()
+
+        assert result.period == ("2026-03-01", "2026-03-03")
+        assert wired.pipeline.run.call_count == 3
+        assert wired.brokerage.place_order.call_count == 3
+
+    def test_delay_1_first_day_no_execution(self) -> None:
+        """execution_delay=1: 首日信号入队延迟，尾部 flush → 3 天 3 次执行。"""
+        loop, pipeline, _planner, brokerage = self._make_delay_loop(
+            execution_delay=1,
+        )
+        loop.run()
+
+        # pipeline 每天都生成信号 (3 天 3 次)
+        assert pipeline.run.call_count == 3
+        # 首日信号入队，Day 1 执行；Day 1 信号 Day 2 执行；Day 2 信号 flush → 3 次
+        assert brokerage.place_order.call_count == 3
+
+    def test_delay_1_signal_executed_next_day(self) -> None:
+        """execution_delay=1: Day 0 的信号在 Day 1 执行（planner 收到延迟信号）。"""
+        targets = [_make_target(d) for d in DAYS]
+        loop, _pipeline, planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+            targets=targets,
+        )
+        loop.run()
+
+        # Day 1 执行 Day 0 信号, Day 2 执行 Day 1 信号, flush 执行 Day 2 信号 → 3 次
+        assert planner.plan.call_count == 3
+        # 验证 planner 第一次调用收到的是 Day 0 的 target
+        first_call_target = planner.plan.call_args_list[0][1]["target"]
+        assert first_call_target is targets[0]
+
+    def test_delay_1_trailing_signal_flushed(self) -> None:
+        """execution_delay=1: 回测结束后尾部信号被 flush 执行。"""
+        loop, pipeline, planner, brokerage = self._make_delay_loop(
+            execution_delay=1,
+        )
+        loop.run()
+
+        # 3 天每天生成信号，尾部 flush 确保 Day 2 信号被执行
+        assert pipeline.run.call_count == 3
+        assert brokerage.place_order.call_count == 3
+        assert planner.plan.call_count == 3
+
+    def test_delay_1_no_skipped_dates(self) -> None:
+        """execution_delay=1: PlanningStep 被跳过而非 fail，无 skipped_dates."""
+        loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+        )
+        result = loop.run()
+
+        assert result.skipped_dates == ()
+
+    def test_delay_1_flush_runs_audit_step(self) -> None:
+        """execution_delay=1: flush 阶段应执行 AuditStep，记录审计数据."""
+        from ditto_engine.backtest.audit.collector import ExecutionAuditCollector
+
+        audit_collector = Mock(spec=ExecutionAuditCollector)
+        config = replace(
+            _make_config(),
+            execution_delay=1,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        order = _make_order()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(order,),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            options=EngineOptions(
+                clock=_make_clock(),
+                fee_model=fee_model,
+                audit_collector=audit_collector,
+            ),
+        )
+        loop.run()
+
+        # 3 normal days + 1 flush = 4 record_account_view calls
+        call_dates = [
+            call[0][0] for call in audit_collector.record_account_view.call_args_list
+        ]
+        assert len(call_dates) == 4
+        assert call_dates[-1] == DAYS[-1]
+
+    def test_flush_propagates_unexpected_error(self) -> None:
+        """flush 延迟信号时，get_slice 异常应向上传播而非被静默吞掉."""
+        targets = [_make_target()]
+        loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+            targets=targets,
+        )
+        loop._data_feed.get_slice = Mock(
+            side_effect=RuntimeError("unexpected DB error")
+        )
+
+        with pytest.raises(RuntimeError, match="unexpected DB error"):
+            loop._execute_delayed_signal(_make_target())

@@ -30,6 +30,16 @@ _ema_specs: dict[str, FactorSpec] = {
     for n in _WINDOWS
 }
 
+# Additional EMA windows for specific indicators
+_extra_ema_specs: dict[str, FactorSpec] = {
+    "ema_13": FactorSpec(
+        id="ema_13",
+        expression="ts_ema(market.close, 13)",
+        dependencies=("market.close",),
+        description="EMA of close price (window=13, used by Elder Ray)",
+    ),
+}
+
 _rsi_specs: dict[str, FactorSpec] = {
     f"rsi_{n}": FactorSpec(
         id=f"rsi_{n}",
@@ -124,9 +134,102 @@ _returns_specs: dict[str, FactorSpec] = {
     for n in _return_windows
 }
 
+# --- Sprint 2: Extended technical factors (+10) ---
+
+_cci_specs: dict[str, FactorSpec] = {
+    "cci_20": FactorSpec(
+        id="cci_20",
+        expression=(
+            "(tp - ts_mean(tp, 20)) / (0.015 * ts_mean(abs(tp - ts_mean(tp, 20)), 20))"
+        ),
+        dependencies=("tp",),
+        description="CCI (20-day): normalized deviation from TP mean",
+    ),
+}
+
+_williams_r_specs: dict[str, FactorSpec] = {
+    "williams_r": FactorSpec(
+        id="williams_r",
+        expression=(
+            "(ts_max(market.high, 14) - market.close) "
+            "/ (ts_max(market.high, 14) - ts_min(market.low, 14)) "
+            "* (-100)"
+        ),
+        dependencies=("market.high", "market.low", "market.close"),
+        description="Williams %R (14-day): measures overbought/oversold levels",
+    ),
+}
+
+_vwap_specs: dict[str, FactorSpec] = {
+    "vwap_20d": FactorSpec(
+        id="vwap_20d",
+        expression="ts_sum(tp * market.volume, 20) / ts_sum(market.volume, 20)",
+        dependencies=("tp", "market.volume"),
+        description="20-day Volume Weighted Average Price",
+    ),
+}
+
+_choppiness_specs: dict[str, FactorSpec] = {
+    "choppiness_index": FactorSpec(
+        id="choppiness_index",
+        expression=(
+            "log10(ts_sum(tr, 14) "
+            "/ (ts_max(market.high, 14) - ts_min(market.low, 14))) "
+            "/ log10(14)"
+        ),
+        dependencies=("tr", "market.high", "market.low"),
+        description="Choppiness Index (14-day): ranging vs trending measure",
+    ),
+}
+
+_elder_ray_specs: dict[str, FactorSpec] = {
+    "elder_ray_bull": FactorSpec(
+        id="elder_ray_bull",
+        expression="market.high - ema_13",
+        dependencies=("market.high", "ema_13"),
+        description="Elder Ray Bull Power: high - EMA(13) (positive = bullish)",
+    ),
+}
+
+_obv_ma20_spec: FactorSpec = FactorSpec(
+    id="obv_ma20",
+    expression="",
+    dependencies=("obv",),
+    description="20-day moving average of On-Balance Volume",
+    computation_type="python",
+)
+
+_kdj_specs: dict[str, FactorSpec] = {
+    "kdj_k": FactorSpec(
+        id="kdj_k",
+        expression="",
+        dependencies=("market.high", "market.low", "market.close"),
+        description="Stochastic K value (9,3,3): fast stochastic oscillator",
+        computation_type="python",
+    ),
+    "kdj_d": FactorSpec(
+        id="kdj_d",
+        expression="",
+        dependencies=("kdj_k",),
+        description="Stochastic D value (9,3,3): smoothed K value",
+        computation_type="python",
+    ),
+}
+
+_supertrend_specs: dict[str, FactorSpec] = {
+    "supertrend": FactorSpec(
+        id="supertrend",
+        expression="",
+        dependencies=("market.high", "market.low", "market.close"),
+        description="SuperTrend indicator: ATR-based trend-following indicator",
+        computation_type="python",
+    ),
+}
+
 TECHNICALS: dict[str, FactorSpec] = {
     **_ma_specs,
     **_ema_specs,
+    **_extra_ema_specs,
     **_rsi_specs,
     **_macd_specs,
     **_bollinger_specs,
@@ -134,4 +237,12 @@ TECHNICALS: dict[str, FactorSpec] = {
     **_volatility_specs,
     **_volume_ma_specs,
     **_returns_specs,
+    **_cci_specs,
+    **_williams_r_specs,
+    **_vwap_specs,
+    **_choppiness_specs,
+    **_elder_ray_specs,
+    "obv_ma20": _obv_ma20_spec,
+    **_kdj_specs,
+    **_supertrend_specs,
 }

@@ -25,6 +25,9 @@ from ditto_analytics.materialization import (
     DerivedRunStatus,
     DerivedRunTrigger,
 )
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
 from ditto_data.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
@@ -37,13 +40,12 @@ from ditto_data.models.derived import (
 from ditto_data.models.publication_safety import DerivedMinimalDQSummaryRecord
 from ditto_data.services import (
     DerivedCatalogService,
-    PublicationSafetyRecordService,
 )
 from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactMetadataParams,
     ArtifactPersistenceService,
 )
-from ditto_kernel.specs import DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 
 from ditto_app.config import now_iso
 from ditto_app.process.materialization.dependencies import apply_cs_amplification

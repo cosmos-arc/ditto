@@ -2,10 +2,12 @@
 
 import pytest
 from ditto_app.builders._spec_deserializer import (
+    _read_clamped_float,
     as_float_tuple,
     as_object_dict,
     as_sequence,
     as_str_tuple,
+    deserialize_regime_config,
     read_bool,
     read_float,
     read_int,
@@ -15,6 +17,101 @@ from ditto_app.builders._spec_deserializer import (
     read_required_str,
     read_str_value,
 )
+
+# ---------------------------------------------------------------------------
+# _read_clamped_float
+# ---------------------------------------------------------------------------
+
+
+class TestReadClampedFloat:
+    @pytest.mark.unit
+    def test_value_in_range(self) -> None:
+        assert _read_clamped_float(0.65, field_name="x", lo=0.0, hi=1.0) == 0.65
+
+    @pytest.mark.unit
+    def test_boundary_lo(self) -> None:
+        assert _read_clamped_float(0.0, field_name="x", lo=0.0, hi=1.0) == 0.0
+
+    @pytest.mark.unit
+    def test_boundary_hi(self) -> None:
+        assert _read_clamped_float(1.0, field_name="x", lo=0.0, hi=1.0) == 1.0
+
+    @pytest.mark.unit
+    def test_above_range_raises(self) -> None:
+        with pytest.raises(ValueError, match=r"x 必须在 \[0.0, 1.0\] 范围内"):
+            _read_clamped_float(1.5, field_name="x", lo=0.0, hi=1.0)
+
+    @pytest.mark.unit
+    def test_below_range_raises(self) -> None:
+        with pytest.raises(ValueError, match=r"x 必须在 \[0.0, 1.0\] 范围内"):
+            _read_clamped_float(-0.1, field_name="x", lo=0.0, hi=1.0)
+
+    @pytest.mark.unit
+    def test_non_numeric_raises(self) -> None:
+        with pytest.raises(ValueError, match="x 必须是数字"):
+            _read_clamped_float("abc", field_name="x", lo=0.0, hi=1.0)
+
+
+# ---------------------------------------------------------------------------
+# deserialize_regime_config — threshold 范围校验
+# ---------------------------------------------------------------------------
+
+
+class TestDeserializeRegimeConfigThresholdRange:
+    @pytest.mark.unit
+    def test_bull_threshold_above_one_raises(self) -> None:
+        """bull_threshold=70.0（百分比思维）应被拒绝."""
+        with pytest.raises(ValueError, match=r"bull_threshold 必须在 \[0.0, 1.0\]"):
+            deserialize_regime_config(
+                {
+                    "indicators": [],
+                    "bull_threshold": 70.0,
+                }
+            )
+
+    @pytest.mark.unit
+    def test_bear_threshold_below_zero_raises(self) -> None:
+        """bear_threshold=-0.5 应被拒绝."""
+        with pytest.raises(ValueError, match=r"bear_threshold 必须在 \[0.0, 1.0\]"):
+            deserialize_regime_config(
+                {
+                    "indicators": [],
+                    "bear_threshold": -0.5,
+                }
+            )
+
+    @pytest.mark.unit
+    def test_bull_threshold_at_boundary_ok(self) -> None:
+        """bull_threshold=1.0 应被接受（边界值）."""
+        config = deserialize_regime_config(
+            {
+                "indicators": [],
+                "bull_threshold": 1.0,
+            }
+        )
+        assert config is not None
+        assert config.bull_threshold == 1.0
+
+    @pytest.mark.unit
+    def test_bear_threshold_at_boundary_ok(self) -> None:
+        """bear_threshold=0.0 应被接受（边界值）."""
+        config = deserialize_regime_config(
+            {
+                "indicators": [],
+                "bear_threshold": 0.0,
+            }
+        )
+        assert config is not None
+        assert config.bear_threshold == 0.0
+
+    @pytest.mark.unit
+    def test_normal_defaults_ok(self) -> None:
+        """默认值 0.65/0.35 应被接受."""
+        config = deserialize_regime_config({"indicators": []})
+        assert config is not None
+        assert config.bull_threshold == 0.65
+        assert config.bear_threshold == 0.35
+
 
 # ---------------------------------------------------------------------------
 # read_int

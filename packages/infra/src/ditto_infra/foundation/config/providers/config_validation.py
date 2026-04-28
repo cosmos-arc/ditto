@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from loguru import logger
@@ -18,9 +17,10 @@ class ConfigValidationProvider(ConfigInitProvider):
     """
     启动配置校验.
 
-    职责：在启动阶段校验关键环境变量和目录是否存在/有效。
-    - TUSHARE_TOKEN：非空、非纯空白
+    职责：在启动阶段校验通用配置项。
     - DATA_DIR（data_root）：存在且为目录
+
+    注意：数据源特定校验（如 TUSHARE_TOKEN）由对应层的 ValidationProvider 负责。
     """
 
     @property
@@ -38,13 +38,8 @@ class ConfigValidationProvider(ConfigInitProvider):
         return True
 
     def initialize(self, data_root: Path) -> InitResult:
-        """校验关键配置项，返回成功或失败结果."""
+        """校验通用配置项，返回成功或失败结果."""
         errors: list[str] = []
-
-        # 校验 TUSHARE_TOKEN
-        token = os.environ.get("TUSHARE_TOKEN", "")
-        if not token.strip():
-            errors.append("TUSHARE_TOKEN is not set or empty")
 
         # 校验 DATA_DIR
         if not data_root.exists():

@@ -26,7 +26,9 @@ from ditto_data.errors import DatasetNotFoundError
 from ditto_data.models import Dataset
 from pydantic import BaseModel, Field
 
-__all__ = ["DataStoreSettings", "now_iso"]
+__all__ = ["DEFAULT_INITIAL_CASH", "DataStoreSettings", "now_iso"]
+
+DEFAULT_INITIAL_CASH: float = 1_000_000.0
 
 
 def now_iso() -> str:
@@ -507,9 +509,18 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         description="公司行为",
         typical_available_time=time(20, 0),
         depends_on=[Dataset.STOCK_BASIC],
-        critical_fields=["instrument_id", "action_type", "effective_date"],
+        critical_fields=["instrument_id", "action_type", "action_date"],
         task_name="ingest_corporate_actions",
         priority=65,
+    ),
+    Dataset.INDEX_WEIGHT: create_t1_config(
+        dataset=Dataset.INDEX_WEIGHT,
+        description="指数成分股权重",
+        typical_available_time=time(19, 0),
+        depends_on=[Dataset.INDEX_BASIC],
+        critical_fields=["index_code", "con_code", "weight", "trade_date"],
+        task_name="ingest_index_weight",
+        priority=50,
     ),
 }
 

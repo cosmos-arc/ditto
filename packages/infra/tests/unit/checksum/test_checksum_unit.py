@@ -4,6 +4,9 @@ import polars as pl
 import xxhash
 from ditto_infra.foundation.util.checksum import ChecksumCompute
 
+STOCK_DAILY_KEYS = ("trade_date", "instrument_id")
+CALENDAR_KEYS = ("trade_date",)
+
 
 class TestChecksumCompute:
     """ChecksumCompute 单元测试."""
@@ -11,13 +14,12 @@ class TestChecksumCompute:
     def test_empty_dataframe_returns_xxh3_128_of_empty_bytes(self) -> None:
         """空 DataFrame 应返回 XXH3_128 of empty bytes."""
         df = pl.DataFrame()
-        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum = ChecksumCompute.from_dataframe(df)
         expected = xxhash.xxh3_128_hexdigest(b"")
         assert checksum == expected
 
     def test_deterministic_irrespective_of_row_order(self) -> None:
         """验证行顺序不影响 checksum(核心测试)."""
-        # [REVIEW]
         df1 = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
@@ -36,8 +38,8 @@ class TestChecksumCompute:
             }
         )
 
-        checksum1 = ChecksumCompute.from_dataframe(df1, "stock_daily")
-        checksum2 = ChecksumCompute.from_dataframe(df2, "stock_daily")
+        checksum1 = ChecksumCompute.from_dataframe(df1, sort_keys=STOCK_DAILY_KEYS)
+        checksum2 = ChecksumCompute.from_dataframe(df2, sort_keys=STOCK_DAILY_KEYS)
 
         assert checksum1 == checksum2, "相同数据不同行顺序应产生相同 checksum"
 
@@ -59,8 +61,12 @@ class TestChecksumCompute:
             }
         )
 
-        checksum1 = ChecksumCompute.from_dataframe(df_with_sid, "stock_daily")
-        checksum2 = ChecksumCompute.from_dataframe(df_without_sid, "stock_daily")
+        checksum1 = ChecksumCompute.from_dataframe(
+            df_with_sid, sort_keys=STOCK_DAILY_KEYS
+        )
+        checksum2 = ChecksumCompute.from_dataframe(
+            df_without_sid, sort_keys=STOCK_DAILY_KEYS
+        )
 
         assert checksum1 != checksum2, "instrument_id/source 字段应影响 checksum"
 
@@ -75,8 +81,12 @@ class TestChecksumCompute:
         df_tushare = pl.DataFrame({**base_data, "source": ["tushare"]})
         df_akshare = pl.DataFrame({**base_data, "source": ["akshare"]})
 
-        checksum1 = ChecksumCompute.from_dataframe(df_tushare, "stock_daily")
-        checksum2 = ChecksumCompute.from_dataframe(df_akshare, "stock_daily")
+        checksum1 = ChecksumCompute.from_dataframe(
+            df_tushare, sort_keys=STOCK_DAILY_KEYS
+        )
+        checksum2 = ChecksumCompute.from_dataframe(
+            df_akshare, sort_keys=STOCK_DAILY_KEYS
+        )
 
         assert checksum1 != checksum2, "不同 source 应产生不同 checksum"
 
@@ -89,15 +99,13 @@ class TestChecksumCompute:
             }
         )
 
-        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum = ChecksumCompute.from_dataframe(df, sort_keys=STOCK_DAILY_KEYS)
 
-        # XXH3_128 应该是 32 字符 hex string
         assert len(checksum) == 32
         assert all(c in "0123456789abcdef" for c in checksum)
 
-    def test_dataset_specific_sort_keys(self) -> None:
-        """验证不同数据集使用不同的排序键."""
-        # stock_daily: 按 trade_date, instrument_id 排序
+    def test_sort_keys_produce_deterministic_results(self) -> None:
+        """验证通过 sort_keys 参数控制排序产生确定性结果."""
         df_stock = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
@@ -106,7 +114,6 @@ class TestChecksumCompute:
             }
         )
 
-        # calendar: 按 trade_date 排序
         df_calendar = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
@@ -114,18 +121,24 @@ class TestChecksumCompute:
             }
         )
 
-        # stock_daily: 两行不同顺序应相同
-        checksum1a = ChecksumCompute.from_dataframe(df_stock, "stock_daily")
-        checksum1b = ChecksumCompute.from_dataframe(df_stock.reverse(), "stock_daily")
+        checksum1a = ChecksumCompute.from_dataframe(
+            df_stock, sort_keys=STOCK_DAILY_KEYS
+        )
+        checksum1b = ChecksumCompute.from_dataframe(
+            df_stock.reverse(), sort_keys=STOCK_DAILY_KEYS
+        )
         assert checksum1a == checksum1b
 
-        # calendar: 两行不同顺序应相同
-        checksum2a = ChecksumCompute.from_dataframe(df_calendar, "calendar")
-        checksum2b = ChecksumCompute.from_dataframe(df_calendar.reverse(), "calendar")
+        checksum2a = ChecksumCompute.from_dataframe(
+            df_calendar, sort_keys=CALENDAR_KEYS
+        )
+        checksum2b = ChecksumCompute.from_dataframe(
+            df_calendar.reverse(), sort_keys=CALENDAR_KEYS
+        )
         assert checksum2a == checksum2b
 
-    def test_unknown_dataset_with_fallback_sort_keys(self) -> None:
-        """验证未知数据集可以使用备用排序键."""
+    def test_fallback_sort_keys(self) -> None:
+        """验证自定义排序键产生确定性结果."""
         df = pl.DataFrame(
             {
                 "id": [2, 1],
@@ -133,32 +146,25 @@ class TestChecksumCompute:
             }
         )
 
-        # [REVIEW]
-        checksum = ChecksumCompute.from_dataframe(
-            df,
-            "unknown_dataset",
-            fallback_sort_keys=["id"],
-        )
-
-        # [REVIEW] checksum
+        checksum = ChecksumCompute.from_dataframe(df, sort_keys=["id"])
         checksum_reversed = ChecksumCompute.from_dataframe(
-            df.reverse(),
-            "unknown_dataset",
-            fallback_sort_keys=["id"],
+            df.reverse(), sort_keys=["id"]
         )
 
         assert checksum == checksum_reversed
 
-    def test_get_sort_keys_returns_sequence(self) -> None:
-        """验证 get_sort_keys 返回正确的排序键."""
-        keys = ChecksumCompute.get_sort_keys("stock_daily")
-        assert list(keys) == ["trade_date", "instrument_id"]
+    def test_no_sort_keys_preserves_row_order(self) -> None:
+        """验证不提供 sort_keys 时保留原始行顺序."""
+        df = pl.DataFrame(
+            {
+                "value": [1, 2],
+            }
+        )
 
-        keys_calendar = ChecksumCompute.get_sort_keys("calendar")
-        assert list(keys_calendar) == ["trade_date"]
+        checksum1 = ChecksumCompute.from_dataframe(df)
+        checksum2 = ChecksumCompute.from_dataframe(df.reverse())
 
-        keys_unknown = ChecksumCompute.get_sort_keys("unknown")
-        assert list(keys_unknown) == []
+        assert checksum1 != checksum2
 
     def test_handles_missing_sort_keys_gracefully(self) -> None:
         """验证缺失排序键时能优雅处理（不排序，记录警告）."""
@@ -169,11 +175,11 @@ class TestChecksumCompute:
             }
         )
 
-        # 使用不匹配的排序键，应该产生不同 checksum
-        checksum1 = ChecksumCompute.from_dataframe(df, "stock_daily")
-        checksum2 = ChecksumCompute.from_dataframe(df.reverse(), "stock_daily")
+        checksum1 = ChecksumCompute.from_dataframe(df, sort_keys=["nonexistent"])
+        checksum2 = ChecksumCompute.from_dataframe(
+            df.reverse(), sort_keys=["nonexistent"]
+        )
 
-        # 由于排序键不存在，行顺序会影响结果
         assert checksum1 != checksum2
 
     def test_different_data_types_affect_checksum(self) -> None:
@@ -184,13 +190,12 @@ class TestChecksumCompute:
         df_bool = pl.DataFrame({"value": [True]})
 
         checksums = [
-            ChecksumCompute.from_dataframe(df_int, "test"),
-            ChecksumCompute.from_dataframe(df_float, "test"),
-            ChecksumCompute.from_dataframe(df_str, "test"),
-            ChecksumCompute.from_dataframe(df_bool, "test"),
+            ChecksumCompute.from_dataframe(df_int),
+            ChecksumCompute.from_dataframe(df_float),
+            ChecksumCompute.from_dataframe(df_str),
+            ChecksumCompute.from_dataframe(df_bool),
         ]
 
-        # 所有 checksum 应该不同
         assert len(set(checksums)) == 4
 
     def test_handles_null_values(self) -> None:
@@ -209,8 +214,8 @@ class TestChecksumCompute:
             }
         )
 
-        checksum1 = ChecksumCompute.from_dataframe(df_with_null, "test")
-        checksum2 = ChecksumCompute.from_dataframe(df_with_zero, "test")
+        checksum1 = ChecksumCompute.from_dataframe(df_with_null)
+        checksum2 = ChecksumCompute.from_dataframe(df_with_zero)
 
         assert checksum1 != checksum2
 
@@ -224,14 +229,13 @@ class TestChecksumCompute:
             }
         )
 
-        checksum = ChecksumCompute.from_dataframe(df, "stock_daily")
+        checksum = ChecksumCompute.from_dataframe(df, sort_keys=STOCK_DAILY_KEYS)
 
-        # 验证 checksum 格式
         assert len(checksum) == 32
         assert all(c in "0123456789abcdef" for c in checksum)
 
-    def test_adj_factor_dataset_sorting(self) -> None:
-        """验证 adj_factor 数据集使用正确的排序键."""
+    def test_adj_factor_sorting(self) -> None:
+        """验证 adj_factor 排序键产生确定性结果."""
         df = pl.DataFrame(
             {
                 "trade_date": ["2024-01-02", "2024-01-01"],
@@ -240,10 +244,11 @@ class TestChecksumCompute:
             }
         )
 
-        checksum1 = ChecksumCompute.from_dataframe(df, "adj_factor")
-        checksum2 = ChecksumCompute.from_dataframe(df.reverse(), "adj_factor")
+        checksum1 = ChecksumCompute.from_dataframe(df, sort_keys=STOCK_DAILY_KEYS)
+        checksum2 = ChecksumCompute.from_dataframe(
+            df.reverse(), sort_keys=STOCK_DAILY_KEYS
+        )
 
-        # 应该相同（按 trade_date, instrument_id 排序）
         assert checksum1 == checksum2
 
     def test_empty_string_vs_none(self) -> None:
@@ -251,7 +256,7 @@ class TestChecksumCompute:
         df_empty_str = pl.DataFrame({"value": [""]})
         df_none = pl.DataFrame({"value": [None]})
 
-        checksum1 = ChecksumCompute.from_dataframe(df_empty_str, "test")
-        checksum2 = ChecksumCompute.from_dataframe(df_none, "test")
+        checksum1 = ChecksumCompute.from_dataframe(df_empty_str)
+        checksum2 = ChecksumCompute.from_dataframe(df_none)
 
         assert checksum1 != checksum2

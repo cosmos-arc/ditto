@@ -10,8 +10,11 @@ import pytest
 from ditto_data.storage.fundamental.forecast.forecast_reader import (
     ForecastReader,
 )
+from ditto_data.storage.fundamental.specs import FORECAST_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_infra.foundation import SQLitePool
+
+SPEC = FORECAST_SPEC
 
 
 @pytest.fixture
@@ -39,7 +42,7 @@ def in_memory_db(tmp_path: Path) -> SQLitePool:
 @pytest.fixture
 def forecast_reader(in_memory_db: SQLitePool) -> ForecastReader:
     """Provide ForecastReader with in-memory database."""
-    return ForecastReader(SQLiteClient(in_memory_db))
+    return ForecastReader(SPEC, SQLiteClient(in_memory_db))
 
 
 @pytest.mark.unit

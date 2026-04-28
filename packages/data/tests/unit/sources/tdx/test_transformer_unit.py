@@ -116,7 +116,7 @@ class TestTdxExchangeTransformer:
 
     def test_implements_exchange_transformer_protocol(self) -> None:
         """Test that TdxExchangeTransformer implements ExchangeTransformer protocol."""
-        from ditto_data.sources import ExchangeTransformer
+        from ditto_data.sources.exchange_transformers import ExchangeTransformer
 
         transformer = TdxExchangeTransformer()
         # 验证实例满足协议（structural typing）

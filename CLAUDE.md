@@ -83,6 +83,7 @@
 - **禁止循环依赖**：必须重构架构，禁止 `TYPE_CHECKING` 延迟导入
 
 详细分层规范：
+- 总体架构边界、命名与抽象层级 → [docs/architecture/boundaries-and-abstraction-standards.md](docs/architecture/boundaries-and-abstraction-standards.md)
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)

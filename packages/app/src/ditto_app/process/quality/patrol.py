@@ -13,19 +13,14 @@ import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_data.quality.protocols import QualityEngineProtocol
 from ditto_infra.foundation import logger
+from ditto_infra.services.notification import AlertManager, alert_dq_failure
 from ditto_kernel.quality import DQIssue, DQResult
 
+from ditto_app.process.quality.types import L3CheckResult
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
 
-_CALENDAR_BUFFER_MULTIPLIER = 2  # 周末/假日缓冲系数
-
-# ---------------------------------------------------------------------------
-# L3 批量统计检查
-# ---------------------------------------------------------------------------
-
-# NOTE: L3CheckResult 临时从 ditto_kernel.quality 导入（Phase D 清理）。
-from ditto_kernel.quality import L3CheckResult  # noqa: E402
+_CALENDAR_BUFFER_MULTIPLIER = 2
 
 
 class QualityPatrolService:
@@ -41,6 +36,7 @@ class QualityPatrolService:
         engine: QualityEngineProtocol,
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
+        alert_manager: AlertManager | None = None,
     ) -> None:
         """
         初始化质量巡检服务.
@@ -49,11 +45,13 @@ class QualityPatrolService:
             engine: 质量引擎实例
             market_facade: 行情查询 facade，用于数据访问
             metadata_facade: 元数据查询 facade，用于数据访问
+            alert_manager: 告警管理器，可选。未配置时退化为日志告警。
 
         """
         self._engine = engine
         self._market_facade = market_facade
         self._metadata_facade = metadata_facade
+        self._alert_manager = alert_manager
 
     def check_dataset(
         self,
@@ -203,7 +201,8 @@ class QualityPatrolService:
 
         # end=trade_date 包含当日数据（与 current 重叠），这是预存行为。
         # 引擎内部使用 historical 构建参考分布时需排除 current 行。
-        # TODO: 考虑 end=trade_date 前一天以避免参考分布污染。
+        # 注: end=trade_date 前一天可避免参考分布污染，但需引擎侧同步调整，
+        # 暂保持当前行为以确保回测一致性。
         historical = self._market_facade.find_bars(
             instrument_ids=None,
             start=start_date,
@@ -257,20 +256,28 @@ class QualityPatrolService:
         """
         发送 DQ 告警通知.
 
+        通过 AlertManager 发送多渠道告警；未配置时退化为日志记录。
+
         Args:
             trade_date: 交易日期
             dataset: 数据集名称
             issues: DQ 问题列表
 
         """
+        failed_rules = [i.rule_name for i in issues]
         logger.warning(
             "DQ alert notification",
             event="dq_alert",
             trade_date=trade_date,
             dataset=dataset,
             issue_count=len(issues),
-            issues=[
-                {"level": i.level.value, "rule": i.rule_name, "message": i.message}
-                for i in issues
-            ],
+        )
+        if self._alert_manager is None:
+            return
+        alert_dq_failure(
+            manager=self._alert_manager,
+            dataset=dataset,
+            trade_date=trade_date,
+            failed_rules=failed_rules,
+            error_count=len(issues),
         )

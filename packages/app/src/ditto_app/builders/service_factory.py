@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import date, timedelta
 
 from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.provider import DataProvider
@@ -21,7 +22,8 @@ from ditto_engine.backtest.data_feed import (
 )
 from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
-from ditto_engine.execution.reality import BrokerageModel, FeeModel, SimpleFeeModel
+from ditto_engine.execution.reality import AShareFeeModel, BrokerageModel, FeeModel
+from ditto_engine.execution.reality.slippage import FixedBpsSlippage, SlippageModel
 from ditto_engine.risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -34,11 +36,13 @@ from ditto_app.builders._resolution import (
     resolve_instrument_display,
 )
 from ditto_app.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_app.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_app.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
+from ditto_app.process.execution.factor_bridge import CompiledExpressions
 from ditto_app.process.execution.strategy_input import StrategyInputAssembler
 from ditto_app.process.execution.strategy_run_process import (
     StrategyRunService,
@@ -51,6 +55,34 @@ __all__ = [
     "PublishedBacktestRuntime",
     "StrategyServiceFactory",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _compute_max_lookback(
+    compiled: CompiledExpressions | None,
+) -> int:
+    """计算因子表达式所需最大 lookback 天数."""
+    if compiled is None:
+        return REGIME_DEFAULT_LOOKBACK
+    return max(
+        (expr.analysis.lookback for expr in compiled.expressions),
+        default=REGIME_DEFAULT_LOOKBACK,
+    )
+
+
+def _shift_back_calendar_days(date_str: str, days: int) -> str:
+    """将 YYYY-MM-DD 向前偏移 days 个日历日。"""
+    d = date.fromisoformat(date_str) - timedelta(days=days)
+    return d.isoformat()
 
 
 # ===========================================================================
@@ -72,6 +104,7 @@ class PublishedBacktestRuntime:
     display_map: dict[InstrumentId, str]
     fee_model: FeeModel
     config: BacktestServiceConfig
+    compiled_expressions: CompiledExpressions | None = None
 
 
 # ===========================================================================
@@ -99,13 +132,16 @@ class BacktestRuntimeBuilder:
         config: BacktestServiceConfig,
         version: int | None = None,
         source: str = "tushare",
+        fee_model: FeeModel | None = None,
+        slippage_model: SlippageModel | None = None,
     ) -> PublishedBacktestRuntime:
         """从 published strategy catalog 构造回测运行时。"""
         runtime = self._strategy_runtime_builder.build_published_runtime(
             config.strategy_id,
             version,
         )
-        fee_model = SimpleFeeModel()
+        resolved_fee_model = fee_model or AShareFeeModel()
+        resolved_slippage = slippage_model or FixedBpsSlippage()
         brokerage = BacktestBrokerage(
             account=Account(
                 cash=CashBook(
@@ -114,7 +150,10 @@ class BacktestRuntimeBuilder:
                     frozen=0.0,
                 )
             ),
-            model=BrokerageModel(fee_model=fee_model),
+            model=BrokerageModel(
+                fee_model=resolved_fee_model,
+                slippage_model=resolved_slippage,
+            ),
         )
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
@@ -139,10 +178,14 @@ class BacktestRuntimeBuilder:
         id_map = resolution.id_map
         display_map = resolution.display_map
 
+        # 计算数据加载起点：考虑因子表达式 lookback + Regime 默认 lookback
+        max_lookback = _compute_max_lookback(runtime.compiled_expressions)
+        data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
+
         data_feed = ProviderBackedDataFeed(
             self._data_provider,
             tickers=tickers,
-            start_date=config.start_date,
+            start_date=data_start_date,
             end_date=config.end_date,
             id_map=id_map,
             benchmark_id=resolved_config.benchmark_id,
@@ -159,8 +202,9 @@ class BacktestRuntimeBuilder:
             ),
             data_feed=data_feed,
             display_map=display_map,
-            fee_model=fee_model,
+            fee_model=resolved_fee_model,
             config=resolved_config,
+            compiled_expressions=runtime.compiled_expressions,
         )
 
 
@@ -271,12 +315,14 @@ class StrategyServiceFactory:
         resolved_version = version
         if resolved_version is None:
             resolved_version = self._parse_catalog_version(config.strategy_version)
+        resolved_options = options or BacktestServiceOptions()
         runtime = self._backtest_runtime_builder.build_published_runtime(
             config=config,
             version=resolved_version,
             source=source,
+            fee_model=resolved_options.fee_model,
+            slippage_model=resolved_options.slippage_model,
         )
-        resolved_options = options or BacktestServiceOptions()
         if resolved_options.fee_model is None:
             resolved_options = replace(
                 resolved_options,
@@ -286,6 +332,11 @@ class StrategyServiceFactory:
             resolved_options = replace(
                 resolved_options,
                 display_map=runtime.display_map,
+            )
+        if resolved_options.compiled_expressions is None:
+            resolved_options = replace(
+                resolved_options,
+                compiled_expressions=runtime.compiled_expressions,
             )
         return self.build_backtest_service(
             config=runtime.config,
@@ -328,8 +379,10 @@ class StrategyServiceFactory:
             )
         return BacktestServiceOptions(
             fee_model=options.fee_model,
+            slippage_model=options.slippage_model,
             rule_provider=options.rule_provider,
             post_trade_guard=options.post_trade_guard,
+            compiled_expressions=options.compiled_expressions,
             audit_service=options.audit_service or self._audit_service,
             artifact_service=options.artifact_service or self._artifact_service,
             artifact_dir=options.artifact_dir,

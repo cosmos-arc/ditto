@@ -1,12 +1,8 @@
 """ditto_kernel.enums 单元测试."""
 
-from ditto_kernel.enums import (
-    AssetClass,
-    Exchange,
-    OrderSide,
-    RiskScope,
-    RunStatus,
-)
+from ditto_kernel.instrument import AssetClass, Exchange
+from ditto_kernel.order import OrderSide
+from ditto_kernel.strategy import ImpactModel, RunStatus
 
 
 class TestAssetClass:
@@ -60,23 +56,28 @@ class TestRunStatus:
     """RunStatus 枚举测试."""
 
     def test_members(self) -> None:
-        """应包含 4 个成员."""
-        assert len(RunStatus) == 4
+        """应包含 5 个成员."""
+        assert len(RunStatus) == 5
 
     def test_values(self) -> None:
         assert RunStatus.PENDING == "pending"
         assert RunStatus.RUNNING == "running"
         assert RunStatus.COMPLETED == "completed"
         assert RunStatus.FAILED == "failed"
+        assert RunStatus.CANCELLED == "cancelled"
 
 
-class TestRiskScope:
-    """RiskScope 枚举测试."""
+class TestImpactModel:
+    """ImpactModel 枚举测试."""
 
     def test_members(self) -> None:
         """应包含 2 个成员."""
-        assert len(RiskScope) == 2
+        assert len(ImpactModel) == 2
 
     def test_values(self) -> None:
-        assert RiskScope.INSTRUMENT == "instrument"
-        assert RiskScope.PORTFOLIO == "portfolio"
+        assert ImpactModel.NONE == "none"
+        assert ImpactModel.VOLUME_SHARE == "volume_share"
+
+    def test_is_strenum(self) -> None:
+        """应为 StrEnum，支持直接字符串比较."""
+        assert ImpactModel.NONE == "none"

@@ -12,11 +12,11 @@ class TestPaginationRequest:
     """测试 PaginationRequest 分页请求模型."""
 
     def test_default_values(self) -> None:
-        """验证默认值: limit=100, offset=0."""
+        """验证默认值: limit=20, offset=0."""
         from ditto_interfaces.models.common import PaginationRequest
 
         req = PaginationRequest()
-        assert req.limit == 100
+        assert req.limit == 20
         assert req.offset == 0
 
     def test_custom_values(self) -> None:
@@ -41,17 +41,17 @@ class TestPaginationRequest:
         assert "greater than or equal to 1" in str(exc_info.value)
 
     def test_limit_maximum_value(self) -> None:
-        """验证 limit 最大值为 1000."""
+        """验证 limit 最大值为 100."""
         from ditto_interfaces.models.common import PaginationRequest
 
-        # 边界值: 1000 应该有效
-        req = PaginationRequest(limit=1000)
-        assert req.limit == 1000
+        # 边界值: 100 应该有效
+        req = PaginationRequest(limit=100)
+        assert req.limit == 100
 
-        # 1001 应该无效
+        # 101 应该无效
         with pytest.raises(ValidationError) as exc_info:
-            PaginationRequest(limit=1001)
-        assert "less than or equal to 1000" in str(exc_info.value)
+            PaginationRequest(limit=101)
+        assert "less than or equal to 100" in str(exc_info.value)
 
     def test_offset_cannot_be_negative(self) -> None:
         """验证 offset 不能为负数."""

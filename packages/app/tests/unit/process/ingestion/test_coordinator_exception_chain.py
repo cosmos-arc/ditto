@@ -7,13 +7,15 @@ import pytest
 from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
 from ditto_app.process.ingestion.coordinator import (
     IngestionCoordinator,
+    IngestionServices,
     MarketServices,
+    SourceFetchers,
 )
 from ditto_data.errors import IdentifierNotFoundError
 from ditto_infra.foundation.config.environment import Environment
 from ditto_infra.foundation.observability import init, reset_for_testing
 from ditto_infra.foundation.observability.config import ObservabilityConfig
-from ditto_kernel.types import InstrumentIngestParams
+from ditto_kernel.instrument import InstrumentIngestParams
 
 
 @pytest.fixture(autouse=True)
@@ -110,15 +112,23 @@ def coordinator(
 ):
     """创建 IngestionCoordinator 实例."""
     return IngestionCoordinator(
-        metadata_service=mock_metadata_service,
-        market_services=MarketServices(
-            query=mock_market_service,
-            write=mock_market_service,
+        services=IngestionServices(
+            metadata=mock_metadata_service,
+            market=MarketServices(
+                query=mock_market_service,
+                write=mock_market_service,
+            ),
+            fundamental=mock_fundamental_service,
+            capital=mock_capital_service,
+            macro=mock_macro_service,
         ),
-        fundamental_service=mock_fundamental_service,
-        capital_service=mock_capital_service,
-        macro_service=mock_macro_service,
-        source=mock_source,
+        fetchers=SourceFetchers(
+            metadata=mock_source,
+            market=mock_source,
+            fundamental=mock_source,
+            capital=mock_source,
+            macro=mock_source,
+        ),
         config=IngestionCoordinatorConfig(
             ingestion_log_service=mock_ingestion_log_service,
         ),

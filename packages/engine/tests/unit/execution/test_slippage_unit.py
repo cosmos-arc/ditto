@@ -10,7 +10,7 @@ from ditto_engine.execution.reality.slippage import (
     VolumeShareSlippage,
 )
 from ditto_engine.execution.rules import InstrumentDefinition
-from ditto_kernel.enums import OrderSide
+from ditto_kernel.order import OrderSide
 
 # ---------------------------------------------------------------------------
 # Test helpers

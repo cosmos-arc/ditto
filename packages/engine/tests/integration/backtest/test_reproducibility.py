@@ -256,7 +256,7 @@ class _AuditedEngineLoop(EngineLoop):
         super().__init__(**kwargs)
         self._audit_collector = collector
 
-    def _step(self, date: str) -> None:
+    def _step(self, date: str) -> bool:
         """执行单日步骤并记录审计数据。"""
         # 记录步骤前账户快照
         account_view_before = self._brokerage.get_account()
@@ -266,11 +266,13 @@ class _AuditedEngineLoop(EngineLoop):
         )
 
         # 执行原始步骤
-        super()._step(date)
+        result = super()._step(date)
 
         # 记录步骤后账户快照
         account_view_after = self._brokerage.get_account()
         self._audit_collector.record_account_view(date, account_view_after)
+
+        return result
 
 
 def _fill_key(fill: FillEvent) -> tuple[int, str, int, float, float]:

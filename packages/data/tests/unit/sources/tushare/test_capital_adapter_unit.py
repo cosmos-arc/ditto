@@ -227,7 +227,10 @@ class TestCapitalTushareAdapterFetchCorporateActions:
         assert len(result) > 0
         assert "source_ticker" in result.columns
         assert "action_type" in result.columns
-        assert "announcement_date" in result.columns
+        assert "action_date" in result.columns
+        assert "knowledge_date" in result.columns
+        assert "effective_from" in result.columns
+        assert "effective_to" in result.columns
 
 
 class TestCapitalTushareAdapterFetchShareBuyback:

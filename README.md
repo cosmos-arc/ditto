@@ -1,6 +1,6 @@
 # Ditto: 量化投资系统
 
-**版本**: v0.10.0 | **更新**: 2026-04-04 | **状态**: Phase 4 App 层提取完成
+**版本**: v0.14.0 | **更新**: 2026-04-15 | **状态**: V1 RC Closeout 完成
 
 ## 概要
 
@@ -17,7 +17,15 @@
 - **数据质量** — 多源校验、PIT 安全、L1-L4 检查器
 - **衍生数据** — 物化编排 + 发布安全（Shadow Diff / Certification）
 - **任务调度** — Prefect 3（摄取/回填/修补/物化/发布）
-- **CLI** — Typer 命令行（ditto init/ingest/backfill/query）
+- **CLI** — Typer 命令行（ditto init db / ingest / backfill / query / strategy / ops）
+- **策略 API** — FastAPI 路由（策略 CRUD + 发布 + 回测结果查询 + 成交审计）
+- **人工执行闭环** — 信号快照 → 交易意图 → 成交录入 → 实际持仓/P&L → 回测vs实际对比
+- **交易 API** — FastAPI 路由（意图查询/成交录入/持仓查询/P&L 汇总/信号查询/对比报告）
+- **Regime 识别** — 市场状态识别（BULL/BEAR/NEUTRAL），多维复合 Regime Score + 仓位调节
+- **因子增强回测** — FactorBridge 桥接 Analytics 表达式编译器到回测引擎，声明式因子配置
+- **Universe 管理** — 预设 + 自定义 Universe CRUD + 成分股/ETF 管理 API
+- **自定义费率** — CostConfig 支持佣金/印花税/滑点可配置，API 回测触发时注入
+- **T+1 交收日历** — 交易日历注入 + settlement_date 自动计算 + 持仓冻结逻辑
 
 ## 架构
 
@@ -32,7 +40,7 @@
 │ ditto_app    │ │ ditto_    │ │ ditto_    │ │ ditto_data   │
 │ CQRS 编排    │ │ analytics │ │ engine    │ │ 数据访问层    │
 │ query/process│ │ 表达式编译 │ │ 策略/回测  │ │ CQRS + PIT   │
-│ command/     │ │ 因子/研究  │ │ 执行/组合  │ │ 7 域服务     │
+│ command/     │ │ 因子/研究  │ │ 执行/组合  │ │ 13+ 域服务   │
 │ builders     │ │ 物化/评估  │ │ 风控/编排  │ │ 质量引擎     │
 └──────┬───────┘ └─────┬─────┘ └─────┬─────┘ └──────┬───────┘
        │               │             │               │
@@ -48,12 +56,13 @@
 **依赖方向**（import-linter 强制检查）：
 
 ```
-interfaces → app → engine → data → infra
+interfaces → app → engine → kernel
+interfaces → app → data → kernel, infra
 interfaces → analytics → kernel
 interfaces → data → kernel, infra
 app → data, engine, analytics, kernel, infra
-engine → kernel, data.errors, data.provider (Protocol)
-analytics → kernel, data.errors, infra (logger)
+engine → kernel
+analytics → kernel, infra (logger)
 data → kernel, infra
 ```
 
@@ -73,52 +82,61 @@ ditto/
 ├── packages/
 │   ├── app/                     # 应用编排层（CQRS）
 │   │   └── src/ditto_app/
-│   │       ├── query/           # 查询编排
-│   │       ├── process/         # 流程编排
-│   │       ├── command/         # 命令编排
+│   │       ├── query/           # 查询编排（26 Facade）
+│   │       ├── process/         # 流程编排（ingestion/execution/materialization/quality）
+│   │       ├── command/         # 命令编排（8 Handler）
 │   │       ├── builders/        # DI builders
 │   │       ├── providers.py     # Provider 注册
+│   │       ├── contracts.py     # 共享契约类型
+│   │       ├── execution_dto.py # 执行层 DTO
 │   │       └── config.py
 │   ├── engine/                  # 核心引擎
 │   │   └── src/ditto_engine/
-│   │       ├── alpha/           # Alpha 信号
-│   │       ├── execution/       # 执行层
-│   │       ├── backtest/        # 回测引擎
-│   │       ├── portfolio/       # 组合构建
+│   │       ├── alpha/           # Alpha 信号（Pipeline + 8 Stage + 4 模板）
+│   │       ├── execution/       # 执行层（Brokerage/TradeBuilder/Reality Model）
+│   │       ├── backtest/        # 回测引擎（EngineLoop + Steps + Audit）
+│   │       ├── portfolio/       # 组合构建（Allocator/Constraints/Comparison）
 │   │       ├── accounting/      # 账户核算
-│   │       ├── risk/            # 风控
+│   │       ├── risk/            # 风控（PreTrade/PostTrade）
 │   │       └── events.py
 │   ├── analytics/               # 分析层
 │   │   └── src/ditto_analytics/
-│   │       ├── expression/      # Expression DSL（lexer/parser/codegen/compiler）
-│   │       ├── factors/         # 因子库
-│   │       ├── evaluation/      # 因子评估
+│   │       ├── expression/      # Expression DSL（lexer/parser/ast/codegen/compiler）
+│   │       ├── factors/         # 因子库（15 类因子）
+│   │       ├── evaluation/      # 因子评估（IC/FactorAnalysis/Portfolio/TailRisk）
 │   │       ├── research/        # 研究
 │   │       ├── materialization/ # 物化编排
 │   │       └── compile_cache.py
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
-│   │       ├── services/        # 域服务（6 Facade）
+│   │       ├── services/        # 域服务（13 Facade + audit/derived/metadata/strategy）
 │   │       ├── sources/         # 数据源（Tushare/FRED/TDX）
-│   │       ├── models/          # 数据模型
-│   │       ├── storage/         # 存储引擎
-│   │       ├── runtime/         # 运行时（SQL/PIT/Freeze）
-│   │       ├── quality/         # 数据质量
-│   │       ├── query/           # 查询服务
-│   │       ├── helpers/         # 辅助工具
+│   │       ├── models/          # 数据模型（13 模块）
+│   │       ├── storage/         # 存储引擎（Reader/Writer CQRS）
+│   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
+│   │       ├── quality/         # 数据质量（L1-L4 检查器）
+│   │       ├── helpers/         # 辅助工具（PIT/复权调整）
+│   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/发布安全）
+│   │       ├── providers/       # DataProvider 实现
 │   │       ├── config/          # 数据层配置
 │   │       └── di/              # DI 注册
 │   ├── kernel/                  # 共享内核（零依赖）
 │   │   └── src/ditto_kernel/
-│   │       ├── identity.py      # 标识类型
-│   │       ├── enums.py         # 枚举
+│   │       ├── identity.py      # 标识类型（InstrumentId）
+│   │       ├── instrument.py    # 工具注册参数
+│   │       ├── market.py        # 市场数据类型
+│   │       ├── order.py         # 订单类型
+│   │       ├── strategy.py      # 策略规格类型
 │   │       ├── clock.py         # 时钟
 │   │       ├── events.py        # 事件
-│   │       └── specs.py         # 规约
+│   │       ├── quality.py       # 数据质量值对象
+│   │       ├── research.py      # 研究数据集类型
+│   │       ├── exceptions.py    # 共享异常
+│   │       └── math.py          # 数学工具函数
 │   └── infra/                   # 基础设施
 │       └── src/ditto_infra/
 │           ├── foundation/      # cache/checksum/concurrency/config/db/observability/util
-│           └── services/        # notification
+│           └── services/        # notification（Telegram/Email/Webhook）
 ├── config/                      # 环境配置
 │   ├── default/
 │   ├── development/
@@ -197,6 +215,14 @@ pixi run -e dev arch-check       # 分层依赖检查
 - **Phase 0.5** — 数据质量验证 (done)
 - **Phase 1** — 策略引擎：Pipeline + Stage + 4 模板 (done)
 - **Phase 2** — 回测闭环：EngineLoop + PreTrade/PostTrade + Reality Model (done)
+- **V1 Sprint Phase 0** — EngineLoop StepChain + DecisionFrame 保护 + RunManifest 丰富化 (done)
+- **V1 Sprint Phase 1** — 策略/回测 API 闭环 (done)
+- **V1 Sprint Phase 2** — 人工执行闭环 (done)
+- **V1 Sprint 修复** — 8 项偏差修复: Position UPSERT/T+1 日历/基准 NAV/Comparison API/Signal API/分页/乐观锁/settlement_date (done)
+- **V1 Sprint Enhancement** — Regime 识别 + 因子增强回测 + Universe 管理 + 自定义费率 + 回测 artifact + 可复现性验证 (done)
+- **V1 Sprint Phase 3** — Run Lineage / Replayability (done)
+- **Sprint 5** — 交易 API 分页 + 成交幂等 + 偏差报告 + CORS 配置 (done)
+- **V1 RC Closeout** — 6 维度代码审查修复 (done)
 - **Phase 3** — 实盘接入：BrokerAdapter / 纸面交易（规划中）
 - **Phase 4** — App 层提取：CQRS 编排 + DI builders + engine 独立包 (done)
 - **Phase 5** — ML 增强：因子权重学习 / 多策略组合（远期规划）
@@ -230,11 +256,63 @@ pixi run -e dev arch-check       # 分层依赖检查
 
 ## 变更记录
 
+### v0.14.0 (2026-04-15)
+**Sprint 5 交易 API 增强 + V1 RC Closeout**
+- 交易 API 分页（limit/offset 统一下沉至 SQL 层）
+- 成交幂等（trade_fill UNIQUE 约束 + INSERT OR IGNORE）
+- 偏差报告 API（comparison query facade 增强）
+- CORS 配置（可配置允许的 origins）
+- 6 维度代码审查修复（25 files, +948/-418）
+- 数据源调研文档（宏观/商品/舆情增量评估）
+- 全量文档审计与同步
+
+### v0.13.0 (2026-04-13)
+**V1 Sprint Enhancement — 7 项关键能力补齐**
+- R1 Regime: 市场状态识别（BULL/BEAR/NEUTRAL），多维复合 Regime Score + 仓位调节
+- R2 FactorBridge: 因子增强回测路径，Analytics 表达式编译器桥接到回测引擎
+- R3 回测触发: POST /backtests/runs 异步触发 + 状态轮询 + 取消/重试
+- R5 Universe API: 完整 CRUD + 成分管理（预设 + 自定义双模式）
+- R6 CostConfig: 自定义费率配置（佣金/印花税/滑点可注入回测）
+- 回测 artifact 管理 + BacktestQueryFacade 增强
+- 可复现性验证（ReplayValidator + LineageQueryFacade + ManifestDiff）
+- 11 项审查问题修复 + 测试增强
+- 5244 测试通过，0 类型错误
+
+### v0.12.1 (2026-04-11)
+**V1 Sprint 8 项偏差修复**
+- F1: Position UPSERT — INSERT OR REPLACE 消除 UNIQUE 冲突
+- F2: T+1 日历注入 — MetadataService 加载交易日历到 ManualTracker
+- F3: 基准 NAV — BacktestQueryFacade 提取 benchmark_return + benchmark 端点
+- F4: Comparison API — ComparisonQueryFacade + GET /trade/comparison（12 指标）
+- F5: settlement_date — DTO 增加 settlement_date + RecordFillHandler 自动计算
+- F6: Signal API — SignalQueryFacade + GET /trade/signals/latest + /trade/signals/{date}/intents
+- F7: Run 分页 — limit/offset 下沉至 SQL 层，移除 Python 切片
+- F8: 乐观锁 — UpdateStrategyHandler 版本校验防并发覆盖
+- 架构: ComparisonMetrics 移至 query 层消除 R8 违规（23/24 contracts kept）
+- 4353 测试通过，0 类型错误
+
+### v0.12.0 (2026-04-11)
+**V1 Sprint Phase 2 人工执行闭环完成**
+- 信号快照 + 交易意图推导（SignalSnapshotProcess + generate_intents）
+- 人工成交录入 + 状态管理（RecordFillHandler + UpdateIntentStatusHandler）
+- 实际持仓聚合（ManualTracker — T+1 交收 + 加权平均成本 + 已实现/未实现 P&L）
+- 回测 vs 实际对比（ComparisonMetrics — Sharpe/Return/成本/跟踪误差 12 指标）
+- 交易 API 路由（/trade/intents, /trade/fills, /trade/positions, /trade/pnl）
+- 共享 DTO 迁移至 ditto_app.types（解决 R8 互斥规则 query↔process 冲突）
+- DI 注册 6 个新 Provider 方法（TradeService, ManualTracker, handlers, facades）
+- 114 个新测试，4272 全通过
+
+### v0.11.0 (2026-04-11)
+**V1 Sprint Phase 1 回测闭环基础完成**
+- 策略 CRUD API（CreateStrategyHandler + UpdateStrategyHandler + PublishStrategyHandler）
+- 回测查询 API（BacktestQueryFacade + BacktestTradeQueryFacade + RunReadModel）
+- 审计扩展（trade_fill record_type + ExecutionAuditService）
+
 ### v0.10.0 (2026-04-04)
 **Phase 4 App 层提取完成**
 - App 层独立为 `ditto_app` 包（CQRS: query/process/command + builders）
 - Engine 独立为 `ditto_engine` 包（从 core 拆分 alpha/portfolio/execution/accounting/backtest/orchestrator/risk）
-- Kernel 独立为 `ditto_kernel`（零依赖共享内核: identity/enums/clock/events/specs）
+- Kernel 独立为 `ditto_kernel`（零依赖共享内核: instrument/order/market/strategy/identity/clock/events/quality/research/exceptions/math）
 - 目录结构扁平化：`interfaces/` 提升至根层级，移除 `apps/` 目录
 - DI 泄漏修复 + engine 去冗余 + 测试迁移
 

@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
+from ditto_data.storage.capital.specs import VALUATION_METRICS_SPEC
 from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
@@ -42,7 +43,7 @@ def in_memory_db() -> SQLiteClient:
 @pytest.fixture
 def writer(in_memory_db: SQLiteClient) -> ValuationMetricsWriter:
     """创建 ValuationMetricsWriter 实例."""
-    return ValuationMetricsWriter(client=in_memory_db)
+    return ValuationMetricsWriter(VALUATION_METRICS_SPEC, in_memory_db)
 
 
 def test_write_success(writer: ValuationMetricsWriter) -> None:
@@ -160,7 +161,7 @@ def test_write_failure_rollback(writer: ValuationMetricsWriter) -> None:
     mock_client.rollback = Mock()
 
     # 使用模拟客户端创建 Writer
-    mock_writer = ValuationMetricsWriter(client=mock_client)
+    mock_writer = ValuationMetricsWriter(VALUATION_METRICS_SPEC, mock_client)
 
     # 由于模拟客户端会抛出异常，预期会传播异常
     with pytest.raises(RuntimeError, match="Database error"):

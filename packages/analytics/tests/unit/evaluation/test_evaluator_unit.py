@@ -1073,6 +1073,194 @@ class TestComputeICDecaySafe:
         assert all(ic == 0.0 for _, ic in result)
         assert half_life is None
 
+    def test_with_close_df_uses_close_not_factor_value(self) -> None:
+        """When close_df is provided, IC decay should use close prices for
+        forward returns instead of factor values as pseudo-close.
+
+        This is a regression test for the bug where factor values were
+        passed as pseudo-close, computing factor autocorrelation instead
+        of factor-vs-forward-return IC decay.
+        """
+        rng = np.random.default_rng(42)
+        n_factor_dates = 100
+        n_close_dates = 130  # extra dates so forward returns cover factor range
+        n_entities = 50
+        entities = list(range(1, n_entities + 1))
+
+        # Build correlated factor and close series so IC is non-zero
+        signal = rng.standard_normal(n_close_dates)
+        rows_f: list[dict[str, object]] = []
+        rows_c: list[dict[str, object]] = []
+
+        # Close prices: random walk with signal correlation
+        prices = dict.fromkeys(entities, 100.0)
+        for t in range(n_close_dates):
+            d = date(2024, 1, 2) + timedelta(days=t)
+            for eid in entities:
+                rows_c.append(
+                    {
+                        "trade_date": d,
+                        "instrument_id": eid,
+                        "close": prices[eid],
+                    },
+                )
+                prices[eid] *= 1 + 0.01 * signal[t] + rng.standard_normal() * 0.02
+
+        # Factor values for the first n_factor_dates
+        for t in range(n_factor_dates):
+            d = date(2024, 1, 2) + timedelta(days=t)
+            for eid in entities:
+                factor_val = 0.5 * signal[t] + rng.standard_normal() * 0.5
+                rows_f.append(
+                    {
+                        "trade_date": d,
+                        "instrument_id": eid,
+                        "value": float(factor_val),
+                    },
+                )
+
+        factor_df = pl.DataFrame(rows_f)
+        close_df = pl.DataFrame(rows_c)
+
+        # With close_df: IC decay should be well-defined
+        result_with_close, _ = _compute_ic_decay_safe(
+            factor_df,
+            [5, 10, 20],
+            close_df=close_df,
+        )
+        assert len(result_with_close) == 3
+        # IC values should be in reasonable range (not NaN/inf)
+        for lag, ic in result_with_close:
+            assert math.isfinite(ic), f"IC at lag {lag} should be finite"
+
+        # Without close_df (old pseudo-close behavior)
+        result_without, _ = _compute_ic_decay_safe(
+            factor_df,
+            [5, 10, 20],
+        )
+        assert len(result_without) == 3
+
+        # The IC values should differ between the two approaches
+        # because one uses close prices for forward returns and the other
+        # uses factor values as pseudo-close.
+        ics_with = [ic for _, ic in result_with_close]
+        ics_without = [ic for _, ic in result_without]
+        assert ics_with != ics_without, (
+            "IC decay with close_df should differ from pseudo-close approach"
+        )
+
+    def test_close_df_none_falls_back_to_empty(self) -> None:
+        """When close_df is None and factor_df is empty, should return zeros."""
+        empty_df = pl.DataFrame(
+            schema={
+                "trade_date": pl.Date,
+                "instrument_id": pl.Int64,
+                "value": pl.Float64,
+            },
+        )
+        result, half_life = _compute_ic_decay_safe(
+            empty_df,
+            [1, 5],
+            close_df=None,
+        )
+        assert len(result) == 2
+        assert all(ic == 0.0 for _, ic in result)
+        assert half_life is None
+
+
+# ---------------------------------------------------------------------------
+# Test ClosePriceProvider protocol
+# ---------------------------------------------------------------------------
+
+
+class TestClosePriceProvider:
+    """Tests for ClosePriceProvider protocol integration."""
+
+    def test_evaluator_accepts_close_price_provider(self) -> None:
+        """FactorEvaluator should accept an optional close_price_provider."""
+
+        class MockClosePriceProvider:
+            def get_close_prices(
+                self,
+                asset_class: str,
+                start: str,
+                end: str,
+                adj: str = "none",
+            ) -> pl.DataFrame:
+                return pl.DataFrame(
+                    schema={
+                        "trade_date": pl.Date,
+                        "instrument_id": pl.Int64,
+                        "close": pl.Float64,
+                    },
+                )
+
+        # Verify the provider can be passed without error
+        evaluator = FactorEvaluator(
+            mock_provider,
+            close_price_provider=MockClosePriceProvider(),
+        )
+        assert evaluator._cp_provider is not None
+
+    def test_ic_decay_with_close_provider_produces_finite_values(
+        self,
+        mock_provider: MockForwardReturnProvider,
+        synthetic_data: FactorReturnPair,
+    ) -> None:
+        """Evaluator with close_price_provider should produce finite IC decay."""
+
+        class MockClosePriceProvider:
+            def __init__(self, close_df: pl.DataFrame) -> None:
+                self._close_df = close_df
+
+            def get_close_prices(
+                self,
+                asset_class: str,
+                start: str,
+                end: str,
+                adj: str = "none",
+            ) -> pl.DataFrame:
+                return self._close_df
+
+        import math
+
+        factor_df, _ = synthetic_data
+        rng = np.random.default_rng(42)
+        # Close prices need extra dates beyond the factor range so that
+        # forward returns (shift(-lag)) are available for the full factor
+        # period.  Use 40 extra calendar days (~28 trading days).
+        n_close_dates = 140
+        n_entities = 50
+        entities = list(range(1, n_entities + 1))
+
+        rows_c: list[dict[str, object]] = []
+        prices = dict.fromkeys(entities, 100.0)
+        for t in range(n_close_dates):
+            d = date(2024, 1, 2) + timedelta(days=t)
+            for eid in entities:
+                rows_c.append(
+                    {
+                        "trade_date": d,
+                        "instrument_id": eid,
+                        "close": prices[eid],
+                    },
+                )
+                prices[eid] *= 1 + rng.standard_normal() * 0.02
+        close_df = pl.DataFrame(rows_c)
+
+        close_provider = MockClosePriceProvider(close_df)
+        evaluator = FactorEvaluator(
+            mock_provider,
+            close_price_provider=close_provider,
+        )
+        report = evaluator.evaluate(factor_df)
+
+        # IC decay should have finite values
+        for lag, ic in report.ic_decay:
+            assert math.isfinite(ic), (
+                f"IC decay at lag {lag} should be finite, got {ic}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Test _compute_quantile_annual_returns

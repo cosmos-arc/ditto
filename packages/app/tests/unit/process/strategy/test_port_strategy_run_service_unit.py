@@ -1,4 +1,4 @@
-"""StrategyRunService 单元测试 — Port 层策略运行编排服务。"""
+"""StrategyRunService 单元测试 — 策略运行编排服务。"""
 
 from __future__ import annotations
 
@@ -262,6 +262,7 @@ class TestRecommendationMode:
         """RECOMMENDATION 模式应创建并推进 run 生命周期。"""
         mock_artifact_service = MagicMock(spec=StrategyArtifactService)
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None  # get_or_create: no existing run
         target = _make_target_portfolio(run_id="run-001")
         service = StrategyRunService(
             config=StrategyRunServiceConfig(
@@ -284,6 +285,7 @@ class TestRecommendationMode:
             strategy_id="momentum-etf",
             strategy_version="2026.03",
             mode="recommendation",
+            parent_run_id="",
         )
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_completed.assert_called_once_with("run-001")
@@ -292,6 +294,7 @@ class TestRecommendationMode:
     def test_auto_generated_run_id_flows_into_assembler_and_lifecycle(self) -> None:
         """空 run_id 时生成的真实 run_id 应传给 assembler 与 lifecycle。"""
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None  # get_or_create: no existing run
         mock_assembler = _make_mock_assembler()
         slice_ = _make_fake_slice()
         service = StrategyRunService(
@@ -322,6 +325,7 @@ class TestRecommendationMode:
     def test_pipeline_failure_marks_run_failed(self) -> None:
         """pipeline 抛错时应将 run 标记为 failed，并保留原始错误消息。"""
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None  # get_or_create: no existing run
         mock_pipeline = _make_mock_pipeline()
         mock_pipeline.run.side_effect = RuntimeError("pipeline exploded")
         service = StrategyRunService(
@@ -343,6 +347,7 @@ class TestRecommendationMode:
             strategy_id="momentum-etf",
             strategy_version="",
             mode="recommendation",
+            parent_run_id="",
         )
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_failed.assert_called_once_with(

@@ -4,7 +4,8 @@ from datetime import date
 from unittest.mock import create_autospec
 
 import pytest
-from ditto_app.command.ingestion import IngestDateCommand, IngestDateHandler
+from ditto_app.command.ingestion import IngestDateHandler
+from ditto_app.contracts import IngestDateCommand
 from ditto_app.process.ingestion.backfill_manager import BackfillManager
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_infra.foundation.config.environment import Environment

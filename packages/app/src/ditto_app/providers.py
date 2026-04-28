@@ -1,9 +1,11 @@
 """
 App 层 DI Provider — 应用编排服务注册。
 
-四个 Provider 按职责分离，对应 R8 互斥规则：
+六个 Provider 按职责分离，对应 R8 互斥规则：
 - AppCommandProvider: Command Handler 注册（command 模块）
-- AppQueryProvider: 只读查询服务（query 模块）
+- AppMarketQueryProvider: 市场数据查询服务（query 模块）
+- AppStrategyQueryProvider: 策略/回测查询服务（query 模块）
+- AppPortfolioQueryProvider: 组合/交易查询服务（query 模块）
 - AppProcessProvider: 编排/物化/质量服务（process 模块）
 - AppBuilderFactory: 策略运行时装配服务（builders 模块）
 """
@@ -20,28 +22,25 @@ from dishka import Provider, Scope, provide
 from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
+from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
     DerivedQueryService,
     DerivedShadowSlotService,
-    PublicationSafetyRecordService,
-    QualityRecordService,
-    ResearchCatalogService,
 )
 from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
-from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.research_artifact_service import ResearchArtifactService
-from ditto_data.services.source_service import SourceService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -51,6 +50,12 @@ from ditto_data.services.strategy.strategy_catalog_service import (
 from ditto_data.services.strategy.strategy_run_service import (
     StrategyRunService as StrategyRunLifecycleService,
 )
+from ditto_data.services.trade import TradeService
+from ditto_data.sources.tdx.source import TdxSource
+from ditto_data.storage.metadata.instrument import InstrumentReader
+from ditto_data.storage.runtime.quality import ComparisonWriter
+from ditto_infra.foundation.config.settings import TradingSettings
+from ditto_infra.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------
 # App Builder 层
@@ -65,8 +70,32 @@ from ditto_app.builders import (
 # ---------------------------------------------------------------------------
 # App Command 层
 # ---------------------------------------------------------------------------
+from ditto_app.command.backtest import (
+    BacktestRunHandler,
+    CancelRunHandler,
+    RetryRunHandler,
+)
 from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.command.quality_reconciliation import ReconcileSourcesHandler
+from ditto_app.command.strategy import (
+    CreateStrategyHandler,
+    PublishStrategyHandler,
+    UpdateStrategyHandler,
+)
+from ditto_app.command.trade import (
+    RecordFillHandler,
+    UpdateIntentStatusHandler,
+)
+from ditto_app.command.universe import (
+    CreateCustomUniverseHandler,
+    DeleteCustomUniverseHandler,
+    UpdateCustomUniverseHandler,
+)
+from ditto_app.process.execution.factor_bridge import FactorBridge
+from ditto_app.process.execution.manual_tracker import ManualTracker
+from ditto_app.process.execution.replay_process import ReplayProcess
 from ditto_app.process.execution.strategy_run_process import StrategyFacade
+from ditto_app.process.execution.strategy_types import RunLifecycleService
 
 # ---------------------------------------------------------------------------
 # App Process 层
@@ -82,29 +111,44 @@ from ditto_app.process.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
 from ditto_app.process.quality import QualityPatrolService
-
-# ---------------------------------------------------------------------------
-# App Query 层
-# ---------------------------------------------------------------------------
-from ditto_app.query.capital import CapitalQueryFacade
-from ditto_app.query.commodity import CommodityQueryFacade
-from ditto_app.query.derived import DerivedQueryFacade
-from ditto_app.query.forward_return_service import ForwardReturnService
-from ditto_app.query.fundamental import FundamentalQueryFacade
-from ditto_app.query.fx import FXQueryFacade
-from ditto_app.query.macro import MacroQueryFacade
+from ditto_app.providers_market import AppMarketQueryProvider
+from ditto_app.providers_portfolio import AppPortfolioQueryProvider
+from ditto_app.providers_strategy import AppStrategyQueryProvider
 from ditto_app.query.market import MarketQueryFacade
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_app.query.research import ResearchDatasetFacade
-from ditto_app.query.source import SourceQueryFacade
 
 __all__ = [
     "AppBuilderFactory",
     "AppCommandProvider",
+    "AppMarketQueryProvider",
+    "AppPortfolioQueryProvider",
     "AppProcessProvider",
-    "AppQueryProvider",
+    "AppStrategyQueryProvider",
     "get_app_providers",
 ]
+
+
+# ---------------------------------------------------------------------------
+# 日期范围配置（环境变量外部化，避免硬编码失效）
+# ---------------------------------------------------------------------------
+
+
+def get_trading_calendar_range(
+    trading_settings: TradingSettings,
+) -> tuple[str, str]:
+    """
+    获取交易日历查询的日期范围。
+
+    通过 TradingSettings 类型化配置获取，支持环境变量别名覆盖。
+
+    Returns:
+        (start_date, end_date) 字符串元组，格式 YYYY-MM-DD。
+
+    """
+    return (
+        trading_settings.trading_calendar_start,
+        trading_settings.trading_calendar_end,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -129,122 +173,129 @@ class AppCommandProvider(Provider):
             quarantine_writer=quality_record_service,
         )
 
-
-# ---------------------------------------------------------------------------
-# AppQueryProvider — 只读查询服务
-# ---------------------------------------------------------------------------
-
-
-class AppQueryProvider(Provider):
-    """App Query 层 DI Provider — 只读查询服务注册。"""
-
-    scope = Scope.APP
-
     @provide
-    def forward_return_service(
+    def reconcile_sources_handler(
         self,
-        market_service: MarketService,
-    ) -> ForwardReturnService:
-        """前向收益率计算服务."""
-        return ForwardReturnService(market_service=market_service)
-
-    @provide
-    def derived_query_facade(
-        self,
-        derived_query_service: DerivedQueryService,
-    ) -> DerivedQueryFacade:
-        """衍生数据查询用例 facade."""
-        return DerivedQueryFacade(
-            service=derived_query_service,
+        dq_engine: QualityEngine,
+        tdx_source: TdxSource,
+        comparison_store: ComparisonWriter,
+        instrument_store: InstrumentReader,
+        golden_dataset: GoldenDatasetSpec | None = None,
+    ) -> ReconcileSourcesHandler:
+        """数据源对账 Command Handler."""
+        return ReconcileSourcesHandler(
+            engine=dq_engine,
+            tdx_source=tdx_source,
+            comparison_store=comparison_store,
+            instrument_store=instrument_store,
+            golden_dataset=golden_dataset,
         )
 
     @provide
-    def market_query_facade(
+    def create_strategy_handler(
         self,
-        market_service: MarketService,
-    ) -> MarketQueryFacade:
-        """行情数据查询 facade — 隐藏内部查询类型."""
-        return MarketQueryFacade(market_service=market_service)
+        catalog_service: StrategyCatalogService,
+    ) -> CreateStrategyHandler:
+        """创建策略 Command Handler."""
+        return CreateStrategyHandler(catalog_service=catalog_service)
 
     @provide
-    def source_query_facade(
+    def update_strategy_handler(
         self,
-        source_service: SourceService,
-        metadata_service: MetadataService,
-    ) -> SourceQueryFacade:
-        """数据源查询 facade — 隐藏 Dataset 枚举和服务接线."""
-        return SourceQueryFacade(
-            source_service=source_service,
-            metadata_service=metadata_service,
+        catalog_service: StrategyCatalogService,
+    ) -> UpdateStrategyHandler:
+        """更新策略 Command Handler."""
+        return UpdateStrategyHandler(catalog_service=catalog_service)
+
+    @provide
+    def publish_strategy_handler(
+        self,
+        catalog_service: StrategyCatalogService,
+    ) -> PublishStrategyHandler:
+        """发布策略 Command Handler."""
+        return PublishStrategyHandler(catalog_service=catalog_service)
+
+    @provide
+    def record_fill_handler(
+        self,
+        trade_service: TradeService,
+        manual_tracker: ManualTracker,
+    ) -> RecordFillHandler:
+        """录入人工成交 Command Handler."""
+        return RecordFillHandler(
+            trade_service=trade_service,
+            manual_tracker=manual_tracker,
         )
 
     @provide
-    def research_dataset_facade(
+    def update_intent_status_handler(
         self,
-        metadata_service: MetadataService,
-        research_catalog_service: ResearchCatalogService,
-        derived_catalog_service: DerivedCatalogService,
-        research_artifact_service: ResearchArtifactService,
-        settings: DataStoreSettings,
-    ) -> ResearchDatasetFacade:
-        """研究数据集快照构建 facade."""
-        return ResearchDatasetFacade(
-            metadata_service=metadata_service,
-            research_catalog_service=research_catalog_service,
-            artifact_reader=DerivedArtifactReader(
-                catalog_service=derived_catalog_service,
-                artifact_root=Path(settings.data_root),
-            ),
-            research_artifact_service=research_artifact_service,
+        trade_service: TradeService,
+    ) -> UpdateIntentStatusHandler:
+        """更新交易意图状态 Command Handler."""
+        return UpdateIntentStatusHandler(trade_service=trade_service)
+
+    @provide
+    def backtest_run_handler(
+        self,
+        catalog_service: StrategyCatalogService,
+        run_service: StrategyRunLifecycleService,
+        factor_bridge: FactorBridge,
+    ) -> BacktestRunHandler:
+        """回测触发 Command Handler."""
+        return BacktestRunHandler(
+            catalog_service=catalog_service,
+            run_service=run_service,
+            factor_bridge=factor_bridge,
         )
 
     @provide
-    def metadata_query_facade(
+    def cancel_run_handler(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> CancelRunHandler:
+        """取消运行 Command Handler."""
+        return CancelRunHandler(run_service=run_service)
+
+    @provide
+    def retry_run_handler(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> RetryRunHandler:
+        """重试运行 Command Handler."""
+        return RetryRunHandler(run_service=run_service)
+
+    @provide
+    def run_lifecycle_service(
+        self,
+        run_service: StrategyRunLifecycleService,
+    ) -> RunLifecycleService:
+        """RunLifecycleService Protocol 绑定 — 路由层通过此协议解耦 data 层."""
+        return run_service
+
+    @provide
+    def create_custom_universe_handler(
         self,
         metadata_service: MetadataService,
-    ) -> MetadataQueryFacade:
-        """元数据查询 facade — 隐藏 SecurityQuery 和内部类型."""
-        return MetadataQueryFacade(metadata_service=metadata_service)
+    ) -> CreateCustomUniverseHandler:
+        """创建自定义 Universe Command Handler."""
+        return CreateCustomUniverseHandler(metadata_service=metadata_service)
 
     @provide
-    def capital_query_facade(
+    def update_custom_universe_handler(
         self,
-        capital_service: CapitalService,
-    ) -> CapitalQueryFacade:
-        """资金查询 facade — 隐藏 CQRS 端口类型."""
-        return CapitalQueryFacade(capital_service=capital_service)
+        metadata_service: MetadataService,
+    ) -> UpdateCustomUniverseHandler:
+        """更新自定义 Universe Command Handler."""
+        return UpdateCustomUniverseHandler(metadata_service=metadata_service)
 
     @provide
-    def fundamental_query_facade(
+    def delete_custom_universe_handler(
         self,
-        fundamental_service: FundamentalService,
-    ) -> FundamentalQueryFacade:
-        """基本面查询 facade — 隐藏 CQRS 端口类型."""
-        return FundamentalQueryFacade(fundamental_service=fundamental_service)
-
-    @provide
-    def macro_query_facade(
-        self,
-        macro_service: MacroService,
-    ) -> MacroQueryFacade:
-        """宏观查询 facade — 隐藏 MacroQuery 和枚举类型."""
-        return MacroQueryFacade(macro_service=macro_service)
-
-    @provide
-    def fx_query_facade(
-        self,
-        market_service: MarketService,
-    ) -> FXQueryFacade:
-        """外汇查询 facade — 隐藏 FX 代码映射和资产类别."""
-        return FXQueryFacade(market_service=market_service)
-
-    @provide
-    def commodity_query_facade(
-        self,
-        market_service: MarketService,
-    ) -> CommodityQueryFacade:
-        """商品查询 facade — 隐藏 Commodity/VIX 映射和资产类别."""
-        return CommodityQueryFacade(market_service=market_service)
+        metadata_service: MetadataService,
+    ) -> DeleteCustomUniverseHandler:
+        """删除自定义 Universe Command Handler."""
+        return DeleteCustomUniverseHandler(metadata_service=metadata_service)
 
 
 # ---------------------------------------------------------------------------
@@ -338,13 +389,43 @@ class AppProcessProvider(Provider):
         dq_engine: QualityEngine,
         market_facade: MarketQueryFacade,
         metadata_facade: MetadataQueryFacade,
+        alert_manager: AlertManager,
     ) -> QualityPatrolService:
         """质量巡检服务（原 L3 批量统计检查）."""
         return QualityPatrolService(
             engine=dq_engine,
             market_facade=market_facade,
             metadata_facade=metadata_facade,
+            alert_manager=alert_manager,
         )
+
+    @provide
+    def manual_tracker(
+        self,
+        metadata_service: MetadataService,
+        trading_settings: TradingSettings,
+    ) -> ManualTracker:
+        """人工持仓聚合追踪器 — 注入交易日历以支持 T+1 冻结逻辑."""
+        start_date, end_date = get_trading_calendar_range(trading_settings)
+        trading_days = metadata_service.list_trading_days(start_date, end_date)
+        return ManualTracker(trading_calendar=tuple(trading_days))
+
+    @provide
+    def replay_process(
+        self,
+        strategy_facade: StrategyFacade,
+        artifact_service: StrategyArtifactService,
+    ) -> ReplayProcess:
+        """回测重放编排 — 从原始运行恢复配置并重新执行."""
+        return ReplayProcess(
+            strategy_facade=strategy_facade,
+            artifact_service=artifact_service,
+        )
+
+    @provide
+    def factor_bridge(self) -> FactorBridge:
+        """因子桥接 — 字符串表达式 → 编译 → 信号计算."""
+        return FactorBridge()
 
 
 # ---------------------------------------------------------------------------
@@ -444,7 +525,9 @@ def get_app_providers() -> list[Provider]:
     """返回 App 层所有 Provider。"""
     return [
         AppCommandProvider(),
-        AppQueryProvider(),
+        AppMarketQueryProvider(),
+        AppStrategyQueryProvider(),
+        AppPortfolioQueryProvider(),
         AppProcessProvider(),
         AppBuilderFactory(),
     ]

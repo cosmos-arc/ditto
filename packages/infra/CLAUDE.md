@@ -13,16 +13,19 @@ Infra 层（原 Foundation）是**横切层**，提供跨所有层的基础设�
 
 ```
 ditto_infra/
-├── foundation/           # 基础模块（原独立 foundation 包）
-│   ├── cache/           # 通用缓存（DataCache）
-│   ├── checksum/        # 校验和计算
-│   ├── concurrency/     # 并发控制（FileLockManager）
-│   ├── config/          # 配置管理（Settings、路径、环境）
-│   ├── db/              # 数据库连接（SQLitePool）
-│   ├── observability/   # 可观测性（日志、追踪、指标）
-│   └── util/            # 通用工具（日期、IO）
-└── services/            # 基础服务
-    └── notification/    # 通知服务（Telegram、Email、Webhook）
+├── foundation/                    # 基础模块（原独立 foundation 包）
+│   ├── cache/                    # 通用缓存（DataCache）
+│   ├── checksum/                 # 校验和计算（file.py）
+│   ├── concurrency/              # 并发控制（FileLockManager）
+│   ├── config/                   # 配置管理（Settings、路径、环境）
+│   │   └── providers/            # 配置提供者（校验、数据根路径）
+│   ├── db/                       # 数据库连接（SQLitePool）
+│   ├── observability/            # 可观测性（日志、追踪、指标、生命周期）
+│   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
+└── services/                     # 基础服务
+    └── notification/             # 通知服务（Telegram、Email、Webhook）
+        ├── channels/             # 通知渠道实现（email、telegram、webhook）
+        └── templates/            # 通知模板（alerts）
 ```
 
 ## 导入规范
@@ -45,9 +48,9 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 | 模块 | 职责 | 禁止 |
 |------|------|------|
 | `cache` | 数据缓存、缓存统计 | 包含业务逻辑 |
-| `checksum` | 文件/数据校验和 | - |
+| `checksum` | 文件/数据校验和（纯工具，sort_keys 由调用方提供） | 领域知识（如数据集排序键映射） |
 | `concurrency` | 文件锁、并发控制 | - |
-| `config` | 配置加载、环境管理、XDG 路径 | 读取业务配置 |
+| `config` | 配置加载、环境管理、XDG 路径 | 读取业务配置或数据源特定校验 |
 | `db` | SQLite 连接池 | 包含 SQL 业务逻辑 |
 | `observability` | 日志、追踪、指标 | - |
 | `util` | 通用工具函数 | 领域特定工具 |
@@ -80,7 +83,7 @@ from ditto_infra.config import ...  # 应为 ditto_infra.foundation.config
 | 层 | 允许范围 | 说明 |
 |----|---------|------|
 | interfaces | `foundation` + `services` | 完整访问（Composition Root） |
-| app | 仅 `foundation` | 禁止直接使用 `services`（通知等编排走 interfaces） |
+| app | `foundation` + `services` | 禁止 `config`（配置加载走 interfaces） |
 | data | 仅 `foundation` | 存储通过 foundation.db / foundation.util |
 | analytics | 仅 `foundation` | 配置、日志等基础能力 |
 | engine | 禁止 | 不依赖 infra |

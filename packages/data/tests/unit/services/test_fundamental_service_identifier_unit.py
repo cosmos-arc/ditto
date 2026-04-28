@@ -8,8 +8,8 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 from ditto_data.services.fundamental_service import FundamentalService
-from ditto_data.services.ports import FundamentalReadPorts, FundamentalWritePorts
 from pytest_mock import MockerFixture
 
 
@@ -29,8 +29,8 @@ def _make_service(
         "express": override_readers.get("express", mock_reader),
     }
 
-    read_ports = FundamentalReadPorts(**readers)
-    write_ports = FundamentalWritePorts(
+    read_ports = FundamentalReaders(**readers)
+    write_ports = FundamentalWriters(
         balance_sheet=mocker.Mock(),
         income_statement=mocker.Mock(),
         cash_flow=mocker.Mock(),
@@ -146,7 +146,7 @@ class TestFundamentalServiceIntInstrumentId:
         expected_df = pl.DataFrame(
             {"instrument_id": [1_000_001], "action_type": ["split"]}
         )
-        mock_reader.get.return_value = expected_df
+        mock_reader.query.return_value = expected_df
 
         service = _make_service(mocker, corporate_actions=mock_reader)
         result = service.list_corporate_actions(
@@ -156,8 +156,8 @@ class TestFundamentalServiceIntInstrumentId:
         )
 
         assert isinstance(result, pl.DataFrame)
-        mock_reader.get.assert_called_once_with(
-            1_000_001, date(2024, 1, 1), date(2024, 3, 31)
+        mock_reader.query.assert_called_once_with(
+            1_000_001, date(2024, 1, 1), date(2024, 3, 31), None
         )
 
     def test_get_balance_sheet_returns_none_when_empty(

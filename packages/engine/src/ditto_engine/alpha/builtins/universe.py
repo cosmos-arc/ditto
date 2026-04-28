@@ -8,6 +8,7 @@ import polars as pl
 from ditto_kernel.identity import InstrumentId
 
 from ditto_engine.alpha.context import StrategyContext
+from ditto_engine.alpha.frame import FrameCol, validate_frame
 
 __all__ = ["UniverseStage"]
 
@@ -30,4 +31,5 @@ class UniverseStage:
         context: StrategyContext,
     ) -> pl.DataFrame:
         """保留白名单中的标的，其余过滤掉。"""
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
         return frame.filter(pl.col("instrument_id").is_in(list(self.instrument_ids)))

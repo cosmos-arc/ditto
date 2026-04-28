@@ -6,8 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.cash import CashBook
 from ditto_engine.accounting.fills import FillEvent

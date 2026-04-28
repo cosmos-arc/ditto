@@ -13,8 +13,8 @@ from __future__ import annotations
 from typing import Any
 
 import polars as pl
-from ditto_kernel.enums import AssetClass
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.instrument import AssetClass
 from pydantic import BaseModel, ConfigDict, Field
 
 

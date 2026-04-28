@@ -14,7 +14,7 @@ from datetime import date
 from typing import Annotated, Any, Self
 
 import polars as pl
-from ditto_kernel import MacroCategory, MacroFrequency
+from ditto_kernel.market import MacroCategory, MacroFrequency
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 

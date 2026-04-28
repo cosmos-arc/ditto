@@ -28,9 +28,11 @@ from ditto_app.providers import (
     AppBuilderFactory,
     AppCommandProvider,
     AppProcessProvider,
-    AppQueryProvider,
     get_app_providers,
 )
+from ditto_app.providers_market import AppMarketQueryProvider
+from ditto_app.providers_portfolio import AppPortfolioQueryProvider
+from ditto_app.providers_strategy import AppStrategyQueryProvider
 from ditto_app.query.derived import DerivedQueryFacade
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
@@ -42,13 +44,20 @@ from ditto_data.di import (
     MetadataProvider,
     QualityProvider,
     RuntimeProvider,
+    TradeProvider,
 )
+from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_data.sources.tdx.source import TdxSource
 from ditto_infra.foundation.cache import DataCache
 from ditto_infra.foundation.config.environment import Environment
+from ditto_infra.foundation.config.settings import TradingSettings
+from ditto_infra.services.notification import AlertManager
+
+_tdx_mock = MagicMock(spec=TdxSource)
 
 # ---------------------------------------------------------------------------
 # Test fixtures: 辅助 Provider（替代 Interfaces 层 ConfigProvider）
@@ -80,6 +89,11 @@ class _TestConfigProvider(Provider):
         return self._data_root
 
     @provide
+    def trading_settings(self) -> TradingSettings:
+        """提供测试用交易配置."""
+        return TradingSettings()
+
+    @provide
     def data_cache(self) -> DataCache[Any]:  # type: ignore[misc]
         """提供测试用内存缓存."""
         return DataCache(ttl_seconds=300, max_size=100)
@@ -109,13 +123,59 @@ def _runtime_deps_provider() -> Provider:
 
         @provide
         def metadata_service(self) -> MetadataService:
-            return MagicMock(spec=MetadataService)
+            svc = MagicMock(spec=MetadataService)
+            svc.list_trading_days.return_value = [
+                "2026-04-06",
+                "2026-04-07",
+                "2026-04-08",
+                "2026-04-09",
+                "2026-04-10",
+                "2026-04-13",
+                "2026-04-14",
+                "2026-04-15",
+                "2026-04-16",
+                "2026-04-17",
+            ]
+            return svc
 
         @provide
         def market_service(self) -> MarketService:
             return MagicMock(spec=MarketService)
 
     return RuntimeDepsProvider()
+
+
+def _notification_provider() -> Provider:
+    """测试用通知 Provider — 提供 mock AlertManager."""
+
+    class NotificationProvider(Provider):
+        scope = Scope.APP
+
+        @provide
+        def alert_manager(self) -> AlertManager:
+            return MagicMock(spec=AlertManager)
+
+    return NotificationProvider()
+
+
+class _TdxMockProvider(Provider):
+    """测试用 TdxSource mock Provider — 替代 SourcesProvider.tdx_source."""
+
+    scope = Scope.APP
+
+    @provide
+    def tdx_source(self) -> TdxSource:
+        return _tdx_mock
+
+
+class _GoldenNoneProvider(Provider):
+    """测试用 GoldenDatasetSpec mock Provider — 返回 None."""
+
+    scope = Scope.APP
+
+    @provide
+    def golden_dataset_spec(self) -> GoldenDatasetSpec | None:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -126,23 +186,62 @@ def _runtime_deps_provider() -> Provider:
 class TestAppProviderStructure:
     """验证 App 层 Provider 结构."""
 
-    def test_get_app_providers_returns_four_providers(self) -> None:
-        """get_app_providers() 应返回 4 个 Provider 实例."""
+    def test_get_app_providers_returns_six_providers(self) -> None:
+        """get_app_providers() 应返回 6 个 Provider 实例."""
         providers = get_app_providers()
-        assert len(providers) == 4
+        assert len(providers) == 6
         names = [type(p).__name__ for p in providers]
         assert "AppCommandProvider" in names
-        assert "AppQueryProvider" in names
+        assert "AppMarketQueryProvider" in names
+        assert "AppStrategyQueryProvider" in names
+        assert "AppPortfolioQueryProvider" in names
         assert "AppProcessProvider" in names
         assert "AppBuilderFactory" in names
 
-    def test_app_query_provider_methods(self) -> None:
-        """AppQueryProvider 应包含 3 个 provide 方法."""
-        provider = AppQueryProvider()
+    def test_app_market_query_provider_methods(self) -> None:
+        """AppMarketQueryProvider 应包含市场数据查询的 provide 方法."""
+        provider = AppMarketQueryProvider()
         method_names = {name for name in dir(provider) if not name.startswith("_")}
         expected = {
+            "forward_return_service",
             "derived_query_facade",
+            "market_query_facade",
+            "source_query_facade",
             "research_dataset_facade",
+            "metadata_query_facade",
+            "capital_query_facade",
+            "fundamental_query_facade",
+            "macro_query_facade",
+            "fx_query_facade",
+            "commodity_query_facade",
+            "universe_query_facade",
+            "ingestion_status_query_facade",
+        }
+        assert expected.issubset(method_names)
+
+    def test_app_strategy_query_provider_methods(self) -> None:
+        """AppStrategyQueryProvider 应包含策略/回测查询的 provide 方法."""
+        provider = AppStrategyQueryProvider()
+        method_names = {name for name in dir(provider) if not name.startswith("_")}
+        expected = {
+            "backtest_trade_query_facade",
+            "backtest_artifact_reader",
+            "backtest_query_facade",
+            "run_read_model",
+            "strategy_query_facade",
+            "lineage_query_facade",
+            "comparison_query_facade",
+        }
+        assert expected.issubset(method_names)
+
+    def test_app_portfolio_query_provider_methods(self) -> None:
+        """AppPortfolioQueryProvider 应包含组合/交易查询的 provide 方法."""
+        provider = AppPortfolioQueryProvider()
+        method_names = {name for name in dir(provider) if not name.startswith("_")}
+        expected = {
+            "trade_query_facade",
+            "portfolio_actual_query_facade",
+            "signal_query_facade",
         }
         assert expected.issubset(method_names)
 
@@ -201,6 +300,8 @@ class TestAppProviderIntegration:
             _TestConfigProvider(tmp_path),
             QualityProvider(),
             _sources_provider(),
+            _TdxMockProvider(),
+            _GoldenNoneProvider(),
             RuntimeProvider(),
             MetadataProvider(),
             MarketProvider(),
@@ -208,6 +309,8 @@ class TestAppProviderIntegration:
             FundamentalProvider(),
             MacroProvider(),
             DerivedProvider(),
+            TradeProvider(),
+            _notification_provider(),
             *get_app_providers(),
             _runtime_deps_provider(),
         )
@@ -215,7 +318,7 @@ class TestAppProviderIntegration:
         container.close()
 
     def test_query_services_resolved(self, app_container) -> None:
-        """AppQueryProvider 的服务应可从容器解析."""
+        """AppMarketQueryProvider 的服务应可从容器解析."""
         assert isinstance(app_container.get(DerivedQueryFacade), DerivedQueryFacade)
 
     def test_process_services_resolved(self, app_container) -> None:
@@ -260,3 +363,65 @@ class TestAppProviderIntegration:
             app_container.get(CheckDataQualityHandler),
             CheckDataQualityHandler,
         )
+
+    def test_manual_tracker_receives_trading_calendar(self, app_container) -> None:
+        """ManualTracker 应从 MetadataService 加载交易日历（非空 tuple）."""
+        from ditto_app.process.execution.manual_tracker import ManualTracker
+
+        tracker = app_container.get(ManualTracker)
+        assert isinstance(tracker, ManualTracker)
+        assert isinstance(tracker._calendar, tuple)
+        assert len(tracker._calendar) > 0
+
+
+# ---------------------------------------------------------------------------
+# 日期范围配置测试
+# ---------------------------------------------------------------------------
+
+
+class TestTradingCalendarRange:
+    """测试 get_trading_calendar_range 类型化配置."""
+
+    def test_default_values(self) -> None:
+        """默认 TradingSettings 应返回默认日期范围."""
+        from ditto_app.providers import get_trading_calendar_range
+        from ditto_infra.foundation.config.settings import TradingSettings
+
+        settings = TradingSettings()
+        start, end = get_trading_calendar_range(settings)
+        assert start == "2020-01-01"
+        assert end == "2030-12-31"
+
+    def test_custom_values(self) -> None:
+        """自定义 TradingSettings 应返回自定义日期范围."""
+        from ditto_app.providers import get_trading_calendar_range
+        from ditto_infra.foundation.config.settings import TradingSettings
+
+        settings = TradingSettings(
+            trading_calendar_start="2019-06-01",
+            trading_calendar_end="2040-06-30",
+        )
+        start, end = get_trading_calendar_range(settings)
+        assert start == "2019-06-01"
+        assert end == "2040-06-30"
+
+    def test_only_start_customized(self) -> None:
+        """仅自定义 START 时 END 应保持默认值."""
+        from ditto_app.providers import get_trading_calendar_range
+        from ditto_infra.foundation.config.settings import TradingSettings
+
+        settings = TradingSettings(trading_calendar_start="2018-01-01")
+        start, end = get_trading_calendar_range(settings)
+        assert start == "2018-01-01"
+        assert end == "2030-12-31"
+
+    def test_env_alias_populates_settings(self) -> None:
+        """TradingSettings 应通过构造参数覆盖默认值."""
+        from ditto_infra.foundation.config.settings import TradingSettings
+
+        settings = TradingSettings(
+            trading_calendar_start="2021-03-01",
+            trading_calendar_end="2035-06-30",
+        )
+        assert settings.trading_calendar_start == "2021-03-01"
+        assert settings.trading_calendar_end == "2035-06-30"

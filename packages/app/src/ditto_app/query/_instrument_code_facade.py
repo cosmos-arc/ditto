@@ -18,6 +18,10 @@ class InstrumentCodeQueryFacade:
         self._service = market_service
         self._asset_class = asset_class
 
+    def get_valid_codes(self) -> set[str]:
+        """获取所有有效的品种代码集合。"""
+        return set(self._code_to_instrument_id.keys())
+
     def get_all_instrument_ids(self) -> list[int]:
         """获取所有品种的 instrument_id 列表。"""
         return list(self._code_to_instrument_id.values())

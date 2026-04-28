@@ -78,8 +78,9 @@ class TestMainRoutesAssembly:
                     )
 
     def test_expected_route_modules_complete(self) -> None:
-        """验证 __all__ 包含所有 10 个路由模块."""
+        """验证 __all__ 包含所有路由模块."""
         expected = {
+            "backtest",
             "capital",
             "commodity",
             "fundamental",
@@ -88,8 +89,10 @@ class TestMainRoutesAssembly:
             "macro",
             "market",
             "metadata",
-            "portfolio",
             "source",
+            "strategy",
+            "trade",
+            "universe",
         }
 
         actual = set(expected_route_modules)

@@ -100,18 +100,24 @@ class TestBacktestRunWithLifecycle:
 
         mock_loop = MockEngineLoop.return_value
         mock_loop.run.return_value.run_id = "run-001"
+        mock_loop.run.return_value.cancelled = False
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(run_service=mock_run_service)
         service.run()
 
         # 验证生命周期调用
-        mock_run_service.create_run.assert_called_once_with(
-            run_id="run-001",
-            strategy_id="momentum-etf",
-            strategy_version="",
-            mode="backtest",
-        )
+        mock_run_service.create_run.assert_called_once()
+        call_kwargs = mock_run_service.create_run.call_args[1]
+        assert call_kwargs["run_id"] == "run-001"
+        assert call_kwargs["strategy_id"] == "momentum-etf"
+        assert call_kwargs["strategy_version"] == ""
+        assert call_kwargs["mode"] == "backtest"
+        assert call_kwargs["parent_run_id"] == ""
+        assert "config_json" in call_kwargs
+        assert "start_date" in call_kwargs["config_json"]
+        assert "end_date" in call_kwargs["config_json"]
         mock_run_service.mark_running.assert_called_once_with("run-001")
         mock_run_service.mark_completed.assert_called_once_with("run-001")
         mock_run_service.mark_failed.assert_not_called()
@@ -128,6 +134,7 @@ class TestBacktestRunWithLifecycle:
         MockEngineLoop.return_value.run.return_value.run_id = "run-001"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(
             config=_make_service_config(strategy_version="2026.03"),
             run_service=mock_run_service,
@@ -135,12 +142,14 @@ class TestBacktestRunWithLifecycle:
 
         service.run()
 
-        mock_run_service.create_run.assert_called_once_with(
-            run_id="run-001",
-            strategy_id="momentum-etf",
-            strategy_version="2026.03",
-            mode="backtest",
-        )
+        mock_run_service.create_run.assert_called_once()
+        call_kwargs = mock_run_service.create_run.call_args[1]
+        assert call_kwargs["run_id"] == "run-001"
+        assert call_kwargs["strategy_id"] == "momentum-etf"
+        assert call_kwargs["strategy_version"] == "2026.03"
+        assert call_kwargs["mode"] == "backtest"
+        assert call_kwargs["parent_run_id"] == ""
+        assert "config_json" in call_kwargs
 
     @patch(BUILD_REPORT_PATH)
     @patch(ENGINE_LOOP_PATH)
@@ -155,6 +164,7 @@ class TestBacktestRunWithLifecycle:
         MockEngineLoop.return_value.run.return_value.run_id = "run-001"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(run_service=mock_run_service)
 
         with pytest.raises(RuntimeError, match="engine crash"):
@@ -179,8 +189,10 @@ class TestBacktestRunWithLifecycle:
 
         mock_loop = MockEngineLoop.return_value
         mock_loop.run.return_value.run_id = "generated-run"
+        mock_loop.run.return_value.cancelled = False
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(
             config=_make_service_config(run_id=""),
             run_service=mock_run_service,
@@ -208,6 +220,7 @@ class TestBacktestRunWithLifecycle:
         MockEngineLoop.return_value.run.return_value.run_id = "generated-run"
 
         mock_run_service = MagicMock()
+        mock_run_service.get_run.return_value = None
         service = _make_service(
             config=_make_service_config(run_id=""),
             run_service=mock_run_service,

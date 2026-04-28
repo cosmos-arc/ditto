@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import polars as pl
+from ditto_data.config.dataset_checksum import dataset_sort_keys
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.models.ingestion import IngestionLog
-from ditto_data.services import IngestionLogService
 from ditto_infra.foundation import logger
 from ditto_infra.foundation.util.checksum import ChecksumCompute
 
@@ -148,7 +149,9 @@ class MetadataManager:
             return False
 
         # 计算新数据的 checksum（使用统一的 ChecksumCompute）
-        new_checksum = ChecksumCompute.from_dataframe(new_df, existing_log.dataset)
+        new_checksum = ChecksumCompute.from_dataframe(
+            new_df, dataset_sort_keys(existing_log.dataset)
+        )
 
         # 比较 checksum
         if new_checksum != existing_log.checksum:

@@ -603,8 +603,15 @@ def _attach_dates(
     return_df = return_df.with_columns(
         row_idx=pl.arange(1, pl.len() + 1).over(entity_col),
     )
-    return return_df.join(
+    joined = return_df.join(
         close_with_idx.select(entity_col, "row_idx", date_col),
         on=[entity_col, "row_idx"],
         how="left",
     ).drop("row_idx")
+    # The join may produce a suffixed date column (e.g. trade_date_right)
+    # when return_df already has date_col.  Replace the null date_col with
+    # the suffixed version.
+    right_col = f"{date_col}_right"
+    if right_col in joined.columns:
+        joined = joined.drop(date_col).rename({right_col: date_col})
+    return joined

@@ -12,6 +12,9 @@ from ditto_engine.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
 )
+from ditto_engine.alpha.builtins.regime import RegimeConfig, TrendIndicator
+from ditto_engine.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.scoring import ScoringStage
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.builtins.signal import SignalStage
@@ -347,3 +350,33 @@ class TestBuildETFTrendSwingPipeline:
         # Equal weight: 1.0 / 2 = 0.5
         assert target.positions[20] == pytest.approx(0.5)
         assert target.positions[21] == pytest.approx(0.5)
+
+    def test_regime_config_inserts_scoring_step(
+        self,
+    ) -> None:
+        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        regime_config = RegimeConfig(
+            indicators=(TrendIndicator(threshold=0.01),),
+        )
+        config = ETFTrendSwingConfig(
+            max_positions=2,
+            trailing_stop_pct=0.0,
+            regime_config=regime_config,
+        )
+        pipeline = build_etf_trend_swing_pipeline(config)
+
+        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+
+        # RegimeScoringStep 应在 RegimeAwareAllocationStage 之前
+        scoring_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeScoringStep)
+        )
+        aware_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeAwareAllocationStage)
+        )
+        assert scoring_idx < aware_idx

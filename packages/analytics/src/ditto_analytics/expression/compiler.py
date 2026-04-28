@@ -7,7 +7,7 @@ from hashlib import sha256
 
 import orjson
 import polars as pl
-from ditto_kernel.specs import DerivedSpec
+from ditto_kernel.strategy import DerivedSpec
 
 from ditto_analytics.expression.analyzer import analyze_expression
 from ditto_analytics.expression.ast import (

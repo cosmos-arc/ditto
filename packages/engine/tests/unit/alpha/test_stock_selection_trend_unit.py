@@ -13,6 +13,9 @@ from ditto_engine.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
 )
+from ditto_engine.alpha.builtins.regime import RegimeConfig, TrendIndicator
+from ditto_engine.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
+from ditto_engine.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_engine.alpha.builtins.scoring import ScoringStage
 from ditto_engine.alpha.builtins.selection import SelectionStage
 from ditto_engine.alpha.context import StrategyContext
@@ -25,7 +28,8 @@ from ditto_engine.alpha.templates.stock_selection_trend import (
     get_param_constraints,
     validate_config,
 )
-from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_engine.backtest.config import EngineConfig
+from ditto_engine.backtest.engine import EngineLoop, EngineOptions
 from ditto_engine.portfolio.allocation import (
     AllocationStage,
     EqualWeightAllocator,
@@ -475,6 +479,31 @@ class TestPipelineE2E:
         for weight in target.positions.values():
             assert weight <= 0.15
 
+    def test_regime_config_inserts_scoring_step(
+        self,
+    ) -> None:
+        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        regime_config = RegimeConfig(
+            indicators=(TrendIndicator(threshold=0.01),),
+        )
+        config = StockSelectionTrendConfig(regime_config=regime_config)
+        pipeline = build_stock_selection_trend_pipeline(config)
+
+        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+
+        scoring_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeScoringStep)
+        )
+        aware_idx = next(
+            i
+            for i, s in enumerate(pipeline._stages)
+            if isinstance(s, RegimeAwareAllocationStage)
+        )
+        assert scoring_idx < aware_idx
+
 
 # ---------------------------------------------------------------------------
 # EngineConfig rebalance_freq
@@ -506,6 +535,7 @@ class TestRebalanceFreq:
             options=EngineOptions(clock=Mock(), fee_model=Mock()),
         )
         loop._trading_days = tuple(trading_days)
+        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
         return loop
 
     def test_daily_always_true(self) -> None:

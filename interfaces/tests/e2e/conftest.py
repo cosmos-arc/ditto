@@ -26,8 +26,9 @@ import polars as pl  # noqa: E402
 import pytest  # noqa: E402
 from ditto_data.config import DataSourceSettings  # noqa: E402
 from ditto_data.quality import GoldenDatasetSpec  # noqa: E402
-from ditto_data.sources import TushareSource  # noqa: E402
 from ditto_data.sources.tdx import TdxSource  # noqa: E402
+from ditto_data.sources.tushare.tushare_source import TushareSource  # noqa: E402
+from ditto_data.storage.base.parquet_store import ParquetStore  # noqa: E402
 from ditto_data.storage.market.stock.bars import (  # noqa: E402
     StockBarsReader,
     StockBarsWriter,
@@ -234,7 +235,7 @@ def stock_bars_reader(tmp_path: Path) -> StockBarsReader:
         StockBarsReader: Stock 日线数据 Reader 实例.
 
     """
-    return StockBarsReader(data_root=tmp_path)
+    return StockBarsReader(ParquetStore(tmp_path))
 
 
 @pytest.fixture
@@ -250,7 +251,7 @@ def stock_bars_writer(tmp_path: Path) -> StockBarsWriter:
         StockBarsWriter: Stock 日线数据 Writer 实例.
 
     """
-    return StockBarsWriter(data_root=tmp_path)
+    return StockBarsWriter(ParquetStore(tmp_path))
 
 
 @pytest.fixture

@@ -35,7 +35,7 @@ from ditto_data.storage.runtime.derived_sqlite import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_kernel.specs import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _state_record(active_version: int | None = 3) -> DerivedStateRecord:
@@ -945,10 +945,8 @@ class TestStreamingMemoryManagement:
 
 def test_services_exports_switch_to_derived_query_contract() -> None:
     """Top-level exports should no longer expose feature/factor query services."""
-    import ditto_data
     from ditto_data import services
 
     assert "DerivedQueryService" in services.__all__
     assert "FeatureService" not in services.__all__
     assert "FactorService" not in services.__all__
-    assert "DerivedQueryService" in ditto_data.__all__

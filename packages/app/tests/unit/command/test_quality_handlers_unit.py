@@ -40,7 +40,7 @@ class TestCheckDataQualityHandler:
         handler, mock_engine, _ = self._make_handler()
         df = pl.DataFrame({"a": [1, 2, 3]})
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=df, dataset="stock_daily")
         result_df, has_errors = handler.handle(cmd)
@@ -60,7 +60,7 @@ class TestCheckDataQualityHandler:
         df = pl.DataFrame({"a": [1]})
         context = {"reference_values": [100]}
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=df, dataset="etf_daily", context=context)
         handler.handle(cmd)
@@ -94,7 +94,7 @@ class TestCheckDataQualityHandler:
         handler, _, _ = self._make_handler(engine=mock_engine)
         df = pl.DataFrame({"a": [1]})
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=df, dataset="test")
         result_df, has_errors = handler.handle(cmd)
@@ -109,7 +109,7 @@ class TestCheckDataQualityHandler:
 
         handler, _, _ = self._make_handler(engine=mock_engine)
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=pl.DataFrame(), dataset="bad")
 
@@ -143,7 +143,7 @@ class TestCheckDataQualityHandler:
         handler, _, _ = self._make_handler(engine=mock_engine, writer=mock_writer)
         df = pl.DataFrame({"a": [1]})
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=df, dataset="stock_daily")
         handler.handle(cmd)
@@ -173,7 +173,7 @@ class TestCheckDataQualityHandler:
         handler, _, _ = self._make_handler(engine=mock_engine, writer=None)
         df = pl.DataFrame({"a": [1]})
 
-        from ditto_app.command.quality_check import CheckDataQualityCommand
+        from ditto_app.contracts import CheckDataQualityCommand
 
         cmd = CheckDataQualityCommand(df=df, dataset="test")
         result_df, _has_errors = handler.handle(cmd)

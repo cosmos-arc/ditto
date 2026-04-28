@@ -14,7 +14,11 @@ from urllib.parse import urlparse
 from dishka import Provider, Scope, provide
 from ditto_infra.foundation import logger
 from ditto_infra.services.notification import NotificationSettings
-from ditto_infra.services.notification.channels import EmailSender, WebhookSender
+from ditto_infra.services.notification.channels import (
+    EmailSender,
+    TelegramSender,
+    WebhookSender,
+)
 from ditto_infra.services.notification.manager import AlertManager
 from ditto_infra.services.notification.sender import NotificationSender
 from ditto_infra.services.notification.template import TemplateEngine
@@ -115,7 +119,20 @@ class NotificationProvider(Provider):
                     error_type=type(e).__name__,
                 )
 
-        # 可以在此添加更多发送器（Telegram, WeChat, DingTalk, Slack）
+        # Telegram 发送器
+        has_tg = (
+            notification_settings.telegram_bot_token
+            and notification_settings.telegram_chat_id
+        )
+        if has_tg:
+            try:
+                senders.append(TelegramSender(notification_settings))
+                logger.info("Telegram sender initialized")
+            except (ConnectionError, TimeoutError, ValueError) as e:
+                logger.warning(
+                    "telegram_sender_initialization_failed",
+                    error_type=type(e).__name__,
+                )
 
         logger.info(
             "Notification senders initialized",

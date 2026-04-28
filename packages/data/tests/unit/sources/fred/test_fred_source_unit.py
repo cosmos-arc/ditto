@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import polars as pl
-import pytest
 from ditto_data.sources.fred.fred_source import FredSource
 
 
@@ -128,58 +127,3 @@ class TestFredSourceCommodityMethods:
             end_date="2024-01-31",
         )
         assert result.height == 0
-
-
-class TestFredSourceUnsupportedMethods:
-    """Tests for FredSource unsupported methods that raise NotImplementedError."""
-
-    @pytest.fixture
-    def source(self) -> FredSource:
-        """Create FredSource with mocked adapters."""
-        with (
-            patch("ditto_data.sources.fred.fred_source.MacroFredAdapter"),
-            patch("ditto_data.sources.fred.fred_source.CommodityFredAdapter"),
-        ):
-            return FredSource(api_key="test_key")
-
-    def test_fetch_calendar_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_calendar raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="trading calendar"):
-            source.fetch_calendar("2024-01-01", "2024-12-31")
-
-    def test_fetch_stock_basic_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_stock_basic raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="stock data"):
-            source.fetch_stock_basic()
-
-    def test_fetch_stock_daily_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_stock_daily raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="stock data"):
-            source.fetch_stock_daily(trade_date="2024-01-15")
-
-    def test_fetch_adj_factor_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_adj_factor raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="adjustment factors"):
-            source.fetch_adj_factor("2024-01-15")
-
-    def test_fetch_etf_basic_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_etf_basic raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="ETF data"):
-            source.fetch_etf_basic()
-
-    def test_fetch_etf_daily_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_etf_daily raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="ETF data"):
-            source.fetch_etf_daily(trade_date="2024-01-15")
-
-    def test_fetch_index_basic_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_index_basic raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="index data"):
-            source.fetch_index_basic()
-
-    def test_fetch_fx_daily_raises_not_implemented(self, source: FredSource) -> None:
-        """Test fetch_fx_daily raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="FX data"):
-            source.fetch_fx_daily(
-                ts_codes=["USDCNH"], start_date="2024-01-01", end_date="2024-01-31"
-            )

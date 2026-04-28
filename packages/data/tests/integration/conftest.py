@@ -1,7 +1,4 @@
-"""Pytest configuration for integration tests.
-
-这个文件为 tests/integration/ 目录下的所有测试自动添加 @pytest.mark.integration marker。
-"""
+"""Pytest configuration for integration tests."""
 
 from collections.abc import Generator
 from pathlib import Path
@@ -46,32 +43,6 @@ def ensure_sqlite_cleanup() -> Generator[None, None, None]:
 
 # 集成测试串行执行，避免并发副作用
 pytestmark = pytest.mark.serial
-
-
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """为 integration 目录下的所有测试自动添加 integration 和 serial marker.
-
-    Args:
-        items: pytest 收集到的所有测试项
-    """
-    for item in items:
-        # 检查测试文件是否在 integration 目录下
-        is_integration_path = "/integration/" in str(
-            item.fspath
-        ) or "\\integration\\" in str(item.fspath)
-
-        if is_integration_path:
-            # 添加 integration marker（如果没有）
-            has_integration_marker = "integration" in [
-                mark.name for mark in item.iter_markers()
-            ]
-            if not has_integration_marker:
-                item.add_marker(pytest.mark.integration)
-
-            # 添加 serial marker（如果没有）
-            has_serial_marker = "serial" in [mark.name for mark in item.iter_markers()]
-            if not has_serial_marker:
-                item.add_marker(pytest.mark.serial)
 
 
 @pytest.fixture

@@ -20,10 +20,10 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import (
     InstrumentId as _InstrumentId,
 )
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.buying_power import BuyingPowerModel
@@ -101,8 +101,8 @@ class PreTradeContext:
     account_view: AccountView
     rules: dict[InstrumentId, InstrumentRules]
     market_snapshots: dict[InstrumentId, MarketSnapshot]
-    fee_model: FeeModel
     buying_power_model: BuyingPowerModel
+    fee_model: FeeModel | None = None
     pending_tickets: tuple[OrderTicket, ...] = ()
 
     # -- 辅助方法 ---------------------------------------------------------
@@ -142,7 +142,11 @@ class PreTradeContext:
             return 0.0
         cost = order.quantity * price
         fee_schedule = self.fee_schedule_for(order.instrument_id)
-        cost += self.fee_model.estimate(order, price, fee_schedule)
+        cost += (
+            self.fee_model.estimate(order, price, fee_schedule)
+            if self.fee_model is not None
+            else 0.0
+        )
         return cost
 
     def with_order_accepted(self, order: Order) -> PreTradeContext:

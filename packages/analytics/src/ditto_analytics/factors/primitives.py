@@ -29,4 +29,10 @@ PRIMITIVES: dict[str, FactorSpec] = {
         dependencies=("market.high", "market.low", "prev_close"),
         description="True Range: max of high-low, |high-prev_close|, |low-prev_close|",
     ),
+    "tp": FactorSpec(
+        id="tp",
+        expression="(market.high + market.low + market.close) / 3",
+        dependencies=("market.high", "market.low", "market.close"),
+        description="Typical Price: (high + low + close) / 3",
+    ),
 }

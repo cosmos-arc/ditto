@@ -9,10 +9,34 @@
 
 from __future__ import annotations
 
+from typing import Protocol
+
 import polars as pl
 from ditto_data.models import METAL_CODE_ALIASES, VIX_CODE_TO_INSTRUMENT_ID
-from ditto_data.sources.base import DataSource
 from ditto_infra.foundation import logger
+
+
+class _MetalSource(Protocol):
+    """Minimized protocol for metal data fetching."""
+
+    def fetch_metal_daily(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame: ...
+
+
+class CommoditySource(Protocol):
+    """Minimized protocol for commodity data fetching."""
+
+    def fetch_commodities(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame: ...
+
 
 __all__ = ["fetch_commodity_daily"]
 
@@ -20,15 +44,15 @@ __all__ = ["fetch_commodity_daily"]
 def fetch_commodity_daily(
     trade_date: str,
     *,
-    primary_source: DataSource,
-    fred_source: DataSource | None = None,
+    primary_source: _MetalSource,
+    fred_source: CommoditySource | None = None,
 ) -> pl.DataFrame:
     """
     获取商品数据（原油、贵金属、VIX）并合并.
 
     Args:
         trade_date: 交易日期 (YYYY-MM-DD).
-        primary_source: Tushare 主数据源（贵金属）.
+        primary_source: 主数据源（贵金属）.
         fred_source: FRED 数据源（原油/VIX），可选.
 
     Returns:
@@ -37,7 +61,6 @@ def fetch_commodity_daily(
     """
     results: list[pl.DataFrame] = []
 
-    # FRED 数据：原油和 VIX（排除已停止更新的贵金属）
     fred_codes = [
         "COMMOD_WTI",
         "COMMOD_BRENT",
@@ -65,7 +88,6 @@ def fetch_commodity_daily(
             event="fred_not_configured",
         )
 
-    # Tushare 数据：贵金属（黄金、白银）
     metal_codes = list(dict.fromkeys(METAL_CODE_ALIASES.values()))
 
     try:

@@ -7,6 +7,8 @@ MetadataService - Metadata 域统一查询服务（门面模式）.
 CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 """
 
+from __future__ import annotations
+
 from datetime import date
 from typing import Any, Literal
 
@@ -24,7 +26,7 @@ from ditto_data.services.metadata.instrument import (
     InstrumentServiceDeps,
 )
 from ditto_data.services.metadata.universe import UniverseService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.capital.index_composition import IndexCompositionReader
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 from ditto_data.storage.metadata.industry import (
@@ -380,6 +382,57 @@ class MetadataService:
     def sync_index_universe(self, index_code: str, asof_date: date) -> int:
         """从指数成分数据同步到标的池。委托到 UniverseService."""
         return self._universe.sync_index_universe(index_code, asof_date)
+
+    # ============ Universe CRUD（→ reader/writer） ============
+
+    def create_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+        universe_type: str = "custom",
+        source_ref: str | None = None,
+    ) -> None:
+        """创建新的证券域."""
+        self._universe_writer.create_universe(
+            universe_id=universe_id,
+            name=name,
+            description=description,
+            universe_type=universe_type,
+            source_ref=source_ref,
+        )
+
+    def delete_universe(self, universe_id: str) -> None:
+        """删除证券域及其所有成分股."""
+        self._universe_writer.delete_universe(universe_id)
+
+    def update_universe(
+        self,
+        universe_id: str,
+        name: str,
+        description: str | None = None,
+    ) -> bool:
+        """更新证券域元数据。返回是否成功更新."""
+        return self._universe_writer.update_metadata(universe_id, name, description)
+
+    def replace_constituents(
+        self,
+        universe_id: str,
+        records: list[dict[str, Any]],
+        effective_date: str,
+    ) -> int:
+        """原子替换证券域所有当前成分股。返回新增成分数量。"""
+        return self._universe_writer.replace_constituents(
+            universe_id, records, effective_date
+        )
+
+    def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None:
+        """获取证券域定义。不存在时返回 None."""
+        return self._universe_reader.get_universe(universe_id)
+
+    def list_universes_df(self, universe_type: str | None = None) -> pl.DataFrame:
+        """列出所有证券域。可选按类型过滤."""
+        return self._universe_reader.list_universes(universe_type)
 
     # ============ 证券注册（→ InstrumentService） ============
 

@@ -17,12 +17,13 @@ Design Doc: v3 §7.1, §7.3
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
 
-from ditto_kernel.enums import RiskScope
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.strategy import RiskScope
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.risk._validation import validate_weight
@@ -126,6 +127,10 @@ class PostTradeRiskGuard(Protocol):
         """扫描当前组合状态，返回所有触发的风控行为。"""
         ...
 
+    def reset(self) -> None:
+        """重置内部状态，确保跨回测隔离。"""
+        ...
+
 
 # ---------------------------------------------------------------------------
 # MaxDrawdownRule — stateful, 追踪峰值 NAV
@@ -159,6 +164,10 @@ class MaxDrawdownRule:
         self._warning_threshold = warning_threshold
         self._emergency_threshold = emergency_threshold
         self._peak_nav: float = 0.0
+
+    def reset(self) -> None:
+        """重置内部峰值 NAV 状态，确保跨回测隔离。"""
+        self._peak_nav = 0.0
 
     def scan(
         self,
@@ -274,6 +283,9 @@ class SingleLossLimitRule:
 
         return actions
 
+    def reset(self) -> None:
+        """无状态规则，no-op。"""
+
 
 # ---------------------------------------------------------------------------
 # ConcentrationLimitRule — stateless
@@ -326,6 +338,9 @@ class ConcentrationLimitRule:
                 )
 
         return actions
+
+    def reset(self) -> None:
+        """无状态规则，no-op。"""
 
 
 # ---------------------------------------------------------------------------
@@ -395,19 +410,32 @@ class CompositePostTradeGuard:
     Parameters
     ----------
         rules: PostTrade 规则列表
+        callbacks: 扫描完成后回调列表（用于通知/告警）
 
     """
 
-    def __init__(self, rules: tuple[PostTradeRiskGuard, ...]) -> None:
+    def __init__(
+        self,
+        rules: tuple[PostTradeRiskGuard, ...],
+        callbacks: tuple[Callable[[list[RiskAction]], None], ...] = (),
+    ) -> None:
         self._rules = rules
+        self._callbacks = callbacks
 
     def scan(
         self,
         account_view: AccountView,
         slice_: _SliceView,
     ) -> list[RiskAction]:
-        """依次执行每条规则，收集所有风控行为。"""
+        """依次执行每条规则，收集所有风控行为，触发回调。"""
         actions: list[RiskAction] = []
         for rule in self._rules:
             actions.extend(rule.scan(account_view, slice_))
+        for cb in self._callbacks:
+            cb(actions)
         return actions
+
+    def reset(self) -> None:
+        """重置所有子规则的状态。"""
+        for rule in self._rules:
+            rule.reset()

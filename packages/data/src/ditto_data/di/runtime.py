@@ -11,20 +11,20 @@ from ditto_infra.foundation import SQLitePool
 from ditto_infra.foundation.concurrency import FileLockManager
 
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.ingestion.publication_safety_record_service import (
+    PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
+from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.runtime.freeze_manager import FreezeManager
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sql_engine import SqlEngine
 from ditto_data.services import (
     DerivedCatalogService,
     DerivedShadowSlotService,
-    FreezeService,
-    IngestionCursorService,
-    IngestionLogService,
-    PublicationSafetyRecordService,
-    QualityRecordService,
     ResearchCatalogService,
 )
 from ditto_data.services.audit import ExecutionAuditService
@@ -35,7 +35,10 @@ from ditto_data.services.strategy.strategy_artifact_service import (
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.services.strategy.strategy_run_service import (
+    StrategyRunService,
+    StrategyRunWriterProtocol,
+)
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.metadata import (
     SQLiteStrategyArtifactReader,
@@ -220,7 +223,10 @@ class RuntimeProvider(Provider):
         return SQLiteStrategyRunReader(sqlite_pool)
 
     @provide
-    def strategy_run_writer(self, sqlite_pool: SQLitePool) -> SQLiteStrategyRunWriter:
+    def strategy_run_writer(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> StrategyRunWriterProtocol:
         """策略运行控制面写入器."""
         return SQLiteStrategyRunWriter(sqlite_pool)
 
@@ -388,7 +394,7 @@ class RuntimeProvider(Provider):
     def strategy_run_service(
         self,
         strategy_run_reader: SQLiteStrategyRunReader,
-        strategy_run_writer: SQLiteStrategyRunWriter,
+        strategy_run_writer: StrategyRunWriterProtocol,
     ) -> StrategyRunService:
         """策略运行生命周期服务."""
         return StrategyRunService(

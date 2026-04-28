@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_kernel.enums import MacroCategory, MacroFrequency
+from ditto_kernel.market import MacroCategory, MacroFrequency
 
 
 @dataclass(frozen=True)
@@ -19,9 +19,6 @@ class IndicatorMetadataSpec:
     source: str | None = None
     unit: str | None = None
     description: str | None = None
-
-
-# MacroCategory and MacroFrequency are now in ditto_kernel.enums (re-exported above)
 
 
 __all__ = ["IndicatorMetadataSpec", "MacroCategory", "MacroFrequency"]

@@ -1,0 +1,12 @@
+<b>{{ strategy_name | default(strategy_id) }}</b> — 调仓信号 [{{ level | upper }}]
+<br/>
+{{ signal_date }}{% if regime_label is defined %} | Regime: {{ regime_label }}{% if regime_score is defined %} ({{ regime_score }}){% endif %}{% endif %}
+<br/><br/>
+{% for action in actions %}
+{{ "📈" if action.action == "buy" else "📉" }} <b>{{ action.instrument_id }}</b>
+<br/>
+&nbsp;&nbsp;{{ action.action | upper }} | 权重 {{ action.current_weight }} → {{ action.target_weight }} | Δ {{ action.delta_weight }}
+<br/>
+{% endfor %}
+<br/>
+{% if timestamp %}<i>{{ timestamp }}</i>{% endif %}

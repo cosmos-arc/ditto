@@ -32,7 +32,10 @@ from ditto_app.process.execution.backtest_process import (
     BacktestServiceOptions,
 )
 from ditto_app.process.execution.strategy_input import StrategyInputAssembler
-from ditto_app.process.execution.strategy_types import RunLifecycleService
+from ditto_app.process.execution.strategy_types import (
+    RunLifecycleService,
+    mark_run_failed,
+)
 
 __all__ = [
     "StrategyFacade",
@@ -164,19 +167,21 @@ class StrategyRunService:
         run_id = self._resolve_run_id()
         run_svc = self._run_service
         if run_svc is not None:
-            run_svc.create_run(
-                run_id=run_id,
-                strategy_id=self._config.strategy_id,
-                strategy_version=self._config.strategy_version,
-                mode=str(self._config.mode),
-            )
+            existing = run_svc.get_run(run_id)
+            if existing is None:
+                run_svc.create_run(
+                    run_id=run_id,
+                    strategy_id=self._config.strategy_id,
+                    strategy_version=self._config.strategy_version,
+                    mode=str(self._config.mode),
+                    parent_run_id="",
+                )
             run_svc.mark_running(run_id)
 
         try:
             return self._execute_run(trade_date, slice_, run_id=run_id)
         except Exception as exc:
-            if run_svc is not None:
-                run_svc.mark_failed(run_id, str(exc))
+            mark_run_failed(run_svc, run_id, exc)
             raise
 
     def _execute_run(
@@ -224,11 +229,7 @@ class StrategyRunService:
     @staticmethod
     def _validate_params(spec: StrategySpec) -> None:
         """校验 spec 参数，不合法时抛出 ValueError。"""
-        errors = validate_spec_params(spec)
-        if errors:
-            raise ValueError(
-                f"策略参数校验失败 [{spec.strategy_id}]: {'; '.join(errors)}"
-            )
+        validate_spec_params(spec)
 
     # -- internal persistence ------------------------------------------------
 

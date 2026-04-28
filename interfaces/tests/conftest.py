@@ -31,6 +31,28 @@ def pytest_configure(config) -> None:
     # fmt: on
 
 
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Auto-mark tests based on directory location.
+
+    - tests/unit/ -> unit
+    - tests/integration/ -> integration + serial
+    """
+    for item in items:
+        rel_path_str = str(item.fspath)
+        try:
+            tests_root = Path(__file__).parent
+            rel_path = item.path.relative_to(tests_root)
+        except ValueError:
+            rel_path = None
+
+        path_to_check = str(rel_path) if rel_path else rel_path_str
+        if "integration" in path_to_check:
+            item.add_marker(pytest.mark.integration)
+            item.add_marker(pytest.mark.serial)
+        elif "unit" in path_to_check:
+            item.add_marker(pytest.mark.unit)
+
+
 @pytest.fixture
 def fake_time(monkeypatch: pytest.MonkeyPatch) -> None:
     """可控的时间 fixture，通过 monkeypatch 替换时间函数.

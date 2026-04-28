@@ -4,18 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from ditto_data.services import (
-    FreezeService,
-    IngestionCursorService,
-    IngestionLogService,
-)
-from ditto_data.sources.base import DataSource
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from pydantic import BaseModel, ConfigDict, Field
 
-if TYPE_CHECKING:
-    from ditto_app.command.quality_check import CheckDataQualityHandler
+from ditto_app.process.ingestion.ports import QualityCheckerProtocol
 
 
 class IngestionConfig(BaseModel):
@@ -31,13 +26,12 @@ class IngestionConfig(BaseModel):
     auto_register_securities: bool = True
 
 
-@dataclass
+@dataclass(frozen=True)
 class IngestionCoordinatorConfig:
     """IngestionCoordinator 可选依赖配置."""
 
     source_name: str = "tushare"
     ingestion_log_service: IngestionLogService | None = None
     ingestion_cursor_service: IngestionCursorService | None = None
-    quality_checker: CheckDataQualityHandler | None = None
+    quality_checker: QualityCheckerProtocol | None = None
     freeze_service: FreezeService | None = None
-    fred_source: DataSource | None = None

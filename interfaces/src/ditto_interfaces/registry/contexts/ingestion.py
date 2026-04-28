@@ -13,11 +13,9 @@ from ditto_app.process.ingestion.coordinator_factory import (
 )
 from ditto_app.process.ingestion.retry_manager import RetryManager
 from ditto_app.query.metadata import MetadataQueryFacade
-from ditto_data.services import (
-    FreezeService,
-    IngestionCursorService,
-    IngestionLogService,
-)
+from ditto_data.ingestion.freeze_service import FreezeService
+from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
@@ -25,7 +23,7 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 
 from ditto_interfaces.registry.container import make_app_container
 from ditto_interfaces.registry.contexts.bundle import IngestionBundle

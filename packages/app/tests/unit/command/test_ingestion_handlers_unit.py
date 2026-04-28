@@ -3,7 +3,7 @@
 from datetime import date
 from unittest.mock import create_autospec
 
-from ditto_app.command.ingestion import IngestDateCommand
+from ditto_app.contracts import IngestDateCommand
 from ditto_app.process.ingestion.coordinator import IngestionCoordinator
 from ditto_data.models.ingestion import IngestionResult
 

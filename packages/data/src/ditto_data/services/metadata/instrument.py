@@ -16,6 +16,7 @@ from ditto_infra.foundation.util.checksum import ChecksumCompute
 from ditto_kernel import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_kernel.identity import InstrumentId
 
+from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.errors import IdentifierNotFoundError
 from ditto_data.models.metadata import (
     InstrumentExtension,
@@ -23,7 +24,7 @@ from ditto_data.models.metadata import (
     StockExtension,
 )
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_data.sources import ExchangeTransformers
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.storage.metadata.industry import (
     IndustryMappingReader,
     IndustryMappingWriter,
@@ -441,7 +442,9 @@ class InstrumentService:
         # 计算 checksum
         dataset_name = f"{asset_class}_basic"
         df_with_source = df.with_columns(pl.lit(source).alias("source"))
-        checksum = ChecksumCompute.from_dataframe(df_with_source, dataset_name)
+        checksum = ChecksumCompute.from_dataframe(
+            df_with_source, dataset_sort_keys(dataset_name)
+        )
 
         file_path = f"instrument_reader:{asset_class}_basic"
 

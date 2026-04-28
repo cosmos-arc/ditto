@@ -22,8 +22,8 @@ ditto_app 禁止 → ditto_interfaces ❌
 
 ## App→Infra Scope 限制
 
-App 层仅允许使用 `ditto_infra.foundation`（缓存、配置、日志、工具），**禁止**直接使用 `ditto_infra.services`（通知等）。
-通知编排应在 Interfaces 层完成。
+App 层允许使用 `ditto_infra.foundation` 和 `ditto_infra.services`（通知、告警等），**禁止**直接使用 `ditto_infra.config`。
+配置加载由 Interfaces 层负责。
 
 ## CQRS 模块结构
 
@@ -42,12 +42,29 @@ ditto_app/
 │   ├── evaluation.py  # 评估查询
 │   ├── research.py    # 研究数据集查询
 │   ├── forward_return_service.py  # 前向收益率服务
-│   └── _instrument_code_facade.py # 证券代码解析门面
+│   ├── _instrument_code_facade.py # 证券代码解析门面
+│   ├── _artifact_utils.py        # 共享 artifact 查找 + 回测指标计算
+│   ├── backtest.py     # 回测统一查询门面（结果/成交/审计）
+│   ├── backtest_trade.py # 回测成交明细查询
+│   ├── comparison.py   # 回测 vs 实际对比查询门面
+│   ├── comparison_math.py # 回测 vs 实际对比纯计算函数
+│   ├── ingestion_status.py # 摄取状态查询
+│   ├── lineage.py      # 运行血统查询
+│   ├── portfolio_actual.py # 实际组合查询（持仓/成交/P&L）
+│   ├── run.py          # 回测运行统一查询（列表/过滤）
+│   ├── signal.py       # 信号查询（交易意图）
+│   ├── strategy.py     # 策略只读查询
+│   ├── trade.py        # 交易意图查询
+│   └── universe.py     # Universe 只读查询
 ├── command/            # Command DTO + Handler（原子写操作）
 │   ├── ingestion.py              # IngestDateCommand + IngestDateHandler
 │   ├── quality_check.py          # CheckDataQualityCommand + Handler
 │   ├── quality_reconciliation.py # ReconcileSourcesCommand + Handler
-│   └── protocols.py              # CommandHandler Protocol
+│   ├── protocols.py              # CommandHandler Protocol
+│   ├── backtest.py               # 回测触发/取消/重试 Command
+│   ├── strategy.py               # 策略 Spec CRUD（创建/更新/发布）
+│   ├── trade.py                  # 成交录入 + 意图状态更新
+│   └── universe.py               # 自定义 Universe CRUD
 ├── process/            # Process Manager（有状态长流程）
 │   ├── ingestion/      # 数据摄取流程
 │   │   ├── coordinator.py           # IngestionCoordinator 主类
@@ -81,7 +98,15 @@ ditto_app/
 │   │   ├── strategy_run_process.py  # StrategyRunService + StrategyFacade
 │   │   ├── strategy_types.py        # Protocol + Trigger DTO
 │   │   ├── strategy_input.py        # StrategyInputAssembler
-│   │   └── backtest_serialization.py # 回测序列化
+│   │   ├── backtest_serialization.py # 回测序列化
+│   │   ├── comparison.py            # 回测 vs 实际对比计算
+│   │   ├── delivery.py              # 信号推送路由器
+│   │   ├── factor_bridge.py         # 因子桥接（表达式→编译→信号）
+│   │   ├── fee_override.py          # CostConfig 费率覆盖工厂
+│   │   ├── manual_tracker.py        # 人工持仓聚合追踪器（T+1 交收）
+│   │   ├── replay_process.py        # 回测重放编排
+│   │   ├── signal_snapshot.py       # 信号快照 + 交易意图推导
+│   │   └── ports.py                 # 人工执行闭环 Port 定义
 │   └── quality/        # 质量巡检流程
 │       ├── __init__.py              # re-export shim
 │       └── patrol.py                # QualityPatrolService（原 L3BatchService）
@@ -91,18 +116,25 @@ ditto_app/
 │   ├── service_factory.py   # 服务工厂
 │   ├── _resolution.py       # 依赖解析工具
 │   └── _spec_deserializer.py # 衍生规格反序列化
-├── providers.py        # DI Provider 注册（4 个 Provider）
-└── config.py           # 数据集配置
+├── providers.py            # DI Provider 聚合入口（6 个 Provider）
+├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
+├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
+├── providers_portfolio.py  # 组合/交易查询 Provider（3 个 @provide）
+├── config.py           # 数据集配置
+├── contracts.py        # 跨 CQRS 子模块共享契约（Command DTO + ReadModel）
+└── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
 ```
 
-## DI Provider（4 个）
+## DI Provider（6 个）
 
 | Provider | 职责 | 注册的服务 |
 |----------|------|-----------|
-| `AppCommandProvider` | Command Handler | CheckDataQualityHandler |
-| `AppQueryProvider` | 只读查询 | 各 QueryFacade, ForwardReturnService |
-| `AppProcessProvider` | 编排/物化/质量 | DerivedMaterializationOrchestrator, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, SQLiteCompileCache, RuntimeDerivedInputProvider |
-| `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, BacktestRuntimeBuilder, StrategySliceBuilder, StrategyFacade |
+| `AppCommandProvider` | Command Handler | CheckDataQualityHandler, CreateStrategyHandler, UpdateStrategyHandler, PublishStrategyHandler, RecordFillHandler, UpdateIntentStatusHandler, BacktestRunHandler, CancelRunHandler, RetryRunHandler, RunLifecycleService, CreateCustomUniverseHandler, UpdateCustomUniverseHandler, DeleteCustomUniverseHandler |
+| `AppMarketQueryProvider` | 市场数据查询 | ForwardReturnService, DerivedQueryFacade, MarketQueryFacade, SourceQueryFacade, ResearchDatasetFacade, MetadataQueryFacade, CapitalQueryFacade, FundamentalQueryFacade, MacroQueryFacade, FXQueryFacade, CommodityQueryFacade, UniverseQueryFacade, IngestionStatusQueryFacade |
+| `AppStrategyQueryProvider` | 策略/回测查询 | BacktestTradeQueryFacade, BacktestArtifactReader, RunReadModel, StrategyQueryFacade, BacktestQueryFacade, LineageQueryFacade, ComparisonQueryFacade |
+| `AppPortfolioQueryProvider` | 组合/交易查询 | TradeQueryFacade, PortfolioActualQueryFacade, SignalQueryFacade |
+| `AppProcessProvider` | 编排/物化/质量/执行 | SQLiteCompileCache, RuntimeDerivedInputProvider, DerivedMaterializationOrchestrator, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, ManualTracker, ReplayProcess, FactorBridge |
+| `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, ServiceBackedDataProvider, BacktestRuntimeBuilder, StrategySliceBuilder, StrategyServiceFactory, StrategyFacade |
 
 ## R8 互斥规则（importlinter 强制）
 

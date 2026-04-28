@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol
 
-from ditto_kernel.enums import OrderSide
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
 
 from ditto_engine.accounting.position import Position
 from ditto_engine.execution.rules import TradingRuleSet

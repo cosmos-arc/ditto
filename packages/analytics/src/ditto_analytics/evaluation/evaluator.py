@@ -39,6 +39,7 @@ from ditto_analytics.evaluation.report import (
 )
 
 __all__ = [
+    "ClosePriceProvider",
     "EvaluationConfig",
     "FactorEvaluator",
     "ForwardReturnProvider",
@@ -85,6 +86,20 @@ class ForwardReturnProvider(Protocol):
         ...
 
 
+class ClosePriceProvider(Protocol):
+    """Protocol for providing close price data for IC decay computation."""
+
+    def get_close_prices(
+        self,
+        asset_class: str,
+        start: str,
+        end: str,
+        adj: str = "none",
+    ) -> pl.DataFrame:
+        """Return close prices as ``[date, entity, close]``."""
+        ...
+
+
 class RiskFactorProvider(Protocol):
     """Provide risk factor data for Fama-MacBeth and factor exposure."""
 
@@ -109,6 +124,51 @@ class RiskFactorProvider(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class _PreparedData:
+    """清洗后的输入数据 + 元信息。"""
+
+    factor_df: pl.DataFrame
+    return_df: pl.DataFrame
+    n_dates: int
+
+
+@dataclass(frozen=True)
+class _ICMetrics:
+    """IC 分析中间结果。"""
+
+    rank_ic_df: pl.DataFrame
+    rank_ic_summary: ICSummary
+    pearson_ic_summary: ICSummary
+    ic_decay: list[tuple[int, float]]
+    ic_half_life: float | None
+    ic_autocorrelation: list[tuple[int, float]]
+    turnover_adjusted_ir: float
+    grinold_kahn_ir: float
+    sub_period_ic: dict[str, ICSummary]
+
+
+@dataclass(frozen=True)
+class _QuantileMetrics:
+    """分位收益中间结果。"""
+
+    q_ret_df: pl.DataFrame
+    long_short: LongShortResult
+    quantile_annual_returns: dict[int, float]
+    avg_turnover: float
+    net_return_after_cost: float
+
+
+@dataclass(frozen=True)
+class _OptionalAnalysis:
+    """可选分析中间结果。"""
+
+    fama_macbeth: FamaMacBethResult | None
+    factor_exposure: FactorExposureResult | None
+    regime_ic: RegimeICResult | None
+    performance_attribution: PerformanceAttributionResult | None
+
+
 class FactorEvaluator:
     """Factor evaluation orchestrator: coordinates forward returns and metrics."""
 
@@ -116,10 +176,12 @@ class FactorEvaluator:
         self,
         forward_return_provider: ForwardReturnProvider,
         *,
+        close_price_provider: ClosePriceProvider | None = None,
         risk_factor_provider: RiskFactorProvider | None = None,
         risk_factor_ids: list[str] | None = None,
     ) -> None:
         self._fr_provider = forward_return_provider
+        self._cp_provider = close_price_provider
         self._rf_provider = risk_factor_provider
         self._rf_ids = risk_factor_ids or []
 
@@ -157,68 +219,124 @@ class FactorEvaluator:
     ) -> FactorEvaluationReport:
         """Core evaluation logic."""
         effective_start, effective_end = _resolve_period(factor_df, start, end)
-        effective_lags = config.ic_lags or DEFAULT_IC_LAGS
         ppw = config.periods_per_year
 
-        # Compute forward returns
-        return_df = self._fr_provider.compute(
-            asset_class=config.asset_class,
+        # 数据准备
+        prepared = self._prepare_factor_data(
+            factor_df,
+            config,
             start=effective_start,
             end=effective_end,
+        )
+        if isinstance(prepared, FactorEvaluationReport):
+            return prepared
+
+        # 分步计算各项指标
+        ic_data = self._compute_ic_metrics(
+            prepared,
+            config=config,
+            effective_start=effective_start,
+            effective_end=effective_end,
+            ppw=ppw,
+        )
+        q_data = self._compute_quantile_metrics(
+            prepared,
+            config=config,
+            ppw=ppw,
+        )
+        opt_data = self._compute_optional_analysis(
+            prepared,
+            rank_ic_df=ic_data.rank_ic_df,
+            q_ret_df=q_data.q_ret_df,
+            config=config,
+            effective_start=effective_start,
+            effective_end=effective_end,
+            ppw=ppw,
+        )
+
+        return self._assemble_report(
+            config=config,
+            period=(effective_start, effective_end),
+            n_dates=prepared.n_dates,
+            n_observations=prepared.factor_df.height,
+            ic_data=ic_data,
+            q_data=q_data,
+            opt_data=opt_data,
+        )
+
+    def _prepare_factor_data(
+        self,
+        factor_df: pl.DataFrame,
+        config: EvaluationConfig,
+        *,
+        start: str,
+        end: str,
+    ) -> FactorEvaluationReport | _PreparedData:
+        """计算远期收益、清洗数据；空数据时返回空报告。"""
+        return_df = self._fr_provider.compute(
+            asset_class=config.asset_class,
+            start=start,
+            end=end,
             holding_period=config.holding_period,
             adj=config.adj,
         )
-
-        # Data preparation
         factor_df_clean, return_df_clean = _prepare_data(
             factor_df,
             return_df,
-            start=effective_start,
-            end=effective_end,
+            start=start,
+            end=end,
         )
-
         if factor_df_clean.height == 0:
             return _empty_report(
                 factor_id="unknown",
                 factor_version=1,
-                period=(effective_start, effective_end),
+                period=(start, end),
                 holding_period=config.holding_period,
                 n_quantiles=config.n_quantiles,
             )
-
         n_dates = factor_df_clean.select(
             pl.col("trade_date").n_unique(),
         ).item()
+        return _PreparedData(
+            factor_df=factor_df_clean,
+            return_df=return_df_clean,
+            n_dates=n_dates,
+        )
 
-        # IR Layer 1: IC analysis
-        rank_ic_df = rank_ic(factor_df_clean, return_df_clean)
-        pearson_ic_df = pearson_ic(factor_df_clean, return_df_clean)
+    def _compute_ic_metrics(
+        self,
+        data: _PreparedData,
+        *,
+        config: EvaluationConfig,
+        effective_start: str,
+        effective_end: str,
+        ppw: int,
+    ) -> _ICMetrics:
+        """IR Layer 1: IC 分析 + IR Layer 3: Turnover IR / GK IR."""
+        effective_lags = config.ic_lags or DEFAULT_IC_LAGS
+        rank_ic_df = rank_ic(data.factor_df, data.return_df)
         rank_ic_summary = ic_summary(rank_ic_df)
-        pearson_ic_summary = ic_summary(pearson_ic_df)
+        pearson_ic_summary = ic_summary(pearson_ic(data.factor_df, data.return_df))
 
         # IC decay + half-life
-        # ic_decay needs close prices; use factor values as proxy
+        close_df = self._resolve_close_df(config, effective_start, effective_end)
         decay_results, half_life = _compute_ic_decay_safe(
-            factor_df_clean,
+            data.factor_df,
             effective_lags,
+            close_df=close_df,
         )
 
-        # IC autocorrelation
-        ic_acf = ic_autocorrelation(
-            rank_ic_df,
-            max_lag=config.ic_autocorr_max_lag,
-        )
+        # IC 自相关
+        ic_acf = ic_autocorrelation(rank_ic_df, max_lag=config.ic_autocorr_max_lag)
         ic_autocorr_lag1 = ic_acf[0][1] if ic_acf else 0.0
 
-        # IR Layer 3: Turnover-adjusted IR
+        # IR Layer 3: Turnover-adjusted IR + Grinold-Kahn IR
         t_ir = turnover_adjusted_ir(
             mean_ic=rank_ic_summary.mean,
             ic_autocorr_lag1=ic_autocorr_lag1,
             rebalance_freq=config.rebalance_freq,
         )
-
-        # IR Layer 3: Grinold-Kahn IR
-        breadth = n_dates * (config.n_quantiles - 1) / config.n_quantiles
+        breadth = data.n_dates * (config.n_quantiles - 1) / config.n_quantiles
         gk_ir = grinold_kahn_ir(
             mean_ic=rank_ic_summary.mean,
             ic_std=rank_ic_summary.std,
@@ -228,10 +346,45 @@ class FactorEvaluator:
             periods_per_year=ppw,
         )
 
-        # IR Layer 2: Quantile returns + Long-Short
+        return _ICMetrics(
+            rank_ic_df=rank_ic_df,
+            rank_ic_summary=rank_ic_summary,
+            pearson_ic_summary=pearson_ic_summary,
+            ic_decay=decay_results,
+            ic_half_life=half_life,
+            ic_autocorrelation=ic_acf,
+            turnover_adjusted_ir=t_ir,
+            grinold_kahn_ir=gk_ir,
+            sub_period_ic=sub_period_ic(rank_ic_df),
+        )
+
+    def _resolve_close_df(
+        self,
+        config: EvaluationConfig,
+        effective_start: str,
+        effective_end: str,
+    ) -> pl.DataFrame | None:
+        """获取收盘价数据（如果 provider 可用）。"""
+        if self._cp_provider is None:
+            return None
+        return self._cp_provider.get_close_prices(
+            asset_class=config.asset_class,
+            start=effective_start,
+            end=effective_end,
+            adj=config.adj,
+        )
+
+    def _compute_quantile_metrics(
+        self,
+        data: _PreparedData,
+        *,
+        config: EvaluationConfig,
+        ppw: int,
+    ) -> _QuantileMetrics:
+        """IR Layer 2: 分位收益 + Long-Short + 换手率 + 净收益."""
         q_ret_df = quantile_returns(
-            factor_df_clean,
-            return_df_clean,
+            data.factor_df,
+            data.return_df,
             n_quantiles=config.n_quantiles,
         )
         ls_result = long_short_returns(
@@ -240,54 +393,58 @@ class FactorEvaluator:
             periods_per_year=ppw,
         )
 
-        # Quantile annual returns
         quantile_annual = _compute_quantile_annual_returns(
             q_ret_df,
             periods_per_year=ppw,
         )
-
-        # Turnover and net returns
         avg_turnover = _estimate_avg_turnover(q_ret_df)
         gross_return = ls_result.annual_return / 100.0
         net_ret = net_returns(gross_return, avg_turnover, config.cost_bps)
 
-        # Sub-period IC
-        sub_ic = sub_period_ic(rank_ic_df)
+        return _QuantileMetrics(
+            q_ret_df=q_ret_df,
+            long_short=ls_result,
+            quantile_annual_returns=quantile_annual,
+            avg_turnover=avg_turnover,
+            net_return_after_cost=net_ret,
+        )
 
-        # Fama-MacBeth regression and factor exposure analysis (optional)
+    def _compute_optional_analysis(
+        self,
+        data: _PreparedData,
+        *,
+        rank_ic_df: pl.DataFrame,
+        q_ret_df: pl.DataFrame,
+        config: EvaluationConfig,
+        effective_start: str,
+        effective_end: str,
+        ppw: int,
+    ) -> _OptionalAnalysis:
+        """可选分析: Fama-MacBeth / 因子暴露 / 情景 IC / 绩效归因."""
+        # Fama-MacBeth 回归和因子暴露分析
         fm_result: FamaMacBethResult | None = None
         fe_result: FactorExposureResult | None = None
-        risk_dfs: dict[str, pl.DataFrame] = {}
-        if (
-            (config.run_fama_macbeth or config.run_exposure_analysis)
-            and self._rf_provider is not None
-            and self._rf_ids
-        ):
-            risk_dfs = self._rf_provider.get_risk_factors(
-                self._rf_ids,
-                effective_start,
-                effective_end,
-            )
+        risk_dfs = self._resolve_risk_dfs(config, effective_start, effective_end)
         if risk_dfs:
             if config.run_fama_macbeth:
                 fm_result = fama_macbeth(
-                    factor_df_clean,
-                    return_df_clean,
+                    data.factor_df,
+                    data.return_df,
                     risk_factors=risk_dfs,
                 )
             if config.run_exposure_analysis:
                 fe_result = factor_exposure(
-                    factor_df_clean,
+                    data.factor_df,
                     risk_dfs,
-                    return_df=return_df_clean,
+                    return_df=data.return_df,
                 )
 
-        # Regime-adjusted IC (optional)
+        # 情景调整 IC
         regime_ic_result: RegimeICResult | None = None
         if config.run_regime_ic:
             regime_ic_result = regime_adjusted_ic(rank_ic_df)
 
-        # Performance attribution (optional)
+        # 绩效归因
         pa_result: PerformanceAttributionResult | None = None
         if config.run_performance_attribution:
             pa_result = performance_attribution(
@@ -295,31 +452,69 @@ class FactorEvaluator:
                 periods_per_year=ppw,
             )
 
-        return FactorEvaluationReport(
-            factor_id="unknown",
-            factor_version=1,
-            evaluation_period=(effective_start, effective_end),
-            holding_period=config.holding_period,
-            n_quantiles=config.n_quantiles,
-            rank_ic_summary=rank_ic_summary,
-            pearson_ic_summary=pearson_ic_summary,
-            ic_decay=decay_results,
-            ic_half_life=half_life,
-            ic_autocorrelation=ic_acf,
-            quantile_annual_returns=quantile_annual,
-            long_short=ls_result,
-            avg_turnover=avg_turnover,
-            net_return_after_cost=net_ret,
-            turnover_adjusted_ir=t_ir,
-            grinold_kahn_ir=gk_ir,
-            sub_period_ic=sub_ic,
+        return _OptionalAnalysis(
             fama_macbeth=fm_result,
             factor_exposure=fe_result,
             regime_ic=regime_ic_result,
             performance_attribution=pa_result,
-            n_observations=factor_df_clean.height,
+        )
+
+    def _assemble_report(
+        self,
+        *,
+        config: EvaluationConfig,
+        period: tuple[str, str],
+        n_dates: int,
+        n_observations: int,
+        ic_data: _ICMetrics,
+        q_data: _QuantileMetrics,
+        opt_data: _OptionalAnalysis,
+    ) -> FactorEvaluationReport:
+        """组装 FactorEvaluationReport."""
+        return FactorEvaluationReport(
+            factor_id="unknown",
+            factor_version=1,
+            evaluation_period=period,
+            holding_period=config.holding_period,
+            n_quantiles=config.n_quantiles,
+            rank_ic_summary=ic_data.rank_ic_summary,
+            pearson_ic_summary=ic_data.pearson_ic_summary,
+            ic_decay=ic_data.ic_decay,
+            ic_half_life=ic_data.ic_half_life,
+            ic_autocorrelation=ic_data.ic_autocorrelation,
+            quantile_annual_returns=q_data.quantile_annual_returns,
+            long_short=q_data.long_short,
+            avg_turnover=q_data.avg_turnover,
+            net_return_after_cost=q_data.net_return_after_cost,
+            turnover_adjusted_ir=ic_data.turnover_adjusted_ir,
+            grinold_kahn_ir=ic_data.grinold_kahn_ir,
+            sub_period_ic=ic_data.sub_period_ic,
+            fama_macbeth=opt_data.fama_macbeth,
+            factor_exposure=opt_data.factor_exposure,
+            regime_ic=opt_data.regime_ic,
+            performance_attribution=opt_data.performance_attribution,
+            n_observations=n_observations,
             n_dates=n_dates,
             computed_at=datetime.now(UTC).isoformat(),
+        )
+
+    def _resolve_risk_dfs(
+        self,
+        config: EvaluationConfig,
+        effective_start: str,
+        effective_end: str,
+    ) -> dict[str, pl.DataFrame]:
+        """获取风险因子数据（条件满足时）。"""
+        if (
+            not (config.run_fama_macbeth or config.run_exposure_analysis)
+            or self._rf_provider is None
+            or not self._rf_ids
+        ):
+            return {}
+        return self._rf_provider.get_risk_factors(
+            self._rf_ids,
+            effective_start,
+            effective_end,
         )
 
     def evaluate_orthogonal(
@@ -411,10 +606,26 @@ def _prepare_data(
 def _compute_ic_decay_safe(
     factor_df: pl.DataFrame,
     lags: list[int],
+    *,
+    close_df: pl.DataFrame | None = None,
 ) -> tuple[list[tuple[int, float]], float | None]:
-    """Safely compute IC decay, returning empty list on failure."""
+    """
+    Safely compute IC decay, returning empty list on failure.
+
+    When *close_df* is provided, forward returns are derived from actual
+    close prices (correct IC decay).  When omitted, factor values are
+    used as pseudo-close (computes factor autocorrelation, not true IC
+    decay) — kept for backward compatibility but semantically wrong.
+    """
     try:
-        # Use factor values as a pseudo-close for IC decay estimation
+        if close_df is not None:
+            return ic_decay(
+                factor_df,
+                close_df,
+                lags=lags,
+                factor_col="value",
+            )
+        # Fallback: use factor values as pseudo-close (legacy behavior)
         pseudo_close = factor_df.select(
             pl.col("trade_date"),
             pl.col("instrument_id"),
@@ -457,24 +668,18 @@ def _estimate_avg_turnover(
         return 0.0
 
     try:
-        dates = sorted(
-            q_ret_df.select(pl.col("trade_date").unique()).to_series().to_list(),
+        daily = (
+            q_ret_df.group_by("trade_date")
+            .agg(pl.col("mean_return").mean())
+            .sort("trade_date")
         )
-        if len(dates) < _MIN_DATES_FOR_TURNOVER:
+
+        if daily.height < _MIN_DATES_FOR_TURNOVER:
             return 0.0
 
-        migrations: list[float] = []
-        for i in range(1, len(dates)):
-            prev = q_ret_df.filter(pl.col("trade_date") == dates[i - 1])
-            curr = q_ret_df.filter(pl.col("trade_date") == dates[i])
-            # If we had weight data we'd compute actual turnover;
-            # here we estimate from quantile return stability
-            curr_mean = curr.select(pl.col("mean_return").mean()).item() or 0
-            prev_mean = prev.select(pl.col("mean_return").mean()).item() or 0
-            avg_change = abs(curr_mean - prev_mean)
-            migrations.append(avg_change)
+        migrations = daily.select(pl.col("mean_return").diff().abs().drop_nans())
 
-        return float(sum(migrations) / len(migrations)) if migrations else 0.0
+        return float(migrations.select(pl.col("mean_return").mean()).item()) or 0.0
     except (pl_exc.ComputeError, TypeError, IndexError):
         return 0.0
 
