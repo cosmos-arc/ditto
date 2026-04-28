@@ -1,7 +1,7 @@
 # Ditto 设计文档索引
 
-**版本**: v1.0.0
-**最后更新**: 2026-02-17
+**版本**: v1.1.0
+**最后更新**: 2026-04-27
 **状态**: ✅ 稳定
 
 ## 概要
@@ -15,7 +15,7 @@
 | [PRD.md](PRD.md) | v2.0 | 2025-12-08 | 产品需求文档 - 项目目标、功能范围、用户故事 |
 | [01_system_design.md](01_system_design.md) | v2.1 | 2025-12-26 | 系统架构设计 - 分层架构、目录结构、核心领域模型 |
 | [02_data_design.md](02_data_design.md) | v2.0 | 2025-12-26 | 数据层设计 - 存储、PIT、复权、DQ、Runtime |
-| [03_engine_design.md](03_engine_design.md) | v2.0 | 待补充 | 引擎层设计 - Regime、Factor、Backtest、Risk 引擎 |
+| [03_engine_design.md](03_engine_design.md) | v2.0 | 历史参考 | 引擎层设计 - Regime、Factor、Backtest、Risk 引擎 |
 | [04_deployment_topology.md](04_deployment_topology.md) | v2.1 | 2025-12-26 | 部署拓扑设计 - 单机部署、Prefect 调度、心跳监控 |
 | [05_observability.md](05_observability.md) | v2.0 | 2025-12-23 | 可观测性方案 - 日志、追踪、指标、告警、部署 |
 | [06_roadmap.md](06_roadmap.md) | v2.0 | 2025-12-08 | 路线图 - Phase 0-3 时间线、里程碑、验收标准 |
@@ -23,8 +23,8 @@
 | [08_risk_constitution.md](08_risk_constitution.md) | v1.0 | 2025-12-08 | 风险宪法 - Kill Switch、仓位控制、操作纪律 |
 | [09_data_quality_design.md](09_data_quality_design.md) | v1.1 | 2025-12-28 | 数据质量设计 - DQ 三层架构、YAML 配置、隔离区 |
 | [10_data_ingestion_scheduler_design.md](10_data_ingestion_scheduler_design.md) | v2.0 | 2025-12-30 | 数据摄取调度 - Prefect Flows/Tasks、T0/T1/T2/T3 分层 |
-| [11_port_architecture.md](11_port_architecture.md) | v1.0 | 2026-01-23 | Port 层架构 - FastAPI、Prefect、CLI、DI |
-| [12_quant_architecture_alignment.md](12_quant_architecture_alignment.md) | v1.0 | 2026-02-11 | 行业架构对标 - LEAN/Zipline/Qlib 参考设计 |
+| [11_interfaces_architecture.md](11_interfaces_architecture.md) | v1.0 | 2026-01-23 | Interfaces 层架构 - FastAPI、Prefect、CLI、DI |
+| [12_quant_architecture_alignment.md](12_quant_architecture_alignment.md) | v1.0 | 2026-02-11 | 行业架构对标 - LEAN/Zipline/Qlib 参考设计（历史参考，最新审计见 `docs/reviews/`） |
 | [13_golden_dataset_design.md](13_golden_dataset_design.md) | v1.0 | 2026-02-17 | 黄金数据集设计 - 标的选择标准、配置格式、架构设计 |
 
 ## 文档分类
@@ -74,7 +74,7 @@
 ### 引擎设计
 
 **核心引擎**：
-- [03_engine_design.md](03_engine_design.md) - 引擎层设计（待补充）
+- [03_engine_design.md](03_engine_design.md) - 引擎层设计（历史参考，最新实现见 `packages/engine/CLAUDE.md`）
   - Regime Engine（市场状态识别）
   - Factor Engine（因子计算）
   - Backtest Engine（回测引擎）

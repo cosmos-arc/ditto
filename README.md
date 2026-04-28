@@ -312,7 +312,7 @@ pixi run -e dev arch-check       # 分层依赖检查
 **Phase 4 App 层提取完成**
 - App 层独立为 `ditto_app` 包（CQRS: query/process/command + builders）
 - Engine 独立为 `ditto_engine` 包（从 core 拆分 alpha/portfolio/execution/accounting/backtest/orchestrator/risk）
-- Kernel 独立为 `ditto_kernel`（零依赖共享内核: identity/enums/clock/events/specs）
+- Kernel 独立为 `ditto_kernel`（零依赖共享内核: instrument/order/market/strategy/identity/clock/events/quality/research/exceptions/math）
 - 目录结构扁平化：`interfaces/` 提升至根层级，移除 `apps/` 目录
 - DI 泄漏修复 + engine 去冗余 + 测试迁移
 

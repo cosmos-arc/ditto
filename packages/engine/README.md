@@ -1,7 +1,7 @@
 # ditto-engine
 
-**版本**: v0.10.0
-**最后更新**: 2026-04-04
+**版本**: v0.11.0
+**最后更新**: 2026-04-27
 **状态**: 策略引擎 + 回测闭环
 
 ## 概要
@@ -12,15 +12,19 @@
 
 ```
 ditto_engine/
-├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / DecisionStage / 内置 Stages / 策略模板）
-│   ├── builtins/      # Universe / Signal / Scoring / Filtering / Selection / RiskLock / Trend / Regime
+├── alpha/             # Alpha 决策层（StrategySpec / Pipeline / DecisionStage / 8 内置 Stages / 4 模板）
+│   ├── builtins/      # Universe / Signal / Scoring / Filtering / Selection /
+│   │                 #   Regime / RegimeAllocation / RegimeScoring
 │   ├── templates/     # etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend
 │   └── ...            # validation.py, context.py, models.py, protocols.py, pipeline.py, specs.py
 ├── execution/         # 执行层（Planner / Brokerage / TradeBuilder / Reality Model）
-├── backtest/          # 回测引擎（EngineLoop / Manifest / Statistics / Audit / Serialization）
+│   └── reality/       # Reality Model（佣金/滑点/成交/结算）
+├── backtest/          # 回测引擎（EngineLoop / Manifest / Statistics / Audit / Steps）
+│   ├── audit/         # ExecutionAuditCollector
+│   └── steps/         # Pipeline Steps（10 个）
 ├── portfolio/         # 组合构建（WeightAllocator / ConstraintChecker / compare_reports）
 ├── accounting/        # 共享账户契约（Account / CashBook / OrderBook / Position）
-├── risk/              # 风险管理
+├── risk/              # 风险管理（PreTrade / PostTrade）
 └── events.py          # 域事件定义
 ```
 
@@ -45,7 +49,7 @@ interfaces → app → engine → kernel
 
 | 模块 | 关键组件 | 说明 |
 |------|---------|------|
-| alpha | StrategyPipeline + 7 Stages + 4 Templates | 策略决策流水线 |
+| alpha | StrategyPipeline + 8 Stages + 4 Templates | 策略决策流水线 |
 | backtest | EngineLoop + PreTrade(6) + PostTrade(4) | 日历步进回测 |
 | execution | ExecutionPlanner + BacktestBrokerage + TradeBuilder | 订单执行与成交匹配 |
 | portfolio | EqualWeight / ScoreWeight / InverseVol + Constraints | 组合权重分配与约束 |
@@ -58,11 +62,13 @@ interfaces → app → engine → kernel
 | UniverseStage | 标的池白名单过滤 |
 | SignalStage | 信号值附加 |
 | ScoringStage | 信号 -> 评分（Mean/Rank/Percentile） |
-| FilteringStage | 条件过滤（FilterCondition） |
+| FilteringStage | 条件过滤（含 RiskLockFilter） |
 | SelectionStage | Top-K 选择 |
-| RiskLockFilter | 风控锁定标的过滤（合并入 FilteringStage） |
-| TrendFilterStage | 趋势方向过滤 |
 | RegimeStage | 市场状态检测（MA 交叉 / 波动率阈值） |
+| RegimeAllocationStage | 基于 Regime 的资产配置 |
+| RegimeScoringStage | 基于 Regime 的评分 |
+
+> 注：TrendFilterStage 在 etf_trend_swing 模板内（向量化 polars join），非全局内置。
 
 ### 策略模板（alpha/templates/）
 
@@ -139,6 +145,13 @@ print(f"Max DD: {report.alpha.max_drawdown:.2%}")
 3. **向量化优先** -- Pipeline 使用 Polars DataFrame（DecisionFrame）列名约定流转
 4. **纯函数** -- Engine 层无 I/O，数据通过 Provider Protocol 注入
 
+### execution_delay 语义
+
+- 基于调仓日（rebalance day）计数，非自然日
+- daily rebalance 模式下 1 execution_delay = 1 交易日
+- weekly/monthly rebalance 模式下延迟效果与自然日不对应
+- 尾部 flush 使用 last_date，为"最佳努力"执行，非 PIT 精确
+
 ## 相关文档
 
 - [Engine 层规范](CLAUDE.md)
@@ -146,6 +159,12 @@ print(f"Max DD: {report.alpha.max_drawdown:.2%}")
 - [v3 系统设计](../../docs/plans/2026-03-21-strategy-engine-system-design-v3.md)
 
 ## 变更记录
+
+### v0.11.0 (2026-04-27)
+- 新增 RegimeAllocationStage / RegimeScoringStage（8 内置 Stages）
+- 新增 execution/reality/、backtest/audit/、backtest/steps/ 模块
+- 新增 execution_delay 语义说明
+- TrendFilterStage 移入 etf_trend_swing 模板（非全局内置）
 
 ### v0.10.0 (2026-04-04)
 **重构**

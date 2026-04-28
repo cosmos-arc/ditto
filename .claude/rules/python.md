@@ -399,7 +399,7 @@ from ditto_interfaces.api.dependencies import get_hub  # 直接导入内部实�
 ```python
 # ❌ 跨包 re-export：任何包不得从另一个 ditto 包 re-export 符号
 # ditto_data/models/__init__.py
-from ditto_kernel.enums import AssetClass, Exchange  # 禁止
+from ditto_kernel.instrument import AssetClass, Exchange  # 禁止
 
 # ❌ Barrel + 内联定义混合：__init__.py 不应混合 re-export 和新符号定义
 from .margin import MarginReader
@@ -417,8 +417,8 @@ from ditto_data.storage.capital.margin import MarginReader
 
 ```python
 # ✅ 需要哪个包的类型就从哪个包导入
-from ditto_kernel.enums import AssetClass, Exchange
-from ditto_kernel.types import InstrumentId
+from ditto_kernel.instrument import AssetClass, Exchange
+from ditto_kernel.identity import InstrumentId
 
 # ❌ 不要通过中间包间接导入
 from ditto_data.models import AssetClass  # 跨包 re-export，依赖被隐藏

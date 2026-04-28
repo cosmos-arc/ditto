@@ -1,7 +1,7 @@
 # GitHub Actions CI/CD 说明
 
-**版本**: v0.1.0
-**最后更新**: 2026-01-23
+**版本**: v0.2.0
+**最后更新**: 2026-04-27
 **状态**: ✅ 稳定
 
 ## 概要
@@ -18,7 +18,7 @@ Ditto 项目使用分层的 CI/CD 策略，将快速反馈的单元测试与耗�
 |------|----------|------|------|
 | `ci.yml` | PR 到 main, push 到 main | 单元测试 + 代码质量检查 | ~5 分钟 |
 | `ci-integration.yml` | 手动触发, 定时, CI 成功后 | 集成测试（含 observability 服务） | ~15 分钟 |
-| `deploy.yml.disabled` | CI 成功后, Release 发布 | 部署到 staging/production | ~10 分钟 | **规划中 (planned)** |
+| `e2e-validation.yml` | 手动触发 | 端到端验证测试 | ~20 分钟 |
 
 ---
 

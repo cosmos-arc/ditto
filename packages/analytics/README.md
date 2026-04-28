@@ -1,7 +1,7 @@
 # ditto-analytics
 
-**版本**: v0.3.0
-**最后更新**: 2026-04-07
+**版本**: v0.4.0
+**最后更新**: 2026-04-27
 **状态**: 分析层（表达式编译 + 物化 + 因子 + 研究）
 
 ## 概要
@@ -20,12 +20,22 @@ ditto_analytics/
 │   ├── compiler.py    # 编译入口
 │   ├── diagnostics.py # 诊断信息
 │   └── registry.py    # 函数注册表
-├── factors/             # 内置因子库
+├── factors/             # 内置因子库（15 个模块）
 │   ├── spec.py         # FactorSpec 定义
-│   ├── primitives.py  # 基础因子
+│   ├── factor_specs.py # 因子规格注册
+│   ├── validate.py     # 因子验证
+│   ├── primitives.py   # 基础因子
 │   ├── technical.py    # 技术因子
 │   ├── fundamental.py  # 基本面因子
-│   └── alpha.py        # Alpha 因子
+│   ├── alpha.py        # Alpha 因子
+│   ├── alternative.py  # 另类因子
+│   ├── growth.py       # 成长因子
+│   ├── liquidity.py    # 流动性因子
+│   ├── momentum.py     # 动量因子
+│   ├── quality.py      # 质量因子
+│   ├── size.py         # 规模因子
+│   ├── value.py        # 价值因子
+│   └── volatility.py   # 波动率因子
 ├── evaluation/          # 因子评估
 │   ├── evaluator.py    # 评估引擎
 │   ├── report.py       # 评估报告
@@ -34,8 +44,9 @@ ditto_analytics/
 │   ├── contracts.py   # 物化契约
 │   ├── models.py       # 物化模型
 │   └── planner.py      # 物化计划器
-├── models/             # 数据模型（因子 / 特征 / 研究）
-├── research/            # 研究数据集领域模型
+├── models/             # 数据模型（因子 / 特征）
+├── research/            # 研究数据集
+│   └── domain.py       # 领域模型
 ├── compile_cache.py      # 表达式编译缓存（SQLite）
 ├── publication_safety.py # 发布安全检查
 └── validation.py        # 输入验证
@@ -64,7 +75,7 @@ interfaces → analytics → kernel
 | 模块 | 关键组件 | 说明 |
 |------|---------|------|
 | expression | Lexer → Parser → Analyzer → Codegen → Compiler | 表达式编译流水线 |
-| factors | FactorSpec + 4 类内置因子 | 因子定义与注册 |
+| factors | FactorSpec + 15 类内置因子 | 因子定义与注册 |
 | evaluation | Evaluator + Report + Metrics | IC / 因子分析 / 组合分析 / 尾部风险 |
 | materialization | Contracts + Planner | 物化计划与执行 |
 | research | DatasetSnapshot / KnownAtPolicy | 研究数据集领域模型 |
@@ -99,3 +110,12 @@ report: FactorEvaluationReport = evaluator.evaluate(factor_values, forward_retur
 
 - [Analytics 层规范](CLAUDE.md)
 - [PIT 安全指南](../../.claude/rules/pit.md)
+
+## 变更记录
+
+### v0.4.0 (2026-04-27)
+- factors/ 扩展至 15 个模块（新增 alternative/growth/liquidity/momentum/quality/size/value/volatility）
+- 新增 research/domain.py 领域模型
+
+### v0.3.0 (2026-04-07)
+- 表达式编译 + 物化 + 因子 + 研究架构稳定
