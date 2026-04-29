@@ -271,6 +271,13 @@ extraPaths = [
     "packages/analytics/src",
     "packages/app/src",
     "interfaces/src",
+    "packages/features/src",
+    "packages/analysis/src",
+    "packages/strategy/src",
+    "packages/portfolio/src",
+    "packages/risk/src",
+    "packages/execution/src",
+    "packages/backtest/src",
 ]
 
 # ===================================================================
@@ -290,6 +297,13 @@ pythonpath = [
     "packages/analytics/src",
     "packages/app/src",
     "interfaces/src",
+    "packages/features/src",
+    "packages/analysis/src",
+    "packages/strategy/src",
+    "packages/portfolio/src",
+    "packages/risk/src",
+    "packages/execution/src",
+    "packages/backtest/src",
 ]
 
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]

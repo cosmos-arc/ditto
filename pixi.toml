@@ -56,6 +56,13 @@ ditto-infra = { path = "packages/infra", editable = true }
 ditto-kernel = { path = "packages/kernel", editable = true }
 ditto-analytics = { path = "packages/analytics", editable = true }
 ditto-interfaces = { path = "interfaces", editable = true }
+ditto-features = { path = "packages/features", editable = true }
+ditto-analysis = { path = "packages/analysis", editable = true }
+ditto-strategy = { path = "packages/strategy", editable = true }
+ditto-portfolio = { path = "packages/portfolio", editable = true }
+ditto-risk = { path = "packages/risk", editable = true }
+ditto-execution = { path = "packages/execution", editable = true }
+ditto-backtest = { path = "packages/backtest", editable = true }
 
 # 性能优化库
 cachebox = ">=5.0,<6"
