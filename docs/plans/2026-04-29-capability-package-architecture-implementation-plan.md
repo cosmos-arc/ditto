@@ -96,7 +96,7 @@ No commit is needed if no files changed.
 
 ---
 
-### Task 1: Add Capability Package Skeletons
+### Task 1: Add Capability Package Skeletons ~~✅ DONE (a28f8507)~~
 
 **Files:**
 - Create: `packages/features/pyproject.toml`
