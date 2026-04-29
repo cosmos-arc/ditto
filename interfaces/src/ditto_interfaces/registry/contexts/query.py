@@ -1,8 +1,6 @@
 """查询上下文组合包."""
 
-from __future__ import annotations
-
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -32,7 +30,7 @@ class QueryContext:
 
 
 @contextmanager
-def create_query_context() -> Iterator[QueryContext]:
+def create_query_context() -> Generator[QueryContext, None, None]:
     """创建查询上下文（轻量级，不创建协调器等 process 组件）."""
     container = make_app_container()
     try:

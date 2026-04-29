@@ -6,7 +6,7 @@ import sqlite3
 from dataclasses import dataclass
 
 import orjson
-from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_infra.foundation import SQLitePool
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_data.storage.metadata._pit_base import PITRecordReader
@@ -18,29 +18,6 @@ __all__ = ["SQLiteTradingRuleReader", "TradingRuleReader", "TradingRuleRecord"]
 # ---------------------------------------------------------------------------
 # SQL constants
 # ---------------------------------------------------------------------------
-
-_CREATE_TABLE = """
-CREATE TABLE IF NOT EXISTS trading_rule (
-    instrument_id INTEGER NOT NULL,
-    as_of_date TEXT NOT NULL,
-    settlement_cycle INT NOT NULL,
-    fund_settlement_cycle INT NOT NULL,
-    price_limit_pct REAL,
-    order_types_supported TEXT NOT NULL,
-    call_auction_sessions TEXT NOT NULL,
-    effective_from TEXT NOT NULL,
-    effective_to TEXT,
-    PRIMARY KEY (instrument_id, effective_from)
-);
-"""
-
-_INSERT_OR_REPLACE = """
-INSERT OR REPLACE INTO trading_rule (
-    instrument_id, as_of_date, settlement_cycle, fund_settlement_cycle,
-    price_limit_pct, order_types_supported, call_auction_sessions,
-    effective_from, effective_to
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-"""
 
 _PIT_QUERY = """
 SELECT instrument_id, as_of_date, settlement_cycle, fund_settlement_cycle,
@@ -101,39 +78,6 @@ class SQLiteTradingRuleReader(PITRecordReader[TradingRuleRecord]):
     def __init__(self, pool: SQLitePool) -> None:
         self._pool = pool
 
-    @traced("trading_rule.init_schema")
-    def init_schema(self) -> None:
-        """创建 trading_rule 表（幂等操作）。"""
-        conn = self._pool.get_connection()
-        conn.executescript(_CREATE_TABLE)
-        self._pool.commit()
-        logger.debug(
-            "trading_rule schema initialized",
-            event="trading_rule_schema_init",
-        )
-
-    def load(self, records: list[TradingRuleRecord]) -> None:
-        """批量加载记录到 SQLite（INSERT OR REPLACE）。"""
-        if not records:
-            return
-        conn = self._pool.get_connection()
-        for rec in records:
-            conn.execute(
-                _INSERT_OR_REPLACE,
-                (
-                    rec.instrument_id,
-                    rec.as_of_date,
-                    rec.settlement_cycle,
-                    rec.fund_settlement_cycle,
-                    rec.price_limit_pct,
-                    orjson.dumps(rec.order_types_supported).decode("utf-8"),
-                    orjson.dumps(rec.call_auction_sessions).decode("utf-8"),
-                    rec.effective_from,
-                    rec.effective_to,
-                ),
-            )
-        self._pool.commit()
-
     def get(
         self,
         instrument_id: InstrumentId,
@@ -155,6 +99,12 @@ class SQLiteTradingRuleReader(PITRecordReader[TradingRuleRecord]):
         if row is None:
             return None
         return self._row_to_record(row)
+
+    def list_all(self) -> list[TradingRuleRecord]:
+        """获取所有交易规则记录."""
+        conn = self._pool.get_connection()
+        rows = conn.execute(_SELECT_ALL).fetchall()
+        return [self._row_to_record(row) for row in rows]
 
     def _row_to_record(self, row: sqlite3.Row) -> TradingRuleRecord:
         """将数据库行转换为 TradingRuleRecord."""

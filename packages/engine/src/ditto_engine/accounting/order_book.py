@@ -13,7 +13,7 @@ from enum import StrEnum
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
-from ditto_engine.exceptions import EngineError
+from ditto_engine.exceptions import StateTransitionError
 
 __all__ = [
     "Order",
@@ -57,10 +57,6 @@ class OrderStatus(StrEnum):
             OrderStatus.REJECTED,
             OrderStatus.INVALID,
         )
-
-
-class StateTransitionError(EngineError):
-    """非法状态转换，如 FILLED → CANCEL。"""
 
 
 @dataclass(frozen=True)

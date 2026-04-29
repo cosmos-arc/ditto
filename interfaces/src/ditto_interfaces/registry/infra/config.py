@@ -201,10 +201,15 @@ class ConfigProvider(Provider):
         config_loader: ConfigLoader,
         environment: Environment,
     ) -> DQSettings:
-        """加载 DQ 配置并注入环境。"""
+        """加载 DQ 配置并注入环境与项目根目录。"""
         dq_values = load_env_file(config_loader, "dq")
         settings = DQSettings.model_validate(dq_values)
-        return settings.model_copy(update={"environment": environment.value})
+        return settings.model_copy(
+            update={
+                "environment": environment.value,
+                "config_root": config_loader.config_root,
+            }
+        )
 
     @provide
     def notification_settings(

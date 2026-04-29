@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_infra.foundation.config.settings import Settings
 from ditto_infra.foundation.observability import init, shutdown
 from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_infra.foundation.observability.tracing import traced as infra_traced
+from ditto_kernel.tracing import install_trace_handler, reset_trace_handler
 
 from ditto_interfaces.registry.infra.config import RuntimeFlags
 
@@ -55,5 +58,22 @@ class ObservabilityProvider(Provider):
     def observability(self, config: ObservabilityConfig) -> Iterator[None]:
         """初始化并在生命周期结束时关闭观测系统。"""
         init(config)
+        install_trace_handler(_make_kernel_bridge())
         yield
+        reset_trace_handler()
         shutdown()
+
+
+def _make_kernel_bridge() -> Callable[[str, Callable[..., Any], Any], Any]:
+    """创建 kernel tracing → infra OTel 的桥接 handler."""
+
+    def handle(
+        operation: str,
+        fn: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        decorated = infra_traced(operation)(fn)
+        return decorated(*args, **kwargs)
+
+    return handle

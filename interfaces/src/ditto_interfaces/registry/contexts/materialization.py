@@ -1,8 +1,6 @@
 """物化上下文工厂。"""
 
-from __future__ import annotations
-
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from ditto_app.process.materialization.cascade_orchestrator import (
@@ -21,7 +19,7 @@ from ditto_interfaces.registry.contexts.bundle import MaterializationBundle
 
 
 @contextmanager
-def create_materialization_bundle() -> Iterator[MaterializationBundle]:
+def create_materialization_bundle() -> Generator[MaterializationBundle, None, None]:
     """创建物化上下文组合包（单容器）。"""
     container = make_app_container()
     try:

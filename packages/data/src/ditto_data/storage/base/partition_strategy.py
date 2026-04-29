@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from typing import Protocol, runtime_checkable
 
 
-class PartitionStrategy(ABC):
+@runtime_checkable
+class PartitionStrategy(Protocol):
     """
-    分区策略抽象基类.
+    分区策略协议.
 
     定义如何将数据组织到不同的分区文件中，支持可配置的分区策略。
+    使用 Protocol（结构化子类型），实现者无需显式继承。
 
     Examples:
         >>> strategy = YearlyPartition()
@@ -20,7 +22,6 @@ class PartitionStrategy(ABC):
 
     """
 
-    @abstractmethod
     def get_partition_key(self, date_str: str) -> str:
         """
         从日期字符串提取分区键.
@@ -32,9 +33,8 @@ class PartitionStrategy(ABC):
             分区键.
 
         """
-        pass
+        ...
 
-    @abstractmethod
     def get_filename(self, partition_key: str) -> str:
         """
         生成分区文件名.
@@ -46,9 +46,8 @@ class PartitionStrategy(ABC):
             文件名.
 
         """
-        pass
+        ...
 
-    @abstractmethod
     def get_partitions_from_filters(
         self,
         start_date: str | None,
@@ -65,10 +64,10 @@ class PartitionStrategy(ABC):
             分区键列表.
 
         """
-        pass
+        ...
 
 
-class YearlyPartition(PartitionStrategy):
+class YearlyPartition:
     """
     按年分区策略.
 

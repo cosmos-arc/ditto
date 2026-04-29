@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import cast
 
 import orjson
+
 from ditto_data.models.common import JsonDict
 
 

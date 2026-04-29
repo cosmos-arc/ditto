@@ -265,6 +265,7 @@ accounting / execution / portfolio / risk / alpha
 2. `Service` 不是万能后缀。若它只是查询门面，用 `QueryFacade`；若只是物理读写，用 `Store/Reader/Writer`；若只是外部适配，用 `Adapter`。
 3. `Provider` 不等于业务服务。DI provider 中不应出现多分支业务流程。
 4. `Registry` 和 `Catalog` 不同。Registry 偏技术注册，Catalog 偏领域目录。
+5. 已知领域缩写在类名中保持大写：`ETF`、`FX`、`API`、`SQL`、`DQ`、`PIT`、`HTTP`。模块路径保持小写（`etf`、`fx`）。不要将公开类重命名为 `Etf` 或 `Fx`，这会丢失缩写信号。
 
 ## 6. 抽象层级一致性规则
 
@@ -471,20 +472,25 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 | 字符串匹配异常类型 | 错误语义脆弱 | 使用明确异常类和错误码 |
 | 包级 re-export 链过深 | 真实依赖不可见 | 直接导入叶模块或明确 public API |
 
-## 10. 建议增加的架构门禁
+## 10. 机器门禁解释原则
+
+当 `.importlinter` 的 layers 表达与 diamond 图看似冲突时，
+以 diamond 作为架构语义，以 explicit forbidden contracts 作为平面隔离依据。
+
+## 11. 建议增加的架构门禁
 
 当前 `.importlinter` 已覆盖包级和部分子域规则。下一阶段建议增加以下门禁：
 
-| 门禁 | 目的 |
-|---|---|
-| `analytics.expression` 禁止依赖 `analytics.materialization` | 固化 Analytics 内部抽象方向 |
-| `engine.accounting/execution/risk/portfolio/alpha` 禁止依赖 `engine.backtest` | 防止 runtime 污染核心领域 |
-| `interfaces.api.routes` 禁止依赖 `ditto_data.services` / `ditto_data.storage` | route 保持传输适配 |
-| `app.providers` 禁止读取 `os.environ` | 配置入口集中 |
-| `data.storage` 只允许依赖明确的 storage model/contracts | 收紧 storage-model 豁免 |
-| `helpers/utils` 新增文件需要架构审查 | 防止无语义目录扩张 |
+| 门禁 | 目的 | 状态 |
+|---|---|---|
+| `analytics.expression` 禁止依赖 `analytics.materialization` | 固化 Analytics 内部抽象方向 | **已添加** ✅ |
+| `engine.accounting/execution/risk/portfolio/alpha` 禁止依赖 `engine.backtest` | 防止 runtime 污染核心领域 | 待添加 |
+| `interfaces.api.routes` 禁止依赖 `ditto_data.services` / `ditto_data.storage` | route 保持传输适配 | 待添加 |
+| `app.providers` 禁止读取 `os.environ` | 配置入口集中 | 待添加 |
+| `data.storage` 只允许依赖明确的 storage model/contracts | 收紧 storage-model 豁免 | 待添加 |
+| `helpers/utils` 新增文件需要架构审查 | 防止无语义目录扩张 | 待添加 |
 
-## 11. Agent 开发检查清单
+## 12. Agent 开发检查清单
 
 开发前：
 
@@ -509,7 +515,7 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 - 若新增公共入口，更新包级 `CLAUDE.md` 或本目录文档。
 - 若接受架构偏离，新增 ADR 或在审计报告中记录。
 
-## 12. 当前最值得收敛的模糊点
+## 13. 当前最值得收敛的模糊点
 
 按架构清晰度优先级排序：
 
@@ -521,8 +527,30 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 6. 限制 `Manager`、`helpers`、`utils` 的新增。
 7. 为每个包建立稳定 public API 清单。
 
-## 13. 结论
+## 14. 结论
 
 Ditto 当前已经有较强的分层和门禁。下一阶段要解决的是“概念精度”问题：每个目录名、类后缀、port 位置和扩展入口都应该能说明它代表哪个领域概念、处在哪个抽象层、为什么只能放在这里。
 
 架构清晰度的目标不是让系统看起来更复杂，而是让后续 agent 和个人开发者在没有额外解释的情况下，也能做出一致的放置、命名和依赖判断。
+
+## 15. Agent 快速参考
+
+> 机器可读的架构快速参考卡: [agent-context-pack.md](agent-context-pack.md)
+
+## 16. T0 Architecture Clarity Acceptance Checklist
+
+以下命令构成 T0 gate 的验收标准（所有项必须通过）：
+
+```bash
+# 代码架构门禁
+python scripts/architecture/check_architecture_smells.py   # passes (0 issues)
+pixi run -e dev lint-imports                                # 34 kept, 0 broken
+pixi run -e dev type                                        # 0 errors, 0 warnings, 0 notes
+pixi run -e dev test --fast                                 # all pass, 0 fail
+pixi run -e dev arch-check                                  # passes
+```
+
+**功能性检查**：
+- Tracing: `@traced` in `kernel.tracing` defaults to no-op; `install_trace_handler()` accepts handler; composition root wires OTel bridge
+- DQ settings: `config_root` injected via DI, path resolution independent of process CWD
+- Expression contracts: types owned by `expression.contracts`, `materialization` imports from canonical path

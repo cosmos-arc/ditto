@@ -22,7 +22,7 @@ from ditto_app.command.backtest import (
 )
 from ditto_app.process.execution.strategy_types import RunLifecycleService
 from ditto_data.models.strategy_run import StrategyRunRecord
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.services.strategy.strategy_run_service import StrategyRunLifecycleStore
 from ditto_kernel.strategy import ImpactModel
 
 
@@ -266,7 +266,7 @@ class TestCancelRunHandler:
 
     def test_cancel_pending_run(self) -> None:
         """取消 pending 状态的运行成功."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="pending")
         handler = CancelRunHandler(run_service=run_svc)
 
@@ -276,7 +276,7 @@ class TestCancelRunHandler:
 
     def test_cancel_running_run(self) -> None:
         """取消 running 状态的运行成功."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="running")
         handler = CancelRunHandler(run_service=run_svc)
 
@@ -286,7 +286,7 @@ class TestCancelRunHandler:
 
     def test_cancel_completed_rejected(self) -> None:
         """completed 状态不允许取消."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="completed")
         handler = CancelRunHandler(run_service=run_svc)
 
@@ -296,7 +296,7 @@ class TestCancelRunHandler:
 
     def test_cancel_failed_rejected(self) -> None:
         """failed 状态不允许取消."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="failed")
         handler = CancelRunHandler(run_service=run_svc)
 
@@ -305,7 +305,7 @@ class TestCancelRunHandler:
 
     def test_cancel_not_found(self) -> None:
         """运行不存在抛 ValueError."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = None
         handler = CancelRunHandler(run_service=run_svc)
 
@@ -318,7 +318,7 @@ class TestRetryRunHandler:
 
     def test_retry_failed_run(self) -> None:
         """重试 failed 状态的运行创建新 run 并传递 config_json."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(
             status="failed",
             config_json='{"start_date":"2025-01-01"}',
@@ -337,7 +337,7 @@ class TestRetryRunHandler:
 
     def test_retry_cancelled_run(self) -> None:
         """重试 cancelled 状态的运行成功."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="cancelled")
         handler = RetryRunHandler(run_service=run_svc)
 
@@ -346,7 +346,7 @@ class TestRetryRunHandler:
 
     def test_retry_pending_rejected(self) -> None:
         """pending 状态不允许重试."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="pending")
         handler = RetryRunHandler(run_service=run_svc)
 
@@ -356,7 +356,7 @@ class TestRetryRunHandler:
 
     def test_retry_running_rejected(self) -> None:
         """running 状态不允许重试."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(status="running")
         handler = RetryRunHandler(run_service=run_svc)
 
@@ -365,7 +365,7 @@ class TestRetryRunHandler:
 
     def test_retry_not_found(self) -> None:
         """运行不存在抛 ValueError."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = None
         handler = RetryRunHandler(run_service=run_svc)
 
@@ -374,7 +374,7 @@ class TestRetryRunHandler:
 
     def test_retry_preserves_strategy_version(self) -> None:
         """重试保留原始 strategy_version."""
-        run_svc = Mock(spec=StrategyRunService)
+        run_svc = Mock(spec=StrategyRunLifecycleStore)
         run_svc.get_run.return_value = _make_run_record(
             status="failed",
             strategy_version="2",

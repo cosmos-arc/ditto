@@ -6,6 +6,7 @@ Provides write access to quarantine data.
 
 import orjson
 import polars as pl
+
 from ditto_data.storage.sqlite_client import SQLiteClient
 
 

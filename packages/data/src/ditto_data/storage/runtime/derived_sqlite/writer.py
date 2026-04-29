@@ -1,6 +1,7 @@
 """SQLite-backed writer for unified derived runtime metadata."""
 
 import orjson
+
 from ditto_data.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,

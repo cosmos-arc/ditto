@@ -5,7 +5,7 @@
 这些是纯粹的工程技术实现，不包含任何业务逻辑或领域特定规则。
 """
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -80,7 +80,7 @@ class FileLockManager:
         )
 
     @contextmanager
-    def acquire(self, name: str, timeout: float = 30.0) -> Iterator[None]:
+    def acquire(self, name: str, timeout: float = 30.0) -> Generator[None, None, None]:
         """
         获取文件锁的上下文管理器.
 

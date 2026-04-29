@@ -68,7 +68,11 @@ class ConfigInitCoordinator:
         """注册初始化提供者。"""
         with self._lock:
             self._providers.append(provider)
-            logger.debug(f"Registered config init provider: {provider.name}")
+            logger.debug(
+                "Registered config init provider",
+                event="config_init_provider_registered",
+                provider=provider.name,
+            )
 
     def initialize(
         self,
@@ -119,11 +123,20 @@ class ConfigInitCoordinator:
 
                 status_str = "success" if result.success else "failed"
                 logger.info(
-                    f"Config init {provider.name}: {status_str} - {result.message}"
+                    "Config init completed",
+                    event="config_init_completed",
+                    provider=provider.name,
+                    status=status_str,
+                    message=result.message,
                 )
 
             except Exception as e:
-                logger.error(f"Config init {provider.name} failed: {e}")
+                logger.error(
+                    "Config init failed",
+                    event="config_init_failed",
+                    provider=provider.name,
+                    error=str(e),
+                )
                 results[provider.name] = InitResult(
                     provider=provider.name,
                     success=False,
@@ -150,7 +163,11 @@ class ConfigInitCoordinator:
                 need_init = provider.check(data_root)
                 status[provider.name] = need_init
             except Exception as e:
-                logger.warning(f"Check {provider.name} failed: {e}")
+                logger.warning(
+                    "Config provider check failed",
+                    provider=provider.name,
+                    error=str(e),
+                )
                 status[provider.name] = True
 
         return status

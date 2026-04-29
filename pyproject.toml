@@ -149,6 +149,11 @@ unfixable = []
 "packages/data/src/ditto_data/sources/tushare/adapters/index.py" = ["RUF001"]
 "packages/data/src/ditto_data/sources/tushare/adapters/fundamental.py" = ["RUF001"]
 
+# Kernel tracing — Protocol __call__ 和通用装饰器签名不可避免使用 Any
+"packages/kernel/src/ditto_kernel/tracing.py" = ["ANN401", "D102"]
+# Observability bridge — 桥接函数签名需匹配 TraceHandler Protocol（Any）
+"interfaces/src/ditto_interfaces/registry/infra/observability.py" = ["ANN401"]
+
 # E2E 测试
 "interfaces/tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
 

@@ -36,7 +36,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunService,
+    StrategyRunLifecycleStore,
     StrategyRunWriterProtocol,
 )
 from ditto_data.sources.source import DataSources
@@ -395,9 +395,9 @@ class RuntimeProvider(Provider):
         self,
         strategy_run_reader: SQLiteStrategyRunReader,
         strategy_run_writer: StrategyRunWriterProtocol,
-    ) -> StrategyRunService:
-        """策略运行生命周期服务."""
-        return StrategyRunService(
+    ) -> StrategyRunLifecycleStore:
+        """策略运行生命周期存储."""
+        return StrategyRunLifecycleStore(
             reader=strategy_run_reader,
             writer=strategy_run_writer,
         )

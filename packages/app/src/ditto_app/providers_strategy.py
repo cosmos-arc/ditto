@@ -14,7 +14,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunService as StrategyRunLifecycleService,
+    StrategyRunLifecycleStore,
 )
 
 from ditto_app.query.backtest import BacktestQueryFacade
@@ -52,7 +52,7 @@ class AppStrategyQueryProvider(Provider):
     @provide
     def run_read_model(
         self,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
     ) -> RunReadModel:
         """回测运行读模型."""
         return RunReadModel(run_service=run_service)
@@ -86,7 +86,7 @@ class AppStrategyQueryProvider(Provider):
     @provide
     def lineage_query_facade(
         self,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
     ) -> LineageQueryFacade:
         """运行血统查询 facade — 提供 lineage chain 查询."""
         return LineageQueryFacade(run_service=run_service)

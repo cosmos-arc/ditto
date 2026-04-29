@@ -31,6 +31,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import polars as pl
+from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_engine.alpha.context import StrategyContext
@@ -90,6 +91,7 @@ class StrategyPipeline:
     def __init__(self, stages: Sequence[DecisionStage]) -> None:
         self._stages = tuple(stages)
 
+    @traced("engine.alpha.pipeline.process")
     def run(
         self,
         context: StrategyContext,

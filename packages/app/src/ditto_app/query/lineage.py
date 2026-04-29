@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.services.strategy.strategy_run_service import StrategyRunLifecycleStore
 
 from ditto_app.query.backtest import RunSummary, to_run_summary
 
@@ -29,7 +29,7 @@ class LineageChain:
 class LineageQueryFacade:
     """运行血统查询 facade — 提供血统链查询."""
 
-    def __init__(self, run_service: StrategyRunService) -> None:
+    def __init__(self, run_service: StrategyRunLifecycleStore) -> None:
         self._service = run_service
 
     def get_lineage(self, run_id: str) -> LineageChain | None:

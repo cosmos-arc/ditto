@@ -18,6 +18,7 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
+from ditto_kernel.tracing import traced
 
 from ditto_engine.accounting.account import AccountView
 from ditto_engine.accounting.order_book import (
@@ -160,6 +161,7 @@ class SimpleExecutionPlanner:
         self._default_lot_size = default_lot_size
         self._default_order_type = default_order_type
 
+    @traced("engine.execution.plan")
     def plan(
         self,
         target: TargetPortfolioLike,

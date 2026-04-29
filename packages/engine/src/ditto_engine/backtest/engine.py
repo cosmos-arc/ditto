@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
@@ -318,6 +319,7 @@ class EngineLoop:
 
     # -- public ---------------------------------------------------------------
 
+    @traced("engine.backtest.run")
     def run(self) -> EngineResult:
         """
         执行完整回测.

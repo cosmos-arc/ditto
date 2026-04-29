@@ -16,7 +16,7 @@ from ditto_analytics.expression.ast import (
     StringNode,
     UnaryOpNode,
 )
-from ditto_analytics.materialization.contracts import Analysis, AnalysisWarning
+from ditto_analytics.expression.contracts import Analysis, AnalysisWarning
 
 __all__ = ["analyze_expression"]
 

@@ -117,6 +117,8 @@ jupyter = ">=1.1,<2"
 [feature.dev.pypi-dependencies]
 # BasedPyright 类型检查（Pyright fork，更严格的默认设置）
 basedpyright = ">=1.29,<2"
+# coverage — conda-forge 包损坏（无 .py 文件），使用 PyPI 版本
+coverage = ">=7.6,<8"
 
 # ==========================================================
 # 环境定义
@@ -142,6 +144,9 @@ analyze-slow-tests = "python scripts/analyze_slow_tests.py"
 # Lint：代码检查
 lint = "ruff check ."
 
+# Lint imports：架构边界检查（Import Linter）
+lint-imports = "lint-imports"
+
 # Format：代码格式化
 fmt = "ruff format ."
 
@@ -154,8 +159,11 @@ type = "python scripts/type.py"
 # Type all：完整类型检查（供 CI 使用，始终清除缓存）
 type-all = "python scripts/type.py --all --clean"
 
-# Architecture check：架构边界检查（使用 Import Linter）
-arch-check = "lint-imports"
+# Architecture smell check：架构坏味道检查（f-string 日志、缺失 __init__.py、超大文件）
+arch-smells = "python scripts/architecture/check_architecture_smells.py"
+
+# Architecture check：架构边界检查（Import Linter + smell 检查）
+arch-check = { depends-on = ["lint-imports", "arch-smells"] }
 
 # ──────────────────────────────────────────────────────────
 # 测试（使用包装脚本，支持参数驱动）

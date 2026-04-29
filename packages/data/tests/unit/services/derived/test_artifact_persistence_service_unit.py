@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_analytics.materialization import Analysis, CompileIdentity
+from ditto_analytics.expression import Analysis, CompileIdentity
 from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,

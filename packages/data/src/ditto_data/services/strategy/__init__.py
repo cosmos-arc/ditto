@@ -14,7 +14,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunService,
+    StrategyRunLifecycleStore,
 )
 
 __all__ = [
@@ -23,5 +23,5 @@ __all__ = [
     "InstrumentRuleProvider",
     "StrategyArtifactService",
     "StrategyCatalogService",
-    "StrategyRunService",
+    "StrategyRunLifecycleStore",
 ]

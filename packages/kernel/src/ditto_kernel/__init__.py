@@ -36,6 +36,7 @@ from ditto_kernel.strategy import (
     RiskScope,
     RunStatus,
 )
+from ditto_kernel.tracing import traced
 
 __all__ = [
     "CALENDAR_TO_TIMEZONE",
@@ -69,4 +70,5 @@ __all__ = [
     "SimulatedClock",
     "TimeSpec",
     "__version__",
+    "traced",
 ]

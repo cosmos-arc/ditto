@@ -1,8 +1,6 @@
 """摄取协调器工厂 — create_coordinator."""
 
-from __future__ import annotations
-
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -51,7 +49,7 @@ def create_coordinator(
     ingestion_cursor_service: IngestionCursorService | None = None,
     quality_checker: QualityCheckerProtocol | None = None,
     freeze_service: FreezeService | None = None,
-) -> Iterator[IngestionCoordinator]:
+) -> Generator[IngestionCoordinator, None, None]:
     """
     创建 IngestionCoordinator 实例.
 

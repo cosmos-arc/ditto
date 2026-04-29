@@ -197,19 +197,6 @@ class SQLiteStrategySpecReader:
     def __init__(self, pool: SQLitePool) -> None:
         self._pool = pool
 
-    @traced("store.spec_reader.init_schema")
-    def init_schema(self) -> None:
-        """Create strategy_spec table and indexes (idempotent)."""
-        conn = self._pool.get_connection()
-        conn.executescript(
-            _CREATE_TABLE + _CREATE_INDEX_STATUS + _CREATE_INDEX_STRATEGY_ID,
-        )
-        self._pool.commit()
-        logger.debug(
-            "strategy_spec schema initialized",
-            event="spec_schema_init",
-        )
-
     @traced("store.spec_reader.get")
     def get(
         self, strategy_id: str, version: int | None = None

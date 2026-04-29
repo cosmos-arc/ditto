@@ -39,12 +39,13 @@ class PITRecord(Protocol):
 class PITRecordReader[RecordT: PITRecord]:
     """PIT 版本化查询 Reader. V1 内存实现."""
 
-    def __init__(self) -> None:
-        self._records: list[RecordT] = []
+    def __init__(self, backing_store: list[RecordT] | None = None) -> None:
+        self._store: list[RecordT] = backing_store if backing_store is not None else []
 
-    def load(self, records: list[RecordT]) -> None:
-        """加载记录列表（V1 内存实现）."""
-        self._records = list(records)
+    @property
+    def backing_store(self) -> list[RecordT]:
+        """底层存储引用（用于配套 Writer 共享同一存储）."""
+        return self._store
 
     def get(self, instrument_id: InstrumentId, as_of_date: str) -> RecordT | None:
         """
@@ -58,7 +59,7 @@ class PITRecordReader[RecordT: PITRecord]:
         """
         candidates = [
             r
-            for r in self._records
+            for r in self._store
             if r.instrument_id == instrument_id
             and r.effective_from <= as_of_date
             and (r.effective_to is None or r.effective_to > as_of_date)
@@ -71,13 +72,13 @@ class PITRecordReader[RecordT: PITRecord]:
 class PITRecordWriter[RecordT: PITRecord]:
     """PIT 版本化写入 Writer. V1 内存实现."""
 
-    def __init__(self) -> None:
-        self._records: list[RecordT] = []
+    def __init__(self, backing_store: list[RecordT] | None = None) -> None:
+        self._store: list[RecordT] = backing_store if backing_store is not None else []
 
     def write(self, record: RecordT) -> None:
         """写入一条记录."""
-        self._records.append(record)
+        self._store.append(record)
 
-    def get_records(self) -> list[RecordT]:
-        """获取所有已写入的记录（副本）."""
-        return list(self._records)
+    def _get_records(self) -> list[RecordT]:
+        """获取所有已写入的记录（内部接口，仅供测试使用）."""
+        return list(self._store)

@@ -17,10 +17,12 @@ from ditto_data.storage.metadata.fee_schedule_reader import (
     FeeScheduleReader,
     FeeScheduleRecord,
 )
+from ditto_data.storage.metadata.fee_schedule_writer import FeeScheduleWriter
 from ditto_data.storage.metadata.trading_rule_reader import (
     TradingRuleReader,
     TradingRuleRecord,
 )
+from ditto_data.storage.metadata.trading_rule_writer import TradingRuleWriter
 
 InstrumentId = _InstrumentId
 
@@ -70,6 +72,8 @@ class InstrumentRuleProvider:
         _definitions: instrument_id -> dict 映射（V1 内存）。
         _trading_rule_reader: PIT 版本化交易规则 Reader。
         _fee_schedule_reader: PIT 版本化费率 Reader。
+        _trading_rule_writer: PIT Writer（与 Reader 共享 backing store）。
+        _fee_schedule_writer: PIT Writer（与 Reader 共享 backing store）。
 
     """
 
@@ -79,8 +83,23 @@ class InstrumentRuleProvider:
         fee_schedule_reader: FeeScheduleReader | None = None,
     ) -> None:
         self._definitions: dict[InstrumentId, DefinitionRecord] = {}
-        self._trading_rule_reader = trading_rule_reader or TradingRuleReader()
-        self._fee_schedule_reader = fee_schedule_reader or FeeScheduleReader()
+        # 创建共享 backing store 的 Reader/Writer 对
+        if trading_rule_reader is not None:
+            self._trading_rule_reader = trading_rule_reader
+            self._trading_rule_store = trading_rule_reader.backing_store
+        else:
+            self._trading_rule_store: list[TradingRuleRecord] = []
+            self._trading_rule_reader = TradingRuleReader(
+                backing_store=self._trading_rule_store,
+            )
+        if fee_schedule_reader is not None:
+            self._fee_schedule_reader = fee_schedule_reader
+            self._fee_schedule_store = fee_schedule_reader.backing_store
+        else:
+            self._fee_schedule_store: list[FeeScheduleRecord] = []
+            self._fee_schedule_reader = FeeScheduleReader(
+                backing_store=self._fee_schedule_store,
+            )
 
     # ── 加载方法（V1 测试用，生产环境从存储读取）──
 
@@ -90,11 +109,15 @@ class InstrumentRuleProvider:
 
     def load_trading_rules(self, records: list[TradingRuleRecord]) -> None:
         """加载交易规则记录列表."""
-        self._trading_rule_reader.load(records)
+        writer = TradingRuleWriter(backing_store=self._trading_rule_store)
+        for rec in records:
+            writer.write(rec)
 
     def load_fee_schedules(self, records: list[FeeScheduleRecord]) -> None:
         """加载费率记录列表."""
-        self._fee_schedule_reader.load(records)
+        writer = FeeScheduleWriter(backing_store=self._fee_schedule_store)
+        for rec in records:
+            writer.write(rec)
 
     # ── 查询方法 ──
 

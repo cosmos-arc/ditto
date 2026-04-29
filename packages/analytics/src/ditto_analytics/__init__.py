@@ -7,10 +7,9 @@ Ditto Analytics — 因子表达式编译、物化计划、因子计算、因子
     ``ditto_analytics.materialization`` 等。
 """
 
-from ditto_analytics.expression import ExpressionCompiler
+from ditto_analytics.expression import CompiledDerivedExpression, ExpressionCompiler
 from ditto_analytics.factors import FactorContext, FactorSpec
 from ditto_analytics.materialization import (
-    CompiledDerivedExpression,
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
     DerivedMaterializationResult,

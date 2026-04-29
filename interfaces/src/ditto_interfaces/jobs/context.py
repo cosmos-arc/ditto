@@ -8,9 +8,7 @@ Prefect 任务上下文管理（使用 dishka 同步容器）.
 registry/contexts/ingestion.py 中的 create_ingestion_bundle 替代。
 """
 
-from __future__ import annotations
-
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -23,7 +21,7 @@ from ditto_interfaces.registry.container import make_app_container
 
 
 @contextmanager
-def create_prefect_host() -> Iterator[Any]:
+def create_prefect_host() -> Generator[Any, None, None]:
     """
     Prefect Host - 任务级容器生命周期管理.
 
@@ -44,8 +42,8 @@ def create_prefect_host() -> Iterator[Any]:
 
 
 @contextmanager
-def create_dq_and_metadata_context() -> Iterator[
-    tuple[QualityEngineProtocol, MetadataQueryFacade, MarketQueryFacade]
+def create_dq_and_metadata_context() -> Generator[
+    tuple[QualityEngineProtocol, MetadataQueryFacade, MarketQueryFacade], None, None
 ]:
     """
     创建 DQ、MetadataQueryFacade 和 MarketQueryFacade 上下文，使用 dishka 容器管理依赖.

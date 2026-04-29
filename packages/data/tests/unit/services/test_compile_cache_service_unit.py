@@ -10,7 +10,7 @@ import orjson
 import polars as pl
 import pytest
 from ditto_analytics.compile_cache import SQLiteCompileCache
-from ditto_analytics.materialization import (
+from ditto_analytics.expression import (
     CompiledDerivedExpression,
 )
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile

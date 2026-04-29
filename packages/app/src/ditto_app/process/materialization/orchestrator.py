@@ -14,9 +14,8 @@ from uuid import uuid4
 
 import polars as pl
 from ditto_analytics.compile_cache import SQLiteCompileCache
+from ditto_analytics.expression import CompiledDerivedExpression, CompileIdentity
 from ditto_analytics.materialization import (
-    CompiledDerivedExpression,
-    CompileIdentity,
     DerivedExecutionPlan,
     DerivedExecutionPlanner,
     DerivedMaterializationRequest,
@@ -49,14 +48,12 @@ from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 
 from ditto_app.config import now_iso
 from ditto_app.process.materialization.dependencies import apply_cs_amplification
+from ditto_app.process.materialization.dependency_refs import dependency_refs
 from ditto_app.process.materialization.factor_orthogonalization import (
     FactorOrthogonalizationService,
 )
-from ditto_app.process.materialization.helpers import (
-    build_manifest_record,
-    build_minimal_dq_record,
-    dependency_refs,
-)
+from ditto_app.process.materialization.manifest_builder import build_manifest_record
+from ditto_app.process.materialization.minimal_dq import build_minimal_dq_record
 from ditto_app.process.materialization.runtime_input_provider import (
     RuntimeDerivedInputProvider,
 )

@@ -19,7 +19,7 @@ from ditto_data.services.strategy.strategy_artifact_service import (
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.services.strategy.strategy_run_service import StrategyRunLifecycleStore
 from ditto_data.sources.source import DataSources
 from ditto_interfaces.registry.infra import ConfigProvider
 
@@ -110,7 +110,7 @@ class TestRuntimeProviderDerivedCatalog:
             RuntimeProvider(),
         )
 
-        service = container.get(StrategyRunService)
+        service = container.get(StrategyRunLifecycleStore)
         service.create_run(
             run_id="run-001",
             strategy_id="momentum-etf",
@@ -119,7 +119,7 @@ class TestRuntimeProviderDerivedCatalog:
         service.mark_completed("run-001")
         record = service.get_run("run-001")
 
-        assert isinstance(service, StrategyRunService)
+        assert isinstance(service, StrategyRunLifecycleStore)
         assert record is not None
         assert record.strategy_version == "2026.03"
         assert record.status == "completed"

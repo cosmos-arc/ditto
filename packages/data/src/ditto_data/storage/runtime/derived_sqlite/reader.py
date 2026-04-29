@@ -3,6 +3,7 @@
 from typing import Any
 
 import orjson
+
 from ditto_data.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,

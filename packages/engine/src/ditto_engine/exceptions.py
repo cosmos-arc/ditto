@@ -7,4 +7,31 @@ class EngineError(DittoError):
     """引擎域基础异常."""
 
 
-__all__ = ["EngineError"]
+class StateTransitionError(EngineError):
+    """Invalid domain state transition."""
+
+
+class InvalidOrderError(EngineError):
+    """Invalid order or execution request."""
+
+
+class BacktestConfigError(EngineError):
+    """Invalid backtest configuration."""
+
+
+class DataIntegrityError(EngineError):
+    """Invalid or unsafe input data for engine execution."""
+
+
+class PortfolioConstraintError(EngineError):
+    """Portfolio or risk constraint violation."""
+
+
+__all__ = [
+    "BacktestConfigError",
+    "DataIntegrityError",
+    "EngineError",
+    "InvalidOrderError",
+    "PortfolioConstraintError",
+    "StateTransitionError",
+]

@@ -49,7 +49,11 @@ class ConfigValidationProvider(ConfigInitProvider):
 
         if errors:
             message = "; ".join(errors)
-            logger.error(f"Config validation failed: {message}")
+            logger.error(
+                "Config validation failed",
+                event="config_validation_failed",
+                message=message,
+            )
             return InitResult(
                 provider=self.name,
                 success=False,

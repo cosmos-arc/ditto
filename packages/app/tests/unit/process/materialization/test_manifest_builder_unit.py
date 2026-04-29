@@ -1,7 +1,7 @@
 """Tests for manifest_builder helpers."""
 
 import pytest
-from ditto_app.process.materialization.helpers import dependency_refs
+from ditto_app.process.materialization.dependency_refs import dependency_refs
 
 
 class TestDependencyRefs:

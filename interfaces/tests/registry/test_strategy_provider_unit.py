@@ -35,7 +35,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunService as DataStrategyRunService,
+    StrategyRunLifecycleStore as DataStrategyRunLifecycleStore,
 )
 from ditto_data.sources.source import DataSources
 from ditto_engine.alpha.pipeline import StrategyPipeline
@@ -190,7 +190,7 @@ class TestAppBuilderFactory:
         assert isinstance(backtest_runtime_builder, BacktestRuntimeBuilder)
         assert isinstance(run_service, StrategyRunService)
         assert isinstance(run_service._artifact_service, StrategyArtifactService)
-        assert isinstance(run_service._run_service, DataStrategyRunService)
+        assert isinstance(run_service._run_service, DataStrategyRunLifecycleStore)
         assert isinstance(run_service._assembler, StrategyInputAssembler)
         assert run_service._assembler.strategy_id == "momentum-etf"
 
@@ -205,7 +205,7 @@ class TestAppBuilderFactory:
         )
         assert isinstance(
             backtest_service._options.run_service,
-            DataStrategyRunService,
+            DataStrategyRunLifecycleStore,
         )
         container.close()
 

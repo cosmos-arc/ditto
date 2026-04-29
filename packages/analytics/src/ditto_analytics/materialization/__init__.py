@@ -1,10 +1,12 @@
 """Derived materialization models."""
 
-from ditto_analytics.materialization.contracts import (
+from ditto_analytics.expression.contracts import (
     Analysis,
     AnalysisWarning,
     CompiledDerivedExpression,
     CompileIdentity,
+)
+from ditto_analytics.materialization.contracts import (
     DerivedExecutionPlan,
     DerivedInvalidationEvent,
     DerivedMaterializationRequest,

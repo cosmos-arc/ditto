@@ -9,16 +9,17 @@ from typing import Any
 
 import orjson
 import polars as pl
-from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
-from ditto_data.models.publication_safety import (
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
-)
 from ditto_infra.foundation import logger
 from ditto_infra.foundation.util.io import (
     ParquetCompression,
     atomic_bytes_write,
     atomic_write,
+)
+
+from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
+from ditto_data.models.publication_safety import (
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
 )
 
 __all__ = ["ArtifactMetadataParams", "DerivedArtifactWriter", "extract_partition_keys"]

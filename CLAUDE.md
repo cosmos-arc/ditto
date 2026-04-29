@@ -84,6 +84,7 @@
 
 详细分层规范：
 - 总体架构边界、命名与抽象层级 → [docs/architecture/boundaries-and-abstraction-standards.md](docs/architecture/boundaries-and-abstraction-standards.md)
+- Agent 快速参考 → [docs/architecture/agent-context-pack.md](docs/architecture/agent-context-pack.md)
 - Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
@@ -91,6 +92,10 @@
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
 - App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
 - Interfaces → [interfaces/CLAUDE.md](interfaces/CLAUDE.md)
+
+架构心智模型以 diamond 为准：`data`、`analytics`、`engine` 是并列核心平面；
+`.importlinter` 中的 layers 顺序是工具表达限制，不代表业务层级高低。
+平面互斥由 explicit forbidden contracts 固化。
 
 ### 允许的依赖（严格限制）
 

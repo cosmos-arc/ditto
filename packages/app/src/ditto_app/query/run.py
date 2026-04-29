@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ditto_data.models.strategy_run import StrategyRunRecord
-from ditto_data.services.strategy.strategy_run_service import StrategyRunService
+from ditto_data.services.strategy.strategy_run_service import StrategyRunLifecycleStore
 
 __all__ = ["RunReadModel"]
 
@@ -11,7 +11,7 @@ __all__ = ["RunReadModel"]
 class RunReadModel:
     """回测运行读模型 — 跨策略列表查询与过滤."""
 
-    def __init__(self, run_service: StrategyRunService) -> None:
+    def __init__(self, run_service: StrategyRunLifecycleStore) -> None:
         self._service = run_service
 
     def list_runs(

@@ -28,6 +28,15 @@ def _make(**overrides: object) -> FeeScheduleRecord:
     return FeeScheduleRecord(**{**_DEFAULTS, **overrides})
 
 
+def _seed_reader(records: list[FeeScheduleRecord]) -> FeeScheduleReader:
+    """创建共享 backing store 的 Reader/Writer 对，通过 Writer 写入数据."""
+    store: list[FeeScheduleRecord] = []
+    writer = FeeScheduleWriter(backing_store=store)
+    for rec in records:
+        writer.write(rec)
+    return FeeScheduleReader(backing_store=store)
+
+
 def _check_effective_from_boundary(
     reader: FeeScheduleReader,
     *,
@@ -37,7 +46,7 @@ def _check_effective_from_boundary(
     instrument_id: int = 1,
 ) -> None:
     """effective_from <= as_of_date: as_of_date == effective_from 应匹配."""
-    reader.load([_make(effective_from=effective_from)])
+    reader = _seed_reader([_make(effective_from=effective_from)])
     assert reader.get(instrument_id, match_date) is not None
     assert reader.get(instrument_id, miss_date) is None
 
@@ -51,7 +60,7 @@ def _check_effective_to_boundary(
     instrument_id: int = 1,
 ) -> None:
     """effective_to > as_of_date: boundary 是 exclusive, == 应不匹配."""
-    reader.load([_make(effective_to=effective_to)])
+    reader = _seed_reader([_make(effective_to=effective_to)])
     assert reader.get(instrument_id, match_date) is not None
     assert reader.get(instrument_id, miss_date) is None
 
@@ -69,7 +78,7 @@ def _check_latest_version(
     instrument_id: int = 1,
 ) -> None:
     """多个版本匹配时, 选择 effective_from 最大的版本."""
-    reader.load([_make(**old_attrs), _make(**new_attrs)])
+    reader = _seed_reader([_make(**old_attrs), _make(**new_attrs)])
     result_old = reader.get(instrument_id, old_date)
     assert result_old is not None
     assert getattr(result_old, check_field) == old_value
@@ -85,7 +94,7 @@ def _check_null_effective_to(
     instrument_id: int = 1,
 ) -> None:
     """effective_to IS NULL 表示版本仍然有效."""
-    reader.load([_make()])
+    reader = _seed_reader([_make()])
     assert reader.get(instrument_id, far_future_date) is not None
 
 
@@ -133,8 +142,7 @@ class TestFeeScheduleReaderPIT:
         )
 
     def test_get_historical_version(self) -> None:
-        reader = FeeScheduleReader()
-        reader.load(
+        reader = _seed_reader(
             [
                 _make(
                     as_of_date="2023-01-01",
@@ -167,12 +175,12 @@ class TestFeeScheduleWriter:
         writer = FeeScheduleWriter()
         record = _make()
         writer.write(record)
-        assert len(writer.get_records()) == 1
-        assert writer.get_records()[0] is record
+        assert len(writer._get_records()) == 1
+        assert writer._get_records()[0] is record
 
     def test_get_records_returns_copy(self) -> None:
         writer = FeeScheduleWriter()
         writer.write(_make())
-        records = writer.get_records()
+        records = writer._get_records()
         records.clear()
-        assert len(writer.get_records()) == 1
+        assert len(writer._get_records()) == 1

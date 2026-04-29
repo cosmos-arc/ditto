@@ -329,11 +329,6 @@ class SQLiteStrategyRunReader:
     def __init__(self, pool: SQLitePool) -> None:
         self._pool = pool
 
-    @traced("store.strategy_run_reader.init_schema")
-    def init_schema(self) -> None:
-        """Create strategy_run table + indexes (idempotent)."""
-        _init_schema(self._pool)
-
     @traced("store.strategy_run_reader.get")
     def get(self, run_id: str) -> StrategyRunRecord | None:
         """Get a strategy run by run_id."""

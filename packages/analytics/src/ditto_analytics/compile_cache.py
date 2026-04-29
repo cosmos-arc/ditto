@@ -23,7 +23,7 @@ import orjson
 from ditto_kernel.strategy import DerivedSpec
 
 from ditto_analytics.expression import ExpressionCompiler, compute_compile_cache_key
-from ditto_analytics.materialization import CompiledDerivedExpression
+from ditto_analytics.expression.contracts import CompiledDerivedExpression
 
 __all__ = ["SQLiteCompileCache", "SQLiteCompileCacheBackend"]
 

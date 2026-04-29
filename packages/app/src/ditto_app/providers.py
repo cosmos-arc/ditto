@@ -48,7 +48,7 @@ from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunService as StrategyRunLifecycleService,
+    StrategyRunLifecycleStore,
 )
 from ditto_data.services.trade import TradeService
 from ditto_data.sources.tdx.source import TdxSource
@@ -239,7 +239,7 @@ class AppCommandProvider(Provider):
     def backtest_run_handler(
         self,
         catalog_service: StrategyCatalogService,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
         factor_bridge: FactorBridge,
     ) -> BacktestRunHandler:
         """回测触发 Command Handler."""
@@ -252,7 +252,7 @@ class AppCommandProvider(Provider):
     @provide
     def cancel_run_handler(
         self,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
     ) -> CancelRunHandler:
         """取消运行 Command Handler."""
         return CancelRunHandler(run_service=run_service)
@@ -260,7 +260,7 @@ class AppCommandProvider(Provider):
     @provide
     def retry_run_handler(
         self,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
     ) -> RetryRunHandler:
         """重试运行 Command Handler."""
         return RetryRunHandler(run_service=run_service)
@@ -268,7 +268,7 @@ class AppCommandProvider(Provider):
     @provide
     def run_lifecycle_service(
         self,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
     ) -> RunLifecycleService:
         """RunLifecycleService Protocol 绑定 — 路由层通过此协议解耦 data 层."""
         return run_service
@@ -493,7 +493,7 @@ class AppBuilderFactory(Provider):
         self,
         audit_service: ExecutionAuditService,
         artifact_service: StrategyArtifactService,
-        run_service: StrategyRunLifecycleService,
+        run_service: StrategyRunLifecycleStore,
         runtime_builder: StrategyRuntimeBuilder,
         backtest_runtime_builder: BacktestRuntimeBuilder,
     ) -> StrategyServiceFactory:

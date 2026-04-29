@@ -183,19 +183,6 @@ class SQLiteStrategyArtifactReader:
     def __init__(self, pool: SQLitePool) -> None:
         self._pool = pool
 
-    @traced("store.artifact_reader.init_schema")
-    def init_schema(self) -> None:
-        """Create strategy_artifact table and indexes (idempotent)."""
-        conn = self._pool.get_connection()
-        conn.executescript(
-            _CREATE_TABLE + _CREATE_INDEX_STRATEGY_ID + _CREATE_INDEX_STATUS,
-        )
-        self._pool.commit()
-        logger.debug(
-            "strategy_artifact schema initialized",
-            event="artifact_schema_init",
-        )
-
     @traced("store.artifact_reader.get")
     def get(self, artifact_id: str) -> StrategyArtifactRecord | None:
         """Get a strategy artifact by artifact_id."""

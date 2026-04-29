@@ -1,8 +1,6 @@
 """摄入上下文工厂。"""
 
-from __future__ import annotations
-
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from ditto_app.command.quality_check import CheckDataQualityHandler
@@ -30,7 +28,9 @@ from ditto_interfaces.registry.contexts.bundle import IngestionBundle
 
 
 @contextmanager
-def create_ingestion_bundle(source: str = "tushare") -> Iterator[IngestionBundle]:
+def create_ingestion_bundle(
+    source: str = "tushare",
+) -> Generator[IngestionBundle, None, None]:
     """
     创建摄入上下文组合包（单容器）.
 

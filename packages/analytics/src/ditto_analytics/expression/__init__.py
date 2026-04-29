@@ -5,8 +5,18 @@ from ditto_analytics.expression.compiler import (
     compute_compile_cache_key,
     detect_dependency_cycles,
 )
+from ditto_analytics.expression.contracts import (
+    Analysis,
+    AnalysisWarning,
+    CompiledDerivedExpression,
+    CompileIdentity,
+)
 
 __all__ = [
+    "Analysis",
+    "AnalysisWarning",
+    "CompileIdentity",
+    "CompiledDerivedExpression",
     "ExpressionCompiler",
     "compute_compile_cache_key",
     "detect_dependency_cycles",

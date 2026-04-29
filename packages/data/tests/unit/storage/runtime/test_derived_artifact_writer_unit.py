@@ -10,7 +10,7 @@ from unittest.mock import patch
 import orjson
 import polars as pl
 import pytest
-from ditto_analytics.materialization import Analysis, CompileIdentity
+from ditto_analytics.expression import Analysis, CompileIdentity
 from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,

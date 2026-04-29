@@ -1,4 +1,4 @@
-"""StrategyRunService — 策略运行生命周期管理."""
+"""StrategyRunLifecycleStore — 策略运行生命周期持久化存储."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from ditto_kernel.strategy import RunStatus
 from ditto_data.models.strategy_run import StrategyRunRecord
 
 __all__ = [
+    "StrategyRunLifecycleStore",
     "StrategyRunReaderProtocol",
-    "StrategyRunService",
     "StrategyRunWriterProtocol",
 ]
 
@@ -76,8 +76,12 @@ class StrategyRunWriterProtocol(Protocol):
         ...
 
 
-class StrategyRunService:
-    """策略运行服务 — 生命周期管理 (pending → running → completed/failed)."""
+class StrategyRunLifecycleStore:
+    """
+    Persistent strategy run lifecycle store.
+
+    pending -> running -> completed/failed
+    """
 
     def __init__(
         self,

@@ -48,6 +48,9 @@ def shutdown() -> None:
             if hasattr(provider, "shutdown"):
                 provider.shutdown()
     except Exception as e:
-        logger.debug(f"Graceful shutdown completed with warnings: {e}")
+        logger.debug(
+            "Graceful shutdown completed with warnings",
+            error=str(e),
+        )
 
     _Registry.reset()

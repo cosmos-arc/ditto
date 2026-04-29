@@ -29,8 +29,16 @@ exclude_type_checking_imports = true
 [importlinter:contract:layered-architecture]
 name = Layered Architecture
 type = layers
-# 从高层到低层：Interfaces → App → Engine → Data → Infra
-# Kernel 在最底层，但 layers 检查不包含它（Kernel 无业务依赖，被所有层依赖）
+# Technical ordering for import-linter's `layers` contract.
+# This is not the domain architecture model.
+#
+# Domain architecture is a diamond:
+#   interfaces -> app -> {data, analytics, engine} -> kernel
+#   infra is horizontal foundation.
+#
+# import-linter `layers` needs a sequence, so this contract only guards
+# broad top-to-bottom imports. Parallel-plane isolation is enforced by
+# the explicit forbidden contracts below.
 layers =
     ditto_interfaces
     ditto_app
@@ -111,6 +119,15 @@ source_modules =
     ditto_analytics.**
 forbidden_modules =
     ditto_interfaces.**
+
+# Analytics 内部方向：expression 禁止依赖 materialization
+[importlinter:contract:analytics-expression-no-materialization]
+name = Analytics expression must not import materialization
+type = forbidden
+source_modules =
+    ditto_analytics.expression.**
+forbidden_modules =
+    ditto_analytics.materialization.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Engine ↔ Data 边界：双向禁止互相依赖
@@ -324,6 +341,10 @@ ignore_imports =
     ditto_data.storage.** -> ditto_data.models.strategy
     ditto_data.storage.** -> ditto_data.models.strategy_run
     ditto_data.storage.** -> ditto_data.models.trade
+    ditto_data.storage.** -> ditto_data.models.derived
+    ditto_data.storage.** -> ditto_data.models.publication_safety
+    ditto_data.storage.** -> ditto_data.models.ingestion
+    ditto_data.storage.** -> ditto_data.models.common
 unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:data-sources-no-storage-import]

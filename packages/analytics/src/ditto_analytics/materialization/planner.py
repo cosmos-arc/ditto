@@ -7,8 +7,8 @@ from datetime import date, timedelta
 
 from ditto_kernel.strategy import DerivedSpec
 
+from ditto_analytics.expression.contracts import CompiledDerivedExpression
 from ditto_analytics.materialization.contracts import (
-    CompiledDerivedExpression,
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
 )

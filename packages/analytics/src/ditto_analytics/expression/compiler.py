@@ -8,6 +8,7 @@ from hashlib import sha256
 import orjson
 import polars as pl
 from ditto_kernel.strategy import DerivedSpec
+from ditto_kernel.tracing import traced
 
 from ditto_analytics.expression.analyzer import analyze_expression
 from ditto_analytics.expression.ast import (
@@ -22,15 +23,15 @@ from ditto_analytics.expression.ast import (
     UnaryOpNode,
 )
 from ditto_analytics.expression.codegen import compile_expression
-from ditto_analytics.expression.diagnostics import make_compile_error
-from ditto_analytics.expression.lexer import tokenize
-from ditto_analytics.expression.parser import ExpressionParser
-from ditto_analytics.expression.registry import P0_OPERATOR_VERSIONS
-from ditto_analytics.materialization.contracts import (
+from ditto_analytics.expression.contracts import (
     Analysis,
     CompiledDerivedExpression,
     CompileIdentity,
 )
+from ditto_analytics.expression.diagnostics import make_compile_error
+from ditto_analytics.expression.lexer import tokenize
+from ditto_analytics.expression.parser import ExpressionParser
+from ditto_analytics.expression.registry import P0_OPERATOR_VERSIONS
 from ditto_analytics.validation import validate_derived_spec
 
 __all__ = [
@@ -116,6 +117,7 @@ def compute_compile_cache_key(
 class ExpressionCompiler:
     """Compile a derived expression into executable Polars state."""
 
+    @traced("analytics.expression.compile")
     def compile(
         self,
         spec: DerivedSpec,

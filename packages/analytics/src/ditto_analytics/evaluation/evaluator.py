@@ -8,6 +8,7 @@ from typing import Protocol
 
 import polars as pl
 import polars.exceptions as pl_exc
+from ditto_kernel.tracing import traced
 
 from ditto_analytics.evaluation.metrics import (
     factor_exposure,
@@ -185,6 +186,7 @@ class FactorEvaluator:
         self._rf_provider = risk_factor_provider
         self._rf_ids = risk_factor_ids or []
 
+    @traced("analytics.evaluation.evaluate")
     def evaluate(
         self,
         factor_df: pl.DataFrame,

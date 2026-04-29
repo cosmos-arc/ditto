@@ -849,7 +849,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_compiled_nonempty_returns_bundle_builder(self) -> None:
         """compiled_expressions 非空 → 返回可调用的 bundle_builder."""
         import polars as pl
-        from ditto_analytics.materialization.contracts import (
+        from ditto_analytics.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
@@ -919,7 +919,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_run_id_param_propagated_to_bundle(self) -> None:
         """传入的 run_id 参数应传递到生成的 StrategyInputBundle.run_id (F10)."""
         import polars as pl
-        from ditto_analytics.materialization.contracts import (
+        from ditto_analytics.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
@@ -993,7 +993,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_compilation_failure_propagates_error(self) -> None:
         """当 FactorBridge.compute_signals 因无效表达式抛异常时，builder 传播异常."""
         import polars as pl
-        from ditto_analytics.materialization.contracts import (
+        from ditto_analytics.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
@@ -1070,7 +1070,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_lookback_days_from_compiled_max_lookback(self) -> None:
         """lookback_days 应取 compiled.expressions 中 analysis.lookback 的最大值."""
         import polars as pl
-        from ditto_analytics.materialization.contracts import (
+        from ditto_analytics.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,

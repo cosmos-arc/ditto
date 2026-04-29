@@ -47,7 +47,11 @@ class DataSourceValidationProvider(ConfigInitProvider):
 
         if errors:
             message = "; ".join(errors)
-            logger.error(f"Data source validation failed: {message}")
+            logger.error(
+                "Data source validation failed",
+                event="data_source_validation_failed",
+                message=message,
+            )
             return InitResult(
                 provider=self.name,
                 success=False,
