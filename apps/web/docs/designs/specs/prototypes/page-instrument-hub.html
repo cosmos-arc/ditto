@@ -2806,12 +2806,13 @@
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" data-contract-slot="sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
-        <section class="context-section pos-relative" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent" data-reveal="fade-up" data-reveal-delay="120">
-          <div class="context-header">
-            <span class="context-title">相关信号</span>
+        <details class="context-section pos-relative" data-collapse-priority="l2" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent" data-reveal="fade-up" data-reveal-delay="120" open>
+          <summary class="context-section-header context-header">
+            <span class="context-section-title context-title">相关信号</span>
             <span class="context-count">3</span>
-          </div>
-          <div class="context-body">
+            <span class="collapse-count">3 条</span>
+          </summary>
+          <div class="context-section-body context-body">
             <div class="signal-item" tabindex="0" role="button" data-reveal="fade-up" data-reveal-delay="140">
               <div class="signal-header">
                 <span class="signal-dot opportunity" aria-hidden="true"></span>
@@ -2845,16 +2846,17 @@
               <div data-confidence="0.78" data-confidence-label="Bullish" data-tooltip="综合信号评级: 看多 (0.78)" data-tooltip-pos="top"></div>
             </div>
           </div>
-        </section>
+        </details>
 
         <!-- Related Research (默认折叠 — 低频补充) -->
-        <details class="context-section" aria-label="关联研究" data-reveal="fade-up" data-reveal-delay="160">
-          <summary class="context-header">
-            <span class="context-title">关联研究</span>
+        <details class="context-section" data-collapse-priority="l3" aria-label="关联研究" data-reveal="fade-up" data-reveal-delay="160">
+          <summary class="context-section-header context-header">
+            <span class="context-section-title context-title">关联研究</span>
             <span class="collapse-count">2 条</span>
+            <span class="collapse-summary">年报点评 · 白酒行业报告</span>
             <span class="context-count">2</span>
           </summary>
-          <div class="context-body">
+          <div class="context-section-body context-body">
             <div class="research-item" tabindex="0" role="button">
               <span class="research-title">贵州茅台2025年年报点评：Q4业绩稳健，直销占比持续提升</span>
               <div class="research-meta">
@@ -2875,18 +2877,20 @@
         </details>
 
         <!-- Notes -->
-        <section class="context-section" aria-label="备注" data-reveal="fade-up" data-reveal-delay="200">
-          <div class="context-header">
-            <span class="context-title">备注</span>
-          </div>
-          <div class="context-body">
+        <details class="context-section" data-collapse-priority="l3" aria-label="备注" data-reveal="fade-up" data-reveal-delay="200">
+          <summary class="context-section-header context-header">
+            <span class="context-section-title context-title">备注</span>
+            <span class="collapse-count">1 条</span>
+            <span class="collapse-summary">关注 Q2 批价走势</span>
+          </summary>
+          <div class="context-section-body context-body">
             <textarea class="note-input" placeholder="添加备注..." aria-label="添加备注"></textarea>
             <div class="note-item">
               <div class="note-text">关注Q2批价走势，当前飞天批价2,680元，环比+30元。若批价站稳2,700可加仓。</div>
               <div class="note-time">2026-03-30 16:42 — 陈</div>
             </div>
           </div>
-        </section>
+        </details>
       </aside>
 
       <!-- ── State Variants: 12. Sidebar (Related/Signals/Notes) ── -->

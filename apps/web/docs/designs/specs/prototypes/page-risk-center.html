@@ -1761,11 +1761,11 @@
 
               <!-- Tab Panel: Breaches -->
               <div data-tab-panel="breaches">
-                <div class="context-section">
-                  <div class="context-section-header">
+                <details class="context-section" data-collapse-priority="l2" open>
+                  <summary class="context-section-header">
                     <span class="context-section-title">活跃突破</span>
-                    <span class="context-section-count" data-tooltip="当前无指标突破风控线" data-tooltip-delay="500">0 突破</span>
-                  </div>
+                    <span class="collapse-count" data-tooltip="当前无指标突破风控线" data-tooltip-delay="500">0 突破</span>
+                  </summary>
                   <div class="context-section-body">
 
                     <!-- All-clear status -->
@@ -1832,16 +1832,17 @@
                     </div>
 
                   </div>
-                </div>
+                </details>
               </div>
 
               <!-- Tab Panel: Stress Test -->
               <div data-tab-panel="stress-test">
-                <div class="context-section">
-                  <div class="context-section-header">
+                <details class="context-section" data-collapse-priority="l2" open>
+                  <summary class="context-section-header">
                     <span class="context-section-title">压力测试</span>
+                    <span class="collapse-count">3 情景</span>
                     <span class="context-section-action">运行测试</span>
-                  </div>
+                  </summary>
                   <div class="context-section-body">
 
                     <div class="stress-row">
@@ -1884,7 +1885,7 @@
                     </div>
 
                   </div>
-                </div>
+                </details>
               </div>
             </div><!-- /data-tabs="risk-activity-tabs" -->
 

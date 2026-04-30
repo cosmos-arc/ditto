@@ -2624,10 +2624,12 @@
     <!-- ═══ Activity Stack (300px right) ═══ -->
     <div class="activity-stack right-rail" data-contract-slot="activity" role="complementary" aria-label="研究活动与复审队列">
       <!-- Section 1: 最近运行 -->
-      <div class="context-section" data-reveal="fade-up" data-reveal-delay="100">
-        <div class="context-section-header">
+      <details class="context-section" data-collapse-priority="l3" data-reveal="fade-up" data-reveal-delay="100">
+        <summary class="context-section-header">
           <span class="context-section-title">最近运行</span>
-        </div>
+          <span class="collapse-count">4 次</span>
+          <span class="collapse-summary">价值回测完成 · 北向验证运行中</span>
+        </summary>
         <div class="context-section-body">
           <!-- Run 1: Completed -->
           <div class="run-item">
@@ -2689,14 +2691,14 @@
             </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <!-- Section 2: 审核/实验队列 -->
-      <div class="context-section" data-reveal="fade-up" data-reveal-delay="200">
-        <div class="context-section-header">
+      <details class="context-section" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="200" open>
+        <summary class="context-section-header">
           <span class="context-section-title">复审队列</span>
-          <span class="context-section-count">3</span>
-        </div>
+          <span class="collapse-count">3</span>
+        </summary>
         <div class="context-section-body">
           <!-- Review 1 -->
           <div class="queue-review-item">
@@ -2728,7 +2730,7 @@
             <span class="queue-review-badge improve">待改进</span>
           </div>
         </div>
-      </div>
+      </details>
     </div>
 
     <!-- State Variants: Recent Runs -->

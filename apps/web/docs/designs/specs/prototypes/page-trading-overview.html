@@ -2771,11 +2771,11 @@
       <div class="context-rail">
 
         <!-- Section 1: 风控监控 -->
-        <div class="context-section section-risk" data-reveal="fade-up" data-reveal-delay="3">
-          <div class="context-section-header">
+        <details class="context-section section-risk" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="3" open>
+          <summary class="context-section-header">
             <span class="context-section-title">风控监控</span>
-            <span class="context-section-count" aria-label="2 项预警" title="2 项预警"><span class="text-risk-critical">2</span></span>
-          </div>
+            <span class="collapse-count" aria-label="2 项预警" title="2 项预警"><span class="text-risk-critical">2</span></span>
+          </summary>
           <div class="context-section-body">
             <div class="risk-item critical-alert" data-tooltip="科技板块集中度 37.2%，超出上限 35%，建议减持">
               <div class="risk-item-dot critical"></div>
@@ -2822,7 +2822,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- State Variants: Risk/Alerts -->
 
@@ -2832,10 +2832,11 @@
 
 
         <!-- Section 2: 信号队列 -->
-        <div class="context-section" role="region" aria-label="信号队列" data-reveal="fade-up" data-reveal-delay="4">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" role="region" aria-label="信号队列" data-reveal="fade-up" data-reveal-delay="4" open>
+          <summary class="context-section-header">
             <span class="context-section-title">信号队列</span>
-          </div>
+            <span class="collapse-count">4 信号</span>
+          </summary>
           <div class="context-section-body">
             <div class="signal-queue-item" role="button" tabindex="0" aria-label="贵州茅台 卖出信号 置信度 87%">
               <div class="signal-queue-bar p1"></div>
@@ -2898,7 +2899,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- State Variants: Signal Queue -->
 
@@ -2907,10 +2908,12 @@
 
 
         <!-- Section 3: 今日成交 -->
-        <div class="context-section" role="region" aria-label="今日成交" data-reveal="fade-up" data-reveal-delay="5">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l3" role="region" aria-label="今日成交" data-reveal="fade-up" data-reveal-delay="5">
+          <summary class="context-section-header">
             <span class="context-section-title">今日成交</span>
-          </div>
+            <span class="collapse-count">4 笔</span>
+            <span class="collapse-summary">600519 买入 · 300750 卖出</span>
+          </summary>
           <div class="context-section-body">
             <div class="fill-row">
               <span class="fill-quality good" aria-label="执行质量优"></span>
@@ -2941,7 +2944,7 @@
               <span class="fill-time">45分钟前</span>
             </div>
           </div>
-        </div>
+        </details>
 
       </div>
     </div>

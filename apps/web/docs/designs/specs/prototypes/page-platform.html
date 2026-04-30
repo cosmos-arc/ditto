@@ -2641,11 +2641,11 @@
     <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="250px">
       <div class="context-rail" data-contract-slot="rail">
         <!-- Section 1: 任务概览（聚合摘要，非逐条重复 Tab 2） -->
-        <div class="context-section" data-reveal="fade-up" data-reveal-delay="190">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="190" open>
+          <summary class="context-section-header">
             <span class="context-section-title">任务概览</span>
-            <span class="panel-count panel-count-healthy"><span class="status-value">4</span> 任务</span>
-          </div>
+            <span class="collapse-count panel-count panel-count-healthy"><span class="status-value">4</span> 任务</span>
+          </summary>
           <div class="context-section-body">
             <div class="task-summary-grid" data-reveal="fade-up" data-reveal-delay="200">
               <div class="task-summary-card ok">
@@ -2671,14 +2671,14 @@
               <span class="next-event-value">日线行情同步 <span class="next-event-time">15:00:00</span></span>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Section 2: 配额预警（只展示需关注的项，非重复 Tab 4） -->
-        <div class="context-section" data-reveal="fade-up" data-reveal-delay="210">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="210" open>
+          <summary class="context-section-header">
             <span class="context-section-title">配额预警</span>
-            <span class="panel-count panel-count-down"><span class="status-value">1</span> 项</span>
-          </div>
+            <span class="collapse-count panel-count panel-count-down"><span class="status-value">1</span> 项</span>
+          </summary>
           <div class="context-section-body">
             <div class="resource-item" data-reveal="fade-up" data-reveal-delay="220">
               <div class="resource-header">
@@ -2697,13 +2697,15 @@
               <span class="resource-compact-item ok"><span class="resource-compact-label">磁盘</span> <span class="resource-compact-value">25%</span></span>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- Section 3: 最近事件 -->
-        <div class="context-section" data-reveal="fade-up" data-reveal-delay="220">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l3" data-reveal="fade-up" data-reveal-delay="220">
+          <summary class="context-section-header">
             <span class="context-section-title">最近事件</span>
-          </div>
+            <span class="collapse-count">5 条</span>
+            <span class="collapse-summary">14:32 同步完成 · 14:25 模型 503</span>
+          </summary>
           <div class="context-section-body">
             <div class="event-item" data-reveal="fade-up" data-reveal-delay="220">
               <span class="event-time">14:32:15</span>
@@ -2726,7 +2728,7 @@
               <span class="event-text">聚宽连接断开，已发送告警</span>
             </div>
           </div>
-        </div>
+        </details>
       </div>
     </div>
   </div>

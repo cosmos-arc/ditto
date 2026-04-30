@@ -1760,10 +1760,11 @@
     <div class="shell-sidebar">
       <div class="context-rail">
         <!-- Market Pulse (context-first — lightest ambient data) -->
-        <div class="context-section" data-contract-slot="market-pulse" data-reveal="fade-right" data-reveal-delay="100">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="market-pulse" data-reveal="fade-right" data-reveal-delay="100" open>
+          <summary class="context-section-header">
             <span class="context-section-title">市场脉搏</span>
-          </div>
+            <span class="collapse-count">4 指标</span>
+          </summary>
           <div class="context-section-body">
             <div class="pulse-metric">
               <span class="pulse-metric-label" data-tooltip="沪深300 指数实时行情">沪深300</span>
@@ -1791,14 +1792,14 @@
             </div>
             </details>
           </div>
-        </div>
+        </details>
 
         <!-- Global Alerts -->
-        <div class="context-section" data-contract-slot="global-alerts" data-reveal="fade-right" data-reveal-delay="200">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="global-alerts" data-reveal="fade-right" data-reveal-delay="200" open>
+          <summary class="context-section-header">
             <span class="context-section-title">全局预警</span>
-            <span class="panel-count">4</span>
-          </div>
+            <span class="collapse-count panel-count">4</span>
+          </summary>
           <div class="context-section-body">
             <div class="alert-row">
               <span class="alert-dot critical"></span>
@@ -1827,7 +1828,7 @@
           <div class="context-section-footer">
             <button class="panel-action">查看全部预警 →</button>
           </div>
-        </div>
+        </details>
 
         <!-- State Variants: Alerts / Market Snapshot -->
 
@@ -1835,10 +1836,12 @@
 
 
         <!-- Data Health (system trust check) -->
-        <div class="context-section" data-contract-slot="data-health" data-reveal="fade-right" data-reveal-delay="300">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l3" data-contract-slot="data-health" data-reveal="fade-right" data-reveal-delay="300">
+          <summary class="context-section-header">
             <span class="context-section-title">数据健康</span>
-          </div>
+            <span class="collapse-count">5 数据源</span>
+            <span class="collapse-summary">3 正常 · 2 降级</span>
+          </summary>
           <div class="context-section-body health-preview-body">
             <!-- Health summary bar — visual data trust gauge -->
             <div class="health-gauge" aria-label="数据健康度: 3/5 正常">
@@ -1880,7 +1883,7 @@
           <div class="health-preview-footer">
             <button class="panel-action">查看详情 →</button>
           </div>
-        </div>
+        </details>
 
         <!-- State Variants: Data Health -->
 

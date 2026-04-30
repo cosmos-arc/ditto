@@ -2337,11 +2337,11 @@
               <div class="context-rail">
 
                 <!-- Section: Key Drivers -->
-                <div class="context-section" data-reveal="fade-right">
-                  <div class="context-section-header">
+                <details class="context-section" data-collapse-priority="l2" data-reveal="fade-right" open>
+                  <summary class="context-section-header">
                     <span class="context-section-title" data-tooltip="影响当前 Regime 判定的 5 个核心驱动因子">Key Drivers</span>
-                    <span class="context-section-count">5 因子</span>
-                  </div>
+                    <span class="collapse-count">5 因子</span>
+                  </summary>
                   <div class="context-section-body">
 
                     <div class="driver-item" data-tooltip="隐含波动率指数，衡量市场恐慌程度。低于 20 为低波动环境">
@@ -2375,14 +2375,15 @@
                     </div>
 
                   </div>
-                </div>
+                </details>
 
                 <!-- Section: Regime Composition -->
-                <div class="context-section" data-reveal="fade-right" data-reveal-delay="100">
-                  <div class="context-section-header">
+                <details class="context-section" data-collapse-priority="l3" data-reveal="fade-right" data-reveal-delay="100">
+                  <summary class="context-section-header">
                     <span class="context-section-title" data-tooltip="Regime 判定的多因子加权组合，展示各因子的独立贡献">Regime Composition</span>
-                    <span class="context-section-count">多因子</span>
-                  </div>
+                    <span class="collapse-count">4 因子</span>
+                    <span class="collapse-summary">情绪 78% · 波动率 82%</span>
+                  </summary>
                   <div class="context-section-body">
                     <div class="factor-item" data-tooltip="情绪因子权重 78%，反映市场参与者的风险偏好倾向">
                       <div class="factor-item__header">
@@ -2469,15 +2470,16 @@
                       </div>
                     </div>
                   </div>
-                </div>
+                </details>
 
                 <!-- Section: Market State Matrix (HeatGrid) -->
-                <div class="context-section" data-reveal="fade-right" data-reveal-delay="200">
-                  <div class="context-section-header">
+                <details class="context-section" data-collapse-priority="l3" data-reveal="fade-right" data-reveal-delay="200">
+                  <summary class="context-section-header">
                     <span class="context-section-title" data-tooltip="近 4 周每日 Regime 状态热力图，颜色越深表示风险偏好越强">Market State Matrix</span>
-                    <span class="context-section-count">近 4 周</span>
-                  </div>
-                  <div class="heatgrid-body">
+                    <span class="collapse-count">近 4 周</span>
+                    <span class="collapse-summary">Risk-On 强势连续</span>
+                  </summary>
+                  <div class="context-section-body heatgrid-body">
                     <svg class="viz-cell-strong" data-viz-cell-strength="strong" data-viz-cell-selected data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["color-mix(in oklch, var(--market-down-fg) 10%, transparent)","color-mix(in oklch, var(--market-down-fg) 18%, transparent)","color-mix(in oklch, var(--neutral-950) 2%, transparent)","color-mix(in oklch, var(--market-up-fg) 12%, transparent)","color-mix(in oklch, var(--market-up-fg) 22%, transparent)","color-mix(in oklch, var(--market-up-fg) 32%, transparent)","color-mix(in oklch, var(--market-up-fg) 45%, transparent)"]}' aria-label="市场状态矩阵"></svg>
                     <div class="heatgrid-legend" data-viz-legend aria-label="Regime 矩阵图例">
                       <span class="viz-sign-marker" data-viz-sign="positive">Risk-On</span><span class="viz-sign-marker" data-viz-sign="negative">Risk-Off</span><span class="viz-threshold-label" data-viz-threshold-label>概率 ≥ 70% 强 regime</span>
@@ -2487,14 +2489,14 @@
                       <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--strong"></span>Strong</span>
                     </div>
                   </div>
-                </div>
+                </details>
 
                 <!-- Section: Regime Probability (DonutGauge) -->
-                <div class="context-section" data-reveal="fade-right" data-reveal-delay="300">
-                  <div class="context-section-header">
+                <details class="context-section" data-collapse-priority="l2" data-reveal="fade-right" data-reveal-delay="300" open>
+                  <summary class="context-section-header">
                     <span class="context-section-title" data-tooltip="多因子模型预测未来 5 个交易日的 Regime 状态概率分布">Regime Probability</span>
-                    <span class="context-section-count">状态概率</span>
-                  </div>
+                    <span class="collapse-count">3 状态</span>
+                  </summary>
                   <div class="context-section-body probability-body">
                     <div class="regime-probability-item">
                       <svg data-donut='{"value":0.72,"label":"72%","color":"var(--market-up-fg)","size":72,"strokeWidth":5}' aria-label="Risk-On概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
@@ -2509,7 +2511,7 @@
                       <span class="probability-label--neutral">Mixed</span>
                     </div>
                   </div>
-                </div>
+                </details>
 
               </div>
             </div>
