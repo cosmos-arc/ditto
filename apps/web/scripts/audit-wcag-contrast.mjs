@@ -50,13 +50,36 @@ const TEXT_PATTERNS = [
   "brand-signature-fg",
 ];
 
-const TEXT_USAGE_TIERS = {
+const TEXT_USAGE_TIERS = Object.freeze({
   "text-disabled": "decorative",
   "text-quaternary": "metadata",
   "text-data-stale": "operational",
   "text-tertiary": "metadata",
   "text-secondary": "operational",
-};
+});
+
+const USAGE_TIER_GATES = Object.freeze({
+  decorative: {
+    failBelow: null,
+    warnBelow: null,
+    requiresNonColorMarker: false,
+  },
+  metadata: {
+    failBelow: 3,
+    warnBelow: 4.5,
+    requiresNonColorMarker: false,
+  },
+  operational: {
+    failBelow: 4.5,
+    warnBelow: null,
+    requiresNonColorMarker: false,
+  },
+  "data-critical": {
+    failBelow: 4.5,
+    warnBelow: null,
+    requiresNonColorMarker: true,
+  },
+});
 
 const BG_PATTERNS = ["overlay-2", "overlay-3", "overlay-4", "overlay-6", "overlay-8", "overlay-10", "overlay-12"];
 
@@ -86,23 +109,23 @@ function getTextUsageTier(textName) {
 
 function classifyContrast(textName, ratio) {
   const usageTier = getTextUsageTier(textName);
+  const gate = USAGE_TIER_GATES[usageTier];
 
   if (usageTier === "decorative") {
-    return { usageTier, status: "report", pass: true, requiresNonColorMarker: false };
+    return { usageTier, status: "report", pass: true, requiresNonColorMarker: gate.requiresNonColorMarker };
   }
 
   if (usageTier === "metadata") {
-    if (ratio < 3) return { usageTier, status: "fail", pass: false, requiresNonColorMarker: false };
-    if (ratio < 4.5) return { usageTier, status: "warn", pass: true, requiresNonColorMarker: false };
-    return { usageTier, status: "pass", pass: true, requiresNonColorMarker: false };
+    if (ratio < gate.failBelow) return { usageTier, status: "fail", pass: false, requiresNonColorMarker: gate.requiresNonColorMarker };
+    if (ratio < gate.warnBelow) return { usageTier, status: "warn", pass: true, requiresNonColorMarker: gate.requiresNonColorMarker };
+    return { usageTier, status: "pass", pass: true, requiresNonColorMarker: gate.requiresNonColorMarker };
   }
 
-  const requiresNonColorMarker = usageTier === "data-critical";
   return {
     usageTier,
-    status: ratio < 4.5 ? "fail" : "pass",
-    pass: ratio >= 4.5,
-    requiresNonColorMarker,
+    status: ratio < gate.failBelow ? "fail" : "pass",
+    pass: ratio >= gate.failBelow,
+    requiresNonColorMarker: gate.requiresNonColorMarker,
   };
 }
 

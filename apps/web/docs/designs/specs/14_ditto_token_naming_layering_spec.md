@@ -342,6 +342,9 @@ surface.input.focused
 text.primary
 text.secondary
 text.tertiary
+text.quaternary
+text.data-stale
+text.disabled
 text.muted
 text.inverse
 ```
@@ -353,6 +356,18 @@ border.subtle
 border.default
 border.strong
 ```
+
+#### 文本可读性使用分级
+
+文本 token 必须按信息风险分级使用，不能只按"视觉弱一点"选择层级。
+`text.quaternary` 只能用于装饰性文本或低风险 metadata；状态、时间戳、表格 metadata、队列时间等 operational 信息必须使用 `text.tertiary`、`text.secondary` 或对应语义 token。`text.disabled` 仅表示不可用 affordance，不得承载 operational 信息。
+
+| Tier | Examples | Contrast Gate |
+|---|---|---|
+| decorative | disabled affordance, watermark | report only |
+| metadata | optional timestamp, decorative caption | warn below 4.5, fail below 3 |
+| operational | stale status, table metadata, queue time | fail below 4.5 |
+| data-critical | risk, trade, error, approval | fail below 4.5 and require non-color marker |
 
 这个层级是全站"灰阶秩序"的根基。
 
