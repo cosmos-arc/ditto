@@ -7,6 +7,7 @@
 import {
   readAllTokenFiles,
   extractTokensFromCss,
+  parseColorValue,
   resolveColor,
   contrastRatio,
   formatRatio,
@@ -102,6 +103,39 @@ function buildTokenMap() {
   return tokens;
 }
 
+function resolveTokenValue(name, tokens) {
+  return tokens[name] ?? tokens[name.replace(/^--/, "")] ?? tokens[`--${name}`];
+}
+
+function resolveAuditColor(value, tokens, seen = new Set()) {
+  if (seen.has(value)) return null;
+  seen.add(value);
+
+  const color = resolveColor(value, tokens);
+  if (color) return color;
+
+  const parsed = parseColorValue(value);
+  if (parsed.type === "var-fallback") {
+    const resolved = resolveTokenValue(parsed.name, tokens);
+    const resolvedColor = resolved ? resolveAuditColor(resolved, tokens, seen) : null;
+    return resolvedColor ?? resolveAuditColor(parsed.fallback, tokens, seen);
+  }
+
+  if (parsed.type === "relative-oklch" && parsed.lMod === "l" && parsed.cMod === "c" && parsed.hMod === "h") {
+    const base = resolveTokenValue(parsed.baseVar, tokens);
+    if (!base) return null;
+    const baseColor = resolveAuditColor(base, tokens, seen);
+    if (!baseColor) return null;
+    return {
+      ...baseColor,
+      alpha: parsed.alpha,
+      isDerived: true,
+    };
+  }
+
+  return null;
+}
+
 function getTextUsageTier(textName) {
   if (TEXT_USAGE_TIERS[textName]) return TEXT_USAGE_TIERS[textName];
   if (textName === "text-error" || textName === "text-warning" || textName === "text-success") {
@@ -139,6 +173,11 @@ function updateCounts(classification, counts) {
   else counts.pass += 1;
 }
 
+function addUnresolved(unresolved, token, role, reason) {
+  if (unresolved.some((entry) => entry.token === token && entry.role === role && entry.reason === reason)) return;
+  unresolved.push({ token, role, reason });
+}
+
 // ── Main ──
 
 function main() {
@@ -150,19 +189,40 @@ function main() {
     warn: 0,
     report: 0,
   };
+  const unresolved = [];
+  const skipped = [];
 
   // Surface × Text pairs
   for (const surfName of SURFACE_PATTERNS) {
     for (const textName of TEXT_PATTERNS) {
       const surfVal = tokens[surfName];
       const textVal = tokens[textName];
-      if (!surfVal || !textVal) continue;
+      if (!surfVal) {
+        addUnresolved(unresolved, surfName, "surface", "token is declared for audit but missing from token map");
+        continue;
+      }
+      if (!textVal) {
+        addUnresolved(unresolved, textName, "text", "token is declared for audit but missing from token map");
+        continue;
+      }
 
-      const surfColor = resolveColor(surfVal, tokens);
-      const textColor = resolveColor(textVal, tokens);
+      const surfColor = resolveAuditColor(surfVal, tokens);
+      const textColor = resolveAuditColor(textVal, tokens);
 
-      if (!surfColor || !textColor) continue;
-      if (surfColor.alpha < 0.5) continue; // skip near-transparent backgrounds
+      if (!surfColor) {
+        addUnresolved(unresolved, surfName, "surface", `could not resolve ${surfVal}`);
+        continue;
+      }
+      if (!textColor) {
+        addUnresolved(unresolved, textName, "text", `could not resolve ${textVal}`);
+        continue;
+      }
+      if (surfColor.alpha < 0.5) {
+        if (!skipped.some((entry) => entry.token === surfName)) {
+          skipped.push({ token: surfName, reason: `near-transparent background alpha ${surfColor.alpha.toFixed(2)}` });
+        }
+        continue;
+      }
 
       const ratio = contrastRatio(surfColor.luminance, textColor.luminance);
       const level = wcagLevel(ratio);
@@ -184,17 +244,37 @@ function main() {
     for (const textName of ["text-primary", "text-secondary", "text-tertiary"]) {
       const bgVal = tokens[bgName];
       const textVal = tokens[textName];
-      if (!bgVal || !textVal) continue;
+      if (!bgVal) {
+        addUnresolved(unresolved, bgName, "overlay", "token is declared for audit but missing from token map");
+        continue;
+      }
+      if (!textVal) {
+        addUnresolved(unresolved, textName, "text", "token is declared for audit but missing from token map");
+        continue;
+      }
 
-      const bgColor = resolveColor(bgVal, tokens);
-      const textColor = resolveColor(textVal, tokens);
-      if (!bgColor || !textColor) continue;
+      const bgColor = resolveAuditColor(bgVal, tokens);
+      const textColor = resolveAuditColor(textVal, tokens);
+      if (!bgColor) {
+        addUnresolved(unresolved, bgName, "overlay", `could not resolve ${bgVal}`);
+        continue;
+      }
+      if (!textColor) {
+        addUnresolved(unresolved, textName, "text", `could not resolve ${textVal}`);
+        continue;
+      }
 
       // Effective luminance when overlay composited on surface-app
       const surfVal = tokens["surface-app"];
-      if (!surfVal) continue;
-      const surfColor = resolveColor(surfVal, tokens);
-      if (!surfColor) continue;
+      if (!surfVal) {
+        addUnresolved(unresolved, "surface-app", "surface", "overlay composite base is missing from token map");
+        continue;
+      }
+      const surfColor = resolveAuditColor(surfVal, tokens);
+      if (!surfColor) {
+        addUnresolved(unresolved, "surface-app", "surface", `overlay composite base could not resolve ${surfVal}`);
+        continue;
+      }
 
       const alpha = bgColor.alpha;
       const effR = bgColor.rgb[0] * alpha + surfColor.rgb[0] * (1 - alpha);
@@ -234,8 +314,18 @@ function main() {
   console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults)\n");
   console.log(`Pairs checked: ${results.length}`);
   console.log(
-    `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Fail: ${counts.fail}  Report: ${counts.report}\n`,
+    `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Fail: ${counts.fail + unresolved.length}  Report: ${counts.report}\n`,
   );
+
+  if (unresolved.length > 0) {
+    console.log("### Unresolved Audit Tokens\n");
+    console.log("| Token | Role | Reason |");
+    console.log("|-------|------|--------|");
+    for (const entry of unresolved) {
+      console.log(`| ${entry.token} | ${entry.role} | ${entry.reason} |`);
+    }
+    console.log("");
+  }
 
   if (counts.fail > 0) {
     console.log("### Failed Pairs\n");
@@ -243,6 +333,16 @@ function main() {
     console.log("|---------|------|-------|-------|-------|");
     for (const r of results.filter((r) => r.status === "fail")) {
       console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
+    }
+    console.log("");
+  }
+
+  if (skipped.length > 0) {
+    console.log("### Excluded Transparent Backgrounds\n");
+    console.log("| Token | Reason |");
+    console.log("|-------|--------|");
+    for (const entry of skipped) {
+      console.log(`| ${entry.token} | ${entry.reason} |`);
     }
     console.log("");
   }
@@ -294,10 +394,11 @@ function main() {
     console.log("Data-critical text usage requires a non-color marker in UI contexts where status is conveyed.");
   }
 
-  console.log(counts.fail === 0 ? "All gating pairs pass their contrast tier." : `${counts.fail} pair(s) fail contrast tier gates.`);
+  const totalFailures = counts.fail + unresolved.length;
+  console.log(totalFailures === 0 ? "All gating pairs pass their contrast tier." : `${totalFailures} pair(s) fail contrast tier gates.`);
 
   const reportOnly = process.argv.includes("--report-only");
-  process.exit(!reportOnly && counts.fail > 0 ? 1 : 0);
+  process.exit(!reportOnly && totalFailures > 0 ? 1 : 0);
 }
 
 main();

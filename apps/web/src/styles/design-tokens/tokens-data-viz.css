@@ -17,8 +17,8 @@
   /* ── Data State (connection/feed status) ── */
   --data-state-live-fg:         var(--text-primary);
   --data-state-updating-fg:     var(--brand-accent);
-  --data-state-stale-fg:        var(--text-tertiary);
-  --data-state-disconnected-fg: var(--text-disabled);
+  --data-state-stale-fg:        var(--text-data-stale);
+  --data-state-disconnected-fg: var(--text-secondary);
 
   /* ── Chart Pane ── */
   --chart-bg:                    var(--surface-app);
