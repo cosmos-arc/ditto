@@ -490,3 +490,39 @@ Signal 专属状态映射到通用状态（§1）：
 - `reviewing` → `active`
 - `failed` → `failed`
 - 订单生成中 → `running`
+
+---
+
+## 16. Bottom Tray 与高风险确认合同（2026-04-29）
+
+### 16.1 Bottom Tray 状态
+
+Bottom Tray 只用于日志、验证结果、执行状态和运行追踪，不用于承载主工作面内容。
+
+| 状态 | 可见内容 | 默认场景 |
+|------|----------|----------|
+| `collapsed` | 状态摘要、关键计数、展开入口 | Ops / Trading 的低风险常态 |
+| `peek` | 一行最新状态、当前错误、展开入口 | Studio、紧凑视口、存在活跃任务 |
+| `expanded` | 完整日志、验证、dry run、trace | 用户主动排查或复盘 |
+
+实现合同：
+
+- 容器暴露 `data-bottom-tray`。
+- 当前状态写入 `data-bottom-tray-state="collapsed|peek|expanded"`。
+- 切换控件暴露 `data-bottom-tray-toggle` 与 `aria-controls`。
+- 内容区域暴露 `data-bottom-tray-content`。
+- 默认态必须在文档流内，不得用 fixed overlay 遮挡主工作面。
+
+### 16.2 高风险动作确认
+
+以下动作必须进入确认链路：交易提交 / 暂停 / 批量撤单、配置保存 / 回滚 / diff apply、Catalog 删除 universe / strategy / watchlist 批量删除。
+
+确认链路必须包含：
+
+- 影响摘要：`data-impact-summary`。
+- 明确确认：`data-confirm-control`。
+- 明确取消：`data-cancel-control`。
+- 恢复或回滚提示：`data-recovery-hint`。
+- 非颜色危险标记：`data-danger-marker` 或等价 icon / 边界 / 文案。
+
+危险态不能只靠红色表达；必须同时使用文字、符号或边界强化。

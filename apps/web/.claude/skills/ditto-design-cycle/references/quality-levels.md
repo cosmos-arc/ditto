@@ -38,3 +38,16 @@ impeccable:bolder → impeccable:delight → impeccable:overdrive
 - 可降级过度的 bolder/delight/overdrive 效果
 - 可移除违反克制度的装饰元素
 - 使用 impeccable: quieter 处理过度装饰
+
+---
+
+## Edition Review 质量门槛（2026-04-29）
+
+从 `polished` 升级到 `best` 时，不再只看高级感和记忆点，还必须满足专家效率门槛：
+
+| 等级 | 额外要求 |
+|------|----------|
+| **polished** | 关键页面通过 prototype gates；light / density 可切换；状态、overlay 和交互可用。 |
+| **best** | 7 类 Shell 代表页有 dark / light + compact / comfortable 截图矩阵；专家入口页有 `data-primary-answer`；关键数据图有非颜色编码；高风险动作有确认链路；Bottom Tray 不遮挡主流程。 |
+
+`best` 不是“更炫”，而是更可靠、更可扫视、更像专家每天愿意使用的工作台。

@@ -1161,3 +1161,21 @@ AI / Agent
 - **[新增]** Sparkline opacity 标准: 0.6, stroke-width 1.5px（来源: FIX-07）
 - **[新增]** LIVE 状态指示器规范: 同源绿色 oklch(0.72 0.19 155)（来源: COPY-09）
 - **[新增]** kbd 幽灵键帽组件规范: font-mono 10px, border oklch(1 0 0 / 0.10)（来源: FIX-10/COPY-10）
+
+### 2026-04-29 — Shared Contract Components
+
+本轮 Edition Review Remediation 固化以下跨页组件合同。
+
+| 组件 | 必要语义 | 说明 |
+|------|----------|------|
+| Bottom Tray | `data-bottom-tray`、`data-bottom-tray-state`、`data-bottom-tray-toggle`、`data-bottom-tray-content` | 日志 / 状态托盘，三态为 collapsed、peek、expanded。 |
+| Global Command Button | `data-shell-utility="command"`、`data-search-scope="global"`、`data-command-scope="global"` | icon-only 可以保留，但 hover / focus / title 必须暴露 `Ctrl+K`。 |
+| Local Search | `data-local-search` | 本地筛选 / 表搜索必须和全局 command 分离。 |
+| Visual Legend | `data-viz-legend`、`data-viz-sign`、`data-viz-threshold-label` | 图表不可只靠颜色编码。 |
+| Catalog Detail Summary | `data-detail-sticky-summary` | 右栏首屏摘要固定在上下文顶部。 |
+| Bulk Action Bar | `data-batch-action-bar` | 多选后展示选中数量、批量动作和清除入口。 |
+| Danger Confirmation | `data-danger-confirmation` / `data-high-risk-confirmation` | 必含影响、确认、取消、恢复提示和非颜色危险标记。 |
+| Expert Primary Answer | `data-primary-answer` | 专家入口页 5 秒内必须可回答当前最重要判断。 |
+| Selected Object Region | `data-selected-object-region` | 当前选中对象至少驱动两个区域联动。 |
+
+这些属性不是视觉实现细节，而是 Prototype、Page Contract 与 React parity 的共享验收语言。

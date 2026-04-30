@@ -1161,6 +1161,9 @@
       document.querySelectorAll('[data-resizable-panel-group]').forEach(function (group) {
         group.querySelectorAll('[data-resize-separator]').forEach(function (separator) {
           ResizablePanels._sync(group, separator, ResizablePanels._currentValue(group, separator));
+          if (!separator.getAttribute('title')) {
+            separator.setAttribute('title', '拖拽调整面板，双击恢复默认宽度');
+          }
 
           if (separator.getAttribute('data-resizable-panel-ready') === 'true') return;
           separator.setAttribute('data-resizable-panel-ready', 'true');

@@ -47,7 +47,7 @@ function ContextSection({
 
 					<div className="flex items-center gap-2">
 						{count !== undefined && (
-							<span className="font-data text-sm tabular-nums tracking-[-0.24px] text-(--color-foreground-tertiary) bg-(--color-surface-strip) rounded-[4px] flex items-center px-1.5 h-[18px]"
+							<span className="font-data text-sm tabular-nums text-(--color-foreground-tertiary) bg-(--color-surface-strip) rounded-[4px] flex items-center px-1.5 h-[18px]"
 							>
 								{count}
 							</span>

@@ -89,6 +89,47 @@ describe("page-strategies-detail prototype", () => {
 	);
 
 	it(
+		"keeps the destructive header action compact and aligned with primary actions",
+		async () => {
+			const browser = await chromium.launch({ channel: "chromium" });
+			const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+
+			try {
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
+
+				const metrics = await page.evaluate(() => {
+					const primary = document.querySelector<HTMLElement>(".header-ctas .btn-primary");
+					const danger = document.querySelector<HTMLElement>(".header-ctas .btn-icon-danger");
+					if (!primary || !danger) return null;
+
+					const primaryRect = primary.getBoundingClientRect();
+					const dangerRect = danger.getBoundingClientRect();
+
+					return {
+						dangerLabel: danger.getAttribute("aria-label"),
+						dangerTitle: danger.getAttribute("title"),
+						dangerText: danger.textContent?.replace(/\s+/g, " ").trim() ?? "",
+						topDelta: Math.abs(Math.round(primaryRect.top - dangerRect.top)),
+						heightDelta: Math.abs(Math.round(primaryRect.height - dangerRect.height)),
+						width: Math.round(dangerRect.width),
+					};
+				});
+
+				expect(metrics).not.toBeNull();
+				expect(metrics?.dangerLabel).toBe("删除策略");
+				expect(metrics?.dangerTitle).toBe("删除策略");
+				expect(metrics?.dangerText).toBe("");
+				expect(metrics?.topDelta).toBeLessThanOrEqual(1);
+				expect(metrics?.heightDelta).toBeLessThanOrEqual(1);
+				expect(metrics?.width).toBeLessThanOrEqual(36);
+			} finally {
+				await browser.close();
+			}
+		},
+		15_000,
+	);
+
+	it(
 		"keeps the default main row attached to the bottom strip in the standard viewport",
 		async () => {
 			const browser = await chromium.launch({ channel: "chromium" });

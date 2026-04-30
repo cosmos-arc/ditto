@@ -3555,6 +3555,32 @@ details.context-section:not([open]) > .context-section-body {
   transform: translateX(-50%);
 }
 
+.resize-separator::after,
+[data-resize-separator]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 40px;
+  border: 1px solid color-mix(in oklch, var(--border-strong) 68%, transparent);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 28%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 72%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 84%, transparent);
+  box-shadow: 0 1px 4px color-mix(in oklch, var(--text-primary) 12%, transparent);
+  opacity: 0.72;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard),
+    background var(--motion-duration-fast) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
 .resize-separator:hover,
 .resize-separator:focus-visible,
 .resize-separator[data-resizing="true"],
@@ -3564,6 +3590,22 @@ details.context-section:not([open]) > .context-section-body {
   background: var(--brand-accent);
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 36%, transparent);
   outline: none;
+}
+
+.resize-separator:hover::after,
+.resize-separator:focus-visible::after,
+.resize-separator[data-resizing="true"]::after,
+[data-resize-separator]:hover::after,
+[data-resize-separator]:focus-visible::after,
+[data-resize-separator][data-resizing="true"]::after {
+  border-color: var(--brand-accent);
+  background:
+    radial-gradient(circle at 50% 28%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 72%, var(--brand-accent) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 92%, var(--brand-accent));
+  box-shadow: 0 0 0 4px var(--interaction-selected-border);
+  opacity: 1;
 }
 
 .resize-separator:focus-visible,
@@ -3588,6 +3630,30 @@ details.context-section:not([open]) > .context-section-body {
   width: auto;
   height: 24px;
   transform: translateY(-50%);
+}
+
+.resize-separator[aria-orientation="horizontal"]::after,
+[data-resize-separator][aria-orientation="horizontal"]::after {
+  width: 40px;
+  height: 10px;
+  background:
+    radial-gradient(circle at 28% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 84%, transparent);
+}
+
+.resize-separator[aria-orientation="horizontal"]:hover::after,
+.resize-separator[aria-orientation="horizontal"]:focus-visible::after,
+.resize-separator[aria-orientation="horizontal"][data-resizing="true"]::after,
+[data-resize-separator][aria-orientation="horizontal"]:hover::after,
+[data-resize-separator][aria-orientation="horizontal"]:focus-visible::after,
+[data-resize-separator][aria-orientation="horizontal"][data-resizing="true"]::after {
+  background:
+    radial-gradient(circle at 28% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 92%, var(--brand-accent));
 }
 
 html[data-resizing-panel="true"],

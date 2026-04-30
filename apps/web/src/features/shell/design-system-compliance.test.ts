@@ -9,10 +9,14 @@ import { join, extname, basename, relative } from "node:path";
 const SRC_ROOT = join(import.meta.dirname, "../../");
 
 const INLINE_STYLE_PATTERN = /style=\{\{/g;
+const NEGATIVE_LETTER_SPACING_PATTERNS: readonly RegExp[] = [
+	/letter-spacing\s*:\s*-/,
+	/tracking-\[-/,
+	/\btracking-tight\b/,
+];
 
 const FEATURE_INLINE_STYLE_ALLOWLIST = new Set([
 	"features/shell/components/noise-layer.tsx",
-	"features/shell/components/rail.tsx",
 ]);
 
 const COMPONENT_INLINE_STYLE_ALLOWLIST = new Set([
@@ -187,6 +191,20 @@ describe("Typography compliance", () => {
 		"node_modules",
 		".test.",
 	]);
+	const coreFiles = new Map([
+		...readAllFiles(join(SRC_ROOT, "features"), [".tsx"], [
+			"node_modules",
+			".test.",
+		]),
+		...readAllFiles(join(SRC_ROOT, "components"), [".tsx"], [
+			"node_modules",
+			".test.",
+		]),
+		...readAllFiles(join(SRC_ROOT, "styles"), [".css"], [
+			"node_modules",
+			".test.",
+		]),
+	]);
 
 	// text-[10px] → text-xs, text-[13px] → text-base, text-[24px] → text-3xl
 	const FORBIDDEN_FONT_SIZES: Record<string, string> = {
@@ -218,6 +236,24 @@ describe("Typography compliance", () => {
 		expect(
 			violations.join("\n"),
 			`${violations.length} arbitrary font-size usages found:\n`,
+		).toBe("");
+	});
+
+	it("keeps core shell and component typography free of negative letter spacing", () => {
+		const violations: string[] = [];
+
+		for (const [filePath, content] of coreFiles) {
+			const relPath = relativeSourcePath(filePath);
+			for (const pattern of NEGATIVE_LETTER_SPACING_PATTERNS) {
+				if (pattern.test(content)) {
+					violations.push(`${relPath}: ${pattern.source}`);
+				}
+			}
+		}
+
+		expect(
+			violations.join("\n"),
+			`${violations.length} negative letter-spacing usages found:\n`,
 		).toBe("");
 	});
 });

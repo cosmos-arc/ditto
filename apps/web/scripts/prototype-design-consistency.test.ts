@@ -1051,6 +1051,7 @@ describe("prototype design consistency", () => {
 			".semantic-status-transition",
 			".threshold-crossed",
 			".linked-region-pulse",
+			".resize-separator::after",
 		];
 
 		const combinedCss = `${layoutCss}\n${togglesCss}`;

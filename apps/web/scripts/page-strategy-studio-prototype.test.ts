@@ -35,15 +35,14 @@ describe("page-strategy-studio prototype", () => {
 		expect(shell?.querySelector(".studio-logs")).not.toBeNull();
 	});
 
-	it("allocates a readable log drawer row instead of collapsing logs to status-bar height", () => {
+	it("keeps the bottom log drawer collapsed by default so it does not mask the editor", () => {
 		const html = loadHtml();
+		const document = loadPage();
 
 		expect(html).toMatch(
-			/grid-template-rows:\s*var\(--shell-header-height\)\s+auto\s+minmax\(0,\s*1fr\)\s+minmax\(128px,\s*15vh\);/,
+			/grid-template-rows:\s*var\(--shell-header-height\)\s+auto\s+minmax\(0,\s*1fr\)\s+auto;/,
 		);
-		expect(html).not.toContain(
-			"grid-template-rows: var(--shell-header-height) auto 1fr var(--shell-status-bar-height);",
-		);
+		expect(document.querySelector("[data-bottom-tray]")?.getAttribute("data-bottom-tray-state")).toBe("collapsed");
 	});
 
 	it("keeps default-view numeric values deterministic for visual review screenshots", () => {
@@ -87,6 +86,38 @@ describe("page-strategy-studio prototype", () => {
 				expect(child.right).toBeLessThanOrEqual(pipeline.right + 1);
 				expect(child.bottom).toBeLessThanOrEqual(pipeline.bottom + 1);
 			}
+		} finally {
+			await browser.close();
+		}
+	}, playwrightTestTimeoutMs);
+
+	it("keeps the collapsed log drawer below the main workspace in the standard viewport", async () => {
+		const browser = await chromium.launch({ channel: "chromium" });
+		const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+
+		try {
+			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
+			const layout = await page.evaluate(() => {
+				const main = document.querySelector(".studio-main");
+				const logs = document.querySelector(".studio-logs");
+				const content = document.querySelector("[data-bottom-tray-content]");
+				if (!main || !logs || !content) return null;
+
+				const mainRect = main.getBoundingClientRect();
+				const logsRect = logs.getBoundingClientRect();
+				const contentRect = content.getBoundingClientRect();
+
+				return {
+					gap: Math.round(logsRect.top - mainRect.bottom),
+					logsHeight: Math.round(logsRect.height),
+					contentHeight: Math.round(contentRect.height),
+				};
+			});
+
+			expect(layout).not.toBeNull();
+			expect(layout?.gap).toBeGreaterThanOrEqual(-1);
+			expect(layout?.logsHeight).toBeLessThanOrEqual(48);
+			expect(layout?.contentHeight).toBe(0);
 		} finally {
 			await browser.close();
 		}

@@ -20,8 +20,8 @@ const expectedRailItems = [
 	{ domain: "home", label: "首页", icon: "home", current: false },
 	{ domain: "markets", label: "市场", icon: "trending-up", current: false },
 	{ domain: "research", label: "研究", icon: "book-open", current: false },
-	{ domain: "trading", label: "交易", icon: "arrow-left-right", current: true },
-	{ domain: "platform", label: "平台", icon: "settings-2", current: false },
+	{ domain: "trading", label: "交易", icon: "candlestick-chart", current: true },
+	{ domain: "platform", label: "平台", icon: "server-cog", current: false },
 ] as const;
 
 describe("page-signals-inbox prototype", () => {

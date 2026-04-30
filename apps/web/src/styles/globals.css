@@ -569,6 +569,18 @@ body {
   pointer-events: none;
 }
 
+[data-slot="rail-right-light"] {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in oklch, var(--color-accent) 12%, transparent) 20%,
+      color-mix(in oklch, var(--color-accent) 20%, transparent) 50%,
+      color-mix(in oklch, var(--color-accent) 12%, transparent) 80%,
+      transparent 100%
+    );
+}
+
 /* ── Status badge hover glow (per prototype) ── */
 [data-slot="status-badge"] {
   transition:
@@ -583,7 +595,7 @@ body {
 .font-data {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* ── Positions summary: header accent border ── */

@@ -36,7 +36,7 @@
 | 当前图标 | 当前含义 | 用户直觉解读 | 建议替换 |
 |----------|---------|-------------|---------|
 | 放大镜 | Research / 研究 | "搜索" | `book-open` 或 `flask-conical` |
-| 3x2 网格 | Trading / 交易 | "数据表/电子表格" | `arrow-left-right` 或自定义蜡烛图剪影 |
+| 3x2 网格 | Trading / 交易 | "数据表/电子表格" | `candlestick-chart` 蜡烛图剪影 |
 | 五角星 | AI Copilot | "收藏/评分/精选" | `sparkles` 或 `bot` |
 | 横条 tally | 校验/Validate | "数据/表格" | `check-circle` 或 `shield-check` |
 | 3x2 网格 | 事件/Events (Platform) | 与 Trading Rail 碰撞 | `zap` 或 `activity` |
@@ -71,8 +71,8 @@
 | Home | 房子 | 保持 | `home` |
 | Markets | 趋势线 | 保持 | `trending-up` |
 | Research | 放大镜 | 替换 | `book-open` 或 `microscope` |
-| Trading | 网格 | 替换 | `arrow-left-right` 或自定义交易图标 |
-| Platform | 2x2 方格 | 替换 | `settings-2` 或 `cpu` |
+| Trading | 网格 | 替换 | `candlestick-chart` |
+| Platform | 2x2 方格 | 替换 | `server-cog` |
 
 **功能按钮替换表**：
 

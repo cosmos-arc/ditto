@@ -674,3 +674,24 @@ Shared state
 
 - **[新增]** Heat map 5 级 alpha 梯度: 0.05/0.10/0.17（oklch 红/绿双色系），用于 Matrix 热区背景（来源: FIX-04）
 - **[新增]** Sparkline opacity 0.6, stroke-width 1.5px（来源: FIX-07）
+
+### 2026-04-29 — Non-Color Visual Encoding Contract
+
+数据可视化不得只靠颜色表达方向、强弱或风险。热力图、相关矩阵、风险矩阵、因子表和回测图至少需要两类编码同时存在：
+
+- 方向：正负号、箭头、`data-viz-sign` 或文字标签。
+- 强弱：数值、边界、权重、`data-viz-cell-strength`。
+- 阈值：固定图例、阈值线、`data-viz-threshold-label`。
+- 选中：边界、焦点环、`data-viz-cell-selected`。
+
+原型合同：
+
+| 元素 | 属性 / class | 目的 |
+|------|--------------|------|
+| 图例 | `data-viz-legend` / `.viz-legend` | 解释颜色、方向和阈值 |
+| 方向标记 | `data-viz-sign` / `.viz-sign-marker` | 避免红绿色依赖 |
+| 阈值标签 | `data-viz-threshold-label` / `.viz-threshold-label` | 暴露风险或相关性分界 |
+| 强重点单元 | `data-viz-cell-strength` / `.viz-cell-strong` | 用边界 / 字重补充热度 |
+| 选中单元 | `data-viz-cell-selected` / `.viz-cell-selected` | 显示当前分析对象 |
+
+适用代表页：A Shares、Cross Market、Risk Center、Regime Monitor、Factor Analysis、Backtest Result。

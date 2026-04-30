@@ -15,7 +15,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "visual:audit": "bun .claude/skills/ditto-app-dev/scripts/visual-audit.mjs",
-    "prototype:gates": "bun .claude/skills/ditto-design-cycle/scripts/verify-gates.mjs",
+    "prototype:gates": "bun scripts/run-prototype-gates.ts",
     "prototype:interaction": "vitest run scripts/prototype-interaction-ux-contract.test.ts",
     "prototype:visual-matrix": "bun scripts/prototype-visual-matrix.ts",
     "audit:routes": "bun scripts/audit-route-coverage.mjs",

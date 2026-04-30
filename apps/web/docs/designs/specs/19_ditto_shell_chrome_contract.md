@@ -57,7 +57,7 @@ Header 从左到右承担三段稳定职责：
 |---|---|---|
 | Page Identity | 页面标题、可选副标题、domain/scope/session metadata | 表格筛选、导出、列配置 |
 | Context Spacer | 轻量上下文、状态摘要、留白 | filter workbench |
-| Global Utilities | command、Copilot、notifications、help、account | workspace 执行动作 |
+| Global Utilities | command、Copilot、notifications、help、theme、density、account | workspace 执行动作 |
 
 全局工具顺序固定：
 
@@ -65,7 +65,9 @@ Header 从左到右承担三段稳定职责：
 2. Copilot
 3. Notifications
 4. Help
-5. Account / View Preferences
+5. Theme
+6. Density
+7. Account
 
 ## 4. Search Scope
 
@@ -81,16 +83,14 @@ Header 从左到右承担三段稳定职责：
 
 ## 5. View Preferences
 
-Theme 与 density 是视图偏好，不是常驻 Header segmented controls，也不是 Rail 控件。
+Theme 与 density 是视图偏好。它们可以常驻 Header，但只能以 icon-only toggle 出现；不得使用弹窗、segmented controls 或 Rail 控件。
 
 Prototype 必须使用：
 
 ```html
+<button id="theme-toggle" data-shell-utility="theme">...</button>
+<button id="density-toggle" data-shell-utility="density">...</button>
 <button data-shell-utility="account">...</button>
-<div data-view-preferences-menu>
-  <button data-set-density="dense">...</button>
-  <button data-set-theme="light">...</button>
-</div>
 ```
 
 React 必须映射为：
@@ -101,9 +101,25 @@ React 必须映射为：
   <CopilotButton />
   <NotificationsButton />
   <HelpButton />
-  <ViewPreferencesMenu />
+  <ThemeToggleButton />
+  <DensityToggleButton />
+  <AccountButton />
 </HeaderUtilityBar>
 ```
+
+### 5.1 Theme / Density Toggle Refinement（2026-04-29）
+
+业界参考：Fluent 2 Popover/Menu、Carbon UI Shell/Modal、GitHub Primer ActionMenu/Dialog、SAP Fiori Content Density。
+
+本项目采用以下收敛规则：
+
+- Header 暴露两个直接 icon toggle：`theme-toggle` 与 `density-toggle`；不再使用 view preferences popover。
+- Theme toggle 在 `dark ↔ light` 间切换，Density toggle 在 `compact → comfortable → dense` 间循环。
+- Toggle 必须只用图标、`aria-label` 与 `title` 表达当前状态，不展示说明性 hint 或弹窗内容。
+- 密度切换必须映射到密度 token，不为单个页面或单个组件写独立间距补丁。
+- Header chrome 的底色、边线、间距、utility 顺序由 shared layout 控制；单页不得用 frosted header、渐变分隔线或独立 Header 光效制造差异。
+- Page title 使用一致语言风格，禁止单页标题使用英文营销名；标题下划线和渐变标题装饰统一关闭。
+- Overlay surface 使用 shared overlay grammar：同一 surface token、同一边框/圆角；单页只定义内容语义，不重新定义弹层外壳或重阴影。
 
 ## 6. Workspace And Data Toolbars
 
@@ -134,8 +150,9 @@ React 必须映射为：
 | Copilot | `data-shell-utility="copilot"` | Header | Opens global sidecar |
 | Notifications | `data-shell-utility="notifications"` | Header | Global alerts only |
 | Help | `data-shell-utility="help"` | Header | Product help |
-| Account/preferences | `data-shell-utility="account"` | Header | Account + view prefs |
-| View preferences menu | `data-view-preferences-menu` | Account menu | Theme/density only here |
+| Theme toggle | `id="theme-toggle"` + `data-shell-utility="theme"` | Header | Direct icon toggle |
+| Density toggle | `id="density-toggle"` + `data-shell-utility="density"` | Header | Direct icon toggle |
+| Account | `data-shell-utility="account"` | Header | Account entry only |
 | Workspace toolbar | `data-workspace-toolbar` | Page shell | Page-level actions |
 | Table toolbar | `data-table-toolbar` | Data surface | Search/filter/bulk/columns |
 
@@ -146,7 +163,42 @@ React 必须映射为：
 | Page Identity | `PageTitleBlock` |
 | Header Utility Bar | `HeaderUtilityBar` |
 | Global command | `GlobalCommandButton` |
-| Account/preferences | `ViewPreferencesMenu` |
+| Theme toggle | `ThemeToggleButton` |
+| Density toggle | `DensityToggleButton` |
+| Account | `AccountButton` |
 | Data-local actions | `DataToolbar` |
 
 Shell Family 差异从全局 Rail 与 Header Utility Bar 之下开始。
+
+## 9. Command Discoverability Addendum（2026-04-29）
+
+全局 Command 入口可以保持 icon-only，但必须在机器合同和用户可发现性上显式：
+
+```html
+<button
+  data-shell-utility="command"
+  data-search-scope="global"
+  data-command-scope="global"
+  aria-label="打开全局命令 Ctrl+K"
+  title="打开全局命令 Ctrl+K"
+></button>
+```
+
+本地搜索不得复用全局命令语义：
+
+- Workspace filter 使用 `data-workspace-action="filter"`。
+- Table / list search 使用 `data-local-search`。
+- 全局入口使用 `data-command-scope="global"`。
+
+评分和门禁应把“本地搜索误标为全局 command”视为 Chrome 合同错误。
+
+## 10. Expert Efficiency Contract
+
+专家入口页必须显式暴露：
+
+- 5 秒主答案：`data-primary-answer`。
+- 选中对象联动区域：至少两个 `data-selected-object-region`。
+- Studio / Agent React parity 槽位：`main`、`sidebar`、`inspector` 或 `detail`、`activity-log`、`status`。
+- 关键状态的非颜色表达：`data-critical-status` 内必须有 `data-danger-marker` 或 `data-status-label`。
+
+这组合同用于防止高分原型只在视觉上完成，而没有把专家工作流效率落实到结构里。

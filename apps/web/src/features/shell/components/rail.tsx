@@ -72,12 +72,9 @@ export function Rail() {
 			{/* Right ambient light bar -- vertical brand glow along right edge of rail */}
 			<div
 				aria-hidden="true"
+				data-slot="rail-right-light"
 				data-testid="rail-right-light"
 				className="absolute inset-y-0 -right-px w-px"
-				style={{
-					backgroundImage:
-						"linear-gradient(to bottom, transparent 0%, color-mix(in oklch, var(--color-accent) 12%, transparent) 20%, color-mix(in oklch, var(--color-accent) 20%, transparent) 50%, color-mix(in oklch, var(--color-accent) 12%, transparent) 80%, transparent 100%)",
-				}}
 			/>
 		</nav>
 	);

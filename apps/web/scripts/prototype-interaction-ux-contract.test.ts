@@ -23,6 +23,13 @@ const railHrefs: Record<(typeof railDomains)[number], string> = {
 	trading: "page-trading-overview.html",
 	platform: "page-platform.html",
 };
+const railIcons: Record<(typeof railDomains)[number], string> = {
+	home: "home",
+	markets: "trending-up",
+	research: "book-open",
+	trading: "candlestick-chart",
+	platform: "server-cog",
+};
 const bannedRailLabels = new Set(["AI", "运维", "Platform", "Home", "Markets", "Research", "Trading"]);
 const hamburgerPathSet = ["M3 4h14", "M3 10h14", "M3 16h14"].sort().join("|");
 const contextSectionTitleSelector = ".context-section-title, .inspector-section-title, .section-title, [data-section-title]";
@@ -502,6 +509,7 @@ describe("prototype interaction UX contracts", () => {
 				const domain = item.dataset.railDomain ?? "";
 				const expectedLabel = railDomainSet.has(domain) ? railLabels[domain as keyof typeof railLabels] : undefined;
 				const expectedHref = railDomainSet.has(domain) ? railHrefs[domain as keyof typeof railHrefs] : undefined;
+				const expectedIcon = railDomainSet.has(domain) ? railIcons[domain as keyof typeof railIcons] : undefined;
 				const label = item.getAttribute("aria-label");
 				const title = item.getAttribute("title");
 				const href = item.getAttribute("href");
@@ -511,6 +519,11 @@ describe("prototype interaction UX contracts", () => {
 				}
 				if (expectedHref && href !== expectedHref) {
 					violations.push(`${page.id}:${domain}: expected href="${expectedHref}", found "${href ?? ""}"`);
+				}
+				if (expectedIcon && item.getAttribute("data-icon") !== expectedIcon) {
+					violations.push(
+						`${page.id}:${domain}: expected data-icon="${expectedIcon}", found "${item.getAttribute("data-icon") ?? ""}"`,
+					);
 				}
 				if (expectedLabel && (label !== expectedLabel || title !== expectedLabel)) {
 					violations.push(
@@ -547,7 +560,7 @@ describe("prototype interaction UX contracts", () => {
 		}
 
 		expect(violations).toEqual([]);
-	});
+	}, 15_000);
 
 	it("keeps header and strategy action icons collision-free", () => {
 		const violations: string[] = [];
@@ -797,6 +810,14 @@ describe("prototype interaction UX contracts", () => {
 		if (!tray || !toggle || !validationPanel || !dryRunPanel || !dryRunTab) return;
 
 		dryRunTab.click();
+		expect(validationPanel.getAttribute("aria-hidden")).toBe("true");
+		expect(validationPanel.style.display).toBe("none");
+		expect(dryRunPanel.getAttribute("aria-hidden")).toBe("false");
+		expect(dryRunPanel.style.display).not.toBe("none");
+
+		expect(tray.getAttribute("data-bottom-tray-state")).toBe("collapsed");
+		toggle.click();
+		expect(tray.getAttribute("data-bottom-tray-state")).toBe("peek");
 		expect(validationPanel.getAttribute("aria-hidden")).toBe("true");
 		expect(validationPanel.style.display).toBe("none");
 		expect(dryRunPanel.getAttribute("aria-hidden")).toBe("false");

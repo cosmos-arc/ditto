@@ -1215,3 +1215,19 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 | 移除 `/ai/copilot`、`/ai/agent` | §8.2 | copilot 升级为全局 Sidecar，agent 迁入 Platform |
 | 新增 `/platform/agents` | §8.2, §12.6 | 从 AI 域迁入（Studio Shell） |
 | §12.5 AI & Agent 整段 deprecated | §12.5 | AI 域不再作为独立路由域，添加迁移说明 |
+
+### v1.4 — 2026-04-29（Edition Review Remediation）
+
+| 变更 | 章节 | 说明 |
+|------|------|------|
+| Bottom Tray 合同 | Studio / Builder、Queue / Ops、Ledger / Execution | Studio 默认 `peek`；Ops 与 Trading 默认 `collapsed` 或按告警升级为 `peek`；Analytical 页面避免默认使用底部日志托盘。 |
+| Catalog 右栏顺序 | Catalog / Screener Workspace | 右栏固定为 `summary -> status/risk -> insight/event -> actions`，summary 必须可 sticky。 |
+| Catalog 批量与选中反馈 | Catalog / Screener Workspace | 选中对象不能只靠背景色；有 checkbox / 多选能力时必须暴露批量操作反馈。 |
+| 危险动作链路 | Catalog、Config、Trading | 删除、回滚、暂停交易等动作必须提供影响预览、确认、取消和恢复提示。 |
+
+Catalog 页面落地属性：
+
+- 右栏摘要：`data-detail-sticky-summary`。
+- 批量操作：`data-batch-action-bar`。
+- 选中对象标记：`data-row-selection-marker`。
+- 危险确认摘要：`data-danger-confirmation` 或 `data-high-risk-confirmation`。

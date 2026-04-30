@@ -352,3 +352,26 @@ async function verifyToggle(page, radioId, expectedVisibleSelector, expectedHidd
 > - 产品定位是否有变化？（更新模块分层，同步到产品规格）
 
 **优化原则**: 准则的修改基于实际审查经验，不是为了"更容易通过"而妥协。
+
+---
+
+## Expert Efficiency 校准（2026-04-29）
+
+当 Edition 平均分进入 9.x 后，评分必须更关注专家工作流效率，避免“视觉完成度高但操作判断慢”的虚高。
+
+### 新增前置检查
+
+| 检查项 | 量化方法 | 阈值 | 优先级 |
+|--------|----------|------|--------|
+| 5 秒主答案 | 页面是否暴露 `data-primary-answer`，首屏能回答当前最重要判断 | 专家入口页必需 | P1 |
+| 选中联动 | 是否至少有两个 `data-selected-object-region` 随选中对象更新 | Catalog / Studio / Agent 必需 | P1 |
+| 紧凑视口主流程 | 1366x768 下主工作面仍可完成核心任务 | 主工作面不被底部或右栏压断 | P1 |
+| 非颜色关键状态 | `data-critical-status` 内有文字 / icon / 边界辅助 | 不允许 color-only | P0 |
+| 搜索作用域 | 全局 command 与本地 search / filter 有不同 data 语义 | 0 混淆 | P1 |
+
+### 系统卫生扣分
+
+- `oklch(from...)` 出现在活跃原型或共享 CSS：一致性扣分。
+- `letter-spacing` 负 fallback、未说明的 line-height / z-index 硬编码：一致性和可维护性扣分。
+- 缺少 reduced-motion fallback：可访问性和高级感扣分。
+- 缺少 Bottom Tray 三态合同但页面存在日志 / 状态底栏：信息效率扣分。
