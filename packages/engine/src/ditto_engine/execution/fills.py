@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_engine.accounting.fills import FillEvent
+from ditto_portfolio.accounting.fills import FillEvent
 
 __all__ = [
     "FillOutcome",

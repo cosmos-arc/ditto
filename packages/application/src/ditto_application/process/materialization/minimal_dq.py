@@ -6,11 +6,11 @@ from dataclasses import asdict
 from typing import cast
 
 import polars as pl
-from ditto_analytics.publication_safety import DerivedMinimalDQSummary
 from ditto_data.models.publication_safety import (
     DerivedMinimalDQSummaryRecord,
     JsonDict,
 )
+from ditto_features.publication_safety import DerivedMinimalDQSummary
 from ditto_kernel.strategy import DerivedSpec
 
 from ditto_application.config import now_iso

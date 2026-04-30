@@ -12,9 +12,9 @@ from ditto_application.process.execution.strategy_run_process import (
     StrategyRunResult,
     StrategyRunServiceConfig,
 )
-from ditto_engine.alpha.models import TargetPortfolio
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.statistics import BacktestReport
+from ditto_strategy.alpha.models import TargetPortfolio
 
 
 class TestStrategyFacade:

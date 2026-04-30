@@ -15,8 +15,8 @@ from ditto_application.process.execution.strategy_input import (
 from ditto_engine.backtest.audit import RiskScanRecord
 from ditto_engine.backtest.manifest import RunManifest, RunMode
 from ditto_engine.backtest.statistics import PreTradeDecisionRecord
-from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
 from ditto_kernel.identity import InstrumentId
+from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 # ---------------------------------------------------------------------------
 # enrich_record_with_symbol

@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import orjson
 import polars as pl
-from ditto_analytics.research.domain import (
+from ditto_analysis.research.domain import (
     DatasetSnapshot,
     KnownAtPolicy,
     LateArrivalPolicy,

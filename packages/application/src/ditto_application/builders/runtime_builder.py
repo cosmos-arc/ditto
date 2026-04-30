@@ -8,9 +8,11 @@ from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_engine.alpha.builtins.scoring import ScoringMethod
-from ditto_engine.alpha.pipeline import StrategyPipeline
-from ditto_engine.alpha.specs import (
+from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
+from ditto_kernel.strategy import ImpactModel
+from ditto_strategy.alpha.builtins.scoring import ScoringMethod
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.specs import (
     ConstraintSpec,
     CostModelSpec,
     ExecutionSpec,
@@ -19,7 +21,7 @@ from ditto_engine.alpha.specs import (
     SelectorSpec,
     StrategySpec,
 )
-from ditto_engine.alpha.templates import (
+from ditto_strategy.alpha.templates import (
     ETFRotationConfig,
     ETFTrendSwingConfig,
     StockSectorRotationConfig,
@@ -31,14 +33,12 @@ from ditto_engine.alpha.templates import (
     get_sector_rotation_param_constraints,
     validate_sector_rotation_config,
 )
-from ditto_engine.alpha.templates import (
+from ditto_strategy.alpha.templates import (
     get_param_constraints as get_stock_selection_param_constraints,
 )
-from ditto_engine.alpha.templates import (
+from ditto_strategy.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
-from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
-from ditto_kernel.strategy import ImpactModel
 
 from ditto_application.builders._spec_deserializer import (
     as_float_tuple,

@@ -11,8 +11,7 @@ from dataclasses import dataclass
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
-
-from ditto_engine.risk.post_trade import RiskActionType, RiskSeverity
+from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 __all__ = [
     "PreTradeDecisionRecord",

@@ -296,13 +296,17 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/59/172424b79f8cfd4b6d8a122b2193e6b8ad4b11f7159bb3b6f9b3191329bb/xxhash-3.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: ./packages/analytics
+      - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
+      - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
+      - pypi: ./packages/portfolio
+      - pypi: ./packages/risk
+      - pypi: ./packages/strategy
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -557,13 +561,17 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/99/57/d849a8d3afa1f8f4bc6a831cd89f49f9706fbbad94d2975d6140a171988c/xxhash-3.7.0-cp313-cp313-win_amd64.whl
-      - pypi: ./packages/analytics
+      - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
+      - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
+      - pypi: ./packages/portfolio
+      - pypi: ./packages/risk
+      - pypi: ./packages/strategy
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -962,13 +970,17 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/59/172424b79f8cfd4b6d8a122b2193e6b8ad4b11f7159bb3b6f9b3191329bb/xxhash-3.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: ./packages/analytics
+      - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
+      - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
+      - pypi: ./packages/portfolio
+      - pypi: ./packages/risk
+      - pypi: ./packages/strategy
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1326,13 +1338,17 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/99/57/d849a8d3afa1f8f4bc6a831cd89f49f9706fbbad94d2975d6140a171988c/xxhash-3.7.0-cp313-cp313-win_amd64.whl
-      - pypi: ./packages/analytics
+      - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
+      - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
+      - pypi: ./packages/portfolio
+      - pypi: ./packages/risk
+      - pypi: ./packages/strategy
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
@@ -2393,27 +2409,31 @@ packages:
   - pkg:pypi/distlib?source=hash-mapping
   size: 275642
   timestamp: 1752823081585
-- pypi: ./packages/analytics
-  name: ditto-analytics
+- pypi: ./packages/analysis
+  name: ditto-analysis
   version: 0.1.0
-  sha256: 7aac2a4c3429634ff497176e52d2d3b1c20a1d2cfc7bb485e22b4796d4109ee8
+  sha256: 70c498dddf3ea4b03744d46ea258e5146c30311fe572c89fe97ba4e117f77c40
   requires_dist:
-  - ditto-data
   - ditto-kernel
+  - ditto-data
+  - ditto-features
   - polars
   - numpy
-  - cachebox
   - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/application
   name: ditto-application
   version: 0.1.0
-  sha256: c349bdf6ec05df89aa3e3afadf9012ae3da075c790e445e0e0f0f79d47ac1c3d
+  sha256: 5b6333755cc3a51c32578dc73a4ab2f3bb53023443e9474f449cdabd3919b5ca
   requires_dist:
   - ditto-kernel
   - ditto-data
   - ditto-engine
-  - ditto-analytics
+  - ditto-features
+  - ditto-analysis
+  - ditto-strategy
+  - ditto-portfolio
+  - ditto-risk
   - ditto-platform
   requires_python: '>=3.13'
 - pypi: ./packages/apps
@@ -2432,10 +2452,23 @@ packages:
 - pypi: ./packages/engine
   name: ditto-engine
   version: 0.1.0
-  sha256: a1a21614bbb6c76adcd5af9967e47d9634fb5892e3f7985542c9e6631badce63
+  sha256: 776c9a904f3d57a0f9380ef538b56db8bd6c9dcde578e18714ee1ea86236230d
   requires_dist:
   - ditto-data
   - ditto-kernel
+  - ditto-portfolio
+  requires_python: '>=3.13'
+- pypi: ./packages/features
+  name: ditto-features
+  version: 0.1.0
+  sha256: 409e8243d91e238d9215fd1446e31cdc996ee246fa1bd2aabd526fd1293a1200
+  requires_dist:
+  - ditto-kernel
+  - ditto-data
+  - polars
+  - numpy
+  - cachebox
+  - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/kernel
   name: ditto-kernel
@@ -2446,6 +2479,38 @@ packages:
   name: ditto-platform
   version: 0.1.0
   sha256: 03a3c3185adc2678e42d73265ca05d94e3109894e7b89471d2ef45176d60d3d8
+  requires_python: '>=3.13'
+- pypi: ./packages/portfolio
+  name: ditto-portfolio
+  version: 0.1.0
+  sha256: da7b83616f32be0407a2e77bba51f75c278cdb40d48a03cb8d743cf28e183681
+  requires_dist:
+  - ditto-kernel
+  - polars
+  requires_python: '>=3.13'
+- pypi: ./packages/risk
+  name: ditto-risk
+  version: 0.1.0
+  sha256: d0d741233022f5ff0e9901b6b89d5fce6aa9964d6b69709f99e1a4cdccfc196e
+  requires_dist:
+  - ditto-kernel
+  - ditto-portfolio
+  - ditto-engine
+  - polars
+  - orjson
+  requires_python: '>=3.13'
+- pypi: ./packages/strategy
+  name: ditto-strategy
+  version: 0.1.0
+  sha256: 19345e26d6b7c8c699bc5cae4a8e030f7206206d7903baa9d8bb53fdd3d7ef48
+  requires_dist:
+  - ditto-kernel
+  - ditto-data
+  - ditto-features
+  - ditto-engine
+  - ditto-portfolio
+  - polars
+  - orjson
   requires_python: '>=3.13'
 - conda: https://conda.anaconda.org/conda-forge/noarch/dnspython-2.8.0-pyhcf101f3_0.conda
   sha256: ef1e7b8405997ed3d6e2b6722bd7088d4a8adf215e7c88335582e65651fb4e05

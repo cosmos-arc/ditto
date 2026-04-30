@@ -23,13 +23,15 @@ from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting.order_book import Order
+from ditto_risk.post_trade import PostTradeRiskGuard
+from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from loguru import logger
 
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.fills import FillEvent
-from ditto_engine.accounting.order_book import Order
-from ditto_engine.alpha.context import StrategyContext
-from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_engine.backtest.config import EngineConfig, EngineMode
 from ditto_engine.backtest.data_feed import DataFeed, Slice
 from ditto_engine.backtest.manifest import (
@@ -60,8 +62,6 @@ from ditto_engine.execution.trade_builder import (
     FlatToFlatTradeBuilder,
     TradeMatchingMethod,
 )
-from ditto_engine.risk.post_trade import PostTradeRiskGuard
-from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 
 __all__ = [
     "EngineConfig",

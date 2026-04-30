@@ -14,7 +14,7 @@ from conftest import (
     _make_slice,
 )
 from ditto_engine.backtest.steps import PreTradeStep, StepContext, TradingStep
-from ditto_engine.risk.pre_trade import Decision
+from ditto_risk.pre_trade import Decision
 
 
 class TestPreTradeStep:

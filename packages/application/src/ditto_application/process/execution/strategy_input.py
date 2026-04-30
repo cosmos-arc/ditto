@@ -14,7 +14,6 @@ from pathlib import Path
 
 import orjson
 import polars as pl
-from ditto_engine.alpha.pipeline import StrategyInputBundle
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.manifest import RunManifest, serialize_manifest
 from ditto_engine.backtest.statistics import (
@@ -24,6 +23,7 @@ from ditto_engine.backtest.statistics import (
 )
 from ditto_kernel.identity import InstrumentId
 from ditto_platform.foundation.util.io import atomic_bytes_write, atomic_write
+from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
 from ditto_application.process.execution.backtest_serialization import serialize_report
 

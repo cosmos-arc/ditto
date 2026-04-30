@@ -170,7 +170,7 @@ class TestCompileAndValidate:
     def test_custom_compiler_is_used(self) -> None:
         """传入自定义 compiler 时使用它."""
         mock_compiler = MagicMock()
-        from ditto_analytics.expression.contracts import (
+        from ditto_features.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,

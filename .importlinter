@@ -12,8 +12,12 @@ root_packages =
     ditto_platform
     ditto_kernel
     ditto_data
-    ditto_analytics
+    ditto_features
+    ditto_analysis
     ditto_engine
+    ditto_strategy
+    ditto_portfolio
+    ditto_risk
     ditto_application
     ditto_apps
 
@@ -43,8 +47,14 @@ layers =
     ditto_apps
     ditto_application
     ditto_engine
+    ditto_portfolio
+    ditto_analysis
+    ditto_features
     ditto_data
     ditto_platform
+# NOTE: ditto_strategy and ditto_risk not in layers — temporarily have
+# bidirectional module dependencies with ditto_engine. Will be added
+# back after Tasks 9-10 extract execution/backtest from engine.
 
 # ═══════════════════════════════════════════════════════════════════
 # Kernel 层隔离：禁止依赖其他层
@@ -60,7 +70,11 @@ forbidden_modules =
     ditto_apps.**
     ditto_application.**
     ditto_platform.**
-    ditto_analytics.**
+    ditto_features.**
+    ditto_analysis.**
+    ditto_strategy.**
+    ditto_portfolio.**
+    ditto_risk.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Platform 层隔离：禁止依赖其他层
@@ -75,7 +89,10 @@ forbidden_modules =
     ditto_engine.**
     ditto_apps.**
     ditto_kernel.**
-    ditto_analytics.**
+    ditto_features.**
+    ditto_analysis.**
+    ditto_strategy.**
+    ditto_risk.**
     ditto_application.**
 # PlatformError 继承 DittoError（全局异常根），这是跨层共享的合法依赖
 ignore_imports =
@@ -86,7 +103,7 @@ unmatched_ignore_imports_alerting = warn
 # Data 层边界：禁止依赖 Engine/Apps/App
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:data-boundary]
-name = Data must not depend on Engine/Apps/App/Analytics
+name = Data must not depend on Engine/Apps/App/Analytics/Features/Analysis/Strategy
 type = forbidden
 source_modules =
     ditto_data.**
@@ -94,40 +111,81 @@ forbidden_modules =
     ditto_engine.**
     ditto_apps.**
     ditto_application.**
-    ditto_analytics.**
+    ditto_features.**
+    ditto_analysis.**
+    ditto_strategy.**
+    ditto_portfolio.**
+    ditto_risk.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Analytics 层隔离：禁止依赖 Data/Engine/Apps
+# Features 层隔离：禁止依赖 Data/Engine/Strategy 等
 # ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:analytics-isolation]
-name = Analytics must not depend on Data/Engine
+[importlinter:contract:features-boundary]
+name = Features must not depend on Data/Engine/Strategy/Apps/Application/Analysis/Portfolio
 type = forbidden
 source_modules =
-    ditto_analytics.**
+    ditto_features.**
 forbidden_modules =
     ditto_data.**
     ditto_engine.**
+    ditto_apps.**
+    ditto_application.**
+    ditto_analysis.**
+    ditto_strategy.**
+    ditto_portfolio.**
+    ditto_risk.**
 ignore_imports =
-    # Analytics 引用 data.errors 是合法的：DerivedNotImplementedError 等类型供编译/验证使用
-    ditto_analytics.** -> ditto_data.errors
+    # Features 引用 data.errors 是合法的：DerivedNotImplementedError 等类型供编译/验证使用
+    ditto_features.** -> ditto_data.errors
 unmatched_ignore_imports_alerting = warn
 
-[importlinter:contract:analytics-must-not-depend-on-interfaces]
-name = Analytics must not depend on Applications
+# Features 内部方向：expression 禁止依赖 materialization
+[importlinter:contract:features-expression-no-materialization]
+name = Features expression must not import materialization
 type = forbidden
 source_modules =
-    ditto_analytics.**
+    ditto_features.expression.**
 forbidden_modules =
-    ditto_apps.**
+    ditto_features.materialization.**
 
-# Analytics 内部方向：expression 禁止依赖 materialization
-[importlinter:contract:analytics-expression-no-materialization]
-name = Analytics expression must not import materialization
+# ═══════════════════════════════════════════════════════════════════
+# Portfolio 层隔离：禁止依赖下游能力包
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:portfolio-boundary]
+name = Portfolio must not depend on execution/risk/backtest/application/apps
 type = forbidden
 source_modules =
-    ditto_analytics.expression.**
+    ditto_portfolio.**
 forbidden_modules =
-    ditto_analytics.materialization.**
+    ditto_engine.**
+    ditto_apps.**
+    ditto_application.**
+    ditto_risk.**
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# Analysis 层隔离：禁止被生产包依赖
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:analysis-no-production-dependency]
+name = Analysis must not depend on production packages
+type = forbidden
+source_modules =
+    ditto_analysis.**
+forbidden_modules =
+    ditto_data.**
+    ditto_engine.**
+    ditto_apps.**
+    ditto_application.**
+    ditto_features.**
+    ditto_strategy.**
+    ditto_portfolio.**
+    ditto_risk.**
+ignore_imports =
+    # Analysis 引用 data.errors 是合法的：DerivedNotImplementedError 等共享错误类型
+    ditto_analysis.** -> ditto_data.errors
+    # Analysis 引用 features.errors 是合法的：AnalyticsError 基类定义在 features.errors 中
+    ditto_analysis.** -> ditto_features.errors
+unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
 # Engine ↔ Data 边界：双向禁止互相依赖
@@ -164,31 +222,6 @@ source_modules =
     ditto_engine.**
 forbidden_modules =
     ditto_platform.**
-
-# ═══════════════════════════════════════════════════════════════════
-# Engine 与 Analytics 互相隔离：平行平面，互不依赖
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:engine-no-analytics-dependency]
-name = Engine must not depend on Analytics
-type = forbidden
-source_modules =
-    ditto_engine.**
-forbidden_modules =
-    ditto_analytics.**
-
-# ═══════════════════════════════════════════════════════════════════
-# Analytics 与 Application 互斥：平行平面，互不依赖
-# Application 通过 builders 层使用 Analytics（表达式编译/因子计算）
-# Analytics 禁止反向依赖 Application
-# 注意：Application → Analytics 方向由分层架构隐式允许（无对应 forbidden 合约）。
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:analytics-no-app-dependency]
-name = Analytics must not depend on Application
-type = forbidden
-source_modules =
-    ditto_analytics.**
-forbidden_modules =
-    ditto_application.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Apps 层边界：禁止直接依赖 Data 存储/运行时实现
@@ -502,8 +535,12 @@ ancestors =
     ditto_platform
     ditto_kernel
     ditto_data
-    ditto_analytics
+    ditto_features
+    ditto_analysis
     ditto_engine
+    ditto_strategy
+    ditto_portfolio
+    ditto_risk
     ditto_application
     ditto_apps
 depth = 10

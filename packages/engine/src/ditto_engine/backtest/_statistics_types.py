@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.fills import FillEvent
 
-from ditto_engine.accounting.fills import FillEvent
 from ditto_engine.backtest.audit import (
     PreTradeDecisionRecord,
     RiskScanRecord,

@@ -19,13 +19,13 @@ from typing import Protocol
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.tracing import traced
-
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.order_book import (
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBookReadOnly,
     OrderType,
 )
+
 from ditto_engine.execution.reality.constants import DEFAULT_LOT_SIZE
 from ditto_engine.execution.reality.market import MarketSnapshot
 from ditto_engine.execution.rules import InstrumentRules

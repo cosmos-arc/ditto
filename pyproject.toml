@@ -108,6 +108,7 @@ unfixable = []
 "packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
+"packages/portfolio/src/ditto_portfolio/rebalancing/report_views.py" = ["D102"]
 # Protocol 接口方法用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/data/src/ditto_data/storage/base/protocols.py" = ["D102"]
 # 第三方 stub 文件包含 Any 类型签名，无法修改
@@ -268,7 +269,11 @@ extraPaths = [
     "packages/platform/src",
     "packages/kernel/src",
     "packages/data/src",
-    "packages/analytics/src",
+    "packages/features/src",
+    "packages/analysis/src",
+    "packages/strategy/src",
+    "packages/portfolio/src",
+    "packages/risk/src",
     "packages/application/src",
     "packages/apps/src",
 ]
@@ -287,7 +292,11 @@ pythonpath = [
     "packages/platform/src",
     "packages/kernel/src",
     "packages/data/src",
-    "packages/analytics/src",
+    "packages/features/src",
+    "packages/analysis/src",
+    "packages/strategy/src",
+    "packages/portfolio/src",
+    "packages/risk/src",
     "packages/application/src",
     "packages/apps/src",
 ]

@@ -15,7 +15,7 @@ Application 层是 **Application Layer（应用层）**，负责 Use Case 编排
 ditto_application → ditto_kernel ✅
 ditto_application → ditto_data ✅
 ditto_application → ditto_engine ✅
-ditto_application → ditto_analytics ✅
+ditto_application → ditto_features ✅
 ditto_application → ditto_platform ✅
 ditto_application 禁止 → ditto_apps ❌
 ```

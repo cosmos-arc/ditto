@@ -4,11 +4,7 @@ from ditto_kernel.exceptions import DittoError
 
 
 class EngineError(DittoError):
-    """引擎域基础异常."""
-
-
-class StateTransitionError(EngineError):
-    """Invalid domain state transition."""
+    """Engine domain base exception."""
 
 
 class InvalidOrderError(EngineError):
@@ -33,5 +29,4 @@ __all__ = [
     "EngineError",
     "InvalidOrderError",
     "PortfolioConstraintError",
-    "StateTransitionError",
 ]

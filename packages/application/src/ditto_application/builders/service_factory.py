@@ -12,10 +12,6 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_engine.accounting.account import Account
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.alpha.pipeline import StrategyPipeline
-from ditto_engine.alpha.specs import StrategySpec
 from ditto_engine.backtest.data_feed import (
     DataFeed,
     ProviderBackedDataFeed,
@@ -24,12 +20,16 @@ from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_engine.execution.reality import AShareFeeModel, BrokerageModel, FeeModel
 from ditto_engine.execution.reality.slippage import FixedBpsSlippage, SlippageModel
-from ditto_engine.risk.pre_trade import (
+from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.specs import StrategySpec
 
 from ditto_application.builders._resolution import (
     resolve_benchmark,

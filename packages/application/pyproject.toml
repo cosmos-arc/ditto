@@ -6,7 +6,11 @@ dependencies = [
     "ditto-kernel",
     "ditto-data",
     "ditto-engine",
-    "ditto-analytics",
+    "ditto-features",
+    "ditto-analysis",
+    "ditto-strategy",
+    "ditto-portfolio",
+    "ditto-risk",
     "ditto-platform",
 ]
 

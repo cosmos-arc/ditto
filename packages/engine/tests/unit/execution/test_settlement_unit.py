@@ -1,13 +1,13 @@
 """SettlementModel unit tests — SimpleSettlementModel + AShareSettlementModel."""
 
 import pytest
-from ditto_engine.accounting.position import Position
 from ditto_engine.execution.reality.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
 from ditto_engine.execution.rules import TradingRuleSet
 from ditto_kernel.order import OrderSide
+from ditto_portfolio.accounting.position import Position
 
 # ---------------------------------------------------------------------------
 # Test fixtures

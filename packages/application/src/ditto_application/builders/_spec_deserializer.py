@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from ditto_engine.alpha.builtins.regime import (
+from ditto_strategy.alpha.builtins.regime import (
     BreadthIndicator,
     MomentumIndicator,
     RegimeConfig,

@@ -10,21 +10,21 @@ from datetime import UTC, datetime
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.accounting.fills import FillEvent
-from ditto_engine.accounting.order_book import Order, OrderBookReadOnly, OrderType
 from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
 from ditto_engine.execution.planner import ExecutionPlan
-from ditto_engine.risk.post_trade import (
+from ditto_kernel.clock import Clock
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting.order_book import Order, OrderBookReadOnly, OrderType
+from ditto_risk.post_trade import (
     RiskAction,
     RiskActionType,
     RiskScope,
     RiskSeverity,
 )
-from ditto_kernel.clock import Clock
-from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
 
 IID_1 = InstrumentId(1)
 IID_2 = InstrumentId(2)

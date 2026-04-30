@@ -106,8 +106,8 @@ interfaces → app → engine → kernel
 ### 策略 Pipeline
 
 ```python
-from ditto_engine.alpha import StrategySpec, StrategyPipeline, StrategyInputBundle
-from ditto_engine.alpha.templates import build_etf_rotation_pipeline, ETFRotationConfig
+from ditto_strategy.alpha import StrategySpec, StrategyPipeline, StrategyInputBundle
+from ditto_strategy.alpha.templates import build_etf_rotation_pipeline, ETFRotationConfig
 
 # 从模板构建 Pipeline
 config = ETFRotationConfig(top_n=3, rebalance_freq="monthly")

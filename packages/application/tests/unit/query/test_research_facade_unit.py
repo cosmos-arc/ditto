@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_analytics.research.domain import DatasetSnapshot, KnownAtPolicy
+from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
 from ditto_application.query.research import ResearchDatasetFacade, _sanitize_table_name
 
 

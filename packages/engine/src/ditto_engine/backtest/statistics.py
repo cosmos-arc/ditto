@@ -12,7 +12,8 @@ import math
 import statistics
 from dataclasses import dataclass, replace
 
-from ditto_engine.accounting.fills import FillEvent
+from ditto_portfolio.accounting.fills import FillEvent
+
 from ditto_engine.backtest._statistics_types import (
     AggregatedTradeStatistics,
     AlphaStatistics,

@@ -7,10 +7,6 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_analytics.materialization.contracts import (
-    DerivedExecutionPlan,
-    DerivedRunMode,
-)
 from ditto_application.process.materialization.dependencies import (
     _resolve_etf_dependency,
     _resolve_market_dependency,
@@ -19,6 +15,10 @@ from ditto_application.process.materialization.runtime_input_provider import (
     RuntimeDerivedInputProvider,
 )
 from ditto_application.process.materialization.types import InputContext
+from ditto_features.materialization.contracts import (
+    DerivedExecutionPlan,
+    DerivedRunMode,
+)
 from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,

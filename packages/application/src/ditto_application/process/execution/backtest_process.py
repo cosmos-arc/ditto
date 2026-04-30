@@ -24,7 +24,6 @@ from ditto_data.services.audit import ExecutionAuditService
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_engine.backtest.audit import ExecutionAuditCollector
 from ditto_engine.backtest.config import EngineConfig, EngineMode
 from ditto_engine.backtest.data_feed import DataFeed
@@ -43,11 +42,12 @@ from ditto_engine.execution.brokerage import Brokerage
 from ditto_engine.execution.planner import ExecutionPlanner
 from ditto_engine.execution.reality import FeeModel, SlippageModel
 from ditto_engine.execution.rules import InstrumentRuleProvider
-from ditto_engine.risk.post_trade import PostTradeRiskGuard
-from ditto_engine.risk.pre_trade import CompositePreTradeCheck
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
+from ditto_risk.post_trade import PostTradeRiskGuard
+from ditto_risk.pre_trade import CompositePreTradeCheck
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK

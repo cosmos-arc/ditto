@@ -10,7 +10,6 @@ from unittest.mock import patch
 import orjson
 import polars as pl
 import pytest
-from ditto_analytics.expression import Analysis, CompileIdentity
 from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
@@ -19,6 +18,7 @@ from ditto_data.models.publication_safety import (
 from ditto_data.storage.runtime.derived_artifact_writer import (
     ArtifactMetadataParams,
 )
+from ditto_features.expression import Analysis, CompileIdentity
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 _TIME_KEY = "trade_date"

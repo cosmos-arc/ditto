@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting.order_book import Order
 
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.fills import FillEvent
-from ditto_engine.accounting.order_book import Order
 from ditto_engine.backtest.audit.records import PreTradeDecisionRecord
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.execution.planner import ExecutionPlan

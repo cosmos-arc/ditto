@@ -15,8 +15,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from ditto_engine.accounting.account import Account
-from ditto_engine.accounting.cash import CashBook
 from ditto_engine.backtest.audit import ExecutionAuditCollector
 from ditto_engine.backtest.engine import (
     EngineConfig,
@@ -29,6 +27,8 @@ from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel
 from ditto_kernel.clock import SimulatedClock
+from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.cash import CashBook
 from inline_snapshot import snapshot
 
 from .conftest import INITIAL_CASH, build_test_data_feed, write_parquet_data

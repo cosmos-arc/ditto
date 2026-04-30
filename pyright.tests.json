@@ -1,5 +1,5 @@
 {
-  "include": ["packages/*/tests", "interfaces/tests"],
+  "include": ["packages/*/tests"],
   "exclude": ["**/__pycache__", ".pixi", ".venv"],
   "pythonVersion": "3.13",
   "pythonPlatform": "All",
@@ -10,11 +10,12 @@
   "extraPaths": [
     "packages/kernel/src",
     "packages/engine/src",
-    "packages/infra/src",
+    "packages/platform/src",
     "packages/data/src",
-    "packages/analytics/src",
+    "packages/features/src",
+    "packages/analysis/src",
     "packages/application/src",
-    "interfaces/src"
+    "packages/apps/src"
   ],
   "reportMissingTypeStubs": "none",
   "reportUnknownMemberType": "none",

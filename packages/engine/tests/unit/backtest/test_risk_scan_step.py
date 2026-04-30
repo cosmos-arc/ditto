@@ -13,10 +13,10 @@ from conftest import (
     _make_risk_action,
     _make_slice,
 )
-from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.backtest.audit import ExecutionAuditCollector
 from ditto_engine.backtest.steps import RiskScanStep, StepContext, TradingStep
-from ditto_engine.risk.post_trade import RiskActionType, RiskScope
+from ditto_risk.post_trade import RiskActionType, RiskScope
+from ditto_strategy.alpha.context import StrategyContext
 
 
 class TestRiskScanStep:

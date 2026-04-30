@@ -10,7 +10,6 @@ from unittest.mock import Mock
 
 import polars as pl
 import pytest
-from ditto_analytics.expression.compiler import ExpressionCompiler
 from ditto_application.command.backtest import BacktestRunCommand, BacktestRunHandler
 from ditto_application.process.execution.factor_bridge import (
     CompiledExpressions,
@@ -19,6 +18,7 @@ from ditto_application.process.execution.factor_bridge import (
 )
 from ditto_application.process.execution.strategy_types import RunLifecycleService
 from ditto_data.services.strategy.strategy_catalog_service import StrategyCatalogService
+from ditto_features.expression.compiler import ExpressionCompiler
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -222,7 +222,7 @@ class TestPipelineAssembly:
 
     def test_regime_score_engine_assembly(self) -> None:
         """RegimeScoreEngine 可正确创建和计算."""
-        from ditto_engine.alpha.builtins.regime import (
+        from ditto_strategy.alpha.builtins.regime import (
             RegimeConfig,
             RegimeScoreEngine,
         )

@@ -21,13 +21,6 @@ from datetime import UTC, datetime
 
 import polars as pl
 import pytest
-from ditto_engine.accounting.account import Account
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.alpha.pipeline import StrategyPipeline
-from ditto_engine.alpha.templates.etf_rotation import (
-    ETFRotationConfig,
-    build_etf_rotation_pipeline,
-)
 from ditto_engine.backtest.audit import ExecutionAuditCollector
 from ditto_engine.backtest.engine import (
     EngineConfig,
@@ -39,12 +32,19 @@ from ditto_engine.backtest.statistics import BacktestReport, build_report
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel, SimpleFeeModel
-from ditto_engine.risk.pre_trade import (
+from ditto_kernel.clock import SimulatedClock
+from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_kernel.clock import SimulatedClock
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.templates.etf_rotation import (
+    ETFRotationConfig,
+    build_etf_rotation_pipeline,
+)
 
 from .conftest import (
     INITIAL_CASH,
@@ -374,21 +374,21 @@ class TestE2ESmoke:
 
         使用自定义 Pipeline 验证 signal_value 注入后排序和权重分配正确。
         """
-        from ditto_engine.alpha.builtins import (
-            ScoringStage,
-            SelectionStage,
-            SignalStage,
-        )
-        from ditto_engine.portfolio.allocation import (
+        from ditto_portfolio.rebalancing.allocation import (
             AllocationStage,
             EqualWeightAllocator,
         )
 
         # 构建自定义 Pipeline: Signal → Score → Selection → Allocation → Constraint
-        from ditto_engine.portfolio.constraints import (
+        from ditto_portfolio.rebalancing.constraints import (
             ConstraintChecker,
             ConstraintStage,
             MaxWeightConstraint,
+        )
+        from ditto_strategy.alpha.builtins import (
+            ScoringStage,
+            SelectionStage,
+            SignalStage,
         )
 
         checker = ConstraintChecker(

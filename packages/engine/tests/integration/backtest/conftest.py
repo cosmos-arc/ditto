@@ -18,16 +18,6 @@ from typing import Any
 import polars as pl
 import pytest
 from ditto_data.provider import BarQuery, InstrumentQuery
-from ditto_engine.accounting.account import Account
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.alpha.templates.etf_rotation import (
-    ETFRotationConfig,
-    build_etf_rotation_pipeline,
-)
-from ditto_engine.alpha.templates.etf_trend_swing import (
-    ETFTrendSwingConfig,
-    build_etf_trend_swing_pipeline,
-)
 from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_engine.backtest.engine import (
     EngineConfig,
@@ -45,13 +35,23 @@ from ditto_engine.execution.reality import (
     FixedBpsSlippage,
     SimpleFeeModel,
 )
-from ditto_engine.risk.pre_trade import (
+from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_kernel.clock import SimulatedClock
-from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.templates.etf_rotation import (
+    ETFRotationConfig,
+    build_etf_rotation_pipeline,
+)
+from ditto_strategy.alpha.templates.etf_trend_swing import (
+    ETFTrendSwingConfig,
+    build_etf_trend_swing_pipeline,
+)
 
 # ---------------------------------------------------------------------------
 # TestParquetProvider — 测试专用 DataProvider 实现

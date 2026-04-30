@@ -13,17 +13,17 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
-
-from ditto_engine.accounting.account import Account, AccountView
-from ditto_engine.accounting.fills import FillEvent
-from ditto_engine.accounting.order_book import (
+from ditto_portfolio.accounting.account import Account, AccountView
+from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting.order_book import (
     Order,
     OrderEvent,
     OrderStatus,
     OrderTicket,
     StateTransitionError,
 )
-from ditto_engine.accounting.position import Position
+from ditto_portfolio.accounting.position import Position
+
 from ditto_engine.exceptions import EngineError
 from ditto_engine.execution.fills import Filled, NoFill
 from ditto_engine.execution.reality import BrokerageModel

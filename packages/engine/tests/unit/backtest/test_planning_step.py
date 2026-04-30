@@ -12,8 +12,8 @@ from conftest import (
     _make_execution_plan,
     _make_slice,
 )
-from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.backtest.steps import PlanningStep, StepContext, TradingStep
+from ditto_strategy.alpha.context import StrategyContext
 
 
 class TestPlanningStep:

@@ -15,13 +15,6 @@ from typing import Any
 import orjson
 import polars as pl
 import pytest
-from ditto_engine.accounting.account import Account
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.accounting.fills import FillEvent
-from ditto_engine.alpha.templates.etf_rotation import (
-    ETFRotationConfig,
-    build_etf_rotation_pipeline,
-)
 from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -54,12 +47,19 @@ from ditto_engine.execution.rules import (
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_engine.risk.pre_trade import (
+from ditto_kernel.clock import SimulatedClock
+from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting.fills import FillEvent
+from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_kernel.clock import SimulatedClock
+from ditto_strategy.alpha.templates.etf_rotation import (
+    ETFRotationConfig,
+    build_etf_rotation_pipeline,
+)
 
 from .conftest import (
     INITIAL_CASH,

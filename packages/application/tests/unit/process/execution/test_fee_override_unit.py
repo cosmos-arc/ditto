@@ -21,12 +21,12 @@ from ditto_application.process.execution.fee_override import (
     build_fee_model,
     build_slippage_model,
 )
-from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel
 from ditto_engine.execution.rules import FeeSchedule
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.strategy import ImpactModel
+from ditto_portfolio.accounting.order_book import Order
 
 # ---------------------------------------------------------------------------
 # Fixtures

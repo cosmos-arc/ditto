@@ -10,13 +10,13 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass
 
-from ditto_engine.accounting.order_book import Order
 from ditto_engine.execution.reality.fee import AShareFeeModel, FeeModel
 from ditto_engine.execution.reality.slippage import (
     FixedBpsSlippage,
     VolumeShareSlippage,
 )
 from ditto_engine.execution.rules import FeeSchedule
+from ditto_portfolio.accounting.order_book import Order
 
 from ditto_application.contracts import CostConfig
 

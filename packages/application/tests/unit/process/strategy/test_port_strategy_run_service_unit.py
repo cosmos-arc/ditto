@@ -18,12 +18,12 @@ from ditto_data.models.strategy import StrategyArtifactRecord
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_engine.alpha.context import StrategyContext
-from ditto_engine.alpha.models import TargetPortfolio
-from ditto_engine.alpha.pipeline import StrategyPipeline
-from ditto_engine.alpha.specs import ParamConstraint, StrategySpec
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.models import TargetPortfolio
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.specs import ParamConstraint, StrategySpec
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,7 +82,7 @@ def _make_mock_assembler() -> MagicMock:
     assembler = MagicMock(spec=StrategyInputAssembler)
     # 返回一个最小 StrategyInputBundle — 仅用于验证调用参数
     import polars as pl
-    from ditto_engine.alpha.pipeline import StrategyInputBundle
+    from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
     assembler.assemble.return_value = StrategyInputBundle(
         trade_date=TRADE_DATE,

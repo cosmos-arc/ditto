@@ -3,18 +3,6 @@
 from types import MappingProxyType
 
 import pytest
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.accounting.order_book import (
-    Order,
-    OrderBookReadOnly,
-    OrderSide,
-    OrderStatus,
-    OrderTicket,
-    OrderType,
-)
-from ditto_engine.accounting.position import Position
-from ditto_engine.alpha.models import TargetPortfolio
 from ditto_engine.execution.planner import (
     BlockedOrder,
     BlockSeverity,
@@ -30,6 +18,18 @@ from ditto_engine.execution.rules import (
     TradingRuleSet,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting.order_book import (
+    Order,
+    OrderBookReadOnly,
+    OrderSide,
+    OrderStatus,
+    OrderTicket,
+    OrderType,
+)
+from ditto_portfolio.accounting.position import Position
+from ditto_strategy.alpha.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers

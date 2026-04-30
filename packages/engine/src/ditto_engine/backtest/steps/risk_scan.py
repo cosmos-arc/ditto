@@ -12,17 +12,17 @@ from __future__ import annotations
 
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
-
-from ditto_engine.alpha.context import StrategyContext
-from ditto_engine.backtest.audit.collector import ExecutionAuditCollector
-from ditto_engine.backtest.audit.records import RiskScanRecord
-from ditto_engine.backtest.steps.types import StepContext, StepResult
-from ditto_engine.events import RiskGuardTriggered
-from ditto_engine.risk.post_trade import (
+from ditto_risk.post_trade import (
     PostTradeRiskGuard,
     RiskActionType,
     RiskScope,
 )
+from ditto_strategy.alpha.context import StrategyContext
+
+from ditto_engine.backtest.audit.collector import ExecutionAuditCollector
+from ditto_engine.backtest.audit.records import RiskScanRecord
+from ditto_engine.backtest.steps.types import StepContext, StepResult
+from ditto_engine.events import RiskGuardTriggered
 
 __all__ = ["RiskScanStep"]
 

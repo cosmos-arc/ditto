@@ -3,7 +3,6 @@
 from collections.abc import Callable
 from typing import Any
 
-from ditto_analytics.publication_safety import CertificationStage
 from ditto_application.process.materialization.cascade_orchestrator import (
     RepairBatchResult,
 )
@@ -17,6 +16,7 @@ from ditto_apps.jobs.flows.materialization import (
     shadow_compare_flow,
     shadow_publish_flow,
 )
+from ditto_features.publication_safety import CertificationStage
 from pytest_mock import MockerFixture
 
 

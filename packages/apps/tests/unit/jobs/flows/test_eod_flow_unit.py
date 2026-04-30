@@ -287,7 +287,7 @@ class TestEodFlowHappyPath:
         run_id: str = "run-001",
     ) -> Any:
         """构造 TargetPortfolio 实例。"""
-        from ditto_engine.alpha.models import TargetPortfolio
+        from ditto_strategy.alpha.models import TargetPortfolio
 
         return TargetPortfolio(
             trade_date="2026-04-15",
@@ -445,7 +445,7 @@ class TestEodFlowStrategyPartialFailure:
         from ditto_application.process.execution.strategy_run_process import (
             StrategyRunResult,
         )
-        from ditto_engine.alpha.models import TargetPortfolio
+        from ditto_strategy.alpha.models import TargetPortfolio
 
         # 第一个成功，第二个失败
         mock_facade.run_strategy_for_date_from_catalog.side_effect = [
@@ -537,7 +537,7 @@ class TestEodFlowMaterializationFailure:
         from ditto_application.process.execution.strategy_run_process import (
             StrategyRunResult,
         )
-        from ditto_engine.alpha.models import TargetPortfolio
+        from ditto_strategy.alpha.models import TargetPortfolio
 
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(
             run_id="run-test",

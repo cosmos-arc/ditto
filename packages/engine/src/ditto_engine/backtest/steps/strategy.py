@@ -11,8 +11,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ditto_engine.alpha.context import StrategyContext
-from ditto_engine.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+
 from ditto_engine.backtest.steps.input_bundle import build_input_bundle
 from ditto_engine.backtest.steps.types import StepContext, StepResult
 

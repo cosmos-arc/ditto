@@ -14,12 +14,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_engine.accounting.account import Account
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.alpha.templates.etf_rotation import (
-    ETFRotationConfig,
-    build_etf_rotation_pipeline,
-)
 from ditto_engine.backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -32,18 +26,24 @@ from ditto_engine.backtest.statistics import (
 from ditto_engine.execution.brokerage import BacktestBrokerage
 from ditto_engine.execution.planner import SimpleExecutionPlanner
 from ditto_engine.execution.reality import BrokerageModel, SimpleFeeModel
-from ditto_engine.risk.post_trade import (
+from ditto_kernel.clock import SimulatedClock
+from ditto_portfolio.accounting.account import Account
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_risk.post_trade import (
     CompositePostTradeGuard,
     ConcentrationLimitRule,
     MarketAnomalyRule,
     SingleLossLimitRule,
 )
-from ditto_engine.risk.pre_trade import (
+from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
     LotSizeCheck,
 )
-from ditto_kernel.clock import SimulatedClock
+from ditto_strategy.alpha.templates.etf_rotation import (
+    ETFRotationConfig,
+    build_etf_rotation_pipeline,
+)
 
 from .conftest import (
     INITIAL_CASH,

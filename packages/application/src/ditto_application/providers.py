@@ -15,11 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-
-# ---------------------------------------------------------------------------
-# Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
-# ---------------------------------------------------------------------------
-from ditto_analytics.compile_cache import SQLiteCompileCache
 from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.publication_safety_record_service import (
@@ -54,6 +49,11 @@ from ditto_data.services.trade import TradeService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
+
+# ---------------------------------------------------------------------------
+# Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
+# ---------------------------------------------------------------------------
+from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_platform.foundation.config.settings import TradingSettings
 from ditto_platform.services.notification import AlertManager
 

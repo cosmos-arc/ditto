@@ -54,7 +54,11 @@ ditto-data = { path = "packages/data", editable = true }
 ditto-engine = { path = "packages/engine", editable = true }
 ditto-platform = { path = "packages/platform", editable = true }
 ditto-kernel = { path = "packages/kernel", editable = true }
-ditto-analytics = { path = "packages/analytics", editable = true }
+ditto-features = { path = "packages/features", editable = true }
+ditto-analysis = { path = "packages/analysis", editable = true }
+ditto-strategy = { path = "packages/strategy", editable = true }
+ditto-portfolio = { path = "packages/portfolio", editable = true }
+ditto-risk = { path = "packages/risk", editable = true }
 ditto-apps = { path = "packages/apps", editable = true }
 
 # 性能优化库

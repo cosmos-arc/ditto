@@ -9,14 +9,6 @@ from unittest.mock import MagicMock
 
 import orjson
 import polars as pl
-from ditto_analytics.compile_cache import SQLiteCompileCache
-from ditto_analytics.materialization import DerivedMaterializationRequest
-from ditto_analytics.materialization.models import (
-    DerivedRunMode,
-    DerivedRunTrigger,
-    DerivedVersionStatus,
-)
-from ditto_analytics.publication_safety import CompatibilityManifest
 from ditto_application.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
@@ -50,6 +42,14 @@ from ditto_data.storage.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
+from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.materialization import DerivedMaterializationRequest
+from ditto_features.materialization.models import (
+    DerivedRunMode,
+    DerivedRunTrigger,
+    DerivedVersionStatus,
+)
+from ditto_features.publication_safety import CompatibilityManifest
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 

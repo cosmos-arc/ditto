@@ -124,7 +124,7 @@ interfaces → app → engine → data → infra
 | `ditto_kernel` | 共享类型 |
 | `ditto_data` | 数据服务 |
 | `ditto_engine` | 领域计算 |
-| `ditto_analytics` | 表达式编译 / 物化 |
+| `ditto_features` | 表达式编译 / 物化 |
 | `ditto_platform` | 基础设施（仅 foundation） |
 
 **禁止依赖**: interfaces

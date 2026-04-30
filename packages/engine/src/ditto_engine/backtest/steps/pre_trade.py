@@ -17,20 +17,20 @@ from typing import ClassVar
 
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
-
-from ditto_engine.accounting.buying_power import CashAccountBuyingPower
-from ditto_engine.accounting.order_book import Order
-from ditto_engine.backtest.audit.records import PreTradeDecisionRecord
-from ditto_engine.backtest.steps.types import StepContext, StepResult
-from ditto_engine.events import OrderSubmitted
-from ditto_engine.execution.brokerage import Brokerage
-from ditto_engine.execution.reality import FeeModel
-from ditto_engine.risk.pre_trade import (
+from ditto_portfolio.accounting.buying_power import CashAccountBuyingPower
+from ditto_portfolio.accounting.order_book import Order
+from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     Decision,
     OrderCheckResult,
     PreTradeContext,
 )
+
+from ditto_engine.backtest.audit.records import PreTradeDecisionRecord
+from ditto_engine.backtest.steps.types import StepContext, StepResult
+from ditto_engine.events import OrderSubmitted
+from ditto_engine.execution.brokerage import Brokerage
+from ditto_engine.execution.reality import FeeModel
 
 __all__ = ["PreTradeStep"]
 

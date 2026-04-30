@@ -18,13 +18,13 @@ from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
 from ditto_data.services.strategy.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_engine.alpha.context import StrategyContext
-from ditto_engine.alpha.models import TargetPortfolio
-from ditto_engine.alpha.pipeline import StrategyPipeline
-from ditto_engine.alpha.specs import StrategySpec
-from ditto_engine.alpha.validation import validate_spec_params
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.statistics import BacktestReport
+from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.models import TargetPortfolio
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.alpha.validation import validate_spec_params
 
 from ditto_application.process.execution.backtest_process import (
     BacktestService,

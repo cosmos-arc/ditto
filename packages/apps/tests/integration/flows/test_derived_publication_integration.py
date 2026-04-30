@@ -10,16 +10,6 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_analytics.materialization import DerivedMaterializationRequest
-from ditto_analytics.materialization.models import (
-    DerivedRunMode,
-    DerivedRunTrigger,
-    DerivedVersionStatus,
-)
-from ditto_analytics.publication_safety import (
-    CertificationStage,
-    CompatibilityManifest,
-)
 from ditto_application.process.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -51,6 +41,16 @@ from ditto_data.services import (
 from ditto_data.services.derived import DerivedLatestQuery
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_features.materialization import DerivedMaterializationRequest
+from ditto_features.materialization.models import (
+    DerivedRunMode,
+    DerivedRunTrigger,
+    DerivedVersionStatus,
+)
+from ditto_features.publication_safety import (
+    CertificationStage,
+    CompatibilityManifest,
+)
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial

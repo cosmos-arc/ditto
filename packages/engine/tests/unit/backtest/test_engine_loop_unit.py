@@ -10,22 +10,22 @@ from typing import NamedTuple
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.accounting.order_book import (
+from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
+from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_kernel.clock import Clock
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBookReadOnly,
     OrderSide,
     OrderType,
 )
-from ditto_engine.alpha.models import TargetPortfolio
-from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
-from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineOptions
-from ditto_engine.risk.pre_trade import (
+from ditto_risk.pre_trade import (
     Decision,
     OrderCheckResult,
 )
-from ditto_kernel.clock import Clock
+from ditto_strategy.alpha.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
 # Helpers

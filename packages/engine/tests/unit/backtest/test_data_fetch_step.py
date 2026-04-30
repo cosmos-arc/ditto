@@ -15,10 +15,10 @@ from conftest import (
     _make_slice,
     _make_snapshot,
 )
-from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.steps import DataFetchStep, StepContext, TradingStep
 from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.context import StrategyContext
 
 
 class TestDataFetchStep:

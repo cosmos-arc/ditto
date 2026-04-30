@@ -6,15 +6,6 @@ from datetime import UTC, datetime
 from types import MappingProxyType
 from unittest.mock import MagicMock, Mock
 
-from ditto_engine.accounting.account import AccountView
-from ditto_engine.accounting.cash import CashBook
-from ditto_engine.accounting.fills import FillEvent
-from ditto_engine.accounting.order_book import (
-    Order,
-    OrderBookReadOnly,
-    OrderSide,
-    OrderType,
-)
 from ditto_engine.backtest.config import EngineConfig
 from ditto_engine.backtest.data_feed import MarketSnapshot, Slice
 from ditto_engine.backtest.engine import EngineLoop, EngineOptions
@@ -23,16 +14,25 @@ from ditto_engine.events import (
     OrderSubmitted,
     RiskGuardTriggered,
 )
-from ditto_engine.risk.post_trade import (
+from ditto_kernel import SimpleEventBus
+from ditto_kernel.clock import Clock
+from ditto_kernel.events import DomainEvent
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting.order_book import (
+    Order,
+    OrderBookReadOnly,
+    OrderSide,
+    OrderType,
+)
+from ditto_risk.post_trade import (
     RiskAction,
     RiskActionType,
     RiskScope,
     RiskSeverity,
 )
-from ditto_engine.risk.pre_trade import Decision, OrderCheckResult
-from ditto_kernel import SimpleEventBus
-from ditto_kernel.clock import Clock
-from ditto_kernel.events import DomainEvent
+from ditto_risk.pre_trade import Decision, OrderCheckResult
 
 # ---------------------------------------------------------------------------
 # Helpers

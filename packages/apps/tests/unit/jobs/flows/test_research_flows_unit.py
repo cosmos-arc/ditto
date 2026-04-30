@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_analytics.research.domain import DatasetSnapshot, KnownAtPolicy
+from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
 from ditto_apps.jobs.flows.research import research_dataset_build_flow
 from pytest_mock import MockerFixture
 

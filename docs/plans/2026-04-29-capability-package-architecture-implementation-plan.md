@@ -566,7 +566,7 @@ git commit -m "refactor: rename app package to application"
 
 ---
 
-### Task 5: Split Analytics into Features and Analysis
+### Task 5: Split Analytics into Features and Analysis ✅ DONE
 
 **Files:**
 - Move: `packages/analytics/src/ditto_analytics/expression/` -> `packages/features/src/ditto_features/expression/`
@@ -678,7 +678,10 @@ git commit -m "refactor: split analytics into features and analysis"
 
 ---
 
-### Task 6: Extract Strategy from Engine Alpha
+### Task 6: Extract Strategy from Engine Alpha ✅ DONE
+
+> **临时状态说明**: strategy 暂时依赖 ditto-engine（portfolio allocation/constraints + execution constants）。
+> 在 .importlinter layers 中暂时排除 ditto_strategy，待 Task 7-10 提取 portfolio/execution/backtest 后恢复。
 
 **Files:**
 - Move: `packages/engine/src/ditto_engine/alpha/` -> `packages/strategy/src/ditto_strategy/alpha/`

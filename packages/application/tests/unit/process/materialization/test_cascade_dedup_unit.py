@@ -6,15 +6,15 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from ditto_analytics.materialization import DerivedMaterializationResult
-from ditto_analytics.materialization.models import (
-    DerivedRunStatus,
-)
 from ditto_application.process.materialization.cascade_orchestrator import (
     CascadeStatus,
     InvalidationCascadeOrchestrator,
 )
 from ditto_data.models.derived import DerivedInvalidationRecord
+from ditto_features.materialization import DerivedMaterializationResult
+from ditto_features.materialization.models import (
+    DerivedRunStatus,
+)
 from ditto_kernel.strategy import MaterializationProfile
 
 

@@ -13,17 +13,6 @@ from typing import NamedTuple, Protocol, runtime_checkable
 from uuid import uuid4
 
 import polars as pl
-from ditto_analytics.compile_cache import SQLiteCompileCache
-from ditto_analytics.expression import CompiledDerivedExpression, CompileIdentity
-from ditto_analytics.materialization import (
-    DerivedExecutionPlan,
-    DerivedExecutionPlanner,
-    DerivedMaterializationRequest,
-    DerivedMaterializationResult,
-    DerivedRunMode,
-    DerivedRunStatus,
-    DerivedRunTrigger,
-)
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
 )
@@ -43,6 +32,17 @@ from ditto_data.services import (
 from ditto_data.services.derived.artifact_persistence_service import (
     ArtifactMetadataParams,
     ArtifactPersistenceService,
+)
+from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.expression import CompiledDerivedExpression, CompileIdentity
+from ditto_features.materialization import (
+    DerivedExecutionPlan,
+    DerivedExecutionPlanner,
+    DerivedMaterializationRequest,
+    DerivedMaterializationResult,
+    DerivedRunMode,
+    DerivedRunStatus,
+    DerivedRunTrigger,
 )
 from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 

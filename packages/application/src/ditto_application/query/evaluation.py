@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_analytics.evaluation.evaluator import (
+from ditto_data.services.derived import DerivedArtifactReader
+from ditto_features.evaluation.evaluator import (
     EvaluationConfig,
     FactorEvaluator,
 )
-from ditto_analytics.evaluation.report import FactorEvaluationReport
-from ditto_data.services.derived import DerivedArtifactReader
+from ditto_features.evaluation.report import FactorEvaluationReport
 
 from ditto_application.query.forward_return_service import ForwardReturnService
 

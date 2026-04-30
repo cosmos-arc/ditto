@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from ditto_kernel.clock import Clock
 from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.context import StrategyContext
 
-from ditto_engine.alpha.context import StrategyContext
 from ditto_engine.backtest.data_feed import DataFeed
 from ditto_engine.backtest.steps.types import StepContext, StepResult
 from ditto_engine.execution.brokerage import Brokerage

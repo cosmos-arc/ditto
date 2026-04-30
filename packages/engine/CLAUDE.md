@@ -152,7 +152,7 @@ ditto_engine/
 - 4 个策略模板: etf_rotation / etf_trend_swing / stock_sector_rotation / stock_selection_trend
 - etf_trend_swing 包含 TrailingStopStage（追踪止损，向量化 polars join）
 - `validation.py` 提供 `validate_spec_params()` 独立参数校验函数
-- 模块路径：`ditto_engine.alpha`
+- 模块路径：`ditto_strategy.alpha`
 - 详见 v3 设计文档 §2, §6.1, §9.1
 
 ### Portfolio（组合构建层）

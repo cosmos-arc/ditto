@@ -12,9 +12,9 @@ from ditto_application.process.execution.backtest_process import (
 from ditto_application.process.execution.factor_bridge import (
     FactorBridge,
 )
-from ditto_engine.alpha.pipeline import StrategyInputBundle
 from ditto_engine.backtest.data_feed import Slice
 from ditto_engine.backtest.steps import StepContext
+from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
 
 def _make_slice_with_bars() -> Slice:

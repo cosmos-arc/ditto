@@ -11,15 +11,15 @@ from ditto_data.models.strategy import StrategySpecRecord
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_engine.alpha.pipeline import StrategyPipeline
-from ditto_engine.alpha.specs import (
+from ditto_kernel.strategy import ImpactModel
+from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.specs import (
     CostModelSpec,
     ExecutionSpec,
     ScorerSpec,
     SelectorSpec,
     StrategySpec,
 )
-from ditto_kernel.strategy import ImpactModel
 
 
 def _make_rotation_spec() -> StrategySpec:

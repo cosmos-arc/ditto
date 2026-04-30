@@ -13,11 +13,11 @@ from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
 import polars as pl
-from ditto_analytics.materialization import (
+from ditto_data.models.derived import DerivedInvalidationRecord, DerivedSpecRecord
+from ditto_features.materialization import (
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
 )
-from ditto_data.models.derived import DerivedInvalidationRecord, DerivedSpecRecord
 from ditto_kernel.market import CalendarId, GrainId, TimeSpec
 from ditto_kernel.strategy import (
     DerivedRole,

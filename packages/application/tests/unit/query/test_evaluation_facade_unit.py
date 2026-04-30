@@ -5,13 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import polars as pl
-from ditto_analytics.evaluation.report import (
+from ditto_application.query.evaluation import EvaluationOptions, FactorEvaluationFacade
+from ditto_features.evaluation.report import (
     FactorEvaluationReport,
     ICSummary,
     LongShortResult,
     TailRiskMetrics,
 )
-from ditto_application.query.evaluation import EvaluationOptions, FactorEvaluationFacade
 
 
 def _make_report(**overrides: object) -> FactorEvaluationReport:

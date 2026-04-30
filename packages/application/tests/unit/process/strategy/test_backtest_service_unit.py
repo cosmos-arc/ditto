@@ -332,7 +332,7 @@ class TestAuditPersistence:
     ) -> None:
         """Portfolio-wide 风控记录在持久化时 instrument_id=None, scope='portfolio'。"""
         from ditto_engine.backtest.audit import RiskScanRecord
-        from ditto_engine.risk.post_trade import (
+        from ditto_risk.post_trade import (
             RiskActionType,
             RiskScope,
             RiskSeverity,
@@ -849,13 +849,13 @@ class TestBuildFactorAwareBundleBuilder:
     def test_compiled_nonempty_returns_bundle_builder(self) -> None:
         """compiled_expressions 非空 → 返回可调用的 bundle_builder."""
         import polars as pl
-        from ditto_analytics.expression.contracts import (
+        from ditto_application.process.execution.factor_bridge import (
+            CompiledExpressions,
+        )
+        from ditto_features.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
-        )
-        from ditto_application.process.execution.factor_bridge import (
-            CompiledExpressions,
         )
 
         # 构建真实的 CompiledDerivedExpression（简单的 close 列）
@@ -903,7 +903,7 @@ class TestBuildFactorAwareBundleBuilder:
         ctx = self._make_step_context()
         bundle = builder(ctx)
 
-        from ditto_engine.alpha.pipeline import StrategyInputBundle
+        from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
         assert isinstance(bundle, StrategyInputBundle)
         assert bundle.trade_date == "2026-04-10"
@@ -921,13 +921,13 @@ class TestBuildFactorAwareBundleBuilder:
     def test_run_id_param_propagated_to_bundle(self) -> None:
         """传入的 run_id 参数应传递到生成的 StrategyInputBundle.run_id (F10)."""
         import polars as pl
-        from ditto_analytics.expression.contracts import (
+        from ditto_application.process.execution.factor_bridge import (
+            CompiledExpressions,
+        )
+        from ditto_features.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
-        )
-        from ditto_application.process.execution.factor_bridge import (
-            CompiledExpressions,
         )
 
         compiled_expr = CompiledDerivedExpression(
@@ -989,7 +989,7 @@ class TestBuildFactorAwareBundleBuilder:
         ctx = self._make_step_context()
         bundle = builder(ctx)
 
-        from ditto_engine.alpha.pipeline import StrategyInputBundle
+        from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
         assert isinstance(bundle, StrategyInputBundle)
         assert bundle.signal_values.height == 2  # FactorBridge 处理 empty exprs
@@ -997,13 +997,13 @@ class TestBuildFactorAwareBundleBuilder:
     def test_compilation_failure_propagates_error(self) -> None:
         """当 FactorBridge.compute_signals 因无效表达式抛异常时，builder 传播异常."""
         import polars as pl
-        from ditto_analytics.expression.contracts import (
+        from ditto_application.process.execution.factor_bridge import (
+            CompiledExpressions,
+        )
+        from ditto_features.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
-        )
-        from ditto_application.process.execution.factor_bridge import (
-            CompiledExpressions,
         )
 
         # 构建一个引用不存在列的表达式，会在 rank 阶段抛出 ColumnNotFoundError
@@ -1078,13 +1078,13 @@ class TestBuildFactorAwareBundleBuilder:
     def test_lookback_days_from_compiled_max_lookback(self) -> None:
         """lookback_days 应取 compiled.expressions 中 analysis.lookback 的最大值."""
         import polars as pl
-        from ditto_analytics.expression.contracts import (
+        from ditto_application.process.execution.factor_bridge import (
+            CompiledExpressions,
+        )
+        from ditto_features.expression.contracts import (
             Analysis,
             CompiledDerivedExpression,
             CompileIdentity,
-        )
-        from ditto_application.process.execution.factor_bridge import (
-            CompiledExpressions,
         )
 
         # 构建两个表达式：lookback=61 和 lookback=21
