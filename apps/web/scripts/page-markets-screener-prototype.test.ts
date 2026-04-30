@@ -177,6 +177,10 @@ describe("page-markets-screener prototype", () => {
 				await page.locator("button[data-compare-add='000333']").click();
 				await expectLocatorText(page, "[data-compare-count]", "4");
 				await expectLocatorText(page, ".catalog-detail", "美的集团");
+				const insertedCompareSectionTitle = await page
+					.locator(".catalog-detail .compare-item", { hasText: "美的集团" })
+					.evaluate((item) => item.closest(".context-section")?.querySelector(".context-section-title")?.textContent?.trim());
+				expect(insertedCompareSectionTitle).toBe("对比篮");
 			} finally {
 				await browser.close();
 			}

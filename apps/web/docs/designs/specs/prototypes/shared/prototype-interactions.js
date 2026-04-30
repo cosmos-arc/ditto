@@ -324,7 +324,14 @@
     },
 
     _appendCompareItem: function (root, ticker, name, change) {
-      var detailBody = root.querySelector('.catalog-detail details[open] .context-section-body');
+      var detailBody = root.querySelector('[data-compare-basket-body]');
+      if (!detailBody) {
+        var compareCta = root.querySelector('.catalog-detail .compare-cta');
+        detailBody = compareCta ? compareCta.closest('.context-section-body') : null;
+      }
+      if (!detailBody) {
+        detailBody = root.querySelector('.catalog-detail details[open] .context-section-body');
+      }
       if (detailBody) {
         var detailItem = document.createElement('div');
         detailItem.className = 'compare-item';
