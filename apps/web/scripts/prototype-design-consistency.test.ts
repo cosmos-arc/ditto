@@ -110,7 +110,12 @@ function getStyleBlocks(html: string): string {
 }
 
 function stripCssComments(css: string): string {
-	return css.replace(/\/\*[\s\S]*?\*\//g, (comment) => "\n".repeat(comment.match(/\n/g)?.length ?? 0));
+	return css.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+		comment
+			.split("")
+			.map((char) => (char === "\n" ? "\n" : " "))
+			.join(""),
+	);
 }
 
 function getLineNumber(value: string, index: number): number {
@@ -120,9 +125,14 @@ function getLineNumber(value: string, index: number): number {
 function hasFixedCanvasException(css: string, index: number): boolean {
 	const lineStart = css.lastIndexOf("\n", index) + 1;
 	const lineEnd = css.indexOf("\n", index);
-	const line = css.slice(lineStart, lineEnd === -1 ? css.length : lineEnd);
+	const previousLineEnd = lineStart > 0 ? lineStart - 1 : -1;
+	const previousLineStart = previousLineEnd > 0 ? css.lastIndexOf("\n", previousLineEnd - 1) + 1 : 0;
+	const lines = [
+		css.slice(previousLineStart, previousLineEnd === -1 ? 0 : previousLineEnd),
+		css.slice(lineStart, lineEnd === -1 ? css.length : lineEnd),
+	].join("\n");
 
-	return /fixed canvas exception|fixed-canvas-exception/i.test(line);
+	return /fixed canvas exception|fixed-canvas-exception/i.test(lines);
 }
 
 function readPrototypeCssSources(): CssSource[] {
@@ -374,7 +384,7 @@ describe("prototype design consistency", () => {
 			const h1Count = document.querySelectorAll("h1").length;
 			const visibleStyleLabelCount = document.querySelectorAll(".style-label:not([aria-hidden='true'])").length;
 
-			if (h1Count < 1) {
+			if (h1Count !== 1) {
 				violations.push(`${page.id}:h1:${h1Count}`);
 			}
 			if (visibleStyleLabelCount > 0) {
@@ -1119,11 +1129,12 @@ describe("prototype design consistency", () => {
 		const violations: string[] = [];
 
 		for (const source of readPrototypeCssSources()) {
-			const css = stripCssComments(source.css);
+			const rawCss = source.css;
+			const css = stripCssComments(rawCss);
 
 			for (const match of css.matchAll(/(^|[^a-z0-9-])100vh\b/gi)) {
 				const index = match.index + match[1].length;
-				if (!hasFixedCanvasException(css, index)) {
+				if (!hasFixedCanvasException(rawCss, index)) {
 					violations.push(`${source.label}:${getLineNumber(css, index)}:100vh`);
 				}
 			}

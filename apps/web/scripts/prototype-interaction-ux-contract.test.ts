@@ -554,6 +554,7 @@ describe("prototype interaction UX contracts", () => {
 			const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"]'));
 			const panels = Array.from(document.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
 			const tabsById = new Map(tabs.flatMap((tab) => (tab.id ? [[tab.id, tab]] : [])));
+			const controllingTabIdByPanelId = new Map<string, string>();
 
 			tabs.forEach((tab, index) => {
 				const label = `${page.id}:tab ${index + 1}`;
@@ -566,6 +567,9 @@ describe("prototype interaction UX contracts", () => {
 					violations.push(`${label}:missing-aria-controls`);
 					return;
 				}
+				if (!tab.id) {
+					violations.push(`${label}:missing-id-for-aria-controls:${controls}`);
+				}
 
 				const panel = document.getElementById(controls);
 				if (!panel) {
@@ -575,17 +579,25 @@ describe("prototype interaction UX contracts", () => {
 				if (panel.getAttribute("role") !== "tabpanel") {
 					violations.push(`${label}:controlled-target-not-tabpanel:${controls}`);
 				}
+				if (tab.id) {
+					controllingTabIdByPanelId.set(controls, tab.id);
+				}
 			});
 
 			panels.forEach((panel, index) => {
 				const label = `${page.id}:tabpanel ${index + 1}`;
 				const labelledBy = panel.getAttribute("aria-labelledby")?.trim() ?? "";
-				const labelledByTab = labelledBy.split(/\s+/).some((id) => tabsById.has(id));
+				const labelledByIds = labelledBy.split(/\s+/).filter(Boolean);
+				const labelledByTab = labelledByIds.some((id) => tabsById.has(id));
+				const controllingTabId = panel.id ? controllingTabIdByPanelId.get(panel.id) : undefined;
 
 				if (!labelledBy) {
 					violations.push(`${label}:missing-aria-labelledby`);
 				} else if (!labelledByTab) {
 					violations.push(`${label}:aria-labelledby-not-tab:${labelledBy}`);
+				}
+				if (controllingTabId && !labelledByIds.includes(controllingTabId)) {
+					violations.push(`${label}:aria-labelledby-missing-controlling-tab:${controllingTabId}`);
 				}
 			});
 		}
