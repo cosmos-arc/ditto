@@ -114,6 +114,38 @@ describe("page-watchlist prototype", () => {
 	);
 
 	it(
+		"keeps collapsed observation records at summary height in roomy viewports",
+		async () => {
+			const browser = await chromium.launch({ channel: "chromium" });
+			const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+			page.setDefaultTimeout(2_000);
+
+			try {
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
+
+				const geometry = await page.locator('.catalog-detail details[data-collapse-priority="l3"]:not([open])').evaluate(
+					(section) => {
+						const summary = section.querySelector(".context-section-header");
+						const sectionRect = section.getBoundingClientRect();
+						const summaryRect = summary?.getBoundingClientRect();
+
+						return {
+							sectionHeight: Math.round(sectionRect.height),
+							summaryHeight: Math.round(summaryRect?.height ?? 0),
+						};
+					},
+				);
+
+				expect(geometry.sectionHeight).toBeLessThan(96);
+				expect(geometry.sectionHeight).toBeLessThanOrEqual(geometry.summaryHeight + 32);
+			} finally {
+				await browser.close();
+			}
+		},
+		15_000,
+	);
+
+	it(
 		"keeps compact right rail content clear of the viewport bottom",
 		async () => {
 			const browser = await chromium.launch({ channel: "chromium" });
