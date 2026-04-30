@@ -320,12 +320,15 @@ button {
 .rail-icon {
   width: var(--rail-icon-size);
   height: var(--rail-icon-size);
+  min-width: 32px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-8);
   color: var(--icon-secondary);
   cursor: pointer;
+  text-decoration: none;
   transition: background var(--motion-duration-fast) var(--motion-easing-standard),
               color var(--motion-duration-fast) var(--motion-easing-standard);
   position: relative;
@@ -334,6 +337,11 @@ button {
 .rail-icon:hover {
   background: var(--interaction-hover-subtle-bg);
   color: var(--icon-primary);
+}
+
+.rail-icon:focus-visible {
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: 2px;
 }
 
 .rail-icon.active {
