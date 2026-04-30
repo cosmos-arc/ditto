@@ -6,6 +6,7 @@
 > **审核等级**: Best (最严)
 > **审核框架**: UI/UX Pro Max Priority 1-10 + 项目视觉验证规范
 > **关联 Spec**: 04_interaction_state_spec.md, 10_ditto_shell_family_spec.md, 11_ditto_page_pattern_library.md
+> **状态说明**: 评分为原始审计快照；2026-04-30 prototype remediation 进展见第六节。
 
 ---
 
@@ -55,7 +56,7 @@
 | 文件 | 问题 |
 |------|------|
 | page-cross-market.html L1542-1556 | Rail 图标有 `aria-label` 无 `title`，无浏览器原生 tooltip |
-| page-cross-market / page-strategy-studio / page-platform | Rail 用 `<div role="button">` 而非 `<button>`，键盘可访问性差 |
+| page-cross-market / page-strategy-studio / page-platform | Rail 用 `<div role="button">` 而非导航链接，键盘与链接语义不一致 |
 | 多个页面的 icon-only 按钮 | 仅有 `title` 无 `aria-label`（screen reader 不可靠） |
 | 5 个页面间 | 标签语言不一致：部分用英文 `"Home"`，部分用中文 `"首页"`，Platform 在不同页面分别标记为 `"Platform"` / `"平台"` / `"运维"` |
 
@@ -107,6 +108,8 @@
 | `<details>/<summary>` | 右侧面板内部 section | 点击 header | 无统一规则，部分展开部分折叠 |
 | Right Rail `.collapsed` | 仅 radar 类页面 | 按钮 `«`/`»` 切换 | 始终展开 |
 | Bottom Tray 3-state | 4 个页面（platform, agent-console, strategy-studio, trading-overview） | `data-bottom-tray-toggle` | 有默认值定义但部分页面未遵守 |
+
+2026-04-30 remediation 前的静态扫描基线：共有 50 个 `.context-section`，其中仅 3 个是 `<details class="context-section">`。也就是说，大部分右侧上下文区缺少可折叠语义与统一默认策略。
 
 ### 3.2 问题诊断
 
@@ -176,9 +179,9 @@ Interaction Spec (04_interaction_state_spec.md §14) 定义了规则：
 
 ## 四、分区可调尺寸审核
 
-### 4.1 现状：零基础设施
+### 4.1 原始现状：零基础设施
 
-所有 Shell 家族的面板宽度均为固定值：
+原始审计时，所有 Shell 家族的面板宽度均为固定值：
 
 | Shell 家族 | 左侧 Rail | 主内容区 | 右侧面板 | 面板宽度 |
 |-----------|:---------:|:-------:|:--------:|---------|
@@ -189,7 +192,7 @@ Interaction Spec (04_interaction_state_spec.md §14) 定义了规则：
 | agent/studio | 56px | 1fr | 368px | 固定 |
 | radar | 56px | 1fr | 可折叠 56px↔完整 | 二态切换 |
 
-没有任何 `minmax()`、`resize` CSS 属性、拖拽手柄或 resize JavaScript。
+原始审计未发现 `minmax()`、`resize` CSS 属性、拖拽手柄或 resize JavaScript。2026-04-30 prototype remediation 已先在 Catalog 与 Studio/Agent P0 shell 加入 prototype-only separator 合同；React 实现仍按 backlog 推进。
 
 ### 4.2 为什么需要可调尺寸
 
@@ -200,16 +203,20 @@ Interaction Spec (04_interaction_state_spec.md §14) 定义了规则：
 | 市场筛选 — 表格列多需要空间 | 320px detail 挤压 screener 表格 | 收窄 detail 到最小值，表格多显示 3-4 列 |
 | 交易监控 — 需要同时看多个面板 | 固定比例无法适配不同数据密度 | 按需调整各区域比例 |
 
-### 4.3 推荐方案：react-resizable-panels
+### 4.3 推荐方案：Prototype 合同 + React 后续实现
+
+原型层不安装 `react-resizable-panels`。Prototype remediation 先用共享 HTML/CSS/JS 建立可检查合同：`data-resizable-panel-group`、`data-resize-separator`、`role="separator"`、`aria-controls`、`aria-valuemin`、`aria-valuemax`、`aria-valuenow`、方向键调整、拖拽调整、双击重置与 min/max clamp。
+
+React 层在产品/技术批准后再评估并安装 `react-resizable-panels`，当前记录在 `docs/plans/prototype-to-react-enhancement-backlog.md`。
 
 | 评估项 | 结论 |
 |--------|------|
-| **库** | `react-resizable-panels` v2+（Brian Vaughn, React 核心团队前成员） |
+| **React 候选库** | `react-resizable-panels`（版本与 API 需在实施前重新确认） |
 | **体积** | ~5KB gzipped |
 | **无障碍** | 内置 `role="separator"`, `aria-valuenow`, 键盘方向键调节 |
 | **持久化** | `autoSaveId` 自动存 localStorage 或 `onLayoutChange` 接 Zustand |
 | **双击重置** | 内置支持（恢复默认比例） |
-| **React 19** | 完全支持 |
+| **React 19** | 实施前随当前版本重新验证 |
 
 最小/最大约束建议：
 
@@ -231,7 +238,7 @@ Interaction Spec (04_interaction_state_spec.md §14) 定义了规则：
   拖拽中: 2px 强调色 + 全局 user-select: none
 
 交互:
-  Hit area: 6px（视觉仅 1px，可点击区域扩大）
+  Hit area: 至少 24px（视觉仅 1px，可点击区域扩大）
   双击: 恢复默认比例
   键盘: 方向键 ±5%, Shift+方向键 ±1%
 
@@ -262,23 +269,48 @@ Interaction Spec (04_interaction_state_spec.md §14) 定义了规则：
 2. 替换 2 个 Rail 语义弱图标（Research 放大镜、Trading 网格）
 3. 替换 Copilot 星形为 `sparkles`
 4. 统一 Rail `aria-label` + `title` 为中文
-5. 所有 Rail `<div role="button">` 改为 `<button>`
+5. 所有 Rail `<div role="button">` 改为 `<a href="...">` 导航链接
 6. 所有 icon-only 按钮补充 `aria-label`
 
 ### Phase 2 — 折叠策略体系化（Spec + Prototype 层，1 天）
 
 1. 定义每个 shell 家族的默认折叠/展开规则表
 2. 为折叠态增加 count badge + 关键指标摘要
-3. Bottom Tray 补充平滑上滑/下滑动画
+3. Bottom Tray 的 prototype 三态与动画已补齐；React 层继续实现状态机与持久化
 4. Activity Stack 低优先级队列默认折叠
 
-### Phase 3 — 可调尺寸基础设施（React 层，2-3 天）
+### Phase 3 — 可调尺寸基础设施（Prototype 已建合同，React 层后续 2-3 天）
 
-1. 引入 `react-resizable-panels` 依赖
-2. 在 Shell Chrome 层（`layout-base`）集成 PanelGroup
-3. 先实现 catalog + studio 两种 Shell（P0 覆盖率最高）
-4. Zustand 持久化面板布局偏好
-5. Prototype 层同步更新 grid 为 `minmax()` 弹性约束
+1. Prototype 层已为 catalog + studio/agent P0 shell 建立 separator 合同
+2. React 层经批准后再引入 `react-resizable-panels` 或等价实现
+3. 在 Shell Chrome 层集成 PanelGroup
+4. 先实现 catalog + studio 两种 Shell（P0 覆盖率最高）
+5. Zustand 持久化面板布局偏好
+
+---
+
+## 六、2026-04-30 Prototype Remediation Status
+
+### 已在 Prototype 层修复
+
+- Rail 统一为 5 个导航链接，并统一中文 `aria-label` 与 `title`。
+- Header 与 Strategy Studio 的 P0 图标碰撞已通过 `data-icon` / `data-action-icon` 合同收敛。
+- 右侧上下文区已按 L1/L2/L3 折叠优先级迁移，折叠态保留 count 与摘要。
+- Bottom Tray 已补齐三态合同、作用域隔离、动画与键盘/状态测试。
+- Catalog 与 Studio/Agent P0 shell 已加入 prototype-only resize separator，视觉线 1px、hit area 至少 24px，并支持拖拽、方向键、Shift+方向键与双击重置。
+
+### 延后到 React 层
+
+- TanStack Router link 驱动的 React Rail。
+- Lucide/custom icon registry 与跨语义复用治理。
+- `ContextDisclosureSection` React 组件、Bottom Tray 状态机与用户偏好持久化。
+- 经批准后评估并安装 `react-resizable-panels`，先覆盖 Catalog 与 Studio shell，再扩展 Analytical/Ops/Radar。
+
+### 需要产品/设计确认
+
+- P0 修复后的图标词汇是否作为长期 canonical vocabulary。
+- L1/L2/L3 默认展开策略是否符合实际工作流优先级。
+- 面板最小/默认/最大宽度、双击重置行为、未来是否支持 snap-to-collapse。
 
 ---
 
@@ -309,7 +341,7 @@ Interaction Spec (04_interaction_state_spec.md §14) 定义了规则：
 |---|------|:----:|------|
 | R-1 | 全部 5 页 | varies | 标签语言不一致（英文/中文混用） |
 | R-2 | page-cross-market.html | 1542-1556 | Rail 图标缺失 `title` 属性 |
-| R-3 | 3/5 页 | varies | Rail 用 `<div role="button">` 非 `<button>` |
+| R-3 | 3/5 页 | varies | Rail 用 `<div role="button">` 非导航链接 |
 | S-2 | page-strategy-studio.html | 1998 | 删除策略按钮有 `title` 无 `aria-label` |
 | P-1 | page-platform.html | 2056-2058 | 刷新按钮 `<div>` 缺 `aria-label` |
 | T-1 | page-trading-overview.html | 2141 | 涨跌停状态按钮有 `title` 无 `aria-label` |
