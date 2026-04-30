@@ -39,8 +39,8 @@
   var Tabs = {
     init: function () {
       document.querySelectorAll('[data-tabs]').forEach(function (group) {
-        var buttons = group.querySelectorAll('[data-tab-target]');
-        var panels  = group.querySelectorAll('[data-tab-panel]');
+        var buttons = Array.from(group.querySelectorAll('[data-tab-target]'));
+        var panels  = Tabs._resolvePanels(group, buttons);
         if (!buttons.length || !panels.length) return;
 
         function rememberPanelDisplay(panel) {
@@ -96,6 +96,36 @@
           activate(btn, true);
         });
       });
+    },
+
+    _resolvePanels: function (group, buttons) {
+      var localPanels = Array.from(group.querySelectorAll('[data-tab-panel]'));
+      if (localPanels.length) return localPanels;
+
+      var targets = buttons
+        .map(function (button) { return button.getAttribute('data-tab-target'); })
+        .filter(Boolean);
+      var uniqueTargets = Array.from(new Set(targets));
+      if (!uniqueTargets.length) return [];
+
+      function matchingPanels(scope) {
+        var matches = Array.from(scope.querySelectorAll('[data-tab-panel]')).filter(function (panel) {
+          var panelTarget = panel.getAttribute('data-tab-panel');
+          var owningGroup = panel.closest('[data-tabs]');
+          return uniqueTargets.indexOf(panelTarget) >= 0 && (!owningGroup || owningGroup === group);
+        });
+        var matchedTargets = new Set(matches.map(function (panel) { return panel.getAttribute('data-tab-panel'); }));
+        return uniqueTargets.every(function (target) { return matchedTargets.has(target); }) ? matches : [];
+      }
+
+      var scope = group.parentElement;
+      while (scope && scope !== document.body) {
+        var scopedPanels = matchingPanels(scope);
+        if (scopedPanels.length) return scopedPanels;
+        scope = scope.parentElement;
+      }
+
+      return matchingPanels(document);
     },
   };
 

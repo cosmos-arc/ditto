@@ -546,6 +546,58 @@ describe("prototype interaction UX contracts", () => {
 		expect(clickCount).toBe(2);
 	});
 
+	it("updates separated tab panels from shared tab interactions", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<main class="prototype-shell">
+						<div data-tabs="research-tabs" role="tablist" aria-label="研究视图切换">
+							<button data-tab-target="factors" role="tab" id="tab-factors" aria-selected="true" aria-controls="panel-factors">因子</button>
+							<button data-tab-target="reports" role="tab" id="tab-reports" aria-selected="false" aria-controls="panel-reports">研报</button>
+						</div>
+						<section class="research-panels">
+							<div data-tab-panel="factors" id="panel-factors" role="tabpanel" aria-labelledby="tab-factors" aria-hidden="false">因子内容</div>
+							<div data-tab-panel="reports" id="panel-reports" role="tabpanel" aria-labelledby="tab-reports" aria-hidden="true">研报内容</div>
+						</section>
+					</main>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/separated-tabs-contract.html",
+			},
+		);
+		const { document } = dom.window;
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (document.readyState === "loading") {
+			document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		document.getElementById("tab-reports")?.click();
+
+		expect(document.getElementById("tab-factors")?.getAttribute("aria-selected")).toBe("false");
+		expect(document.getElementById("tab-factors")?.getAttribute("tabindex")).toBe("-1");
+		expect(document.getElementById("panel-factors")?.getAttribute("aria-hidden")).toBe("true");
+		expect(document.getElementById("panel-factors")?.style.display).toBe("none");
+		expect(document.getElementById("tab-reports")?.getAttribute("aria-selected")).toBe("true");
+		expect(document.getElementById("tab-reports")?.getAttribute("tabindex")).toBe("0");
+		expect(document.getElementById("panel-reports")?.getAttribute("aria-hidden")).toBe("false");
+		expect(document.getElementById("panel-reports")?.style.display).toBe("");
+
+		document
+			.getElementById("tab-factors")
+			?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+
+		expect(document.getElementById("tab-factors")?.getAttribute("aria-selected")).toBe("true");
+		expect(document.getElementById("panel-factors")?.getAttribute("aria-hidden")).toBe("false");
+		expect(document.getElementById("tab-reports")?.getAttribute("aria-selected")).toBe("false");
+		expect(document.getElementById("panel-reports")?.getAttribute("aria-hidden")).toBe("true");
+		expect(document.getElementById("panel-reports")?.style.display).toBe("none");
+	});
+
 	it("keeps active prototype tabs wired to labelled tab panels", () => {
 		const violations: string[] = [];
 
