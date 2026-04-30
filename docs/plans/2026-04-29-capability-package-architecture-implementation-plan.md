@@ -802,7 +802,7 @@ git commit -m "refactor: extract strategy package from engine alpha"
 
 ---
 
-### Task 7: Extract Portfolio and Accounting
+### Task 7: Extract Portfolio and Accounting ✅ DONE
 
 **Files:**
 - Move: `packages/engine/src/ditto_engine/accounting/` -> `packages/portfolio/src/ditto_portfolio/accounting/`
@@ -889,7 +889,7 @@ git commit -m "refactor: extract portfolio and accounting packages"
 
 ---
 
-### Task 8: Extract Risk
+### Task 8: Extract Risk ✅ DONE
 
 **Files:**
 - Move: `packages/engine/src/ditto_engine/risk/` -> `packages/risk/src/ditto_risk/`
