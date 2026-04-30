@@ -94,10 +94,10 @@
     .shell-catalog.catalog-shell {
       grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
       grid-template-areas:
-        "rail header  header"
-        "rail toolbar toolbar"
-        "rail summary detail"
-        "rail table   detail";
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail summary separator detail"
+        "rail table   separator detail";
       contain: paint;
     }
 
@@ -678,7 +678,7 @@
     <a class="skip-link" href="#main-content">跳至主要内容</a>
     <div class="style-label">Graphite Studio — 观察列表 · Compact · A股</div>
 
-    <div class="shell-catalog catalog-shell">
+    <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
       <!-- ═══ Rail ═══ -->
       <nav class="shell-rail" aria-label="主导航">
         <div class="rail-logo">D</div>
@@ -941,7 +941,9 @@
       </div>
 
       <!-- ═══ Detail Panel ═══ -->
-      <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
+
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">标的详情</span>

@@ -146,17 +146,31 @@
      * ══════════════════════════════════════════════ */
     .shell-studio {
       display: grid;
-      grid-template-columns: var(--shell-rail-width) 240px 1fr 300px;
+      grid-template-columns:
+        var(--shell-rail-width)
+        minmax(180px, var(--prototype-studio-source-width))
+        1px
+        minmax(0, 1fr)
+        1px
+        minmax(220px, var(--prototype-studio-inspector-width));
       grid-template-rows: var(--shell-header-height) auto minmax(0, 1fr) minmax(128px, 15vh);
       grid-template-areas:
-        "rail    header    header    header"
-        "rail    header2   header2   header2"
-        "rail    sources   main      inspector"
-        "rail    logs      logs      logs";
+        "rail    header    header           header    header              header"
+        "rail    header2   header2          header2   header2             header2"
+        "rail    sources   source-separator main      inspector-separator inspector"
+        "rail    logs      logs             logs      logs                logs";
       height: 100vh;
       width: 100vw;
       overflow: hidden;
       position: relative;
+    }
+
+    .shell-studio .resize-separator[data-resize-var="--prototype-studio-source-width"] {
+      grid-area: source-separator;
+    }
+
+    .shell-studio .resize-separator[data-resize-var="--prototype-studio-inspector-width"] {
+      grid-area: inspector-separator;
     }
 
     /* ── Noise texture overlay ── */
@@ -1958,7 +1972,7 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Strategy Studio · Compact · A股</div>
 
-  <div class="shell-studio">
+  <div class="shell-studio" data-resizable-panel-group="studio-workspace">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
@@ -2066,7 +2080,7 @@
     </div>
 
     <!-- ═══ Sources Panel (Left) ═══ -->
-    <aside class="studio-sources" aria-label="策略资源" data-contract-slot="sidebar">
+    <aside class="studio-sources" id="studio-sources-panel" aria-label="策略资源" data-contract-slot="sidebar">
       <!-- Factors -->
       <div class="source-section">
         <div class="source-section-title">因子</div>
@@ -2185,6 +2199,8 @@
         </div>
       </div>
     </aside>
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-studio-source-width" data-resize-default="240" data-resize-min="180" data-resize-max="360" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整资源栏宽度" aria-orientation="vertical" aria-controls="studio-sources-panel main-content" aria-valuemin="180" aria-valuemax="360" aria-valuenow="240"></div>
 
     <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
     <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region role="main" aria-label="策略编辑器">
@@ -2482,7 +2498,9 @@
     </main>
 
     <!-- ═══ Inspector Panel (Right) ═══ -->
-    <aside class="studio-inspector" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region>
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-studio-inspector-width" data-resize-default="300" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整检查器宽度" aria-orientation="vertical" aria-controls="main-content studio-inspector-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="300"></div>
+
+    <aside class="studio-inspector" id="studio-inspector-panel" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region>
       <!-- AI Assistant (always visible above tabs) -->
       <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0">
         <div class="inspector-section-title">AI 助手</div>

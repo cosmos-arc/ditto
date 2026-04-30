@@ -1149,6 +1149,131 @@
     },
   };
 
+  /* ══════════════════════════════════════════════
+   * 14. ResizablePanels
+   *     Prototype-only panel resize contract
+   * ══════════════════════════════════════════════ */
+  var ResizablePanels = {
+    defaultStep: 40,
+    fineStep: 8,
+
+    init: function () {
+      document.querySelectorAll('[data-resizable-panel-group]').forEach(function (group) {
+        group.querySelectorAll('[data-resize-separator]').forEach(function (separator) {
+          ResizablePanels._sync(group, separator, ResizablePanels._currentValue(group, separator));
+
+          if (separator.getAttribute('data-resizable-panel-ready') === 'true') return;
+          separator.setAttribute('data-resizable-panel-ready', 'true');
+
+          separator.addEventListener('keydown', function (event) {
+            ResizablePanels._onKeydown(event, group, separator);
+          });
+          separator.addEventListener('pointerdown', function (event) {
+            ResizablePanels._onPointerDown(event, group, separator);
+          });
+          separator.addEventListener('dblclick', function () {
+            ResizablePanels._sync(group, separator, ResizablePanels._defaultValue(group, separator));
+          });
+        });
+      });
+    },
+
+    _onKeydown: function (event, group, separator) {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+      event.preventDefault();
+      var step = event.shiftKey ? ResizablePanels.fineStep : ResizablePanels.defaultStep;
+      var direction = event.key === 'ArrowRight' ? 1 : -1;
+      ResizablePanels._sync(group, separator, ResizablePanels._currentValue(group, separator) + (direction * step));
+    },
+
+    _onPointerDown: function (event, group, separator) {
+      if (event.button && event.button !== 0) return;
+
+      event.preventDefault();
+      var startX = event.clientX || 0;
+      var startY = event.clientY || 0;
+      var startValue = ResizablePanels._currentValue(group, separator);
+      var edge = separator.getAttribute('data-resize-edge') || 'end';
+      var isHorizontal = separator.getAttribute('aria-orientation') === 'horizontal';
+
+      separator.setAttribute('data-resizing', 'true');
+      group.setAttribute('data-resizing', 'true');
+      document.documentElement.setAttribute('data-resizing-panel', 'true');
+      if (separator.setPointerCapture && event.pointerId !== undefined) {
+        separator.setPointerCapture(event.pointerId);
+      }
+
+      var onMove = function (moveEvent) {
+        var delta = isHorizontal ? (moveEvent.clientY || 0) - startY : (moveEvent.clientX || 0) - startX;
+        var nextValue = edge === 'start' ? startValue + delta : startValue - delta;
+        ResizablePanels._sync(group, separator, nextValue);
+      };
+
+      var onEnd = function () {
+        separator.removeAttribute('data-resizing');
+        group.removeAttribute('data-resizing');
+        document.documentElement.removeAttribute('data-resizing-panel');
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onEnd);
+        window.removeEventListener('pointercancel', onEnd);
+      };
+
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onEnd);
+      window.addEventListener('pointercancel', onEnd);
+    },
+
+    _sync: function (group, separator, value) {
+      var nextValue = ResizablePanels._clamp(value, ResizablePanels._minValue(separator), ResizablePanels._maxValue(separator));
+      group.style.setProperty(ResizablePanels._cssVar(group, separator), Math.round(nextValue) + 'px');
+      separator.setAttribute('aria-valuenow', String(Math.round(nextValue)));
+    },
+
+    _currentValue: function (group, separator) {
+      return ResizablePanels._number(
+        separator.getAttribute('aria-valuenow'),
+        ResizablePanels._number(
+          group.style.getPropertyValue(ResizablePanels._cssVar(group, separator)),
+          ResizablePanels._defaultValue(group, separator),
+        ),
+      );
+    },
+
+    _defaultValue: function (group, separator) {
+      return ResizablePanels._clamp(
+        ResizablePanels._number(
+          separator.getAttribute('data-resize-default'),
+          ResizablePanels._number(separator.getAttribute('aria-valuenow'), ResizablePanels._minValue(separator)),
+        ),
+        ResizablePanels._minValue(separator),
+        ResizablePanels._maxValue(separator),
+      );
+    },
+
+    _minValue: function (separator) {
+      return ResizablePanels._number(separator.getAttribute('data-resize-min'), ResizablePanels._number(separator.getAttribute('aria-valuemin'), 160));
+    },
+
+    _maxValue: function (separator) {
+      return ResizablePanels._number(separator.getAttribute('data-resize-max'), ResizablePanels._number(separator.getAttribute('aria-valuemax'), 640));
+    },
+
+    _cssVar: function (group, separator) {
+      return separator.getAttribute('data-resize-var') || group.getAttribute('data-resize-var') || '--prototype-detail-width';
+    },
+
+    _number: function (value, fallback) {
+      if (typeof value !== 'string' && typeof value !== 'number') return fallback;
+      var parsed = Number.parseFloat(String(value).trim());
+      return Number.isFinite(parsed) ? parsed : fallback;
+    },
+
+    _clamp: function (value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    },
+  };
+
   /* ── Inject shared CSS for dynamic modules ── */
   var style = document.createElement('style');
   style.textContent = [
@@ -1192,6 +1317,7 @@
     TooltipSystem.init();
     CollapsibleContextSections.init();
     BottomTray.init();
+    ResizablePanels.init();
   }
 
   if (document.readyState === 'loading') {

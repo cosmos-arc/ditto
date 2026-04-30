@@ -1612,7 +1612,7 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label">Graphite Studio — Agent Console · Compact</div>
 
-  <div class="shell-agent studio-shell">
+  <div class="shell-agent studio-shell" data-resizable-panel-group="studio-workspace" data-resize-var="--prototype-agent-detail-width">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
@@ -2310,8 +2310,10 @@
       </div><!-- /tab-panels -->
     </div><!-- /tab-group -->
 
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-agent-detail-width" data-resize-default="368" data-resize-min="280" data-resize-max="560" role="separator" tabindex="0" aria-label="调整 Agent 详情宽度" aria-orientation="vertical" aria-controls="main-content agent-detail-panel" aria-valuemin="280" aria-valuemax="560" aria-valuenow="368"></div>
+
     <!-- ═══ Detail / Tool Trace Panel (340px) ═══ -->
-    <div class="agent-detail" data-contract-slot="detail" data-selected-object-region>
+    <div class="agent-detail" id="agent-detail-panel" data-contract-slot="detail" data-selected-object-region>
       <!-- Detail Header -->
       <div class="detail-header" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="160px">
         <div class="detail-header-title">Alpha 因子挖掘计划</div>

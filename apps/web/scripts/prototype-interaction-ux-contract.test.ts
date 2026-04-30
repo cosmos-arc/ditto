@@ -877,4 +877,59 @@ describe("prototype interaction UX contracts", () => {
 
 		expect(violations).toEqual([]);
 	});
+
+	it("updates resizable panel CSS variables through keyboard, drag, and reset interactions", () => {
+		const document = readInteractivePrototypeDocument(getActivePageById("home"), (preparedDocument) => {
+			const group = preparedDocument.createElement("div");
+			group.setAttribute("data-resizable-panel-group", "test-workspace");
+			group.style.setProperty("--prototype-detail-width", "320px");
+			group.innerHTML = `
+				<section id="test-main"></section>
+				<div
+					class="resize-separator"
+					data-resize-separator
+					data-resize-var="--prototype-detail-width"
+					data-resize-default="320"
+					data-resize-min="220"
+					data-resize-max="520"
+					role="separator"
+					tabindex="0"
+					aria-label="调整测试面板宽度"
+					aria-orientation="vertical"
+					aria-controls="test-main test-detail"
+					aria-valuemin="220"
+					aria-valuemax="520"
+					aria-valuenow="320"
+				></div>
+				<aside id="test-detail"></aside>
+			`;
+			preparedDocument.body.append(group);
+		});
+		const group = document.querySelector<HTMLElement>('[data-resizable-panel-group="test-workspace"]');
+		const separator = document.querySelector<HTMLElement>("[data-resize-separator]");
+
+		expect(group).not.toBeNull();
+		expect(separator).not.toBeNull();
+		if (!group || !separator) return;
+
+		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+		expect(separator.getAttribute("aria-valuenow")).toBe("280");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("280px");
+
+		separator.dispatchEvent(
+			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }),
+		);
+		expect(separator.getAttribute("aria-valuenow")).toBe("288");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("288px");
+
+		separator.dispatchEvent(new document.defaultView!.MouseEvent("pointerdown", { clientX: 400, bubbles: true }));
+		document.defaultView!.dispatchEvent(new document.defaultView!.MouseEvent("pointermove", { clientX: 360, bubbles: true }));
+		document.defaultView!.dispatchEvent(new document.defaultView!.MouseEvent("pointerup", { bubbles: true }));
+		expect(separator.getAttribute("aria-valuenow")).toBe("328");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("328px");
+
+		separator.dispatchEvent(new document.defaultView!.MouseEvent("dblclick", { bubbles: true }));
+		expect(separator.getAttribute("aria-valuenow")).toBe("320");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
+	});
 });

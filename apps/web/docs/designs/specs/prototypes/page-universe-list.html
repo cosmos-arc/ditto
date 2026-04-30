@@ -617,7 +617,7 @@
     <a class="skip-link" href="#main-content">跳至主要内容</a>
     <div class="style-label">Graphite Studio — 股票池列表 · Compact · A股</div>
 
-    <div class="shell-catalog catalog-shell">
+    <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
       <nav class="shell-rail" aria-label="主导航" data-contract-slot="rail">
         <div class="rail-logo">D</div>
         <div class="rail-nav">
@@ -854,7 +854,9 @@
         </div>
       </div>
 
-      <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
+
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">股票池详情</span>

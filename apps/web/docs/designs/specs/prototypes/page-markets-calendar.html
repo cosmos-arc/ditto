@@ -167,10 +167,10 @@
     .shell-catalog.catalog-shell {
       grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
       grid-template-areas:
-        "rail header  header"
-        "rail toolbar toolbar"
-        "rail insight detail"
-        "rail table   detail";
+        "rail header  header    header"
+        "rail toolbar toolbar   toolbar"
+        "rail insight separator detail"
+        "rail table   separator detail";
       contain: paint;
     }
 
@@ -1100,7 +1100,7 @@
   <a class="skip-link" href="#main-content">跳至主要内容</a>
   <div class="style-label">Graphite Studio — 市场日历 · Compact · A股</div>
 
-  <div class="shell-catalog catalog-shell">
+  <div class="shell-catalog catalog-shell" data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo">D</div>
@@ -1468,7 +1468,9 @@
     </div><!-- /.workspace-body -->
 
       <!-- ─── Right Panel: Economic Data Timeline ─── -->
-      <div class="workspace-right catalog-detail" data-contract-slot="right-rail" data-detail-sticky-summary data-batch-action-bar>
+      <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
+
+      <div class="workspace-right catalog-detail" id="catalog-detail-panel" data-contract-slot="right-rail" data-detail-sticky-summary data-batch-action-bar>
         <div class="timeline-section" data-reveal="fade-up" data-reveal-delay="150">
           <div class="timeline-header">
             <div class="timeline-title">经济数据时间线</div>
