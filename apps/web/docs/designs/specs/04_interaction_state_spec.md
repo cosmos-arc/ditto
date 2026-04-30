@@ -176,8 +176,8 @@ Selected 是 Ditto 最重要的交互状态之一。
 - warning 不是 critical
 - critical 必须持续可见
 - 不可把这三者都压成同一种黄色提醒
-- stale 文案、时间戳、表格 metadata 与队列时间属于 operational 文本，必须满足 4.5:1；优先使用 `text-data-stale`、`text-tertiary` 或 `text-secondary`
-- `text-quaternary` 只能用于装饰性文本或低风险 metadata，不得承载 stale / warning / critical 判断
+- stale 文案、时间戳、表格 metadata 与队列时间属于 operational 文本，必须满足 4.5:1；优先使用 `text-data-stale` 或 `text-secondary`
+- `text-tertiary` 与 `text-quaternary` 只能用于低风险 metadata 或装饰性说明，不得承载 stale / warning / critical 判断
 - disabled affordance 可使用 `text-disabled`，但 disabled 文案不得替代 blocked / failed / stale 的原因说明
 - critical、交易、审批、风险和错误状态不得只靠颜色表达，必须同时提供 icon、边界、文案或 `data-danger-marker` 等非颜色标记
 

@@ -333,9 +333,9 @@ describe("reference-resolver", () => {
       const resolved = resolveAllTokens(tokens);
       const textLink = resolved.get("{semantic.text.link}");
       expect(textLink).toBeDefined();
-      // parseTokenValue strips the -- prefix from var(--brand-500) → "brand-500"
+      // parseTokenValue strips the -- prefix from var(--brand-400) → "brand-400"
       // buildReferenceMap stores keys without --, so lookup succeeds.
-      expect(textLink!.$value).toBe("{base.brand.500}");
+      expect(textLink!.$value).toBe("{base.brand.400}");
       expect(textLink!.$type).toBe("color");
     });
 

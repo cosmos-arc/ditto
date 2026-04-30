@@ -38,7 +38,6 @@ const TEXT_PATTERNS = [
   "text-tertiary",
   "text-quaternary",
   "text-disabled",
-  "text-inverse",
   "text-data-stale",
   "text-link",
   "text-link-hover",
@@ -96,7 +95,11 @@ function buildTokenMap() {
       allCss += rootMatch[1] + "\n";
     }
   }
-  return extractTokensFromCss(allCss);
+  const tokens = extractTokensFromCss(allCss);
+  for (const [name, value] of Object.entries(tokens)) {
+    tokens[`--${name}`] = value;
+  }
+  return tokens;
 }
 
 function getTextUsageTier(textName) {
@@ -259,6 +262,17 @@ function main() {
     console.log("| Surface | Text | Usage | Ratio | Level |");
     console.log("|---------|------|-------|-------|-------|");
     for (const r of results.filter((r) => r.status === "report")) {
+      console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
+    }
+    console.log("");
+  }
+
+  const dataCritical = results.filter((r) => r.usageTier === "data-critical");
+  if (dataCritical.length > 0) {
+    console.log("### Data-Critical Checked Pairs\n");
+    console.log("| Surface | Text | Usage | Ratio | Level |");
+    console.log("|---------|------|-------|-------|-------|");
+    for (const r of dataCritical) {
       console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
     }
     console.log("");

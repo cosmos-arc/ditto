@@ -360,7 +360,7 @@ border.strong
 #### 文本可读性使用分级
 
 文本 token 必须按信息风险分级使用，不能只按"视觉弱一点"选择层级。
-`text.quaternary` 只能用于装饰性文本或低风险 metadata；状态、时间戳、表格 metadata、队列时间等 operational 信息必须使用 `text.tertiary`、`text.secondary` 或对应语义 token。`text.disabled` 仅表示不可用 affordance，不得承载 operational 信息。
+`text.tertiary` 与 `text.quaternary` 只能用于装饰性文本或低风险 metadata；状态、时间戳、表格 metadata、队列时间等 operational 信息必须使用 `text.secondary` 或对应语义 token。`text.disabled` 仅表示不可用 affordance，不得承载 operational 信息。
 
 | Tier | Examples | Contrast Gate |
 |---|---|---|

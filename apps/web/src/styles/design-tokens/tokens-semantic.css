@@ -35,9 +35,9 @@
   --text-data-stale:           oklch(0.660 0.020 55);
 
   /* ── Text Semantic ── */
-  --text-link:                 var(--brand-500);
-  --text-link-hover:           var(--brand-400);
-  --text-error:                var(--red-500);
+  --text-link:                 var(--brand-400);
+  --text-link-hover:           var(--brand-300);
+  --text-error:                oklch(0.680 0.150 22);
   --text-warning:              var(--amber-500);
   --text-success:              var(--green-500);
 
