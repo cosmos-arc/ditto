@@ -170,7 +170,7 @@
       padding: var(--space-4) var(--space-10);
       border-radius: var(--radius-6);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
       display: inline-flex;
       align-items: center;
@@ -206,7 +206,7 @@
       padding: var(--space-4) var(--space-10);
       border-radius: var(--radius-6);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
       display: inline-flex;
       align-items: center;
@@ -356,7 +356,7 @@
       cursor: pointer;
       padding: var(--space-4);
       border-radius: var(--radius-4);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -562,7 +562,7 @@
       border-left: 2px solid transparent;
       cursor: pointer;
       border-radius: var(--radius-4);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .queue-review-item:hover {
@@ -1494,7 +1494,7 @@
     /* ── Elevated search area refinement ── */
     .header-search {
       position: relative;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .header-search:hover {
       border-color: var(--border-default);
@@ -2126,7 +2126,7 @@
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
 
-  <div class="style-label">Graphite Studio — Research Workspace · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Research Workspace · Compact · A股</div>
 
   <div class="shell-analytical">
 
@@ -2145,7 +2145,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">研究工作区</span>
+      <h1 class="header-title">研究工作区</h1>
       <div class="header-spacer"></div>
       <div class="header-actions">
         <!-- Overlay triggers: New Backtest / New Strategy / New Experiment -->
@@ -2258,13 +2258,13 @@
 
     <!-- ═══ Research View Tabs ═══ -->
     <div data-tabs="research-tabs" class="flex-row-center research-tab-bar" role="tablist" aria-label="研究视图切换">
-      <button data-tab-target="reports" class="tab-button" role="tab" aria-selected="false" aria-controls="panel-reports">研报</button>
-      <button data-tab-target="factors" class="tab-button active" role="tab" aria-selected="true" aria-controls="panel-factors">因子</button>
-      <button data-tab-target="backtest" class="tab-button" role="tab" aria-selected="false" aria-controls="panel-backtest">回测</button>
+      <button data-tab-target="reports" class="tab-button" role="tab" aria-selected="false" aria-controls="panel-reports" id="tab-reports">研报</button>
+      <button data-tab-target="factors" class="tab-button active" role="tab" aria-selected="true" aria-controls="panel-factors" id="tab-factors">因子</button>
+      <button data-tab-target="backtest" class="tab-button" role="tab" aria-selected="false" aria-controls="panel-backtest" id="tab-backtest">回测</button>
     </div>
 
     <!-- Tab Panel: Reports -->
-    <div data-tab-panel="reports" id="panel-reports" aria-hidden="true" role="tabpanel" aria-labelledby="tablist-research">
+    <div data-tab-panel="reports" id="panel-reports" aria-hidden="true" role="tabpanel" aria-labelledby="tab-reports">
       <div class="tab-panel-scroll">
         <!-- Report 1: A股动量因子深度报告 -->
         <div class="report-card" data-reveal="fade-up" data-reveal-delay="0" data-glow>
@@ -2407,7 +2407,7 @@
     </div>
 
     <!-- Tab Panel: Factors (default visible) — display:contents lets grid children pass through -->
-    <div data-tab-panel="factors" id="panel-factors" aria-hidden="false" role="tabpanel" aria-labelledby="tablist-research">
+    <div data-tab-panel="factors" id="panel-factors" aria-hidden="false" role="tabpanel" aria-labelledby="tab-factors">
 
     <!-- State Variants: Pulse Strip -->
 
@@ -3003,7 +3003,7 @@
     </div><!-- end data-tab-panel="factors" -->
 
     <!-- Tab Panel: Backtest -->
-    <div data-tab-panel="backtest" id="panel-backtest" aria-hidden="true" role="tabpanel" aria-labelledby="tablist-research">
+    <div data-tab-panel="backtest" id="panel-backtest" aria-hidden="true" role="tabpanel" aria-labelledby="tab-backtest">
       <div class="tab-panel-scroll">
         <!-- Backtest metrics row -->
         <div class="backtest-metrics-row">

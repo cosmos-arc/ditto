@@ -123,7 +123,7 @@
         "rail strip  strip"
         "rail kpi    trace"
         "rail table   trace";
-      min-height: calc(100vh - var(--shell-status-bar-height));
+      min-height: calc(100dvh - var(--shell-status-bar-height));
       width: 100vw;
       overflow-y: auto;
     }
@@ -1285,7 +1285,7 @@
       background: transparent;
       color: var(--text-secondary);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .batch-action-btn:hover {
       border-color: var(--border-strong);
@@ -1326,7 +1326,7 @@
       color: var(--text-tertiary);
       cursor: pointer;
       font-size: var(--font-size-12);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .pagination-btn:hover {
       background: var(--interaction-hover-subtle-bg);
@@ -1828,7 +1828,7 @@
 
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Execution Ledger · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Execution Ledger · Compact · A股</div>
 
   <div class="shell-ledger catalog-shell" data-tabs="order-tabs">
     <!-- ═══ Rail ═══ -->
@@ -1846,7 +1846,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">执行账本</span>
+      <h1 class="header-title">执行账本</h1>
       <div class="header-filters" data-contract-slot="filter-bar" role="toolbar" aria-label="订单筛选">
         <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话">
           <span>会话</span>
@@ -1866,10 +1866,10 @@
         <span class="filter-sep" aria-hidden="true"></span>
         <!-- JS Tabs: 快速过滤 -->
         <div data-tabs="order-tabs" role="tablist" aria-label="订单快速过滤">
-          <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true">全部</button>
-          <button class="filter-btn" data-tab-target="pending" role="tab" aria-selected="false">待处理</button>
-          <button class="filter-btn" data-tab-target="filled" role="tab" aria-selected="false">已成</button>
-          <button class="filter-btn" data-tab-target="cancelled" role="tab" aria-selected="false">撤单</button>
+          <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true" id="tab-all" aria-controls="panel-all">全部</button>
+          <button class="filter-btn" data-tab-target="pending" role="tab" aria-selected="false" id="tab-pending" aria-controls="panel-pending">待处理</button>
+          <button class="filter-btn" data-tab-target="filled" role="tab" aria-selected="false" id="tab-filled" aria-controls="panel-filled">已成</button>
+          <button class="filter-btn" data-tab-target="cancelled" role="tab" aria-selected="false" id="tab-cancelled" aria-controls="panel-cancelled">撤单</button>
         </div>
         <span class="filter-sep" aria-hidden="true"></span>
         <button class="filter-btn" tabindex="0" aria-label="日期范围: 今日">
@@ -1937,27 +1937,27 @@
       <input type="radio" name="orders-tab" id="orders-failed" class="tab-radio sr-only">
 
       <div class="status-tabs">
-        <label for="orders-pending" class="status-tab label-tab" role="tab">
+        <label for="orders-pending" class="status-tab label-tab" role="tab" id="tab-orders-pending" aria-selected="false" aria-controls="panel-orders-pending">
           <span class="tab-dot pending" aria-hidden="true"></span>
           待提交
           <span class="tab-count">2</span>
         </label>
-        <label for="orders-submitted" class="status-tab label-tab" role="tab">
+        <label for="orders-submitted" class="status-tab label-tab" role="tab" id="tab-orders-submitted" aria-selected="false" aria-controls="panel-orders-submitted">
           <span class="tab-dot submitted" aria-hidden="true"></span>
           已提交
           <span class="tab-count">5</span>
         </label>
-        <label for="orders-partial" class="status-tab label-tab" role="tab">
+        <label for="orders-partial" class="status-tab label-tab" role="tab" id="tab-orders-partial" aria-selected="false" aria-controls="panel-orders-partial">
           <span class="tab-dot partial" aria-hidden="true"></span>
           部分成交
           <span class="tab-count">1</span>
         </label>
-        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true">
+        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true" id="tab-orders-done" aria-controls="panel-orders-done">
           <span class="tab-dot done" aria-hidden="true"></span>
           已完成
           <span class="tab-count">148</span>
         </label>
-        <label for="orders-failed" class="status-tab label-tab" role="tab">
+        <label for="orders-failed" class="status-tab label-tab" role="tab" id="tab-orders-failed" aria-selected="false" aria-controls="panel-orders-failed">
           <span class="tab-dot failed" aria-hidden="true"></span>
           失败/撤单
           <span class="tab-count">12</span>
@@ -2026,12 +2026,12 @@
     <div class="tab-group" data-tab-group="orders">
 
       <!-- Tab Panel: 已完成 (default — visible) -->
-      <div class="tab-panel" data-panel="orders-done">
+      <div class="tab-panel" data-panel="orders-done" id="panel-orders-done" role="tabpanel" aria-labelledby="tab-orders-done" aria-hidden="false">
 
     <!-- ═══ Orders Ledger Table ═══ -->
     <div class="ledger-table-area catalog-main" id="main-content" data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
       <!-- JS Tab Panel: 全部 (default visible) -->
-      <div data-tab-panel="all" data-tab-display="block">
+      <div data-tab-panel="all" data-tab-display="block" id="panel-all" role="tabpanel" aria-labelledby="tab-all" aria-hidden="false">
       <table class="ledger-table main-ledger-table" aria-label="订单账本">
         <thead>
           <tr>
@@ -2340,7 +2340,7 @@
       </div><!-- /data-tab-panel="all" -->
 
       <!-- JS Tab Panel: 待处理 -->
-      <div data-tab-panel="pending" data-tab-display="block">
+      <div data-tab-panel="pending" data-tab-display="block" id="panel-pending" role="tabpanel" aria-labelledby="tab-pending" aria-hidden="true">
       <table class="ledger-table" aria-label="待处理订单">
         <thead>
           <tr>
@@ -2409,7 +2409,7 @@
       </div><!-- /data-tab-panel="pending" -->
 
       <!-- JS Tab Panel: 已成 -->
-      <div data-tab-panel="filled" data-tab-display="block">
+      <div data-tab-panel="filled" data-tab-display="block" id="panel-filled" role="tabpanel" aria-labelledby="tab-filled" aria-hidden="true">
       <table class="ledger-table" aria-label="已成订单">
         <thead>
           <tr>
@@ -2510,7 +2510,7 @@
       </div><!-- /data-tab-panel="filled" -->
 
       <!-- JS Tab Panel: 撤单 -->
-      <div data-tab-panel="cancelled" data-tab-display="block">
+      <div data-tab-panel="cancelled" data-tab-display="block" id="panel-cancelled" role="tabpanel" aria-labelledby="tab-cancelled" aria-hidden="true">
       <table class="ledger-table" aria-label="已撤单订单">
         <thead>
           <tr>
@@ -2762,7 +2762,7 @@
     </div><!-- /tab-panel orders-done -->
 
     <!-- Tab Panel: 待提交 -->
-    <div class="tab-panel" data-panel="orders-pending">
+    <div class="tab-panel" data-panel="orders-pending" id="panel-orders-pending" role="tabpanel" aria-labelledby="tab-orders-pending" aria-hidden="true">
       <div class="state-empty state-pad-lg">
         <div class="state-empty-icon">📋</div>
         <div class="state-empty-title">2 笔待提交订单</div>
@@ -2845,7 +2845,7 @@
     </div><!-- /tab-panel orders-pending -->
 
     <!-- Tab Panel: 已提交 -->
-    <div class="tab-panel" data-panel="orders-submitted">
+    <div class="tab-panel" data-panel="orders-submitted" id="panel-orders-submitted" role="tabpanel" aria-labelledby="tab-orders-submitted" aria-hidden="true">
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="已提交订单">
           <thead>
@@ -2896,7 +2896,7 @@
     </div><!-- /tab-panel orders-submitted -->
 
     <!-- Tab Panel: 部分成交 -->
-    <div class="tab-panel" data-panel="orders-partial">
+    <div class="tab-panel" data-panel="orders-partial" id="panel-orders-partial" role="tabpanel" aria-labelledby="tab-orders-partial" aria-hidden="true">
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="部分成交订单">
           <thead>
@@ -2944,7 +2944,7 @@
     </div><!-- /tab-panel orders-partial -->
 
     <!-- Tab Panel: 失败/撤单 -->
-    <div class="tab-panel" data-panel="orders-failed">
+    <div class="tab-panel" data-panel="orders-failed" id="panel-orders-failed" role="tabpanel" aria-labelledby="tab-orders-failed" aria-hidden="true">
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
         <table class="ledger-table" aria-label="失败/撤单订单">
           <thead>

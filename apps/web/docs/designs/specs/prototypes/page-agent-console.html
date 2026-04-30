@@ -83,6 +83,7 @@
     .panel-action:focus-visible,
     .header-avatar:focus-visible,
     .agent-tab:focus-visible,
+    .agent-filter-tab:focus-visible,
     .plan-card:focus-visible {
       outline: none;
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
@@ -1618,7 +1619,7 @@
   <section id="default-view" class="proto-section">
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Agent Console · Compact</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Agent Console · Compact</div>
 
   <div class="shell-agent studio-shell" data-resizable-panel-group="studio-workspace" data-resize-var="--prototype-agent-detail-width">
     <!-- ═══ Rail ═══ -->
@@ -1636,7 +1637,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">智能体工作台</span>
+      <h1 class="header-title">智能体工作台</h1>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
 
@@ -1690,10 +1691,10 @@
 
       <!-- Tab labels -->
       <div class="agent-tabs" role="tablist" aria-label="Agent 工作流" data-contract-slot="sidebar">
-        <label for="agent-plans" class="agent-tab" role="tab">计划</label>
-        <label for="agent-runs" class="agent-tab" role="tab">执行</label>
-        <label for="agent-findings" class="agent-tab" role="tab">发现 <span class="agent-tab-count">3</span></label>
-        <label for="agent-approvals" class="agent-tab" role="tab">审批 <span class="agent-tab-count">2</span></label>
+        <label for="agent-plans" class="agent-tab" role="tab" id="tab-agent-plans" aria-selected="true" aria-controls="main-content">计划</label>
+        <label for="agent-runs" class="agent-tab" role="tab" id="tab-agent-runs" aria-selected="false" aria-controls="panel-agent-runs">执行</label>
+        <label for="agent-findings" class="agent-tab" role="tab" id="tab-agent-findings" aria-selected="false" aria-controls="panel-agent-findings">发现 <span class="agent-tab-count">3</span></label>
+        <label for="agent-approvals" class="agent-tab" role="tab" id="tab-agent-approvals" aria-selected="false" aria-controls="panel-agent-approvals">审批 <span class="agent-tab-count">2</span></label>
         <div class="agent-tabs-spacer"></div>
       </div>
 
@@ -1701,18 +1702,18 @@
       <div class="tab-panels">
 
         <!-- ═══ Panel: Plans (default) ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region data-tabs="agent-status-filter">
+        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region data-tabs="agent-status-filter" role="tabpanel" aria-labelledby="tab-agent-plans" aria-hidden="false">
 
           <!-- Status Filter Tabs -->
-          <div class="flex-row-center gap-4 mb-6">
-            <span data-tab-target="all" class="agent-filter-tab active" aria-selected="true">全部</span>
-            <span data-tab-target="running" class="agent-filter-tab" aria-selected="false">运行中</span>
-            <span data-tab-target="completed" class="agent-filter-tab" aria-selected="false">已完成</span>
-            <span data-tab-target="failed" class="agent-filter-tab" aria-selected="false">失败</span>
+          <div class="flex-row-center gap-4 mb-6" role="tablist" aria-label="计划状态筛选">
+            <button type="button" data-tab-target="all" class="agent-filter-tab active" role="tab" id="tab-agent-filter-all" aria-selected="true" aria-controls="panel-agent-filter-all">全部</button>
+            <button type="button" data-tab-target="running" class="agent-filter-tab" role="tab" id="tab-agent-filter-running" aria-selected="false" aria-controls="panel-agent-filter-running">运行中</button>
+            <button type="button" data-tab-target="completed" class="agent-filter-tab" role="tab" id="tab-agent-filter-completed" aria-selected="false" aria-controls="panel-agent-filter-completed">已完成</button>
+            <button type="button" data-tab-target="failed" class="agent-filter-tab" role="tab" id="tab-agent-filter-failed" aria-selected="false" aria-controls="panel-agent-filter-failed">失败</button>
           </div>
 
           <!-- Tab Panel: All Plans -->
-          <div data-tab-panel="all">
+          <div data-tab-panel="all" id="panel-agent-filter-all" role="tabpanel" aria-labelledby="tab-agent-filter-all" aria-hidden="false">
 
           <!-- Plan 1: Running (selected) -->
           <div class="plan-card selected" data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
@@ -1896,7 +1897,7 @@
           </div><!-- /tab-panel: all -->
 
           <!-- Tab Panel: Running Plans -->
-          <div data-tab-panel="running">
+          <div data-tab-panel="running" id="panel-agent-filter-running" role="tabpanel" aria-labelledby="tab-agent-filter-running" aria-hidden="true">
           <!-- Plan 1: Running (selected) -->
           <div class="plan-card selected" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
             <div class="plan-card-header">
@@ -1987,7 +1988,7 @@
           </div><!-- /tab-panel: running -->
 
           <!-- Tab Panel: Completed Plans -->
-          <div data-tab-panel="completed">
+          <div data-tab-panel="completed" id="panel-agent-filter-completed" role="tabpanel" aria-labelledby="tab-agent-filter-completed" aria-hidden="true">
           <!-- Plan 2: Completed -->
           <div class="plan-card" tabindex="0" role="button" aria-label="北向资金异常流入检测 — 已完成">
             <div class="plan-card-header">
@@ -2039,7 +2040,7 @@
           </div><!-- /tab-panel: completed -->
 
           <!-- Tab Panel: Failed Plans -->
-          <div data-tab-panel="failed">
+          <div data-tab-panel="failed" id="panel-agent-filter-failed" role="tabpanel" aria-labelledby="tab-agent-filter-failed" aria-hidden="true">
           <!-- Plan 3: Failed -->
           <div class="plan-card" tabindex="0" role="button" aria-label="行业轮动策略回测 — 失败">
             <div class="plan-card-header">
@@ -2085,7 +2086,7 @@
         </div><!-- /panel: Plans -->
 
         <!-- ═══ Panel: Runs ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-runs">
+        <div class="tab-panel agent-main" data-panel="agent-runs" id="panel-agent-runs" role="tabpanel" aria-labelledby="tab-agent-runs" aria-hidden="true">
 
           <!-- Run 1: Running -->
           <div class="run-card" data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Run #42 — Alpha 因子挖掘计划 — 运行中">
@@ -2201,7 +2202,7 @@
         </div><!-- /panel: Runs -->
 
         <!-- ═══ Panel: Findings ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-findings">
+        <div class="tab-panel agent-main" data-panel="agent-findings" id="panel-agent-findings" role="tabpanel" aria-labelledby="tab-agent-findings" aria-hidden="true">
 
           <!-- Finding 1: High confidence -->
           <div class="finding-card" data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Finding — 北向资金连续净流入 — 高置信">
@@ -2266,7 +2267,7 @@
         </div><!-- /panel: Findings -->
 
         <!-- ═══ Panel: Approvals ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-approvals">
+        <div class="tab-panel agent-main" data-panel="agent-approvals" id="panel-agent-approvals" role="tabpanel" aria-labelledby="tab-agent-approvals" aria-hidden="true">
 
           <!-- Approval 1: High confidence, pending -->
           <div class="approval-card" tabindex="0" role="button" aria-label="审批 — Alpha v2 合成因子 — 高置信 · 建议通过">

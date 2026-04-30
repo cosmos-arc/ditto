@@ -287,8 +287,8 @@
      * Trading Variant: 4-row override (banner + no analysis band)
      * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
-      height: calc(100vh - 1.5rem);
-      min-height: calc(100vh - 1.5rem);
+      height: calc(100dvh - 1.5rem);
+      min-height: calc(100dvh - 1.5rem);
       overflow: hidden;
       grid-template-rows:
         var(--shell-header-height)
@@ -506,7 +506,7 @@
       background: transparent;
       color: var(--risk-critical-fg);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
       min-height: 24px;
       display: inline-flex;
@@ -1390,7 +1390,7 @@
       background: transparent;
       color: var(--text-secondary);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
       min-height: 24px;
       display: inline-flex;
@@ -1440,7 +1440,7 @@
       background: transparent;
       color: var(--text-secondary);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .bulk-action-btn:hover {
       border-color: var(--border-strong);
@@ -2078,7 +2078,7 @@
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
 
-  <div class="style-label">Graphite Studio — Trading Overview · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Trading Overview · Compact · A股</div>
 
   <div class="shell-analytical trading-variant">
     <!-- R1: Noise texture overlay -->
@@ -2103,15 +2103,15 @@
 
     <!-- ═══ Header (68px) ═══ -->
     <header class="shell-header">
-      <span class="header-title">交易总览</span>
+      <h1 class="header-title">交易总览</h1>
       <span class="header-subtitle">实盘控制中心</span>
 
       <!-- Tab Bar: 交易模式 / 复盘模式 -->
       <div class="trading-tab-bar" role="tablist" aria-label="交易模式切换">
         <input type="radio" name="trading-tabs" id="trading-mode" checked class="tab-radio sr-only">
-        <label for="trading-mode" class="trading-mode-tab" role="tab" aria-controls="panel-trading-mode" aria-selected="true">交易模式</label>
+        <label for="trading-mode" class="trading-mode-tab" role="tab" aria-controls="panel-trading-mode" aria-selected="true" id="tab-trading-mode">交易模式</label>
         <input type="radio" name="trading-tabs" id="review-mode" class="tab-radio sr-only">
-        <label for="review-mode" class="trading-mode-tab" role="tab" aria-controls="panel-review-mode" aria-selected="false">复盘模式</label>
+        <label for="review-mode" class="trading-mode-tab" role="tab" aria-controls="panel-review-mode" aria-selected="false" id="tab-review-mode">复盘模式</label>
       </div>
 
       <div class="header-spacer"></div>
@@ -2294,7 +2294,7 @@
       <div class="tab-group" data-tab-group="trading">
 
       <!-- Tab Panel 1: 交易模式（默认） -->
-      <div class="tab-panel" data-panel="trading-mode" id="panel-trading-mode" role="tabpanel" aria-label="交易模式" aria-labelledby="trading-mode">
+      <div class="tab-panel" data-panel="trading-mode" id="panel-trading-mode" role="tabpanel" aria-label="交易模式" aria-labelledby="tab-trading-mode" aria-hidden="false">
       <div class="trading-panels" role="group" aria-label="交易面板">
 
         <!-- Panel 1: 权益/盈亏 (~35%) -->
@@ -2531,16 +2531,16 @@
           <div class="panel-header">
             <span class="panel-title">订单</span>
             <div class="order-tabs" role="tablist">
-              <button class="order-tab active" role="tab" aria-selected="true" data-tab-target="positions">待成交 <span class="tab-count">2</span></button>
-              <button class="order-tab" role="tab" aria-selected="false" data-tab-target="orders">已成交 <span class="tab-count">5</span></button>
-              <button class="order-tab" role="tab" aria-selected="false" data-tab-target="fills">已撤单 <span class="tab-count">1</span></button>
+              <button class="order-tab active" role="tab" aria-selected="true" data-tab-target="positions" id="tab-positions" aria-controls="panel-positions">待成交 <span class="tab-count">2</span></button>
+              <button class="order-tab" role="tab" aria-selected="false" data-tab-target="orders" id="tab-orders" aria-controls="panel-orders">已成交 <span class="tab-count">5</span></button>
+              <button class="order-tab" role="tab" aria-selected="false" data-tab-target="fills" id="tab-fills" aria-controls="panel-fills">已撤单 <span class="tab-count">1</span></button>
             </div>
             <div class="panel-actions">
               <button class="panel-action">查看全部 →</button>
             </div>
           </div>
-          <div class="panel-body" role="tabpanel">
-            <div data-tab-panel="positions">
+          <div class="panel-body">
+            <div data-tab-panel="positions" id="panel-positions" role="tabpanel" aria-labelledby="tab-positions" aria-hidden="false">
             <div class="order-row order-pending" role="button" tabindex="0" aria-label="买入 600519 100股 ¥1,850.00 待成交" data-tooltip="限价买入贵州茅台，委托价 ¥1,850.00">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">600519</span>
@@ -2558,7 +2558,7 @@
               <span class="order-time">8分钟前</span>
             </div>
             </div>
-            <div data-tab-panel="orders">
+            <div data-tab-panel="orders" id="panel-orders" role="tabpanel" aria-labelledby="tab-orders" aria-hidden="true">
             <div class="order-row order-filled" role="button" tabindex="0" aria-label="买入 002594 200股 ¥288.00 已成交" data-tooltip="限价买入比亚迪，成交价 ¥288.00">
               <span class="order-side-pill buy">买入</span>
               <span class="order-ticker">002594</span>
@@ -2576,7 +2576,7 @@
               <span class="order-time">45分钟前</span>
             </div>
             </div>
-            <div data-tab-panel="fills">
+            <div data-tab-panel="fills" id="panel-fills" role="tabpanel" aria-labelledby="tab-fills" aria-hidden="true">
             <div class="order-row order-cancelled" role="button" tabindex="0" aria-label="卖出 601318 500股 ¥54.00 已撤单" data-tooltip="限价卖出中国平安，已撤单">
               <span class="order-side-pill sell">卖出</span>
               <span class="order-ticker">601318</span>
@@ -2598,7 +2598,7 @@
       </div><!-- /tab-panel trading-mode -->
 
       <!-- Tab Panel 2: 复盘模式（Review Mode） -->
-      <div class="tab-panel" data-panel="review-mode" id="panel-review-mode" role="tabpanel" aria-label="复盘模式" aria-labelledby="review-mode">
+      <div class="tab-panel" data-panel="review-mode" id="panel-review-mode" role="tabpanel" aria-label="复盘模式" aria-labelledby="tab-review-mode" aria-hidden="true">
         <div class="review-panel">
 
           <!-- Review: 当日交易摘要 -->

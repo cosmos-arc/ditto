@@ -254,7 +254,7 @@
     .bar-tertiary-9 { width: 9%; background: var(--text-tertiary); }
 
     /* ── Compare View Overlay ── */
-    .overlay-fullscreen { width: min(1080px, calc(100vw - 48px)); height: min(720px, calc(100vh - 48px)); background: var(--surface-app); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); display: flex; flex-direction: column; overflow: hidden; }
+    .overlay-fullscreen { width: min(1080px, calc(100vw - 48px)); height: min(720px, calc(100dvh - 48px)); background: var(--surface-app); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); display: flex; flex-direction: column; overflow: hidden; }
     .compare-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-10) var(--space-16); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
     .compare-header-left { display: flex; align-items: center; gap: var(--space-8); }
     .compare-title { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
@@ -311,7 +311,7 @@
 
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Backtest Result · Compact · 多因子</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Backtest Result · Compact · 多因子</div>
 
   <div class="object-shell shell-hub">
     <!-- ═══ Rail ═══ -->
@@ -394,25 +394,25 @@
     <div class="tab-group" data-tab-group="bt">
       <div class="hub-tabs" role="tablist" aria-label="回测结果导航">
         <input type="radio" name="bt" id="bt-overview" checked class="tab-radio sr-only">
-        <label for="bt-overview" class="hub-tab" role="tab" tabindex="0">概览</label>
+        <label for="bt-overview" class="hub-tab" role="tab" tabindex="0" id="tab-bt-overview" aria-selected="true" aria-controls="panel-bt-overview">概览</label>
         <input type="radio" name="bt" id="bt-returns" class="tab-radio sr-only">
-        <label for="bt-returns" class="hub-tab" role="tab" tabindex="0">收益曲线</label>
+        <label for="bt-returns" class="hub-tab" role="tab" tabindex="0" id="tab-bt-returns" aria-selected="false" aria-controls="panel-bt-returns">收益曲线</label>
         <input type="radio" name="bt" id="bt-risk" class="tab-radio sr-only">
-        <label for="bt-risk" class="hub-tab" role="tab" tabindex="0">风险分析</label>
+        <label for="bt-risk" class="hub-tab" role="tab" tabindex="0" id="tab-bt-risk" aria-selected="false" aria-controls="panel-bt-risk">风险分析</label>
         <input type="radio" name="bt" id="bt-trades" class="tab-radio sr-only">
-        <label for="bt-trades" class="hub-tab" role="tab" tabindex="0">交易记录</label>
+        <label for="bt-trades" class="hub-tab" role="tab" tabindex="0" id="tab-bt-trades" aria-selected="false" aria-controls="panel-bt-trades">交易记录</label>
         <input type="radio" name="bt" id="bt-holdings" class="tab-radio sr-only">
-        <label for="bt-holdings" class="hub-tab" role="tab" tabindex="0">持仓分析</label>
+        <label for="bt-holdings" class="hub-tab" role="tab" tabindex="0" id="tab-bt-holdings" aria-selected="false" aria-controls="panel-bt-holdings">持仓分析</label>
         <input type="radio" name="bt" id="bt-attribution" class="tab-radio sr-only">
-        <label for="bt-attribution" class="hub-tab" role="tab" tabindex="0">因子暴露</label>
+        <label for="bt-attribution" class="hub-tab" role="tab" tabindex="0" id="tab-bt-attribution" aria-selected="false" aria-controls="panel-bt-attribution">因子暴露</label>
         <input type="radio" name="bt" id="bt-diagnostics" class="tab-radio sr-only">
-        <label for="bt-diagnostics" class="hub-tab" role="tab" tabindex="0">诊断</label>
+        <label for="bt-diagnostics" class="hub-tab" role="tab" tabindex="0" id="tab-bt-diagnostics" aria-selected="false" aria-controls="panel-bt-diagnostics">诊断</label>
       </div>
 
       <div class="tab-panels" id="main-content">
 
         <!-- ═══ Tab 1: Overview ═══ -->
-        <div class="tab-panel" data-panel="bt-overview">
+        <div class="tab-panel" data-panel="bt-overview" id="panel-bt-overview" role="tabpanel" aria-labelledby="tab-bt-overview" aria-hidden="false">
           <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -509,7 +509,7 @@
         </div>
 
         <!-- ═══ Tab 2: Returns ═══ -->
-        <div class="tab-panel" data-panel="bt-returns">
+        <div class="tab-panel" data-panel="bt-returns" id="panel-bt-returns" role="tabpanel" aria-labelledby="tab-bt-returns" aria-hidden="true">
           <div class="object-main hub-main">
             <div class="hub-object-view">
               <div class="panel panel-flex">
@@ -559,7 +559,7 @@
         </div>
 
         <!-- ═══ Tab 3: Risk ═══ -->
-        <div class="tab-panel" data-panel="bt-risk">
+        <div class="tab-panel" data-panel="bt-risk" id="panel-bt-risk" role="tabpanel" aria-labelledby="tab-bt-risk" aria-hidden="true">
           <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">回撤曲线</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><defs><linearGradient id="dd2-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-down-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-down-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="20" x2="400" y2="20" stroke="var(--border-subtle)" stroke-width="0.3" stroke-dasharray="2"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10 L400 100 L0 100 Z" fill="url(#dd2-g)"/><path d="M0 10 L40 8 L80 12 L120 25 L160 35 L180 45 L200 40 L220 30 L240 18 L280 15 L320 20 L360 12 L400 10" fill="none" stroke="var(--market-down-fg)" stroke-width="1.5"/></svg></div></div>
             <div class="grid-2col">
@@ -570,7 +570,7 @@
         </div>
 
         <!-- ═══ Tab 4: Trades ═══ -->
-        <div class="tab-panel" data-panel="bt-trades">
+        <div class="tab-panel" data-panel="bt-trades" id="panel-bt-trades" role="tabpanel" aria-labelledby="tab-bt-trades" aria-hidden="true">
           <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header flex-between"><span class="panel-title">交易明细</span><span class="chart-legend">最近 10 笔</span></div>
               <table class="data-table"><thead><tr><th>时间</th><th>标的</th><th>方向</th><th class="numeric">数量</th><th class="numeric">价格</th><th class="numeric">金额</th><th>成本</th></tr></thead>
@@ -587,7 +587,7 @@
         </div>
 
         <!-- ═══ Tab 5: Holdings Analysis ═══ -->
-        <div class="tab-panel" data-panel="bt-holdings">
+        <div class="tab-panel" data-panel="bt-holdings" id="panel-bt-holdings" role="tabpanel" aria-labelledby="tab-bt-holdings" aria-hidden="true">
           <div class="object-main hub-main"><div class="hub-object-view">
             <div class="grid-2col">
               <!-- 持仓分布饼图 -->
@@ -655,7 +655,7 @@
         </div>
 
         <!-- ═══ Tab 6: Attribution ═══ -->
-        <div class="tab-panel" data-panel="bt-attribution">
+        <div class="tab-panel" data-panel="bt-attribution" id="panel-bt-attribution" role="tabpanel" aria-labelledby="tab-bt-attribution" aria-hidden="true">
           <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">因子暴露时间序列</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><line x1="0" y1="50" x2="400" y2="50" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 40 L40 38 L80 35 L120 32 L160 30 L200 28 L240 32 L280 35 L320 30 L360 28 L400 25" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/><path d="M0 55 L40 58 L80 60 L120 62 L160 58 L200 55 L240 60 L280 62 L320 58 L360 55 L400 52" fill="none" stroke="var(--text-tertiary)" stroke-width="0.8" stroke-dasharray="3"/></svg></div></div>
             <div class="panel panel-shrink"><div class="panel-header"><span class="panel-title">因子收益贡献</span></div>
@@ -673,7 +673,7 @@
         </div>
 
         <!-- ═══ Tab 7: Diagnostics ═══ -->
-        <div class="tab-panel" data-panel="bt-diagnostics">
+        <div class="tab-panel" data-panel="bt-diagnostics" id="panel-bt-diagnostics" role="tabpanel" aria-labelledby="tab-bt-diagnostics" aria-hidden="true">
           <div class="object-main hub-main"><div class="hub-object-view">
             <div class="panel panel-flex"><div class="panel-header"><span class="panel-title">换手率分析</span><span class="chart-legend">月度</span></div><div class="panel-body flex-center"><svg viewBox="0 0 400 100" class="chart-svg"><defs><linearGradient id="to-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand-accent)" stop-opacity="0.1"/><stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38 L400 100 L0 100 Z" fill="url(#to-g)"/><path d="M0 65 L40 58 L80 52 L120 55 L160 48 L200 42 L240 45 L280 38 L320 42 L360 35 L400 38" fill="none" stroke="var(--brand-accent)" stroke-width="1.5"/></svg></div></div>
             <div class="grid-2col">

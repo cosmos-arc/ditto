@@ -186,7 +186,7 @@
       background: transparent;
       color: var(--brand-accent);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
     }
     .btn-cta-sm:hover {
@@ -1501,7 +1501,7 @@
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
 
-  <div class="style-label">Graphite Studio — Risk Center · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Risk Center · Compact · A股</div>
 
   <div class="shell-analytical">
 
@@ -1520,7 +1520,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">风控中心</span>
+      <h1 class="header-title">风控中心</h1>
 
       <span class="market-card-regime on" data-contract-slot="regime-indicator" data-tooltip="当前市场体制：温和风险偏好">Risk-On</span>
 
@@ -1592,9 +1592,9 @@
         <input type="radio" name="risk" id="risk-incidents" class="tab-radio sr-only">
 
         <!-- Tab labels -->
-        <label for="risk-summary" class="risk-tab" role="tab" aria-controls="panel-risk-summary" aria-selected="true">风险概览</label>
-        <label for="risk-stress" class="risk-tab" role="tab" aria-controls="panel-risk-stress" aria-selected="false">压力测试</label>
-        <label for="risk-incidents" class="risk-tab" role="tab" aria-controls="panel-risk-incidents" aria-selected="false">事件记录</label>
+        <label for="risk-summary" class="risk-tab" role="tab" aria-controls="panel-risk-summary" aria-selected="true" id="tab-risk-summary">风险概览</label>
+        <label for="risk-stress" class="risk-tab" role="tab" aria-controls="panel-risk-stress" aria-selected="false" id="tab-risk-stress">压力测试</label>
+        <label for="risk-incidents" class="risk-tab" role="tab" aria-controls="panel-risk-incidents" aria-selected="false" id="tab-risk-incidents">事件记录</label>
       </div>
     </div>
 
@@ -1670,7 +1670,7 @@
     <div class="tab-panels">
 
       <!-- ─── Tab Panel: Risk Summary (default) ─── -->
-      <div class="tab-panel" id="panel-risk-summary" data-panel="risk-summary" role="tabpanel" aria-labelledby="risk-summary">
+      <div class="tab-panel" id="panel-risk-summary" data-panel="risk-summary" role="tabpanel" aria-labelledby="tab-risk-summary" aria-hidden="false">
 
     <!-- ═══ Main Content ═══ -->
     <div class="main-content">
@@ -1754,13 +1754,13 @@
 
             <!-- JS Tabs: Breaches / Stress -->
             <div data-tabs="risk-activity-tabs" class="flex-col col-auto risk-activity-tabs-col">
-              <div class="flex-row-center gap-2 border-b-subtle py-4 mb-4">
-                <button data-tab-target="breaches" class="filter-btn active" aria-selected="true">Breaches</button>
-                <button data-tab-target="stress-test" class="filter-btn" aria-selected="false">压力测试</button>
+              <div class="flex-row-center gap-2 border-b-subtle py-4 mb-4" role="tablist" aria-label="风险活动视图">
+                <button data-tab-target="breaches" class="filter-btn active" role="tab" id="tab-risk-activity-breaches" aria-selected="true" aria-controls="panel-risk-activity-breaches">Breaches</button>
+                <button data-tab-target="stress-test" class="filter-btn" role="tab" id="tab-risk-activity-stress-test" aria-selected="false" aria-controls="panel-risk-activity-stress-test">压力测试</button>
               </div>
 
               <!-- Tab Panel: Breaches -->
-              <div data-tab-panel="breaches">
+              <div data-tab-panel="breaches" id="panel-risk-activity-breaches" role="tabpanel" aria-labelledby="tab-risk-activity-breaches" aria-hidden="false">
                 <details class="context-section" data-collapse-priority="l2" open>
                   <summary class="context-section-header">
                     <span class="context-section-title">活跃突破</span>
@@ -1836,7 +1836,7 @@
               </div>
 
               <!-- Tab Panel: Stress Test -->
-              <div data-tab-panel="stress-test">
+              <div data-tab-panel="stress-test" id="panel-risk-activity-stress-test" role="tabpanel" aria-labelledby="tab-risk-activity-stress-test" aria-hidden="true">
                 <details class="context-section" data-collapse-priority="l2" open>
                   <summary class="context-section-header">
                     <span class="context-section-title">压力测试</span>
@@ -1901,10 +1901,10 @@
         <span class="analysis-band-title">风险总览</span>
         <span class="analysis-band-subtitle">资产风险热力矩阵 · 最近事件</span>
         <div class="flex-1"></div>
-        <button class="analysis-band-tab active" role="tab" aria-selected="true">全部</button>
-        <button class="analysis-band-tab" role="tab" aria-selected="false">警告</button>
-        <button class="analysis-band-tab" role="tab" aria-selected="false">突破</button>
-        <button class="analysis-band-tab" role="tab" aria-selected="false">已处理</button>
+        <button class="analysis-band-tab active">全部</button>
+        <button class="analysis-band-tab">警告</button>
+        <button class="analysis-band-tab">突破</button>
+        <button class="analysis-band-tab">已处理</button>
         <span class="panel-action margin-left-8">查看全部 →</span>
       </div>
       <div class="analysis-band-body">
@@ -2000,7 +2000,7 @@
       </div><!-- /tab-panel: risk-summary -->
 
       <!-- ─── Tab Panel: Stress Test ─── -->
-      <div class="tab-panel" id="panel-risk-stress" data-panel="risk-stress" role="tabpanel" aria-labelledby="risk-stress">
+      <div class="tab-panel" id="panel-risk-stress" data-panel="risk-stress" role="tabpanel" aria-labelledby="tab-risk-stress" aria-hidden="true">
 
         <!-- Stress Test Scenario Selector -->
         <div class="tab-section-header">
@@ -2135,7 +2135,7 @@
       </div><!-- /tab-panel: risk-stress -->
 
       <!-- ─── Tab Panel: Incidents ─── -->
-      <div class="tab-panel" id="panel-risk-incidents" data-panel="risk-incidents" role="tabpanel" aria-labelledby="risk-incidents">
+      <div class="tab-panel" id="panel-risk-incidents" data-panel="risk-incidents" role="tabpanel" aria-labelledby="tab-risk-incidents" aria-hidden="true">
 
         <!-- Incident Timeline Header -->
         <div class="tab-section-header">

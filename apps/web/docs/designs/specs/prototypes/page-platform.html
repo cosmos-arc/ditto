@@ -2014,7 +2014,7 @@
   <section id="default-view" class="proto-section">
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Platform Ops · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Platform Ops · Compact · A股</div>
 
   <!-- ═══ State Variants: Health Strip ═══ -->
 
@@ -2036,7 +2036,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">平台运维</span>
+      <h1 class="header-title">平台运维</h1>
       <div class="env-badge">
         <span class="env-badge-dot"></span>
         生产环境
@@ -2149,16 +2149,16 @@
         <div class="panel" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="300px">
           <div class="panel-header">
             <div class="panel-tabs">
-              <label for="tab-providers" class="panel-tab panel-tab-radio active" data-tab-label="tab-providers" data-tab-target="services" role="tab" aria-selected="true">数据源 <span class="panel-subtitle">5 个源</span></label>
-              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" data-tab-target="performance" role="tab" aria-selected="false">任务执行 <span class="panel-subtitle">运行中 2</span></label>
-              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" data-tab-target="logs" role="tab" aria-selected="false">系统告警 <span class="panel-count panel-count-critical"><span class="status-value">4</span></span></label>
-              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" data-tab-target="resources" role="tab" aria-selected="false">资源与配额</label>
+              <label for="tab-providers" class="panel-tab panel-tab-radio active" data-tab-label="tab-providers" data-tab-target="services" role="tab" aria-selected="true" id="tab-control-providers" aria-controls="panel-providers">数据源 <span class="panel-subtitle">5 个源</span></label>
+              <label for="tab-pipelines" class="panel-tab panel-tab-radio" data-tab-label="tab-pipelines" data-tab-target="performance" role="tab" aria-selected="false" id="tab-control-pipelines" aria-controls="panel-pipelines">任务执行 <span class="panel-subtitle">运行中 2</span></label>
+              <label for="tab-alerts" class="panel-tab panel-tab-radio" data-tab-label="tab-alerts" data-tab-target="logs" role="tab" aria-selected="false" id="tab-control-alerts" aria-controls="panel-alerts">系统告警 <span class="panel-count panel-count-critical"><span class="status-value">4</span></span></label>
+              <label for="tab-resources" class="panel-tab panel-tab-radio" data-tab-label="tab-resources" data-tab-target="resources" role="tab" aria-selected="false" id="tab-control-resources" aria-controls="panel-resources">资源与配额</label>
             </div>
           </div>
           <div class="panel-body">
             <div class="tab-panels">
               <!-- Tab Panel 1: Data Providers / DQ -->
-              <div class="tab-panel" data-panel="tab-providers" data-tab-panel="services">
+              <div class="tab-panel" data-panel="tab-providers" data-tab-panel="services" id="panel-providers" role="tabpanel" aria-labelledby="tab-control-providers" aria-hidden="false">
                 <table class="data-table">
                   <thead>
                     <tr>
@@ -2451,7 +2451,7 @@
               </div>
 
               <!-- Tab Panel 2: Pipelines / Jobs -->
-              <div class="tab-panel" data-panel="tab-pipelines" data-tab-panel="performance">
+              <div class="tab-panel" data-panel="tab-pipelines" data-tab-panel="performance" id="panel-pipelines" role="tabpanel" aria-labelledby="tab-control-pipelines" aria-hidden="true">
                 <table class="data-table">
                   <thead>
                     <tr>
@@ -2515,7 +2515,7 @@
               </div>
 
               <!-- Tab Panel 3: System Alerts -->
-              <div class="tab-panel" data-panel="tab-alerts" data-tab-panel="logs">
+              <div class="tab-panel" data-panel="tab-alerts" data-tab-panel="logs" id="panel-alerts" role="tabpanel" aria-labelledby="tab-control-alerts" aria-hidden="true">
                 <!-- Alert 1 — critical -->
                 <div class="alert-row" data-reveal="fade-up" data-reveal-delay="150">
                   <span class="alert-dot critical" data-tooltip="严重级别：需要立即处理" data-tooltip-delay="200"></span>
@@ -2563,7 +2563,7 @@
               </div>
 
               <!-- Tab Panel 4: Resources / Quotas -->
-              <div class="tab-panel" data-panel="tab-resources" data-tab-panel="resources">
+              <div class="tab-panel" data-panel="tab-resources" data-tab-panel="resources" id="panel-resources" role="tabpanel" aria-labelledby="tab-control-resources" aria-hidden="true">
                 <table class="data-table">
                   <thead>
                     <tr>

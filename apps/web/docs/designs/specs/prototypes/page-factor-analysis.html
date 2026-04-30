@@ -613,7 +613,7 @@
 
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Factor Analysis · Compact · 动量</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Factor Analysis · Compact · 动量</div>
 
   <div class="object-shell shell-hub shell-hub--with-context">
     <!-- ══════════════════════════════════════════════
@@ -745,13 +745,13 @@
     <div class="tab-group" data-tab-group="fact">
       <div class="hub-tabs" role="tablist" aria-label="因子分析导航" data-tabs="fact-tabs">
         <input type="radio" name="fact" id="fact-ic" checked class="tab-radio sr-only">
-        <label for="fact-ic" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-ic">IC</label>
+        <label for="fact-ic" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-ic" id="tab-fact-ic" aria-selected="true" aria-controls="panel-fact-ic">IC</label>
         <input type="radio" name="fact" id="fact-returns" class="tab-radio sr-only">
-        <label for="fact-returns" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-returns">收益</label>
+        <label for="fact-returns" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-returns" id="tab-fact-returns" aria-selected="false" aria-controls="panel-fact-returns">收益</label>
         <input type="radio" name="fact" id="fact-dist" class="tab-radio sr-only">
-        <label for="fact-dist" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-dist">分布与相关</label>
+        <label for="fact-dist" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-dist" id="tab-fact-dist" aria-selected="false" aria-controls="panel-fact-dist">分布与相关</label>
         <input type="radio" name="fact" id="fact-turnover" class="tab-radio sr-only">
-        <label for="fact-turnover" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-turnover">换手</label>
+        <label for="fact-turnover" class="hub-tab" role="tab" tabindex="0" data-tab-target="fact-turnover" id="tab-fact-turnover" aria-selected="false" aria-controls="panel-fact-turnover">换手</label>
       </div>
 
       <div class="tab-panels" id="main-content">
@@ -759,7 +759,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 1: IC (信息系数)
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="fact-ic" data-tab-panel="fact-ic">
+        <div class="tab-panel" data-panel="fact-ic" data-tab-panel="fact-ic" id="panel-fact-ic" role="tabpanel" aria-labelledby="tab-fact-ic" aria-hidden="false">
           <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1009,7 +1009,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 2: 收益 (Returns)
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="fact-returns" data-tab-panel="fact-returns">
+        <div class="tab-panel" data-panel="fact-returns" data-tab-panel="fact-returns" id="panel-fact-returns" role="tabpanel" aria-labelledby="tab-fact-returns" aria-hidden="true">
           <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1158,7 +1158,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 3: 分布与相关
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="fact-dist" data-tab-panel="fact-dist">
+        <div class="tab-panel" data-panel="fact-dist" data-tab-panel="fact-dist" id="panel-fact-dist" role="tabpanel" aria-labelledby="tab-fact-dist" aria-hidden="true">
           <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1375,7 +1375,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 4: 换手 (Turnover)
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="fact-turnover" data-tab-panel="fact-turnover">
+        <div class="tab-panel" data-panel="fact-turnover" data-tab-panel="fact-turnover" id="panel-fact-turnover" role="tabpanel" aria-labelledby="tab-fact-turnover" aria-hidden="true">
           <div class="object-main hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 

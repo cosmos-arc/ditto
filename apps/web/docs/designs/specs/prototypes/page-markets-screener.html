@@ -925,6 +925,7 @@
     /* ── Row keyboard focus — brand-accent tint + left accent bar ── */
     .data-table tr.row:focus-within {
       outline: none;
+  box-shadow: 0 0 0 2px var(--interaction-focus-ring);
       background: color-mix(in oklch, var(--brand-accent) 4%, transparent);
     }
     .data-table tr.row:focus-within td:first-child {
@@ -1058,7 +1059,6 @@
       background: var(--surface-muted);
       color: var(--text-primary);
       font-size: var(--font-size-12);
-      outline: none;
     }
 
     /* ── Tag / chip items (compare tags, preset tags) ── */
@@ -1968,7 +1968,7 @@
 
 
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — 筛选器 · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — 筛选器 · Compact · A股</div>
 
   <div class="shell-catalog catalog-shell" data-tabs="screener-tabs" data-screener-workflow data-resizable-panel-group="catalog-main-detail" data-resize-var="--prototype-detail-width">
     <!-- ═══ Rail ═══ -->
@@ -1987,7 +1987,7 @@
     <!-- ═══ Header ═══ -->
     <header class="shell-header" role="toolbar" aria-label="筛选器工具栏">
       <div class="header-title-group">
-        <span class="header-title">筛选器</span>
+        <h1 class="header-title">筛选器</h1>
         <span class="header-subtitle">Markets · Screener</span>
       </div>
       <div class="header-spacer"></div>
@@ -2103,12 +2103,12 @@
     </section>
 
     <!-- ═══ View Tabs: 筛选 / 排序 / 对比 ═══ -->
-    <div class="view-tabs-bar">
-      <button class="ov-tab active" data-tab-target="filter" aria-selected="true">筛选</button>
-      <button class="ov-tab" data-tab-target="sort" aria-selected="false">排序</button>
-      <button class="ov-tab" data-tab-target="compare" aria-selected="false">对比</button>
+    <div class="view-tabs-bar" role="tablist" aria-label="筛选器视图">
+      <button class="ov-tab active" data-tab-target="filter" role="tab" id="tab-screener-filter" aria-selected="true" aria-controls="panel-screener-filter">筛选</button>
+      <button class="ov-tab" data-tab-target="sort" role="tab" id="tab-screener-sort" aria-selected="false" aria-controls="panel-screener-sort">排序</button>
+      <button class="ov-tab" data-tab-target="compare" role="tab" id="tab-screener-compare" aria-selected="false" aria-controls="panel-screener-compare">对比</button>
     </div>
-    <div data-tab-panel="filter" data-contract-slot="main" aria-hidden="false">
+    <div data-tab-panel="filter" id="panel-screener-filter" role="tabpanel" aria-labelledby="tab-screener-filter" data-contract-slot="main" aria-hidden="false">
       <section class="filter-workbench" aria-label="筛选条件工作区" data-reveal="fade-up" data-reveal-delay="80">
         <div class="filter-workbench-section">
           <div class="filter-workbench-header">
@@ -2504,7 +2504,7 @@
     </div><!-- end data-tab-panel="filter" -->
 
     <!-- Sort Panel -->
-    <div data-tab-panel="sort" aria-hidden="true" class="sort-panel" data-reveal="fade-up" data-reveal-delay="0">
+    <div data-tab-panel="sort" id="panel-screener-sort" role="tabpanel" aria-labelledby="tab-screener-sort" aria-hidden="true" class="sort-panel" data-reveal="fade-up" data-reveal-delay="0">
       <div class="sort-panel-desc">拖拽或点击调整排序优先级，已排序列：</div>
       <div class="sort-list">
         <button class="sort-item sort-item--active" type="button" data-sort-option="change" data-sort-label="涨跌幅" data-sort-target=".col-change" data-tooltip="当前首要排序条件，点击切换方向">
@@ -2535,7 +2535,7 @@
     </div><!-- end data-tab-panel="sort" -->
 
     <!-- Compare Panel -->
-    <div data-tab-panel="compare" aria-hidden="true" class="compare-panel" data-reveal="fade-up" data-reveal-delay="0">
+    <div data-tab-panel="compare" id="panel-screener-compare" role="tabpanel" aria-labelledby="tab-screener-compare" aria-hidden="true" class="compare-panel" data-reveal="fade-up" data-reveal-delay="0">
       <div class="compare-panel-desc">快速对比已选标的，当前已选 <span data-compare-count>3</span> 只：</div>
       <div class="compare-chart-section">
         <div class="compare-chart-label">成交额占比</div>

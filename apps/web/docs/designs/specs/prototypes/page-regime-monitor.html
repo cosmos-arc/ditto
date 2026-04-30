@@ -132,8 +132,8 @@
         "rail tabs     tabs"
         "rail panels   panels"
         "rail status   status";
-      height: 100vh;
-      min-height: 100vh;
+      height: 100dvh;
+      min-height: 100dvh;
       width: 100vw;
       overflow: hidden;
     }
@@ -244,7 +244,7 @@
       background: transparent;
       color: var(--brand-accent);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
     }
     .btn-cta-sm:hover { background: var(--brand-accent-subtle); }
@@ -422,7 +422,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       background: transparent;
       appearance: none;
     }
@@ -1776,7 +1776,7 @@
 
     /* ── Regime time button enhanced hover ── */
     .regime-time-btn {
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .regime-time-btn:hover:not(.active) {
       background: var(--interaction-hover-subtle-bg);
@@ -2096,7 +2096,7 @@
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
 
-  <div class="style-label">Graphite Studio — Regime Monitor · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Regime Monitor · Compact · A股</div>
 
   <div class="shell-analytical shell-regime">
 
@@ -2115,7 +2115,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">市场状态监控</span>
+      <h1 class="header-title">市场状态监控</h1>
 
       <div class="header-spacer"></div>
 
@@ -2212,9 +2212,9 @@
         <input type="radio" name="regime-tab" id="strategy-impact" class="tab-radio sr-only">
 
         <!-- Tab labels -->
-        <label for="regime-status" class="regime-tab" role="tab" aria-selected="true" aria-controls="panel-regime-status">Regime Status</label>
-        <label for="switch-history" class="regime-tab" role="tab" aria-selected="false" aria-controls="panel-switch-history">Switch History</label>
-        <label for="strategy-impact" class="regime-tab" role="tab" aria-selected="false" aria-controls="panel-strategy-impact">Strategy Impact</label>
+        <label for="regime-status" class="regime-tab" role="tab" aria-selected="true" aria-controls="panel-regime-status" id="tab-regime-status">Regime Status</label>
+        <label for="switch-history" class="regime-tab" role="tab" aria-selected="false" aria-controls="panel-switch-history" id="tab-switch-history">Switch History</label>
+        <label for="strategy-impact" class="regime-tab" role="tab" aria-selected="false" aria-controls="panel-strategy-impact" id="tab-strategy-impact">Strategy Impact</label>
       </div>
     </div>
 
@@ -2222,7 +2222,7 @@
     <div class="tab-panels">
 
       <!-- ─── Tab Panel: Regime Status (default) ─── -->
-      <div class="tab-panel" data-panel="regime-status" role="tabpanel" id="panel-regime-status" aria-labelledby="regime-status" tabindex="0">
+      <div class="tab-panel" data-panel="regime-status" role="tabpanel" id="panel-regime-status" aria-labelledby="tab-regime-status" tabindex="0" aria-hidden="false">
         <div class="main-content" data-contract-slot="main">
           <div class="regime-layout">
 
@@ -2521,7 +2521,7 @@
       </div><!-- /tab-panel: regime-status -->
 
       <!-- ─── Tab Panel: Switch History ─── -->
-      <div class="tab-panel" data-panel="switch-history" role="tabpanel" id="panel-switch-history" aria-labelledby="switch-history" tabindex="0">
+      <div class="tab-panel" data-panel="switch-history" role="tabpanel" id="panel-switch-history" aria-labelledby="tab-switch-history" tabindex="0" aria-hidden="true">
         <div class="section-header">
           <div class="section-header-row">
             <span class="section-header__title" data-tooltip="记录所有 Regime 状态切换事件，包含触发因子和持续时间">Regime 切换历史</span>
@@ -2678,7 +2678,7 @@
       </div><!-- /tab-panel: switch-history -->
 
       <!-- ─── Tab Panel: Strategy Impact ─── -->
-      <div class="tab-panel" data-panel="strategy-impact" role="tabpanel" id="panel-strategy-impact" aria-labelledby="strategy-impact" tabindex="0">
+      <div class="tab-panel" data-panel="strategy-impact" role="tabpanel" id="panel-strategy-impact" aria-labelledby="tab-strategy-impact" tabindex="0" aria-hidden="true">
         <div class="section-header">
           <div class="section-header-row">
             <span class="section-header__title" data-tooltip="各策略在当前 Regime 下的表现对比与适配度评估">策略表现对比</span>

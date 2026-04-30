@@ -76,7 +76,7 @@
 :root:has(#view-default:checked) #default-view {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -91,7 +91,7 @@
 :root:has(#view-states:checked) body,
 :root:has(#view-overlays:checked) body {
   height: auto !important;
-  min-height: 100vh !important;
+  min-height: 100dvh !important;
   overflow-y: auto !important;
 }
 
@@ -393,13 +393,13 @@
 
 .overlay-surface--sheet {
   width: min(520px, calc(100vw - var(--space-32, 48px)));
-  max-height: calc(100vh - var(--space-32, 48px));
+  max-height: calc(100dvh - var(--space-32, 48px));
   animation: overlay-sheet-enter var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, ease-out) both;
 }
 
 .overlay-surface--modal {
   width: min(440px, calc(100vw - var(--space-32, 48px)));
-  max-height: calc(100vh - var(--space-32, 48px));
+  max-height: calc(100dvh - var(--space-32, 48px));
   animation: overlay-modal-enter var(--motion-duration-normal, 200ms) var(--motion-easing-emphasis, ease-out) both;
 }
 

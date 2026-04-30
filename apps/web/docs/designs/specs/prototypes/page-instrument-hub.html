@@ -2075,7 +2075,7 @@
 
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Instrument Hub · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Instrument Hub · Compact · A股</div>
 
   <div class="object-shell shell-hub shell-hub--with-status shell-hub--with-sidebar">
     <!-- ══════════════════════════════════════════════
@@ -2233,21 +2233,21 @@
     <div class="tab-group" data-tab-group="hub">
       <div class="hub-tabs" role="tablist" aria-label="标的详情导航" data-tabs="hub-tabs">
         <input type="radio" name="hub" id="hub-overview" checked class="tab-radio sr-only">
-        <label for="hub-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-overview">概览</label>
+        <label for="hub-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-overview" id="tab-hub-overview" aria-selected="true" aria-controls="panel-hub-overview">概览</label>
         <input type="radio" name="hub" id="hub-chart" class="tab-radio sr-only">
-        <label for="hub-chart" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-chart">行情</label>
+        <label for="hub-chart" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-chart" id="tab-hub-chart" aria-selected="false" aria-controls="panel-hub-chart">行情</label>
         <input type="radio" name="hub" id="hub-flow" class="tab-radio sr-only">
-        <label for="hub-flow" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-flow">态势</label>
+        <label for="hub-flow" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-flow" id="tab-hub-flow" aria-selected="false" aria-controls="panel-hub-flow">态势</label>
         <input type="radio" name="hub" id="hub-fundamentals" class="tab-radio sr-only">
-        <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0" data-tooltip="财务三表、杜邦分析、同行对比" data-tooltip-pos="bottom">基本面</label>
+        <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0" data-tooltip="财务三表、杜邦分析、同行对比" data-tooltip-pos="bottom" id="tab-hub-fundamentals" aria-selected="false" aria-controls="panel-hub-fundamentals">基本面</label>
         <input type="radio" name="hub" id="hub-corporate" class="tab-radio sr-only">
-        <label for="hub-corporate" class="hub-tab" role="tab" tabindex="0" data-tooltip="分红、解禁、高管变更" data-tooltip-pos="bottom">公司行动</label>
+        <label for="hub-corporate" class="hub-tab" role="tab" tabindex="0" data-tooltip="分红、解禁、高管变更" data-tooltip-pos="bottom" id="tab-hub-corporate" aria-selected="false" aria-controls="panel-hub-corporate">公司行动</label>
         <input type="radio" name="hub" id="hub-news" class="tab-radio sr-only">
-        <label for="hub-news" class="hub-tab" role="tab" tabindex="0" data-tooltip="相关新闻、AI摘要" data-tooltip-pos="bottom">新闻</label>
+        <label for="hub-news" class="hub-tab" role="tab" tabindex="0" data-tooltip="相关新闻、AI摘要" data-tooltip-pos="bottom" id="tab-hub-news" aria-selected="false" aria-controls="panel-hub-news">新闻</label>
         <input type="radio" name="hub" id="hub-network" class="tab-radio sr-only">
-        <label for="hub-network" class="hub-tab" role="tab" tabindex="0" data-tooltip="标的关联关系、相关性分析" data-tooltip-pos="bottom">关联网络</label>
+        <label for="hub-network" class="hub-tab" role="tab" tabindex="0" data-tooltip="标的关联关系、相关性分析" data-tooltip-pos="bottom" id="tab-hub-network" aria-selected="false" aria-controls="panel-hub-network">关联网络</label>
         <input type="radio" name="hub" id="hub-announcements" class="tab-radio sr-only">
-        <label for="hub-announcements" class="hub-tab" role="tab" tabindex="0" data-tooltip="公司公告、年报、董事会决议" data-tooltip-pos="bottom">公告</label>
+        <label for="hub-announcements" class="hub-tab" role="tab" tabindex="0" data-tooltip="公司公告、年报、董事会决议" data-tooltip-pos="bottom" id="tab-hub-announcements" aria-selected="false" aria-controls="panel-hub-announcements">公告</label>
       </div>
     </div><!-- /tab-group -->
 
@@ -2259,7 +2259,7 @@
       <div class="tab-panels">
 
       <!-- ═══ Tab 1: hub-overview (概览) ═══ -->
-      <div class="tab-panel" data-panel="hub-overview" data-tab-panel="hub-overview">
+      <div class="tab-panel" data-panel="hub-overview" data-tab-panel="hub-overview" id="panel-hub-overview" role="tabpanel" aria-labelledby="tab-hub-overview" aria-hidden="false">
       <div class="hub-object-view">
         <!-- Key Metrics -->
         <div class="metrics-grid" role="region" aria-label="关键指标" data-mouse-glow="true" data-mouse-glow-size="180px" data-mouse-glow-color="accent">
@@ -2391,7 +2391,7 @@
       </div><!-- /tab-panel hub-overview -->
 
       <!-- ═══ Tab 2: hub-chart (行情) ═══ -->
-      <div class="tab-panel" data-panel="hub-chart" data-tab-panel="hub-chart">
+      <div class="tab-panel" data-panel="hub-chart" data-tab-panel="hub-chart" id="panel-hub-chart" role="tabpanel" aria-labelledby="tab-hub-chart" aria-hidden="true">
       <div class="hub-object-view">
         <div class="chart-panel panel panel-grow">
           <div class="panel-header">
@@ -2435,7 +2435,7 @@
       </div><!-- /tab-panel hub-chart -->
 
       <!-- ═══ Tab 3: hub-flow (态势) ═══ -->
-      <div class="tab-panel" data-panel="hub-flow" data-tab-panel="hub-flow">
+      <div class="tab-panel" data-panel="hub-flow" data-tab-panel="hub-flow" id="panel-hub-flow" role="tabpanel" aria-labelledby="tab-hub-flow" aria-hidden="true">
       <div class="hub-object-view">
         <!-- 资金流向图 -->
         <div class="panel panel-grow">
@@ -2508,7 +2508,7 @@
       </div><!-- /tab-panel hub-flow -->
 
       <!-- ═══ Tab 4: hub-fundamentals (基本面) ═══ -->
-      <div class="tab-panel" data-panel="hub-fundamentals">
+      <div class="tab-panel" data-panel="hub-fundamentals" id="panel-hub-fundamentals" role="tabpanel" aria-labelledby="tab-hub-fundamentals" aria-hidden="true">
       <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <!-- 财务三表摘要 -->
         <div class="panel panel-shrink">
@@ -2582,7 +2582,7 @@
       </div><!-- /tab-panel hub-fundamentals -->
 
       <!-- ═══ Tab 5: hub-corporate (公司行动) ═══ -->
-      <div class="tab-panel" data-panel="hub-corporate">
+      <div class="tab-panel" data-panel="hub-corporate" id="panel-hub-corporate" role="tabpanel" aria-labelledby="tab-hub-corporate" aria-hidden="true">
       <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <!-- 近期公司行动时间线 -->
         <div class="panel panel-shrink" data-reveal="fade-up" data-reveal-delay="0">
@@ -2633,7 +2633,7 @@
       </div><!-- /tab-panel hub-corporate -->
 
       <!-- ═══ Tab 6: hub-news (新闻) ═══ -->
-      <div class="tab-panel" data-panel="hub-news">
+      <div class="tab-panel" data-panel="hub-news" id="panel-hub-news" role="tabpanel" aria-labelledby="tab-hub-news" aria-hidden="true">
       <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <div class="panel panel-grow">
           <div class="panel-header">
@@ -2686,7 +2686,7 @@
 
 
       </div><!-- /tab-panel hub-news -->
-      <div class="tab-panel" data-panel="hub-network">
+      <div class="tab-panel" data-panel="hub-network" id="panel-hub-network" role="tabpanel" aria-labelledby="tab-hub-network" aria-hidden="true">
       <div class="hub-object-view">
         <div class="panel panel-grow">
           <div class="panel-header">
@@ -2744,7 +2744,7 @@
       </div><!-- /tab-panel hub-network -->
 
       <!-- ═══ Tab 8: hub-announcements (公告) ═══ -->
-      <div class="tab-panel" data-panel="hub-announcements">
+      <div class="tab-panel" data-panel="hub-announcements" id="panel-hub-announcements" role="tabpanel" aria-labelledby="tab-hub-announcements" aria-hidden="true">
       <div class="hub-object-view panel-scroll" data-reveal="fade-up" data-reveal-delay="0">
         <div class="panel panel-grow">
           <div class="panel-header">
@@ -2905,11 +2905,11 @@
       <input type="radio" id="bottom-tab-filings" name="bottom-tab" class="sr-only">
       <input type="radio" id="bottom-tab-research" name="bottom-tab" class="sr-only">
       <div class="bottom-tabs" role="tablist">
-        <label for="bottom-tab-events" class="bottom-tab" role="tab">最近事件</label>
-        <label for="bottom-tab-filings" class="bottom-tab" role="tab">公告</label>
-        <label for="bottom-tab-research" class="bottom-tab" role="tab">关联研究</label>
+        <label for="bottom-tab-events" class="bottom-tab">最近事件</label>
+        <label for="bottom-tab-filings" class="bottom-tab">公告</label>
+        <label for="bottom-tab-research" class="bottom-tab">关联研究</label>
       </div>
-      <div class="bottom-content" data-panel="bottom-events" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-events">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>
@@ -2945,7 +2945,7 @@
           </div>
         </div>
       </div>
-      <div class="bottom-content" data-panel="bottom-filings" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-filings">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker filing" aria-hidden="true"></div>
@@ -2973,7 +2973,7 @@
           </div>
         </div>
       </div>
-      <div class="bottom-content" data-panel="bottom-research" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-research">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>

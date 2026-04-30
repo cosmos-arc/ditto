@@ -144,13 +144,13 @@
     body { overflow-y: auto; }
 
     .shell-intel {
-      height: 100vh;
-      min-height: 100vh;
+      height: 100dvh;
+      min-height: 100dvh;
       overflow: hidden;
     }
 
     .shell-intel .shell-body {
-      height: 100vh;
+      height: 100dvh;
       min-height: 0;
       overflow: hidden;
     }
@@ -320,7 +320,7 @@
       padding: var(--space-4) var(--space-10);
       cursor: pointer;
       border-radius: var(--radius-4);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       letter-spacing: 0.02em;
       min-height: 2rem;
       display: inline-flex;
@@ -1379,7 +1379,6 @@
       color: var(--text-primary);
       font-size: var(--font-size-12);
       font-family: var(--font-family-numeric);
-      outline: none;
     }
     .form-textarea {
       width: 100%;
@@ -1390,7 +1389,6 @@
       background: var(--surface-muted);
       color: var(--text-primary);
       font-size: var(--font-size-12);
-      outline: none;
       resize: vertical;
       font-family: var(--font-family-ui);
       line-height: 1.5;
@@ -1852,7 +1850,7 @@
 
 
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — 市场情报 · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — 市场情报 · Compact · A股</div>
 
   <div class="shell-intel intel-shell">
 
@@ -1924,11 +1922,11 @@
         <input type="radio" name="intel-tab" id="tab-news" class="tab-radio sr-only">
         <input type="radio" name="intel-tab" id="tab-network" class="tab-radio sr-only">
         <!-- Tab labels -->
-        <label for="tab-capital-flow" class="intel-tab active" role="tab">资金流向</label>
-        <label for="tab-macro" class="intel-tab" role="tab">宏观指标</label>
-        <label for="tab-fundamental" class="intel-tab" role="tab">基本面</label>
-        <label for="tab-news" class="intel-tab" role="tab">新闻</label>
-        <label for="tab-network" class="intel-tab" role="tab">关联网络</label>
+        <label for="tab-capital-flow" class="intel-tab active" role="tab" id="tab-control-capital-flow" aria-selected="true" aria-controls="panel-capital-flow">资金流向</label>
+        <label for="tab-macro" class="intel-tab" role="tab" id="tab-control-macro" aria-selected="false" aria-controls="panel-macro">宏观指标</label>
+        <label for="tab-fundamental" class="intel-tab" role="tab" id="tab-control-fundamental" aria-selected="false" aria-controls="panel-fundamental">基本面</label>
+        <label for="tab-news" class="intel-tab" role="tab" id="tab-control-news" aria-selected="false" aria-controls="panel-news">新闻</label>
+        <label for="tab-network" class="intel-tab" role="tab" id="tab-control-network" aria-selected="false" aria-controls="panel-network">关联网络</label>
         <div class="tab-strip-spacer"></div>
         <span class="tab-strip-meta">资金流向</span>
         <span class="tab-strip-meta">1D</span>
@@ -1943,7 +1941,7 @@
           <div class="tab-group">
 
             <!-- ═══ Tab 1: 资金面 (Capital Flow) ═══ -->
-            <div class="tab-panel" data-panel="tab-capital-flow">
+            <div class="tab-panel" data-panel="tab-capital-flow" id="panel-capital-flow" role="tabpanel" aria-labelledby="tab-control-capital-flow" aria-hidden="false">
 
               <!-- KPI Cards -->
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
@@ -2160,7 +2158,7 @@
             </div>
 
             <!-- ═══ Tab 2: 宏观 (Macro) ═══ -->
-            <div class="tab-panel" data-panel="tab-macro">
+            <div class="tab-panel" data-panel="tab-macro" id="panel-macro" role="tabpanel" aria-labelledby="tab-control-macro" aria-hidden="true">
 
               <!-- Macro KPI Cards -->
               <div class="kpi-row" data-reveal="fade-up">
@@ -2312,7 +2310,7 @@
             </div>
 
             <!-- ═══ Tab 3: 基本面 (Fundamental) ═══ -->
-            <div class="tab-panel" data-panel="tab-fundamental">
+            <div class="tab-panel" data-panel="tab-fundamental" id="panel-fundamental" role="tabpanel" aria-labelledby="tab-control-fundamental" aria-hidden="true">
 
               <!-- Earnings Calendar KPI -->
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
@@ -2446,7 +2444,7 @@
             </div>
 
             <!-- ═══ Tab 4: 新闻 (News) ═══ -->
-            <div class="tab-panel" data-panel="tab-news">
+            <div class="tab-panel" data-panel="tab-news" id="panel-news" role="tabpanel" aria-labelledby="tab-control-news" aria-hidden="true">
 
               <!-- KPI Cards -->
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">
@@ -2625,7 +2623,7 @@
             </div>
 
             <!-- ═══ Tab 5: 关联网络 (Network) ═══ -->
-            <div class="tab-panel" data-panel="tab-network">
+            <div class="tab-panel" data-panel="tab-network" id="panel-network" role="tabpanel" aria-labelledby="tab-control-network" aria-hidden="true">
 
               <!-- KPI Cards -->
               <div class="kpi-row" data-reveal="fade-up" data-reveal-delay="0">

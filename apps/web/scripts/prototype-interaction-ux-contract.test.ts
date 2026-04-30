@@ -551,8 +551,8 @@ describe("prototype interaction UX contracts", () => {
 
 		for (const page of activePages()) {
 			const document = readPrototypeDocument(page);
-			const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"]'));
-			const panels = Array.from(document.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
+			const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"], [data-tab-target]'));
+			const panels = Array.from(document.querySelectorAll<HTMLElement>('[role="tabpanel"], [data-tab-panel]'));
 			const tabsById = new Map(tabs.flatMap((tab) => (tab.id ? [[tab.id, tab]] : [])));
 			const controllingTabIdByPanelId = new Map<string, string>();
 			const controllingTabLabelsByPanelId = new Map<string, string[]>();
@@ -561,6 +561,9 @@ describe("prototype interaction UX contracts", () => {
 				const label = `${page.id}:tab ${index + 1}`;
 				const controls = tab.getAttribute("aria-controls")?.trim() ?? "";
 
+				if (tab.getAttribute("role") !== "tab") {
+					violations.push(`${label}:missing-role-tab`);
+				}
 				if (!tab.id) {
 					violations.push(`${label}:missing-id`);
 				}
@@ -599,6 +602,9 @@ describe("prototype interaction UX contracts", () => {
 				const labelledByTab = labelledByIds.some((id) => tabsById.has(id));
 				const controllingTabId = panel.id ? controllingTabIdByPanelId.get(panel.id) : undefined;
 
+				if (panel.getAttribute("role") !== "tabpanel") {
+					violations.push(`${label}:missing-role-tabpanel`);
+				}
 				if (!panel.id) {
 					violations.push(`${label}:missing-id`);
 				}

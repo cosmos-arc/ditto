@@ -183,7 +183,7 @@
 
     /* Body: page-specific padding for fixed status bar */
     .shell-body {
-      height: 100vh;
+      height: 100dvh;
       overflow-y: auto;
       overflow-x: hidden;
       padding-bottom: 0;
@@ -334,7 +334,7 @@
       flex-direction: column;
       gap: var(--space-6);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       position: relative;
     }
 
@@ -878,7 +878,7 @@
     }
     .quick-access-item:hover { color: var(--text-secondary); }
     .quick-access-item:hover svg { opacity: 1; transform: translateX(2px); }
-    .quick-access-item svg { opacity: 0.6; transition: all 150ms var(--motion-easing-standard); }
+    .quick-access-item svg { opacity: 0.6; transition: border-color 150ms var(--motion-easing-standard), background 150ms var(--motion-easing-standard), color 150ms var(--motion-easing-standard), box-shadow 150ms var(--motion-easing-standard), opacity 150ms var(--motion-easing-standard), transform 150ms var(--motion-easing-standard); }
 
     /* ══════════════════════════════════════════════
      * Tab Band (bottom, L3: supplementary perspective switch)
@@ -908,7 +908,7 @@
       padding: var(--space-2) var(--space-4);
       cursor: pointer;
       border-radius: var(--radius-3);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       letter-spacing: 0.02em;
       min-height: 1.5rem; /* 24px — product-criteria: interactive element ≥ 24px */
       display: inline-flex;
@@ -1541,7 +1541,7 @@
   <section id="default-view" class="proto-section">
 
   <a class="skip-link" href="#main-content">跳至主要内容</a>
-  <div class="style-label">Graphite Studio — Cross-Market Overview · v18 · Design Review R11</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Cross-Market Overview · v18 · Design Review R11</div>
 
   <div class="shell-radar">
 
@@ -2123,13 +2123,13 @@
         <input type="radio" name="cross-market" id="tab-ai" class="tab-radio sr-only">
 
         <div class="tab-band-header" role="tablist" aria-label="辅助视角切换">
-          <label for="tab-rotation" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-rotation" aria-selected="true">资金轮动</label>
-          <label for="tab-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-calendar" aria-selected="false">事件日历</label>
-          <label for="tab-ai" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-ai" aria-selected="false">AI 解读</label>
+          <label for="tab-rotation" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-rotation" aria-selected="true" id="tab-control-rotation">资金轮动</label>
+          <label for="tab-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-calendar" aria-selected="false" id="tab-control-calendar">事件日历</label>
+          <label for="tab-ai" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-ai" aria-selected="false" id="tab-control-ai">AI 解读</label>
         </div>
 
         <!-- Tab 1: Capital Rotation — summary only -->
-        <div class="tab-panel tab-band-body" id="panel-rotation" data-panel="tab-rotation" role="tabpanel" aria-labelledby="tab-rotation">
+        <div class="tab-panel tab-band-body" id="panel-rotation" data-panel="tab-rotation" role="tabpanel" aria-labelledby="tab-control-rotation" aria-hidden="false">
           <div class="rotation-summary-row">
             <div class="rotation-summary-item">
               <span class="rotation-summary-label">风险偏好</span>
@@ -2182,7 +2182,7 @@
         </div>
 
         <!-- Tab 2: Event Calendar — summary-only, upcoming events -->
-        <div class="tab-panel tab-band-body" id="panel-calendar" data-panel="tab-calendar" role="tabpanel" aria-labelledby="tab-calendar">
+        <div class="tab-panel tab-band-body" id="panel-calendar" data-panel="tab-calendar" role="tabpanel" aria-labelledby="tab-control-calendar" aria-hidden="true">
           <div class="calendar-summary-list">
             <div class="calendar-summary-event">
               <span class="calendar-summary-time">今晚 20:30</span>
@@ -2209,7 +2209,7 @@
         </div>
 
         <!-- Tab 3: AI Insight — enhanced analysis -->
-        <div class="tab-panel tab-band-body" id="panel-ai" data-panel="tab-ai" role="tabpanel" aria-labelledby="tab-ai">
+        <div class="tab-panel tab-band-body" id="panel-ai" data-panel="tab-ai" role="tabpanel" aria-labelledby="tab-control-ai" aria-hidden="true">
           <div class="insight-headline">
             <strong>美元走弱</strong>是本轮跨市场反弹的核心驱动，港股高弹性领先；黄金与成长同步偏强，指向<strong>美元信用走弱</strong>与实际利率预期下行。
           </div>

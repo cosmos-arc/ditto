@@ -130,7 +130,7 @@ button {
     "rail header   header"
     "rail pulse    pulse"
     "rail main     sidebar";
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -144,7 +144,7 @@ button {
     "rail header   header"
     "rail status   status"
     "rail main     sidebar";
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -170,7 +170,7 @@ button {
     "rail bottom"
   );
   width: 100vw;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-y: auto;
   position: relative;
   box-sizing: border-box;
@@ -270,6 +270,7 @@ button {
     "rail tabs   tabs"
     "rail main   detail";
   width: 100vw;
+  height: calc(100dvh - 1.5rem);
   min-height: 0;
   overflow: hidden;
   position: relative;
@@ -281,10 +282,23 @@ button {
 
 .shell-agent .agent-main {
   grid-area: main;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .shell-agent .agent-detail {
   grid-area: detail;
+}
+
+.shell-agent .agent-main[data-tabs="agent-status-filter"] > [data-tab-panel][aria-hidden="false"] {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-right: var(--space-2);
 }
 
 .shell-agent[data-resizable-panel-group="studio-workspace"] {
@@ -423,7 +437,15 @@ button {
   display: none !important;
 }
 
-.header-title {
+.header-title,
+h1.header-title {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.header-title,
+h1.header-title {
   font-size: var(--font-size-16);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
@@ -2183,7 +2205,7 @@ details.context-section:not([open]) > .context-section-body {
     "rail toolbar"
     "rail table"
     "rail footer";
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -2226,7 +2248,7 @@ details.context-section:not([open]) > .context-section-body {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
   white-space: nowrap;
 }
 
@@ -2249,34 +2271,24 @@ details.context-section:not([open]) > .context-section-body {
   border-radius: var(--radius-4);
   border: 1px solid var(--border-subtle);
   background: var(--surface-panel-base);
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-8) center;
   color: var(--text-secondary);
   appearance: none;
   cursor: pointer;
   position: relative;
   transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
 }
-.filter-select::after {
-  content: '';
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-  height: 6px;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  background-color: var(--icon-secondary);
-}
 
 .filter-select:hover {
   border-color: var(--border-default);
 }
 
-.filter-select:focus {
+.filter-select:focus-visible {
   border-color: var(--brand-accent);
   outline: none;
+  box-shadow: 0 0 0 2px var(--interaction-focus-ring);
 }
 
 .filter-search {
@@ -2295,9 +2307,10 @@ details.context-section:not([open]) > .context-section-body {
   color: var(--text-tertiary);
 }
 
-.filter-search:focus {
+.filter-search:focus-visible {
   border-color: var(--brand-accent);
   outline: none;
+  box-shadow: 0 0 0 2px var(--interaction-focus-ring);
 }
 
 .filter-divider {
@@ -2527,7 +2540,7 @@ details.context-section:not([open]) > .context-section-body {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .pagination-btn:hover {
@@ -2553,7 +2566,7 @@ details.context-section:not([open]) > .context-section-body {
     "rail header header"
     "rail toolbar toolbar"
     "rail queue detail";
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   overflow-y: auto;
 }
@@ -2648,7 +2661,7 @@ details.context-section:not([open]) > .context-section-body {
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -2871,7 +2884,7 @@ details.context-section:not([open]) > .context-section-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
   flex-shrink: 0;
 }
 
@@ -2897,7 +2910,7 @@ details.context-section:not([open]) > .context-section-body {
     "rail tabs"
     "rail main"
     "rail secondary";
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   overflow-y: auto;
 }
@@ -3168,7 +3181,7 @@ details.context-section:not([open]) > .context-section-body {
     "rail metrics"
     "rail main"
     "rail secondary";
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   overflow-y: auto;
 }
@@ -3381,7 +3394,7 @@ details.context-section:not([open]) > .context-section-body {
     "rail strip    strip"
     "rail main     activity"
     "rail analysis activity";
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   overflow-y: auto;
 }
@@ -3452,7 +3465,7 @@ details.context-section:not([open]) > .context-section-body {
   padding: var(--space-4) var(--space-8);
   cursor: pointer;
   border-radius: var(--radius-4);
-  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .analysis-band-tab:hover {
@@ -3485,7 +3498,7 @@ details.context-section:not([open]) > .context-section-body {
     "rail header  header"
     "rail toolbar toolbar"
     "rail table   detail";
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -3681,7 +3694,7 @@ html[data-resizing-panel="true"] * {
     "rail header header"
     "rail health health"
     "rail main   detail";
-  min-height: 100vh;
+  min-height: 100dvh;
   width: 100vw;
   overflow-y: auto;
 }
@@ -3840,7 +3853,7 @@ html[data-resizing-panel="true"] * {
 .shell-radar .shell-rail {
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
   flex-shrink: 0;
   width: var(--shell-rail-width);
   z-index: 30;
@@ -3895,13 +3908,13 @@ html[data-resizing-panel="true"] * {
   display: grid;
   grid-template-columns: var(--shell-rail-width) 1fr;
   width: 100vw;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .shell-intel .shell-rail {
   grid-column: 1;
   grid-row: 1;
-  height: 100vh;
+  height: 100dvh;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -4016,7 +4029,7 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   font-family: var(--font-family-ui); font-size: var(--font-size-12);
   font-weight: var(--font-weight-medium); color: var(--text-tertiary);
   padding: var(--space-4) var(--space-8); cursor: pointer;
-  transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
 }
 .tab-button.active { color: var(--brand-accent); }
 

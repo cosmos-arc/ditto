@@ -159,7 +159,7 @@
         "rail    header2   header2          header2   header2             header2"
         "rail    sources   source-separator main      inspector-separator inspector"
         "rail    logs      logs             logs      logs                logs";
-      height: 100vh;
+      height: calc(100dvh - var(--status-bar-height, 22px));
       width: 100vw;
       overflow: hidden;
       position: relative;
@@ -597,11 +597,19 @@
     .studio-main {
       grid-area: main;
       background: var(--surface-app);
-      overflow-y: auto;
+      min-height: 0;
+      overflow: hidden;
       padding: var(--density-panel-padding);
       display: flex;
       flex-direction: column;
       gap: var(--density-section-gap);
+    }
+
+    .studio-main > .tab-panel[aria-hidden="false"] {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     /* ── Studio Panel Card ── */
@@ -681,7 +689,6 @@
       border-radius: var(--input-radius);
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
                   box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
-      outline: none;
     }
     .form-input:focus,
     .form-select:focus,
@@ -740,7 +747,6 @@
       height: 4px;
       background: var(--border-default);
       border-radius: 2px;
-      outline: none;
       cursor: pointer;
     }
     .factor-weight-slider::-webkit-slider-thumb {
@@ -810,6 +816,50 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: var(--density-section-gap);
+    }
+
+    @media (max-height: 800px) {
+      .studio-main {
+        padding: var(--space-8) var(--density-panel-padding);
+      }
+
+      .studio-main > .tab-panel[aria-hidden="false"] {
+        gap: var(--space-8);
+      }
+
+      .studio-panel-header {
+        padding: var(--space-8) var(--density-panel-padding);
+      }
+
+      .studio-panel-body {
+        padding: var(--space-8) var(--density-panel-padding);
+      }
+
+      .studio-panel-body--flush {
+        padding: 0;
+      }
+
+      .form-grid,
+      .opt-grid {
+        gap: var(--space-8);
+      }
+
+      .backtest-params {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: var(--space-8);
+      }
+
+      .factor-weight-list {
+        gap: var(--space-8);
+      }
+
+      .param-matrix th {
+        padding: var(--space-4) var(--space-8);
+      }
+
+      .param-matrix td {
+        padding: var(--space-2) var(--space-8);
+      }
     }
 
     /* ══════════════════════════════════════════════
@@ -1065,6 +1115,13 @@
     }
     .logs-body[aria-hidden="true"] {
       display: none;
+    }
+
+    .studio-logs[data-bottom-tray-state="collapsed"] [data-bottom-tray-content] [role="tabpanel"] {
+      height: 0;
+      max-height: 0;
+      overflow: hidden;
+      padding-block: 0;
     }
 
     .log-line {
@@ -1970,7 +2027,7 @@
   <section id="default-view" class="proto-section">
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Strategy Studio · Compact · A股</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Strategy Studio · Compact · A股</div>
 
   <div class="shell-studio" data-resizable-panel-group="studio-workspace">
     <!-- ═══ Rail ═══ -->
@@ -1988,7 +2045,7 @@
 
     <!-- ═══ Studio Header ═══ -->
     <header class="shell-header studio-header" data-contract-slot="header">
-      <span class="header-title">策略工作台</span>
+      <h1 class="header-title">策略工作台</h1>
       <div class="strategy-name">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon" data-icon="strategy-blueprint">
           <rect x="4" y="3" width="12" height="14" rx="2"/>
@@ -2060,11 +2117,11 @@
       <input type="radio" name="studio-mode" id="studio-mode-form" checked class="tab-radio sr-only">
       <input type="radio" name="studio-mode" id="studio-mode-code" class="tab-radio sr-only">
       <div class="mode-tabs">
-        <label for="studio-mode-form" class="mode-tab active" role="tab" tabindex="0">
+        <label for="studio-mode-form" class="mode-tab active" role="tab" tabindex="0" id="tab-studio-mode-form" aria-selected="true" aria-controls="panel-studio-mode-form">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="3" rx="1"/><rect x="3" y="8.5" width="14" height="3" rx="1"/><rect x="3" y="14" width="14" height="3" rx="1"/></svg>
           Form Builder
         </label>
-        <label for="studio-mode-code" class="mode-tab" role="tab" tabindex="0">
+        <label for="studio-mode-code" class="mode-tab" role="tab" tabindex="0" id="tab-studio-mode-code" aria-selected="false" aria-controls="panel-studio-mode-code">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12M4 8h8M4 12h10M4 16h6"/></svg>
           Code Editor
         </label>
@@ -2206,7 +2263,7 @@
     <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region role="main" aria-label="策略编辑器">
 
       <!-- Tab Panel: Form Builder -->
-      <div class="tab-panel" data-panel="studio-mode-form">
+      <div class="tab-panel" data-panel="studio-mode-form" id="panel-studio-mode-form" role="tabpanel" aria-labelledby="tab-studio-mode-form" aria-hidden="false">
 
       <!-- Panel 1: Strategy Basic Info -->
       <div class="studio-panel" data-reveal="fade-up" data-reveal-delay="0">
@@ -2433,7 +2490,7 @@
       </div><!-- /tab-panel: Form Builder -->
 
       <!-- Tab Panel: Code Editor -->
-      <div class="tab-panel" data-panel="studio-mode-code">
+      <div class="tab-panel" data-panel="studio-mode-code" id="panel-studio-mode-code" role="tabpanel" aria-labelledby="tab-studio-mode-code" aria-hidden="true">
         <div class="studio-panel">
           <div class="studio-panel-header">
             <div>
@@ -2522,22 +2579,22 @@
       <!-- Inspector Tabs: 策略 / 参数 / 绩效 -->
       <div data-tabs="strategy-tabs" class="inspector-tabs-container">
         <div class="inspector-tabs-bar">
-          <span data-tab-target="strategy" class="mode-tab active inspector-tab" role="tab" aria-selected="true" tabindex="0">
+          <span data-tab-target="strategy" class="mode-tab active inspector-tab" role="tab" aria-selected="true" tabindex="0" id="tab-strategy" aria-controls="panel-strategy">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="strategy-map"><rect x="4" y="4" width="5" height="5" rx="1"/><rect x="11" y="4" width="5" height="5" rx="1"/><rect x="4" y="11" width="12" height="5" rx="1"/></svg>
             策略
           </span>
-          <span data-tab-target="params" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0">
+          <span data-tab-target="params" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0" id="tab-params" aria-controls="panel-params">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="parameter-brackets"><path d="M7 4H5a1 1 0 00-1 1v10a1 1 0 001 1h2"/><path d="M13 4h2a1 1 0 011 1v10a1 1 0 01-1 1h-2"/><path d="M8 8h4M8 12h4"/></svg>
             参数
           </span>
-          <span data-tab-target="performance" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0">
+          <span data-tab-target="performance" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0" id="tab-performance" aria-controls="panel-performance">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="performance-gauge"><path d="M4 14a6 6 0 1112 0"/><path d="M10 14l4-5"/><path d="M6 14h8"/></svg>
             绩效
           </span>
         </div>
 
         <!-- Tab Panel: 策略 -->
-        <div data-tab-panel="strategy" class="inspector-tab-panel">
+        <div data-tab-panel="strategy" class="inspector-tab-panel" id="panel-strategy" role="tabpanel" aria-labelledby="tab-strategy" aria-hidden="false">
           <!-- Warnings / Suggestions -->
           <div class="inspector-section">
             <div class="inspector-section-title">警告与建议</div>
@@ -2597,7 +2654,7 @@
         </div>
 
         <!-- Tab Panel: 参数 -->
-        <div data-tab-panel="params" class="inspector-tab-panel" aria-hidden="true">
+        <div data-tab-panel="params" class="inspector-tab-panel" aria-hidden="true" id="panel-params" role="tabpanel" aria-labelledby="tab-params">
           <!-- Portfolio Optimization Config -->
           <div class="inspector-section">
             <div class="inspector-section-title">组合优化</div>
@@ -2677,7 +2734,7 @@
         </div>
 
         <!-- Tab Panel: 绩效 -->
-        <div data-tab-panel="performance" class="inspector-tab-panel" aria-hidden="true">
+        <div data-tab-panel="performance" class="inspector-tab-panel" aria-hidden="true" id="panel-performance" role="tabpanel" aria-labelledby="tab-performance">
           <!-- Equity Curve (last backtest) -->
           <div class="inspector-section" data-reveal="fade-up" data-reveal-delay="0">
             <div class="inspector-section-title">权益曲线</div>
@@ -2778,9 +2835,9 @@
     <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="collapsed">
       <div class="logs-header bottom-tray-header">
         <div class="logs-tabs">
-          <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation">校验结果</span>
-          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="dry-run" data-log-tab="dry-run">Dry Run</span>
-          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="compile" data-log-tab="compile">编译日志</span>
+          <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation" id="tab-validation" aria-controls="panel-validation">校验结果</span>
+          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="dry-run" data-log-tab="dry-run" id="tab-dry-run" aria-controls="panel-dry-run">Dry Run</span>
+          <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="compile" data-log-tab="compile" id="tab-compile" aria-controls="panel-compile">编译日志</span>
         </div>
         <div class="logs-spacer"></div>
         <div class="logs-meta">
@@ -2793,7 +2850,7 @@
         </span>
       </div>
       <div class="bottom-tray-content" id="strategy-bottom-tray-content" data-bottom-tray-content aria-hidden="true">
-        <div class="logs-body" data-tab-panel="validation" aria-hidden="false">
+        <div class="logs-body" data-tab-panel="validation" aria-hidden="false" id="panel-validation" role="tabpanel" aria-labelledby="tab-validation">
           <div class="log-line">
             <span class="log-time tabular-nums">14:32:08</span>
             <span class="log-level success">PASS</span>
@@ -2825,7 +2882,7 @@
             <span class="log-msg">预处理管道校验 — 去极值: MAD, 标准化: Z-Score, 中性化: 行业中性</span>
           </div>
         </div>
-        <div class="logs-body" data-tab-panel="dry-run" aria-hidden="true">
+        <div class="logs-body" data-tab-panel="dry-run" aria-hidden="true" id="panel-dry-run" role="tabpanel" aria-labelledby="tab-dry-run">
           <div class="log-line">
             <span class="log-time tabular-nums">14:34:12</span>
             <span class="log-level info">DRY</span>
@@ -2842,7 +2899,7 @@
             <span class="log-msg">流动性检查 — 2 只股票成交额低于阈值，已降低目标权重</span>
           </div>
         </div>
-        <div class="logs-body" data-tab-panel="compile" aria-hidden="true">
+        <div class="logs-body" data-tab-panel="compile" aria-hidden="true" id="panel-compile" role="tabpanel" aria-labelledby="tab-compile">
           <div class="log-line">
             <span class="log-time tabular-nums">14:35:01</span>
             <span class="log-level info">BUILD</span>

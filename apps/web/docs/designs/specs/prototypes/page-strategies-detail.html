@@ -960,7 +960,7 @@
 
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — Strategy Detail · Compact · 多因子</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Strategy Detail · Compact · 多因子</div>
 
   <div class="shell-hub object-shell">
     <!-- ══════════════════════════════════════════════
@@ -1089,15 +1089,15 @@
     <div class="tab-group" data-tab-group="strat">
       <div class="hub-tabs" role="tablist" aria-label="策略详情导航" data-tabs="strat-tabs">
         <input type="radio" name="strat" id="strat-overview" checked class="tab-radio sr-only">
-        <label for="strat-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-overview">概览</label>
+        <label for="strat-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-overview" id="tab-strat-overview" aria-selected="true" aria-controls="panel-strat-overview">概览</label>
         <input type="radio" name="strat" id="strat-config" class="tab-radio sr-only">
-        <label for="strat-config" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-config">配置</label>
+        <label for="strat-config" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-config" id="tab-strat-config" aria-selected="false" aria-controls="panel-strat-config">配置</label>
         <input type="radio" name="strat" id="strat-backtests" class="tab-radio sr-only">
-        <label for="strat-backtests" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-backtests">回测历史</label>
+        <label for="strat-backtests" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-backtests" id="tab-strat-backtests" aria-selected="false" aria-controls="panel-strat-backtests">回测历史</label>
         <input type="radio" name="strat" id="strat-signals" class="tab-radio sr-only">
-        <label for="strat-signals" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-signals">信号</label>
+        <label for="strat-signals" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-signals" id="tab-strat-signals" aria-selected="false" aria-controls="panel-strat-signals">信号</label>
         <input type="radio" name="strat" id="strat-versions" class="tab-radio sr-only">
-        <label for="strat-versions" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-versions">版本</label>
+        <label for="strat-versions" class="hub-tab" role="tab" tabindex="0" data-tab-target="strat-versions" id="tab-strat-versions" aria-selected="false" aria-controls="panel-strat-versions">版本</label>
       </div>
 
       <div class="tab-panels" id="main-content">
@@ -1105,7 +1105,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 1: Overview
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="strat-overview" data-tab-panel="strat-overview">
+        <div class="tab-panel" data-panel="strat-overview" data-tab-panel="strat-overview" id="panel-strat-overview" role="tabpanel" aria-labelledby="tab-strat-overview" aria-hidden="false">
           <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1312,7 +1312,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 2: Config
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="strat-config" data-tab-panel="strat-config">
+        <div class="tab-panel" data-panel="strat-config" data-tab-panel="strat-config" id="panel-strat-config" role="tabpanel" aria-labelledby="tab-strat-config" aria-hidden="true">
           <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1492,7 +1492,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 3: Backtests (with inline compare)
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="strat-backtests" data-tab-panel="strat-backtests">
+        <div class="tab-panel" data-panel="strat-backtests" data-tab-panel="strat-backtests" id="panel-strat-backtests" role="tabpanel" aria-labelledby="tab-strat-backtests" aria-hidden="true">
           <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1660,7 +1660,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 4: Signals
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="strat-signals" data-tab-panel="strat-signals">
+        <div class="tab-panel" data-panel="strat-signals" data-tab-panel="strat-signals" id="panel-strat-signals" role="tabpanel" aria-labelledby="tab-strat-signals" aria-hidden="true">
           <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 
@@ -1776,7 +1776,7 @@
         <!-- ══════════════════════════════════════════════
              Tab 5: Versions
              ══════════════════════════════════════════════ -->
-        <div class="tab-panel" data-panel="strat-versions" data-tab-panel="strat-versions">
+        <div class="tab-panel" data-panel="strat-versions" data-tab-panel="strat-versions" id="panel-strat-versions" role="tabpanel" aria-labelledby="tab-strat-versions" aria-hidden="true">
           <div class="hub-main" data-contract-slot="main">
             <div class="hub-object-view">
 

@@ -526,3 +526,45 @@ Bottom Tray 只用于日志、验证结果、执行状态和运行追踪，不�
 - 非颜色危险标记：`data-danger-marker` 或等价 icon / 边界 / 文案。
 
 危险态不能只靠红色表达；必须同时使用文字、符号或边界强化。
+
+---
+
+## 17. 原型可访问性交互基线（Task 2）
+
+本节定义 `docs/designs/specs/prototypes` 的最低交互合同。所有原型页面必须在不削弱语义的前提下通过交互契约测试与视觉 gates。
+
+### 17.1 页面标题语义
+
+- 每个 active page 必须且只能有一个语义 `<h1>`。
+- 用于对比、风格标记、画廊标签的视觉 label 不得承担标题语义。
+- 风格 label 必须设置 `aria-hidden="true"`，避免被辅助技术识别为页面标题或主内容。
+
+### 17.2 `role="button"` 键盘激活
+
+- 非原生按钮如果使用 `[role="button"]`，必须可通过键盘触发。
+- 共享交互脚本负责为 `[role="button"]` 提供 Enter 与 Space 激活行为。
+- Enter / Space 触发时必须调用目标元素的 click 行为，并阻止 Space 造成页面滚动。
+
+### 17.3 Tabs 与 Tabpanel 合同
+
+- 每个 tab 必须具备稳定 `id`。
+- 每个 tab 必须维护 `aria-selected="true|false"`。
+- 每个 tab 必须通过 `aria-controls` 指向受控面板。
+- 受控面板必须具备 `role="tabpanel"`。
+- 受控面板必须具备稳定 `id`。
+- 受控面板必须通过 `aria-labelledby` 反向指回控制它的 tab。
+- JS 驱动 tabs 必须在切换时同步维护 tab 的 `aria-selected` 与 panel 的 `aria-hidden`。
+- 隐藏面板不得继续暴露为当前 active 内容；显示面板必须保持在对应 shell 的内容区域内，避免与 fixed / sticky 状态栏重叠。
+
+### 17.4 Focus-visible 基线
+
+- 任何移除原生 `outline` 的可交互元素，必须提供显式 `:focus-visible` ring。
+- focus ring 必须同时满足键盘可见性与品牌克制度，不得弱到只依赖颜色差异。
+- `hover`、`selected`、`active` 不得替代键盘 focus 表达。
+
+### 17.5 Reduced Motion 实时合同
+
+- 原型必须保留 `@media (prefers-reduced-motion: reduce)` 基线。
+- 共享交互脚本必须监听 reduced-motion media query 变化。
+- 当用户偏好变化时，`document.documentElement` 必须实时同步 `data-reduced-motion`。
+- 动画、transition、reveal、状态脉动必须尊重该偏好；不得只在页面首次加载时读取一次。

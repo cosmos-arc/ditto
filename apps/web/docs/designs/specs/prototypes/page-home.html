@@ -56,7 +56,7 @@
     /* ── Gate 0: Hide prototype tooling in default-view ── */
     :root:has(#view-default:checked) .proto-nav { display: none !important; }
     :root:has(#view-default:checked) #default-view > .style-label { display: none !important; }
-    :root:has(#view-default:checked) #default-view { height: 100vh !important; }
+    :root:has(#view-default:checked) #default-view { height: 100dvh !important; }
 
     /* ── Rail toggle icons ── */
     .rail-bottom {
@@ -1331,7 +1331,7 @@
 
   <a class="skip-link" href="#main-content">跳到主内容</a>
 
-  <div class="style-label">Compact 适中 · 12px · 36px rows · 56px rail · A股</div>
+  <div class="style-label" aria-hidden="true">Compact 适中 · 12px · 36px rows · 56px rail · A股</div>
 
   <div class="shell-v2 shell-home">
     <!-- R1: Noise texture overlay -->
@@ -1356,7 +1356,7 @@
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">首页</span>
+      <h1 class="header-title">首页</h1>
       <div class="header-spacer"></div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">

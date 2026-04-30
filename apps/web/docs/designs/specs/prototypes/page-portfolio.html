@@ -103,7 +103,7 @@
       border-radius: var(--radius-6);
       cursor: pointer;
       color: var(--text-tertiary);
-      transition: all 0.15s ease;
+      transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
     }
     .shell-analytical .rail-icon:hover { color: var(--text-secondary); background: var(--interaction-hover-subtle-bg); }
     .shell-analytical .rail-icon.active { color: var(--brand-accent); background: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
@@ -124,7 +124,7 @@
       padding: var(--space-4) var(--space-8);
       cursor: pointer;
       border-radius: var(--radius-4);
-      transition: all 0.15s ease;
+      transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
     }
     .portfolio-tab:hover { color: var(--text-secondary); }
     .portfolio-tab.active { color: var(--brand-accent); background: var(--brand-accent-subtle); }
@@ -531,7 +531,7 @@
 
   <section id="default-view" class="proto-section">
     <a class="skip-link" href="#main-content">跳至主要内容</a>
-    <div class="style-label">Graphite Studio — Portfolio · Compact</div>
+    <div class="style-label" aria-hidden="true">Graphite Studio — Portfolio · Compact</div>
 
     <div class="shell-analytical">
 
@@ -639,9 +639,9 @@
             <input type="radio" name="portfolio-tab" id="tab-positions" checked class="tab-radio sr-only">
             <input type="radio" name="portfolio-tab" id="tab-trades" class="tab-radio sr-only">
             <input type="radio" name="portfolio-tab" id="tab-attribution" class="tab-radio sr-only">
-            <label for="tab-positions" class="portfolio-tab active" role="tab" aria-selected="true" aria-controls="panel-positions">持仓</label>
-            <label for="tab-trades" class="portfolio-tab" role="tab" aria-selected="false" aria-controls="panel-trades">交易</label>
-            <label for="tab-attribution" class="portfolio-tab" role="tab" aria-selected="false" aria-controls="panel-attribution">归因</label>
+            <label for="tab-positions" class="portfolio-tab active" role="tab" aria-selected="true" aria-controls="panel-positions" id="tab-control-positions">持仓</label>
+            <label for="tab-trades" class="portfolio-tab" role="tab" aria-selected="false" aria-controls="panel-trades" id="tab-control-trades">交易</label>
+            <label for="tab-attribution" class="portfolio-tab" role="tab" aria-selected="false" aria-controls="panel-attribution" id="tab-control-attribution">归因</label>
             <div class="tab-strip-spacer"></div>
             <label for="overlay-confirm-close-all" class="btn btn-ghost ov-label-btn ml-auto">全部平仓</label>
           </div>
@@ -650,7 +650,7 @@
           <div class="tab-group">
 
             <!-- ═══ Tab: 持仓 ═══ -->
-            <div class="tab-panel" id="panel-positions" data-panel="tab-positions" role="tabpanel" aria-labelledby="tablist-portfolio">
+            <div class="tab-panel" id="panel-positions" data-panel="tab-positions" role="tabpanel" aria-labelledby="tab-control-positions" aria-hidden="false">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -777,7 +777,7 @@
             </div>
 
             <!-- ═══ Tab: 交易 ═══ -->
-            <div class="tab-panel" id="panel-trades" data-panel="tab-trades" role="tabpanel" aria-labelledby="tablist-portfolio">
+            <div class="tab-panel" id="panel-trades" data-panel="tab-trades" role="tabpanel" aria-labelledby="tab-control-trades" aria-hidden="true">
               <div class="filter-bar">
                 <input type="text" placeholder="搜索标的…">
                 <select>
@@ -884,7 +884,7 @@
             </div>
 
             <!-- ═══ Tab: 归因 ═══ -->
-            <div class="tab-panel" id="panel-attribution" data-panel="tab-attribution" role="tabpanel" aria-labelledby="tablist-portfolio">
+            <div class="tab-panel" id="panel-attribution" data-panel="tab-attribution" role="tabpanel" aria-labelledby="tab-control-attribution" aria-hidden="true">
               <div class="attribution-time-selector">
                 <button class="attribution-time-btn active">当日</button>
                 <button class="attribution-time-btn">本周</button>

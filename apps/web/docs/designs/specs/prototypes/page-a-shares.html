@@ -87,7 +87,7 @@
       display: none !important;
     }
     :root:has(#view-default:checked) #default-view {
-      height: 100vh;
+      height: 100dvh;
     }
 
     .sr-only {
@@ -131,7 +131,7 @@
     }
 
     .shell-body {
-      height: 100vh;
+      height: 100dvh;
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-gutter: stable;
@@ -739,7 +739,7 @@
 
     .treemap-cell-iv .treemap-cell-name,
     .heatmap-cell[data-size-bucket="xl"] .hm-name { font-size: var(--font-size-12); }
-    .heatmap-cell[data-size-bucket="sm"] .hm-name { font-size: 9px; }
+    .heatmap-cell[data-size-bucket="sm"] .hm-name { font-size: var(--font-size-10); }
 
     .heatmap-cell > span {
       position: relative;
@@ -1124,7 +1124,7 @@
       padding: var(--space-2) var(--space-4);
       cursor: pointer;
       border-radius: var(--radius-3);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
       letter-spacing: 0.02em;
       min-height: 1.5rem;
       display: inline-flex;
@@ -1791,7 +1791,7 @@
 
   <section id="default-view" class="proto-section">
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="style-label">Graphite Studio — A 股总览 · Compact · Radar</div>
+  <div class="style-label" aria-hidden="true">Graphite Studio — A 股总览 · Compact · Radar</div>
 
   <div class="shell-radar">
 
@@ -2291,14 +2291,14 @@
         <input type="radio" name="a-shares" id="tab-event-calendar" class="tab-radio sr-only">
 
         <div class="tab-band-header" role="tablist" aria-label="辅助数据切换">
-          <label for="tab-capital-flow" class="tab-band-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="panel-capital-flow">资金轮动</label>
-          <label for="tab-dragon-tiger" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-dragon-tiger">龙虎榜</label>
-          <label for="tab-margin-trading" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-margin-trading">两融数据</label>
-          <label for="tab-event-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-event-calendar">事件日历</label>
+          <label for="tab-capital-flow" class="tab-band-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="panel-capital-flow" id="tab-control-capital-flow">资金轮动</label>
+          <label for="tab-dragon-tiger" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-dragon-tiger" id="tab-control-dragon-tiger">龙虎榜</label>
+          <label for="tab-margin-trading" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-margin-trading" id="tab-control-margin-trading">两融数据</label>
+          <label for="tab-event-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="panel-event-calendar" id="tab-control-event-calendar">事件日历</label>
         </div>
 
         <!-- Tab 1: 资金轮动 -->
-        <div class="tab-panel tab-band-body" id="panel-capital-flow" data-panel="tab-capital-flow" role="tabpanel" aria-labelledby="tablist-a-shares">
+        <div class="tab-panel tab-band-body" id="panel-capital-flow" data-panel="tab-capital-flow" role="tabpanel" aria-labelledby="tab-control-capital-flow" aria-hidden="false">
           <div class="rotation-summary-row">
             <div class="rotation-summary-item" data-reveal="fade-up">
               <span class="rotation-summary-label">北向净买入</span>
@@ -2343,7 +2343,7 @@
         </div>
 
         <!-- Tab 2: 龙虎榜 -->
-        <div class="tab-panel tab-band-body" id="panel-dragon-tiger" data-panel="tab-dragon-tiger" role="tabpanel" aria-labelledby="tablist-a-shares">
+        <div class="tab-panel tab-band-body" id="panel-dragon-tiger" data-panel="tab-dragon-tiger" role="tabpanel" aria-labelledby="tab-control-dragon-tiger" aria-hidden="true">
           <div class="dragon-list">
             <div class="dragon-item" tabindex="0" data-reveal="fade-up" data-tooltip="寒武纪-U · 涨停 · 机构净买入 3.2 亿">
               <span class="dragon-stock">寒武纪-U</span>
@@ -2374,7 +2374,7 @@
         </div>
 
         <!-- Tab 3: 两融数据 -->
-        <div class="tab-panel tab-band-body" id="panel-margin-trading" data-panel="tab-margin-trading" role="tabpanel" aria-labelledby="tablist-a-shares">
+        <div class="tab-panel tab-band-body" id="panel-margin-trading" data-panel="tab-margin-trading" role="tabpanel" aria-labelledby="tab-control-margin-trading" aria-hidden="true">
           <div class="margin-stats">
             <div class="margin-stat" data-reveal="fade-up">
               <div class="margin-stat-label">两融余额</div>
@@ -2413,7 +2413,7 @@
         </div>
 
         <!-- Tab 4: 事件日历 -->
-        <div class="tab-panel tab-band-body" id="panel-event-calendar" data-panel="tab-event-calendar" role="tabpanel" aria-labelledby="tablist-a-shares">
+        <div class="tab-panel tab-band-body" id="panel-event-calendar" data-panel="tab-event-calendar" role="tabpanel" aria-labelledby="tab-control-event-calendar" aria-hidden="true">
           <div class="event-calendar-list">
             <div class="event-cal-item" data-reveal="fade-up">
               <span class="event-cal-date">04-14 周一</span>

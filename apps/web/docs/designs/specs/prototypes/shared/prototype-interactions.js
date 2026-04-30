@@ -10,7 +10,13 @@
   'use strict';
 
   /* ── Motion Preference ─────────────────────── */
-  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var reducedMotion = motionQuery.matches;
+  document.documentElement.toggleAttribute('data-reduced-motion', reducedMotion);
+  motionQuery.addEventListener('change', function (event) {
+    reducedMotion = event.matches;
+    document.documentElement.toggleAttribute('data-reduced-motion', reducedMotion);
+  });
 
   /* ── Utility: Parse JSON from data attribute ── */
   function parseAttr(el, attr) {
@@ -37,52 +43,57 @@
         var panels  = group.querySelectorAll('[data-tab-panel]');
         if (!buttons.length || !panels.length) return;
 
-        /* default active = first button */
-        var hasActive = Array.from(buttons).some(function (b) {
-          return b.classList.contains('active') || b.getAttribute('aria-selected') === 'true';
-        });
-        if (!hasActive) {
-          buttons[0].classList.add('active');
-          buttons[0].setAttribute('aria-selected', 'true');
+        function rememberPanelDisplay(panel) {
+          var currentDisplay = panel.style.display;
+          if (currentDisplay && currentDisplay !== 'none') {
+            panel.setAttribute('data-tab-display', currentDisplay);
+          }
         }
 
-        /* show/hide initial panels */
-        var activeTarget = group.querySelector('[data-tab-target].active');
-        if (activeTarget) {
-          var tid = activeTarget.getAttribute('data-tab-target');
-          panels.forEach(function (p) {
-            /* Preserve display:contents or other non-block display values */
-            var currentDisplay = p.style.display;
-            if (currentDisplay && currentDisplay !== 'none') {
-              p.setAttribute('data-tab-display', currentDisplay);
+        function activate(btn, shouldDispatch) {
+          var target = btn.getAttribute('data-tab-target');
+          if (!target) return;
+
+          buttons.forEach(function (button) {
+            var selected = button === btn;
+            button.classList.toggle('active', selected);
+            button.setAttribute('aria-selected', selected ? 'true' : 'false');
+            if (button.getAttribute('role') === 'tab') {
+              button.setAttribute('tabindex', selected ? '0' : '-1');
             }
-            p.style.display = p.getAttribute('data-tab-panel') === tid ? (p.getAttribute('data-tab-display') || '') : 'none';
           });
+
+          panels.forEach(function (panel) {
+            var match = panel.getAttribute('data-tab-panel') === target;
+            rememberPanelDisplay(panel);
+            panel.style.display = match ? (panel.getAttribute('data-tab-display') || '') : 'none';
+            panel.setAttribute('aria-hidden', match ? 'false' : 'true');
+          });
+
+          if (shouldDispatch) {
+            group.dispatchEvent(new CustomEvent('ditto:tab-change', {
+              detail: { target: target },
+              bubbles: true,
+            }));
+          }
         }
+
+        var activeTarget = group.querySelector('[data-tab-target].active, [data-tab-target][aria-selected="true"]') || buttons[0];
+        activate(activeTarget, false);
 
         /* delegated click */
         group.addEventListener('click', function (e) {
           var btn = e.target.closest('[data-tab-target]');
-          if (!btn) return;
-          var target = btn.getAttribute('data-tab-target');
+          if (!btn || !group.contains(btn)) return;
+          activate(btn, true);
+        });
 
-          buttons.forEach(function (b) {
-            b.classList.remove('active');
-            b.setAttribute('aria-selected', 'false');
-          });
-          btn.classList.add('active');
-          btn.setAttribute('aria-selected', 'true');
-
-          panels.forEach(function (p) {
-            var match = p.getAttribute('data-tab-panel') === target;
-            p.style.display = match ? (p.getAttribute('data-tab-display') || '') : 'none';
-            p.setAttribute('aria-hidden', match ? 'false' : 'true');
-          });
-
-          group.dispatchEvent(new CustomEvent('ditto:tab-change', {
-            detail: { target: target },
-            bubbles: true,
-          }));
+        group.addEventListener('keydown', function (e) {
+          var btn = e.target.closest('[data-tab-target]');
+          if (!btn || !group.contains(btn)) return;
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          activate(btn, true);
         });
       });
     },
@@ -124,7 +135,24 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 1c. ScreenerWorkflow
+   * 1c. Interactive Role Buttons
+   *     Elements: [role="button"]
+   *     Native buttons already handle Enter/Space.
+   * ══════════════════════════════════════════════ */
+  var InteractiveRoleButtons = {
+    init: function () {
+      document.addEventListener('keydown', function (event) {
+        var target = event.target.closest('[role="button"]');
+        if (!target) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        target.click();
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 1d. ScreenerWorkflow
    *     Root: [data-screener-workflow]
    *     Adds visible draft/apply/sort/compare state for screener prototypes
    * ══════════════════════════════════════════════ */
@@ -1311,6 +1339,7 @@
   /* ── Auto-initialize ── */
   function init() {
     Tabs.init();
+    InteractiveRoleButtons.init();
     FilterChips.init();
     ScreenerWorkflow.init();
     Sparkline.init();
