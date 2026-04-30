@@ -554,7 +554,7 @@
 
       <!-- ═══ Detail Panel ═══ -->
       <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
-        <div class="context-section">
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">策略详情</span>
           </div>
@@ -576,10 +576,11 @@
             </div>
           </div>
         </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">关键指标</span>
-          </div>
+            <span class="collapse-count">4 指标</span>
+          </summary>
           <div class="context-section-body">
             <div class="detail-kpi-grid">
               <div class="detail-kpi">
@@ -600,11 +601,12 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">运行上下文</span>
-          </div>
+            <span class="collapse-count">4 项</span>
+          </summary>
           <div class="context-section-body">
             <div class="detail-section">
               <div class="overlay-field">
@@ -625,8 +627,8 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">操作</span>
           </div>

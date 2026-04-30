@@ -722,7 +722,7 @@
 
       <!-- ═══ Detail Panel ═══ -->
       <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
-        <div class="context-section">
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">因子详情</span>
           </div>
@@ -757,21 +757,23 @@
             </div>
           </div>
         </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">近 60 日 IC</span>
-          </div>
+            <span class="collapse-count">60 日</span>
+          </summary>
           <div class="context-section-body">
             <svg class="ic-sparkline" viewBox="0 0 260 64" role="img" aria-label="MOM_20D 近 60 日 IC 稳定为正">
               <path class="spark-area" d="M0 48 L24 42 L48 45 L72 34 L96 38 L120 30 L144 32 L168 26 L192 29 L216 22 L240 24 L260 18 L260 64 L0 64 Z"/>
               <path class="spark-line" d="M0 48 L24 42 L48 45 L72 34 L96 38 L120 30 L144 32 L168 26 L192 29 L216 22 L240 24 L260 18"/>
             </svg>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">质量分解</span>
-          </div>
+            <span class="collapse-count">3 项</span>
+          </summary>
           <div class="context-section-body">
             <div class="quality-bars">
               <div class="quality-row">
@@ -791,11 +793,13 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l3">
+          <summary class="context-section-header">
             <span class="context-section-title">关联策略</span>
-          </div>
+            <span class="collapse-count">3 策略</span>
+            <span class="collapse-summary">Alpha-Momentum、Multi-Factor、Sector</span>
+          </summary>
           <div class="context-section-body">
             <div class="finding-item">
               <span class="finding-text">Alpha-Momentum-v3</span>
@@ -807,8 +811,8 @@
               <span class="finding-text">Sector-Rotation</span>
             </div>
           </div>
-        </div>
-        <div class="context-section">
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">操作</span>
           </div>

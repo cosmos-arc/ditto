@@ -545,7 +545,7 @@
 
       <!-- ═══ Detail Panel ═══ -->
       <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
-        <div class="context-section">
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">回测预览</span>
           </div>
@@ -580,21 +580,23 @@
             </div>
           </div>
         </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">净值曲线</span>
-          </div>
+            <span class="collapse-count">1 曲线</span>
+          </summary>
           <div class="context-section-body">
             <svg class="equity-sparkline" viewBox="0 0 260 72" role="img" aria-label="MOM-v3-2024Q1 净值曲线稳步上行">
               <path class="spark-area" d="M0 58 L22 54 L44 50 L66 47 L88 39 L110 42 L132 33 L154 29 L176 31 L198 22 L220 20 L242 14 L260 10 L260 72 L0 72 Z"/>
               <path class="spark-line" d="M0 58 L22 54 L44 50 L66 47 L88 39 L110 42 L132 33 L154 29 L176 31 L198 22 L220 20 L242 14 L260 10"/>
             </svg>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">回撤诊断</span>
-          </div>
+            <span class="collapse-count">3 项</span>
+          </summary>
           <div class="context-section-body">
             <div class="drawdown-bars">
               <div class="drawdown-row">
@@ -614,8 +616,8 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">操作</span>
           </div>

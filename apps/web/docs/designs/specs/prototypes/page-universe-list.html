@@ -855,7 +855,7 @@
       </div>
 
       <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
-        <div class="context-section">
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">股票池详情</span>
           </div>
@@ -871,10 +871,11 @@
             </div>
           </div>
         </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">成分分布</span>
-          </div>
+            <span class="collapse-count">5 行业</span>
+          </summary>
           <div class="context-section-body">
             <div class="sector-list">
               <div class="sector-row"><span>食品饮料</span><span class="sector-track"><span class="sector-bar sector-bar--food"></span></span><span class="numeric">18</span></div>
@@ -884,11 +885,12 @@
               <div class="sector-row"><span>电力设备</span><span class="sector-track"><span class="sector-bar sector-bar--power"></span></span><span class="numeric">24</span></div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">筛选规则</span>
-          </div>
+            <span class="collapse-count">3 规则</span>
+          </summary>
           <div class="context-section-body">
             <div class="rule-list">
               <div class="rule-item"><span class="rule-label">同步源</span><span class="rule-value">CSI 300</span></div>
@@ -896,11 +898,13 @@
               <div class="rule-item"><span class="rule-label">刷新节奏</span><span class="rule-value">T+0 09:30</span></div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l3">
+          <summary class="context-section-header">
             <span class="context-section-title">关联策略</span>
-          </div>
+            <span class="collapse-count">3 策略</span>
+            <span class="collapse-summary">质量动量、红利防御、指数增强</span>
+          </summary>
           <div class="context-section-body">
             <div class="strategy-list">
               <div class="strategy-item"><span class="strategy-name">质量动量轮动</span><span class="strategy-meta">live</span></div>
@@ -908,8 +912,8 @@
               <div class="strategy-item"><span class="strategy-name">指数增强基线</span><span class="strategy-meta">live</span></div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">操作</span>
           </div>

@@ -625,7 +625,7 @@
 
       <!-- ═══ Detail Panel ═══ -->
       <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary data-batch-action-bar>
-        <div class="context-section">
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">实验详情</span>
           </div>
@@ -640,10 +640,11 @@
             </div>
           </div>
         </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">关键结果</span>
-          </div>
+            <span class="collapse-count">4 指标</span>
+          </summary>
           <div class="context-section-body">
             <div class="detail-kpi-grid">
               <div class="detail-kpi">
@@ -664,22 +665,25 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l3">
+          <summary class="context-section-header">
             <span class="context-section-title">结果轨迹</span>
-          </div>
+            <span class="collapse-count">1 趋势</span>
+            <span class="collapse-summary">IC 差异走势</span>
+          </summary>
           <div class="context-section-body">
             <svg class="result-sparkline" viewBox="0 0 240 58" role="img" aria-label="IC 差异走势">
               <path class="spark-area" d="M0 46 L0 36 L24 35 L48 30 L72 33 L96 25 L120 23 L144 20 L168 18 L192 14 L216 16 L240 10 L240 46 Z"></path>
               <path class="spark-line" d="M0 36 L24 35 L48 30 L72 33 L96 25 L120 23 L144 20 L168 18 L192 14 L216 16 L240 10"></path>
             </svg>
           </div>
-        </div>
-        <div class="context-section">
-          <div class="context-section-header">
+        </details>
+        <details class="context-section" data-collapse-priority="l2" open>
+          <summary class="context-section-header">
             <span class="context-section-title">采纳检查</span>
-          </div>
+            <span class="collapse-count">3 项</span>
+          </summary>
           <div class="context-section-body">
             <div class="decision-bars">
               <div class="decision-row">
@@ -699,8 +703,8 @@
               </div>
             </div>
           </div>
-        </div>
-        <div class="context-section">
+        </details>
+        <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">操作</span>
           </div>

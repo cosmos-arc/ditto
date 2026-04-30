@@ -2583,10 +2583,11 @@
       </div>
 
       <!-- Section 2: 筛选预设 (默认折叠 — 低频) -->
-      <details class="context-section">
+      <details class="context-section" data-collapse-priority="l3">
         <summary class="context-section-header">
           <span class="context-section-title">筛选预设</span>
           <span class="collapse-count">3 预设</span>
+          <span class="collapse-summary">高ROE、动量、红利</span>
         </summary>
         <div class="context-section-body">
           <!-- Preset 1 -->
@@ -2611,11 +2612,11 @@
       </details>
 
       <!-- Section 3: 多维评分 -->
-      <div class="context-section" data-reveal="fade-up" data-reveal-delay="150">
-        <div class="context-section-header">
+      <details class="context-section" data-collapse-priority="l2" open data-reveal="fade-up" data-reveal-delay="150">
+        <summary class="context-section-header">
           <span class="context-section-title">多维评分</span>
-          <span class="context-section-count">贵州茅台</span>
-        </div>
+          <span class="collapse-count">5 项</span>
+        </summary>
         <div class="context-section-body">
           <div class="score-compact-grid" aria-label="多维评分摘要">
             <div class="score-compact-card score-compact-card--wide" data-tooltip="多维度加权综合评分">
@@ -2645,10 +2646,10 @@
             </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <!-- Section 4: 对比篮 (默认展开 — 高频) -->
-      <details open class="context-section" data-reveal="fade-up" data-reveal-delay="220">
+      <details open class="context-section" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="220">
         <summary class="context-section-header">
           <span class="context-section-title">对比篮</span>
           <span class="collapse-count"><span data-compare-count>3</span> 只</span>
