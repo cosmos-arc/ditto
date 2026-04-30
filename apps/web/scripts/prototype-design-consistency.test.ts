@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
 const contractsDir = join(root, "docs/contracts/pages");
+const prototypeFontsCss = join(prototypesDir, "shared/fonts.css");
 const prototypeLayoutCss = join(prototypesDir, "shared/layout-base.css");
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
@@ -126,6 +127,7 @@ function hasFixedCanvasException(css: string, index: number): boolean {
 
 function readPrototypeCssSources(): CssSource[] {
 	return [
+		{ label: "shared/fonts.css", css: readFileSync(prototypeFontsCss, "utf8") },
 		{ label: "shared/layout-base.css", css: readFileSync(prototypeLayoutCss, "utf8") },
 		{ label: "shared/theme-switcher.css", css: readFileSync(prototypeThemeSwitcherCss, "utf8") },
 		{ label: "shared/prototype-toggles.css", css: readFileSync(prototypeTogglesCss, "utf8") },
