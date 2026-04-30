@@ -135,12 +135,28 @@ function hasFixedCanvasException(css: string, index: number): boolean {
 	return /fixed canvas exception|fixed-canvas-exception/i.test(lines);
 }
 
-function declarationHasNonNoneValue(body: string, property: "box-shadow" | "outline"): boolean {
+function declarationHasNonNoneValue(body: string, property: "outline"): boolean {
 	const declaration = new RegExp(`${property}\\s*:\\s*([^;]+)`, "gi");
 
 	return [...body.matchAll(declaration)].some((match) => {
 		const value = match[1].trim();
 		return !/^none(?:\s*!important)?$/i.test(value);
+	});
+}
+
+function hasFocusSelector(selector: string): boolean {
+	return /:focus(?:-visible|-within)?\b/.test(selector);
+}
+
+function hasFocusRingBoxShadow(body: string): boolean {
+	return [...body.matchAll(/box-shadow\s*:\s*([^;]+)/gi)].some((match) => {
+		const value = match[1].trim();
+		if (/^none(?:\s*!important)?$/i.test(value)) return false;
+
+		return (
+			/var\(\s*--(?:interaction-focus-ring|interaction-focus-border|focus-ring|brand-accent)\b/.test(value) ||
+			/\b0\s+0\s+0\b/.test(value)
+		);
 	});
 }
 
@@ -1166,8 +1182,8 @@ describe("prototype design consistency", () => {
 
 				const bodyWithoutOutlineNone = body.replace(/outline\s*:\s*none(?:\s*!important)?\s*;?/gi, "");
 				const hasReplacementFocusCue =
-					declarationHasNonNoneValue(body, "box-shadow") ||
-					declarationHasNonNoneValue(bodyWithoutOutlineNone, "outline");
+					declarationHasNonNoneValue(bodyWithoutOutlineNone, "outline") ||
+					(hasFocusSelector(selector) && hasFocusRingBoxShadow(body));
 				if (!hasReplacementFocusCue) {
 					violations.push(`${source.label}:${getLineNumber(css, rule.index)}:outline-none:${selector}`);
 				}
