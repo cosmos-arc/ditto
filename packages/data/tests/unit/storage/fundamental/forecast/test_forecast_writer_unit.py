@@ -13,7 +13,7 @@ from ditto_data.storage.fundamental.forecast.forecast_writer import (
 )
 from ditto_data.storage.fundamental.specs import FORECAST_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import Metrics, SQLitePool
+from ditto_platform.foundation import Metrics, SQLitePool
 
 SPEC = FORECAST_SPEC
 

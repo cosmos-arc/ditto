@@ -9,7 +9,9 @@ from ditto_app.execution_dto import TradeIntent
 from ditto_app.process.execution.delivery import DeliveryRouter
 from jinja2 import Template
 
-TEMPLATES_DIR = Path("packages/infra/src/ditto_infra/services/notification/templates")
+TEMPLATES_DIR = Path(
+    "packages/infra/src/ditto_platform/services/notification/templates"
+)
 
 
 def _make_intent(

@@ -52,10 +52,10 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
-from ditto_infra.foundation.cache import DataCache
-from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.config.settings import TradingSettings
-from ditto_infra.services.notification import AlertManager
+from ditto_platform.foundation.cache import DataCache
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.config.settings import TradingSettings
+from ditto_platform.services.notification import AlertManager
 
 _tdx_mock = MagicMock(spec=TdxSource)
 
@@ -65,7 +65,7 @@ _tdx_mock = MagicMock(spec=TdxSource)
 
 
 class _TestConfigProvider(Provider):
-    """测试用最小配置 Provider — 替代 ditto_interfaces.registry.infra.ConfigProvider."""
+    """测试用最小配置 Provider — 替代 ditto_apps.registry.infra.ConfigProvider."""
 
     scope = Scope.APP
 
@@ -385,7 +385,7 @@ class TestTradingCalendarRange:
     def test_default_values(self) -> None:
         """默认 TradingSettings 应返回默认日期范围."""
         from ditto_app.providers import get_trading_calendar_range
-        from ditto_infra.foundation.config.settings import TradingSettings
+        from ditto_platform.foundation.config.settings import TradingSettings
 
         settings = TradingSettings()
         start, end = get_trading_calendar_range(settings)
@@ -395,7 +395,7 @@ class TestTradingCalendarRange:
     def test_custom_values(self) -> None:
         """自定义 TradingSettings 应返回自定义日期范围."""
         from ditto_app.providers import get_trading_calendar_range
-        from ditto_infra.foundation.config.settings import TradingSettings
+        from ditto_platform.foundation.config.settings import TradingSettings
 
         settings = TradingSettings(
             trading_calendar_start="2019-06-01",
@@ -408,7 +408,7 @@ class TestTradingCalendarRange:
     def test_only_start_customized(self) -> None:
         """仅自定义 START 时 END 应保持默认值."""
         from ditto_app.providers import get_trading_calendar_range
-        from ditto_infra.foundation.config.settings import TradingSettings
+        from ditto_platform.foundation.config.settings import TradingSettings
 
         settings = TradingSettings(trading_calendar_start="2018-01-01")
         start, end = get_trading_calendar_range(settings)
@@ -417,7 +417,7 @@ class TestTradingCalendarRange:
 
     def test_env_alias_populates_settings(self) -> None:
         """TradingSettings 应通过构造参数覆盖默认值."""
-        from ditto_infra.foundation.config.settings import TradingSettings
+        from ditto_platform.foundation.config.settings import TradingSettings
 
         settings = TradingSettings(
             trading_calendar_start="2021-03-01",

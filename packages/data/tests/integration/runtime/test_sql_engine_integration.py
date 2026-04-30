@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 from ditto_data.runtime.sql_engine import SqlEngine
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 class TestSqlEngine:

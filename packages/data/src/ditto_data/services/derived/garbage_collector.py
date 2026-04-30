@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Protocol
 
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_data.services.derived.gc_models import GcPlan, GcReport

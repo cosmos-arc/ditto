@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_infra.foundation import logger, traced
-from ditto_infra.foundation.cache import DataCache
+from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation.cache import DataCache
 
 from ditto_data.models.metadata import IndustryBasic
 from ditto_data.storage.sqlite_client import SQLiteClient

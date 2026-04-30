@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ditto_infra.foundation import logger, traced
+from ditto_platform.foundation import logger, traced
 
 from ditto_data.storage.sqlite_client import SQLiteClient
 

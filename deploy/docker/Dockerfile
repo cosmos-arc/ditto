@@ -17,7 +17,6 @@ RUN pixi install --frozen --environment default
 
 # 复制项目代码
 COPY packages/ ./packages/
-COPY apps/ ./apps/
 COPY config/ ./config/
 
 # 创建必要目录

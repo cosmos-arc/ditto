@@ -8,7 +8,7 @@ from ditto_data.storage.metadata.instrument import (
     InstrumentWriter,
 )
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.mark.integration

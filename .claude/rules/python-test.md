@@ -41,7 +41,7 @@ packages/*/tests/
 #### 目录映射规则
 
 ```
-src/ditto_infra/                         packages/infra/tests/unit/
+src/ditto_platform/                         packages/platform/tests/unit/
 ├── foundation/               →          ├── foundation/
 │   ├── cache/                →          │   ├── cache/
 │   ├── config/               →          │   ├── config/
@@ -98,8 +98,8 @@ from pathlib import Path
 def get_dirs(path):
     return {d.name for d in Path(path).rglob('*') if d.is_dir() and '__pycache__' not in str(d)}
 
-src_dirs = get_dirs('packages/infra/src')
-test_dirs = get_dirs('packages/infra/tests/unit')
+src_dirs = get_dirs('packages/platform/src')
+test_dirs = get_dirs('packages/platform/tests/unit')
 
 missing = src_dirs - test_dirs
 extra = test_dirs - src_dirs
@@ -119,7 +119,7 @@ if not missing and not extra:
 # 场景：重命名源码目录 cache/ → caching/
 
 # 1. 重命名源码目录
-git mv src/ditto_infra/foundation/cache/ src/ditto_infra/foundation/caching/
+git mv src/ditto_platform/foundation/cache/ src/ditto_platform/foundation/caching/
 
 # 2. 同步重命名测试目录（强制要求）
 git mv tests/unit/foundation/cache/ tests/unit/foundation/caching/
@@ -392,7 +392,7 @@ packages/data/tests/unit/stores/test_pipeline_store.py
 packages/data/tests/integration/stores/test_pipeline_store.py
 
 # ❌ 错误：跨包同名也会冲突
-packages/infra/tests/unit/observability/test_observability_unit.py
+packages/platform/tests/unit/observability/test_observability_unit.py
 packages/data/tests/unit/stores/test_observability_unit.py
 
 # ✅ 正确：添加层级后缀区分
@@ -400,7 +400,7 @@ packages/data/tests/unit/stores/test_pipeline_store_unit.py
 packages/data/tests/integration/stores/test_pipeline_store_integration.py
 
 # ✅ 正确：添加模块前缀避免跨包冲突
-packages/infra/tests/unit/observability/test_observability_unit.py
+packages/platform/tests/unit/observability/test_observability_unit.py
 packages/data/tests/unit/stores/test_stores_observability_unit.py
 ```
 
@@ -775,7 +775,7 @@ def test_partitioned_write(store, sample_quotes):
 - 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
 - 配置文件位置：
   - Data: `packages/data/tests/conftest.py`
-  - Infra: `packages/infra/tests/unit/conftest.py`
+  - Platform: `packages/platform/tests/unit/conftest.py`
 
 **手动标记需求**：
 - ✅ `@pytest.mark.slow` - 耗时测试（需要手动标记）
@@ -1008,7 +1008,7 @@ def check_structure(src_path, test_path, name):
     return True
 
 all_ok = True
-all_ok &= check_structure('packages/infra/src', 'packages/infra/tests/unit', 'Infra')
+all_ok &= check_structure('packages/platform/src', 'packages/platform/tests/unit', 'Platform')
 all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'Data')
 all_ok &= check_structure('interfaces/src', 'interfaces/tests/unit', 'Interfaces')
 

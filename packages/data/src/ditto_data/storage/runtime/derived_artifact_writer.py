@@ -9,8 +9,8 @@ from typing import Any
 
 import orjson
 import polars as pl
-from ditto_infra.foundation import logger
-from ditto_infra.foundation.util.io import (
+from ditto_platform.foundation import logger
+from ditto_platform.foundation.util.io import (
     ParquetCompression,
     atomic_bytes_write,
     atomic_write,

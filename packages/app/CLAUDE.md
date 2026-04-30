@@ -16,14 +16,14 @@ ditto_app → ditto_kernel ✅
 ditto_app → ditto_data ✅
 ditto_app → ditto_engine ✅
 ditto_app → ditto_analytics ✅
-ditto_app → ditto_infra ✅
-ditto_app 禁止 → ditto_interfaces ❌
+ditto_app → ditto_platform ✅
+ditto_app 禁止 → ditto_apps ❌
 ```
 
-## App→Infra Scope 限制
+## App→Platform Scope 限制
 
-App 层允许使用 `ditto_infra.foundation` 和 `ditto_infra.services`（通知、告警等），**禁止**直接使用 `ditto_infra.config`。
-配置加载由 Interfaces 层负责。
+App 层允许使用 `ditto_platform.foundation` 和 `ditto_platform.services`（通知、告警等），**禁止**直接使用 `ditto_platform.config`。
+配置加载由 Apps 层负责。
 
 ## CQRS 模块结构
 

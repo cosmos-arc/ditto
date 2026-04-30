@@ -12,7 +12,7 @@ from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

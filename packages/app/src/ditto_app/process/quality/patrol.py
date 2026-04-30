@@ -12,9 +12,9 @@ from typing import Literal
 import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_data.quality.protocols import QualityEngineProtocol
-from ditto_infra.foundation import logger
-from ditto_infra.services.notification import AlertManager, alert_dq_failure
 from ditto_kernel.quality import DQIssue, DQResult
+from ditto_platform.foundation import logger
+from ditto_platform.services.notification import AlertManager, alert_dq_failure
 
 from ditto_app.process.quality.types import L3CheckResult
 from ditto_app.query.market import MarketQueryFacade

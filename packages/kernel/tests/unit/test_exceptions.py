@@ -44,7 +44,7 @@ class TestDittoErrorRoot:
             raise DataSourceError("test", source="tushare")
 
     def test_ditto_error_catches_api_error(self) -> None:
-        from ditto_interfaces.api.errors import APIError
+        from ditto_apps.api.errors import APIError
 
         with pytest.raises(DittoError):
             raise APIError("test")
@@ -153,12 +153,12 @@ class TestInterfacesMerge:
     """Interfaces 层异常清理验证."""
 
     def test_ditto_exception_removed(self) -> None:
-        import ditto_interfaces.exceptions as m
+        import ditto_apps.exceptions as m
 
         assert not hasattr(m, "DittoException")
 
     def test_dead_subclasses_removed(self) -> None:
-        import ditto_interfaces.exceptions as m
+        import ditto_apps.exceptions as m
 
         for name in (
             "DataNotFoundError",
@@ -169,18 +169,18 @@ class TestInterfacesMerge:
             assert not hasattr(m, name), f"{name} should be removed"
 
     def test_route_validation_error_inherits_ditto_error(self) -> None:
-        from ditto_interfaces.exceptions import RouteValidationError
+        from ditto_apps.exceptions import RouteValidationError
 
         assert issubclass(RouteValidationError, DittoError)
 
     def test_api_error_inherits_ditto_error(self) -> None:
-        from ditto_interfaces.api.errors import APIError
+        from ditto_apps.api.errors import APIError
 
         assert issubclass(APIError, DittoError)
         assert not issubclass(APIError, DataError)
 
     def test_api_subclasses_inherit_ditto_error(self) -> None:
-        from ditto_interfaces.api.errors import (
+        from ditto_apps.api.errors import (
             BadRequestError,
             ConflictError,
             DateRangeError,
@@ -221,7 +221,7 @@ class TestPerPackageDomainRoots:
         assert issubclass(AppError, DittoError)
 
     def test_infra_error_exists(self) -> None:
-        from ditto_infra.exceptions import InfraError
+        from ditto_platform.exceptions import InfraError
 
         assert issubclass(InfraError, DittoError)
 
@@ -250,9 +250,9 @@ class TestPerPackageDomainRoots:
         assert issubclass(MissingDependencyError, AppError)
 
     def test_infra_orphans_use_domain_root(self) -> None:
-        from ditto_infra.exceptions import InfraError
-        from ditto_infra.foundation.concurrency.filelock import LockAcquisitionError
-        from ditto_infra.foundation.config.errors import ConfigInitError
+        from ditto_platform.exceptions import InfraError
+        from ditto_platform.foundation.concurrency.filelock import LockAcquisitionError
+        from ditto_platform.foundation.config.errors import ConfigInitError
 
         assert issubclass(ConfigInitError, InfraError)
         assert issubclass(LockAcquisitionError, InfraError)

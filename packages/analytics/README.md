@@ -66,7 +66,7 @@ interfaces → analytics → kernel
 |------|------|
 | `ditto_kernel` | 共享类型（DerivedRole / MaterializationProfile / TimeSpec） |
 | `ditto_data.errors` | 错误类型（DerivedNotImplementedError 等） |
-| `ditto_infra.foundation` | 日志（仅 logger） |
+| `ditto_platform.foundation` | 日志（仅 logger） |
 
 **禁止依赖**: data（除 errors）/ engine / interfaces / app
 

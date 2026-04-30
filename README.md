@@ -46,7 +46,7 @@
        │               │             │               │
        v               v             v               v
    ┌───────────────────────────────────────────────────────┐
-   │  ditto_kernel          │  ditto_infra                 │
+   │  ditto_kernel          │  ditto_platform                 │
    │  零依赖共享内核         │  基础设施（零业务逻辑）        │
    │  identity/enums/clock/ │  config/db/cache/concurrency/ │
    │  events/specs          │  observability/notification   │
@@ -134,7 +134,7 @@ ditto/
 │   │       ├── exceptions.py    # 共享异常
 │   │       └── math.py          # 数学工具函数
 │   └── infra/                   # 基础设施
-│       └── src/ditto_infra/
+│       └── src/ditto_platform/
 │           ├── foundation/      # cache/checksum/concurrency/config/db/observability/util
 │           └── services/        # notification（Telegram/Email/Webhook）
 ├── config/                      # 环境配置
@@ -250,7 +250,7 @@ pixi run -e dev arch-check       # 分层依赖检查
 - [packages/data/CLAUDE.md](packages/data/CLAUDE.md) — Data 层规范
 - [packages/app/CLAUDE.md](packages/app/CLAUDE.md) — App 层规范
 - [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md) — Analytics 层规范
-- [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md) — Infra 层规范
+- [packages/platform/CLAUDE.md](packages/platform/CLAUDE.md) — Platform 层规范
 - [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md) — Kernel 层规范
 - [interfaces/CLAUDE.md](interfaces/CLAUDE.md) — Interfaces 层规范
 

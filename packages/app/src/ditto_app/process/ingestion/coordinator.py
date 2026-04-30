@@ -21,8 +21,8 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_infra.foundation import logger
 from ditto_kernel.instrument import InstrumentIngestParams
+from ditto_platform.foundation import logger
 
 from ditto_app.contracts import CheckDataQualityCommand
 from ditto_app.process.ingestion.auto_init import resolve_identifier_with_auto_init

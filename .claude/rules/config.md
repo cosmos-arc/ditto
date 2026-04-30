@@ -74,7 +74,7 @@ config/
 
 | 包 | 位置 | 包含配置 |
 |---|------|----------|
-| `ditto_infra` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
+| `ditto_platform` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
 | `ditto_data` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
 | `ditto_data` | `config/data_source.py` | `DataSourceSettings` |
 | `ditto_data` | `quality/config.py` | `DQSettings` |
@@ -103,10 +103,10 @@ config/
 
 | 组件 | 职责 | 位置 |
 |------|------|------|
-| `get_environment()` | 获取运行时环境 | `infra/foundation/config/environment.py` |
-| `ConfigLoader` | 定位配置文件路径 | `infra/foundation/config/loader.py` |
+| `get_environment()` | 获取运行时环境 | `platform/foundation/config/environment.py` |
+| `ConfigLoader` | 定位配置文件路径 | `platform/foundation/config/loader.py` |
 | `load_env_file()` | 加载 .env 文件 | `interfaces/config/loader.py` |
-| `ConfigProvider` | DI 装配 | `interfaces/registry/infra/config.py` |
+| `ConfigProvider` | DI 装配 | `interfaces/registry/platform/config.py` |
 
 ### 配置加载位置约束
 
@@ -114,7 +114,7 @@ config/
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  interfaces/registry/infra/config.py（唯一加载点）              │
+│  interfaces/registry/platform/config.py（唯一加载点）              │
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │
@@ -125,7 +125,7 @@ config/
           │ DI 注入
           ▼
 ┌────────────────────────────────────────────────────────────┐
-│  packages/data/   packages/engine/   packages/infra/      │
+│  packages/data/   packages/engine/   packages/platform/      │
 │  （通过构造函数/方法参数获取配置，禁止自己加载）           │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -296,7 +296,7 @@ settings.data_root = Path("/other")  # frozen dataclass 也不允许
 
 ```bash
 # 验证配置加载
-pixi run -e dev python -c "from ditto_infra.foundation.config import get_environment; print(get_environment())"
+pixi run -e dev python -c "from ditto_platform.foundation.config import get_environment; print(get_environment())"
 
 # 检查配置文件语法
 cat config/development/system.env

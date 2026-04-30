@@ -176,7 +176,7 @@ print(f"Max DD: {report.alpha.max_drawdown:.2%}")
 **改进**
 - README 文档全面更新，反映代码库实际状态
 - 新增 execution/backtest/quality/engine/accounting 模块详细说明
-- 修正架构图（ditto-foundation -> ditto-infra）
+- 修正架构图（ditto-foundation -> ditto-platform）
 
 ### v0.8.0 (2026-03-23)
 **新增** -- Phase 6: Gap 补齐 + 质量加固

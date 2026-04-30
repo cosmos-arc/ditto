@@ -12,7 +12,7 @@ from ditto_data.storage.fundamental.financial.balance_sheet_reader import (
 )
 from ditto_data.storage.fundamental.specs import BALANCE_SHEET_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 SPEC = BALANCE_SHEET_SPEC
 

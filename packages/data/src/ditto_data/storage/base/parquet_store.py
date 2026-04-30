@@ -20,8 +20,8 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_infra.foundation import Metrics, logger, traced
-from ditto_infra.foundation.util.io import atomic_write, file_md5
+from ditto_platform.foundation import Metrics, logger, traced
+from ditto_platform.foundation.util.io import atomic_write, file_md5
 
 from ditto_data.models import OnDuplicate
 from ditto_data.models.storage import WriteStoreResult as WriteResult

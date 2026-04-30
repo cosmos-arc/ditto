@@ -12,7 +12,7 @@ from ditto_data.storage.capital.margin.margin_trading_writer import (
 )
 from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

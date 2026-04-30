@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.config import DataSourceSettings
 from ditto_data.sources.base import SourceConfigurationError

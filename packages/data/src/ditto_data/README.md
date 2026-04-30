@@ -5,7 +5,7 @@
 ## 架构定位
 
 ```
-interfaces → ditto_data → ditto_kernel, ditto_infra
+interfaces → ditto_data → ditto_kernel, ditto_platform
 ```
 
 提供 instrument_id 标识体系、Point-in-Time 语义、DQ 检查与 CQRS 存储访问。

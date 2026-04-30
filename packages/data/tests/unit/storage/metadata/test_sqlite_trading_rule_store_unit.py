@@ -12,7 +12,7 @@ from ditto_data.storage.metadata.trading_rule_reader import (
 from ditto_data.storage.metadata.trading_rule_writer import (
     SQLiteTradingRuleWriter,
 )
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
 # Fixtures

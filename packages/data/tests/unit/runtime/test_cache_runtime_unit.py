@@ -1,6 +1,6 @@
 """Tests for DataCache."""
 
-from ditto_infra.foundation.cache import CacheStats, DataCache
+from ditto_platform.foundation.cache import CacheStats, DataCache
 
 
 class TestDataCache:

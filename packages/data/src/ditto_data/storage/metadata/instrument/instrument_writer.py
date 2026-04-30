@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, ClassVar
 
-from ditto_infra.foundation import logger
-from ditto_infra.foundation.cache import DataCache
+from ditto_platform.foundation import logger
+from ditto_platform.foundation.cache import DataCache
 
 from ditto_data.models.metadata import (
     ETFExtension,

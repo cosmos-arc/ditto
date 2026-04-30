@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from ditto_infra.foundation.config.initializer import (
+from ditto_platform.foundation.config.initializer import (
     ConfigInitProvider,
     InitResult,
     InitScope,

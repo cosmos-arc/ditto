@@ -7,7 +7,7 @@ Provides write access to ingestion cursor data.
 from datetime import datetime
 from typing import Any
 
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.models.ingestion import IngestionCursor
 from ditto_data.storage.sqlite_client import SQLiteClient

@@ -12,8 +12,8 @@ import time
 
 from ditto_data.storage.metadata.calendar import CalendarReader
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
-from ditto_infra.foundation.cache import DataCache
+from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.cache import DataCache
 
 
 class TestCalendarReaderConcurrent:

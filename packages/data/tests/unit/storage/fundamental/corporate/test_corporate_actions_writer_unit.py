@@ -11,7 +11,7 @@ from ditto_data.storage.fundamental.corporate.corporate_actions_writer import (
 )
 from ditto_data.storage.fundamental.specs import CORPORATE_ACTIONS_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import Metrics, SQLitePool
+from ditto_platform.foundation import Metrics, SQLitePool
 
 SPEC = CORPORATE_ACTIONS_SPEC
 

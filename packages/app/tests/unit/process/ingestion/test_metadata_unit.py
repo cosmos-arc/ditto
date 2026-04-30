@@ -4,10 +4,10 @@ import polars as pl
 import pytest
 from ditto_app.process.ingestion.metadata_manager import MetadataManager
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
-from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability import init, reset_for_testing
-from ditto_infra.foundation.observability.config import ObservabilityConfig
-from ditto_infra.foundation.util.checksum import ChecksumCompute
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.observability import init, reset_for_testing
+from ditto_platform.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.util.checksum import ChecksumCompute
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ Uses fx_daily API with METAL classify to fetch XAUUSD and XAGUSD data.
 from __future__ import annotations
 
 import polars as pl
-from ditto_infra.foundation import traced
+from ditto_platform.foundation import traced
 
 from ditto_data.config import DataSourceSettings
 from ditto_data.models.source_codes import METAL_CODE_ALIASES

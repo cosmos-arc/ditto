@@ -6,8 +6,8 @@ import sqlite3
 from dataclasses import dataclass
 
 import orjson
-from ditto_infra.foundation import SQLitePool
 from ditto_kernel.identity import InstrumentId as _InstrumentId
+from ditto_platform.foundation import SQLitePool
 
 from ditto_data.storage.metadata._pit_base import PITRecordReader
 

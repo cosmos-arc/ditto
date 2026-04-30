@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_infra.services.notification import NotificationLevel
-from ditto_infra.services.notification.manager import AlertManager
+from ditto_platform.services.notification import NotificationLevel
+from ditto_platform.services.notification.manager import AlertManager
 from loguru import logger
 
 from ditto_app.execution_dto import TradeIntent

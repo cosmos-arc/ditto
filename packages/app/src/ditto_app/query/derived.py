@@ -21,7 +21,7 @@ type TemporalValue = date | datetime
 
 
 # ---------------------------------------------------------------------------
-# Request / Response models (formerly ditto_interfaces.models.derived)
+# Request / Response models (formerly ditto_apps.models.derived)
 # ---------------------------------------------------------------------------
 
 __all__ = [

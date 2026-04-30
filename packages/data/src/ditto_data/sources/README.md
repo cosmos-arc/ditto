@@ -212,7 +212,7 @@ TUSHARE_TOKEN=YOUR_TOKEN
 3. **数据格式**: 所有 fetch 方法返回 `polars.DataFrame`
 4. **字段命名**: 使用 Ditto 标准（`source_ticker`, `trade_date`, `volume`, `pct_change`）
 5. **日期格式**: 统一使用 YYYY-MM-DD 格式
-6. **日志规范**: 使用 `ditto_infra.foundation.observability`，包含 `event` 字段
+6. **日志规范**: 使用 `ditto_platform.foundation.observability`，包含 `event` 字段
 7. **查询模式**: 日线/财务/复权等数据支持按日期批量查询和按代码+区间查询两种模式
 
 ## 测试

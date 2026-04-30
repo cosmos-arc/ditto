@@ -11,7 +11,7 @@ from typing import Any, cast
 import duckdb
 import polars as pl
 import xxhash
-from ditto_infra.foundation import Metrics, logger
+from ditto_platform.foundation import Metrics, logger
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.helpers.pit import PitHelper

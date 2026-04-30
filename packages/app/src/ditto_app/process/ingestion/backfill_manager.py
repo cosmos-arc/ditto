@@ -8,7 +8,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_data.services.metadata_service import MetadataService
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_app.process.ingestion.coordinator import IngestionCoordinator
 from ditto_app.process.ingestion.result_handler import count_results

@@ -15,7 +15,7 @@ from ditto_data.models import OnDuplicate
 from ditto_data.models.ingestion import DataLateArrivalPolicy
 from ditto_data.services.deps import MarketWriters
 from ditto_data.services.market_write_service import MarketWriteService
-from ditto_infra.foundation.concurrency import FileLockManager
+from ditto_platform.foundation.concurrency import FileLockManager
 
 
 @pytest.fixture

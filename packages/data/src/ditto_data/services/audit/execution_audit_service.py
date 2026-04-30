@@ -14,7 +14,7 @@ import dataclasses
 from typing import Any
 
 import orjson
-from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_data.models.strategy_audit import (
     PreTradeDecisionPayload,

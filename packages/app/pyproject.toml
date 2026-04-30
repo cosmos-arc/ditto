@@ -7,7 +7,7 @@ dependencies = [
     "ditto-data",
     "ditto-engine",
     "ditto-analytics",
-    "ditto-infra",
+    "ditto-platform",
 ]
 
 [build-system]

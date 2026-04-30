@@ -14,7 +14,7 @@ from datetime import date, timedelta
 
 import polars as pl
 from ditto_data.services.market_service import MarketService
-from ditto_infra.foundation.config import get_environment
+from ditto_platform.foundation.config import get_environment
 
 __all__ = ["ForwardReturnService"]
 

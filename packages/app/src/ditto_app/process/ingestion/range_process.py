@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_app.contracts import IngestDateCommand
 from ditto_app.process.ingestion.backfill_manager import BackfillManager

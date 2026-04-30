@@ -8,7 +8,7 @@ from typing import Literal
 import polars as pl
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MarketFetcher
-from ditto_infra.foundation import logger, traced
+from ditto_platform.foundation import logger, traced
 
 # list_date 推断的最早起始日期
 EARLIEST_LIST_DATE_INFERENCE = date(2010, 1, 1)

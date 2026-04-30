@@ -22,8 +22,8 @@ from ditto_engine.backtest.statistics import (
     PreTradeDecisionRecord,
     RiskScanRecord,
 )
-from ditto_infra.foundation.util.io import atomic_bytes_write, atomic_write
 from ditto_kernel.identity import InstrumentId
+from ditto_platform.foundation.util.io import atomic_bytes_write, atomic_write
 
 from ditto_app.process.execution.backtest_serialization import serialize_report
 

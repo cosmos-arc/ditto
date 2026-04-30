@@ -15,7 +15,7 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_app.process.ingestion.config import IngestionCoordinatorConfig
 from ditto_app.process.ingestion.coordinator import (

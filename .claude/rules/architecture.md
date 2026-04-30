@@ -26,10 +26,10 @@ paths:
 │                              ├──→ packages/data (数据服务层)        │
 │                              │         │                        │
 │                              │         └──> ditto_kernel         │
-│                              │         └──> packages/infra         │
+│                              │         └──> packages/platform         │
 │                              │                                  │
 │                              └──> ditto_kernel                      │
-│                              └──> packages/infra                   │
+│                              └──> packages/platform                   │
 └─────────────────────────────────────────────────────────────────┘
               ↑                     ↑
               │                     │
@@ -47,11 +47,11 @@ paths:
 | **数据服务层** | `ditto_data` | 统一查询:存储、数据源、领域感知的数据编排 | DDD Rich Repository |
 | **应用编排层** | `ditto_app` | Use Case 编排（CQRS: query/process/command/builders） | Application Layer |
 | **应用边界层** | `ditto_interfaces` | HTTP API/CLI/Jobs/DI Composition Root | Application Boundary |
-| **基础设施层** | `ditto_infra` | 技术设施:配置、日志、缓存、数据库连接池 | Technical Infrastructure |
+| **基础设施层** | `ditto_platform` | 技术设施:配置、日志、缓存、数据库连接池 | Technical Infrastructure |
 
 **详细分层规范**：
 - Kernel → [packages/kernel/CLAUDE.md](../../packages/kernel/CLAUDE.md)
-- Infra → [packages/infra/CLAUDE.md](../../packages/infra/CLAUDE.md)
+- Platform → [packages/platform/CLAUDE.md](../../packages/platform/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md) | [pit.md](../../.claude/rules/pit.md)
 - Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](../../packages/analytics/CLAUDE.md)
@@ -61,22 +61,22 @@ paths:
 ### 依赖规则
 
 ```
-ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
+ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_platform
 ditto_interfaces → ditto_analytics → ditto_kernel
-ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
-ditto_app → ditto_engine, ditto_data, ditto_analytics, ditto_kernel, ditto_infra
+ditto_interfaces → ditto_data → ditto_kernel, ditto_platform
+ditto_app → ditto_engine, ditto_data, ditto_analytics, ditto_kernel, ditto_platform
 ditto_engine      → ditto_kernel                                            ✅
-ditto_analytics   → ditto_kernel, ditto_data.errors, ditto_infra.foundation ✅
-ditto_data        → ditto_kernel, ditto_infra                              ✅
+ditto_analytics   → ditto_kernel, ditto_data.errors, ditto_platform.foundation ✅
+ditto_data        → ditto_kernel, ditto_platform                              ✅
 ditto_kernel      → (无业务依赖)                                             ✅
-ditto_infra       → (无业务依赖)                                             ✅
+ditto_platform       → (无业务依赖)                                             ✅
 ditto_engine      → ditto_data (仅 errors/provider)                        ❌ (beyond)
 ditto_data        → ditto_engine                                            ❌
 ditto_data        → ditto_interfaces                                        ❌
 ditto_analytics   → ditto_engine                                            ❌
 ditto_analytics   → ditto_interfaces                                        ❌
 ditto_analytics   → ditto_app                                               ❌
-ditto_infra       → 其他层                                                  ❌
+ditto_platform       → 其他层                                                  ❌
 ```
 
 ### v5 强制边界（CI 门禁）
@@ -88,9 +88,9 @@ ditto_infra       → 其他层                                                 
 共 34 条合约（0 broken, 0 warnings）。
 
 **检查类型：**
-1. **分层架构** (`layers`): Interfaces → App → Engine → Data → Infra
+1. **分层架构** (`layers`): Interfaces → App → Engine → Data → Platform
 2. **Kernel 隔离** (`forbidden`): Kernel 禁止依赖其他业务包
-3. **Infra 隔离** (`forbidden`): Infra 禁止依赖其他层
+3. **Platform 隔离** (`forbidden`): Platform 禁止依赖其他层
 4. **Data 边界** (`forbidden`): Data 禁止依赖 Engine/Interfaces/App
 5. **Analytics 隔离** (`forbidden`): Analytics 禁止依赖 Data（除 errors）/Engine/App
 6. **Engine-Data 边界** (`forbidden`): Engine 和 Data 双向禁止互相依赖（均可依赖 Kernel）
@@ -292,7 +292,7 @@ from ditto_kernel.instrument import AssetClass
 
 7. 是技术基础设施？
    （日志、配置、缓存、数据库连接池）
-   YES → ditto_infra
+   YES → ditto_platform
 ```
 
 ---
@@ -464,7 +464,7 @@ def get_source(name: str) -> DataSource:
 | 是数据查询、存储或数据编排？ | ditto_data | 继续下一个问题 |
 | 是应用编排或工作流？ | ditto_app | 继续下一个问题 |
 | 是应用入口（API/CLI/Jobs/DI）？ | ditto_interfaces | 继续下一个问题 |
-| 是技术基础设施？ | ditto_infra | 重新审视设计 |
+| 是技术基础设施？ | ditto_platform | 重新审视设计 |
 
 **禁止重复实现**：
 - ❌ Application Layer 重复实现 Domain Layer 已有的业务逻辑

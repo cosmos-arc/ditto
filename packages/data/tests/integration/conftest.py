@@ -4,7 +4,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 from prometheus_client import CollectorRegistry
 
 

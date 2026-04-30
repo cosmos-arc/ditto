@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

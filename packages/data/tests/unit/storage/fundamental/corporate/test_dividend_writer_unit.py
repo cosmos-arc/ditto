@@ -13,7 +13,7 @@ from ditto_data.storage.fundamental.corporate.dividend_writer import (
 )
 from ditto_data.storage.fundamental.specs import DIVIDEND_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import Metrics, SQLitePool
+from ditto_platform.foundation import Metrics, SQLitePool
 
 SPEC = DIVIDEND_SPEC
 

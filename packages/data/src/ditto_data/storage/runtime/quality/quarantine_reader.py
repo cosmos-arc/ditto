@@ -8,7 +8,7 @@ from typing import Any
 
 import orjson
 import polars as pl
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.storage.sqlite_client import SQLiteClient
 

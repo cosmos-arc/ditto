@@ -50,11 +50,11 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 
 | 模块 | 包路径 | 说明 |
 |------|--------|------|
-| 环境管理 | `ditto_infra.foundation.config` | 环境检测、配置加载 |
-| 系统配置 | `ditto_infra.foundation.config.settings` | SystemSettings, ObservabilitySettings |
+| 环境管理 | `ditto_platform.foundation.config` | 环境检测、配置加载 |
+| 系统配置 | `ditto_platform.foundation.config.settings` | SystemSettings, ObservabilitySettings |
 | 存储配置 | `ditto_data.config.data_store` | DataStoreSettings |
 | 数据源配置 | `ditto_data.config.data_source` | DataSourceSettings |
-| 通知配置 | `ditto_infra.services.notification.config` | NotificationSettings |
+| 通知配置 | `ditto_platform.services.notification.config` | NotificationSettings |
 | 质量配置 | `ditto_data.quality.config` | DQSettings |
 
 ---
@@ -113,7 +113,7 @@ TUSHARE_TOKEN=your_token pixi run -e dev test
 ```bash
 # 查看环境
 pixi run -e dev python -c "
-from ditto_infra.foundation.config import get_environment
+from ditto_platform.foundation.config import get_environment
 print(f'当前环境: {get_environment().value}')
 "
 
@@ -402,7 +402,7 @@ export ENVIRONMENT=production
 ```bash
 # 查看环境
 pixi run -e dev python -c "
-from ditto_infra.foundation.config import get_environment
+from ditto_platform.foundation.config import get_environment
 print(get_environment())
 "
 
@@ -463,7 +463,7 @@ ls -la config/$ENVIRONMENT/
 
 # 3. 检查配置加载
 pixi run -e dev python -c "
-from ditto_infra.foundation.config import get_environment, ConfigLoader
+from ditto_platform.foundation.config import get_environment, ConfigLoader
 env = get_environment()
 loader = ConfigLoader(env)
 print(f'环境: {env.value}')
@@ -547,7 +547,7 @@ import os
 os.environ['ENVIRONMENT'] = 'development'
 from dishka import make_container
 from ditto_interfaces.registry.infra.config import ConfigProvider
-from ditto_infra.foundation.config.settings import Settings
+from ditto_platform.foundation.config.settings import Settings
 
 c = make_container(ConfigProvider())
 s = c.get(Settings)
@@ -576,13 +576,13 @@ c.close()
 
 | 模型 | 位置 | 配置文件 |
 |------|------|---------|
-| `SystemSettings` | `ditto_infra/foundation/config/settings.py` | `system.env` |
-| `ObservabilitySettings` | `ditto_infra/foundation/config/settings.py` | `observability.env` |
+| `SystemSettings` | `ditto_platform/foundation/config/settings.py` | `system.env` |
+| `ObservabilitySettings` | `ditto_platform/foundation/config/settings.py` | `observability.env` |
 | `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
 | `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
 | `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
 | `DQSettings` | `ditto_data/quality/config/` | `dq.env` |
-| `NotificationSettings` | `ditto_infra/services/notification/config.py` | `notification.env` |
+| `NotificationSettings` | `ditto_platform/services/notification/config.py` | `notification.env` |
 
 ### 相关文档
 

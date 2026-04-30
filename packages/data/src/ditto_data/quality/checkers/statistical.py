@@ -4,8 +4,8 @@ from typing import Any
 
 import polars as pl
 import polars.exceptions as pl_exceptions
-from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQLevel, DQSeverity
+from ditto_platform.foundation import logger
 
 
 class StatisticalChecker:

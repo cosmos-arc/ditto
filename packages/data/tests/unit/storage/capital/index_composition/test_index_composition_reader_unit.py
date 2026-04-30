@@ -11,7 +11,7 @@ from ditto_data.storage.capital.index_composition.index_composition_reader impor
 )
 from ditto_data.storage.capital.specs import INDEX_COMPOSITION_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

@@ -8,8 +8,8 @@ Engine 层：纯业务逻辑，无数据访问依赖。
 from typing import Any
 
 import polars as pl
-from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQLevel, DQSeverity
+from ditto_platform.foundation import logger
 
 from ditto_data.quality.spec import (
     CompareMethod,

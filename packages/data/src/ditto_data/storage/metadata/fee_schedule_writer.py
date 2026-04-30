@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_data.storage.metadata._pit_base import PITRecordWriter
 from ditto_data.storage.metadata.fee_schedule_reader import FeeScheduleRecord

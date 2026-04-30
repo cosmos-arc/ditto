@@ -55,8 +55,8 @@ from ditto_data.storage.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotWriter,
 )
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

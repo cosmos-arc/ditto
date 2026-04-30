@@ -343,15 +343,15 @@ class SourceAuthenticationError(DataSourceError): ...
 
 **禁止行内导入！！破例需要注释说明具体原因**
 
-### Infra 层导入
+### Platform 层导入
 
 ```python
 # ✅ 正确
-from ditto_infra.foundation import logger, span, traced, init, SQLitePool
-from ditto_infra.foundation.config import get_environment, Settings
+from ditto_platform.foundation import logger, span, traced, init, SQLitePool
+from ditto_platform.foundation.config import get_environment, Settings
 
 # ❌ 错误
-from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.config
+from ditto_platform.config import get_settings  # 应为 ditto_platform.foundation.config
 直接访问 os.environ
 使用 open() 写文件
 ```
@@ -528,7 +528,7 @@ tar -tzf dist/*.whl | grep py.typed
 |---|--------------|------|
 | ditto_engine | ✅ | `packages/engine/src/ditto_engine/py.typed` |
 | ditto_data | ✅ | `packages/data/src/ditto_data/py.typed` |
-| ditto_infra | ✅ | `packages/infra/src/ditto_infra/py.typed` |
+| ditto_platform | ✅ | `packages/platform/src/ditto_platform/py.typed` |
 | ditto_kernel | ✅ | `packages/kernel/src/ditto_kernel/py.typed` |
 | ditto_analytics | ✅ | `packages/analytics/src/ditto_analytics/py.typed` |
 | ditto_app | ✅ | `packages/app/src/ditto_app/py.typed` |
@@ -594,7 +594,7 @@ tar -tzf dist/*.whl | grep py.typed
 |------|------|----------|------|
 | **Data Store** | 数据持久化、基础查询 | Reader/Writer CQRS（如 `MarketReader`, `MetadataWriter`） | 包含业务逻辑 |
 | **Data Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
-| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator（均属 Infra 层） | 包含业务逻辑 |
+| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator（均属 Platform 层） | 包含业务逻辑 |
 | **Data Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
 | **Interfaces Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
  | **Interfaces Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
@@ -603,7 +603,7 @@ tar -tzf dist/*.whl | grep py.typed
 
 **允许的单向依赖：**
 ```
-Interfaces Flow → Interfaces Service → App Service → Data Service → Data Store/Runtime → Infra
+Interfaces Flow → Interfaces Service → App Service → Data Service → Data Store/Runtime → Platform
 ```
 
 **禁止的依赖模式：**
@@ -623,7 +623,7 @@ from ditto_data.storage.metadata import MetadataReader
 
 # ❌ Interfaces 层禁止直接导入 Runtime
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_infra.foundation.db import SQLitePool  # SQLitePool 属于 Infra 层
+from ditto_platform.foundation.db import SQLitePool  # SQLitePool 属于 Platform 层
 
 # ✅ Interfaces 层应该使用 Service（通过 DI 获取）
 from ditto_data.services.market_service import MarketService

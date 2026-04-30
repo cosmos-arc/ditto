@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_infra.foundation import Metrics, logger
+from ditto_platform.foundation import Metrics, logger
 
 from ditto_data.sources.tushare.processors.column_mapping import ColumnMapping
 from ditto_data.sources.tushare.processors.mappings import DAILY_OHLCV_MAPPING

@@ -13,7 +13,7 @@ from typing import Protocol
 
 import polars as pl
 from ditto_data.models import METAL_CODE_ALIASES, VIX_CODE_TO_INSTRUMENT_ID
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 
 class _MetalSource(Protocol):

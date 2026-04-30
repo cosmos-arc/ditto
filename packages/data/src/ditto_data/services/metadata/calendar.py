@@ -10,7 +10,7 @@ from datetime import date
 from typing import Any
 
 import polars as pl
-from ditto_infra.foundation import traced
+from ditto_platform.foundation import traced
 
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
 

@@ -12,7 +12,7 @@ from ditto_data.storage.metadata.fee_schedule_reader import (
 from ditto_data.storage.metadata.fee_schedule_writer import (
     SQLiteFeeScheduleWriter,
 )
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
 # Fixtures

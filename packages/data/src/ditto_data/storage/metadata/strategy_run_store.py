@@ -11,7 +11,7 @@ import sqlite3
 from datetime import UTC, datetime
 from typing import Any
 
-from ditto_infra.foundation import SQLitePool, logger, traced
+from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_data.models.strategy_run import StrategyRunRecord
 

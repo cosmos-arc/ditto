@@ -8,9 +8,9 @@ from ditto_app.command.ingestion import IngestDateHandler
 from ditto_app.contracts import IngestDateCommand
 from ditto_app.process.ingestion.backfill_manager import BackfillManager
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
-from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability import init, reset_for_testing
-from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.observability import init, reset_for_testing
+from ditto_platform.foundation.observability.config import ObservabilityConfig
 
 
 @pytest.fixture(autouse=True)

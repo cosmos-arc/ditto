@@ -6,8 +6,8 @@ import polars as pl
 import polars.exceptions as pl_exceptions
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.quality import QualityEngine
-from ditto_infra.foundation import logger
 from ditto_kernel.quality import DQIssue, DQResult
+from ditto_platform.foundation import logger
 
 from ditto_app.contracts import CheckDataQualityCommand
 

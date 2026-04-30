@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 import polars as pl
-from ditto_infra.foundation import Metrics, logger
+from ditto_platform.foundation import Metrics, logger
 
 from ditto_data.storage.base.sqlite_table_spec import SqliteTableSpec
 from ditto_data.storage.sqlite_client import SQLiteClient

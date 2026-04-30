@@ -10,7 +10,7 @@ import pytest
 from ditto_data.storage.fundamental.forecast.express_reader import ExpressReader
 from ditto_data.storage.fundamental.specs import EXPRESS_SPEC
 from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 SPEC = EXPRESS_SPEC
 

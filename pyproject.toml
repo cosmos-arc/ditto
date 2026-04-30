@@ -13,7 +13,7 @@ line-length = 88
 target-version = "py312"
 
 # 指定 Ruff 需要检查的源代码和测试目录。
-src = ["packages", "interfaces", "scripts"]
+src = ["packages", "packages/apps", "scripts"]
 
 # 全局排除不需要检查的文件和目录。
 exclude = [
@@ -93,7 +93,7 @@ unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 # SignalDelivery - 环境变量名（非实际密钥）是 Bandit S105 已知误报
-"interfaces/src/ditto_interfaces/registry/infra/signal_delivery.py" = ["S105"]
+"packages/apps/src/ditto_apps/registry/infra/signal_delivery.py" = ["S105"]
 # MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
 "packages/data/src/ditto_data/services/metadata_service.py" = ["PLR0913"]
 # DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数
@@ -101,7 +101,7 @@ unfixable = []
 # MarketService.list_bars - 便利方法，参数透传到 MarketBarsQuery
 "packages/data/src/ditto_data/services/market_service.py" = ["PLR0913"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
-"interfaces/src/ditto_interfaces/services/derived/research.py" = ["S608"]
+"packages/apps/src/ditto_apps/services/derived/research.py" = ["S608"]
 # ResearchQuery.export() - 表名来自内部枚举，非用户输入
 "packages/app/src/ditto_app/query/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
@@ -133,7 +133,7 @@ unfixable = []
 
 # 脚本文件
 "scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN"]
-"interfaces/tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
+"packages/apps/tests/scripts/**/*.py" = ["T201", "S101", "S603", "S607", "D", "ANN", "RUF001", "PLR0912", "PLR0915", "E501"]
 "**/cli.py" = ["T201"]
 "**/cli/*.py" = ["T201"]
 "**/main.py" = ["T201"]
@@ -152,10 +152,10 @@ unfixable = []
 # Kernel tracing — Protocol __call__ 和通用装饰器签名不可避免使用 Any
 "packages/kernel/src/ditto_kernel/tracing.py" = ["ANN401", "D102"]
 # Observability bridge — 桥接函数签名需匹配 TraceHandler Protocol（Any）
-"interfaces/src/ditto_interfaces/registry/infra/observability.py" = ["ANN401"]
+"packages/apps/src/ditto_apps/registry/infra/observability.py" = ["ANN401"]
 
 # E2E 测试
-"interfaces/tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
+"packages/apps/tests/e2e/*.py" = ["S101", "PLR2004", "D", "ANN", "E501"]
 
 # --- Ruff Formatter (格式化器) 配置 ---
 [tool.ruff.format]
@@ -206,7 +206,7 @@ venv = "dev"
 typeCheckingMode = "standard"
 
 # 源码目录
-include = ["packages/**/src", "interfaces/**/src"]
+include = ["packages/**/src"]
 
 # 排除目录（tests 用独立配置）
 exclude = [
@@ -226,7 +226,7 @@ ignore = [
     "tests/**",
     "**/tests/**",
     "packages/*/tests/**",
-    "interfaces/tests/**",
+    "packages/apps/tests/**",
     # MarketQueryService: multi-line error message uses implicit string concatenation
     # (已迁移至 services/)
 ]
@@ -235,7 +235,7 @@ ignore = [
 # 关键：核心目录提升到 strict 模式
 # 这些是最值钱的代码，值得最严格的检查
 # ═══════════════════════════════════════════════════════════════════
-strict = ["packages/**/src", "interfaces/**/src"]
+strict = ["packages/**/src"]
 
 # ═══════════════════════════════════════════════════════════════════
 # 规则微调：让 Ruff 管风格，Pyright 专注类型
@@ -265,12 +265,12 @@ reportImplicitStringConcatenation = "error"
 # 告诉 Pyright 源码根目录（解决 import 路径问题）
 extraPaths = [
     "packages/engine/src",
-    "packages/infra/src",
+    "packages/platform/src",
     "packages/kernel/src",
     "packages/data/src",
     "packages/analytics/src",
     "packages/app/src",
-    "interfaces/src",
+    "packages/apps/src",
 ]
 
 # ===================================================================
@@ -278,18 +278,18 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-testpaths = ["packages/*/tests", "interfaces/tests"]
+testpaths = ["packages/*/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 pythonpath = [
     "packages/engine/src",
-    "packages/infra/src",
+    "packages/platform/src",
     "packages/kernel/src",
     "packages/data/src",
     "packages/analytics/src",
     "packages/app/src",
-    "interfaces/src",
+    "packages/apps/src",
 ]
 
 filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
@@ -316,7 +316,6 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--cov=packages",
-    "--cov=interfaces",
     "--cov-report=html:htmlcov",
     "--cov-report=term-missing",
     "--cov-report=xml",
@@ -330,7 +329,7 @@ addopts = [
 # ===================================================================
 [tool.coverage.run]
 branch = true
-source = ["packages", "interfaces"]
+source = ["packages"]
 
 [tool.coverage.report]
 precision = 2
@@ -365,7 +364,7 @@ version = "0.1.0"
 tag_format = "v$version"
 version_files = [
     "packages/engine/src/ditto_engine/__init__.py:__version__",
-    "packages/infra/src/ditto_infra/__init__.py:__version__",
+    "packages/platform/src/ditto_platform/__init__.py:__version__",
     "packages/kernel/src/ditto_kernel/__init__.py:__version__",
     "packages/data/src/ditto_data/__init__.py:__version__",
 ]

@@ -10,7 +10,7 @@ from ditto_data.models import OnDuplicate
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MarketFetcher
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_app.process.ingestion.data_writer import IngestionDataWriter
 

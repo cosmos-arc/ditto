@@ -13,7 +13,7 @@ import orjson
 import pytest
 from ditto_data.models.strategy_audit import AuditRecordType, TradeFillPayload
 from ditto_data.services.audit.execution_audit_service import ExecutionAuditService
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
 # Fixtures

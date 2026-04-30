@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from dishka import Provider, Scope, provide
-from ditto_infra.foundation.cache import DataCache
+from ditto_platform.foundation.cache import DataCache
 
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata_service import MetadataService

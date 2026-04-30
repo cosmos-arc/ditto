@@ -6,8 +6,8 @@ import polars as pl
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.models.ingestion import IngestionLog
-from ditto_infra.foundation import logger
-from ditto_infra.foundation.util.checksum import ChecksumCompute
+from ditto_platform.foundation import logger
+from ditto_platform.foundation.util.checksum import ChecksumCompute
 
 
 class MetadataManager:

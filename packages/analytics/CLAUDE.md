@@ -14,7 +14,7 @@ Analytics 层是 **Analysis Layer（分析层）**，负责因子表达式编译
 ```
 ditto_analytics → ditto_kernel ✅
 ditto_analytics → ditto_data.errors ✅（仅错误类型，DerivedNotImplementedError 等）
-ditto_analytics → ditto_infra ✅（importlinter 允许，但当前源码无实际 import）
+ditto_analytics → ditto_platform ✅（importlinter 允许，但当前源码无实际 import）
 ```
 
 ## 模块结构

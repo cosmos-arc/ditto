@@ -866,7 +866,7 @@ pixi run -e dev pytest tests/e2e/ -v
 | Pixi 配置 | `pixi.toml` |
 | 生产配置 | `config/production/` |
 | 开发配置 | `config/development/` |
-| 可观测性模块 | `packages/infra/src/ditto_infra/foundation/observability/` |
+| 可观测性模块 | `packages/platform/src/ditto_platform/foundation/observability/` |
 | Docker Compose | `deploy/docker/docker-compose.yml` |
 | Dockerfile | `deploy/docker/Dockerfile` |
 | 可观测性 Docker | `deploy/observability/docker-compose.yml` |

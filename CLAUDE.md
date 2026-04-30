@@ -64,16 +64,16 @@
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
-  ditto_interfaces → ditto_analytics → ditto_kernel
-  ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
+  ditto_apps → ditto_app → ditto_engine → ditto_data → ditto_platform
+  ditto_apps → ditto_analytics → ditto_kernel
+  ditto_apps → ditto_data → ditto_kernel, ditto_platform
   ditto_app → ditto_analytics → ditto_kernel
 
 允许的跨层依赖:
-  - interfaces 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
-  - interfaces 可以直接依赖 infra.foundation
-  - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
-  - interfaces.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
+  - apps 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
+  - apps 可以直接依赖 platform.foundation
+  - apps 禁止直接依赖 data.storage/runtime（仅 registry 例外）
+  - apps.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
 
 详细约束见 .importlinter 配置
 ```
@@ -85,13 +85,13 @@
 详细分层规范：
 - 总体架构边界、命名与抽象层级 → [docs/architecture/boundaries-and-abstraction-standards.md](docs/architecture/boundaries-and-abstraction-standards.md)
 - Agent 快速参考 → [docs/architecture/agent-context-pack.md](docs/architecture/agent-context-pack.md)
-- Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
+- Platform → [packages/platform/CLAUDE.md](packages/platform/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
 - Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
 - App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
-- Interfaces → [interfaces/CLAUDE.md](interfaces/CLAUDE.md)
+- Interfaces → [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md)
 
 架构心智模型以 diamond 为准：`data`、`analytics`、`engine` 是并列核心平面；
 `.importlinter` 中的 layers 顺序是工具表达限制，不代表业务层级高低。
@@ -255,13 +255,13 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ```
 ditto/
 ├── packages/           # 核心包
-│   ├── infra/        # 基础设施
+│   ├── platform/        # 基础设施
 │   ├── kernel/       # 共享内核（零业务行为类型）
 │   ├── data/          # 数据访问层
 │   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
 │   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
 │   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
-├── interfaces/            # 唯一应用入口（API/CLI/Jobs + DI Composition Root）
+├── interfaces/            # → 已迁移至 packages/apps/（唯一应用入口 API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

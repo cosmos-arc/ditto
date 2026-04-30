@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 
 import polars as pl
-from ditto_infra.foundation import logger, traced
+from ditto_platform.foundation import logger, traced
 
 from ditto_data.sources.schemas.macro_schemas import (
     MACRO_INDICATOR_SOURCE_SCHEMA,

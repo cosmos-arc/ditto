@@ -5,9 +5,9 @@ from __future__ import annotations
 from ditto_data.errors import IdentifierNotFoundError
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MetadataFetcher
-from ditto_infra.foundation import logger
 from ditto_kernel import AmbiguousTickerError
 from ditto_kernel.instrument import InstrumentIngestParams
+from ditto_platform.foundation import logger
 
 from ditto_app.process.ingestion.coordinator_constants import (
     A_SHARE_CODE_LENGTH,

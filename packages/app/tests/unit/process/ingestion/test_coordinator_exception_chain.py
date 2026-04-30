@@ -12,10 +12,10 @@ from ditto_app.process.ingestion.coordinator import (
     SourceFetchers,
 )
 from ditto_data.errors import IdentifierNotFoundError
-from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability import init, reset_for_testing
-from ditto_infra.foundation.observability.config import ObservabilityConfig
 from ditto_kernel.instrument import InstrumentIngestParams
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.observability import init, reset_for_testing
+from ditto_platform.foundation.observability.config import ObservabilityConfig
 
 
 @pytest.fixture(autouse=True)

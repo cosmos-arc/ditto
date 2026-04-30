@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 from ditto_app.execution_dto import TradeIntent
 from ditto_app.process.execution.delivery import DeliveryRouter
-from ditto_infra.services.notification import AlertManager, NotificationLevel
+from ditto_platform.services.notification import AlertManager, NotificationLevel
 
 
 def _make_intent(

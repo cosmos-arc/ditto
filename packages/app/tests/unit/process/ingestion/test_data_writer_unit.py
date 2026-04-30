@@ -5,9 +5,9 @@ from datetime import date
 import polars as pl
 import pytest
 from ditto_app.process.ingestion.data_writer import IngestionDataWriter
-from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability import init, reset_for_testing
-from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.observability import init, reset_for_testing
+from ditto_platform.foundation.observability.config import ObservabilityConfig
 
 
 @pytest.fixture(autouse=True)

@@ -54,8 +54,8 @@ from ditto_data.services.trade import TradeService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
-from ditto_infra.foundation.config.settings import TradingSettings
-from ditto_infra.services.notification import AlertManager
+from ditto_platform.foundation.config.settings import TradingSettings
+from ditto_platform.services.notification import AlertManager
 
 # ---------------------------------------------------------------------------
 # App Builder 层

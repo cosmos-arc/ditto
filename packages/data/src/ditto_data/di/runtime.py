@@ -7,8 +7,8 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_infra.foundation import SQLitePool
-from ditto_infra.foundation.concurrency import FileLockManager
+from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.concurrency import FileLockManager
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_service import FreezeService

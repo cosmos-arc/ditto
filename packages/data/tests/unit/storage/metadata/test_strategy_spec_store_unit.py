@@ -10,7 +10,7 @@ from ditto_data.storage.metadata.strategy_spec_store import (
     SQLiteStrategySpecReader,
     SQLiteStrategySpecWriter,
 )
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.helpers.pit.policy import PIT_QUERY_OPERATOR
 

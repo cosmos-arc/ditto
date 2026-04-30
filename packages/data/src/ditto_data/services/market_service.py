@@ -14,7 +14,7 @@ from datetime import date
 from enum import Enum
 
 import polars as pl
-from ditto_infra.foundation import Metrics, logger, traced
+from ditto_platform.foundation import Metrics, logger, traced
 
 from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
 from ditto_data.models import InstrumentIdRange

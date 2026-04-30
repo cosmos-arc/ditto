@@ -296,13 +296,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/59/172424b79f8cfd4b6d8a122b2193e6b8ad4b11f7159bb3b6f9b3191329bb/xxhash-3.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: ./interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
+      - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
-      - pypi: ./packages/infra
       - pypi: ./packages/kernel
+      - pypi: ./packages/platform
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -557,13 +557,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/99/57/d849a8d3afa1f8f4bc6a831cd89f49f9706fbbad94d2975d6140a171988c/xxhash-3.7.0-cp313-cp313-win_amd64.whl
-      - pypi: ./interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
+      - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
-      - pypi: ./packages/infra
       - pypi: ./packages/kernel
+      - pypi: ./packages/platform
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -962,13 +962,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/59/172424b79f8cfd4b6d8a122b2193e6b8ad4b11f7159bb3b6f9b3191329bb/xxhash-3.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
-      - pypi: ./interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
+      - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
-      - pypi: ./packages/infra
       - pypi: ./packages/kernel
+      - pypi: ./packages/platform
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
@@ -1326,13 +1326,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/99/57/d849a8d3afa1f8f4bc6a831cd89f49f9706fbbad94d2975d6140a171988c/xxhash-3.7.0-cp313-cp313-win_amd64.whl
-      - pypi: ./interfaces
       - pypi: ./packages/analytics
       - pypi: ./packages/app
+      - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
-      - pypi: ./packages/infra
       - pypi: ./packages/kernel
+      - pypi: ./packages/platform
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
   build_number: 20
@@ -2408,21 +2408,26 @@ packages:
 - pypi: ./packages/app
   name: ditto-app
   version: 0.1.0
-  sha256: 9a902a34060a72331bd98862d1d866e95e9ebf0f5db96067d635c6a345733f1d
+  sha256: 883204e5d41070d8bb80113d2c0cee8442cbbbef046b5248b556143070c36015
   requires_dist:
   - ditto-kernel
   - ditto-data
   - ditto-engine
   - ditto-analytics
-  - ditto-infra
+  - ditto-platform
+  requires_python: '>=3.13'
+- pypi: ./packages/apps
+  name: ditto-apps
+  version: 0.1.0
+  sha256: c20b437bab544da2b37022d2eb074f8c2ce5ddbd2cdede5675b0b31477a6c541
   requires_python: '>=3.13'
 - pypi: ./packages/data
   name: ditto-data
   version: 0.1.0
-  sha256: 5a53b5902b24be3506b80e18587187f12518fb8e060705b56448468b56343d37
+  sha256: 3fcc5cd740b283c0637bb504ebeed0208bbd8f67775697129158cac221da8f98
   requires_dist:
   - ditto-kernel
-  - ditto-infra
+  - ditto-platform
   requires_python: '>=3.13'
 - pypi: ./packages/engine
   name: ditto-engine
@@ -2432,20 +2437,15 @@ packages:
   - ditto-data
   - ditto-kernel
   requires_python: '>=3.13'
-- pypi: ./packages/infra
-  name: ditto-infra
-  version: 0.1.0
-  sha256: 57f7392d12d5e932397728d12a8a6c416c6491ea219921227977a4e09f49b607
-  requires_python: '>=3.13'
-- pypi: ./interfaces
-  name: ditto-interfaces
-  version: 0.1.0
-  sha256: 315284344b8519cf1bd7b438e48ed12d38341a920229afa892dbe5a0c18a2a53
-  requires_python: '>=3.13'
 - pypi: ./packages/kernel
   name: ditto-kernel
   version: 0.2.0
   sha256: 57697b29483fe8c1efda956b1ba91585e024ffc35df7773f9565d8f2718c03a1
+  requires_python: '>=3.13'
+- pypi: ./packages/platform
+  name: ditto-platform
+  version: 0.1.0
+  sha256: 03a3c3185adc2678e42d73265ca05d94e3109894e7b89471d2ef45176d60d3d8
   requires_python: '>=3.13'
 - conda: https://conda.anaconda.org/conda-forge/noarch/dnspython-2.8.0-pyhcf101f3_0.conda
   sha256: ef1e7b8405997ed3d6e2b6722bd7088d4a8adf215e7c88335582e65651fb4e05

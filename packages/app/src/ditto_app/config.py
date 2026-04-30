@@ -1,7 +1,7 @@
 """
 Dataset configuration registry for data ingestion.
 
-从 ditto_interfaces.models.config 提取至此，供 app 层直接引用，
+从 ditto_apps.models.config 提取至此，供 app 层直接引用，
 无需依赖 port/interfaces。
 
 This module defines the central registry of all datasets with their configuration,
