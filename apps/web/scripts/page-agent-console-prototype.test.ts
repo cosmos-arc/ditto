@@ -173,6 +173,39 @@ describe("page-agent-console prototype", () => {
 		}
 	}, playwrightTestTimeoutMs);
 
+	it("keeps the activity log reachable inside the right panel at gate viewports", async () => {
+		const browser = await chromium.launch({ channel: "chromium" });
+		const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+
+		try {
+			await page.goto(prototypeUrl, { waitUntil: "load" });
+			const metrics = await page.$eval(".agent-detail", (detail) => {
+				const activityLog = detail.querySelector<HTMLElement>("[data-contract-slot='activity-log']");
+				const detailRect = detail.getBoundingClientRect();
+				const activityRect = activityLog?.getBoundingClientRect();
+				const detailStyle = getComputedStyle(detail);
+
+				return {
+					detailBottom: Math.round(detailRect.bottom),
+					activityBottom: Math.round(activityRect?.bottom ?? 0),
+					viewportHeight: window.innerHeight,
+					detailDisplay: detailStyle.display,
+					detailOverflowY: detailStyle.overflowY,
+					detailClientHeight: detail.clientHeight,
+					detailScrollHeight: detail.scrollHeight,
+				};
+			});
+
+			expect(metrics.detailDisplay).toBe("flex");
+			expect(metrics.detailBottom).toBeLessThanOrEqual(metrics.viewportHeight);
+			expect(metrics.detailOverflowY).toBe("auto");
+			expect(metrics.detailScrollHeight).toBeGreaterThan(metrics.detailClientHeight);
+			expect(metrics.activityBottom).toBeGreaterThan(metrics.viewportHeight);
+		} finally {
+			await browser.close();
+		}
+	}, playwrightTestTimeoutMs);
+
 	it("uses the same subdued right-panel typography and status color language as other studio pages", () => {
 		const document = loadPage();
 		const styleText = pageStyleText(document);
