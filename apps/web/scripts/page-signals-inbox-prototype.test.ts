@@ -16,15 +16,41 @@ function loadPage() {
 
 const prototypeUrl = `file://${prototypePath}`;
 const navigationTimeoutMs = 10_000;
+const expectedRailItems = [
+	{ domain: "home", label: "首页", icon: "home", current: false },
+	{ domain: "markets", label: "市场", icon: "trending-up", current: false },
+	{ domain: "research", label: "研究", icon: "book-open", current: false },
+	{ domain: "trading", label: "交易", icon: "arrow-left-right", current: true },
+	{ domain: "platform", label: "平台", icon: "settings-2", current: false },
+] as const;
 
 describe("page-signals-inbox prototype", () => {
 	it("keeps all ops-console regions inside the gate-recognizable shell grid", () => {
 		const document = loadPage();
 		const shell = document.querySelector("#default-view > .shell-signals.shell-ops");
+		const railItems = Array.from(shell?.querySelectorAll<HTMLElement>(".shell-rail .rail-icon[data-rail-domain]") ?? []);
 
 		expect(shell).not.toBeNull();
 		expect(shell?.querySelector(".shell-rail")).not.toBeNull();
-		expect(shell?.querySelector('.rail-icon[aria-label="AI"]')).not.toBeNull();
+		expect(
+			railItems.map((item) => ({
+				domain: item.dataset.railDomain,
+				label: item.getAttribute("aria-label"),
+				title: item.getAttribute("title"),
+				icon: item.dataset.icon,
+				current: item.getAttribute("aria-current"),
+				active: item.classList.contains("active"),
+			})),
+		).toEqual(
+			expectedRailItems.map((item) => ({
+				domain: item.domain,
+				label: item.label,
+				title: item.label,
+				icon: item.icon,
+				current: item.current ? "page" : null,
+				active: item.current,
+			})),
+		);
 		expect(shell?.querySelector(".shell-header")).not.toBeNull();
 		expect(shell?.querySelector('[data-contract-slot="main"]')).not.toBeNull();
 		expect(shell?.querySelector('[data-contract-slot="detail"]')).not.toBeNull();
