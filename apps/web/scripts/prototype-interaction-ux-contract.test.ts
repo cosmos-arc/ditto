@@ -14,8 +14,45 @@ const railLabels: Record<(typeof railDomains)[number], string> = {
 	trading: "交易",
 	platform: "平台",
 };
+const railHrefs: Record<(typeof railDomains)[number], string> = {
+	home: "page-home.html",
+	markets: "page-cross-market.html",
+	research: "page-research.html",
+	trading: "page-trading-overview.html",
+	platform: "page-platform.html",
+};
 const bannedRailLabels = new Set(["AI", "运维", "Platform", "Home", "Markets", "Research", "Trading"]);
 const hamburgerPathSet = ["M3 4h14", "M3 10h14", "M3 16h14"].sort().join("|");
+const contextSectionTitleSelector = ".context-section-title, .inspector-section-title, .section-title, [data-section-title]";
+const pageDomainById: Record<string, (typeof railDomains)[number]> = {
+	home: "home",
+	"cross-market": "markets",
+	"markets-screener": "markets",
+	"instrument-hub": "markets",
+	"markets-intelligence": "markets",
+	"markets-calendar": "markets",
+	"a-shares": "markets",
+	watchlist: "markets",
+	research: "research",
+	"strategy-studio": "research",
+	"strategies-detail": "research",
+	"factor-analysis": "research",
+	"backtest-result": "research",
+	"regime-monitor": "research",
+	"factor-list": "research",
+	"strategy-list": "research",
+	"backtest-list": "research",
+	"experiment-list": "research",
+	"universe-list": "research",
+	"trading-overview": "trading",
+	"signals-inbox": "trading",
+	"orders-ledger": "trading",
+	"risk-center": "trading",
+	portfolio: "trading",
+	platform: "platform",
+	"agent-console": "platform",
+	"platform-settings": "platform",
+};
 
 type ManifestPage = {
 	id: string;
@@ -64,6 +101,41 @@ function readPrototypeDocument(page: ManifestPage): Document {
 
 function normalizePathData(value: string): string {
 	return value.replace(/\s+/g, " ").trim();
+}
+
+function toRailDomain(value: string | null | undefined): (typeof railDomains)[number] | null {
+	return value && railDomainSet.has(value) ? (value as (typeof railDomains)[number]) : null;
+}
+
+function getPageDomain(document: Document, page: ManifestPage): (typeof railDomains)[number] | null {
+	const shellDomain = document.querySelector<HTMLElement>(
+		[
+			"[data-page-domain]",
+			"[data-shell-domain]",
+			".shell-command[data-domain]",
+			".shell-radar[data-domain]",
+			".shell-analytical[data-domain]",
+			".shell-catalog[data-domain]",
+			".shell-studio[data-domain]",
+			".shell-ops[data-domain]",
+			".shell-object[data-domain]",
+		].join(", "),
+	);
+	const candidates = [
+		document.documentElement.dataset.domain,
+		document.body.dataset.domain,
+		shellDomain?.dataset.pageDomain,
+		shellDomain?.dataset.shellDomain,
+		shellDomain?.dataset.domain,
+		pageDomainById[page.id],
+	];
+
+	for (const candidate of candidates) {
+		const domain = toRailDomain(candidate);
+		if (domain) return domain;
+	}
+
+	return null;
 }
 
 function getSvgPathSet(element: Element | null): string {
@@ -131,10 +203,22 @@ function getDirectSummary(element: Element): Element | null {
 	return Array.from(element.children).find((child) => child.tagName.toLowerCase() === "summary") ?? null;
 }
 
+function getContextSectionLabel(section: Element, index: number): string {
+	return section.querySelector(contextSectionTitleSelector)?.textContent?.replace(/\s+/g, " ").trim() ?? `section ${index + 1}`;
+}
+
+function parseFiniteNumber(value: string | null): number | null {
+	if (!value?.trim()) return null;
+
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
 function assertResizableGroupContract(pageId: string, group: Element | null, groupName: string): string[] {
 	if (!group) return [`${pageId}: missing data-resizable-panel-group="${groupName}"`];
 
 	const violations: string[] = [];
+	const document = group.ownerDocument;
 	const separators = Array.from(group.querySelectorAll<HTMLElement>("[data-resize-separator]"));
 	const requiredAttributes = ["aria-controls", "aria-valuemin", "aria-valuemax", "aria-valuenow"] as const;
 
@@ -155,6 +239,35 @@ function assertResizableGroupContract(pageId: string, group: Element | null, gro
 			if (!separator.hasAttribute(attribute) || separator.getAttribute(attribute) === "") {
 				violations.push(`${label}: missing ${attribute}`);
 			}
+		}
+
+		const controls = separator.getAttribute("aria-controls")?.trim();
+		if (controls) {
+			for (const controlledId of controls.split(/\s+/)) {
+				if (!document.getElementById(controlledId)) {
+					violations.push(`${label}: aria-controls target "${controlledId}" does not exist`);
+				}
+			}
+		}
+
+		const min = parseFiniteNumber(separator.getAttribute("aria-valuemin"));
+		const max = parseFiniteNumber(separator.getAttribute("aria-valuemax"));
+		const now = parseFiniteNumber(separator.getAttribute("aria-valuenow"));
+
+		if (separator.hasAttribute("aria-valuemin") && min === null) {
+			violations.push(`${label}: aria-valuemin must be a finite number`);
+		}
+		if (separator.hasAttribute("aria-valuemax") && max === null) {
+			violations.push(`${label}: aria-valuemax must be a finite number`);
+		}
+		if (separator.hasAttribute("aria-valuenow") && now === null) {
+			violations.push(`${label}: aria-valuenow must be a finite number`);
+		}
+		if (min !== null && max !== null && min > max) {
+			violations.push(`${label}: aria-valuemin must be less than or equal to aria-valuemax`);
+		}
+		if (min !== null && max !== null && now !== null && (now < min || now > max)) {
+			violations.push(`${label}: aria-valuenow must be between aria-valuemin and aria-valuemax`);
 		}
 	});
 
@@ -181,11 +294,16 @@ describe("prototype interaction UX contracts", () => {
 			for (const item of railItems) {
 				const domain = item.dataset.railDomain ?? "";
 				const expectedLabel = railDomainSet.has(domain) ? railLabels[domain as keyof typeof railLabels] : undefined;
+				const expectedHref = railDomainSet.has(domain) ? railHrefs[domain as keyof typeof railHrefs] : undefined;
 				const label = item.getAttribute("aria-label");
 				const title = item.getAttribute("title");
+				const href = item.getAttribute("href");
 
 				if (item.tagName.toLowerCase() !== "a") {
 					violations.push(`${page.id}:${domain}: rail item must be an anchor, found <${item.tagName.toLowerCase()}>`);
+				}
+				if (expectedHref && href !== expectedHref) {
+					violations.push(`${page.id}:${domain}: expected href="${expectedHref}", found "${href ?? ""}"`);
 				}
 				if (expectedLabel && (label !== expectedLabel || title !== expectedLabel)) {
 					violations.push(
@@ -206,6 +324,12 @@ describe("prototype interaction UX contracts", () => {
 			const currentItems = railItems.filter((item) => item.getAttribute("aria-current") === "page");
 			if (currentItems.length !== 1) {
 				violations.push(`${page.id}: expected exactly one current rail item, found ${currentItems.length}`);
+			} else {
+				const pageDomain = getPageDomain(document, page);
+				const currentDomain = currentItems[0].dataset.railDomain ?? "";
+				if (pageDomain && currentDomain !== pageDomain) {
+					violations.push(`${page.id}: current rail domain expected "${pageDomain}", found "${currentDomain}"`);
+				}
 			}
 		}
 
@@ -286,9 +410,7 @@ describe("prototype interaction UX contracts", () => {
 
 			sections.forEach((section, index) => {
 				const priority = getCollapsePriority(section);
-				const label =
-					section.querySelector(".context-section-title, .inspector-section-title")?.textContent?.replace(/\s+/g, " ").trim() ??
-					`section ${index + 1}`;
+				const label = getContextSectionLabel(section, index);
 				const isDetails = section.tagName.toLowerCase() === "details";
 
 				if (!section.hasAttribute("data-collapse-priority")) {
@@ -311,15 +433,25 @@ describe("prototype interaction UX contracts", () => {
 				if (isDetails && priority === "L2" && !section.hasAttribute("open")) {
 					violations.push(`${page.id}:${label}: L2 details must be open by default`);
 				}
+				if (isDetails && (priority === "L2" || priority === "L3")) {
+					const summary = getDirectSummary(section);
+
+					if (!summary?.matches("summary.context-section-header")) {
+						violations.push(`${page.id}:${label}: ${priority} details must include direct summary.context-section-header`);
+					}
+					if (!summary?.querySelector(contextSectionTitleSelector)) {
+						violations.push(`${page.id}:${label}: ${priority} summary must include a section title`);
+					}
+					if (!summary?.querySelector(".collapse-count")) {
+						violations.push(`${page.id}:${label}: ${priority} summary must include .collapse-count`);
+					}
+				}
 				if (isDetails && priority === "L3") {
 					if (section.hasAttribute("open")) {
 						violations.push(`${page.id}:${label}: L3 details must be collapsed by default`);
 					}
 
 					const summary = getDirectSummary(section);
-					if (!summary?.querySelector(".collapse-count")) {
-						violations.push(`${page.id}:${label}: L3 summary must include .collapse-count`);
-					}
 					if (!summary?.querySelector(".collapse-summary")) {
 						violations.push(`${page.id}:${label}: L3 summary must include .collapse-summary`);
 					}
