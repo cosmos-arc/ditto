@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_app.process.quality.types import L3CheckResult
+from ditto_application.process.quality.types import L3CheckResult
 from pytest_mock import MockerFixture
 
 

@@ -28,7 +28,7 @@ class TestDatasetRegistry:
 
     def test_registry_has_index_basic(self) -> None:
         """验证 INGESTION_SPECS 包含 index_basic."""
-        from ditto_app.config import INGESTION_SPECS, TaskTier
+        from ditto_application.config import INGESTION_SPECS, TaskTier
         from ditto_data.models import Dataset
 
         assert Dataset.INDEX_BASIC in INGESTION_SPECS
@@ -38,7 +38,7 @@ class TestDatasetRegistry:
 
     def test_registry_has_index_daily(self) -> None:
         """验证 INGESTION_SPECS 包含 index_daily."""
-        from ditto_app.config import INGESTION_SPECS, TaskTier
+        from ditto_application.config import INGESTION_SPECS, TaskTier
         from ditto_data.models import Dataset
 
         assert Dataset.INDEX_DAILY in INGESTION_SPECS

@@ -5,9 +5,9 @@ Tests for create_ingestion_bundle context manager.
 """
 
 import pytest
-from ditto_app.process.ingestion.backfill_manager import BackfillManager
-from ditto_app.process.ingestion.retry_manager import RetryManager
-from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_application.process.ingestion.backfill_manager import BackfillManager
+from ditto_application.process.ingestion.retry_manager import RetryManager
+from ditto_application.query.metadata import MetadataQueryFacade
 from ditto_apps.registry import IngestionBundle, create_ingestion_bundle
 
 # 标记为串行执行，避免并行测试时数据库文件冲突

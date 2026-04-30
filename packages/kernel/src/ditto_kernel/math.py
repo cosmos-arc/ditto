@@ -2,7 +2,7 @@
 共享数学工具 — 跨层使用的纯计算函数.
 
 提供通用的统计计算函数（如 Pearson 相关系数），
-供 ditto_engine、ditto_app 等多层使用。
+供 ditto_engine、ditto_application 等多层使用。
 
 准入依据:
 - pearson_correlation 被 engine（replay）和 app（comparison）两个业务包消费

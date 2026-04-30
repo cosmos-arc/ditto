@@ -9,7 +9,7 @@ logic directly without the DI container.
 from __future__ import annotations
 
 import pytest
-from ditto_app.command.backtest import BacktestRunCommand, BacktestRunResult
+from ditto_application.command.backtest import BacktestRunCommand, BacktestRunResult
 from ditto_apps.api.errors import BadRequestError
 from ditto_apps.models.backtest import (
     BacktestRunTriggerResponse,
@@ -154,7 +154,10 @@ class TestBuildFlowParams:
 
     def test_basic_params_without_cost_config(self) -> None:
         """无 cost_config 时构建基本 flow 参数."""
-        from ditto_app.command.backtest import BacktestRunCommand, BacktestRunResult
+        from ditto_application.command.backtest import (
+            BacktestRunCommand,
+            BacktestRunResult,
+        )
         from ditto_apps.api.routes.backtest import _build_flow_params
 
         command = BacktestRunCommand(
@@ -180,7 +183,7 @@ class TestBuildFlowParams:
     def test_params_with_cost_config(self) -> None:
         """有 cost_config 时包含 cost_config dict."""
 
-        from ditto_app.command.backtest import (
+        from ditto_application.command.backtest import (
             BacktestRunCommand,
             BacktestRunResult,
             CostConfig,
@@ -210,7 +213,10 @@ class TestBuildFlowParams:
 
     def test_params_with_parameter_overrides(self) -> None:
         """parameter_overrides 正确传递."""
-        from ditto_app.command.backtest import BacktestRunCommand, BacktestRunResult
+        from ditto_application.command.backtest import (
+            BacktestRunCommand,
+            BacktestRunResult,
+        )
         from ditto_apps.api.routes.backtest import _build_flow_params
 
         command = BacktestRunCommand(

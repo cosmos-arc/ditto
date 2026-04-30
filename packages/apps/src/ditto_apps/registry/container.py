@@ -9,7 +9,7 @@ from dishka import (
     make_async_container,
     make_container,
 )
-from ditto_app.providers import get_app_providers
+from ditto_application.providers import get_app_providers
 from ditto_data.di import get_data_providers
 
 from .infra import get_infra_providers

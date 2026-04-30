@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 import polars as pl
 import typer
-from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_application.query.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 

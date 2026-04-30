@@ -21,22 +21,25 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_app.command.trade import (
+from ditto_application.command.trade import (
     RecordFillCommand,
     RecordFillHandler,
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
 )
-from ditto_app.execution_dto import (
+from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
     TradeIntent,
 )
-from ditto_app.query.comparison import ComparisonQueryFacade
-from ditto_app.query.comparison_math import ComparisonMetrics
-from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
-from ditto_app.query.signal import SignalQueryFacade
-from ditto_app.query.trade import TradeQueryFacade
+from ditto_application.query.comparison import ComparisonQueryFacade
+from ditto_application.query.comparison_math import ComparisonMetrics
+from ditto_application.query.portfolio_actual import (
+    PnlSummary,
+    PortfolioActualQueryFacade,
+)
+from ditto_application.query.signal import SignalQueryFacade
+from ditto_application.query.trade import TradeQueryFacade
 from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.deps import paginate, pagination_params

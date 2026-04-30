@@ -200,7 +200,9 @@ class TestEodFlowHappyPath:
 
         # 模拟 StrategyFacade
         mock_facade = mocker.MagicMock()
-        from ditto_app.process.execution.strategy_run_process import StrategyRunResult
+        from ditto_application.process.execution.strategy_run_process import (
+            StrategyRunResult,
+        )
 
         mock_facade.run_strategy_for_date_from_catalog.side_effect = [
             StrategyRunResult(
@@ -440,7 +442,9 @@ class TestEodFlowStrategyPartialFailure:
         mock_catalog.list_specs.return_value = [spec1, spec2]
 
         mock_facade = mocker.MagicMock()
-        from ditto_app.process.execution.strategy_run_process import StrategyRunResult
+        from ditto_application.process.execution.strategy_run_process import (
+            StrategyRunResult,
+        )
         from ditto_engine.alpha.models import TargetPortfolio
 
         # 第一个成功，第二个失败
@@ -530,7 +534,9 @@ class TestEodFlowMaterializationFailure:
         mock_catalog.list_specs.return_value = [spec]
 
         mock_facade = mocker.MagicMock()
-        from ditto_app.process.execution.strategy_run_process import StrategyRunResult
+        from ditto_application.process.execution.strategy_run_process import (
+            StrategyRunResult,
+        )
         from ditto_engine.alpha.models import TargetPortfolio
 
         mock_facade.run_strategy_for_date_from_catalog.return_value = StrategyRunResult(

@@ -103,7 +103,7 @@ unfixable = []
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "packages/apps/src/ditto_apps/services/derived/research.py" = ["S608"]
 # ResearchQuery.export() - 表名来自内部枚举，非用户输入
-"packages/app/src/ditto_app/query/research.py" = ["S608"]
+"packages/application/src/ditto_application/query/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
 "packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
@@ -269,7 +269,7 @@ extraPaths = [
     "packages/kernel/src",
     "packages/data/src",
     "packages/analytics/src",
-    "packages/app/src",
+    "packages/application/src",
     "packages/apps/src",
 ]
 
@@ -288,7 +288,7 @@ pythonpath = [
     "packages/kernel/src",
     "packages/data/src",
     "packages/analytics/src",
-    "packages/app/src",
+    "packages/application/src",
     "packages/apps/src",
 ]
 

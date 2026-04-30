@@ -20,19 +20,22 @@ from unittest.mock import MagicMock
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_app.command.trade import (
+from ditto_application.command.trade import (
     RecordFillHandler,
     UpdateIntentStatusHandler,
 )
-from ditto_app.execution_dto import (
+from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
     TradeIntent,
 )
-from ditto_app.query.comparison import ComparisonQueryFacade
-from ditto_app.query.portfolio_actual import PnlSummary, PortfolioActualQueryFacade
-from ditto_app.query.signal import SignalQueryFacade
-from ditto_app.query.trade import TradeQueryFacade
+from ditto_application.query.comparison import ComparisonQueryFacade
+from ditto_application.query.portfolio_actual import (
+    PnlSummary,
+    PortfolioActualQueryFacade,
+)
+from ditto_application.query.signal import SignalQueryFacade
+from ditto_application.query.trade import TradeQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.trade import router
 from ditto_apps.middleware import api_error_handler
@@ -346,7 +349,7 @@ class TestSignalIntentsByDate:
 @pytest.mark.integration
 class TestComparison:
     def test_returns_metrics(self, client: TC, mock_comparison_facade: MC) -> None:
-        from ditto_app.query.comparison_math import ComparisonMetrics
+        from ditto_application.query.comparison_math import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=0.15,

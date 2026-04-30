@@ -49,7 +49,7 @@ prefect = ">=3.4,<4"
 # ==========================================================
 [pypi-dependencies]
 # 本地包（editable 安装）
-ditto-app = { path = "packages/app", editable = true }
+ditto-application = { path = "packages/application", editable = true }
 ditto-data = { path = "packages/data", editable = true }
 ditto-engine = { path = "packages/engine", editable = true }
 ditto-platform = { path = "packages/platform", editable = true }

@@ -14,7 +14,7 @@ root_packages =
     ditto_data
     ditto_analytics
     ditto_engine
-    ditto_app
+    ditto_application
     ditto_apps
 
 # 不包含外部包
@@ -41,7 +41,7 @@ type = layers
 # the explicit forbidden contracts below.
 layers =
     ditto_apps
-    ditto_app
+    ditto_application
     ditto_engine
     ditto_data
     ditto_platform
@@ -58,7 +58,7 @@ forbidden_modules =
     ditto_engine.**
     ditto_data.**
     ditto_apps.**
-    ditto_app.**
+    ditto_application.**
     ditto_platform.**
     ditto_analytics.**
 
@@ -76,7 +76,7 @@ forbidden_modules =
     ditto_apps.**
     ditto_kernel.**
     ditto_analytics.**
-    ditto_app.**
+    ditto_application.**
 # PlatformError 继承 DittoError（全局异常根），这是跨层共享的合法依赖
 ignore_imports =
     ditto_platform.exceptions -> ditto_kernel.exceptions
@@ -93,7 +93,7 @@ source_modules =
 forbidden_modules =
     ditto_engine.**
     ditto_apps.**
-    ditto_app.**
+    ditto_application.**
     ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
@@ -113,7 +113,7 @@ ignore_imports =
 unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:analytics-must-not-depend-on-interfaces]
-name = Analytics must not depend on Apps
+name = Analytics must not depend on Applications
 type = forbidden
 source_modules =
     ditto_analytics.**
@@ -177,18 +177,18 @@ forbidden_modules =
     ditto_analytics.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Analytics 与 App 互斥：平行平面，互不依赖
-# App 通过 builders 层使用 Analytics（表达式编译/因子计算）
-# Analytics 禁止反向依赖 App
-# 注意：App → Analytics 方向由分层架构隐式允许（无对应 forbidden 合约）。
+# Analytics 与 Application 互斥：平行平面，互不依赖
+# Application 通过 builders 层使用 Analytics（表达式编译/因子计算）
+# Analytics 禁止反向依赖 Application
+# 注意：Application → Analytics 方向由分层架构隐式允许（无对应 forbidden 合约）。
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:analytics-no-app-dependency]
-name = Analytics must not depend on App
+name = Analytics must not depend on Application
 type = forbidden
 source_modules =
     ditto_analytics.**
 forbidden_modules =
-    ditto_app.**
+    ditto_application.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Apps 层边界：禁止直接依赖 Data 存储/运行时实现
@@ -209,7 +209,7 @@ allow_indirect_imports = true
 #
 # Composition Root 豁免：registry/** 是 DI 组装点，允许直接导入
 # Data services/quality 以完成 Provider 装配和 Context Bundle 构建。
-# 非registry代码必须通过 App 层或 DI 容器间接访问。
+# 非registry代码必须通过 Application 层或 DI 容器间接访问。
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:interfaces-service-isolation]
 name = Apps must not directly depend on Data services/models (tightening)
@@ -236,33 +236,33 @@ allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
-# App 层边界：禁止依赖 Apps 层
+# Application 层边界：禁止依赖 Apps 层
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:app-no-interfaces-import]
-name = App must not import Apps layer
+name = Application must not import Apps layer
 type = forbidden
 source_modules =
-    ditto_app.**
+    ditto_application.**
 forbidden_modules =
     ditto_apps.**
 
 # ═══════════════════════════════════════════════════════════════════
-# App → Platform 范围约束：允许 foundation + services，禁止 config
+# Application → Platform 范围约束：允许 foundation + services，禁止 config
 # config 加载由 Apps 层负责
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:app-platform-scope]
-name = App must not access ditto_platform.config
+name = Application must not access ditto_platform.config
 type = forbidden
 source_modules =
-    ditto_app.**
+    ditto_application.**
 forbidden_modules =
     ditto_platform.config.**
 ignore_imports =
-    ditto_app.** -> ditto_platform.foundation.**
-    ditto_app.** -> ditto_platform.services.**
+    ditto_application.** -> ditto_platform.foundation.**
+    ditto_application.** -> ditto_platform.services.**
 
 # ═══════════════════════════════════════════════════════════════════
-# R8 — App 内部互斥规则（Use Case 间职责隔离）
+# R8 — Application 内部互斥规则（Use Case 间职责隔离）
 # ═══════════════════════════════════════════════════════════════════
 # 矩阵：
 #   app.query     -X-> app.process, app.builders, app.command  (只读)
@@ -277,49 +277,49 @@ ignore_imports =
 name = R8: app.query must not import app.process
 type = forbidden
 source_modules =
-    ditto_app.query.**
+    ditto_application.query.**
 forbidden_modules =
-    ditto_app.process.**
+    ditto_application.process.**
 
 [importlinter:contract:r8-query-no-builders]
 name = R8: app.query must not import app.builders
 type = forbidden
 source_modules =
-    ditto_app.query.**
+    ditto_application.query.**
 forbidden_modules =
-    ditto_app.builders.**
+    ditto_application.builders.**
 
 [importlinter:contract:r8-builders-no-query]
 name = R8: app.builders must not import app.query
 type = forbidden
 source_modules =
-    ditto_app.builders.**
+    ditto_application.builders.**
 forbidden_modules =
-    ditto_app.query.**
+    ditto_application.query.**
 
 [importlinter:contract:r8-query-no-command]
 name = R8: app.query must not import app.command
 type = forbidden
 source_modules =
-    ditto_app.query.**
+    ditto_application.query.**
 forbidden_modules =
-    ditto_app.command.**
+    ditto_application.command.**
 
 [importlinter:contract:r8-command-no-query]
 name = R8: app.command must not import app.query
 type = forbidden
 source_modules =
-    ditto_app.command.**
+    ditto_application.command.**
 forbidden_modules =
-    ditto_app.query.**
+    ditto_application.query.**
 
 [importlinter:contract:r8-command-no-builders]
 name = R8: app.command must not import app.builders
 type = forbidden
 source_modules =
-    ditto_app.command.**
+    ditto_application.command.**
 forbidden_modules =
-    ditto_app.builders.**
+    ditto_application.builders.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Data 内部边界：storage 与 sources/models 的隔离
@@ -504,7 +504,7 @@ ancestors =
     ditto_data
     ditto_analytics
     ditto_engine
-    ditto_app
+    ditto_application
     ditto_apps
 depth = 10
 unmatched_ignore_imports_alerting = warn

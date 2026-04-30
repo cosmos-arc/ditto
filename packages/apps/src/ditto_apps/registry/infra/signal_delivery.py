@@ -8,8 +8,8 @@ SignalDelivery 组件注册 (DI Provider).
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_app.process.execution.delivery import DeliveryRouter
-from ditto_app.process.execution.ports import SignalDeliveryProtocol
+from ditto_application.process.execution.delivery import DeliveryRouter
+from ditto_application.process.execution.ports import SignalDeliveryProtocol
 from ditto_platform.services.notification.manager import AlertManager
 
 __all__ = ["SignalDeliveryProvider"]

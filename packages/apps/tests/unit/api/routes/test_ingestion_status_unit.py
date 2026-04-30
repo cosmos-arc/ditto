@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_app.query.ingestion_status import (
+from ditto_application.query.ingestion_status import (
     DatasetStatus,
     HistoryItem,
     IngestionStatusQueryFacade,

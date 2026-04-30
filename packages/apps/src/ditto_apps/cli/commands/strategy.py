@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import typer
-from ditto_app.config import DEFAULT_INITIAL_CASH
-from ditto_app.process.execution.backtest_process import BacktestServiceConfig
-from ditto_app.process.execution.strategy_run_process import (
+from ditto_application.config import DEFAULT_INITIAL_CASH
+from ditto_application.process.execution.backtest_process import BacktestServiceConfig
+from ditto_application.process.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunServiceConfig,
 )

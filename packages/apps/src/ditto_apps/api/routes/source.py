@@ -9,7 +9,7 @@ from typing import Annotated, Any
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_app.query.source import SourceQueryFacade
+from ditto_application.query.source import SourceQueryFacade
 from ditto_data.sources.protocols import MarketFetcher
 from ditto_platform.foundation import logger
 from fastapi import APIRouter, Depends, Path

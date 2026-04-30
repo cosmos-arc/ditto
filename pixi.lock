@@ -297,7 +297,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/59/172424b79f8cfd4b6d8a122b2193e6b8ad4b11f7159bb3b6f9b3191329bb/xxhash-3.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: ./packages/analytics
-      - pypi: ./packages/app
+      - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
@@ -558,7 +558,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/99/57/d849a8d3afa1f8f4bc6a831cd89f49f9706fbbad94d2975d6140a171988c/xxhash-3.7.0-cp313-cp313-win_amd64.whl
       - pypi: ./packages/analytics
-      - pypi: ./packages/app
+      - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
@@ -963,7 +963,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/65/59/172424b79f8cfd4b6d8a122b2193e6b8ad4b11f7159bb3b6f9b3191329bb/xxhash-3.7.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: ./packages/analytics
-      - pypi: ./packages/app
+      - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
@@ -1327,7 +1327,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/99/57/d849a8d3afa1f8f4bc6a831cd89f49f9706fbbad94d2975d6140a171988c/xxhash-3.7.0-cp313-cp313-win_amd64.whl
       - pypi: ./packages/analytics
-      - pypi: ./packages/app
+      - pypi: ./packages/application
       - pypi: ./packages/apps
       - pypi: ./packages/data
       - pypi: ./packages/engine
@@ -2405,10 +2405,10 @@ packages:
   - cachebox
   - orjson
   requires_python: '>=3.13'
-- pypi: ./packages/app
-  name: ditto-app
+- pypi: ./packages/application
+  name: ditto-application
   version: 0.1.0
-  sha256: 883204e5d41070d8bb80113d2c0cee8442cbbbef046b5248b556143070c36015
+  sha256: c349bdf6ec05df89aa3e3afadf9012ae3da075c790e445e0e0f0f79d47ac1c3d
   requires_dist:
   - ditto-kernel
   - ditto-data

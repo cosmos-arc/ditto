@@ -5,13 +5,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
-from ditto_app.process.materialization.orchestrator import (
+from ditto_application.process.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_app.process.materialization.publication_facade import (
+from ditto_application.process.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_app.query.derived import DerivedQueryFacade
+from ditto_application.query.derived import DerivedQueryFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.infra import NotificationProvider
 from ditto_data.di import (
@@ -71,7 +71,7 @@ class _GoldenNoneProvider(Provider):
 
 def _make_full_container():
     """构建包含 Data + App 层 Provider 的完整容器。"""
-    from ditto_app.providers import get_app_providers
+    from ditto_application.providers import get_app_providers
 
     return make_container(
         ConfigProvider(),

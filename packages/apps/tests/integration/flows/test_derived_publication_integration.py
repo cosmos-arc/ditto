@@ -20,13 +20,13 @@ from ditto_analytics.publication_safety import (
     CertificationStage,
     CompatibilityManifest,
 )
-from ditto_app.process.materialization.cascade_orchestrator import (
+from ditto_application.process.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
-from ditto_app.process.materialization.publication_facade import (
+from ditto_application.process.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_app.query.research import ResearchDatasetFacade
+from ditto_application.query.research import ResearchDatasetFacade
 from ditto_apps.jobs.flows.materialization import (
     certify_publication_flow,
     promote_publication_flow,
@@ -86,7 +86,7 @@ def _make_test_container():
 
 @contextmanager
 def _materialization_bundle_context():
-    from ditto_app.process.materialization.orchestrator import (
+    from ditto_application.process.materialization.orchestrator import (
         DerivedMaterializationOrchestrator,
     )
 
@@ -264,7 +264,7 @@ class TestDerivedPublicationIntegration:
 
         seed_container = _make_test_container()
         try:
-            from ditto_app.process.materialization.orchestrator import (
+            from ditto_application.process.materialization.orchestrator import (
                 DerivedMaterializationOrchestrator,
             )
 

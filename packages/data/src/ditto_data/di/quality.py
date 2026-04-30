@@ -20,7 +20,7 @@ class QualityProvider(Provider):
     Engine 层 DQ 组件 Provider.
 
     仅注册 Engine 层服务（DQSpec、QualityEngine），
-    App 层 QualityService 已迁入 ditto_app.providers。
+    App 层 QualityService 已迁入 ditto_application.providers。
     """
 
     scope = Scope.APP

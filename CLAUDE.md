@@ -64,10 +64,10 @@
 ### 架构原则
 ```
 依赖层级（从高到低）:
-  ditto_apps → ditto_app → ditto_engine → ditto_data → ditto_platform
+  ditto_apps → ditto_application → ditto_engine → ditto_data → ditto_platform
   ditto_apps → ditto_analytics → ditto_kernel
   ditto_apps → ditto_data → ditto_kernel, ditto_platform
-  ditto_app → ditto_analytics → ditto_kernel
+  ditto_application → ditto_analytics → ditto_kernel
 
 允许的跨层依赖:
   - apps 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
@@ -90,7 +90,7 @@
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
 - Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
-- App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
+- Application → [packages/application/CLAUDE.md](packages/application/CLAUDE.md)
 - Interfaces → [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md)
 
 架构心智模型以 diamond 为准：`data`、`analytics`、`engine` 是并列核心平面；
@@ -259,9 +259,9 @@ ditto/
 │   ├── kernel/       # 共享内核（零业务行为类型）
 │   ├── data/          # 数据访问层
 │   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
-│   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
+│   ├── application/  # 应用编排层（CQRS: query/process/command/builders）
 │   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
-├── interfaces/            # → 已迁移至 packages/apps/（唯一应用入口 API/CLI/Jobs + DI Composition Root）
+├── apps/                   # → 已迁移至 packages/apps/（唯一应用入口 API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

@@ -216,7 +216,7 @@ class TestPerPackageDomainRoots:
         assert issubclass(AnalyticsError, DittoError)
 
     def test_app_error_exists(self) -> None:
-        from ditto_app.exceptions import AppError
+        from ditto_application.exceptions import AppError
 
         assert issubclass(AppError, DittoError)
 
@@ -240,11 +240,13 @@ class TestPerPackageDomainRoots:
         assert issubclass(LateArrivalError, AnalyticsError)
 
     def test_app_orphans_use_domain_root(self) -> None:
-        from ditto_app.exceptions import AppError
-        from ditto_app.process.materialization.cascade_orchestrator import (
+        from ditto_application.exceptions import AppError
+        from ditto_application.process.materialization.cascade_orchestrator import (
             CascadeDepthExceededError,
         )
-        from ditto_app.process.materialization.types import MissingDependencyError
+        from ditto_application.process.materialization.types import (
+            MissingDependencyError,
+        )
 
         assert issubclass(CascadeDepthExceededError, AppError)
         assert issubclass(MissingDependencyError, AppError)

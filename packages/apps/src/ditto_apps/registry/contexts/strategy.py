@@ -3,7 +3,7 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from ditto_app.process.execution.strategy_run_process import StrategyFacade
+from ditto_application.process.execution.strategy_run_process import StrategyFacade
 from ditto_data.services.strategy.strategy_catalog_service import (
     StrategyCatalogService,
 )

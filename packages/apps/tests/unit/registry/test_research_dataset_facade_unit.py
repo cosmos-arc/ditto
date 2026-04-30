@@ -13,7 +13,7 @@ import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analytics.materialization.models import DerivedVersionStatus
 from ditto_analytics.research.domain import DatasetSnapshot, KnownAtPolicy
-from ditto_app.query.research import ResearchDatasetFacade
+from ditto_application.query.research import ResearchDatasetFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_data.di import (
     CapitalProvider,
@@ -58,7 +58,7 @@ def _sources_provider() -> Provider:
 
 
 def _make_container(*, monkeypatch, tmp_path: Path):
-    from ditto_app.providers_market import AppMarketQueryProvider
+    from ditto_application.providers_market import AppMarketQueryProvider
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
     monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())

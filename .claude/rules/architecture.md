@@ -45,7 +45,7 @@ paths:
 | **领域层** | `ditto_engine` | 业务决策:引擎、策略、回测、风险、质量 | DDD Domain Service |
 | **分析层** | `ditto_analytics` | 因子表达式编译、物化计划、因子计算、评估、研究 | Analysis Layer |
 | **数据服务层** | `ditto_data` | 统一查询:存储、数据源、领域感知的数据编排 | DDD Rich Repository |
-| **应用编排层** | `ditto_app` | Use Case 编排（CQRS: query/process/command/builders） | Application Layer |
+| **应用编排层** | `ditto_application` | Use Case 编排（CQRS: query/process/command/builders） | Application Layer |
 | **应用边界层** | `ditto_interfaces` | HTTP API/CLI/Jobs/DI Composition Root | Application Boundary |
 | **基础设施层** | `ditto_platform` | 技术设施:配置、日志、缓存、数据库连接池 | Technical Infrastructure |
 
@@ -55,16 +55,16 @@ paths:
 - Data → [packages/data/CLAUDE.md](../../packages/data/CLAUDE.md) | [pit.md](../../.claude/rules/pit.md)
 - Engine → [packages/engine/CLAUDE.md](../../packages/engine/CLAUDE.md)
 - Analytics → [packages/analytics/CLAUDE.md](../../packages/analytics/CLAUDE.md)
-- App → [packages/app/CLAUDE.md](../../packages/app/CLAUDE.md)
+- App → [packages/application/CLAUDE.md](../../packages/application/CLAUDE.md)
 - Interfaces → [interfaces/CLAUDE.md](../../interfaces/CLAUDE.md)
 
 ### 依赖规则
 
 ```
-ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_platform
+ditto_interfaces → ditto_application → ditto_engine → ditto_data → ditto_platform
 ditto_interfaces → ditto_analytics → ditto_kernel
 ditto_interfaces → ditto_data → ditto_kernel, ditto_platform
-ditto_app → ditto_engine, ditto_data, ditto_analytics, ditto_kernel, ditto_platform
+ditto_application → ditto_engine, ditto_data, ditto_analytics, ditto_kernel, ditto_platform
 ditto_engine      → ditto_kernel                                            ✅
 ditto_analytics   → ditto_kernel, ditto_data.errors, ditto_platform.foundation ✅
 ditto_data        → ditto_kernel, ditto_platform                              ✅
@@ -75,7 +75,7 @@ ditto_data        → ditto_engine                                            �
 ditto_data        → ditto_interfaces                                        ❌
 ditto_analytics   → ditto_engine                                            ❌
 ditto_analytics   → ditto_interfaces                                        ❌
-ditto_analytics   → ditto_app                                               ❌
+ditto_analytics   → ditto_application                                               ❌
 ditto_platform       → 其他层                                                  ❌
 ```
 
@@ -119,7 +119,7 @@ lint-imports --contract acyclic-packages       # 单独检查循环依赖
 **正确的访问模式**:
 ```python
 # ✅ 正确: Interfaces 通过 App 层调用
-from ditto_app.query import MarketQueryFacade
+from ditto_application.query import MarketQueryFacade
 bars = facade.get_bars(query)
 
 # ✅ 正确: registry 负责 DI 装配（Composition Root）
@@ -232,7 +232,7 @@ from ditto_kernel.instrument import AssetClass
 
 **设计依据**：Data 是 Rich Repository 模式的实现。Eric Evans 定义 Repository 为"mediates between the domain and data mapping layers, acting like an in-memory domain object collection" — 明确允许 Repository 包含查找逻辑和数据转换。
 
-#### ditto_app（应用编排层 — CQRS）
+#### ditto_application（应用编排层 — CQRS）
 
 **做什么**：Use Case 编排，协调 Engine（领域计算）+ Data（数据服务）。
 
@@ -285,7 +285,7 @@ from ditto_kernel.instrument import AssetClass
 
 5. 是应用编排或工作流协调？
    （组合 Engine +Data、DTO 映射、CQRS）
-   YES → ditto_app
+   YES → ditto_application
 
 6. 是应用入口（API/CLI/Jobs/DI 装配）？
    YES → ditto_interfaces
@@ -407,7 +407,7 @@ def get_source(name: str) -> DataSource:
 |------|------|------|
 | **Domain** | `packages/data/src/ditto_data/quality/` | 检查规则算法（OHLC、涨跌停、成交量异常） |
 | **Data Service** | `packages/data/` | DQ 结果持久化、数据质量元数据管理 |
-| **Application** | `packages/app/src/ditto_app/process/` | 编排 dq 检查流程 |
+| **Application** | `packages/application/src/ditto_application/process/` | 编排 dq 检查流程 |
 
 **关键点**：
 - ✅ dq 是量化业务规则（如 OHLC 一致性是金融知识），不是通用技术约束
@@ -421,7 +421,7 @@ def get_source(name: str) -> DataSource:
 | **Domain** | `packages/engine/src/ditto_engine/alpha/` | 因子表达式编译、物化计划 |
 | **Analysis** | `packages/analytics/` | 因子表达式编译、评估指标、研究数据集 |
 | **Data Service** | `packages/data/` | 因子数据查询、存储 |
-| **Application** | `packages/app/src/ditto_app/query/` | 编排计算流程 |
+| **Application** | `packages/application/src/ditto_application/query/` | 编排计算流程 |
 
 **关键点**：
 - 表达式编译在 Analytics（知识密集分析计算）
@@ -433,7 +433,7 @@ def get_source(name: str) -> DataSource:
 | 层级 | 路径 | 职责 |
 |------|------|------|
 | **Domain** | `packages/engine/src/ditto_engine/backtest/` | 风险检查（PreTrade/PostTrade） |
-| **Application** | `packages/app/src/ditto_app/process/` | 风险编排（注入到回测流程） |
+| **Application** | `packages/application/src/ditto_application/process/` | 风险编排（注入到回测流程） |
 | **Data Service** | `packages/data/` | 风险审计记录持久化 |
 
 #### Alpha（Alpha 决策层，原 Strategy）
@@ -441,7 +441,7 @@ def get_source(name: str) -> DataSource:
 | 层级 | 路径 | 职责 |
 |------|------|------|
 | **Domain** | `packages/engine/src/ditto_engine/alpha/` | Alpha Pipeline、信号生成、模板 |
-| **Application** | `packages/app/src/ditto_app/process/` | Alpha 运行编排、输入组装、结果持久化 |
+| **Application** | `packages/application/src/ditto_application/process/` | Alpha 运行编排、输入组装、结果持久化 |
 | **Data Service** | `packages/data/` | Alpha 定义存储、运行记录存储、产物持久化 |
 
 #### Execution（执行）
@@ -449,7 +449,7 @@ def get_source(name: str) -> DataSource:
 | 层级 | 路径 | 职责 |
 |------|------|------|
 | **Domain** | `packages/engine/src/ditto_engine/execution/` | 执行计划、撮合模型、交易规则 |
-| **Application** | `packages/app/src/ditto_app/process/` | 执行编排（注入到回测流程） |
+| **Application** | `packages/application/src/ditto_application/process/` | 执行编排（注入到回测流程） |
 | **Data Service** | `packages/data/` | 执行审计记录持久化 |
 
 ### 实施检查清单
@@ -462,7 +462,7 @@ def get_source(name: str) -> DataSource:
 | 是业务决策或领域行为？ | ditto_engine | 继续下一个问题 |
 | 是分析计算（编译、因子、评估）？ | ditto_analytics | 继续下一个问题 |
 | 是数据查询、存储或数据编排？ | ditto_data | 继续下一个问题 |
-| 是应用编排或工作流？ | ditto_app | 继续下一个问题 |
+| 是应用编排或工作流？ | ditto_application | 继续下一个问题 |
 | 是应用入口（API/CLI/Jobs/DI）？ | ditto_interfaces | 继续下一个问题 |
 | 是技术基础设施？ | ditto_platform | 重新审视设计 |
 
@@ -476,10 +476,10 @@ def get_source(name: str) -> DataSource:
 
 ## R8 App 内部互斥矩阵
 
-ditto_app 内部按 CQRS 职责划分为 4 个子模块，通过 importlinter R8 规则强制互斥：
+ditto_application 内部按 CQRS 职责划分为 4 个子模块，通过 importlinter R8 规则强制互斥：
 
 ```
-ditto_app/
+ditto_application/
 ├── query/       # 只读查询（零写入）
 ├── process/     # Process Manager（有状态长流程，按能力域分 ingestion/materialization/execution/quality 子包）
 ├── command/     # Command DTO + Handler（原子写操作）

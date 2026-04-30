@@ -17,12 +17,12 @@ from unittest.mock import MagicMock
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_app.command.backtest import (
+from ditto_application.command.backtest import (
     BacktestRunCommand,
     BacktestRunHandler,
     CostConfig,
 )
-from ditto_app.process.execution.strategy_types import RunLifecycleService
+from ditto_application.process.execution.strategy_types import RunLifecycleService
 from ditto_apps.api.routes.backtest import router
 from ditto_apps.models.backtest import (
     CostConfigRequest,

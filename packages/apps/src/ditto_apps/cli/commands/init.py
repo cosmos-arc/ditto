@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from ditto_app.config import DataStoreSettings
+from ditto_application.config import DataStoreSettings
 from ditto_platform.foundation.config import (
     ConfigInitCoordinator,
     ConfigLoader,

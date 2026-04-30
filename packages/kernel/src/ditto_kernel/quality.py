@@ -2,7 +2,7 @@
 数据质量值对象 — 跨层共享的 DQ 类型定义.
 
 提供 DQLevel、DQSeverity、DQIssue、DQResult 等 frozen dataclass，
-供 ditto_data（检查引擎）、ditto_app（编排流程）、ditto_apps（任务）使用。
+供 ditto_data（检查引擎）、ditto_application（编排流程）、ditto_apps（任务）使用。
 
 准入依据:
 - DQIssue/DQResult 被 data + app + interfaces 三层使用

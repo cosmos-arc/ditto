@@ -3,14 +3,14 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from ditto_app.command.quality_check import CheckDataQualityHandler
-from ditto_app.process.ingestion.backfill_manager import BackfillManager
-from ditto_app.process.ingestion.coordinator_factory import (
+from ditto_application.command.quality_check import CheckDataQualityHandler
+from ditto_application.process.ingestion.backfill_manager import BackfillManager
+from ditto_application.process.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
 )
-from ditto_app.process.ingestion.retry_manager import RetryManager
-from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_application.process.ingestion.retry_manager import RetryManager
+from ditto_application.query.metadata import MetadataQueryFacade
 from ditto_data.ingestion.freeze_service import FreezeService
 from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
 from ditto_data.ingestion.ingestion_log_service import IngestionLogService

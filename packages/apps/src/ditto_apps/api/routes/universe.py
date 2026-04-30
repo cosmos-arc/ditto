@@ -17,7 +17,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_app.command.universe import (
+from ditto_application.command.universe import (
     CreateCustomUniverseCommand,
     CreateCustomUniverseHandler,
     DeleteCustomUniverseCommand,
@@ -25,7 +25,7 @@ from ditto_app.command.universe import (
     UpdateCustomUniverseCommand,
     UpdateCustomUniverseHandler,
 )
-from ditto_app.query.universe import UniverseQueryFacade
+from ditto_application.query.universe import UniverseQueryFacade
 from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.deps import paginate, pagination_params

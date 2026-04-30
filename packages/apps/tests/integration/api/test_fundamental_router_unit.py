@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_app.query.fundamental import FundamentalQueryFacade
-from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_application.query.fundamental import FundamentalQueryFacade
+from ditto_application.query.metadata import MetadataQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.fundamental import router
 from ditto_apps.middleware import api_error_handler

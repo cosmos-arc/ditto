@@ -19,12 +19,12 @@ from __future__ import annotations
 from itertools import chain
 from typing import Any, cast
 
-from ditto_app.config import (
+from ditto_application.config import (
     TaskTier,
     get_datasets_by_tier,
     get_parallel_datasets,
 )
-from ditto_app.process.ingestion.result_handler import count_results
+from ditto_application.process.ingestion.result_handler import count_results
 from ditto_data.models import Dataset
 from prefect import flow, task
 from prefect.futures import PrefectFuture

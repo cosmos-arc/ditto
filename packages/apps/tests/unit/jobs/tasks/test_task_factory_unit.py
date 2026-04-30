@@ -6,7 +6,7 @@ The factories are lightweight wrappers that delegate to IngestionCoordinator.
 """
 
 import pytest
-from ditto_app.config import INGESTION_SPECS, TaskTier
+from ditto_application.config import INGESTION_SPECS, TaskTier
 from ditto_apps.jobs.tasks import (
     create_ingest_task_t1_adj,
     create_ingest_task_t1_bars,

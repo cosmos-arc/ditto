@@ -20,7 +20,7 @@ class DerivedProvider(Provider):
     Data 层 Derived 基础设施 Provider.
 
     仅注册 Data 层服务，App 层服务（Facade/Orchestrator）
-    已迁入 ditto_app.providers。
+    已迁入 ditto_application.providers。
     """
 
     scope = Scope.APP

@@ -6,17 +6,17 @@ from dataclasses import asdict
 from unittest.mock import MagicMock
 
 from dishka import Container, Provider, Scope, make_container, provide
-from ditto_app.builders import (
+from ditto_application.builders import (
     BacktestRuntimeBuilder,
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_app.process.execution.backtest_process import (
+from ditto_application.process.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
 )
-from ditto_app.process.execution.strategy_input import StrategyInputAssembler
-from ditto_app.process.execution.strategy_run_process import (
+from ditto_application.process.execution.strategy_input import StrategyInputAssembler
+from ditto_application.process.execution.strategy_run_process import (
     StrategyFacade,
     StrategyRunMode,
     StrategyRunService,
@@ -78,7 +78,7 @@ def _strategy_runtime_deps_provider() -> Provider:
 
 
 def _make_test_container() -> Container:
-    from ditto_app.providers import AppBuilderFactory
+    from ditto_application.providers import AppBuilderFactory
     from ditto_data.di import QualityProvider
 
     return make_container(

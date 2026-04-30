@@ -8,8 +8,8 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_app.query.fundamental import FundamentalQueryFacade
-from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_application.query.fundamental import FundamentalQueryFacade
+from ditto_application.query.metadata import MetadataQueryFacade
 from fastapi import APIRouter, Depends
 
 from ditto_apps.api.errors import DateRangeError, FutureDateError

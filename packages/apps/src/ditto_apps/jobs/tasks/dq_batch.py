@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_app.process.quality import QualityPatrolService
-from ditto_app.query.market import MarketQueryFacade
-from ditto_app.query.metadata import MetadataQueryFacade
+from ditto_application.process.quality import QualityPatrolService
+from ditto_application.query.market import MarketQueryFacade
+from ditto_application.query.metadata import MetadataQueryFacade
 from ditto_data.models import Dataset
 from ditto_kernel.quality import DQIssue
 from ditto_platform.foundation import Metrics, logger

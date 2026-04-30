@@ -7,17 +7,17 @@ PENDING→RUNNING→COMPLETED/FAILED，支持自动重试。
 
 from __future__ import annotations
 
-from ditto_app.command.backtest import CostConfig
-from ditto_app.config import DEFAULT_INITIAL_CASH
-from ditto_app.process.execution.backtest_process import (
+from ditto_application.command.backtest import CostConfig
+from ditto_application.config import DEFAULT_INITIAL_CASH
+from ditto_application.process.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_app.process.execution.fee_override import (
+from ditto_application.process.execution.fee_override import (
     build_fee_model,
     build_slippage_model,
 )
-from ditto_app.query.artifact_utils import compute_total_return
+from ditto_application.query.artifact_utils import compute_total_return
 from ditto_kernel.strategy import ImpactModel, RunStatus
 from prefect import flow
 

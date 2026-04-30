@@ -4,7 +4,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 import typer
-from ditto_app.query.macro import MacroQueryFacade
+from ditto_application.query.macro import MacroQueryFacade
 from rich.console import Console
 from rich.table import Table
 

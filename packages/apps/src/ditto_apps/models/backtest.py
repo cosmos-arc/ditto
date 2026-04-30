@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 import orjson
-from ditto_app.config import DEFAULT_INITIAL_CASH
+from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_kernel.strategy import ImpactModel
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
