@@ -135,6 +135,15 @@ function hasFixedCanvasException(css: string, index: number): boolean {
 	return /fixed canvas exception|fixed-canvas-exception/i.test(lines);
 }
 
+function declarationHasNonNoneValue(body: string, property: "box-shadow" | "outline"): boolean {
+	const declaration = new RegExp(`${property}\\s*:\\s*([^;]+)`, "gi");
+
+	return [...body.matchAll(declaration)].some((match) => {
+		const value = match[1].trim();
+		return !/^none(?:\s*!important)?$/i.test(value);
+	});
+}
+
 function readPrototypeCssSources(): CssSource[] {
 	return [
 		{ label: "shared/fonts.css", css: readFileSync(prototypeFontsCss, "utf8") },
@@ -1139,8 +1148,11 @@ describe("prototype design consistency", () => {
 				}
 			}
 
-			for (const match of css.matchAll(/transition\s*:\s*all(?:\s|;)/gi)) {
-				violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
+			for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
+				const transitionValue = match[1];
+				if (transitionValue.split(",").some((item) => /^all(?:\s|$)/i.test(item.trim()))) {
+					violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
+				}
 			}
 
 			for (const match of css.matchAll(/font-size\s*:\s*9px\b/gi)) {
@@ -1152,9 +1164,10 @@ describe("prototype design consistency", () => {
 				const body = rule[2];
 				if (!/outline\s*:\s*none\b/i.test(body)) continue;
 
-				const bodyWithoutOutlineNone = body.replace(/outline\s*:\s*none\s*;?/gi, "");
+				const bodyWithoutOutlineNone = body.replace(/outline\s*:\s*none(?:\s*!important)?\s*;?/gi, "");
 				const hasReplacementFocusCue =
-					/box-shadow\s*:/i.test(body) || /outline\s*:\s*(?!none\b)[^;]+/i.test(bodyWithoutOutlineNone);
+					declarationHasNonNoneValue(body, "box-shadow") ||
+					declarationHasNonNoneValue(bodyWithoutOutlineNone, "outline");
 				if (!hasReplacementFocusCue) {
 					violations.push(`${source.label}:${getLineNumber(css, rule.index)}:outline-none:${selector}`);
 				}

@@ -555,11 +555,15 @@ describe("prototype interaction UX contracts", () => {
 			const panels = Array.from(document.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
 			const tabsById = new Map(tabs.flatMap((tab) => (tab.id ? [[tab.id, tab]] : [])));
 			const controllingTabIdByPanelId = new Map<string, string>();
+			const controllingTabLabelsByPanelId = new Map<string, string[]>();
 
 			tabs.forEach((tab, index) => {
 				const label = `${page.id}:tab ${index + 1}`;
 				const controls = tab.getAttribute("aria-controls")?.trim() ?? "";
 
+				if (!tab.id) {
+					violations.push(`${label}:missing-id`);
+				}
 				if (!tab.hasAttribute("aria-selected")) {
 					violations.push(`${label}:missing-aria-selected`);
 				}
@@ -567,8 +571,12 @@ describe("prototype interaction UX contracts", () => {
 					violations.push(`${label}:missing-aria-controls`);
 					return;
 				}
-				if (!tab.id) {
-					violations.push(`${label}:missing-id-for-aria-controls:${controls}`);
+
+				const controllingTabLabels = controllingTabLabelsByPanelId.get(controls) ?? [];
+				controllingTabLabels.push(tab.id || label);
+				controllingTabLabelsByPanelId.set(controls, controllingTabLabels);
+				if (controllingTabLabels.length > 1) {
+					violations.push(`${page.id}:tabpanel:${controls}:duplicate-controlling-tabs:${controllingTabLabels.join(",")}`);
 				}
 
 				const panel = document.getElementById(controls);
@@ -591,10 +599,19 @@ describe("prototype interaction UX contracts", () => {
 				const labelledByTab = labelledByIds.some((id) => tabsById.has(id));
 				const controllingTabId = panel.id ? controllingTabIdByPanelId.get(panel.id) : undefined;
 
+				if (!panel.id) {
+					violations.push(`${label}:missing-id`);
+				}
 				if (!labelledBy) {
 					violations.push(`${label}:missing-aria-labelledby`);
 				} else if (!labelledByTab) {
 					violations.push(`${label}:aria-labelledby-not-tab:${labelledBy}`);
+				}
+				if (panel.id && !controllingTabId) {
+					violations.push(`${label}:orphan-tabpanel:${panel.id}`);
+				}
+				if (controllingTabId && !tabsById.has(controllingTabId)) {
+					violations.push(`${label}:controlling-tab-not-found:${controllingTabId}`);
 				}
 				if (controllingTabId && !labelledByIds.includes(controllingTabId)) {
 					violations.push(`${label}:aria-labelledby-missing-controlling-tab:${controllingTabId}`);
