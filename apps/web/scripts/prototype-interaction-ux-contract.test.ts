@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { JSDOM } from "jsdom";
+import { chromium } from "playwright";
 import { describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
@@ -34,6 +35,7 @@ const bottomTrayUiByState: Record<(typeof bottomTrayStates)[number], { ariaExpan
 	peek: { ariaExpanded: "true", symbol: "▴" },
 	expanded: { ariaExpanded: "true", symbol: "—" },
 };
+const playwrightTestTimeoutMs = 15_000;
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
 	"cross-market": "markets",
@@ -146,6 +148,17 @@ function readPrototypeDocument(page: ManifestPage): Document {
 	const document = new JSDOM(readFileSync(path, "utf8")).window.document;
 	prototypeDocumentCache.set(path, document);
 	return document;
+}
+
+function getActivePageById(pageId: string): ManifestPage {
+	const page = activePages().find((candidate) => candidate.id === pageId);
+	if (!page) throw new Error(`${pageId}: expected active prototype page`);
+
+	return page;
+}
+
+function getPrototypeUrl(page: ManifestPage): string {
+	return `file://${join(prototypesDir, page.file)}`;
 }
 
 function readSharedInteractionsScript(): string {
@@ -410,6 +423,62 @@ function assertResizableGroupContract(pageId: string, group: Element | null, gro
 	});
 
 	return violations;
+}
+
+async function readBottomTrayStatusMetrics(page: import("playwright").Page) {
+	return page.$eval("[data-bottom-tray]", (tray) => {
+		const toggle = tray.querySelector<HTMLElement>("[data-bottom-tray-toggle]");
+		const contentId = toggle?.getAttribute("aria-controls") ?? "";
+		const content = contentId ? document.getElementById(contentId) : null;
+		if (!content) throw new Error(`missing bottom tray content "${contentId}"`);
+
+		const trayRect = tray.getBoundingClientRect();
+		const contentRect = content.getBoundingClientRect();
+		const trayStyle = getComputedStyle(tray);
+		const contentStyle = getComputedStyle(content);
+
+		return {
+			state: tray.getAttribute("data-bottom-tray-state") ?? "",
+			height: trayRect.height,
+			flexBasis: trayStyle.flexBasis,
+			overflow: trayStyle.overflow,
+			contentBottom: contentRect.bottom,
+			contentClientHeight: content.clientHeight,
+			contentOverflow: contentStyle.overflow,
+			contentScrollHeight: content.scrollHeight,
+			trayBottom: trayRect.bottom,
+		};
+	});
+}
+
+async function cycleBottomTrayTo(page: import("playwright").Page, state: BottomTrayState) {
+	for (let attempt = 0; attempt < bottomTrayStates.length; attempt++) {
+		const current = await page.$eval("[data-bottom-tray]", (tray) => tray.getAttribute("data-bottom-tray-state"));
+		if (current === state) return;
+
+		await page.click("[data-bottom-tray-toggle]");
+	}
+
+	throw new Error(`bottom tray did not reach ${state}`);
+}
+
+async function waitForExpandedStatusBarLayout(page: import("playwright").Page, collapsedHeight: number) {
+	await page.waitForFunction(
+		(height) => {
+			const tray = document.querySelector<HTMLElement>("[data-bottom-tray]");
+			const toggle = tray?.querySelector<HTMLElement>("[data-bottom-tray-toggle]");
+			const contentId = toggle?.getAttribute("aria-controls") ?? "";
+			const content = contentId ? document.getElementById(contentId) : null;
+
+			return (
+				tray?.getAttribute("data-bottom-tray-state") === "expanded" &&
+				tray.getBoundingClientRect().height > height &&
+				Boolean(content && content.clientHeight + 1 >= content.scrollHeight)
+			);
+		},
+		collapsedHeight,
+		{ timeout: 1_500 },
+	);
 }
 
 describe("prototype interaction UX contracts", () => {
@@ -711,6 +780,73 @@ describe("prototype interaction UX contracts", () => {
 			expect(labels.size, `${pageId}: aria-label should communicate each state transition`).toBe(3);
 		}
 	});
+
+	it("keeps strategy log tab visibility isolated from bottom tray visibility", () => {
+		const document = readInteractivePrototypeDocument(getActivePageById("strategy-studio"));
+		const tray = document.querySelector<HTMLElement>("[data-bottom-tray]");
+		const toggle = tray?.querySelector<HTMLButtonElement>("[data-bottom-tray-toggle]");
+		const validationPanel = document.querySelector<HTMLElement>('[data-tab-panel="validation"]');
+		const dryRunPanel = document.querySelector<HTMLElement>('[data-tab-panel="dry-run"]');
+		const dryRunTab = document.querySelector<HTMLElement>('[data-log-tab="dry-run"]');
+
+		expect(tray).not.toBeNull();
+		expect(toggle).not.toBeNull();
+		expect(validationPanel).not.toBeNull();
+		expect(dryRunPanel).not.toBeNull();
+		expect(dryRunTab).not.toBeNull();
+		if (!tray || !toggle || !validationPanel || !dryRunPanel || !dryRunTab) return;
+
+		dryRunTab.click();
+		expect(validationPanel.getAttribute("aria-hidden")).toBe("true");
+		expect(validationPanel.style.display).toBe("none");
+		expect(dryRunPanel.getAttribute("aria-hidden")).toBe("false");
+		expect(dryRunPanel.style.display).not.toBe("none");
+
+		toggle.click();
+		expect(tray.getAttribute("data-bottom-tray-state")).toBe("expanded");
+		expect(validationPanel.getAttribute("aria-hidden")).toBe("true");
+		expect(validationPanel.style.display).toBe("none");
+		expect(dryRunPanel.getAttribute("aria-hidden")).toBe("false");
+		expect(dryRunPanel.style.display).not.toBe("none");
+
+		toggle.click();
+		expect(tray.getAttribute("data-bottom-tray-state")).toBe("collapsed");
+		expect(validationPanel.getAttribute("aria-hidden")).toBe("true");
+		expect(dryRunPanel.getAttribute("aria-hidden")).toBe("false");
+	});
+
+	it("lets status-bar bottom trays expand without clipping content in browser layout", async () => {
+		const browser = await chromium.launch({ channel: "chromium" });
+
+		try {
+			for (const pageId of ["agent-console", "trading-overview"] as const) {
+				const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
+
+				try {
+					await page.goto(getPrototypeUrl(getActivePageById(pageId)), { waitUntil: "load" });
+					await cycleBottomTrayTo(page, "collapsed");
+					const collapsed = await readBottomTrayStatusMetrics(page);
+
+					await cycleBottomTrayTo(page, "expanded");
+					await waitForExpandedStatusBarLayout(page, collapsed.height);
+					const expanded = await readBottomTrayStatusMetrics(page);
+
+					expect(expanded.state, `${pageId}: expanded state`).toBe("expanded");
+					expect(expanded.height, `${pageId}: expanded height should exceed collapsed height`).toBeGreaterThan(collapsed.height);
+					expect(expanded.flexBasis, `${pageId}: expanded flex-basis`).toBe("auto");
+					expect(expanded.overflow, `${pageId}: expanded overflow`).not.toBe("hidden");
+					expect(expanded.contentScrollHeight, `${pageId}: content scroll height`).toBeLessThanOrEqual(
+						expanded.contentClientHeight + 1,
+					);
+					expect(expanded.contentBottom, `${pageId}: content bottom inside tray`).toBeLessThanOrEqual(expanded.trayBottom + 1);
+				} finally {
+					await page.close();
+				}
+			}
+		} finally {
+			await browser.close();
+		}
+	}, playwrightTestTimeoutMs);
 
 	it("exposes P0 resizable panel groups with accessible separators", () => {
 		const violations: string[] = [];

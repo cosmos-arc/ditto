@@ -2774,70 +2774,72 @@
           通过
         </span>
       </div>
-      <div class="logs-body bottom-tray-content" id="strategy-bottom-tray-content" data-bottom-tray-content data-tab-panel="validation" aria-hidden="false">
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:32:08</span>
-          <span class="log-level success">PASS</span>
-          <span class="log-msg">策略校验完成，共检查 12 项，通过 11 项，警告 1 项</span>
+      <div class="bottom-tray-content" id="strategy-bottom-tray-content" data-bottom-tray-content aria-hidden="false">
+        <div class="logs-body" data-tab-panel="validation" aria-hidden="false">
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:08</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">策略校验完成，共检查 12 项，通过 11 项，警告 1 项</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:07</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">因子权重归一化检查 — 动量: 45%, 波动率: 30%, 估值: 25% → 合计 100%</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:06</span>
+            <span class="log-level warn">WARN</span>
+            <span class="log-msg">估值因子数据新鲜度 — 最后更新: 2026-03-26，距今 3 天（建议 ≤ 1 天）</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:05</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">股票池验证 — 沪深300成分股: 300 只，ST 标记: 0 只，停牌: 3 只（已排除）</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:04</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">风险约束检查 — 行业偏离度: 3.2%（限制 5%），单股权重: 4.8%（限制 10%）</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:32:03</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-msg">预处理管道校验 — 去极值: MAD, 标准化: Z-Score, 中性化: 行业中性</span>
+          </div>
         </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:32:07</span>
-          <span class="log-level info">INFO</span>
-          <span class="log-msg">因子权重归一化检查 — 动量: 45%, 波动率: 30%, 估值: 25% → 合计 100%</span>
+        <div class="logs-body" data-tab-panel="dry-run" aria-hidden="true">
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:34:12</span>
+            <span class="log-level info">DRY</span>
+            <span class="log-msg">Dry Run 启动 — 样本窗口 2026-03-01 至 2026-03-29，股票池沪深300</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:34:13</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">订单预演完成 — 目标持仓 86 只，预计换手 18.6%，现金留存 2.4%</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:34:14</span>
+            <span class="log-level warn">WARN</span>
+            <span class="log-msg">流动性检查 — 2 只股票成交额低于阈值，已降低目标权重</span>
+          </div>
         </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:32:06</span>
-          <span class="log-level warn">WARN</span>
-          <span class="log-msg">估值因子数据新鲜度 — 最后更新: 2026-03-26，距今 3 天（建议 ≤ 1 天）</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:32:05</span>
-          <span class="log-level info">INFO</span>
-          <span class="log-msg">股票池验证 — 沪深300成分股: 300 只，ST 标记: 0 只，停牌: 3 只（已排除）</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:32:04</span>
-          <span class="log-level info">INFO</span>
-          <span class="log-msg">风险约束检查 — 行业偏离度: 3.2%（限制 5%），单股权重: 4.8%（限制 10%）</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:32:03</span>
-          <span class="log-level info">INFO</span>
-          <span class="log-msg">预处理管道校验 — 去极值: MAD, 标准化: Z-Score, 中性化: 行业中性</span>
-        </div>
-      </div>
-      <div class="logs-body" data-tab-panel="dry-run" aria-hidden="true">
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:34:12</span>
-          <span class="log-level info">DRY</span>
-          <span class="log-msg">Dry Run 启动 — 样本窗口 2026-03-01 至 2026-03-29，股票池沪深300</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:34:13</span>
-          <span class="log-level success">PASS</span>
-          <span class="log-msg">订单预演完成 — 目标持仓 86 只，预计换手 18.6%，现金留存 2.4%</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:34:14</span>
-          <span class="log-level warn">WARN</span>
-          <span class="log-msg">流动性检查 — 2 只股票成交额低于阈值，已降低目标权重</span>
-        </div>
-      </div>
-      <div class="logs-body" data-tab-panel="compile" aria-hidden="true">
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:35:01</span>
-          <span class="log-level info">BUILD</span>
-          <span class="log-msg">编译策略模块 strategy.py — Python 3.12 sandbox</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:35:02</span>
-          <span class="log-level success">PASS</span>
-          <span class="log-msg">类型签名检查通过 — factors(), preprocess(), risk_rules(), rebalance()</span>
-        </div>
-        <div class="log-line">
-          <span class="log-time tabular-nums">14:35:03</span>
-          <span class="log-level success">PASS</span>
-          <span class="log-msg">编译日志完成 — 无语法错误，无未绑定变量</span>
+        <div class="logs-body" data-tab-panel="compile" aria-hidden="true">
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:35:01</span>
+            <span class="log-level info">BUILD</span>
+            <span class="log-msg">编译策略模块 strategy.py — Python 3.12 sandbox</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:35:02</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">类型签名检查通过 — factors(), preprocess(), risk_rules(), rebalance()</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time tabular-nums">14:35:03</span>
+            <span class="log-level success">PASS</span>
+            <span class="log-msg">编译日志完成 — 无语法错误，无未绑定变量</span>
+          </div>
         </div>
       </div>
     </div>

@@ -4114,17 +4114,31 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
   align-items: flex-start;
   flex-wrap: wrap;
+  flex: 0 0 auto !important;
+  flex-basis: auto !important;
   height: auto !important;
   min-height: 1.5rem;
   max-height: min(28vh, 14rem);
+  overflow: visible !important;
   padding-block: var(--space-4);
 }
 
 .status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
   flex-wrap: wrap;
   max-height: calc(min(28vh, 14rem) - var(--space-8));
-  overflow: auto;
+  overflow: visible;
   white-space: normal;
+}
+
+#default-view > .status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
+  flex: 0 0 auto !important;
+  flex-basis: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+#default-view > .status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+  overflow: visible !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
