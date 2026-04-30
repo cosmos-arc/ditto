@@ -105,30 +105,7 @@
       var controlledPanels = Tabs._resolveControlledPanels(buttons);
       if (controlledPanels.length) return controlledPanels;
 
-      var targets = buttons
-        .map(function (button) { return button.getAttribute('data-tab-target'); })
-        .filter(Boolean);
-      var uniqueTargets = Array.from(new Set(targets));
-      if (!uniqueTargets.length) return [];
-
-      function matchingPanels(scope) {
-        var matches = Array.from(scope.querySelectorAll('[data-tab-panel]')).filter(function (panel) {
-          var panelTarget = panel.getAttribute('data-tab-panel');
-          var owningGroup = panel.closest('[data-tabs]');
-          return uniqueTargets.indexOf(panelTarget) >= 0 && (!owningGroup || owningGroup === group);
-        });
-        var matchedTargets = new Set(matches.map(function (panel) { return panel.getAttribute('data-tab-panel'); }));
-        return uniqueTargets.every(function (target) { return matchedTargets.has(target); }) ? matches : [];
-      }
-
-      var scope = group.parentElement;
-      while (scope && scope !== document.body) {
-        var scopedPanels = matchingPanels(scope);
-        if (scopedPanels.length) return scopedPanels;
-        scope = scope.parentElement;
-      }
-
-      return matchingPanels(document);
+      return [];
     },
 
     _resolveControlledPanels: function (buttons) {
@@ -212,10 +189,10 @@
       if (eventTarget === roleButton) return false;
 
       var interactive = eventTarget.closest(
-        'button, input, select, textarea, a[href], label, summary, [contenteditable], [role="tab"], [data-tab-target]'
+        'button, input, select, textarea, a[href], area[href], label, summary, details, iframe, object, embed, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"], [role="checkbox"], [role="switch"], [role="radio"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="combobox"], [role="textbox"], [role="searchbox"], [role="slider"], [role="spinbutton"], [role="listbox"], [role="treeitem"], [data-tab-target]'
       );
 
-      return Boolean(interactive && roleButton.contains(interactive));
+      return Boolean(interactive && interactive !== roleButton && roleButton.contains(interactive));
     },
   };
 
