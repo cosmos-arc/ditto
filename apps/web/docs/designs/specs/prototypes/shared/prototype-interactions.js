@@ -1032,6 +1032,40 @@
     },
   };
 
+  /* ══════════════════════════════════════════════
+   * 12. CollapsibleContextSections
+   *     Native <details>/<summary> contract enhancement
+   * ══════════════════════════════════════════════ */
+  var CollapsibleContextSections = {
+    init: function () {
+      document.querySelectorAll('details.context-section').forEach(function (details) {
+        var summary = CollapsibleContextSections._directSummary(details);
+        if (!summary || !summary.classList.contains('context-section-header')) return;
+
+        CollapsibleContextSections._sync(details, summary);
+        if (details.getAttribute('data-collapsible-context-ready') === 'true') return;
+
+        details.setAttribute('data-collapsible-context-ready', 'true');
+        details.addEventListener('toggle', function () {
+          CollapsibleContextSections._sync(details, summary);
+        });
+      });
+    },
+
+    _directSummary: function (details) {
+      for (var i = 0; i < details.children.length; i++) {
+        if (details.children[i].tagName.toLowerCase() === 'summary') {
+          return details.children[i];
+        }
+      }
+      return null;
+    },
+
+    _sync: function (details, summary) {
+      summary.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+    },
+  };
+
   /* ── Inject shared CSS for dynamic modules ── */
   var style = document.createElement('style');
   style.textContent = [
@@ -1073,6 +1107,7 @@
     FlowBar.init();
     AnimatedCounter.init();
     TooltipSystem.init();
+    CollapsibleContextSections.init();
   }
 
   if (document.readyState === 'loading') {

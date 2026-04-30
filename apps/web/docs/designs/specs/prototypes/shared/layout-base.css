@@ -1520,19 +1520,24 @@ button {
 
 /* ── Collapsible Context Sections (<details>/<summary>) ── */
 
-/* Reset flex on details so it doesn't stretch */
 details.context-section {
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
 details.context-section:last-child {
   flex: 1 1 auto;
 }
 
-/* Header as summary */
 details.context-section > summary.context-section-header {
-  list-style: none;
+  justify-content: flex-start;
+  gap: var(--space-8);
   cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition:
+    background-color 150ms var(--motion-easing-standard),
+    color 150ms var(--motion-easing-standard);
 }
 
 details.context-section > summary.context-section-header::-webkit-details-marker {
@@ -1541,31 +1546,114 @@ details.context-section > summary.context-section-header::-webkit-details-marker
 
 details.context-section > summary.context-section-header::before {
   content: '▶';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 10px;
   font-size: 8px;
   color: var(--text-tertiary);
-  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
-  margin-right: var(--space-4);
-  display: inline-block;
+  transition:
+    color 150ms var(--motion-easing-standard),
+    transform 150ms var(--motion-easing-standard);
+}
+
+details.context-section > summary.context-section-header:hover {
+  background: var(--interaction-hover-subtle-bg);
+}
+
+details.context-section > summary.context-section-header:focus-visible {
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: -2px;
 }
 
 details.context-section[open] > summary.context-section-header::before {
   transform: rotate(90deg);
 }
 
-/* Collapsed count badge — visible only when collapsed */
+details.context-section > summary.context-section-header .context-section-title {
+  min-width: 0;
+  margin-right: auto;
+}
+
 .collapse-count {
-  display: none;
   font-family: var(--font-family-numeric);
   font-size: var(--font-size-10);
   color: var(--text-tertiary);
 }
-details.context-section:not([open]) .collapse-count {
-  display: inline;
+
+details.context-section .collapse-count {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-inline-size: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transition:
+    max-inline-size 150ms var(--motion-easing-standard),
+    opacity 150ms var(--motion-easing-standard);
 }
 
-/* Remove padding-bottom from body inside details */
+details.context-section:not([open]) .collapse-count {
+  max-inline-size: 8rem;
+  opacity: 1;
+}
+
+.collapse-summary {
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+}
+
+details.context-section .collapse-summary {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-inline-size: 16rem;
+  overflow: hidden;
+  opacity: 0.58;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    color 150ms var(--motion-easing-standard),
+    max-inline-size 150ms var(--motion-easing-standard),
+    opacity 150ms var(--motion-easing-standard);
+}
+
+details.context-section:not([open]) .collapse-summary {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+details.context-section[open] .collapse-summary {
+  max-inline-size: 12rem;
+}
+
 details.context-section > .context-section-body {
+  max-height: 42rem;
+  opacity: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: var(--space-8);
+  transition:
+    max-height 150ms var(--motion-easing-standard),
+    opacity 150ms var(--motion-easing-standard);
+}
+
+details.context-section:not([open]) > .context-section-body {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details.context-section > summary.context-section-header,
+  details.context-section > summary.context-section-header::before,
+  details.context-section .collapse-count,
+  details.context-section .collapse-summary,
+  details.context-section > .context-section-body {
+    transition: none;
+  }
 }
 
 /* Health preview in context rail */
