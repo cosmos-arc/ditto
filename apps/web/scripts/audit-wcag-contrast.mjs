@@ -50,6 +50,14 @@ const TEXT_PATTERNS = [
   "brand-signature-fg",
 ];
 
+const TEXT_USAGE_TIERS = {
+  "text-disabled": "decorative",
+  "text-quaternary": "metadata",
+  "text-data-stale": "operational",
+  "text-tertiary": "metadata",
+  "text-secondary": "operational",
+};
+
 const BG_PATTERNS = ["overlay-2", "overlay-3", "overlay-4", "overlay-6", "overlay-8", "overlay-10", "overlay-12"];
 
 // ── Build token map ──
@@ -68,14 +76,54 @@ function buildTokenMap() {
   return extractTokensFromCss(allCss);
 }
 
+function getTextUsageTier(textName) {
+  if (TEXT_USAGE_TIERS[textName]) return TEXT_USAGE_TIERS[textName];
+  if (textName === "text-error" || textName === "text-warning" || textName === "text-success") {
+    return "data-critical";
+  }
+  return "operational";
+}
+
+function classifyContrast(textName, ratio) {
+  const usageTier = getTextUsageTier(textName);
+
+  if (usageTier === "decorative") {
+    return { usageTier, status: "report", pass: true, requiresNonColorMarker: false };
+  }
+
+  if (usageTier === "metadata") {
+    if (ratio < 3) return { usageTier, status: "fail", pass: false, requiresNonColorMarker: false };
+    if (ratio < 4.5) return { usageTier, status: "warn", pass: true, requiresNonColorMarker: false };
+    return { usageTier, status: "pass", pass: true, requiresNonColorMarker: false };
+  }
+
+  const requiresNonColorMarker = usageTier === "data-critical";
+  return {
+    usageTier,
+    status: ratio < 4.5 ? "fail" : "pass",
+    pass: ratio >= 4.5,
+    requiresNonColorMarker,
+  };
+}
+
+function updateCounts(classification, counts) {
+  if (classification.status === "fail") counts.fail += 1;
+  else if (classification.status === "warn") counts.warn += 1;
+  else if (classification.status === "report") counts.report += 1;
+  else counts.pass += 1;
+}
+
 // ── Main ──
 
 function main() {
   const tokens = buildTokenMap();
   const results = [];
-  let passCount = 0;
-  let failCount = 0;
-  let warnCount = 0;
+  const counts = {
+    pass: 0,
+    fail: 0,
+    warn: 0,
+    report: 0,
+  };
 
   // Surface × Text pairs
   for (const surfName of SURFACE_PATTERNS) {
@@ -92,19 +140,15 @@ function main() {
 
       const ratio = contrastRatio(surfColor.luminance, textColor.luminance);
       const level = wcagLevel(ratio);
-      const isFail = !level.startsWith("AA") && !level.startsWith("AAA");
-      const isWarn = level === "AA Large";
-
-      if (isFail) failCount++;
-      else if (isWarn) warnCount++;
-      else passCount++;
+      const classification = classifyContrast(textName, ratio);
+      updateCounts(classification, counts);
 
       results.push({
         surface: surfName,
         text: textName,
         ratio,
         level,
-        pass: !isFail,
+        ...classification,
       });
     }
   }
@@ -138,27 +182,24 @@ function main() {
 
       const ratio = contrastRatio(effLum, textColor.luminance);
       const level = wcagLevel(ratio);
-      const isFail = !level.startsWith("AA") && !level.startsWith("AAA");
-      const isWarn = level === "AA Large";
-
-      if (isFail) failCount++;
-      else if (isWarn) warnCount++;
-      else passCount++;
+      const classification = classifyContrast(textName, ratio);
+      updateCounts(classification, counts);
 
       results.push({
-        surface: `${bgName} (on ${surfName})`,
+        surface: `${bgName} (on surface-app)`,
         text: textName,
         ratio,
         level,
-        pass: !isFail,
         composited: true,
+        ...classification,
       });
     }
   }
 
-  // Sort: failures first, then warnings, then passes
+  // Sort: failures first, then warnings, then reports, then passes
+  const statusOrder = { fail: 0, warn: 1, report: 2, pass: 3 };
   results.sort((a, b) => {
-    if (a.pass !== b.pass) return a.pass ? 1 : -1;
+    if (a.status !== b.status) return statusOrder[a.status] - statusOrder[b.status];
     return a.ratio - b.ratio;
   });
 
@@ -166,46 +207,60 @@ function main() {
 
   console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults)\n");
   console.log(`Pairs checked: ${results.length}`);
-  console.log(`${emoji(7)} Pass: ${passCount}  ${emoji(3)} Warn: ${warnCount}  ${emoji(1)} Fail: ${failCount}\n`);
+  console.log(
+    `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Fail: ${counts.fail}  Report: ${counts.report}\n`,
+  );
 
-  if (failCount > 0) {
-    console.log("### Failed Pairs (< 3:1)\n");
-    console.log("| Surface | Text | Ratio | Level |");
-    console.log("|---------|------|-------|-------|");
-    for (const r of results.filter((r) => !r.pass)) {
-      console.log(`| ${r.surface} | ${r.text} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
+  if (counts.fail > 0) {
+    console.log("### Failed Pairs\n");
+    console.log("| Surface | Text | Usage | Ratio | Level |");
+    console.log("|---------|------|-------|-------|-------|");
+    for (const r of results.filter((r) => r.status === "fail")) {
+      console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
     }
     console.log("");
   }
 
-  if (warnCount > 0) {
-    console.log("### Warnings (AA Large only, 3:1–4.5:1)\n");
-    console.log("| Surface | Text | Ratio | Level |");
-    console.log("|---------|------|-------|-------|");
-    for (const r of results.filter((r) => r.pass && r.level === "AA Large")) {
-      console.log(`| ${r.surface} | ${r.text} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
+  if (counts.warn > 0) {
+    console.log("### Warnings (metadata below 4.5:1)\n");
+    console.log("| Surface | Text | Usage | Ratio | Level |");
+    console.log("|---------|------|-------|-------|-------|");
+    for (const r of results.filter((r) => r.status === "warn")) {
+      console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
+    }
+    console.log("");
+  }
+
+  if (counts.report > 0) {
+    console.log("### Decorative Reports (non-gating)\n");
+    console.log("| Surface | Text | Usage | Ratio | Level |");
+    console.log("|---------|------|-------|-------|-------|");
+    for (const r of results.filter((r) => r.status === "report")) {
+      console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
     }
     console.log("");
   }
 
   // Top 10 weakest passing pairs
-  const passing = results.filter((r) => r.pass && r.level !== "AA Large" && r.level !== "AAA");
+  const passing = results.filter((r) => r.status === "pass" && r.level !== "AAA");
   if (passing.length > 0) {
     console.log("### Weakest Passing Pairs\n");
-    console.log("| Surface | Text | Ratio | Level |");
-    console.log("|---------|------|-------|-------|");
+    console.log("| Surface | Text | Usage | Ratio | Level |");
+    console.log("|---------|------|-------|-------|-------|");
     for (const r of passing.slice(0, 10)) {
-      console.log(`| ${r.surface} | ${r.text} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
+      console.log(`| ${r.surface} | ${r.text} | ${r.usageTier} | ${formatRatio(r.ratio)} | ${emoji(r.ratio)} ${r.level} |`);
     }
     console.log("");
   }
 
-  console.log(failCount === 0 ? "All pairs pass WCAG AA." : `${failCount} pair(s) fail WCAG AA.`);
+  if (results.some((r) => r.requiresNonColorMarker)) {
+    console.log("Data-critical text usage requires a non-color marker in UI contexts where status is conveyed.");
+  }
 
-  // Exit 0 always — this is an informational audit tool.
-  // Use --ci flag to exit 1 on failures (for CI gating).
-  const isCI = process.argv.includes("--ci");
-  process.exit(isCI && failCount > 0 ? 1 : 0);
+  console.log(counts.fail === 0 ? "All gating pairs pass their contrast tier." : `${counts.fail} pair(s) fail contrast tier gates.`);
+
+  const reportOnly = process.argv.includes("--report-only");
+  process.exit(!reportOnly && counts.fail > 0 ? 1 : 0);
 }
 
 main();

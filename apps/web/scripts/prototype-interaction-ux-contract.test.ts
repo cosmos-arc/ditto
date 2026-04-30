@@ -215,17 +215,43 @@ function installInteractiveWindowStubs(window: JSDOM["window"]): void {
 	});
 }
 
+function evaluateSharedInteractionsScript(window: JSDOM["window"]): void {
+	const runSharedInteractions = new Function(
+		"window",
+		"document",
+		"getComputedStyle",
+		"CustomEvent",
+		"IntersectionObserver",
+		"requestAnimationFrame",
+		"cancelAnimationFrame",
+		"setTimeout",
+		"clearTimeout",
+		readSharedInteractionsScript(),
+	);
+
+	runSharedInteractions(
+		window,
+		window.document,
+		window.getComputedStyle.bind(window),
+		window.CustomEvent,
+		window.IntersectionObserver,
+		window.requestAnimationFrame.bind(window),
+		window.cancelAnimationFrame.bind(window),
+		window.setTimeout.bind(window),
+		window.clearTimeout.bind(window),
+	);
+}
+
 function readInteractivePrototypeDocument(page: ManifestPage, prepare?: (document: Document) => void): Document {
 	const dom = new JSDOM(readFileSync(join(prototypesDir, page.file), "utf8"), {
 		pretendToBeVisual: true,
-		runScripts: "outside-only",
 		url: `https://prototype.local/${page.file}`,
 	});
 	const { document } = dom.window;
 
 	prepare?.(document);
 	installInteractiveWindowStubs(dom.window);
-	dom.window.eval(readSharedInteractionsScript());
+	evaluateSharedInteractionsScript(dom.window);
 
 	if (document.readyState === "loading") {
 		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
@@ -489,6 +515,84 @@ async function waitForExpandedStatusBarLayout(page: import("playwright").Page, c
 }
 
 describe("prototype interaction UX contracts", () => {
+	it("activates role button elements from Enter and Space through shared interactions", () => {
+		const dom = new JSDOM(
+			`<!doctype html><html><body><div id="target" role="button" tabindex="0" aria-label="测试动作"></div></body></html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/role-button-contract.html",
+			},
+		);
+		const { document } = dom.window;
+		const target = document.getElementById("target");
+		let clickCount = 0;
+
+		expect(target).not.toBeNull();
+		if (!target) return;
+
+		target.addEventListener("click", () => {
+			clickCount += 1;
+		});
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (document.readyState === "loading") {
+			document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		target.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+		target.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+
+		expect(clickCount).toBe(2);
+	});
+
+	it("keeps active prototype tabs wired to labelled tab panels", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"]'));
+			const panels = Array.from(document.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
+			const tabsById = new Map(tabs.flatMap((tab) => (tab.id ? [[tab.id, tab]] : [])));
+
+			tabs.forEach((tab, index) => {
+				const label = `${page.id}:tab ${index + 1}`;
+				const controls = tab.getAttribute("aria-controls")?.trim() ?? "";
+
+				if (!tab.hasAttribute("aria-selected")) {
+					violations.push(`${label}:missing-aria-selected`);
+				}
+				if (!controls) {
+					violations.push(`${label}:missing-aria-controls`);
+					return;
+				}
+
+				const panel = document.getElementById(controls);
+				if (!panel) {
+					violations.push(`${label}:missing-controlled-panel:${controls}`);
+					return;
+				}
+				if (panel.getAttribute("role") !== "tabpanel") {
+					violations.push(`${label}:controlled-target-not-tabpanel:${controls}`);
+				}
+			});
+
+			panels.forEach((panel, index) => {
+				const label = `${page.id}:tabpanel ${index + 1}`;
+				const labelledBy = panel.getAttribute("aria-labelledby")?.trim() ?? "";
+				const labelledByTab = labelledBy.split(/\s+/).some((id) => tabsById.has(id));
+
+				if (!labelledBy) {
+					violations.push(`${label}:missing-aria-labelledby`);
+				} else if (!labelledByTab) {
+					violations.push(`${label}:aria-labelledby-not-tab:${labelledBy}`);
+				}
+			});
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("keeps every active route on the fixed five-domain anchor rail contract", () => {
 		const violations: string[] = [];
 

@@ -37,6 +37,11 @@ type PageContract = {
 	overlays?: Array<{ prototypeSelector: string }>;
 };
 
+type CssSource = {
+	label: string;
+	css: string;
+};
+
 function readJson<T>(path: string): T {
 	return JSON.parse(readFileSync(path, "utf8")) as T;
 }
@@ -101,6 +106,35 @@ function getStyleBlocks(html: string): string {
 	return [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
 		.map((match) => match[1])
 		.join("\n");
+}
+
+function stripCssComments(css: string): string {
+	return css.replace(/\/\*[\s\S]*?\*\//g, (comment) => "\n".repeat(comment.match(/\n/g)?.length ?? 0));
+}
+
+function getLineNumber(value: string, index: number): number {
+	return value.slice(0, index).split("\n").length;
+}
+
+function hasFixedCanvasException(css: string, index: number): boolean {
+	const lineStart = css.lastIndexOf("\n", index) + 1;
+	const lineEnd = css.indexOf("\n", index);
+	const line = css.slice(lineStart, lineEnd === -1 ? css.length : lineEnd);
+
+	return /fixed canvas exception|fixed-canvas-exception/i.test(line);
+}
+
+function readPrototypeCssSources(): CssSource[] {
+	return [
+		{ label: "shared/layout-base.css", css: readFileSync(prototypeLayoutCss, "utf8") },
+		{ label: "shared/theme-switcher.css", css: readFileSync(prototypeThemeSwitcherCss, "utf8") },
+		{ label: "shared/prototype-toggles.css", css: readFileSync(prototypeTogglesCss, "utf8") },
+		{ label: "tokens-style.css", css: readFileSync(prototypeTokensStyleCss, "utf8") },
+		...activePages().map((page) => ({
+			label: `${page.id}:inline-css`,
+			css: getStyleBlocks(readPrototypeHtml(page)),
+		})),
+	];
 }
 
 function getFirstElementBody(html: string, selectorPattern: RegExp): string {
@@ -324,6 +358,25 @@ describe("prototype design consistency", () => {
 				) {
 					violations.push(`${page.id}:command:visual-form`);
 				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("exposes one semantic page h1 and keeps prototype style labels hidden from assistive tech", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const h1Count = document.querySelectorAll("h1").length;
+			const visibleStyleLabelCount = document.querySelectorAll(".style-label:not([aria-hidden='true'])").length;
+
+			if (h1Count < 1) {
+				violations.push(`${page.id}:h1:${h1Count}`);
+			}
+			if (visibleStyleLabelCount > 0) {
+				violations.push(`${page.id}:visible-style-label:${visibleStyleLabelCount}`);
 			}
 		}
 
@@ -1058,6 +1111,44 @@ describe("prototype design consistency", () => {
 		const missing = requiredSharedMotion.filter((snippet) => !combinedCss.includes(snippet));
 
 		expect(missing).toEqual([]);
+	});
+
+	it("keeps active prototype and shared CSS free of viewport, transition, focus, and tiny-text regressions", () => {
+		const violations: string[] = [];
+
+		for (const source of readPrototypeCssSources()) {
+			const css = stripCssComments(source.css);
+
+			for (const match of css.matchAll(/(^|[^a-z0-9-])100vh\b/gi)) {
+				const index = match.index + match[1].length;
+				if (!hasFixedCanvasException(css, index)) {
+					violations.push(`${source.label}:${getLineNumber(css, index)}:100vh`);
+				}
+			}
+
+			for (const match of css.matchAll(/transition\s*:\s*all(?:\s|;)/gi)) {
+				violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
+			}
+
+			for (const match of css.matchAll(/font-size\s*:\s*9px\b/gi)) {
+				violations.push(`${source.label}:${getLineNumber(css, match.index)}:font-size-9px`);
+			}
+
+			for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+				const selector = rule[1].replace(/\s+/g, " ").trim();
+				const body = rule[2];
+				if (!/outline\s*:\s*none\b/i.test(body)) continue;
+
+				const bodyWithoutOutlineNone = body.replace(/outline\s*:\s*none\s*;?/gi, "");
+				const hasReplacementFocusCue =
+					/box-shadow\s*:/i.test(body) || /outline\s*:\s*(?!none\b)[^;]+/i.test(bodyWithoutOutlineNone);
+				if (!hasReplacementFocusCue) {
+					violations.push(`${source.label}:${getLineNumber(css, rule.index)}:outline-none:${selector}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
 	});
 
 	it("keeps bare rgba and direct oklch colors out of active prototype declarations", () => {
