@@ -546,6 +546,51 @@ describe("prototype interaction UX contracts", () => {
 		expect(clickCount).toBe(2);
 	});
 
+	it("does not proxy nested native controls through parent role button keyboard activation", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<div id="outer" role="button" tabindex="0" aria-label="审批卡片">
+						<span id="plain-child">普通文本</span>
+						<button id="inner-button" type="button">批准</button>
+						<label id="inner-label" for="inner-input">确认</label>
+						<input id="inner-input" type="checkbox">
+					</div>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/nested-role-button-contract.html",
+			},
+		);
+		const { document } = dom.window;
+		const outer = document.getElementById("outer");
+		let outerClicks = 0;
+
+		expect(outer).not.toBeNull();
+		if (!outer) return;
+
+		outer.addEventListener("click", (event) => {
+			if (event.target === outer) {
+				outerClicks += 1;
+			}
+		});
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (document.readyState === "loading") {
+			document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		document.getElementById("plain-child")?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+		document.getElementById("inner-button")?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+		document.getElementById("inner-label")?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+		document.getElementById("inner-input")?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+
+		expect(outerClicks).toBe(1);
+	});
+
 	it("updates separated tab panels from shared tab interactions", () => {
 		const dom = new JSDOM(
 			`<!doctype html>
@@ -596,6 +641,59 @@ describe("prototype interaction UX contracts", () => {
 		expect(document.getElementById("tab-reports")?.getAttribute("aria-selected")).toBe("false");
 		expect(document.getElementById("panel-reports")?.getAttribute("aria-hidden")).toBe("true");
 		expect(document.getElementById("panel-reports")?.style.display).toBe("none");
+	});
+
+	it("uses aria-controls to isolate separated tabsets that reuse target names", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<main>
+						<section id="first-tabset">
+							<div data-tabs="first-tabs" role="tablist" aria-label="第一组">
+								<button data-tab-target="overview" role="tab" id="first-overview-tab" aria-selected="true" aria-controls="first-overview-panel">概览</button>
+								<button data-tab-target="all" role="tab" id="first-all-tab" aria-selected="false" aria-controls="first-all-panel">全部</button>
+							</div>
+						</section>
+						<section id="second-tabset">
+							<div data-tabs="second-tabs" role="tablist" aria-label="第二组">
+								<button data-tab-target="overview" role="tab" id="second-overview-tab" aria-selected="true" aria-controls="second-overview-panel">概览</button>
+								<button data-tab-target="all" role="tab" id="second-all-tab" aria-selected="false" aria-controls="second-all-panel">全部</button>
+							</div>
+						</section>
+						<section id="shared-separated-panels">
+							<div id="first-overview-panel" data-tab-panel="overview" role="tabpanel" aria-labelledby="first-overview-tab" aria-hidden="false">第一组概览</div>
+							<div id="first-all-panel" data-tab-panel="all" role="tabpanel" aria-labelledby="first-all-tab" aria-hidden="true">第一组全部</div>
+							<div id="second-overview-panel" data-tab-panel="overview" role="tabpanel" aria-labelledby="second-overview-tab" aria-hidden="false">第二组概览</div>
+							<div id="second-all-panel" data-tab-panel="all" role="tabpanel" aria-labelledby="second-all-tab" aria-hidden="true">第二组全部</div>
+						</section>
+					</main>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/reused-target-tabsets-contract.html",
+			},
+		);
+		const { document } = dom.window;
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (document.readyState === "loading") {
+			document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		document.getElementById("first-all-tab")?.click();
+
+		expect(document.getElementById("first-overview-tab")?.getAttribute("aria-selected")).toBe("false");
+		expect(document.getElementById("first-overview-panel")?.getAttribute("aria-hidden")).toBe("true");
+		expect(document.getElementById("first-all-tab")?.getAttribute("aria-selected")).toBe("true");
+		expect(document.getElementById("first-all-panel")?.getAttribute("aria-hidden")).toBe("false");
+		expect(document.getElementById("second-overview-tab")?.getAttribute("aria-selected")).toBe("true");
+		expect(document.getElementById("second-overview-panel")?.getAttribute("aria-hidden")).toBe("false");
+		expect(document.getElementById("second-all-tab")?.getAttribute("aria-selected")).toBe("false");
+		expect(document.getElementById("second-all-panel")?.getAttribute("aria-hidden")).toBe("true");
+		expect(document.getElementById("second-all-panel")?.style.display).toBe("none");
 	});
 
 	it("keeps active prototype tabs wired to labelled tab panels", () => {

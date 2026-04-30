@@ -102,6 +102,9 @@
       var localPanels = Array.from(group.querySelectorAll('[data-tab-panel]'));
       if (localPanels.length) return localPanels;
 
+      var controlledPanels = Tabs._resolveControlledPanels(buttons);
+      if (controlledPanels.length) return controlledPanels;
+
       var targets = buttons
         .map(function (button) { return button.getAttribute('data-tab-target'); })
         .filter(Boolean);
@@ -126,6 +129,26 @@
       }
 
       return matchingPanels(document);
+    },
+
+    _resolveControlledPanels: function (buttons) {
+      var panels = [];
+      var seen = new Set();
+
+      for (var i = 0; i < buttons.length; i += 1) {
+        var controls = buttons[i].getAttribute('aria-controls');
+        if (!controls) return [];
+
+        var panel = document.getElementById(controls);
+        if (!panel || !panel.hasAttribute('data-tab-panel')) return [];
+
+        if (!seen.has(panel.id)) {
+          seen.add(panel.id);
+          panels.push(panel);
+        }
+      }
+
+      return panels;
     },
   };
 
@@ -172,12 +195,27 @@
   var InteractiveRoleButtons = {
     init: function () {
       document.addEventListener('keydown', function (event) {
-        var target = event.target.closest('[role="button"]');
-        if (!target) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (!event.target || event.target.nodeType !== 1) return;
+
+        var eventTarget = event.target;
+        var target = eventTarget.closest('[role="button"]');
+        if (!target) return;
+        if (InteractiveRoleButtons._isNestedInteractiveControl(eventTarget, target)) return;
+
         event.preventDefault();
         target.click();
       });
+    },
+
+    _isNestedInteractiveControl: function (eventTarget, roleButton) {
+      if (eventTarget === roleButton) return false;
+
+      var interactive = eventTarget.closest(
+        'button, input, select, textarea, a[href], label, summary, [contenteditable], [role="tab"], [data-tab-target]'
+      );
+
+      return Boolean(interactive && roleButton.contains(interactive));
     },
   };
 
