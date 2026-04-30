@@ -83,6 +83,11 @@ const USAGE_TIER_GATES = Object.freeze({
 
 const BG_PATTERNS = ["overlay-2", "overlay-3", "overlay-4", "overlay-6", "overlay-8", "overlay-10", "overlay-12"];
 
+const STATIC_AUDIT_TOKEN_VALUES = Object.freeze({
+  // Atmosphere defaults all runtime offsets to zero, so the static audit uses the base app surface.
+  "surface-app-atmosphere": "var(--neutral-0)",
+});
+
 // ── Build token map ──
 
 function buildTokenMap() {
@@ -97,6 +102,9 @@ function buildTokenMap() {
     }
   }
   const tokens = extractTokensFromCss(allCss);
+  for (const [name, value] of Object.entries(STATIC_AUDIT_TOKEN_VALUES)) {
+    tokens[name] = value;
+  }
   for (const [name, value] of Object.entries(tokens)) {
     tokens[`--${name}`] = value;
   }
@@ -107,20 +115,42 @@ function resolveTokenValue(name, tokens) {
   return tokens[name] ?? tokens[name.replace(/^--/, "")] ?? tokens[`--${name}`];
 }
 
+function parseAuditVar(value) {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("var(") || !trimmed.endsWith(")")) return null;
+
+  const inner = trimmed.slice(4, -1);
+  let depth = 0;
+  for (let i = 0; i < inner.length; i += 1) {
+    const char = inner[i];
+    if (char === "(") depth += 1;
+    else if (char === ")") depth -= 1;
+    else if (char === "," && depth === 0) {
+      return {
+        name: inner.slice(0, i).trim(),
+        fallback: inner.slice(i + 1).trim(),
+      };
+    }
+  }
+
+  return {
+    name: inner.trim(),
+    fallback: null,
+  };
+}
+
 function resolveAuditColor(value, tokens, seen = new Set()) {
   if (seen.has(value)) return null;
   seen.add(value);
 
-  const color = resolveColor(value, tokens);
-  if (color) return color;
-
-  const parsed = parseColorValue(value);
-  if (parsed.type === "var-fallback") {
-    const resolved = resolveTokenValue(parsed.name, tokens);
-    const resolvedColor = resolved ? resolveAuditColor(resolved, tokens, seen) : null;
-    return resolvedColor ?? resolveAuditColor(parsed.fallback, tokens, seen);
+  const auditVar = parseAuditVar(value);
+  if (auditVar) {
+    const resolved = resolveTokenValue(auditVar.name, tokens);
+    if (resolved) return resolveAuditColor(resolved, tokens, seen);
+    return auditVar.fallback ? resolveAuditColor(auditVar.fallback, tokens, seen) : null;
   }
 
+  const parsed = parseColorValue(value);
   if (parsed.type === "relative-oklch" && parsed.lMod === "l" && parsed.cMod === "c" && parsed.hMod === "h") {
     const base = resolveTokenValue(parsed.baseVar, tokens);
     if (!base) return null;
@@ -133,7 +163,7 @@ function resolveAuditColor(value, tokens, seen = new Set()) {
     };
   }
 
-  return null;
+  return parsed.type === "oklch" ? resolveColor(value, tokens) : null;
 }
 
 function getTextUsageTier(textName) {
@@ -314,7 +344,7 @@ function main() {
   console.log("\n## WCAG 2.1 Contrast Audit — Dark Mode (:root defaults)\n");
   console.log(`Pairs checked: ${results.length}`);
   console.log(
-    `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Fail: ${counts.fail + unresolved.length}  Report: ${counts.report}\n`,
+    `${emoji(7)} Pass: ${counts.pass}  ${emoji(3)} Warn: ${counts.warn}  ${emoji(1)} Failed pairs: ${counts.fail}  Unresolved: ${unresolved.length}  Report: ${counts.report}\n`,
   );
 
   if (unresolved.length > 0) {
@@ -395,7 +425,11 @@ function main() {
   }
 
   const totalFailures = counts.fail + unresolved.length;
-  console.log(totalFailures === 0 ? "All gating pairs pass their contrast tier." : `${totalFailures} pair(s) fail contrast tier gates.`);
+  console.log(
+    totalFailures === 0
+      ? "All gating pairs pass their contrast tier."
+      : `${counts.fail} pair(s) fail contrast tier gates; ${unresolved.length} unresolved audit token(s).`,
+  );
 
   const reportOnly = process.argv.includes("--report-only");
   process.exit(!reportOnly && totalFailures > 0 ? 1 : 0);
