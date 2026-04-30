@@ -1179,11 +1179,16 @@
     },
 
     _onKeydown: function (event, group, separator) {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      var isHorizontal = separator.getAttribute('aria-orientation') === 'horizontal';
+      var positiveKey = isHorizontal ? 'ArrowDown' : 'ArrowRight';
+      var negativeKey = isHorizontal ? 'ArrowUp' : 'ArrowLeft';
+      if (event.key !== positiveKey && event.key !== negativeKey) return;
 
       event.preventDefault();
       var step = event.shiftKey ? ResizablePanels.fineStep : ResizablePanels.defaultStep;
-      var direction = event.key === 'ArrowRight' ? 1 : -1;
+      var separatorDirection = event.key === positiveKey ? 1 : -1;
+      var edge = separator.getAttribute('data-resize-edge') || 'end';
+      var direction = edge === 'start' ? separatorDirection : -separatorDirection;
       ResizablePanels._sync(group, separator, ResizablePanels._currentValue(group, separator) + (direction * step));
     },
 

@@ -913,20 +913,20 @@ describe("prototype interaction UX contracts", () => {
 		if (!group || !separator) return;
 
 		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-		expect(separator.getAttribute("aria-valuenow")).toBe("280");
-		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("280px");
+		expect(separator.getAttribute("aria-valuenow")).toBe("360");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("360px");
 
 		separator.dispatchEvent(
 			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }),
 		);
-		expect(separator.getAttribute("aria-valuenow")).toBe("288");
-		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("288px");
+		expect(separator.getAttribute("aria-valuenow")).toBe("352");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("352px");
 
 		separator.dispatchEvent(new document.defaultView!.MouseEvent("pointerdown", { clientX: 400, bubbles: true }));
 		document.defaultView!.dispatchEvent(new document.defaultView!.MouseEvent("pointermove", { clientX: 360, bubbles: true }));
 		document.defaultView!.dispatchEvent(new document.defaultView!.MouseEvent("pointerup", { bubbles: true }));
-		expect(separator.getAttribute("aria-valuenow")).toBe("328");
-		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("328px");
+		expect(separator.getAttribute("aria-valuenow")).toBe("392");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("392px");
 
 		separator.dispatchEvent(new document.defaultView!.MouseEvent("dblclick", { bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("320");
