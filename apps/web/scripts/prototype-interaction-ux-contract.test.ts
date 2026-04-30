@@ -1,9 +1,10 @@
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
+const contractsDir = resolve(import.meta.dirname, "../docs/contracts/pages");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const railDomains = ["home", "markets", "research", "trading", "platform"] as const;
 const railDomainSet = new Set<string>(railDomains);
@@ -64,16 +65,52 @@ type EditionManifest = {
 	pages: ManifestPage[];
 };
 
+type PageContract = {
+	id: string;
+	prototypeRef?: string;
+	route?: string;
+};
+
 function readJson<T>(path: string): T {
 	return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
 let manifestCache: EditionManifest | undefined;
 const prototypeDocumentCache = new Map<string, Document>();
+let pageContractsCache: PageContract[] | undefined;
+let contractRouteByPageIdCache: Map<string, string> | undefined;
+let contractRouteByPrototypeFileCache: Map<string, string> | undefined;
 
 function readManifest(): EditionManifest {
 	manifestCache ??= readJson<EditionManifest>(join(prototypesDir, ".edition-manifest.json"));
 	return manifestCache;
+}
+
+function readPageContracts(): PageContract[] {
+	pageContractsCache ??= readdirSync(contractsDir)
+		.filter((file) => file.endsWith(".json"))
+		.map((file) => readJson<PageContract>(join(contractsDir, file)));
+	return pageContractsCache;
+}
+
+function contractRouteByPageId(): Map<string, string> {
+	if (contractRouteByPageIdCache) return contractRouteByPageIdCache;
+
+	contractRouteByPageIdCache = new Map(
+		readPageContracts().flatMap((contract) => (contract.route ? [[contract.id, contract.route]] : [])),
+	);
+	return contractRouteByPageIdCache;
+}
+
+function contractRouteByPrototypeFile(): Map<string, string> {
+	if (contractRouteByPrototypeFileCache) return contractRouteByPrototypeFileCache;
+
+	contractRouteByPrototypeFileCache = new Map(
+		readPageContracts().flatMap((contract) =>
+			contract.prototypeRef && contract.route ? [[basename(contract.prototypeRef), contract.route]] : [],
+		),
+	);
+	return contractRouteByPrototypeFileCache;
 }
 
 function isActiveRoutePrototype(page: ManifestPage): boolean {
@@ -107,7 +144,26 @@ function toRailDomain(value: string | null | undefined): (typeof railDomains)[nu
 	return value && railDomainSet.has(value) ? (value as (typeof railDomains)[number]) : null;
 }
 
-function getPageDomain(document: Document, page: ManifestPage): (typeof railDomains)[number] | null {
+function getDomainFromRoute(route: string | null | undefined): (typeof railDomains)[number] | null {
+	if (!route) return null;
+	if (route === "/") return "home";
+	if (route === "/markets" || route.startsWith("/markets/")) return "markets";
+	if (route === "/research" || route.startsWith("/research/")) return "research";
+	if (route === "/trading" || route.startsWith("/trading/")) return "trading";
+	if (route === "/platform" || route.startsWith("/platform/")) return "platform";
+
+	return null;
+}
+
+function getContractRoute(page: ManifestPage): string | null {
+	return contractRouteByPrototypeFile().get(page.file) ?? contractRouteByPageId().get(page.id) ?? null;
+}
+
+function getPageDomain(page: ManifestPage): (typeof railDomains)[number] | null {
+	return getDomainFromRoute(getContractRoute(page)) ?? pageDomainById[page.id] ?? null;
+}
+
+function getPrototypeDeclaredDomain(document: Document): (typeof railDomains)[number] | null {
 	const shellDomain = document.querySelector<HTMLElement>(
 		[
 			"[data-page-domain]",
@@ -127,7 +183,6 @@ function getPageDomain(document: Document, page: ManifestPage): (typeof railDoma
 		shellDomain?.dataset.pageDomain,
 		shellDomain?.dataset.shellDomain,
 		shellDomain?.dataset.domain,
-		pageDomainById[page.id],
 	];
 
 	for (const candidate of candidates) {
@@ -325,11 +380,17 @@ describe("prototype interaction UX contracts", () => {
 			if (currentItems.length !== 1) {
 				violations.push(`${page.id}: expected exactly one current rail item, found ${currentItems.length}`);
 			} else {
-				const pageDomain = getPageDomain(document, page);
+				const pageDomain = getPageDomain(page);
 				const currentDomain = currentItems[0].dataset.railDomain ?? "";
 				if (pageDomain && currentDomain !== pageDomain) {
 					violations.push(`${page.id}: current rail domain expected "${pageDomain}", found "${currentDomain}"`);
 				}
+			}
+
+			const contractDomain = getDomainFromRoute(getContractRoute(page));
+			const declaredDomain = getPrototypeDeclaredDomain(document);
+			if (contractDomain && declaredDomain && declaredDomain !== contractDomain) {
+				violations.push(`${page.id}: data-domain expected "${contractDomain}" from page contract, found "${declaredDomain}"`);
 			}
 		}
 
