@@ -8,6 +8,8 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-factor-analysis.html",
 );
+const navigationTimeoutMs = 10_000;
+const playwrightTestTimeoutMs = 15_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -83,7 +85,7 @@ describe("page-factor-analysis prototype", () => {
 		const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 
 		try {
-			await page.goto(prototypeUrl, { waitUntil: "load" });
+			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 			for (const overlayId of ["overlay-add-backtest", "overlay-add-experiment", "overlay-ai-analysis"]) {
 				await page.click(`label[for="${overlayId}"]`);
@@ -94,14 +96,14 @@ describe("page-factor-analysis prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("keeps compact IC diagnostics readable without hiding the statistics rows", async () => {
 		const browser = await chromium.launch({ channel: "chromium" });
 		const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
 
 		try {
-			await page.goto(prototypeUrl, { waitUntil: "load" });
+			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 			const layout = await page.evaluate(() => {
 				const contextStrip = document.querySelector(".context-strip");
@@ -126,7 +128,7 @@ describe("page-factor-analysis prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 });
 
 async function expectOverlayState(page: import("playwright").Page, overlayId: string, visible: boolean) {

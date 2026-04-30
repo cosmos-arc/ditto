@@ -15,6 +15,7 @@ function loadPage() {
 }
 
 const prototypeUrl = `file://${prototypePath}`;
+const navigationTimeoutMs = 10_000;
 
 describe("page-signals-inbox prototype", () => {
 	it("keeps all ops-console regions inside the gate-recognizable shell grid", () => {
@@ -54,6 +55,105 @@ describe("page-signals-inbox prototype", () => {
 	});
 
 	it(
+		"keeps the shell header title and subtitle visually separated",
+		async () => {
+			const browser = await chromium.launch({ channel: "chromium" });
+			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+			page.setDefaultTimeout(2_000);
+
+			try {
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
+
+				const headerTitle = await page.evaluate(() => {
+					const group = document.querySelector<HTMLElement>(".shell-header .header-title-group");
+					const title = document.querySelector<HTMLElement>(".shell-header .header-title");
+					const subtitle = document.querySelector<HTMLElement>(".shell-header .header-subtitle");
+					if (!group || !title || !subtitle) return null;
+
+					const titleRect = title.getBoundingClientRect();
+					const subtitleRect = subtitle.getBoundingClientRect();
+					const titleStyle = getComputedStyle(title);
+					const subtitleStyle = getComputedStyle(subtitle);
+
+					return {
+						titleText: title.textContent?.trim() ?? "",
+						subtitleText: subtitle.textContent?.trim() ?? "",
+						subtitleIsNestedInTitle: title.contains(subtitle),
+						gap: Math.round(subtitleRect.left - titleRect.right),
+						titleFontSize: titleStyle.fontSize,
+						subtitleFontSize: subtitleStyle.fontSize,
+						titleColor: titleStyle.color,
+						subtitleColor: subtitleStyle.color,
+					};
+				});
+
+				expect(headerTitle).toMatchObject({
+					titleText: "信号收件箱",
+					subtitleText: "交易控制中心",
+					subtitleIsNestedInTitle: false,
+					titleFontSize: "16px",
+					subtitleFontSize: "12px",
+				});
+				expect(headerTitle?.gap).toBeGreaterThanOrEqual(6);
+				expect(headerTitle?.subtitleColor).not.toBe(headerTitle?.titleColor);
+			} finally {
+				await browser.close();
+			}
+		},
+		15_000,
+	);
+
+	it(
+		"stretches the pending signal table columns across the full frame",
+		async () => {
+			const browser = await chromium.launch({ channel: "chromium" });
+			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+			page.setDefaultTimeout(2_000);
+
+			try {
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
+
+				const tableGeometry = await page.evaluate(() => {
+					const wrapper = document.querySelector<HTMLElement>(
+						'[data-panel="tab-pending"] [data-tab-panel="all"].signals-table-wrap',
+					);
+					const table = wrapper?.querySelector<HTMLTableElement>("table");
+					const selectedRow = table?.querySelector<HTMLTableRowElement>("tbody tr.row.selected");
+					const lastHeaderCell = table?.querySelector<HTMLTableCellElement>("thead th:last-child");
+					const lastBodyCell = selectedRow?.querySelector<HTMLTableCellElement>("td:last-child");
+
+					if (!wrapper || !table || !selectedRow || !lastHeaderCell || !lastBodyCell) return null;
+
+					const wrapperRect = wrapper.getBoundingClientRect();
+					const tableRect = table.getBoundingClientRect();
+					const headerRect = lastHeaderCell.getBoundingClientRect();
+					const bodyRect = lastBodyCell.getBoundingClientRect();
+
+					return {
+						wrapperRight: Math.round(wrapperRect.right),
+						tableRight: Math.round(tableRect.right),
+						headerRight: Math.round(headerRect.right),
+						bodyRight: Math.round(bodyRect.right),
+						tableWidth: Math.round(tableRect.width),
+						occupiedWidth: Math.round(bodyRect.right - tableRect.left),
+					};
+				});
+
+				expect(tableGeometry).not.toBeNull();
+				if (!tableGeometry) return;
+
+				expect(tableGeometry.tableRight).toBe(tableGeometry.wrapperRight);
+				expect(tableGeometry.headerRight).toBeGreaterThanOrEqual(tableGeometry.wrapperRight - 1);
+				expect(tableGeometry.bodyRight).toBeGreaterThanOrEqual(tableGeometry.wrapperRight - 1);
+				expect(tableGeometry.occupiedWidth).toBeGreaterThanOrEqual(tableGeometry.tableWidth - 1);
+			} finally {
+				await browser.close();
+			}
+		},
+		15_000,
+	);
+
+	it(
 		"keeps the terminal status bar out of the signal detail viewport",
 		async () => {
 			const browser = await chromium.launch({ channel: "chromium" });
@@ -61,7 +161,7 @@ describe("page-signals-inbox prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(prototypeUrl, { waitUntil: "load" });
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const geometry = await page.evaluate(() => {
 					const shell = document.querySelector("#default-view > .shell-signals");
@@ -105,7 +205,7 @@ describe("page-signals-inbox prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(prototypeUrl, { waitUntil: "load" });
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.locator('label[for="tab-confirmed"]').click();
 				await expectCssVisible(page, '[data-panel="tab-confirmed"]', true);

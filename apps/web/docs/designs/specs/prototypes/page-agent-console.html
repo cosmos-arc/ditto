@@ -26,7 +26,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="platform">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="platform">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -42,14 +42,11 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
-
-  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -93,119 +90,6 @@
       transition: box-shadow 150ms ease-out;
     }
 
-    /* ══════════════════════════════════════════════
-     * Studio Shell — Agent Console
-     * Grid: Rail (56px) | Main (1fr) | Detail Panel (368px)
-     * Rows: Header (var(--shell-header-height)) | Tabs (auto) | Content (1fr)
-     * ══════════════════════════════════════════════ */
-    .shell-agent {
-      display: grid;
-      grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 368px;
-      grid-template-rows: var(--shell-header-height) auto 1fr;
-      grid-template-areas:
-        "rail header header"
-        "rail tabs   tabs"
-        "rail main   detail";
-      min-height: 0;
-      width: 100vw;
-      overflow: hidden;
-      position: relative;
-    }
-
-    /* Noise material texture */
-    .shell-agent::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--surface-app);
-      filter: url(#noise-filter);
-      opacity: 0.018;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    /* Subtle top-edge ambient light */
-    .shell-agent::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        oklch(from var(--brand-accent) l c h / 0.18) 50%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .shell-agent > * {
-      position: relative;
-      z-index: 1;
-    }
-
-    .shell-agent .shell-rail {
-      grid-area: rail;
-    }
-
-    .shell-agent .shell-header {
-      grid-area: header;
-      height: var(--shell-header-height);
-      background: var(--surface-frosted);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    /* Header floating layer — light from behind */
-    .shell-agent .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        oklch(from var(--brand-signature-line) l c h / 0.25) 50%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
-    .shell-agent .agent-tabs {
-      grid-area: tabs;
-      background: var(--surface-strip);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      padding: 0 var(--space-16);
-      gap: 0;
-      height: var(--density-toolbar-height);
-    }
-
-    .shell-agent .agent-main {
-      grid-area: main;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      padding: var(--density-gutter);
-      gap: var(--density-gutter);
-      min-height: 0;
-    }
-
-    .shell-agent .agent-detail {
-      grid-area: detail;
-      background: var(--surface-panel-base);
-      border-left: 1px solid var(--border-subtle);
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-
     /* Detail panel top glow bar */
     .agent-detail::before {
       content: '';
@@ -217,31 +101,10 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(from var(--brand-signature-line) l c h / 0.28) 50%,
+        color-mix(in oklch, var(--brand-signature-line) 28%, transparent) 50%,
         transparent 100%
       );
       pointer-events: none;
-    }
-
-    /* Rail right edge ambient light */
-    .shell-agent .shell-rail {
-      position: relative;
-    }
-    .shell-agent .shell-rail::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: -1px;
-      bottom: 0;
-      width: 1px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        oklch(from var(--brand-accent) l c h / 0.20) 50%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 5;
     }
 
     /* Rail active indicator */
@@ -253,7 +116,7 @@
       bottom: 6px;
       width: 3px;
       border-radius: 0 2px 2px 0;
-      background: oklch(from var(--brand-accent) l c h / 0.80);
+      background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
     }
 
     /* ── Style label for comparison ── */
@@ -581,19 +444,19 @@
     .agent-chain-step.active {
       color: var(--agent-running-fg);
       background: var(--agent-running-bg);
-      border-color: oklch(from var(--agent-running-fg) l c h / 0.30);
+      border-color: color-mix(in oklch, var(--agent-running-fg) 30%, transparent);
     }
 
     .agent-chain-step.done {
       color: var(--system-healthy-fg);
       background: var(--system-healthy-bg);
-      border-color: oklch(from var(--system-healthy-fg) l c h / 0.20);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
     }
 
     .agent-chain-step.failed {
       color: var(--agent-failed-fg);
       background: var(--agent-failed-bg);
-      border-color: oklch(from var(--agent-failed-fg) l c h / 0.20);
+      border-color: color-mix(in oklch, var(--agent-failed-fg) 20%, transparent);
     }
 
     .agent-chain-arrow {
@@ -1166,22 +1029,6 @@
     /* Tool Trace Drawer */
     :root:has(#overlay-tool-trace:checked)
       [data-overlay="overlay-tool-trace"] { display: flex; }
-
-    /* ── Overlay content refinement ── */
-    .overlay-surface .overlay-header,
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
     .overlay-close {
       background: none;
       border: none;
@@ -1192,20 +1039,6 @@
       line-height: 1;
     }
     .overlay-close:hover { color: var(--text-secondary); }
-
-    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
-    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
-    .overlay-body h4:first-child { margin-top: 0; }
-
-    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
-
-    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
-    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
-    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
-    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
     /* State variant containers inherit page style */
     .state-variant .state-variant-content {
@@ -1509,13 +1342,13 @@
       position: relative;
     }
     .progress-bar-fill.brand {
-      box-shadow: 0 0 6px oklch(from var(--brand-accent) l c h / 0.30);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--brand-accent) 30%, transparent);
     }
     .progress-bar-fill.ok {
-      box-shadow: 0 0 6px oklch(from var(--system-healthy-fg) l c h / 0.30);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent);
     }
     .progress-bar-fill.critical {
-      box-shadow: 0 0 6px oklch(from var(--system-down-fg) l c h / 0.30);
+      box-shadow: 0 0 6px color-mix(in oklch, var(--system-down-fg) 30%, transparent);
     }
 
     /* ── Plan card scan line effect (static top accent) ── */
@@ -1545,7 +1378,7 @@
 
     /* ── Agent status block enhanced pulse ── */
     .agent-status-block.running .agent-status-dot {
-      box-shadow: 0 0 4px var(--agent-running-fg), 0 0 8px oklch(from var(--agent-running-fg) l c h / 0.40);
+      box-shadow: 0 0 4px var(--agent-running-fg), 0 0 8px color-mix(in oklch, var(--agent-running-fg) 40%, transparent);
     }
     .agent-status-block.running .agent-status-label strong {
       animation: dot-pulse 2s ease-in-out infinite;
@@ -1558,7 +1391,7 @@
       height: 2px;
       background: linear-gradient(
         90deg,
-        oklch(from var(--brand-accent) l c h / 0.30),
+        color-mix(in oklch, var(--brand-accent) 30%, transparent),
         transparent
       );
       margin-bottom: var(--space-4);
@@ -1611,7 +1444,7 @@
 
     /* ── Enhanced status bar with terminal vibe ── */
     .status-bar {
-      background: oklch(from var(--surface-app) l c h / 0.92);
+      background: color-mix(in oklch, var(--surface-app) 92%, transparent);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-top: 1px solid var(--border-subtle);
@@ -1626,7 +1459,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(from var(--brand-accent) l c h / 0.12) 50%,
+        color-mix(in oklch, var(--brand-accent) 12%, transparent) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -1649,7 +1482,7 @@
       background: linear-gradient(
         90deg,
         transparent 0%,
-        oklch(from var(--brand-signature-line) l c h / 0.28) 50%,
+        color-mix(in oklch, var(--brand-signature-line) 28%, transparent) 50%,
         transparent 100%
       );
       pointer-events: none;
@@ -1687,7 +1520,7 @@
       position: absolute;
       inset: -1px;
       border-radius: inherit;
-      border: 1px solid oklch(from var(--system-healthy-fg) l c h / 0.15);
+      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 15%, transparent);
     }
 
     /* ── Stagger card entrance ── */
@@ -1800,54 +1633,51 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      
+
     </nav>
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">Agent Console<span class="header-subtitle">智能体工作台</span></span>
+      <span class="header-title">智能体工作台</span>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          <span class="badge-dot"></span>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </button>
-        
+
         <label for="overlay-plan-create" class="btn-cta cursor-pointer" tabindex="0" aria-label="新建计划">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
           新建计划
         </label>
-        <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
         <div class="header-search" tabindex="0" role="search" aria-label="搜索" data-workspace-action="filter">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
           <span class="text-tertiary-hint">搜索计划...</span>
           <kbd>Ctrl+K</kbd>
         </div>
-        
+
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
       </div>
     </header>
 
@@ -1861,7 +1691,7 @@
       <input type="radio" name="agent" id="agent-approvals" class="tab-radio sr-only">
 
       <!-- Tab labels -->
-      <div class="agent-tabs" role="tablist" aria-label="Agent 工作流">
+      <div class="agent-tabs" role="tablist" aria-label="Agent 工作流" data-contract-slot="sidebar">
         <label for="agent-plans" class="agent-tab" role="tab">计划</label>
         <label for="agent-runs" class="agent-tab" role="tab">执行</label>
         <label for="agent-findings" class="agent-tab" role="tab">发现 <span class="agent-tab-count">3</span></label>
@@ -1873,7 +1703,7 @@
       <div class="tab-panels">
 
         <!-- ═══ Panel: Plans (default) ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-tabs="agent-status-filter">
+        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region data-tabs="agent-status-filter">
 
           <!-- Status Filter Tabs -->
           <div class="flex-row-center gap-4 mb-6">
@@ -2362,7 +2192,7 @@
               <div class="progress-bar-fill critical progress-w-23"></div>
             </div>
             <div class="run-card-meta mt-space-6">
-              
+
               <label for="overlay-run-rerun" class="btn-ghost cursor-pointer btn-ghost-sm">
                 <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
                 重跑
@@ -2454,7 +2284,7 @@
             <div class="approval-card-actions">
               <span class="plan-card-time">2026-04-01 14:50 · 来自 Alpha 因子挖掘计划</span>
               <div class="flex-grow"></div>
-              
+
               <label for="overlay-approval-confirm" class="btn-cta cursor-pointer btn-cta-sm">
                 <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 10l4 4 6-8"/></svg>
                 通过
@@ -2477,7 +2307,7 @@
             <div class="approval-card-actions">
               <span class="plan-card-time">2026-04-01 14:32 · 来自 Alpha 因子挖掘计划</span>
               <div class="flex-grow"></div>
-              
+
               <label for="overlay-approval-confirm" class="btn-ghost cursor-pointer btn-ghost-accent-sm">
                 通过
               </label>
@@ -2491,9 +2321,9 @@
     </div><!-- /tab-group -->
 
     <!-- ═══ Detail / Tool Trace Panel (340px) ═══ -->
-    <div class="agent-detail" data-contract-slot="detail">
+    <div class="agent-detail" data-contract-slot="detail" data-selected-object-region>
       <!-- Detail Header -->
-      <div class="detail-header" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-accent) l c h / 0.03)" data-mouse-glow-size="160px">
+      <div class="detail-header" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="160px">
         <div class="detail-header-title">Alpha 因子挖掘计划</div>
         <div class="detail-header-meta">
           <span class="detail-running-status">
@@ -2514,7 +2344,7 @@
         <div class="detail-section-header">
           <span class="detail-section-title">当前 Agent</span>
         </div>
-        <div class="detail-section-body" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--agent-running-fg) l c h / 0.04)" data-mouse-glow-size="120px">
+        <div class="detail-section-body" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--agent-running-fg) 4%, transparent)" data-mouse-glow-size="120px">
           <div class="agent-status-block running">
             <span class="agent-status-dot"></span>
             <span class="agent-status-label"><strong>Factor 挖掘 Agent</strong> · 正在分析动量因子</span>
@@ -2592,7 +2422,7 @@
       </div>
 
       <!-- Section 2: Tool Trace -->
-      <div class="detail-section detail-section-trace">
+      <div class="detail-section detail-section-trace" data-contract-slot="activity-log">
         <div class="detail-section-header">
           <span class="detail-section-title">Tool 调用记录</span>
           <span class="panel-count panel-count-sm">6 次</span>
@@ -2736,12 +2566,12 @@
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="4" width="3" height="12" rx="0.5"/><rect x="12" y="4" width="3" height="12" rx="0.5"/></svg>
           暂停
         </button>
-        
+
         <label for="overlay-run-rerun" class="btn-ghost cursor-pointer" tabindex="0" aria-label="重跑">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
           重跑
         </label>
-        
+
         <label for="overlay-tool-trace" class="btn-ghost cursor-pointer" tabindex="0" aria-label="查看产出">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/><path d="M9 4v12"/></svg>
           查看产出
@@ -2751,7 +2581,9 @@
   </div>
 
   <!-- Status Bar -->
-  <div class="status-bar" role="status" aria-label="Agent 状态">
+  <div class="status-bar" role="status" aria-label="Agent 状态" data-contract-slot="status" data-bottom-tray data-bottom-tray-state="collapsed">
+    <button class="status-kbd" type="button" data-bottom-tray-toggle aria-controls="agent-bottom-tray-content" aria-label="展开 Agent 状态">⌄</button>
+    <span id="agent-bottom-tray-content" data-bottom-tray-content>
     <span class="status-indicator" aria-hidden="true"></span>
     <span class="status-live">实时</span>
     <span class="status-sep">|</span>
@@ -2766,6 +2598,7 @@
     <span>14:36:42 CST</span>
     <span class="status-spacer"></span>
     <span class="status-kbd">Ctrl+K</span> 搜索
+    </span>
   </div>
 
   <!-- ════════════════════════════════════════════════
@@ -2963,31 +2796,31 @@
   <!-- ════════════════════════════════════════════════
        Overlay triggers (checkbox inputs placed at body level)
        ════════════════════════════════════════════════ -->
-  
-  
-  
+
+
+
 
   <!-- ════════════════════════════════════════════════
        State Variants (6 component groups)
        ════════════════════════════════════════════════ -->
 
   <!-- ── SV 1: Agent Header ── -->
-  
+
 
   <!-- ── SV 2: Agent Tabs (structural, no state variants) ── -->
-  
+
 
   <!-- ── SV 3: Main Queue + Cards ── -->
-  
+
 
   <!-- ── SV 4: Detail Panel ── -->
-  
+
 
   <!-- ── SV 5: Approval Flow ── -->
-  
+
 
   <!-- ── SV 6: Tool Trace ── -->
-  
+
 
   <script src="shared/theme-switcher.js"></script>
   <script src="shared/prototype-interactions.js"></script>

@@ -22,7 +22,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="platform">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="platform">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -228,16 +228,6 @@
     }
 
     .header-spacer { flex: 1; }
-
-    .header-actions,
-    .header-btn-group,
-    .settings-actions-row,
-    .config-item-actions,
-    .overlay-actions {
-      display: flex;
-      align-items: center;
-      gap: var(--space-8);
-    }
 
     .ops-health {
       min-height: var(--density-strip-height);
@@ -849,24 +839,11 @@
       background: var(--surface-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-8);
-      box-shadow: 0 8px 32px oklch(from var(--neutral-0) l c h / 0.42);
+      box-shadow: 0 8px 32px color-mix(in oklch, var(--neutral-0) 42%, transparent);
       padding: var(--space-16);
       width: 100%;
       max-width: 460px;
       position: relative;
-    }
-
-    .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--space-12);
-    }
-
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
     }
 
     .overlay-close {
@@ -875,45 +852,6 @@
       color: var(--text-tertiary);
       background: none;
       border: none;
-    }
-
-    .overlay-body {
-      color: var(--text-secondary);
-      font-size: var(--font-size-12);
-    }
-
-    .overlay-actions {
-      margin-top: var(--space-12);
-      justify-content: flex-end;
-    }
-
-    .overlay-btn {
-      min-height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 var(--space-10);
-      border-radius: var(--radius-4);
-      font-size: var(--font-size-12);
-      cursor: pointer;
-      border: 1px solid var(--border-default);
-    }
-
-    .overlay-btn-primary {
-      background: var(--brand-accent);
-      color: var(--text-inverse);
-      border-color: var(--brand-accent);
-    }
-
-    .overlay-btn-secondary {
-      background: transparent;
-      color: var(--text-secondary);
-    }
-
-    .overlay-btn-danger {
-      background: transparent;
-      color: var(--risk-high-fg);
-      border-color: color-mix(in oklch, var(--risk-high-fg) 54%, transparent);
     }
 
     .config-add-btn { margin-top: var(--space-10); }
@@ -968,7 +906,7 @@
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
           </div>
         </div>
-        
+
       </nav>
 
       <header class="shell-header" data-contract-slot="header">
@@ -980,38 +918,35 @@
         <div class="config-version-badge">CFG-2026.04.27-r18</div>
         <div class="header-spacer"></div>
         <div class="header-actions" role="toolbar" aria-label="配置操作">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          <span class="badge-dot"></span>
+          <button class="btn btn-sm">验证配置</button>
+          <button class="btn btn-primary btn-sm">保存草稿</button>
+        </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
         </button>
-        <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
-          <button class="btn btn-sm">验证配置</button>
-          <button class="btn btn-primary btn-sm">保存草稿</button>
-        </div>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
       </header>
 
       <div class="ops-health" role="status" aria-label="配置验证摘要" data-contract-slot="health">
@@ -1309,13 +1244,14 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-reset-config">
       <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="重置配置">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header"><span class="overlay-title">重置配置</span><label for="overlay-reset-config" class="overlay-close">✕</label></div>
         <div class="overlay-body">
-          <p>确认将所有配置重置为默认值？此操作不可撤销。</p>
+          <p data-impact-summary><span data-danger-marker>!</span> 确认将所有配置重置为默认值？此操作不可撤销。</p>
+          <p data-recovery-hint>恢复提示：重置前会保留 r17 stable 回滚点和配置 diff。</p>
           <div class="overlay-actions">
-            <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary">取消</label>
-            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger">确认重置</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认重置</label>
           </div>
         </div>
       </div>
@@ -1368,5 +1304,6 @@
       </div>
     </div>
   </section>
+  <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

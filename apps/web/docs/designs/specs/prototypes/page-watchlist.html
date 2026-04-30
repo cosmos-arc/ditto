@@ -16,7 +16,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="markets">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="markets">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,8 +35,6 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
   <link rel="stylesheet" href="shared/prototype-toggles.css">
@@ -222,14 +220,21 @@
       flex-shrink: 0;
     }
 
-    .col-select { width: 34px; }
-    .col-code { width: 12%; }
-    .col-name { width: 16%; }
-    .col-price { width: 12%; }
-    .col-change { width: 11%; }
-    .col-signal { width: 14%; }
-    .col-note { width: 20%; }
-    .col-action { width: 90px; }
+    .col-select { width: 28px; }
+    .col-code { width: 11%; }
+    .col-name { width: 18%; }
+    .col-price { width: 11%; }
+    .col-change { width: 10%; }
+    .col-signal { width: 15%; }
+    .col-note { width: 19%; }
+    .col-action { width: 96px; }
+
+    .data-table th.col-select,
+    .data-table td.col-select {
+      padding-left: var(--space-6);
+      padding-right: var(--space-4);
+      text-align: center;
+    }
 
     .watchlist-row-main {
       min-width: 0;
@@ -275,6 +280,10 @@
 
     .data-table tr.row td:first-child {
       position: relative;
+    }
+
+    .catalog-detail .btn.w-full {
+      justify-content: center;
     }
 
     .row-actions {
@@ -488,23 +497,6 @@
       border-radius: var(--radius-8) 0 0 var(--radius-8);
     }
 
-    /* ── Overlay shared ── */
-    .overlay-surface .overlay-header,
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
-
     .overlay-close {
       background: none;
       border: none;
@@ -517,40 +509,6 @@
 
     .overlay-close:hover { color: var(--text-secondary); }
 
-    .overlay-body {
-      color: var(--text-secondary);
-      font-size: var(--font-size-12);
-      line-height: 1.6;
-    }
-
-    .overlay-body h4 {
-      color: var(--text-primary);
-      font-size: var(--font-size-12);
-      font-weight: var(--font-weight-medium);
-      margin: var(--space-10) 0 var(--space-4);
-    }
-
-    .overlay-body h4:first-child { margin-top: 0; }
-
-    .overlay-actions {
-      display: flex;
-      gap: var(--space-6);
-      margin-top: var(--space-12);
-      justify-content: flex-end;
-    }
-
-    .overlay-btn {
-      padding: var(--space-2) var(--space-10);
-      border-radius: var(--radius-4);
-      font-size: var(--font-size-12);
-      cursor: pointer;
-      border: 1px solid var(--border-default);
-    }
-
-    .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
-    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
-    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
-
     /* ── Utility: overlay input ── */
     .ov-input {
       width: 100%;
@@ -562,17 +520,6 @@
       font-size: var(--font-size-12);
       outline: none;
     }
-
-    /* ── Overlay field ── */
-    .overlay-field {
-      display: flex;
-      justify-content: space-between;
-      padding: var(--space-4) 0;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
 
     .ov-label-btn { cursor: pointer; }
 
@@ -755,7 +702,7 @@
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
           </div>
         </div>
-        
+
       </nav>
 
       <!-- ═══ Header ═══ -->
@@ -769,38 +716,30 @@
           <label for="overlay-add-instrument" class="btn ov-label-btn">添加标的</label>
           <button class="btn btn-primary">同步信号</button>
         </div>
-        <div class="header-btn-group">
-          <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
-          <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          </button>
-          
-        </div>
-      
-      <div class="header-actions header-utility-bar">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
         </button>
       </div>
     </header>
@@ -809,7 +748,7 @@
       <div class="filter-toolbar" data-contract-slot="header">
         <div class="filter-group">
           <span class="filter-label">搜索:</span>
-          <input type="text" class="filter-search" placeholder="搜索代码/名称...">
+          <input type="text" class="filter-search" placeholder="搜索代码/名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索代码/名称...">
         </div>
         <div class="filter-divider"></div>
         <div class="filter-group">
@@ -872,8 +811,8 @@
               </thead>
               <tbody>
                 <!-- 600519 贵州茅台 -->
-                <tr class="row selected" data-direction="up">
-                  <td><span class="checkbox checked" aria-label="已选择贵州茅台"></span></td>
+                <tr class="row selected" data-row-selection-marker data-direction="up">
+                  <td class="col-select"><span class="checkbox checked" aria-label="已选择贵州茅台"></span></td>
                   <td class="cell-ticker numeric">600519</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -889,7 +828,7 @@
                 </tr>
                 <!-- 000858 五粮液 -->
                 <tr class="row" data-direction="up">
-                  <td><span class="checkbox" aria-label="选择五粮液"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择五粮液"></span></td>
                   <td class="cell-ticker numeric">000858</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -905,7 +844,7 @@
                 </tr>
                 <!-- 300750 宁德时代 -->
                 <tr class="row" data-direction="down">
-                  <td><span class="checkbox" aria-label="选择宁德时代"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择宁德时代"></span></td>
                   <td class="cell-ticker numeric">300750</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -921,7 +860,7 @@
                 </tr>
                 <!-- 601318 中国平安 -->
                 <tr class="row" data-direction="up">
-                  <td><span class="checkbox" aria-label="选择中国平安"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择中国平安"></span></td>
                   <td class="cell-ticker numeric">601318</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -937,7 +876,7 @@
                 </tr>
                 <!-- 002594 比亚迪 -->
                 <tr class="row" data-direction="up">
-                  <td><span class="checkbox" aria-label="选择比亚迪"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择比亚迪"></span></td>
                   <td class="cell-ticker numeric">002594</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -953,7 +892,7 @@
                 </tr>
                 <!-- 600036 招商银行 -->
                 <tr class="row" data-direction="down">
-                  <td><span class="checkbox" aria-label="选择招商银行"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择招商银行"></span></td>
                   <td class="cell-ticker numeric">600036</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -969,7 +908,7 @@
                 </tr>
                 <!-- 000001 平安银行 -->
                 <tr class="row" data-direction="up">
-                  <td><span class="checkbox" aria-label="选择平安银行"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择平安银行"></span></td>
                   <td class="cell-ticker numeric">000001</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -985,7 +924,7 @@
                 </tr>
                 <!-- 601012 隆基绿能 -->
                 <tr class="row" data-direction="down" data-stale="true">
-                  <td><span class="checkbox" aria-label="选择隆基绿能"></span></td>
+                  <td class="col-select"><span class="checkbox" aria-label="选择隆基绿能"></span></td>
                   <td class="cell-ticker numeric">601012</td>
                   <td>
                     <div class="watchlist-row-main">
@@ -1015,7 +954,7 @@
       </div>
 
       <!-- ═══ Detail Panel ═══ -->
-      <aside class="catalog-detail" data-contract-slot="detail">
+      <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
         <div class="context-section">
           <div class="context-section-header">
             <span class="context-section-title">标的详情</span>
@@ -1138,13 +1077,14 @@
 
       <div class="overlay-backdrop" data-overlay="overlay-bulk-delete">
         <label class="overlay-dismiss" for="overlay-bulk-delete" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量删除确认">
+        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量删除确认" data-danger-confirmation>
           <div class="overlay-header">
             <span class="overlay-title">确认批量删除</span>
             <label for="overlay-bulk-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
-            <p>确定要从观察列表中移除以下 3 只标的吗？此操作不可撤销，但不会影响 Instrument Hub 历史记录。</p>
+            <p data-impact-summary><span data-danger-marker>!</span> 确定要从观察列表中移除以下 3 只标的吗？此操作不可撤销，但不会影响 Instrument Hub 历史记录。</p>
+            <p data-recovery-hint>恢复提示：可从 Instrument Hub 历史记录重新加入观察列表。</p>
 
             <div class="sv-pad-section">
               <div class="overlay-field">
@@ -1162,8 +1102,8 @@
             </div>
 
             <div class="overlay-actions">
-              <label for="overlay-bulk-delete" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
-              <label for="overlay-bulk-delete" class="overlay-btn overlay-btn-danger ov-label-btn">确认删除</label>
+              <label for="overlay-bulk-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消</label>
+              <label for="overlay-bulk-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认删除</label>
             </div>
           </div>
         </div>
@@ -1259,7 +1199,7 @@
             <div class="gallery-card__label">Selected State</div>
             <div class="gallery-card__preview">
               <div class="state-variant-content" data-state="selected">
-                <div class="batch-bar">
+                <div class="batch-bar" data-batch-action-bar>
                   <span class="batch-count">已选择 1 只</span>
                   <span class="batch-spacer"></span>
                   <button class="btn btn-sm btn-danger">批量删除</button>
@@ -1306,7 +1246,7 @@
                 <div class="filter-toolbar">
                   <div class="filter-group">
                     <span class="filter-label">搜索:</span>
-                    <input type="text" class="filter-search" placeholder="搜索代码/名称...">
+                    <input type="text" class="filter-search" placeholder="搜索代码/名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索代码/名称...">
                   </div>
                   <div class="filter-divider"></div>
                   <div class="filter-group">
@@ -1431,5 +1371,6 @@
   <input type="checkbox" id="overlay-add-instrument" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-bulk-delete" class="overlay-radio sr-only">
 
+  <script src="shared/theme-switcher.js"></script>
 </body>
 </html>

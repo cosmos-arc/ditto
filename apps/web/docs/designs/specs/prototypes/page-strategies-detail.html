@@ -34,7 +34,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="research">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,14 +50,11 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
-
-  <!-- State Toggle System -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -101,85 +98,6 @@
       box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
       border-radius: var(--radius-4);
       transition: box-shadow 150ms ease-out;
-    }
-
-    /* ══════════════════════════════════════════════
-     * Shell Hub Layout
-     * ══════════════════════════════════════════════ */
-    .shell-hub {
-      display: grid;
-      grid-template-columns: var(--shell-rail-width) 1fr;
-      grid-template-rows: var(--shell-header-height) auto auto 1fr auto;
-      grid-template-areas:
-        "rail  header"
-        "rail  meta"
-        "rail  tabs"
-        "rail  main"
-        "rail  bottom";
-      min-height: 100vh;
-      width: 100vw;
-      overflow-y: auto;
-      position: relative;
-      padding-bottom: 1.5rem;
-      box-sizing: border-box;
-    }
-
-    .shell-hub::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--surface-app);
-      filter: url(#noise-filter);
-      opacity: 0.018;
-      pointer-events: none;
-      z-index: 0;
-    }
-    .shell-hub::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 2;
-    }
-    .shell-hub > * {
-      position: relative;
-      z-index: 1;
-    }
-
-    /* ══════════════════════════════════════════════
-     * Header
-     * ══════════════════════════════════════════════ */
-    .shell-hub .shell-header {
-      grid-area: header;
-      background: var(--surface-frosted);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: none;
-      position: relative;
-    }
-    .shell-hub .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
     }
 
     .object-header {
@@ -550,18 +468,6 @@
       background: color-mix(in oklch, var(--market-down-fg) 6%, transparent);
     }
 
-    /* ── Panel ── */
-    .panel {
-      background: var(--surface-panel-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--card-radius);
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
     .panel-header {
       display: flex;
       align-items: center;
@@ -581,26 +487,6 @@
       flex: 1;
       overflow: auto;
       padding: var(--space-10) var(--space-12);
-    }
-
-    /* ── Table ── */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: var(--font-size-12);
-    }
-    .data-table th {
-      text-align: left;
-      padding: var(--space-4) var(--space-6);
-      color: var(--text-tertiary);
-      font-weight: var(--font-weight-medium);
-      border-bottom: 1px solid var(--border-subtle);
-      white-space: nowrap;
-    }
-    .data-table td {
-      padding: var(--space-6);
-      border-bottom: 1px solid var(--border-subtle);
-      color: var(--text-secondary);
     }
     .data-table tr:hover td {
       background: var(--interaction-hover-subtle-bg);
@@ -1085,7 +971,7 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      
+
     </nav>
 
     <!-- ══════════════════════════════════════════════
@@ -1095,7 +981,7 @@
       <div class="object-header" role="banner">
         <div class="object-identity">
           <div class="object-name-row">
-            <span class="object-name">动量因子增强策略</span>
+            <h1 class="object-name">动量因子增强策略</h1>
             <span class="object-code">多因子 · v3.2</span>
             <span class="object-status active" role="status" aria-label="活跃">
               <span class="object-status-dot"></span>
@@ -1107,37 +993,8 @@
         <div class="spacer"></div>
 
         <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </button>
-          <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
           <div class="meta-sep-line"></div>
-          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" data-shell-utility="notifications">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg>
-            <span class="badge-dot"></span>
-          </div>
-          
+
         </div>
 
         <div class="header-ctas">
@@ -1158,6 +1015,32 @@
             删除
           </label>
         </div>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
       </div>
     </header>
 
@@ -2225,7 +2108,7 @@
           <div class="gallery-card" data-overlay-ref="overlay-delete-strategy">
             <div class="gallery-card__label">删除策略 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="删除策略">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="删除策略">
                 <div class="overlay-header">
                   <span class="overlay-title sd-color-down">⚠ 确认删除</span>
                 </div>
@@ -2292,7 +2175,7 @@
           <div class="gallery-card" data-overlay-ref="overlay-copy-strategy">
             <div class="gallery-card__label">复制策略 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="复制策略">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="复制策略">
                 <div class="overlay-header">
                   <span class="overlay-title">复制策略</span>
                 </div>
@@ -2314,7 +2197,7 @@
           <div class="gallery-card" data-overlay-ref="overlay-version-rollback">
             <div class="gallery-card__label">版本回滚 (Modal)</div>
             <div class="gallery-card__preview gallery-card__preview--overlay">
-              <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="版本回滚">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="版本回滚">
                 <div class="overlay-header">
                   <span class="overlay-title sd-color-degraded">⚠ 版本回滚</span>
                 </div>

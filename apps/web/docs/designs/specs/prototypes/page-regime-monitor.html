@@ -24,7 +24,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="research">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,12 +43,8 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
-
-  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <!-- Noise Texture (SVG filter) -->
@@ -380,21 +376,6 @@
      * ══════════════════════════════════════════════ */
     :root:has(#overlay-ai-regime:checked)
       [data-overlay="overlay-ai-regime"] { display: flex; }
-
-    /* ── Overlay content ── */
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
     .overlay-close {
       background: none;
       border: none;
@@ -405,14 +386,6 @@
       line-height: 1;
     }
     .overlay-close:hover { color: var(--text-secondary); }
-
-    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
-    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
-    .overlay-body h4:first-child { margin-top: 0; }
-
-    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
 
     /* ── Regime Indicator (gauge-like display) ── */
     .regime-indicator {
@@ -1311,12 +1284,6 @@
     .overlay-strategy-action--warn { color: var(--risk-near-limit-fg); }
     .overlay-strategy-action--critical { color: var(--risk-critical-fg); }
 
-    /* ── Overlay actions margin ── */
-    .overlay-actions--spaced { margin-top: var(--space-16); }
-
-    /* ── Overlay field value colored ── */
-    .overlay-field-value--up { color: var(--market-up-fg); }
-
     /* ── Status bar separator ── */
     .status-dot-sep {
       margin: 0 var(--space-4);
@@ -1863,17 +1830,17 @@
       border-radius: 2px;
     }
     .heatgrid-legend-swatch--risk-off {
-      background: oklch(from var(--market-down-fg) l c h / 0.18);
+      background: color-mix(in oklch, var(--market-down-fg) 18%, transparent);
     }
     .heatgrid-legend-swatch--mixed {
-      background: oklch(from var(--neutral-950) l c h / 0.02);
+      background: color-mix(in oklch, var(--neutral-950) 2%, transparent);
       border: 1px solid var(--border-subtle);
     }
     .heatgrid-legend-swatch--risk-on {
-      background: oklch(from var(--market-up-fg) l c h / 0.22);
+      background: color-mix(in oklch, var(--market-up-fg) 22%, transparent);
     }
     .heatgrid-legend-swatch--strong {
-      background: oklch(from var(--market-up-fg) l c h / 0.45);
+      background: color-mix(in oklch, var(--market-up-fg) 45%, transparent);
     }
 
     /* ── Probability section body ── */
@@ -2022,15 +1989,6 @@
     .fit-bar-w-58 { width: 58%; }
     .fit-bar-w-32 { width: 32%; }
 
-    /* ══════════════════════════════════════════════
-     * Round 4 — Visual Elevation & Anchor Enhancement
-     * ══════════════════════════════════════════════ */
-
-    /* ── A: Surface Elevation Depth System ── */
-    .panel {
-      box-shadow: inset 0 1px 0 color-mix(in oklch, var(--text-primary) 3%, transparent);
-    }
-
     /* Regime Indicator: focal panel — elevated surface + brand ambient glow */
     .panel[data-mouse-glow] {
       background: color-mix(in oklch, var(--surface-panel-base) 98%, var(--brand-accent));
@@ -2136,6 +2094,7 @@
   </nav>
 
   <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main-content">跳到主内容</a>
 
   <div class="style-label">Graphite Studio — Regime Monitor · Compact · A股</div>
 
@@ -2167,12 +2126,12 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l7 12H3L10 2z"/><line x1="10" y1="7" x2="10" y2="10"/><circle cx="10" cy="12" r="0.5" fill="currentColor"/></svg>
         </div>
       </div>
-      
+
     </nav>
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">Regime Monitor</span>
+      <span class="header-title">市场状态监控</span>
 
       <div class="header-spacer"></div>
 
@@ -2184,45 +2143,40 @@
       </div>
 
       <!-- Search -->
-      <div class="header-search" data-shell-utility="command" data-search-scope="global">
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        搜索 Regime...
-        <kbd>⌘K</kbd>
-      </div>
 
       <!-- Actions -->
       <div class="header-actions">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          <span class="badge-dot"></span>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
-        <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
         <label for="overlay-ai-regime" class="btn-cta-sm label-clickable">AI 解读</label>
         <div class="header-action-btn" title="刷新">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><polyline points="14 5 15.5 7.5 12.5 7.5"/><polyline points="6 15 4.5 12.5 7.5 12.5"/></svg>
         </div>
-        
+
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
       </div>
     </header>
 
@@ -2292,7 +2246,7 @@
             <div class="regime-main-col">
 
               <!-- Regime Indicator Panel -->
-              <div class="panel regime-panel-fixed" data-reveal="fade-up" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.04)" data-mouse-glow-size="280px">
+              <div class="panel regime-panel-fixed" data-reveal="fade-up" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-500) 4%, transparent)" data-mouse-glow-size="280px">
                 <div class="panel-header">
                   <span class="panel-title">Regime Indicator</span>
                   <span class="panel-subtitle panel-subtitle--offset">Regime Engine 实时判定</span>
@@ -2338,7 +2292,7 @@
               </div>
 
               <!-- Regime Timeline Chart -->
-              <div class="panel chart-panel regime-panel-grow" data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" data-mouse-glow-color="oklch(from var(--brand-500) l c h / 0.03)" data-mouse-glow-size="320px">
+              <div class="panel chart-panel regime-panel-grow" data-reveal="fade-up" data-reveal-delay="150" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-500) 3%, transparent)" data-mouse-glow-size="320px">
                 <div class="panel-header">
                   <span class="panel-title">Regime Timeline</span>
                   <span class="panel-subtitle panel-subtitle--offset">近 3 个月 Regime 变化</span>
@@ -2540,8 +2494,9 @@
                     <span class="context-section-count">近 4 周</span>
                   </div>
                   <div class="heatgrid-body">
-                    <svg data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["oklch(from var(--market-down-fg) l c h / 0.10)","oklch(from var(--market-down-fg) l c h / 0.18)","oklch(from var(--neutral-950) l c h / 0.02)","oklch(from var(--market-up-fg) l c h / 0.12)","oklch(from var(--market-up-fg) l c h / 0.22)","oklch(from var(--market-up-fg) l c h / 0.32)","oklch(from var(--market-up-fg) l c h / 0.45)"]}' aria-label="市场状态矩阵"></svg>
-                    <div class="heatgrid-legend">
+                    <svg class="viz-cell-strong" data-viz-cell-strength="strong" data-viz-cell-selected data-heatgrid='{"rows":4,"cols":7,"cellSize":20,"gap":2,"data":[0.12,0.08,0.15,0.22,0.35,0.48,0.55,0.18,0.25,0.42,0.58,0.62,0.71,0.78,0.32,0.38,0.52,0.68,0.75,0.82,0.88,0.45,0.55,0.65,0.72,0.78,0.85,0.92],"labels":["03-02 周一: Risk-Off","03-03 周二: Risk-Off","03-04 周三: Risk-Off","03-05 周四: Mixed-偏弱","03-06 周五: Mixed","03-09 周一: Mixed-偏强","03-10 周二: Risk-On","03-11 周三: Risk-Off","03-12 周四: Mixed-偏弱","03-13 周五: Mixed","03-16 周一: Mixed-偏强","03-17 周二: Risk-On","03-18 周三: Risk-On","03-19 周四: Risk-On 强","03-20 周五: Risk-Off","03-23 周一: Mixed","03-24 周二: Mixed-偏强","03-25 周三: Risk-On","03-26 周四: Risk-On","03-27 周五: Risk-On 强","03-30 周一: Risk-On 强","03-31 周二: Mixed-偏弱","04-01 周三: Mixed-偏强","04-02 周四: Risk-On","04-03 周五: Risk-On","04-06 周一: Risk-On 强","04-07 周二: Risk-On 强"],"colors":["color-mix(in oklch, var(--market-down-fg) 10%, transparent)","color-mix(in oklch, var(--market-down-fg) 18%, transparent)","color-mix(in oklch, var(--neutral-950) 2%, transparent)","color-mix(in oklch, var(--market-up-fg) 12%, transparent)","color-mix(in oklch, var(--market-up-fg) 22%, transparent)","color-mix(in oklch, var(--market-up-fg) 32%, transparent)","color-mix(in oklch, var(--market-up-fg) 45%, transparent)"]}' aria-label="市场状态矩阵"></svg>
+                    <div class="heatgrid-legend" data-viz-legend aria-label="Regime 矩阵图例">
+                      <span class="viz-sign-marker" data-viz-sign="positive">Risk-On</span><span class="viz-sign-marker" data-viz-sign="negative">Risk-Off</span><span class="viz-threshold-label" data-viz-threshold-label>概率 ≥ 70% 强 regime</span>
                       <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--risk-off"></span>Risk-Off</span>
                       <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--mixed"></span>Mixed</span>
                       <span class="heatgrid-legend-item"><span class="heatgrid-legend-swatch heatgrid-legend-swatch--risk-on"></span>Risk-On</span>
@@ -2558,15 +2513,15 @@
                   </div>
                   <div class="context-section-body probability-body">
                     <div class="regime-probability-item">
-                      <svg data-donut='{"value":0.72,"label":"72%","color":"oklch(from var(--market-up-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Risk-On概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
+                      <svg data-donut='{"value":0.72,"label":"72%","color":"var(--market-up-fg)","size":72,"strokeWidth":5}' aria-label="Risk-On概率" data-tooltip="Risk-On 概率 72%，由情绪+资金+波动率三因子驱动"></svg>
                       <span class="probability-label--bull">Risk-On</span>
                     </div>
                     <div class="regime-probability-item">
-                      <svg data-donut='{"value":0.18,"label":"18%","color":"oklch(from var(--market-down-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Risk-Off概率" data-tooltip="Risk-Off 概率 18%，若 IVIX >22 或北向连续流出将触发"></svg>
+                      <svg data-donut='{"value":0.18,"label":"18%","color":"var(--market-down-fg)","size":72,"strokeWidth":5}' aria-label="Risk-Off概率" data-tooltip="Risk-Off 概率 18%，若 IVIX >22 或北向连续流出将触发"></svg>
                       <span class="probability-label--bear">Risk-Off</span>
                     </div>
                     <div class="regime-probability-item">
-                      <svg data-donut='{"value":0.10,"label":"10%","color":"oklch(from var(--risk-near-limit-fg) l c h)","size":72,"strokeWidth":5}' aria-label="Mixed概率" data-tooltip="Mixed 概率 10%，市场信号矛盾时的中性区间"></svg>
+                      <svg data-donut='{"value":0.10,"label":"10%","color":"var(--risk-near-limit-fg)","size":72,"strokeWidth":5}' aria-label="Mixed概率" data-tooltip="Mixed 概率 10%，市场信号矛盾时的中性区间"></svg>
                       <span class="probability-label--neutral">Mixed</span>
                     </div>
                   </div>
@@ -2964,42 +2919,42 @@
 
   <!-- State Variants: Regime Indicator -->
   <div class="state-variant-pad">
-    
-    
-    
-    
+
+
+
+
   </div>
 
   <!-- State Variants: Status Strip -->
   <div class="state-variant-pad">
-    
-    
-    
-    
+
+
+
+
   </div>
 
   <!-- State Variants: Drivers Panel -->
   <div class="state-variant-pad">
-    
-    
-    
-    
+
+
+
+
   </div>
 
   <!-- State Variants: Switch History -->
   <div class="state-variant-pad">
-    
-    
-    
-    
+
+
+
+
   </div>
 
   <!-- State Variants: Strategy Impact -->
   <div class="state-variant-pad">
-    
-    
-    
-    
+
+
+
+
   </div>
 
   <script src="shared/theme-switcher.js"></script>

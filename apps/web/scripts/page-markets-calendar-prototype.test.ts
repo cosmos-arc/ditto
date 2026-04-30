@@ -73,6 +73,41 @@ describe("page-markets-calendar prototype", () => {
 		}
 	});
 
+	it("keeps economic timeline content comfortably away from the right rail divider", () => {
+		const html = loadHtml();
+
+		expect(html).toMatch(
+			/\.timeline-header\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-20\)\s+var\(--space-10\)\s+var\(--space-12\)/s,
+		);
+		expect(html).toMatch(
+			/\.timeline-body\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-20\)\s+var\(--space-10\)\s+var\(--space-12\)/s,
+		);
+		expect(html).toMatch(/\.timeline-item\s*\{[^}]*padding:\s*var\(--space-8\)\s+var\(--space-24\)/s);
+		expect(html).toMatch(/\.timeline-item:hover\s*\{[^}]*margin:\s*0;/s);
+	});
+
+	it("wires the month and list view switcher to real prototype state", () => {
+		const document = loadPage();
+		const html = loadHtml();
+
+		expect(document.querySelector("#calendar-view-month[name='calendar-view'][checked]")).not.toBeNull();
+		expect(document.querySelector("#calendar-view-list[name='calendar-view']")).not.toBeNull();
+		expect(document.querySelector("label.view-switcher-btn[for='calendar-view-month']")?.textContent).toContain(
+			"月历",
+		);
+		expect(document.querySelector("label.view-switcher-btn[for='calendar-view-list']")?.textContent).toContain(
+			"列表",
+		);
+		expect(html).not.toContain('class="view-switcher-btn active"');
+		expect(html).toMatch(/\.view-switcher\s+input:checked\s+\+\s+\.view-switcher-btn\s*\{/s);
+		expect(html).toMatch(
+			/\.shell-catalog:has\(#calendar-view-list:checked\)\s+\.calendar-section\s*\{[^}]*display:\s*none;/s,
+		);
+		expect(html).toMatch(
+			/\.shell-catalog:has\(#calendar-view-list:checked\)\s+\.event-list-section\s*\{[^}]*flex:\s*1\s+1\s+auto;[^}]*max-height:\s*none;/s,
+		);
+	});
+
 	it("keeps default-view numeric values deterministic for visual review screenshots", () => {
 		const document = loadPage();
 

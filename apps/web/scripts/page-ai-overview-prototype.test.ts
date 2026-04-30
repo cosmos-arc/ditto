@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-ai-overview.html",
+	"../docs/designs/specs/prototypes/archive/2026-04-30/page-ai-overview.html",
 );
 
 function loadPage() {

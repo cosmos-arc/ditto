@@ -17,7 +17,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="markets">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="markets">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -163,24 +163,6 @@
       flex-shrink: 0;
     }
 
-    .data-table th:first-child,
-    .data-table td:first-child {
-      width: 34px;
-      padding-left: var(--space-12);
-      padding-right: var(--space-4);
-    }
-
-    .data-table th.col-name,
-    .data-table td.col-name {
-      width: 28%;
-    }
-
-    .data-table th.col-actions,
-    .data-table td.col-actions {
-      width: 150px;
-      text-align: right;
-    }
-
     .row {
       position: relative;
     }
@@ -195,6 +177,22 @@
 
     .data-table tr.row.selected td:first-child {
       box-shadow: inset 3px 0 0 var(--brand-accent);
+    }
+
+    .col-select { width: 30px; }
+    .col-name { width: 26%; }
+    .col-count { width: 9%; }
+    .col-source { width: 14%; }
+    .col-strategies { width: 10%; }
+    .col-status { width: 10%; }
+    .col-updated { width: 15%; }
+    .col-actions { width: 96px; }
+
+    .data-table th.col-select,
+    .data-table td.col-select {
+      padding-left: var(--space-6);
+      padding-right: var(--space-4);
+      text-align: center;
     }
 
     .selection-mark {
@@ -464,22 +462,6 @@
       justify-content: center;
     }
 
-    .overlay-surface .overlay-header,
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
-
     .overlay-close {
       display: inline-flex;
       align-items: center;
@@ -494,77 +476,6 @@
     .overlay-close:hover {
       color: var(--text-secondary);
       background: var(--interaction-hover-subtle-bg);
-    }
-
-    .overlay-body {
-      color: var(--text-secondary);
-      font-size: var(--font-size-12);
-      line-height: 1.6;
-    }
-
-    .overlay-body h4 {
-      color: var(--text-primary);
-      font-size: var(--font-size-12);
-      font-weight: var(--font-weight-medium);
-      margin: var(--space-10) 0 var(--space-4);
-    }
-
-    .overlay-body h4:first-child {
-      margin-top: 0;
-    }
-
-    .overlay-actions {
-      display: flex;
-      gap: var(--space-6);
-      margin-top: var(--space-12);
-      justify-content: flex-end;
-    }
-
-    .overlay-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 26px;
-      padding: var(--space-2) var(--space-10);
-      border-radius: var(--radius-4);
-      font-size: var(--font-size-12);
-      cursor: pointer;
-      border: 1px solid var(--border-default);
-    }
-
-    .overlay-btn-primary {
-      background: var(--brand-accent);
-      color: var(--text-inverse);
-      border-color: var(--brand-accent);
-    }
-
-    .overlay-btn-secondary {
-      background: transparent;
-      color: var(--text-secondary);
-    }
-
-    .overlay-btn-danger {
-      background: transparent;
-      color: var(--risk-high-fg);
-      border-color: var(--risk-high-fg);
-    }
-
-    .overlay-field {
-      display: flex;
-      justify-content: space-between;
-      gap: var(--space-12);
-      padding: var(--space-4) 0;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .overlay-field-label {
-      color: var(--text-tertiary);
-    }
-
-    .overlay-field-value {
-      color: var(--text-primary);
-      font-feature-settings: "tnum" 1;
-      text-align: right;
     }
 
     .ov-input {
@@ -729,7 +640,7 @@
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
           </div>
         </div>
-        
+
       </nav>
 
       <header class="shell-header" role="toolbar" aria-label="股票池列表工具栏" data-contract-slot="header">
@@ -742,38 +653,30 @@
           <label for="overlay-universe-edit" class="btn btn-primary ov-label-btn">创建股票池</label>
           <button class="btn btn-ghost">导入名单</button>
         </div>
-        <div class="header-btn-group">
-          <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
-          <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          </button>
-          
-        </div>
-      
-      <div class="header-actions header-utility-bar">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
         </button>
       </div>
     </header>
@@ -782,7 +685,7 @@
         <div class="filter-toolbar" data-contract-slot="header">
           <div class="filter-group">
             <span class="filter-label">搜索:</span>
-            <input type="text" class="filter-search" placeholder="搜索股票池名称 / 来源">
+            <input type="text" class="filter-search" placeholder="搜索股票池名称 / 来源" data-table-toolbar="search" data-local-search="table" aria-label="搜索股票池名称 / 来源">
           </div>
           <div class="filter-divider"></div>
           <div class="filter-group">
@@ -812,19 +715,19 @@
               <caption class="sr-only">股票池列表：共 12 个股票池</caption>
               <thead>
                 <tr>
-                  <th scope="col" aria-label="选择"></th>
+                  <th scope="col" class="col-select" aria-label="选择"></th>
                   <th scope="col" class="col-name">名称 <span class="sort-icon">▲</span></th>
-                  <th scope="col" class="right">标的数</th>
-                  <th scope="col">来源</th>
-                  <th scope="col" class="right">关联策略数</th>
-                  <th scope="col">状态</th>
+                  <th scope="col" class="right col-count">标的数</th>
+                  <th scope="col" class="col-source">来源</th>
+                  <th scope="col" class="right col-strategies">关联策略数</th>
+                  <th scope="col" class="col-status">状态</th>
                   <th scope="col" class="right col-updated">更新时间</th>
                   <th scope="col" class="col-actions">操作</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="row selected" data-universe-id="hs300">
-                  <td><span class="selection-mark checked" aria-hidden="true">✓</span></td>
+                <tr class="row selected" data-row-selection-marker data-universe-id="hs300">
+                  <td class="col-select"><span class="selection-mark checked" aria-hidden="true">✓</span></td>
                   <td class="col-name">
                     <div class="universe-name-stack">
                       <span class="universe-name">沪深300成分股</span>
@@ -839,7 +742,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="zz500">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">中证500成分股</span><span class="universe-meta">指数同步 · 中盘覆盖</span></div></td>
                   <td class="right numeric">500</td>
                   <td><span class="source-pill index">指数成分</span></td>
@@ -849,7 +752,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="roe">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">高ROE精选</span><span class="universe-meta">ROE TTM &gt; 18% · PE 分位过滤</span></div></td>
                   <td class="right numeric">85</td>
                   <td><span class="source-pill screen">筛选结果</span></td>
@@ -859,7 +762,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="tech-leaders">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">科技龙头组合</span><span class="universe-meta">人工维护 · 芯片 / 软件 / 设备</span></div></td>
                   <td class="right numeric">42</td>
                   <td><span class="source-pill custom">自定义</span></td>
@@ -869,7 +772,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="low-vol">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">低波动率组合</span><span class="universe-meta">近 60 日波动率后 20%</span></div></td>
                   <td class="right numeric">60</td>
                   <td><span class="source-pill screen">筛选结果</span></td>
@@ -879,7 +782,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="cyb50">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">创业板50</span><span class="universe-meta">指数同步 · 成长风格</span></div></td>
                   <td class="right numeric">50</td>
                   <td><span class="source-pill index">指数成分</span></td>
@@ -889,7 +792,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="cashflow">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">自由现金流稳定</span><span class="universe-meta">FCF 连续 8 季为正</span></div></td>
                   <td class="right numeric">118</td>
                   <td><span class="source-pill screen">筛选结果</span></td>
@@ -899,7 +802,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="dividend">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">高股息防御</span><span class="universe-meta">股息率 &gt; 4% · Beta &lt; 0.9</span></div></td>
                   <td class="right numeric">73</td>
                   <td><span class="source-pill screen">筛选结果</span></td>
@@ -909,7 +812,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="northbound">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">北向增持观察</span><span class="universe-meta">20 日净买入 Top 100</span></div></td>
                   <td class="right numeric">100</td>
                   <td><span class="source-pill screen">筛选结果</span></td>
@@ -919,7 +822,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="kcb50">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">科创50</span><span class="universe-meta">指数同步 · 硬科技样本</span></div></td>
                   <td class="right numeric">50</td>
                   <td><span class="source-pill index">指数成分</span></td>
@@ -929,7 +832,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="quality-growth">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">质量成长混合</span><span class="universe-meta">ROIC / 增速 / 盈利稳定性</span></div></td>
                   <td class="right numeric">154</td>
                   <td><span class="source-pill custom">自定义</span></td>
@@ -939,7 +842,7 @@
                   <td class="col-actions"><span class="row-actions"><label for="overlay-universe-edit" class="row-action primary">编辑</label><label for="overlay-universe-delete" class="row-action danger">删除</label></span></td>
                 </tr>
                 <tr class="row" data-universe-id="liquidity">
-                  <td><span class="selection-mark" aria-hidden="true">✓</span></td>
+                  <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">高流动性备选池</span><span class="universe-meta">20 日成交额 &gt; 5 亿</span></div></td>
                   <td class="right numeric">400</td>
                   <td><span class="source-pill screen">筛选结果</span></td>
@@ -964,7 +867,7 @@
         </div>
       </div>
 
-      <aside class="catalog-detail" data-contract-slot="detail">
+      <aside class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary>
         <div class="context-section">
           <div class="context-section-header">
             <span class="context-section-title">股票池详情</span>
@@ -1072,21 +975,22 @@
 
       <div class="overlay-backdrop" data-overlay="overlay-universe-delete">
         <label class="overlay-dismiss" for="overlay-universe-delete" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="删除股票池确认">
+        <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="删除股票池确认" data-danger-confirmation data-high-risk-confirmation>
           <div class="overlay-header">
             <span class="overlay-title">确认删除股票池</span>
             <label for="overlay-universe-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
-            <p>确认删除股票池「科技龙头组合」？关联策略将不再使用此股票池。</p>
+            <p data-impact-summary><span data-danger-marker>!</span> 确认删除股票池「科技龙头组合」？关联策略将不再使用此股票池。</p>
+            <p data-recovery-hint>恢复提示：删除后可用导出快照重建，关联策略需重新绑定。</p>
             <div class="sv-pad-section">
               <div class="overlay-field"><span class="overlay-field-label">标的数</span><span class="overlay-field-value">42</span></div>
               <div class="overlay-field"><span class="overlay-field-label">关联策略</span><span class="overlay-field-value">2 个</span></div>
               <div class="overlay-field"><span class="overlay-field-label">更新时间</span><span class="overlay-field-value">2026-04-19 10:20</span></div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
-              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-danger ov-label-btn">确认删除</label>
+              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消</label>
+              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认删除</label>
             </div>
           </div>
         </div>
@@ -1221,7 +1125,7 @@
             <div class="gallery-card__label">Bulk Selected State</div>
             <div class="gallery-card__preview">
               <div class="state-variant-content" data-state="bulk">
-                <div class="batch-bar">
+                <div class="batch-bar" data-batch-action-bar>
                   <span class="batch-count">已选择 2 个</span>
                   <span class="batch-spacer"></span>
                   <button class="btn btn-sm btn-danger">批量删除</button>

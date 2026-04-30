@@ -42,3 +42,46 @@
   --timeline-line-left:      5px;
   --timeline-line-top:       18px;
 }
+
+/* ── Prototype Density Semantics
+ * Product tokens still provide the raw density scale. Prototypes expose the
+ * reviewed semantic scale: compact / default / comfortable.
+ */
+:root,
+[data-density="default"] {
+  --density-panel-padding:     var(--space-12);
+  --density-section-gap:       var(--space-12);
+  --density-gutter:            var(--space-16);
+  --density-strip-height:      2.25rem;
+  --density-toolbar-height:    2.25rem;
+  --density-row-height:        2.25rem;
+  --density-cell-padding-x:    var(--space-12);
+  --density-cell-padding-y:    var(--space-6);
+  --density-header-height:     2rem;
+  --density-input-height:      2rem;
+  --density-action-height:     2rem;
+  --density-chart-header:      2rem;
+  --density-chart-padding:     var(--space-12);
+  --density-font-delta:        0;
+}
+
+[data-density="compact"] {
+  --density-panel-padding:     var(--space-8);
+  --density-section-gap:       var(--space-8);
+  --density-gutter:            var(--space-12);
+  --density-strip-height:      2rem;
+  --density-toolbar-height:    2rem;
+  --density-row-height:        2.125rem;
+  --density-cell-padding-x:    var(--space-8);
+  --density-cell-padding-y:    var(--space-4);
+  --density-header-height:     1.75rem;
+  --density-input-height:      1.75rem;
+  --density-action-height:     1.75rem;
+  --density-chart-header:      1.75rem;
+  --density-chart-padding:     var(--space-8);
+  --density-font-delta:        0;
+}
+
+[data-density="comfortable"] {
+  --density-font-delta: 0;
+}

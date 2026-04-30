@@ -27,7 +27,11 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="trading">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="trading">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Orders Ledger 执行账本</title>
 
   <!-- Fonts — bundled via Fontsource (no Google Fonts dependency) -->
   <link rel="stylesheet" href="shared/fonts.css">
@@ -42,12 +46,8 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
-
-  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -1246,22 +1246,6 @@
     /* Overlay D: 批量撤单确认 Modal */
     :root:has(#overlay-batch-cancel:checked)
       [data-overlay="overlay-batch-cancel"] { display: flex; }
-
-    /* ── Overlay content refinement ── */
-    .overlay-surface .overlay-header,
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
     .overlay-close {
       background: none;
       border: none;
@@ -1272,20 +1256,6 @@
       line-height: 1;
     }
     .overlay-close:hover { color: var(--text-secondary); }
-
-    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
-    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
-    .overlay-body h4:first-child { margin-top: 0; }
-
-    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
-
-    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
-    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
-    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
-    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
     /* State variant containers inherit page style */
     .state-variant .state-variant-content {
@@ -1409,12 +1379,6 @@
       font-size: var(--font-size-12);
       line-height: 1.6;
       margin: 0 0 var(--space-8);
-    }
-    .overlay-field-label-bold {
-      font-weight: var(--font-weight-medium);
-    }
-    .overlay-field-value-bold {
-      font-weight: var(--font-weight-medium);
     }
 
     /* ── Flex spacer ── */
@@ -1657,13 +1621,6 @@
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
-    /* Overlay button min-height alignment */
-    .overlay-btn {
-      min-height: 28px;
-      display: inline-flex;
-      align-items: center;
-    }
-
     /* Table header brand gradient bottom border */
     .ledger-table thead tr::after {
       content: '';
@@ -1894,12 +1851,12 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      
+
     </nav>
 
     <!-- ═══ Header ═══ -->
     <header class="shell-header">
-      <span class="header-title">Execution<span class="header-subtitle">执行账本</span></span>
+      <span class="header-title">执行账本</span>
       <div class="header-filters" data-contract-slot="filter-bar" role="toolbar" aria-label="订单筛选">
         <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话">
           <span>会话</span>
@@ -1932,31 +1889,6 @@
       </div>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </button>
-        <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
         <button class="filter-btn" tabindex="0" aria-label="刷新订单" title="刷新">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
           刷新
@@ -1964,25 +1896,48 @@
         <div class="header-action-btn" tabindex="0" role="button" aria-label="导出订单" title="导出">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10m0 0l-3-3m3 3l3-3M3 17h14"/></svg>
         </div>
-        <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" title="通知" data-shell-utility="notifications">
+
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-        </div>
-        
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
       </div>
     </header>
 
     <!-- ═══ State Variants: Filter Bar ═══ -->
-    
-    
-    
+
+
+
 
     <!-- ═══ Status Strip (Radio Tab System) ═══ -->
     <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="订单状态筛选">
       <!-- Overlay checkbox inputs (placed here for :has() scope) -->
-      
-      
-      
-      
+
+
+
+
 
       <!-- Radio inputs for tabs (default: orders-done checked) -->
       <input type="radio" name="orders-tab" id="orders-pending" class="tab-radio sr-only">
@@ -2604,13 +2559,13 @@
     </div>
 
     <!-- ═══ State Variants: Orders Ledger Table ═══ -->
-    
-    
-    
-    
+
+
+
+
 
     <!-- ═══ Order Trace Panel (340px) ═══ -->
-    <aside class="order-trace catalog-detail" id="order-trace" data-contract-slot="execution-trace" data-reveal="fade-right" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
+    <aside class="order-trace catalog-detail" id="order-trace" data-contract-slot="execution-trace" data-reveal="fade-up" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
       <!-- Trace Header -->
       <div class="trace-header">
         <div class="trace-title">
@@ -2810,9 +2765,9 @@
     </aside>
 
     <!-- ═══ State Variants: Order Trace ═══ -->
-    
-    
-    
+
+
+
 
     </div><!-- /tab-panel orders-done -->
 
@@ -2887,15 +2842,15 @@
       </aside>
 
     <!-- ═══ State Variants: Batch Action Bar ═══ -->
-    
-    
-    
-    
+
+
+
+
 
     <!-- ═══ State Variants: Pagination ═══ -->
-    
-    
-    
+
+
+
 
     </div><!-- /tab-panel orders-pending -->
 

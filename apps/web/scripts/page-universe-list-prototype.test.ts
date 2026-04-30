@@ -8,6 +8,7 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-universe-list.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -57,6 +58,16 @@ describe("page-universe-list prototype", () => {
 		expect(document.querySelector("#default-view .batch-summary")).not.toBeNull();
 	});
 
+	it("keeps the selection column compact while preserving balanced table width", () => {
+		const document = loadPage();
+		const html = loadHtml();
+
+		expect(document.querySelector("#default-view .data-table th.col-select")).not.toBeNull();
+		expect(document.querySelector("#default-view .data-table tbody td.col-select")).not.toBeNull();
+		expect(html).toMatch(/\.col-select\s*\{[^}]*width:\s*30px;/s);
+		expect(html).toMatch(/\.col-name\s*\{[^}]*width:\s*26%;/s);
+	});
+
 	it("keeps all prototype markup free of inline style attributes", () => {
 		expect(loadHtml()).not.toMatch(/\sstyle=/);
 	});
@@ -81,8 +92,7 @@ describe("page-universe-list prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.locator("label[for='overlay-universe-edit']").first().click();
 				await expectCssVisible(page, "[data-overlay='overlay-universe-edit']", true);

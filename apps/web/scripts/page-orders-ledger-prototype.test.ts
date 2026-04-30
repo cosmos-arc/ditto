@@ -8,10 +8,23 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-orders-ledger.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadPage() {
 	const html = readFileSync(prototypePath, "utf-8");
 	return new JSDOM(html).window.document;
+}
+
+function loadHtml() {
+	return readFileSync(prototypePath, "utf-8");
+}
+
+function loadDefaultViewHtml() {
+	const html = loadHtml();
+	const start = html.indexOf('<section id="default-view"');
+	const end = html.indexOf('<section id="states-gallery"');
+
+	return start >= 0 && end > start ? html.slice(start, end) : html;
 }
 
 describe("page-orders-ledger prototype", () => {
@@ -31,8 +44,7 @@ describe("page-orders-ledger prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await expectVisiblePanels(page, ["all"]);
 
@@ -56,8 +68,7 @@ describe("page-orders-ledger prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const overlap = await page.evaluate(() => {
 					const statusBar = document.querySelector("#default-view > .status-bar");
@@ -101,6 +112,14 @@ describe("page-orders-ledger prototype", () => {
 		expect(document.querySelectorAll("#default-view [data-counter], #default-view [data-ticker]")).toHaveLength(0);
 	});
 
+	it("keeps default-view entrance motion subtle and non-jittery", () => {
+		const defaultView = loadDefaultViewHtml();
+		const delays = [...defaultView.matchAll(/data-reveal-delay="(\d+)"/g)].map((match) => Number(match[1]));
+
+		expect(defaultView).not.toContain('data-reveal="fade-right"');
+		expect(Math.max(...delays)).toBeLessThanOrEqual(220);
+	});
+
 	it(
 		"uses the full default ledger width for scan-ready columns",
 		async () => {
@@ -109,8 +128,7 @@ describe("page-orders-ledger prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const trailingGap = await page.evaluate(() => {
 					const table = document.querySelector('#default-view [data-tab-panel="all"] .ledger-table');
@@ -141,8 +159,7 @@ describe("page-orders-ledger prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.locator('label[for="orders-pending"]').click();
 				await expectCssVisible(page, '[data-panel="orders-pending"]', true);

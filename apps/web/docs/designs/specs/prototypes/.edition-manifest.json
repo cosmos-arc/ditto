@@ -434,7 +434,7 @@
     },
     {
       "id": "ai-overview",
-      "file": "page-ai-overview.html",
+      "file": "archive/2026-04-30/page-ai-overview.html",
       "status": "archived-specimen",
       "score": 9.6,
       "styleAnchor": "platform",
@@ -472,7 +472,7 @@
         "visualAuditStatus": "not-applicable"
       },
       "migrationNote": "v2.0 removes /ai as a product domain; overview content lands in Home Agent Findings and Platform Agents.",
-      "archiveNote": "Retained as an AI interaction specimen, not an active landing route candidate."
+      "archiveNote": "Physically archived on 2026-04-30; retained as an AI interaction specimen, not an active landing route candidate."
     },
     {
       "id": "regime-monitor",
@@ -552,7 +552,7 @@
     },
     {
       "id": "ai-copilot",
-      "file": "page-ai-copilot.html",
+      "file": "archive/2026-04-30/page-ai-copilot.html",
       "status": "archived-specimen",
       "score": 9.6,
       "styleAnchor": "platform",
@@ -590,7 +590,7 @@
         "visualAuditStatus": "not-applicable"
       },
       "migrationNote": "v2.0 removes /ai/copilot as a product route; Copilot now lands as a global sidecar capability.",
-      "archiveNote": "Retained as an AI interaction specimen, not an active landing route candidate."
+      "archiveNote": "Physically archived on 2026-04-30; retained as an AI interaction specimen, not an active landing route candidate."
     },
     {
       "id": "agent-console",
@@ -1136,6 +1136,7 @@
       "ai-overview",
       "ai-copilot"
     ],
+    "archiveDirectory": "docs/designs/specs/prototypes/archive/2026-04-30",
     "shellFamilyStatus": "PASS",
     "overlayRegistryStatus": "PASS",
     "galleryDisciplineStatus": "PASS",
@@ -1319,7 +1320,7 @@
     }
   },
   "editionReviewedAt": "2026-04-27",
-  "metadataUpdatedAt": "2026-04-27",
+  "metadataUpdatedAt": "2026-04-30",
   "routeContractCoverage": {
     "iaRoutes": 27,
     "generatedContracts": 27,

@@ -53,6 +53,20 @@
 - 原型 overlay gallery 为静态渲染
 - React 端需实现：Drawer / Modal / Confirm Dialog 的动画过渡 + 焦点管理 + ESC 关闭
 
+### 10. Prototype Interaction UX 2026-04-30
+- 来源：`docs/designs/specs/20_interaction_ux_audit.md` 与 `docs/plans/2026-04-30-prototype-interaction-ux-remediation-plan.md`
+- React Rail 需使用 TanStack Router links，不延续 prototype 中的静态 `href`
+- 建立 typed icon registry：domain icons、header utilities、local action icons 分层管理
+- 将 prototype inline SVG 替换为 Lucide/custom icon components，并保证同一图标不跨语义复用
+- 实现 `ContextDisclosureSection`：`aria-expanded`、`aria-controls`、默认展开策略、count 与 summary
+- 折叠偏好、Bottom Tray 状态、面板尺寸偏好进入 `use-ui-preferences` 或 Zustand 持久化
+- Bottom Tray 需要 React 状态机：`collapsed | peek | expanded`，并覆盖键盘与 reduced-motion 行为
+- 评估并申请批准后再安装 `react-resizable-panels`
+- 2026-04-30 查询当前包版本为 `react-resizable-panels@4.10.0`，实施前需重新确认版本与 API
+- 若依赖获批，先落地 Catalog 与 Studio shell 的 resizable panel group
+- 面板 resize 需覆盖 `role="separator"`、方向键、Enter collapse/restore、双击重置、24px hit area
+- 补 Playwright/RTL 测试：Rail 导航语义、Disclosure 键盘行为、Bottom Tray 三态、Resizable separator 键盘调整
+
 ---
 
 ## 维护说明

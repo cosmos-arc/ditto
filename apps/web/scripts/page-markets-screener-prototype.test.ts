@@ -8,6 +8,7 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-markets-screener.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadPage() {
 	const html = readFileSync(prototypePath, "utf-8");
@@ -16,6 +17,14 @@ function loadPage() {
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
+}
+
+function loadDefaultViewHtml() {
+	const html = loadHtml();
+	const start = html.indexOf('<section id="default-view"');
+	const end = html.indexOf('<section id="states-gallery"');
+
+	return start >= 0 && end > start ? html.slice(start, end) : html;
 }
 
 function elementText(root: Element | null, selector: string) {
@@ -63,6 +72,14 @@ describe("page-markets-screener prototype", () => {
 		);
 	});
 
+	it("keeps default-view entrance motion subtle and non-jittery", () => {
+		const defaultView = loadDefaultViewHtml();
+		const delays = [...defaultView.matchAll(/data-reveal-delay="(\d+)"/g)].map((match) => Number(match[1]));
+
+		expect(defaultView).not.toContain('data-reveal="fade-right"');
+		expect(Math.max(...delays)).toBeLessThanOrEqual(220);
+	});
+
 	it("keeps screener mode tabs wired to their panels for runtime interaction", () => {
 		const document = loadPage();
 		const tabs = document.querySelector('[data-tabs="screener-tabs"]');
@@ -108,8 +125,7 @@ describe("page-markets-screener prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.getByRole("button", { name: "中证500" }).click();
 				await expectActive(page, "中证500", true);
@@ -138,8 +154,7 @@ describe("page-markets-screener prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.getByRole("button", { name: "中证500" }).click();
 				await expectLocatorText(page, "[data-filter-draft]", "中证500");

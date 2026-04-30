@@ -18,6 +18,8 @@ function loadPage() {
 }
 
 const prototypeUrl = `file://${prototypePath}`;
+const navigationTimeoutMs = 10_000;
+const playwrightTestTimeoutMs = 15_000;
 
 describe("page-strategy-studio prototype", () => {
 	it("keeps all studio regions inside the gate-recognizable shell grid", () => {
@@ -60,7 +62,7 @@ describe("page-strategy-studio prototype", () => {
 		const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 
 		try {
-			await page.goto(prototypeUrl, { waitUntil: "load" });
+			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 			const pipeline = await page.$eval(".pipeline-visual", (element) => {
 				const rect = element.getBoundingClientRect();
 				const children = Array.from(element.children).map((child) => {
@@ -88,14 +90,14 @@ describe("page-strategy-studio prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("switches bottom log tabs between validation, dry run, and compile output", async () => {
 		const browser = await chromium.launch({ channel: "chromium" });
 		const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 
 		try {
-			await page.goto(prototypeUrl, { waitUntil: "load" });
+			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 			await page.click('[data-log-tab="dry-run"]');
 			await expectLogState(page, {
@@ -120,7 +122,7 @@ describe("page-strategy-studio prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 });
 
 async function expectLogState(

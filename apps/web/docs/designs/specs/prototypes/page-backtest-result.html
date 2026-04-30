@@ -30,7 +30,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="research">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,8 +49,6 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
   <link rel="stylesheet" href="shared/prototype-toggles.css">
@@ -60,15 +58,6 @@
     .skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; padding: var(--space-4) var(--space-8); background: var(--surface-overlay); color: var(--text-primary); font-size: var(--font-size-12); border-radius: var(--radius-4); }
     .skip-link:focus { left: var(--space-16); }
     .btn:focus-visible, .hub-tab:focus-visible, .header-action-btn:focus-visible, .meta-chip:focus-visible { outline: none; box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border); border-radius: var(--radius-4); }
-
-    /* ═══ Shell Hub Layout ═══ */
-    .shell-hub { display: grid; grid-template-columns: var(--shell-rail-width) 1fr; grid-template-rows: var(--shell-header-height) auto auto 1fr auto; grid-template-areas: "rail header" "rail meta" "rail tabs" "rail main" "rail bottom"; min-height: 100vh; width: 100vw; overflow-y: auto; position: relative; padding-bottom: 1.5rem; box-sizing: border-box; }
-    .shell-hub::before { content: ''; position: absolute; inset: 0; background: var(--surface-app); filter: url(#noise-filter); opacity: 0.018; pointer-events: none; z-index: 0; }
-    .shell-hub::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-accent) 8%, transparent) 5%, color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%, color-mix(in oklch, var(--brand-accent) 8%, transparent) 95%, transparent 100%); pointer-events: none; z-index: 2; }
-    .shell-hub > * { position: relative; z-index: 1; }
-
-    .shell-hub .shell-header { grid-area: header; background: var(--surface-frosted); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: none; position: relative; }
-    .shell-hub .shell-header::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 0%, color-mix(in oklch, var(--brand-signature-line) 12%, transparent) 5%, color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%, color-mix(in oklch, var(--brand-signature-line) 12%, transparent) 95%, transparent 100%); pointer-events: none; }
 
     .object-header { display: flex; align-items: center; gap: var(--space-12); flex: 1; min-width: 0; }
     .object-identity { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
@@ -125,15 +114,9 @@
     .metric-change.up { color: var(--market-up-fg); background: color-mix(in oklch, var(--market-up-fg) 6%, transparent); }
     .metric-change.down { color: var(--market-down-fg); background: color-mix(in oklch, var(--market-down-fg) 6%, transparent); }
     .metric-change.neutral { color: var(--text-tertiary); background: var(--interaction-hover-subtle-bg); }
-
-    .panel { background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
     .panel-header { display: flex; align-items: center; padding: var(--space-8) var(--space-12); border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; }
     .panel-title { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--text-secondary); flex: 1; }
     .panel-body { flex: 1; overflow: auto; padding: var(--space-10) var(--space-12); }
-
-    .data-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-12); }
-    .data-table th { text-align: left; padding: var(--space-4) var(--space-6); color: var(--text-tertiary); font-weight: var(--font-weight-medium); border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
-    .data-table td { padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
     .data-table tr:hover td { background: var(--interaction-hover-subtle-bg); }
     .data-table .numeric { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
 
@@ -237,29 +220,10 @@
     .dd-value { color: var(--market-down-fg); font-family: var(--font-family-numeric); font-weight: var(--font-weight-medium); }
     .dd-date { color: var(--text-tertiary); font-size: var(--font-size-10); }
     .sidebar-hint { font-size: var(--font-size-12); color: var(--text-tertiary); text-align: center; padding: var(--space-8); }
-    .overlay-surface .overlay-header, .overlay-backdrop .overlay-header, .overlay-fullscreen .overlay-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); padding-bottom: var(--space-10); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-10); }
-    .overlay-title { color: var(--text-primary); font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); }
-    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
-    .overlay-body h4 { margin: var(--space-10) 0 var(--space-4); color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); }
-    .overlay-body h4:first-child { margin-top: 0; }
-    .overlay-body-text { font-size: var(--font-size-12); color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--space-8); }
-    .overlay-body-text p { font-size: var(--font-size-12); color: var(--text-secondary); margin-bottom: var(--space-8); }
-    .overlay-field { display: flex; justify-content: space-between; gap: var(--space-12); padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-family: var(--font-family-numeric); }
-    .overlay-actions { display: flex; justify-content: flex-end; gap: var(--space-6); margin-top: var(--space-12); }
-    .overlay-btn { display: inline-flex; align-items: center; justify-content: center; height: var(--btn-height); padding: 0 var(--btn-padding-x); border: 1px solid var(--border-default); border-radius: var(--btn-radius); font-size: var(--btn-font-size); color: var(--text-secondary); background: var(--surface-panel-elevated); cursor: pointer; }
-    .overlay-btn-primary { color: var(--text-inverse); background: var(--brand-accent); border-color: var(--brand-accent); }
-    .overlay-btn-secondary { color: var(--text-secondary); background: var(--surface-panel-base); }
     .overlay-backdrop { width: min(420px, calc(100vw - 32px)); background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); box-shadow: 0 12px 40px color-mix(in oklch, black 45%, transparent); padding: var(--space-16); position: relative; }
     .gallery-card__preview--overlay .overlay-backdrop,
     .gallery-card__preview--overlay .overlay-fullscreen { width: 100%; max-width: 100%; height: auto; max-height: none; }
-    .overlay-confirm-box { padding: var(--space-8); background: var(--interaction-hover-subtle-bg); border-radius: var(--radius-4); margin-bottom: var(--space-8); }
-    .toast-card { background: var(--surface-panel-elevated); border: 1px solid var(--border-subtle); border-radius: var(--card-radius); padding: var(--space-10) var(--space-12); display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-12); }
-    .toast-link { color: var(--brand-accent); cursor: pointer; margin-left: auto; }
-    .overlay-btn-default { background: var(--surface-panel-elevated); border: 1px solid var(--border-default); color: var(--text-secondary); }
     .overlay-backdrop--toast { align-items: flex-start; justify-content: flex-end; padding: var(--space-16); background: transparent; pointer-events: none; }
-    .overlay-backdrop--toast .toast-card { min-width: 320px; pointer-events: auto; box-shadow: 0 12px 32px color-mix(in oklch, black 30%, transparent); }
     .cursor-pointer { cursor: pointer; }
     .format-tags { display: flex; gap: var(--space-4); margin-bottom: var(--space-10); }
     .mt-4 { margin-top: var(--space-4); }
@@ -360,7 +324,7 @@
         <div class="rail-icon" tabindex="0" role="button" aria-label="交易" title="交易" data-rail-domain="trading"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg></div>
         <div class="rail-icon" tabindex="0" role="button" aria-label="运维" title="运维" data-rail-domain="platform"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg></div>
       </div>
-      
+
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -368,41 +332,15 @@
       <div class="object-header" role="banner">
         <div class="object-identity">
           <div class="object-name-row">
-            <span class="object-name">动量增强优化</span>
+            <h1 class="object-name">动量增强优化</h1>
             <span class="object-code">#BT-20260410-003 · v3.2</span>
             <span class="object-status success" role="status"><span class="object-status-dot"></span>完成</span>
           </div>
         </div>
         <div class="spacer"></div>
         <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </button>
-          <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
           <div class="meta-sep-line"></div>
-          <div class="header-action-btn" tabindex="0" role="button" aria-label="通知" data-shell-utility="notifications"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 6.5A5 5 0 0010 1.5h0a5 5 0 00-5 5v3.5l-2 3h14l-2-3V6.5z"/><path d="M8.5 16a2 2 0 003 0"/></svg><span class="badge-dot"></span></div>
-          
+
         </div>
         <div class="header-ctas">
           <label for="overlay-enable-signal" class="btn btn-primary cursor-pointer"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>启用信号</label>
@@ -410,6 +348,32 @@
           <label for="overlay-ai-analysis" class="btn cursor-pointer"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>AI 解读</label>
           <label for="overlay-compare-toast" class="btn cursor-pointer"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="10" y="3" width="7" height="7" rx="1"/><rect x="3" y="10" width="7" height="7" rx="1"/><rect x="10" y="10" width="7" height="7" rx="1"/></svg>加入对比</label>
         </div>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
       </div>
     </header>
 
@@ -500,7 +464,7 @@
                     <div class="stat-item"><div class="stat-label">总收益</div><div class="stat-value c-up">+27.8%</div></div>
                     <div class="stat-item"><div class="stat-label">最大回撤期</div><div class="stat-value fs-12">2025-08-12 → 2025-09-18</div></div>
                     <div class="stat-item"><div class="stat-label">最长连涨</div><div class="stat-value">12 天</div></div>
-                    <div class="stat-item"><div class="stat-label">最长连跌</div><div class="stat-value c-down">5 天</div></div>
+                    <div class="stat-item viz-cell-strong" data-viz-sign="negative" data-viz-cell-strength="strong" data-viz-cell-selected><div class="stat-label">最长连跌</div><div class="stat-value c-down">5 天</div></div>
                   </div>
                 </div>
               </div>
@@ -549,7 +513,7 @@
           <div class="object-main hub-main">
             <div class="hub-object-view">
               <div class="panel panel-flex">
-                <div class="panel-header"><span class="panel-title">超额收益曲线</span><span class="chart-legend">vs 沪深300</span></div>
+                <div class="panel-header"><span class="panel-title">超额收益曲线</span><span class="chart-legend" data-viz-legend><span class="viz-sign-marker" data-viz-sign="positive">+ 超额</span><span class="viz-sign-marker" data-viz-sign="negative">− 回撤</span><span class="viz-threshold-label" data-viz-threshold-label>回撤 ≤ 15%</span> vs 沪深300</span></div>
                 <div class="panel-body flex-center">
                   <svg viewBox="0 0 400 120" class="chart-svg"><defs><linearGradient id="excess-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--market-up-fg)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--market-up-fg)" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="60" x2="400" y2="60" stroke="var(--border-subtle)" stroke-width="0.5" stroke-dasharray="4"/><path d="M0 65 L40 62 L80 58 L120 52 L160 55 L200 48 L240 42 L280 38 L320 35 L360 30 L400 25 L400 120 L0 120 Z" fill="url(#excess-g)"/><path d="M0 65 L40 62 L80 58 L120 52 L160 55 L200 48 L240 42 L280 38 L320 35 L360 30 L400 25" fill="none" stroke="var(--market-up-fg)" stroke-width="1.5"/></svg>
                 </div>
@@ -743,7 +707,7 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-enable-signal">
       <label class="overlay-dismiss" for="overlay-enable-signal" aria-label="关闭启用信号确认"></label>
-      <div class="overlay-modal" role="dialog" aria-modal="true" aria-label="启用信号">
+      <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="启用信号">
         <div class="overlay-header"><span class="overlay-title">确认启用信号</span><label for="overlay-enable-signal" class="overlay-close" aria-label="关闭">&#10005;</label></div>
         <div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value c-up">1.82 通过</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value c-up">18.2% 通过</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value">-12.3% 通过</span></div></div><div class="overlay-actions"><label for="overlay-enable-signal" class="overlay-btn overlay-btn-secondary">取消</label><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div>
       </div>
@@ -815,7 +779,7 @@
         <!-- Export Report -->
         <div class="gallery-card" data-overlay-ref="overlay-export"><div class="gallery-card__label">导出报告 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="导出报告"><div class="overlay-header"><span class="overlay-title">导出报告</span></div><div class="overlay-body"><h4>导出格式</h4><div class="format-tags"><span class="meta-tag brand cursor-pointer">PDF</span><span class="meta-tag cursor-pointer">Excel</span><span class="meta-tag cursor-pointer">CSV</span></div><h4>内容范围</h4><div class="overlay-field"><span class="overlay-field-label">包含</span><span class="overlay-field-value">全部 Tab + 图表</span></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">导出</button></div></div></div></div></div>
         <!-- Enable Signal -->
-        <div class="gallery-card" data-overlay-ref="overlay-enable-signal"><div class="gallery-card__label">启用信号确认 (Modal)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-modal" role="dialog" aria-modal="true" aria-label="启用信号"><div class="overlay-header"><span class="overlay-title">确认启用信号</span></div><div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value numeric c-up">1.82 ✓</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value numeric c-up">18.2% ✓</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value numeric">-12.3% ✓</span></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div></div></div></div>
+        <div class="gallery-card" data-overlay-ref="overlay-enable-signal"><div class="gallery-card__label">启用信号确认 (Modal)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="启用信号"><div class="overlay-header"><span class="overlay-title">确认启用信号</span></div><div class="overlay-body"><p class="fs-12 c-secondary mb-8">将为策略 <strong class="c-primary">动量因子增强策略 v3.2</strong> 启用实时信号生成。</p><div class="overlay-confirm-box"><div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value numeric c-up">1.82 ✓</span></div><div class="overlay-field"><span class="overlay-field-label">年化收益</span><span class="overlay-field-value numeric c-up">18.2% ✓</span></div><div class="overlay-field"><span class="overlay-field-label">最大回撤</span><span class="overlay-field-value numeric">-12.3% ✓</span></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary">取消</button><button class="overlay-btn overlay-btn-primary">确认启用</button></div></div></div></div></div>
         <!-- AI Analysis -->
         <div class="gallery-card" data-overlay-ref="overlay-ai-analysis"><div class="gallery-card__label">AI 解读 (Sheet)</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读"><div class="overlay-header"><span class="overlay-title">AI 回测分析</span></div><div class="overlay-body"><div class="overlay-body-text"><div><strong class="c-primary">摘要</strong><div class="mt-4">策略 v3.2 整体表现优秀，Sharpe 1.82 显著超越基准。动量因子贡献最大（+8.2%），但换手率因子产生负贡献（-1.2%）。</div></div><div><strong class="c-primary">建议</strong><div class="mt-4">考虑降低换手率因子权重或移除，以减少交易成本侵蚀。</div></div></div><div class="overlay-actions"><button class="overlay-btn overlay-btn-default">复制</button><button class="overlay-btn overlay-btn-primary">关闭</button></div></div></div></div></div>
         <!-- Compare Toast -->

@@ -24,7 +24,7 @@
 
   Coverage Score: 100%
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="markets">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="markets">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,12 +43,8 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
-
-  <!-- State Toggle System (pure CSS: checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -893,18 +889,6 @@
       color: var(--text-primary);
     }
 
-    /* ── Overdrive: text rendering optimization ── */
-    .data-table th,
-    .data-table td.numeric {
-      text-rendering: optimizeLegibility;
-    }
-
-    /* ── Numeric data: tabular-nums ── */
-    .data-table td.numeric {
-      font-feature-settings: 'tnum' 1, 'zero' 1;
-      letter-spacing: 0;
-    }
-
     .direction-symbol {
       display: inline-block;
       width: 0.75rem;
@@ -999,16 +983,6 @@
       font-feature-settings: 'tnum' 1;
     }
 
-    /* ── Sorted column brand accent ── */
-    .data-table th.sorted {
-      border-bottom: 2px solid var(--brand-accent);
-      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .data-table td.col-sorted {
-      background: color-mix(in oklch, var(--brand-accent) 3%, transparent);
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       .score-bar-fill { transition: none !important; }
@@ -1027,8 +1001,6 @@
       .sparkline-flat svg { transition: none !important; }
       .sparkline-up svg polyline,
       .sparkline-down svg polyline { transition: none !important; }
-      .data-table th.sorted { transition: none !important; }
-      .data-table td.col-sorted { transition: none !important; }
       .signal-pill.stale { transition: none !important; }
       .risk-dot.stale { transition: none !important; }
     }
@@ -1056,22 +1028,6 @@
     /* Overlay: 导出结果 Sheet */
     :root:has(#overlay-export:checked)
       [data-overlay="overlay-export"] { display: flex; }
-
-    /* ── Overlay content refinement ── */
-    .overlay-surface .overlay-header,
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
     .overlay-close {
       background: none;
       border: none;
@@ -1082,20 +1038,6 @@
       line-height: 1;
     }
     .overlay-close:hover { color: var(--text-secondary); }
-
-    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
-    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
-    .overlay-body h4:first-child { margin-top: 0; }
-
-    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
-
-    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
-    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
-    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
-    .overlay-btn-danger { background: transparent; color: var(--risk-high-fg); border-color: var(--risk-high-fg); }
 
     /* State variant containers inherit page style */
     .state-variant .state-variant-content {
@@ -1540,17 +1482,6 @@
     .cell-change-down {
       position: relative;
     }
-    .data-table td.cell-change-up::after,
-    .data-table td.cell-change-down::after {
-      content: '';
-      position: absolute;
-      right: 2px;
-      bottom: 2px;
-      height: 2px;
-      border-radius: 1px;
-      opacity: 0;
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
-    }
     .data-table tr:hover td.cell-change-up::after {
       background: var(--market-up-fg);
       opacity: 0.4;
@@ -1576,26 +1507,6 @@
       background: var(--brand-accent);
       opacity: 0.5;
       border-radius: 1px;
-    }
-
-    /* ── Table header sorted column accent glow ── */
-    .data-table th.sorted {
-      position: relative;
-    }
-    .data-table th.sorted::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 10%;
-      right: 10%;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        var(--brand-accent),
-        transparent
-      );
-      opacity: 0.6;
     }
 
     /* ── Signal pill confidence micro-bar ── */
@@ -1705,12 +1616,6 @@
       position: relative;
     }
 
-    /* ── Volume cell — subtle size cue ── */
-    .data-table td.cell-volume {
-      font-feature-settings: 'tnum' 1;
-      letter-spacing: 0;
-    }
-
     /* ── Sector badge — subtle lift with industry color hint ── */
     .cell-badge.sector {
       transition: background var(--motion-duration-fast) var(--motion-easing-standard),
@@ -1719,16 +1624,6 @@
     }
     .data-table tr:hover .cell-badge.sector {
       box-shadow: 0 0 0 1px var(--border-subtle);
-    }
-
-    /* ══════════════════════════════════════════════
-     * Iteration v5 Polish — Tables, Sparklines, Micro-interactions
-     * ══════════════════════════════════════════════ */
-
-    /* ── Table column alignment — consistent widths ── */
-    .data-table {
-      table-layout: fixed;
-      border-collapse: collapse;
     }
 
     /* ── Row hover: smooth background transition ── */
@@ -1777,13 +1672,6 @@
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
       letter-spacing: 0.02em;
-    }
-
-    /* ── Table cell: refined text rendering ── */
-    .data-table td {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
 
     /* ── Cell badge sector: refined sizing ── */
@@ -1835,27 +1723,6 @@
       padding: var(--space-4) var(--space-6);
     }
 
-    /* ── Table header: refined text ── */
-    .data-table th {
-      font-size: var(--font-size-11);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      font-weight: var(--font-weight-medium);
-      color: var(--text-tertiary);
-    }
-
-    /* ── Table header sort icon: refined ── */
-    .data-table th .sort-icon {
-      font-size: 8px;
-      opacity: 0.5;
-      vertical-align: middle;
-      margin-left: var(--space-2);
-    }
-    .data-table th.sorted .sort-icon {
-      opacity: 1;
-      color: var(--brand-accent);
-    }
-
     /* ── Reduced motion: disable new transitions ── */
     @media (prefers-reduced-motion: reduce) {
       .data-table tr.row { transition: none !important; }
@@ -1864,7 +1731,6 @@
       .sort-item { transition: none !important; }
       .compare-row { transition: none !important; }
       .pagination-btn:not(.active) { transition: none !important; }
-      .overlay-btn { transition: none !important; }
       .header-action-btn { transition: none !important; }
       .shm-summary { transition: none !important; }
     }
@@ -1885,20 +1751,6 @@
     .col-signal { width: 80px; }
     .col-risk   { width: 50px; }
     .col-trend  { width: 56px; }
-
-    /* ── Overlay button hover transitions ── */
-    .overlay-btn {
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  color var(--motion-duration-fast) var(--motion-easing-standard),
-                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .overlay-btn-primary:hover {
-      filter: brightness(1.15);
-    }
-    .overlay-btn-secondary:hover {
-      background: var(--interaction-hover-subtle-bg);
-      color: var(--text-primary);
-    }
 
     /* ── Sort item hover ── */
     .sort-item {
@@ -2029,12 +1881,6 @@
       transform: scale(1.15);
     }
 
-    /* ── Ticker cell: hover accent tint ── */
-    .data-table td.cell-ticker:hover {
-      color: var(--brand-accent);
-      cursor: pointer;
-    }
-
     /* ── Table footer: refined separator ── */
     .table-footer {
       border-top: 1px solid var(--border-subtle);
@@ -2148,7 +1994,7 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      
+
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -2163,40 +2009,34 @@
         <button class="btn btn-primary" data-filter-action="apply">执行筛选</button>
       </div>
       <div class="header-btn-group-right">
-        <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
         <button class="btn btn-ghost">重置</button>
         <label for="overlay-export" class="btn btn-ghost ov-label-btn">导出</label>
-        <button class="header-action-btn" title="通知" aria-label="通知" data-shell-utility="notifications">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          <span class="badge-dot"></span>
-        </button>
-        
+
       </div>
-    
-      <div class="header-actions header-utility-bar">
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
         </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
         </button>
       </div>
     </header>
@@ -2237,9 +2077,9 @@
     </div>
 
     <!-- State Variants: 筛选条件 / Filter Toolbar -->
-    
-    
-    
+
+
+
 
     <!-- State Variants: 筛选条件 selected 高亮 -->
 
@@ -2340,7 +2180,7 @@
             </thead>
             <tbody>
               <!-- 600519 贵州茅台 -->
-              <tr class="row selected" data-direction="up">
+              <tr class="row selected" data-row-selection-marker data-direction="up">
                 <td class="cell-ticker numeric" tabindex="0">600519</td>
                 <td>贵州茅台</td>
                 <td class="right numeric" data-tooltip="最新成交价">1,856.00</td>
@@ -2741,7 +2581,7 @@
     </div><!-- end data-tab-panel="compare" -->
 
     <!-- ═══ Detail Panel (320px right side) ═══ -->
-    <div class="catalog-detail" data-contract-slot="detail">
+    <div class="catalog-detail" data-contract-slot="detail" data-detail-sticky-summary data-batch-action-bar>
       <!-- Section 1: 结果去向 -->
       <div class="detail-actions" data-reveal="fade-up" data-reveal-delay="0">
         <div class="context-section-header">
@@ -2821,7 +2661,7 @@
       </div>
 
       <!-- Section 4: 对比篮 (默认展开 — 高频) -->
-      <details open class="context-section" data-reveal="fade-up" data-reveal-delay="300">
+      <details open class="context-section" data-reveal="fade-up" data-reveal-delay="220">
         <summary class="context-section-header">
           <span class="context-section-title">对比篮</span>
           <span class="collapse-count"><span data-compare-count>3</span> 只</span>
@@ -2870,33 +2710,33 @@
     </div>
 
     <!-- State Variants: Compare Cart -->
-    
-    
+
+
 
     <!-- State Variants: Scoring Presets -->
-    
-    
-    
+
+
+
 
     <!-- State Variants: Result Destinations -->
-    
-    
-    
+
+
+
 
     <!-- State Variants: Compare Drawer (Overlay) -->
-    
-    
-    
-    
-    
+
+
+
+
+
   </div>
 
   <!-- ═══ Overlay Checkbox Triggers ═══ -->
-  
-  
-  
-  
-  
+
+
+
+
+
 
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">
@@ -3374,7 +3214,7 @@
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="selected">
         <div class="sv-pad-8">
-          <div class="preset-card preset-card--selected">
+          <div class="preset-card preset-card--selected" data-row-selection-marker>
             <div class="preset-card-title">高ROE低估值</div>
             <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
             <div class="preset-card-match preset-card-match--selected">匹配 23 只 ✓ 已应用</div>

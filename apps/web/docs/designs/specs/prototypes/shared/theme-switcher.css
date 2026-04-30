@@ -1,16 +1,33 @@
 /* ─────────────────────────────────────────────
- * Ditto Theme Switcher — Shared Controls
- * Density (Dense / Compact / Comfortable) + Theme (Dark / Light)
- * Used by all prototype pages for consistency.
+ * Ditto Theme Switcher — Shared Header Controls
+ * Direct icon toggles for appearance + density.
  * ───────────────────────────────────────────── */
 
+.preference-icon-btn {
+  color: var(--icon-secondary);
+}
+
+.preference-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.preference-icon-btn:hover {
+  color: var(--icon-primary);
+}
+
+.preference-icon-btn[data-preference-active="true"] {
+  color: var(--header-control-fg, var(--text-secondary));
+  background: var(--header-control-bg, transparent);
+}
+
+/* ── Legacy inline switcher support outside shell header ── */
 .theme-switcher {
   display: flex;
   align-items: center;
   gap: var(--space-8);
 }
 
-/* ── Switcher Group (density / theme) ── */
 .switcher-group {
   display: flex;
   align-items: center;
@@ -26,7 +43,7 @@
   color: var(--text-quaternary);
   padding: 0 var(--space-6);
   user-select: none;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .switcher-btn {
@@ -53,12 +70,12 @@
   background: var(--interaction-hover-subtle-bg);
 }
 
-.switcher-btn[aria-pressed="true"] {
+.switcher-btn[aria-pressed="true"],
+.switcher-btn[aria-checked="true"] {
   color: var(--text-primary);
   background: var(--interaction-selected-bg);
 }
 
-/* ── Separator ── */
 .switcher-sep {
   width: 1px;
   height: 16px;

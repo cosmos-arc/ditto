@@ -8,6 +8,7 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-strategies-detail.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -64,8 +65,7 @@ describe("page-strategies-detail prototype", () => {
 			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const overflow = await page.evaluate(() => {
 					const benchmarkLabel = Array.from(document.querySelectorAll<SVGTextElement>("svg text")).find(
@@ -95,8 +95,7 @@ describe("page-strategies-detail prototype", () => {
 			const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const gap = await page.evaluate(() => {
 					const main = document.querySelector("#default-view .hub-main");
@@ -124,8 +123,7 @@ describe("page-strategies-detail prototype", () => {
 			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const overflow = await page.evaluate(() => {
 					const recentPanel = Array.from(
@@ -155,8 +153,7 @@ describe("page-strategies-detail prototype", () => {
 			const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const statusHeight = await page.evaluate(() => {
 					const statusPanel = Array.from(

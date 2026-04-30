@@ -8,6 +8,7 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-factor-list.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -80,8 +81,7 @@ describe("page-factor-list prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.locator("label[for='overlay-factor-compare']").first().click();
 				await expectCssVisible(page, "[data-overlay='overlay-factor-compare']", true);

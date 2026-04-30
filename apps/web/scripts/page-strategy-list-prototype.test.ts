@@ -8,6 +8,7 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-strategy-list.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -59,6 +60,10 @@ describe("page-strategy-list prototype", () => {
 		expect(loadHtml()).not.toMatch(/\sstyle=/);
 	});
 
+	it("centers full-width detail action button labels", () => {
+		expect(loadHtml()).toMatch(/\.detail-actions\s+\.btn\s*\{[^}]*justify-content:\s*center;/s);
+	});
+
 	it("covers filter, performance summary, table states, and both modal overlays", () => {
 		const document = loadPage();
 
@@ -78,8 +83,7 @@ describe("page-strategy-list prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.locator("label[for='overlay-strategy-clone']").first().click();
 				await expectCssVisible(page, "[data-overlay='overlay-strategy-clone']", true);

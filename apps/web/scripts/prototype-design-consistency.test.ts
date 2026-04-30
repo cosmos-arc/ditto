@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
 const contractsDir = join(root, "docs/contracts/pages");
+const prototypeLayoutCss = join(prototypesDir, "shared/layout-base.css");
+const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
+const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
+const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
 const tokenStabilizationSpec = join(
 	root,
 	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
@@ -37,8 +41,14 @@ function readJson<T>(path: string): T {
 	return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
+let manifestCache: EditionManifest | undefined;
+const prototypeHtmlCache = new Map<string, string>();
+const prototypeDocumentCache = new Map<string, Document>();
+let contractsCache: PageContract[] | undefined;
+
 function readManifest(): EditionManifest {
-	return readJson<EditionManifest>(join(prototypesDir, ".edition-manifest.json"));
+	manifestCache ??= readJson<EditionManifest>(join(prototypesDir, ".edition-manifest.json"));
+	return manifestCache;
 }
 
 function isActiveRoutePrototype(page: ManifestPage): boolean {
@@ -51,7 +61,13 @@ function isActiveRoutePrototype(page: ManifestPage): boolean {
 }
 
 function readPrototypeHtml(page: ManifestPage): string {
-	return readFileSync(join(prototypesDir, page.file), "utf8");
+	const path = join(prototypesDir, page.file);
+	const cached = prototypeHtmlCache.get(path);
+	if (cached) return cached;
+
+	const html = readFileSync(path, "utf8");
+	prototypeHtmlCache.set(path, html);
+	return html;
 }
 
 function getOverlayIds(html: string): string[] {
@@ -59,9 +75,10 @@ function getOverlayIds(html: string): string[] {
 }
 
 function readContracts(): PageContract[] {
-	return readdirSync(contractsDir)
+	contractsCache ??= readdirSync(contractsDir)
 		.filter((file) => file.endsWith(".json"))
 		.map((file) => readJson<PageContract>(join(contractsDir, file)));
+	return contractsCache;
 }
 
 function countMatches(value: string, pattern: RegExp): number {
@@ -78,6 +95,12 @@ function getElementBodyById(html: string, id: string): string {
 	const closeMatch = closeTag.exec(html.slice(bodyStart));
 
 	return closeMatch ? html.slice(bodyStart, bodyStart + closeMatch.index) : "";
+}
+
+function getStyleBlocks(html: string): string {
+	return [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+		.map((match) => match[1])
+		.join("\n");
 }
 
 function getFirstElementBody(html: string, selectorPattern: RegExp): string {
@@ -102,17 +125,94 @@ function getRailHtml(html: string): string {
 }
 
 function readPrototypeDocument(page: ManifestPage): Document {
-	return new JSDOM(readPrototypeHtml(page)).window.document;
+	const path = join(prototypesDir, page.file);
+	const cached = prototypeDocumentCache.get(path);
+	if (cached) return cached;
+
+	const document = new JSDOM(readPrototypeHtml(page)).window.document;
+	prototypeDocumentCache.set(path, document);
+	return document;
 }
 
 const shellDomains = new Set(["home", "markets", "research", "trading", "platform"]);
-const requiredHeaderUtilities = ["command", "copilot", "notifications", "help", "account"] as const;
+const requiredHeaderUtilities = [
+	"command",
+	"copilot",
+	"notifications",
+	"help",
+	"theme",
+	"density",
+	"account",
+] as const;
+const bottomTrayPages = ["strategy-studio", "agent-console", "platform", "trading-overview"];
+const dataVizContractPages = [
+	"a-shares",
+	"cross-market",
+	"risk-center",
+	"regime-monitor",
+	"factor-analysis",
+	"backtest-result",
+];
+const catalogContractPages = [
+	"watchlist",
+	"factor-list",
+	"strategy-list",
+	"backtest-list",
+	"experiment-list",
+	"universe-list",
+	"markets-screener",
+	"markets-calendar",
+];
+const highRiskActionPages = [
+	"platform-settings",
+	"trading-overview",
+	"universe-list",
+	"strategy-list",
+];
+
+function activePages(): ManifestPage[] {
+	return readManifest().pages.filter(isActiveRoutePrototype);
+}
+
+function readTokenCssBundle(): string {
+	const tokenDir = join(root, "src/styles/design-tokens");
+	const tokenCss = readdirSync(tokenDir)
+		.filter((file) => file.endsWith(".css"))
+		.map((file) => readFileSync(join(tokenDir, file), "utf8"))
+		.join("\n");
+
+	return [
+		tokenCss,
+		readFileSync(prototypeTokensStyleCss, "utf8"),
+		readFileSync(prototypeThemeSwitcherCss, "utf8"),
+		readFileSync(prototypeLayoutCss, "utf8"),
+	].join("\n");
+}
+
+function extractCustomPropertyDefinitions(css: string): Set<string> {
+	return new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map((match) => match[1]));
+}
+
+function extractCustomPropertyReferences(css: string): Set<string> {
+	return new Set([...css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((match) => match[1]));
+}
 
 describe("prototype design consistency", () => {
 	it("keeps exactly 27 active route prototypes", () => {
 		const activePages = readManifest().pages.filter(isActiveRoutePrototype);
 
 		expect(activePages).toHaveLength(27);
+	});
+
+	it("keeps deprecated AI route specimens in the prototype archive", () => {
+		const manifest = readManifest();
+		const archivedPages = [...archivedPrototypeIds].map((id) => manifest.pages.find((page) => page.id === id));
+
+		for (const page of archivedPages) {
+			expect(page?.status).toBe("archived-specimen");
+			expect(page?.file).toMatch(/^archive\/2026-04-30\/page-ai-(?:overview|copilot)\.html$/);
+			expect(existsSync(join(prototypesDir, page?.file ?? ""))).toBe(true);
+		}
 	});
 
 	it("keeps active route prototypes on the five IA domains", () => {
@@ -154,22 +254,291 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
-	it("keeps theme and density controls inside view preferences menus", () => {
+	it(
+		"keeps global header utilities in one semantic utility bar",
+		() => {
+			const violations: string[] = [];
+
+			for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+				const document = readPrototypeDocument(page);
+				const header = document.querySelector(".shell-header");
+				if (!header) {
+					violations.push(`${page.id}:missing-header`);
+					continue;
+				}
+
+				const utilityBars = header.querySelectorAll("[data-header-utility-bar]");
+				if (utilityBars.length !== 1) {
+					violations.push(`${page.id}:utility-bars:${utilityBars.length}`);
+				}
+
+				for (const utility of header.querySelectorAll("[data-shell-utility]")) {
+					if (!utility.closest("[data-header-utility-bar]")) {
+						violations.push(
+							`${page.id}:orphan:${utility.getAttribute("data-shell-utility") ?? "unknown"}`,
+						);
+					}
+				}
+			}
+
+			expect(violations).toEqual([]);
+		},
+		20_000,
+	);
+
+	it("keeps global header utilities in contract DOM order", () => {
 		const violations: string[] = [];
 
 		for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
 			const document = readPrototypeDocument(page);
-			const looseHeaderControls = [
-				...document.querySelectorAll(
-					".shell-header [data-set-density], .shell-header [data-set-theme]",
-				),
-			].filter((element) => !element.closest("[data-view-preferences-menu]"));
-			const looseRailControls = document.querySelectorAll(
-				".shell-rail [data-set-density], .shell-rail [data-set-theme], .shell-rail #density-toggle, .shell-rail #theme-toggle",
-			);
+			const utilities = [
+				...document.querySelectorAll(".shell-header [data-shell-utility]"),
+			].map((element) => element.getAttribute("data-shell-utility"));
 
-			if (looseHeaderControls.length > 0 || looseRailControls.length > 0) {
-				violations.push(page.id);
+			if (utilities.join(">") !== requiredHeaderUtilities.join(">")) {
+				violations.push(`${page.id}:${utilities.join(">")}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("uses button semantics for every global header utility", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			for (const utility of document.querySelectorAll(".shell-header [data-shell-utility]")) {
+				const utilityName = utility.getAttribute("data-shell-utility") ?? "unknown";
+				if (utility.tagName.toLowerCase() !== "button") {
+					violations.push(`${page.id}:${utilityName}:tag:${utility.tagName.toLowerCase()}`);
+				}
+
+				if (utility.getAttribute("type") !== "button") {
+					violations.push(`${page.id}:${utilityName}:type`);
+				}
+
+				if (
+					utilityName === "command" &&
+					!utility.classList.contains("header-command-trigger")
+				) {
+					violations.push(`${page.id}:command:visual-form`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps the Pro Max shared CSS and accessibility baseline machine-checkable", () => {
+		const css = readFileSync(prototypeLayoutCss, "utf8");
+		const orphanDeclaration = /}\s*\n\s*(appearance|cursor|transition)\s*:/m.exec(css);
+		const tokenDefinitions = extractCustomPropertyDefinitions(readTokenCssBundle());
+		const tokenReferences = extractCustomPropertyReferences(css);
+		const missingTokens = [...tokenReferences]
+			.filter((token) => !tokenDefinitions.has(token))
+			.sort();
+		const violations: string[] = [];
+
+		if (orphanDeclaration) {
+			violations.push(`layout-base.css:orphan:${orphanDeclaration[1]}`);
+		}
+
+		for (const token of missingTokens) {
+			violations.push(`layout-base.css:missing-token:${token}`);
+		}
+
+		if (css.includes("oklch(from")) {
+			violations.push("layout-base.css:oklch-from");
+		}
+
+		if (!css.includes("@media (prefers-reduced-motion: reduce)")) {
+			violations.push("layout-base.css:reduced-motion");
+		}
+
+		for (const page of activePages()) {
+			const html = readPrototypeHtml(page);
+			const document = readPrototypeDocument(page);
+
+			if (!document.querySelector("title")?.textContent?.trim()) {
+				violations.push(`${page.id}:title`);
+			}
+			if (!document.querySelector('meta[name="viewport"]')) {
+				violations.push(`${page.id}:viewport`);
+			}
+			if (!document.querySelector(".skip-link")) {
+				violations.push(`${page.id}:skip-link`);
+			}
+			if (!document.querySelector("h1, h2, h3, [role='heading'], .header-title")) {
+				violations.push(`${page.id}:heading`);
+			}
+			for (const selector of [".proto-nav", "#default-view", "#states-gallery", "#overlays-gallery"]) {
+				if (!document.querySelector(selector)) {
+					violations.push(`${page.id}:${selector}`);
+				}
+			}
+			for (const button of document.querySelectorAll('[role="button"]')) {
+				const hasAccessibleName =
+					Boolean(button.getAttribute("aria-label")?.trim()) ||
+					Boolean(button.getAttribute("aria-labelledby")?.trim()) ||
+					Boolean(button.textContent?.trim());
+				if (!hasAccessibleName) {
+					violations.push(`${page.id}:role-button-name`);
+				}
+			}
+			if (html.includes("oklch(from")) {
+				violations.push(`${page.id}:oklch-from`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("makes the global command entry discoverable without masquerading as local search", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const command = document.querySelector('.shell-header [data-shell-utility="command"]');
+
+			if (!command) {
+				violations.push(`${page.id}:missing-command`);
+				continue;
+			}
+			if (command.getAttribute("data-command-scope") !== "global") {
+				violations.push(`${page.id}:command-scope`);
+			}
+
+			const commandLabel = `${command.getAttribute("title") ?? ""} ${
+				command.getAttribute("aria-label") ?? ""
+			}`;
+			if (!/ctrl\s*\+\s*k/i.test(commandLabel)) {
+				violations.push(`${page.id}:command-shortcut`);
+			}
+			if (!command.classList.contains("header-command-trigger")) {
+				violations.push(`${page.id}:command-trigger-class`);
+			}
+			if (!command.querySelector(".command-prompt, .command-caret")) {
+				violations.push(`${page.id}:command-prompt`);
+			}
+			if (!command.querySelector(".command-query")) {
+				violations.push(`${page.id}:command-query`);
+			}
+			if (!command.querySelector("kbd")) {
+				violations.push(`${page.id}:command-kbd`);
+			}
+
+			for (const input of document.querySelectorAll("input.filter-search, input[type='search']")) {
+				if (!input.getAttribute("data-local-search")) {
+					violations.push(`${page.id}:local-search-scope`);
+				}
+				if (input.closest(".shell-header")) {
+					violations.push(`${page.id}:header-search`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("does not leave empty legacy header action wrappers", () => {
+		const violations: string[] = [];
+
+		for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+			const document = readPrototypeDocument(page);
+			for (const wrapper of document.querySelectorAll(
+				[
+					".shell-header .header-actions",
+					".shell-header .header-utility-bar",
+					".shell-header .header-btn-group",
+					".shell-header .header-btn-group-left",
+					".shell-header .header-btn-group-right",
+				].join(", "),
+			)) {
+				if (wrapper.hasAttribute("data-header-utility-bar")) continue;
+				if (wrapper.textContent?.trim()) continue;
+				if (wrapper.querySelectorAll("*").length > 0) continue;
+
+				violations.push(`${page.id}:${wrapper.getAttribute("class") ?? "unknown"}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps theme and density as direct header icon toggles without popovers", () => {
+		const violations: string[] = [];
+
+		for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+			const document = readPrototypeDocument(page);
+
+			if (document.querySelector("[data-view-preferences-menu], [data-view-preferences-trigger]")) {
+				violations.push(`${page.id}:popover`);
+			}
+			if (!document.querySelector('.shell-header #theme-toggle[data-shell-utility="theme"]')) {
+				violations.push(`${page.id}:theme-toggle`);
+			}
+			if (!document.querySelector('.shell-header #density-toggle[data-shell-utility="density"]')) {
+				violations.push(`${page.id}:density-toggle`);
+			}
+			if (document.querySelector(".shell-rail #density-toggle, .shell-rail #theme-toggle")) {
+				violations.push(`${page.id}:rail-toggle`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps header titles language-consistent and undecorated", () => {
+		const violations: string[] = [];
+
+		for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+			const document = readPrototypeDocument(page);
+
+			for (const title of document.querySelectorAll(".shell-header .header-title")) {
+				const text = title.textContent?.trim() ?? "";
+				if (/[A-Za-z]{2,}/.test(text)) {
+					violations.push(`${page.id}:title:${text}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps density and theme affordances out of loose header controls", () => {
+		const violations: string[] = [];
+
+		for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+			const document = readPrototypeDocument(page);
+			for (const element of document.querySelectorAll(".shell-header [title], .shell-header [aria-label]")) {
+				if (element.matches("#theme-toggle, #density-toggle")) continue;
+
+				const label = `${element.getAttribute("title") ?? ""} ${
+					element.getAttribute("aria-label") ?? ""
+				}`;
+				if (/\bDensity\b|密度|\bTheme\b|主题/i.test(label)) {
+					violations.push(`${page.id}:${label.trim()}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("marks prototype list search inputs as data-table search controls", () => {
+		const violations: string[] = [];
+
+		for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+			const document = readPrototypeDocument(page);
+			for (const input of document.querySelectorAll("input.filter-search")) {
+				if (input.getAttribute("data-table-toolbar") !== "search") {
+					violations.push(`${page.id}:scope`);
+				}
+
+				if (!input.getAttribute("aria-label")) {
+					violations.push(`${page.id}:label`);
+				}
 			}
 		}
 
@@ -267,8 +636,7 @@ describe("prototype design consistency", () => {
 	it("keeps prototype zones separated and singular", () => {
 		const violations: string[] = [];
 
-		for (const page of readManifest().pages) {
-			if (!isActiveRoutePrototype(page)) continue;
+		for (const page of activePages()) {
 
 			const html = readPrototypeHtml(page);
 			for (const zoneId of ["default-view", "states-gallery", "overlays-gallery"]) {
@@ -283,6 +651,129 @@ describe("prototype design consistency", () => {
 			if (statesGallery.includes("overlay-surface")) violations.push(`${page.id}:states-overlay-surface`);
 			if (overlaysGallery.includes("data-contract-slot")) {
 				violations.push(`${page.id}:overlays-contract-slot`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("exposes the bottom tray contract on studio and operational prototypes", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages().filter((prototype) => bottomTrayPages.includes(prototype.id))) {
+			const document = readPrototypeDocument(page);
+			const tray = document.querySelector("[data-bottom-tray]");
+
+			if (!tray) {
+				violations.push(`${page.id}:missing-tray`);
+				continue;
+			}
+
+			const state = tray.getAttribute("data-bottom-tray-state");
+			if (!state || !["collapsed", "peek", "expanded"].includes(state)) {
+				violations.push(`${page.id}:state:${state ?? "missing"}`);
+			}
+
+			const toggle = tray.querySelector("[data-bottom-tray-toggle]");
+			const content = tray.querySelector("[data-bottom-tray-content]");
+			if (!toggle?.getAttribute("aria-controls")) {
+				violations.push(`${page.id}:toggle-controls`);
+			}
+			if (!content?.id) {
+				violations.push(`${page.id}:content-id`);
+			}
+			if (toggle?.getAttribute("aria-controls") !== content?.id) {
+				violations.push(`${page.id}:toggle-target`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("requires non-color data visualization encoding on analytical heatmaps and matrices", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages().filter((prototype) => dataVizContractPages.includes(prototype.id))) {
+			const document = readPrototypeDocument(page);
+			const defaultView = document.querySelector("#default-view");
+			if (!defaultView) {
+				violations.push(`${page.id}:missing-default-view`);
+				continue;
+			}
+
+			if (!defaultView.querySelector("[data-viz-legend]")) {
+				violations.push(`${page.id}:legend`);
+			}
+			if (!defaultView.querySelector('[data-viz-sign="positive"], [data-viz-sign="negative"], [data-viz-sign="neutral"]')) {
+				violations.push(`${page.id}:sign`);
+			}
+			if (!defaultView.querySelector("[data-viz-threshold-label]")) {
+				violations.push(`${page.id}:threshold`);
+			}
+			if (!defaultView.querySelector(".viz-cell-strong, .viz-cell-selected, [data-viz-cell-strength='strong'], [data-viz-cell-selected]")) {
+				violations.push(`${page.id}:cell-affordance`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps catalog selected feedback, batch actions, and sticky summaries explicit", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages().filter((prototype) => catalogContractPages.includes(prototype.id))) {
+			const document = readPrototypeDocument(page);
+			const defaultView = document.querySelector("#default-view");
+			if (!defaultView) {
+				violations.push(`${page.id}:missing-default-view`);
+				continue;
+			}
+
+			if (!defaultView.querySelector(".row-selection-marker, .selection-mark, [data-row-selection-marker]")) {
+				violations.push(`${page.id}:selection-marker`);
+			}
+			if (defaultView.querySelector('input[type="checkbox"]') && !defaultView.querySelector("[data-batch-action-bar]")) {
+				violations.push(`${page.id}:batch-action-bar`);
+			}
+			if (!defaultView.querySelector("[data-detail-sticky-summary]")) {
+				violations.push(`${page.id}:sticky-summary`);
+			}
+			if (/delete|删除|撤销|danger/i.test(defaultView.textContent ?? "") && !defaultView.querySelector("[data-danger-confirmation]")) {
+				violations.push(`${page.id}:danger-confirmation`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("documents high-risk actions with impact, confirmation, cancel, recovery, and non-color danger cues", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages().filter((prototype) => highRiskActionPages.includes(prototype.id))) {
+			const document = readPrototypeDocument(page);
+			const defaultView = document.querySelector("#default-view");
+			const action = defaultView?.querySelector("[data-danger-action], [data-high-risk-action]");
+
+			if (!defaultView || !action) {
+				violations.push(`${page.id}:danger-action`);
+				continue;
+			}
+
+			const container = action.closest("[data-danger-confirmation], [data-high-risk-confirmation]");
+			if (!container) {
+				violations.push(`${page.id}:confirmation-container`);
+				continue;
+			}
+			for (const selector of [
+				"[data-impact-summary]",
+				"[data-confirm-control]",
+				"[data-cancel-control]",
+				"[data-recovery-hint]",
+				"[data-danger-marker]",
+			]) {
+				if (!container.querySelector(selector)) {
+					violations.push(`${page.id}:${selector}`);
+				}
 			}
 		}
 
@@ -317,12 +808,255 @@ describe("prototype design consistency", () => {
 	});
 
 	it("keeps active route prototypes free of negative letter spacing", () => {
+		const hasNegativeLetterSpacingValue = (html: string) =>
+			[...html.matchAll(/letter-spacing\s*:[^;]+/g)].some((match) =>
+				/(^|[\s,(])-\.?\d/.test(match[0]),
+			);
 		const hits = readManifest()
 			.pages.filter(isActiveRoutePrototype)
-			.filter((page) => /letter-spacing\s*:\s*-/.test(readPrototypeHtml(page)))
+			.filter((page) => hasNegativeLetterSpacingValue(readPrototypeHtml(page)))
 			.map((page) => page.id);
 
 		expect(hits).toEqual([]);
+	});
+
+	it("keeps shell family layout definitions in shared prototype CSS", () => {
+		const layoutCss = readFileSync(prototypeLayoutCss, "utf8");
+		const violations: string[] = [];
+
+		if (!/\.shell-hub\b/.test(layoutCss)) violations.push("layout-base.css:shell-hub");
+		if (!/\.shell-agent\b/.test(layoutCss)) violations.push("layout-base.css:shell-agent");
+
+		for (const page of activePages()) {
+			const style = getStyleBlocks(readPrototypeHtml(page));
+			for (const selector of [
+				/\.shell-hub\b[^,{]*[,{]/,
+				/\.shell-agent\b[^,{]*[,{]/,
+			]) {
+				if (selector.test(style)) {
+					violations.push(`${page.id}:inline-shell-layout`);
+					break;
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps overlay component grammar in shared prototype CSS", () => {
+		const togglesCss = readFileSync(prototypeTogglesCss, "utf8");
+		const requiredSharedSelectors = [
+			".overlay-header",
+			".overlay-title",
+			".overlay-body",
+			".overlay-actions",
+			".overlay-btn",
+			".overlay-field",
+			".overlay-confirm-box",
+			".toast-card",
+		];
+		const violations: string[] = [];
+
+		for (const selector of requiredSharedSelectors) {
+			if (!togglesCss.includes(selector)) {
+				violations.push(`prototype-toggles.css:${selector}`);
+			}
+		}
+
+		for (const page of activePages()) {
+			const html = readPrototypeHtml(page);
+			const style = getStyleBlocks(html);
+
+			if (/\boverlay-modal\b/.test(html)) {
+				violations.push(`${page.id}:overlay-modal`);
+			}
+			if (/\bmodal-(?:header|title|close|body|actions|btn)\b/.test(html)) {
+				violations.push(`${page.id}:modal-grammar`);
+			}
+			if (
+				/\.overlay-(?:header|title|body|actions|btn|field|confirm-box)\b[^,{]*[,{]/.test(
+					style,
+				)
+			) {
+				violations.push(`${page.id}:inline-overlay-grammar`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps foundational table and panel styles density-aware in shared CSS", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const style = getStyleBlocks(readPrototypeHtml(page));
+
+			if (/(^|\n)\s*\.panel\s*\{/.test(style)) {
+				violations.push(`${page.id}:inline-panel-base`);
+			}
+			if (/(^|\n)\s*\.data-table\s*\{/.test(style)) {
+				violations.push(`${page.id}:inline-data-table-base`);
+			}
+			if (/(^|\n)\s*\.data-table\s+(?:th|td)\b[^,{]*\{[^}]*padding:/s.test(style)) {
+				violations.push(`${page.id}:inline-data-table-padding`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("uses one token and shared CSS import order across active prototypes", () => {
+		const expectedOrder = [
+			"tokens-base.css",
+			"tokens-semantic.css",
+			"tokens-atmosphere.css",
+			"tokens-domain.css",
+			"tokens-interaction.css",
+			"tokens-density.css",
+			"tokens-component.css",
+			"tokens-shell.css",
+			"tokens-data-viz.css",
+			"tokens-style.css",
+			"layout-base.css",
+			"theme-switcher.css",
+			"prototype-toggles.css",
+		];
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const html = readPrototypeHtml(page);
+			const imports = [
+				...html.matchAll(
+					/href="([^"]*(?:tokens-[^"]+\.css|layout-base\.css|theme-switcher\.css|prototype-toggles\.css))"/g,
+				),
+			].map((match) => match[1].split("/").at(-1));
+
+			if (imports.join(">") !== expectedOrder.join(">")) {
+				violations.push(`${page.id}:${imports.join(">")}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("uses default prototype density without shrinking typography", () => {
+		const densityCss = readFileSync(join(prototypesDir, "tokens-style.css"), "utf8");
+		const switcherJs = readFileSync(join(prototypesDir, "shared/theme-switcher.js"), "utf8");
+		const violations: string[] = [];
+
+		if (!densityCss.includes('[data-density="default"]')) {
+			violations.push("tokens-style.css:default-density");
+		}
+		if (/--density-font-delta:\s*-/.test(densityCss)) {
+			violations.push("tokens-style.css:negative-font-delta");
+		}
+		if (!switcherJs.includes("'default'")) {
+			violations.push("theme-switcher.js:default-density");
+		}
+		if (/var DENSITIES = \[[^\]]*'dense'/.test(switcherJs)) {
+			violations.push("theme-switcher.js:dense-primary-density");
+		}
+
+		for (const page of activePages()) {
+			const html = readPrototypeHtml(page);
+			const density = /<html\b[^>]*data-density="([^"]+)"/.exec(html)?.[1];
+			if (density !== "default") {
+				violations.push(`${page.id}:html-density:${density ?? "missing"}`);
+			}
+			if (/data-density="dense"/.test(html)) {
+				violations.push(`${page.id}:dense-html-density`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("defines one shared visual order for global header utilities", () => {
+		const css = readFileSync(prototypeLayoutCss, "utf8");
+		const expectedOrder = [
+			["command", "1"],
+			["copilot", "2"],
+			["notifications", "3"],
+			["help", "4"],
+			["theme", "5"],
+			["density", "6"],
+			["account", "7"],
+		] as const;
+
+		for (const [utility, order] of expectedOrder) {
+			expect(css).toContain(`[data-shell-utility="${utility}"]`);
+			expect(css).toContain(`order: ${order};`);
+		}
+
+		expect(css).toContain("[data-header-utility-bar]");
+		expect(css).toContain("flex: 0 0 auto;");
+	});
+
+	it("normalizes header controls and terminal command trigger styling", () => {
+		const layoutCss = readFileSync(prototypeLayoutCss, "utf8");
+		const switcherCss = readFileSync(prototypeThemeSwitcherCss, "utf8");
+
+		expect(layoutCss).toContain("--header-command-width");
+		expect(layoutCss).toContain(".header-command-trigger");
+		expect(layoutCss).toContain("font-family: var(--font-family-code);");
+		expect(layoutCss).toContain(".command-prompt");
+		expect(layoutCss).toContain(".command-query");
+		expect(layoutCss).toContain(".command-shortcut");
+		expect(layoutCss).toContain(".shell-header :is(.header-utility-btn, .header-action-btn, .header-btn-badge)");
+		expect(layoutCss).toContain(".shell-header .header-actions :is(.btn, .btn-sm)");
+		expect(layoutCss).toContain("height: var(--header-btn-size) !important;");
+		expect(layoutCss).toContain("font-size: var(--font-size-12) !important;");
+		expect(switcherCss).not.toContain("box-shadow: inset 0 0 0 1px");
+	});
+
+	it("styles direct preference icon toggles without menu chrome", () => {
+		const css = readFileSync(prototypeThemeSwitcherCss, "utf8");
+
+		expect(css).toContain(".preference-icon-btn");
+		expect(css).toContain("[data-preference-active=\"true\"]");
+		expect(css).not.toContain(".view-preferences-menu");
+	});
+
+	it("normalizes shell headers and overlay surfaces through shared chrome", () => {
+		const layoutCss = readFileSync(prototypeLayoutCss, "utf8");
+		const togglesCss = readFileSync(prototypeTogglesCss, "utf8");
+
+		expect(layoutCss).toContain("padding: 0 var(--density-gutter);");
+		expect(layoutCss).toContain("gap: var(--space-8);");
+		expect(layoutCss).toContain("background: var(--surface-app) !important;");
+		expect(layoutCss).toContain("backdrop-filter: none !important;");
+		expect(layoutCss).toContain(".shell-header::after");
+		expect(layoutCss).toContain("display: none !important;");
+		expect(layoutCss).toContain(".shell-header .header-title::after");
+		expect(layoutCss).toContain("content: none !important;");
+
+		expect(togglesCss).toContain("background: color-mix(in oklch, var(--surface-app) 72%, transparent);");
+		expect(togglesCss).toContain("background: var(--surface-modal) !important;");
+		expect(togglesCss).toContain("box-shadow: none !important;");
+	});
+
+	it("keeps prototype overlay, tray, and semantic feedback motion shared", () => {
+		const layoutCss = readFileSync(prototypeLayoutCss, "utf8");
+		const togglesCss = readFileSync(prototypeTogglesCss, "utf8");
+		const requiredSharedMotion = [
+			"@keyframes overlay-drawer-enter",
+			"@keyframes overlay-sheet-enter",
+			"@keyframes overlay-modal-enter",
+			"animation: overlay-drawer-enter",
+			"animation: overlay-sheet-enter",
+			"animation: overlay-modal-enter",
+			".bottom-tray",
+			"transition: max-height",
+			".semantic-value-flash",
+			".semantic-status-transition",
+			".threshold-crossed",
+			".linked-region-pulse",
+		];
+
+		const combinedCss = `${layoutCss}\n${togglesCss}`;
+		const missing = requiredSharedMotion.filter((snippet) => !combinedCss.includes(snippet));
+
+		expect(missing).toEqual([]);
 	});
 
 	it("keeps bare rgba and direct oklch colors out of active prototype declarations", () => {

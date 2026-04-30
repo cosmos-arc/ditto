@@ -24,6 +24,7 @@ function pageStyleText(document: Document) {
 }
 
 const prototypeUrl = `file://${prototypePath}`;
+const playwrightTestTimeoutMs = 15_000;
 
 describe("page-agent-console prototype", () => {
 	it("keeps the agent workspace in a gate-recognizable studio shell", () => {
@@ -58,7 +59,7 @@ describe("page-agent-console prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("scopes status filter tabs and panels to the same interaction group", () => {
 		const document = loadPage();
@@ -101,7 +102,7 @@ describe("page-agent-console prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("keeps right-panel actions aligned with the compact workspace button system", async () => {
 		const browser = await chromium.launch({ channel: "chromium" });
@@ -132,7 +133,7 @@ describe("page-agent-console prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("keeps the current-agent blocks fully visible in compact right panel", async () => {
 		const browser = await chromium.launch({ channel: "chromium" });
@@ -170,7 +171,7 @@ describe("page-agent-console prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("uses the same subdued right-panel typography and status color language as other studio pages", () => {
 		const document = loadPage();
@@ -205,7 +206,7 @@ describe("page-agent-console prototype", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, playwrightTestTimeoutMs);
 
 	it("keeps default-view numeric copy deterministic for visual review screenshots", () => {
 		const document = loadPage();

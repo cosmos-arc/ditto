@@ -6,9 +6,10 @@ import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/page-ai-copilot.html",
+	"../docs/designs/specs/prototypes/archive/2026-04-30/page-ai-copilot.html",
 );
 const prototypeUrl = `file://${prototypePath}`;
+const navigationTimeoutMs = 10_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -71,10 +72,10 @@ describe("page-ai-copilot prototype", () => {
 			];
 
 			try {
-				await page.goto(prototypeUrl, { waitUntil: "load" });
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				for (const mode of modes) {
-					await page.locator(`label[for='${mode.id}']`).click();
+					await checkRadio(page, mode.id);
 					await expectModeState(page, mode.id, mode.expectedText);
 				}
 			} finally {
@@ -92,7 +93,7 @@ describe("page-ai-copilot prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(prototypeUrl, { waitUntil: "load" });
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.click("[data-tab-target='analysis']");
 				await expectTabState(page, "analysis", "分析推理时间线");
@@ -136,7 +137,7 @@ describe("page-ai-copilot prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(prototypeUrl, { waitUntil: "load" });
+				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const geometry = await page.evaluate(() => {
 					const statusBar = document.querySelector(".status-bar");

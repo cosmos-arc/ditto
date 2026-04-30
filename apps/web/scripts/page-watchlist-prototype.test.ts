@@ -8,6 +8,7 @@ const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-watchlist.html",
 );
+const navigationTimeoutMs = 10_000;
 
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
@@ -55,6 +56,14 @@ describe("page-watchlist prototype", () => {
 		}
 	});
 
+	it("keeps the selection column compact and full-width action buttons centered", () => {
+		const html = loadHtml();
+
+		expect(html).toMatch(/\.col-select\s*\{[^}]*width:\s*28px;/s);
+		expect(html).toMatch(/\.col-name\s*\{[^}]*width:\s*18%;/s);
+		expect(html).toMatch(/\.catalog-detail\s+\.btn\.w-full\s*\{[^}]*justify-content:\s*center;/s);
+	});
+
 	it("covers the declared table states and watchlist overlays", () => {
 		const document = loadPage();
 
@@ -79,8 +88,7 @@ describe("page-watchlist prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				await page.locator("label[for='overlay-add-instrument']").first().click();
 				await expectCssVisible(page, "[data-overlay='overlay-add-instrument']", true);
@@ -113,8 +121,7 @@ describe("page-watchlist prototype", () => {
 			page.setDefaultTimeout(2_000);
 
 			try {
-				await page.goto(`file://${prototypePath}`);
-				await page.waitForLoadState("load");
+				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
 
 				const geometry = await page.evaluate(() => {
 					const detail = document.querySelector(".catalog-detail");

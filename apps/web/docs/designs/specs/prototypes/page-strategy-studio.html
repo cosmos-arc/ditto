@@ -57,7 +57,7 @@
   - Enhanced panel hover effects
   - Factor weight slider track fill visual
 -->
-<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="compact" data-domain="research">
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -76,12 +76,8 @@
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
   <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
   <link rel="stylesheet" href="tokens-style.css">
-
-  <!-- Layout + Components -->
   <link rel="stylesheet" href="shared/layout-base.css">
   <link rel="stylesheet" href="shared/theme-switcher.css">
-
-  <!-- State Toggle System (pure CSS: radio tabs + checkbox overlays + details state variants) -->
   <link rel="stylesheet" href="shared/prototype-toggles.css">
 
   <style>
@@ -1158,22 +1154,6 @@
     /* Overlay 5: 确认策略删除 Modal */
     :root:has(#overlay-delete-strategy:checked)
       [data-overlay="overlay-delete-strategy"] { display: flex; }
-
-    /* ── Overlay content refinement ── */
-    .overlay-surface .overlay-header,
-    .overlay-surface .overlay-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-12);
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: var(--space-12);
-    }
-    .overlay-title {
-      font-size: var(--font-size-14);
-      font-weight: var(--font-weight-semibold);
-      color: var(--text-primary);
-    }
     .overlay-close {
       background: none;
       border: none;
@@ -1184,21 +1164,6 @@
       line-height: 1;
     }
     .overlay-close:hover { color: var(--text-secondary); }
-
-    .overlay-body { color: var(--text-secondary); font-size: var(--font-size-12); line-height: 1.6; }
-    .overlay-body h4 { color: var(--text-primary); font-size: var(--font-size-12); font-weight: var(--font-weight-medium); margin: var(--space-10) 0 var(--space-4); }
-    .overlay-body h4:first-child { margin-top: 0; }
-
-    .overlay-field { display: flex; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid var(--border-subtle); }
-    .overlay-field-label { color: var(--text-tertiary); }
-    .overlay-field-value { color: var(--text-primary); font-feature-settings: 'tnum' 1; }
-
-    .overlay-actions { display: flex; gap: var(--space-6); margin-top: var(--space-12); justify-content: flex-end; }
-    .overlay-btn { padding: var(--space-2) var(--space-10); border-radius: var(--radius-4); font-size: var(--font-size-12); cursor: pointer; border: 1px solid var(--border-default); }
-    .overlay-btn-primary { background: var(--brand-accent); color: var(--text-inverse); border-color: var(--brand-accent); }
-    .overlay-btn-secondary { background: transparent; color: var(--text-secondary); }
-    .overlay-btn-danger { background: transparent; color: var(--risk-critical-fg); border-color: var(--risk-critical-fg); }
-    .overlay-btn-danger:hover { background: var(--risk-critical-bg); }
 
     /* Toast variant — narrow, top-right positioned */
     .overlay-backdrop .overlay-toast {
@@ -1390,9 +1355,6 @@
     .code-editor-body {
       padding-top: var(--space-12);
     }
-
-    /* ── Overlay button cursor ── */
-    .overlay-btn { cursor: pointer; }
 
     /* ── Distribution chart mock ── */
     .distribution-chart {
@@ -2017,12 +1979,12 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>
         </div>
       </div>
-      
+
     </nav>
 
     <!-- ═══ Studio Header ═══ -->
     <header class="shell-header studio-header" data-contract-slot="header">
-      <span class="header-title">Strategy Studio</span>
+      <span class="header-title">策略工作台</span>
       <div class="strategy-name">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon">
           <path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/>
@@ -2032,48 +1994,19 @@
           <span class="status-badge-dot"></span>
           已保存
         </span>
-        
+
         <label for="overlay-delete-strategy" class="header-delete-btn" title="删除策略" tabindex="0">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V3h6v2M6 5v12a1 1 0 001 1h6a1 1 0 001-1V5"/></svg>
         </label>
       </div>
       <div class="header-spacer"></div>
       <div class="studio-actions header-actions" role="toolbar" aria-label="策略操作">
-        <button class="header-utility-btn" type="button" data-shell-utility="command" data-search-scope="global" aria-label="打开全局命令" title="打开全局命令">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
-          <span class="badge-dot"></span>
-        </button>
-        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
-        </button>
-        <div class="view-preferences" data-open="false">
-          <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" data-view-preferences-trigger aria-label="账户与视图偏好" title="账户与视图偏好">C</button>
-          <div class="view-preferences-menu" data-view-preferences-menu role="menu" aria-label="账户与视图偏好">
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">密度</span>
-              <button class="switcher-btn" data-set-density="dense" role="menuitemradio" aria-checked="false">紧</button>
-              <button class="switcher-btn" data-set-density="compact" role="menuitemradio" aria-checked="true">标</button>
-              <button class="switcher-btn" data-set-density="comfortable" role="menuitemradio" aria-checked="false">松</button>
-            </div>
-            <div class="view-preferences-section">
-              <span class="view-preferences-label">主题</span>
-              <button class="switcher-btn" data-set-theme="dark" role="menuitemradio" aria-checked="true">暗</button>
-              <button class="switcher-btn" data-set-theme="light" role="menuitemradio" aria-checked="false">亮</button>
-            </div>
-          </div>
-        </div>
-        
+
         <label for="overlay-save-strategy" class="studio-action" tabindex="0" aria-label="保存策略">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10l2 2v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4l2-1z"/><path d="M7 3v5h6V3"/><path d="M6 16h8"/></svg>
           保存
         </label>
-        
+
         <label for="overlay-validation-toast" class="studio-action" tabindex="0" aria-label="校验策略">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3v14"/><path d="M6 7l10-2"/><path d="M6 11l10-2"/><path d="M6 15l10-2"/></svg>
           校验
@@ -2082,11 +2015,37 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4l10 6-10 6V4z"/></svg>
           Dry Run
         </button>
-        
+
         <label for="overlay-backtest-config" class="studio-action primary" tabindex="0" aria-label="提交回测">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2a6 6 0 00-6 6v3l-2 3h16l-2-3V8a6 6 0 00-6-6z"/><path d="M8 16a2 2 0 004 0"/></svg>
           提交回测
         </label>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 4h14"/><path d="M3 10h14"/><path d="M3 16h14"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户">
+          <span class="header-avatar-initial">C</span>
+        </button>
       </div>
     </header>
 
@@ -2115,7 +2074,7 @@
     </div>
 
     <!-- ═══ Sources Panel (Left) ═══ -->
-    <aside class="studio-sources" aria-label="策略资源">
+    <aside class="studio-sources" aria-label="策略资源" data-contract-slot="sidebar">
       <!-- Factors -->
       <div class="source-section">
         <div class="source-section-title">因子</div>
@@ -2236,7 +2195,7 @@
     </aside>
 
     <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
-    <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" role="main" aria-label="策略编辑器">
+    <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region role="main" aria-label="策略编辑器">
 
       <!-- Tab Panel: Form Builder -->
       <div class="tab-panel" data-panel="studio-mode-form">
@@ -2531,7 +2490,7 @@
     </main>
 
     <!-- ═══ Inspector Panel (Right) ═══ -->
-    <aside class="studio-inspector" aria-label="检查器">
+    <aside class="studio-inspector" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region>
       <!-- AI Assistant (always visible above tabs) -->
       <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0">
         <div class="inspector-section-title">AI 助手</div>
@@ -2806,8 +2765,8 @@
     </aside>
 
     <!-- ═══ Bottom Logs Panel ═══ -->
-    <div class="studio-logs" role="log" aria-label="策略日志" data-tabs="strategy-logs">
-      <div class="logs-header">
+    <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="peek">
+      <div class="logs-header bottom-tray-header">
         <div class="logs-tabs">
           <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation">校验结果</span>
           <span class="logs-tab" role="tab" aria-selected="false" tabindex="0" data-tab-target="dry-run" data-log-tab="dry-run">Dry Run</span>
@@ -2817,12 +2776,13 @@
         <div class="logs-meta">
           上次校验：<span class="tabular-nums">2026-03-29 14:32:08</span>
         </div>
+        <button class="bottom-tray-toggle" type="button" data-bottom-tray-toggle aria-controls="strategy-bottom-tray-content" aria-label="展开策略日志">⌄</button>
         <span class="log-status-badge success status-dot--sm">
           <span class="status-badge-dot"></span>
           通过
         </span>
       </div>
-      <div class="logs-body" data-tab-panel="validation" aria-hidden="false">
+      <div class="logs-body bottom-tray-content" id="strategy-bottom-tray-content" data-bottom-tray-content data-tab-panel="validation" aria-hidden="false">
         <div class="log-line">
           <span class="log-time tabular-nums">14:32:08</span>
           <span class="log-level success">PASS</span>
@@ -2897,36 +2857,36 @@
        ══════════════════════════════════════════════ -->
 
   <!-- ── State Variants: studio-header ── -->
-  
-  
-  
+
+
+
 
   <!-- ── State Variants: mode-switch ── -->
-  
-  
+
+
 
   <!-- ── State Variants: snippets-sources ── -->
-  
-  
-  
-  
-  
+
+
+
+
+
 
   <!-- ── State Variants: main-studio ── -->
-  
-  
-  
-  
+
+
+
+
 
   <!-- ── State Variants: inspector ── -->
-  
-  
-  
-  
+
+
+
+
 
   <!-- ── State Variants: logs ── -->
-  
-  
+
+
 
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">
@@ -3137,7 +3097,7 @@
   </div>
 
   <!-- Status Bar (terminal DNA) -->
-  <div class="status-bar" role="status" aria-label="系统状态">
+  <div class="status-bar" role="status" aria-label="系统状态" data-contract-slot="status">
     <span class="status-indicator"></span>
     <span>策略引擎</span>
     <span>就绪</span>
