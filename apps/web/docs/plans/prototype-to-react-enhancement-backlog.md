@@ -59,7 +59,7 @@
 - 建立 typed icon registry：domain icons、header utilities、local action icons 分层管理
 - 将 prototype inline SVG 替换为 Lucide/custom icon components，并保证同一图标不跨语义复用
 - 实现 `ContextDisclosureSection`：`aria-expanded`、`aria-controls`、默认展开策略、count 与 summary
-- 折叠偏好、Bottom Tray 状态、面板尺寸偏好进入 `use-ui-preferences` 或 Zustand 持久化
+- 折叠偏好、Bottom Tray 状态、面板尺寸偏好进入 `use-ui-preferences`、Zustand/localStorage 或 library storage 持久化
 - Bottom Tray 需要 React 状态机：`collapsed | peek | expanded`，并覆盖键盘与 reduced-motion 行为
 - 评估并申请批准后再安装 `react-resizable-panels`
 - 2026-04-30 查询当前包版本为 `react-resizable-panels@4.10.0`，实施前需重新确认版本与 API
