@@ -1976,8 +1976,10 @@
     <header class="shell-header studio-header" data-contract-slot="header">
       <span class="header-title">策略工作台</span>
       <div class="strategy-name">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon">
-          <path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon" data-icon="strategy-blueprint">
+          <rect x="4" y="3" width="12" height="14" rx="2"/>
+          <path d="M7 7h6M7 10h3"/>
+          <path d="M7 14l2 2 4-5"/>
         </svg>
         多因子动量策略 v2.3
         <span class="status-badge">
@@ -1997,17 +1999,17 @@
           保存
         </label>
 
-        <label for="overlay-validation-toast" class="studio-action" tabindex="0" aria-label="校验策略">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3v14"/><path d="M6 7l10-2"/><path d="M6 11l10-2"/><path d="M6 15l10-2"/></svg>
+        <label for="overlay-validation-toast" class="studio-action" tabindex="0" aria-label="校验策略" data-action-icon="shield-check">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l6 2.2v4.6c0 3.8-2.4 7.1-6 8.7-3.6-1.6-6-4.9-6-8.7V4.2L10 2z"/><path d="M7.2 10.2l1.8 1.8 3.8-4.2"/></svg>
           校验
         </label>
-        <button class="studio-action" tabindex="0" aria-label="Dry Run">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4l10 6-10 6V4z"/></svg>
+        <button class="studio-action" tabindex="0" aria-label="执行 Dry Run 模拟" data-action-icon="test-tube">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h6"/><path d="M8 3v5.5l-3.8 5.8A2.3 2.3 0 006.1 18h7.8a2.3 2.3 0 001.9-3.7L12 8.5V3"/><path d="M6.8 13h6.4"/></svg>
           Dry Run
         </button>
 
-        <label for="overlay-backtest-config" class="studio-action primary" tabindex="0" aria-label="提交回测">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2a6 6 0 00-6 6v3l-2 3h16l-2-3V8a6 6 0 00-6-6z"/><path d="M8 16a2 2 0 004 0"/></svg>
+        <label for="overlay-backtest-config" class="studio-action primary" tabindex="0" aria-label="提交回测" data-action-icon="rocket">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3c2.5.6 4.4 2.5 5 5l-5.5 5.5-4-4L12 3z"/><path d="M8 10l-3 1 4 4 1-3"/><path d="M5 15l-2 2"/><circle cx="13" cy="7" r="1.2"/></svg>
           提交回测
         </label>
       </div>
@@ -2071,7 +2073,7 @@
         <div class="source-item active" tabindex="0" role="button" aria-pressed="true">
           <div class="source-item-info">
             <div class="source-item-icon source-icon--brand">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2v16M2 10h16"/><circle cx="10" cy="10" r="3"/></svg>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-momentum"><path d="M3 13h6"/><path d="M3 9h9"/><path d="M3 5h12"/><path d="M12 2l4 3-4 3"/></svg>
             </div>
             <span class="source-item-name">动量因子</span>
           </div>
@@ -2080,7 +2082,7 @@
         <div class="source-item" tabindex="0" role="button">
           <div class="source-item-info">
             <div class="source-item-icon source-icon--healthy">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/></svg>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-volatility"><path d="M2.5 10c1.5-4 3-4 4.5 0s3 4 4.5 0 3-4 6 0"/><path d="M3 15h14"/></svg>
             </div>
             <span class="source-item-name">波动率因子</span>
           </div>
@@ -2089,7 +2091,7 @@
         <div class="source-item" tabindex="0" role="button">
           <div class="source-item-info">
             <div class="source-item-icon source-icon--degraded">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/></svg>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-valuation"><path d="M10 3v14"/><path d="M5 6h10"/><path d="M5 6l-3 5h6L5 6z"/><path d="M15 6l-3 5h6l-3-5z"/></svg>
             </div>
             <span class="source-item-name">估值因子</span>
           </div>
@@ -2098,7 +2100,7 @@
         <div class="source-item" tabindex="0" role="button">
           <div class="source-item-info">
             <div class="source-item-icon source-icon--muted">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/></svg>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" data-icon="factor-liquidity"><path d="M10 2c3.2 4.2 5 6.6 5 9a5 5 0 01-10 0c0-2.4 1.8-4.8 5-9z"/><path d="M6.5 13c1.2.8 2.4 1.2 3.5 1.2s2.3-.4 3.5-1.2"/></svg>
             </div>
             <span class="source-item-name">流动性因子</span>
           </div>
@@ -2236,7 +2238,7 @@
           <div class="factor-weight-list">
             <div class="factor-weight-row">
               <div class="factor-weight-label">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--brand"><path d="M10 2v16M2 10h16"/><circle cx="10" cy="10" r="3"/></svg>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--brand" data-icon="factor-momentum"><path d="M3 13h6"/><path d="M3 9h9"/><path d="M3 5h12"/><path d="M12 2l4 3-4 3"/></svg>
                 动量因子
               </div>
               <input class="factor-weight-slider" type="range" min="0" max="100" value="45" aria-label="动量因子权重">
@@ -2244,7 +2246,7 @@
             </div>
             <div class="factor-weight-row">
               <div class="factor-weight-label">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--healthy"><path d="M3 17l4-4 3 2 7-8"/></svg>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--healthy" data-icon="factor-volatility"><path d="M2.5 10c1.5-4 3-4 4.5 0s3 4 4.5 0 3-4 6 0"/><path d="M3 15h14"/></svg>
                 波动率因子
               </div>
               <input class="factor-weight-slider" type="range" min="0" max="100" value="30" aria-label="波动率因子权重">
@@ -2252,7 +2254,7 @@
             </div>
             <div class="factor-weight-row">
               <div class="factor-weight-label">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--degraded"><path d="M3 17l4-4 3 2 7-8"/></svg>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--degraded" data-icon="factor-valuation"><path d="M10 3v14"/><path d="M5 6h10"/><path d="M5 6l-3 5h6L5 6z"/><path d="M15 6l-3 5h6l-3-5z"/></svg>
                 估值因子
               </div>
               <input class="factor-weight-slider" type="range" min="0" max="100" value="25" aria-label="估值因子权重">
@@ -2260,7 +2262,7 @@
             </div>
             <div class="factor-weight-row">
               <div class="factor-weight-label">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--disabled"><path d="M3 17l4-4 3 2 7-8"/></svg>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="source-icon--disabled" data-icon="factor-liquidity"><path d="M10 2c3.2 4.2 5 6.6 5 9a5 5 0 01-10 0c0-2.4 1.8-4.8 5-9z"/><path d="M6.5 13c1.2.8 2.4 1.2 3.5 1.2s2.3-.4 3.5-1.2"/></svg>
                 流动性因子
               </div>
               <input class="factor-weight-slider" type="range" min="0" max="100" value="0" aria-label="流动性因子权重">
@@ -2485,7 +2487,7 @@
       <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0">
         <div class="inspector-section-title">AI 助手</div>
         <div class="strategy-status-tag validated" title="策略校验通过">
-          <span class="strategy-status-dot"></span>
+          <span class="strategy-status-dot" data-icon="status-validated"></span>
           已校验
         </div>
         <div class="ai-assistant" data-mouse-glow="true">
@@ -2503,15 +2505,15 @@
       <div data-tabs="strategy-tabs" class="inspector-tabs-container">
         <div class="inspector-tabs-bar">
           <span data-tab-target="strategy" class="mode-tab active inspector-tab" role="tab" aria-selected="true" tabindex="0">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="strategy-map"><rect x="4" y="4" width="5" height="5" rx="1"/><rect x="11" y="4" width="5" height="5" rx="1"/><rect x="4" y="11" width="12" height="5" rx="1"/></svg>
             策略
           </span>
           <span data-tab-target="params" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon"><rect x="3" y="3" width="14" height="3" rx="1"/><rect x="3" y="8.5" width="14" height="3" rx="1"/><rect x="3" y="14" width="14" height="3" rx="1"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="parameter-brackets"><path d="M7 4H5a1 1 0 00-1 1v10a1 1 0 001 1h2"/><path d="M13 4h2a1 1 0 011 1v10a1 1 0 01-1 1h-2"/><path d="M8 8h4M8 12h4"/></svg>
             参数
           </span>
           <span data-tab-target="performance" class="mode-tab inspector-tab" role="tab" aria-selected="false" tabindex="0">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="inspector-tab-icon" data-icon="performance-gauge"><path d="M4 14a6 6 0 1112 0"/><path d="M10 14l4-5"/><path d="M6 14h8"/></svg>
             绩效
           </span>
         </div>
