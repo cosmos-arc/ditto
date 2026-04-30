@@ -25,6 +25,15 @@ const railHrefs: Record<(typeof railDomains)[number], string> = {
 const bannedRailLabels = new Set(["AI", "运维", "Platform", "Home", "Markets", "Research", "Trading"]);
 const hamburgerPathSet = ["M3 4h14", "M3 10h14", "M3 16h14"].sort().join("|");
 const contextSectionTitleSelector = ".context-section-title, .inspector-section-title, .section-title, [data-section-title]";
+const bottomTrayPageIds = ["strategy-studio", "agent-console", "platform", "trading-overview"] as const;
+const bottomTrayPageIdSet = new Set<string>(bottomTrayPageIds);
+const bottomTrayStates = ["collapsed", "peek", "expanded"] as const;
+const bottomTrayStateSet = new Set<string>(bottomTrayStates);
+const bottomTrayUiByState: Record<(typeof bottomTrayStates)[number], { ariaExpanded: string; symbol: string }> = {
+	collapsed: { ariaExpanded: "false", symbol: "⌄" },
+	peek: { ariaExpanded: "true", symbol: "▴" },
+	expanded: { ariaExpanded: "true", symbol: "—" },
+};
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
 	"cross-market": "markets",
@@ -71,6 +80,8 @@ type PageContract = {
 	route?: string;
 };
 
+type BottomTrayState = (typeof bottomTrayStates)[number];
+
 function readJson<T>(path: string): T {
 	return JSON.parse(readFileSync(path, "utf8")) as T;
 }
@@ -80,6 +91,7 @@ const prototypeDocumentCache = new Map<string, Document>();
 let pageContractsCache: PageContract[] | undefined;
 let contractRouteByPageIdCache: Map<string, string> | undefined;
 let contractRouteByPrototypeFileCache: Map<string, string> | undefined;
+let sharedInteractionsScriptCache: string | undefined;
 
 function readManifest(): EditionManifest {
 	manifestCache ??= readJson<EditionManifest>(join(prototypesDir, ".edition-manifest.json"));
@@ -133,6 +145,72 @@ function readPrototypeDocument(page: ManifestPage): Document {
 
 	const document = new JSDOM(readFileSync(path, "utf8")).window.document;
 	prototypeDocumentCache.set(path, document);
+	return document;
+}
+
+function readSharedInteractionsScript(): string {
+	sharedInteractionsScriptCache ??= readFileSync(join(prototypesDir, "shared/prototype-interactions.js"), "utf8");
+	return sharedInteractionsScriptCache;
+}
+
+function installInteractiveWindowStubs(window: JSDOM["window"]): void {
+	class MockIntersectionObserver implements IntersectionObserver {
+		readonly root: Element | Document | null = null;
+		readonly rootMargin = "0px";
+		readonly thresholds: ReadonlyArray<number> = [0];
+
+		disconnect(): void {
+			// JSDOM contract test stub.
+		}
+
+		observe(): void {
+			// JSDOM contract test stub.
+		}
+
+		takeRecords(): IntersectionObserverEntry[] {
+			return [];
+		}
+
+		unobserve(): void {
+			// JSDOM contract test stub.
+		}
+	}
+
+	Object.defineProperty(window, "matchMedia", {
+		configurable: true,
+		value: (query: string): MediaQueryList => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addListener: () => undefined,
+			removeListener: () => undefined,
+			addEventListener: () => undefined,
+			removeEventListener: () => undefined,
+			dispatchEvent: () => true,
+		}),
+	});
+	Object.defineProperty(window, "IntersectionObserver", {
+		configurable: true,
+		value: MockIntersectionObserver,
+	});
+}
+
+function readInteractivePrototypeDocument(page: ManifestPage, prepare?: (document: Document) => void): Document {
+	const dom = new JSDOM(readFileSync(join(prototypesDir, page.file), "utf8"), {
+		pretendToBeVisual: true,
+		runScripts: "outside-only",
+		url: `https://prototype.local/${page.file}`,
+	});
+	const { document } = dom.window;
+
+	prepare?.(document);
+	installInteractiveWindowStubs(dom.window);
+	dom.window.eval(readSharedInteractionsScript());
+
+	if (document.readyState === "loading") {
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+	}
+
 	return document;
 }
 
@@ -252,6 +330,11 @@ function getCollapsePriority(element: Element): "L1" | "L2" | "L3" | null {
 	if (priority === "L1" || priority === "L2" || priority === "L3") return priority;
 
 	return null;
+}
+
+function getBottomTrayState(element: Element): BottomTrayState | null {
+	const state = element.getAttribute("data-bottom-tray-state");
+	return state && bottomTrayStateSet.has(state) ? (state as BottomTrayState) : null;
 }
 
 function getDirectSummary(element: Element): Element | null {
@@ -522,6 +605,111 @@ describe("prototype interaction UX contracts", () => {
 
 		expect(pagesWithContextSections.length).toBeGreaterThan(0);
 		expect(violations).toEqual([]);
+	});
+
+	it("keeps bottom trays on the collapsed/peek/expanded accessibility contract", () => {
+		const violations: string[] = [];
+		const pagesWithBottomTrays: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const trays = Array.from(document.querySelectorAll<HTMLElement>("[data-bottom-tray]"));
+
+			if (trays.length > 0) pagesWithBottomTrays.push(page.id);
+			if (bottomTrayPageIdSet.has(page.id) && trays.length !== 1) {
+				violations.push(`${page.id}: expected exactly one [data-bottom-tray], found ${trays.length}`);
+			}
+			if (!bottomTrayPageIdSet.has(page.id) && trays.length > 0) {
+				violations.push(`${page.id}: unexpected [data-bottom-tray]`);
+			}
+
+			trays.forEach((tray, index) => {
+				const label = `${page.id}:bottom tray ${index + 1}`;
+				const state = getBottomTrayState(tray);
+				const toggle = tray.querySelector<HTMLElement>("[data-bottom-tray-toggle]");
+				const controls = toggle?.getAttribute("aria-controls")?.trim() ?? "";
+				const content = controls ? document.getElementById(controls) : null;
+				const ariaLabel = toggle?.getAttribute("aria-label")?.trim() ?? "";
+
+				if (!state) {
+					violations.push(
+						`${label}: data-bottom-tray-state must be collapsed, peek, or expanded; found "${tray.getAttribute(
+							"data-bottom-tray-state",
+						) ?? ""}"`,
+					);
+				}
+				if (!toggle) {
+					violations.push(`${label}: missing [data-bottom-tray-toggle]`);
+				}
+				if (toggle && !controls) {
+					violations.push(`${label}: toggle missing aria-controls`);
+				}
+				if (controls && !content) {
+					violations.push(`${label}: aria-controls target "${controls}" does not exist`);
+				}
+				if (toggle && !ariaLabel) {
+					violations.push(`${label}: toggle must have an explicit aria-label`);
+				}
+				if (toggle && state) {
+					const expectedExpanded = bottomTrayUiByState[state].ariaExpanded;
+					const actualExpanded = toggle.getAttribute("aria-expanded");
+					if (actualExpanded !== expectedExpanded) {
+						violations.push(`${label}: expected aria-expanded="${expectedExpanded}" for ${state}, found "${actualExpanded ?? ""}"`);
+					}
+				}
+			});
+		}
+
+		expect(pagesWithBottomTrays.sort()).toEqual([...bottomTrayPageIds].sort());
+		expect(violations).toEqual([]);
+	});
+
+	it("cycles bottom tray state through shared prototype interactions", () => {
+		for (const pageId of bottomTrayPageIds) {
+			const page = activePages().find((candidate) => candidate.id === pageId);
+			expect(page, `${pageId}: expected active prototype page`).toBeDefined();
+			if (!page) continue;
+
+			const document = readInteractivePrototypeDocument(page, (preparedDocument) => {
+				preparedDocument.querySelector("[data-bottom-tray]")?.setAttribute("data-bottom-tray-state", "collapsed");
+			});
+			const tray = document.querySelector<HTMLElement>("[data-bottom-tray]");
+			expect(tray, `${pageId}: expected [data-bottom-tray]`).not.toBeNull();
+			if (!tray) continue;
+
+			const toggle = tray.querySelector<HTMLButtonElement>("[data-bottom-tray-toggle]");
+			expect(toggle, `${pageId}: expected [data-bottom-tray-toggle]`).not.toBeNull();
+			if (!toggle) continue;
+
+			const controls = toggle.getAttribute("aria-controls") ?? "";
+			const content = controls ? document.getElementById(controls) : null;
+			expect(content, `${pageId}: expected controlled bottom tray content`).not.toBeNull();
+			expect(content?.textContent?.replace(/\s+/g, " ").trim(), `${pageId}: expected controlled content text`).not.toBe("");
+
+			const labels = new Set<string>();
+			const assertState = (state: BottomTrayState): void => {
+				const expected = bottomTrayUiByState[state];
+				const label = toggle.getAttribute("aria-label")?.trim() ?? "";
+
+				expect(tray.getAttribute("data-bottom-tray-state"), `${pageId}: state`).toBe(state);
+				expect(toggle.getAttribute("aria-expanded"), `${pageId}: aria-expanded for ${state}`).toBe(expected.ariaExpanded);
+				expect(toggle.textContent?.trim(), `${pageId}: visible toggle symbol for ${state}`).toBe(expected.symbol);
+				expect(label, `${pageId}: aria-label for ${state}`).not.toBe("");
+				expect(content?.getAttribute("aria-hidden"), `${pageId}: content aria-hidden for ${state}`).toBe(
+					state === "collapsed" ? "true" : "false",
+				);
+				labels.add(label);
+			};
+
+			assertState("collapsed");
+			toggle.click();
+			assertState("peek");
+			toggle.click();
+			assertState("expanded");
+			toggle.click();
+			assertState("collapsed");
+			expect(labels.size, `${pageId}: aria-label should communicate each state transition`).toBe(3);
+		}
 	});
 
 	it("exposes P0 resizable panel groups with accessible separators", () => {

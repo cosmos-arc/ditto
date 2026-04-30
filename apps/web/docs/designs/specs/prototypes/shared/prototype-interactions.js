@@ -1073,6 +1073,82 @@
     },
   };
 
+  /* ══════════════════════════════════════════════
+   * 13. BottomTray
+   *     Shared collapsed → peek → expanded state contract
+   * ══════════════════════════════════════════════ */
+  var BottomTray = {
+    states: ['collapsed', 'peek', 'expanded'],
+    symbols: {
+      collapsed: '⌄',
+      peek: '▴',
+      expanded: '—',
+    },
+
+    init: function () {
+      document.querySelectorAll('[data-bottom-tray]').forEach(function (tray) {
+        var toggle = tray.querySelector('[data-bottom-tray-toggle]');
+        if (!toggle) return;
+
+        var content = BottomTray._resolveContent(tray, toggle);
+        if (!content) return;
+
+        BottomTray._sync(tray, toggle, content, BottomTray._state(tray));
+        if (tray.getAttribute('data-bottom-tray-ready') === 'true') return;
+
+        tray.setAttribute('data-bottom-tray-ready', 'true');
+        toggle.addEventListener('click', function () {
+          BottomTray._sync(tray, toggle, content, BottomTray._nextState(BottomTray._state(tray)));
+        });
+      });
+    },
+
+    _resolveContent: function (tray, toggle) {
+      var controls = toggle.getAttribute('aria-controls');
+      if (controls) {
+        var target = document.getElementById(controls);
+        if (target) return target;
+      }
+
+      return tray.querySelector('[data-bottom-tray-content], .bottom-tray-content');
+    },
+
+    _state: function (tray) {
+      var state = tray.getAttribute('data-bottom-tray-state');
+      return BottomTray.states.indexOf(state) >= 0 ? state : 'collapsed';
+    },
+
+    _nextState: function (state) {
+      if (state === 'collapsed') return 'peek';
+      if (state === 'peek') return 'expanded';
+      return 'collapsed';
+    },
+
+    _labelBase: function (tray, toggle, content) {
+      var explicit = tray.getAttribute('data-bottom-tray-label') || toggle.getAttribute('data-bottom-tray-label');
+      if (explicit) return explicit;
+
+      var currentLabel = (toggle.getAttribute('aria-label') || '').replace(/^(预览|展开|收起)\s*/, '').trim();
+      return currentLabel || tray.getAttribute('aria-label') || content.getAttribute('aria-label') || '底部面板';
+    },
+
+    _labelForState: function (state, baseLabel) {
+      if (state === 'collapsed') return '预览' + baseLabel;
+      if (state === 'peek') return '展开' + baseLabel;
+      return '收起' + baseLabel;
+    },
+
+    _sync: function (tray, toggle, content, state) {
+      var isCollapsed = state === 'collapsed';
+
+      tray.setAttribute('data-bottom-tray-state', state);
+      toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+      toggle.setAttribute('aria-label', BottomTray._labelForState(state, BottomTray._labelBase(tray, toggle, content)));
+      toggle.textContent = BottomTray.symbols[state];
+      content.setAttribute('aria-hidden', isCollapsed ? 'true' : 'false');
+    },
+  };
+
   /* ── Inject shared CSS for dynamic modules ── */
   var style = document.createElement('style');
   style.textContent = [
@@ -1115,6 +1191,7 @@
     AnimatedCounter.init();
     TooltipSystem.init();
     CollapsibleContextSections.init();
+    BottomTray.init();
   }
 
   if (document.readyState === 'loading') {

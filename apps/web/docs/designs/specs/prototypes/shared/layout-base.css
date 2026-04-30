@@ -4007,13 +4007,21 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .text-12-tertiary-mb-4 { font-size: var(--font-size-12); color: var(--text-tertiary); margin-bottom: var(--space-4); }
 
 /* ── Review Remediation Shared Contracts ── */
-.bottom-tray {
+[data-bottom-tray] {
+  --bottom-tray-peek-content-max-height: calc(var(--font-size-12) * 1.7 + var(--space-16));
+  --bottom-tray-expanded-content-max-height: min(32vh, 22rem);
+  overflow: hidden;
+  transition:
+    max-height var(--motion-duration-normal) var(--motion-easing-standard),
+    height var(--motion-duration-normal) var(--motion-easing-standard),
+    padding var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+[data-bottom-tray].bottom-tray {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: 22vh;
-  overflow: hidden;
-  transition: max-height var(--motion-duration-normal) var(--motion-easing-standard);
+  max-height: min(38vh, 28rem);
 }
 
 .bottom-tray-header {
@@ -4024,8 +4032,10 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   flex: 0 0 auto;
 }
 
+[data-bottom-tray-content],
 .bottom-tray-content {
   min-height: 0;
+  max-height: var(--bottom-tray-expanded-content-max-height);
   overflow: auto;
   opacity: 1;
   transition:
@@ -4033,10 +4043,29 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
     opacity var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
+.bottom-tray [data-bottom-tray-content][aria-hidden="true"] {
+  display: block;
+}
+
+.status-bar[data-bottom-tray] {
+  max-height: 1.5rem;
+}
+
+.status-bar[data-bottom-tray] [data-bottom-tray-content] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[data-bottom-tray-toggle],
 .bottom-tray-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   min-width: var(--header-btn-size);
   min-height: var(--header-btn-size);
   border: 1px solid var(--border-subtle);
@@ -4045,19 +4074,65 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   cursor: pointer;
 }
 
-.bottom-tray[data-bottom-tray-state="collapsed"] .bottom-tray-content {
+[data-bottom-tray][data-bottom-tray-state="collapsed"] [data-bottom-tray-content] {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
+  pointer-events: none;
 }
 
-.bottom-tray[data-bottom-tray-state="peek"] .bottom-tray-content {
-  max-height: 16vh;
+[data-bottom-tray][data-bottom-tray-state="peek"] [data-bottom-tray-content] {
+  max-height: var(--bottom-tray-peek-content-max-height);
   opacity: 1;
 }
 
-.bottom-tray[data-bottom-tray-state="expanded"] {
-  max-height: 38vh;
+[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+  max-height: var(--bottom-tray-expanded-content-max-height);
+  opacity: 1;
+}
+
+[data-bottom-tray].bottom-tray[data-bottom-tray-state="collapsed"] {
+  max-height: var(--density-strip-height, 2rem);
+}
+
+[data-bottom-tray].bottom-tray[data-bottom-tray-state="peek"] {
+  max-height: calc(var(--density-strip-height, 2rem) + var(--bottom-tray-peek-content-max-height));
+}
+
+[data-bottom-tray].bottom-tray[data-bottom-tray-state="expanded"] {
+  max-height: min(38vh, 28rem);
+}
+
+.status-bar[data-bottom-tray][data-bottom-tray-state="collapsed"] {
+  max-height: 1.5rem;
+}
+
+.status-bar[data-bottom-tray][data-bottom-tray-state="peek"] {
+  max-height: 1.5rem;
+}
+
+.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  height: auto !important;
+  min-height: 1.5rem;
+  max-height: min(28vh, 14rem);
+  padding-block: var(--space-4);
+}
+
+.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+  flex-wrap: wrap;
+  max-height: calc(min(28vh, 14rem) - var(--space-8));
+  overflow: auto;
+  white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-bottom-tray],
+  [data-bottom-tray-content],
+  [data-bottom-tray-toggle] {
+    transition: none;
+  }
 }
 
 /* ── Semantic Feedback Motion ── */
