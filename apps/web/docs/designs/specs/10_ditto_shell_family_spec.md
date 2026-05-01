@@ -104,7 +104,7 @@ Ditto 全站建议固定为 **7 类基础壳层**：
 
 | Shell | Primary Answer 对应面 |
 |---|---|
-| Command Center | decision card / decision banner |
+| Command Center | decision card |
 | Analytical | main instrument readout 或 context strip |
 | Catalog | task-specific summary strip |
 | Object Hub | object status header |
@@ -568,7 +568,7 @@ Command Center 是 Ditto 的全局指挥台。它不是某一模块的首页，�
 ┌ Rail ┬───────────────────────────────────────────────────────────────┐
 │      │ Global Header                                                │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ Global Pulse / Today Strip                                   │
+│      │ Global Pulse                                                 │
 │      ├───────────────────────────────┬───────────────────────────────┤
 │      │ Main Focus Area               │ Global Alerts / Live Queue    │
 │      │                               │                               │
@@ -596,10 +596,10 @@ Command Center 是 Ditto 的全局指挥台。它不是某一模块的首页，�
 
 **Main Focus Area** — 这是首页主角，应优先展示：
 
-- Pending queue
-- Today focus
-- My worklist
-- Latest critical signals
+- 唯一 `decision-card`，回答今日主决策、原因、风险/机会与下一步动作
+- Priority queue 的 P1/P2 默认可见项
+- P3+ 低优先级事项进入折叠区或二级入口
+- Activity stream 作为后续辅助记录，不抢占首屏主答案
 
 **右侧辅助区** — 适合放：
 
@@ -1037,6 +1037,8 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 | 路径 | Shell |
 |------|-------|
 | `/` | Command Center |
+
+Home 的 Command Center 首屏必须先给出一个轻量 `global-pulse` 状态条，再给出唯一 `decision-card` primary answer。`decision-card` 是首屏主角：回答今天最该处理什么、为什么、风险/机会多大、下一步动作是什么。Priority queue 默认只露出 P1/P2 项；普通 activity stream 不得排在 decision card 之前。右侧 `data-health` 只列异常数据源，正常数据源以折叠摘要呈现。
 
 <!-- 已降级/合并: `/home/pending` — Home 角色 orient 型，非 execute，降级移除 -->
 <!-- 已降级/合并: `/home/quick-actions` — Home 角色 orient 型，非 execute，降级移除 -->

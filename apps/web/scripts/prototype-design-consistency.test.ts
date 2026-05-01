@@ -429,6 +429,21 @@ function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
 	return pattern.test(getReadablePrimaryText(element));
 }
 
+function isDefaultVisibleElement(element: Element): boolean {
+	if (element.closest("[hidden], [aria-hidden='true']")) return false;
+
+	const closedDetails = element.closest("details:not([open])");
+	if (!closedDetails) return true;
+
+	const summary = element.closest("summary");
+	return Boolean(summary && closedDetails.contains(summary));
+}
+
+function firstNumberFromText(value: string | null | undefined): number | undefined {
+	const numberMatch = value?.match(/\d+/);
+	return numberMatch ? Number(numberMatch[0]) : undefined;
+}
+
 function hasExistingIdTarget(element: Element, attribute: string): boolean {
 	const value = element.getAttribute(attribute)?.trim();
 	if (!value) return false;
@@ -720,6 +735,92 @@ describe("prototype design consistency", () => {
 			if (!hasPrimaryAnswerScope(region)) {
 				violations.push(`${page.id}:missing-scope`);
 			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps the Home first screen centered on one decision surface", () => {
+		const document = readPrototypeDocument(activePageById("home"));
+		const violations: string[] = [];
+
+		const globalPulseSlots = document.querySelectorAll('[data-contract-slot="global-pulse"]');
+		if (globalPulseSlots.length !== 1) {
+			violations.push(`home:global-pulse:${globalPulseSlots.length}`);
+		}
+		if (document.querySelector('[data-contract-slot="today-pulse"]')) {
+			violations.push("home:legacy-today-pulse");
+		}
+
+		const decisionCards = document.querySelectorAll(
+			'[data-contract-slot="decision-card"][data-primary-answer]',
+		);
+		if (decisionCards.length !== 1) {
+			violations.push(`home:decision-card:${decisionCards.length}`);
+		}
+		if (document.querySelector('[data-contract-slot="decision-banner"]')) {
+			violations.push("home:legacy-decision-banner");
+		}
+
+		const priorityQueue = document.querySelector('[data-contract-slot="pending-actions"]');
+		const priorityQueueCount = firstNumberFromText(
+			priorityQueue?.querySelector(".panel-count")?.textContent,
+		);
+		const visibleQueueItems = [...(priorityQueue?.querySelectorAll(".queue-item") ?? [])].filter(
+			isDefaultVisibleElement,
+		);
+		const visiblePriorities = visibleQueueItems.map((item) =>
+			item.querySelector(".queue-item-tag.priority")?.textContent?.trim() ?? "unprioritized",
+		);
+		const priorityCounts = visiblePriorities.reduce<Record<string, number>>((counts, priority) => {
+			counts[priority] = (counts[priority] ?? 0) + 1;
+			return counts;
+		}, {});
+		const unsupportedPriority = visiblePriorities.find((priority) => !["P1", "P2"].includes(priority));
+		if (unsupportedPriority) {
+			violations.push(`home:visible-priority:${unsupportedPriority}`);
+		}
+		if (!visiblePriorities.includes("P2")) {
+			violations.push("home:visible-priority-missing-p2");
+		}
+
+		const pendingPulse = [...document.querySelectorAll(".global-pulse-item")].find((item) =>
+			item.querySelector(".global-pulse-label")?.textContent?.trim() === "待处理",
+		);
+		const pendingPulseCount = firstNumberFromText(
+			pendingPulse?.querySelector(".global-pulse-value")?.textContent,
+		);
+		const pendingPulseNote = pendingPulse?.querySelector(".global-pulse-note")?.textContent ?? "";
+		const pulseP1Count = /P1\s*(\d+)/.exec(pendingPulseNote)?.[1];
+		const pulseP2Count = /P2\s*(\d+)/.exec(pendingPulseNote)?.[1];
+		if (priorityQueueCount !== undefined && pendingPulseCount !== priorityQueueCount) {
+			violations.push(`home:pending-count:${pendingPulseCount ?? "missing"}:${priorityQueueCount}`);
+		}
+		if (pulseP1Count !== String(priorityCounts.P1 ?? 0)) {
+			violations.push(`home:pending-p1:${pulseP1Count ?? "missing"}:${priorityCounts.P1 ?? 0}`);
+		}
+		if (pulseP2Count !== String(priorityCounts.P2 ?? 0)) {
+			violations.push(`home:pending-p2:${pulseP2Count ?? "missing"}:${priorityCounts.P2 ?? 0}`);
+		}
+
+		const activityStream = document.querySelector('[data-contract-slot="recent-signals"]');
+		const [decisionCard] = decisionCards;
+		const nodeApi = document.defaultView?.Node;
+		if (
+			activityStream &&
+			decisionCard &&
+			nodeApi &&
+			activityStream.compareDocumentPosition(decisionCard) & nodeApi.DOCUMENT_POSITION_FOLLOWING
+		) {
+			violations.push("home:activity-before-decision");
+		}
+
+		const dataHealth = document.querySelector('[data-contract-slot="data-health"]');
+		const normalHealthItems = [
+			...(dataHealth?.querySelectorAll(".health-item") ?? []),
+		].filter((item) => item.querySelector(".health-dot.healthy, .health-status.ok"));
+		if (normalHealthItems.length > 0) {
+			violations.push(`home:data-health-normal-items:${normalHealthItems.length}`);
 		}
 
 		expect(violations).toEqual([]);

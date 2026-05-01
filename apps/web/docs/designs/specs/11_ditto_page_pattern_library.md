@@ -101,7 +101,7 @@ Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主�
 
 | Pattern | Primary Answer 承载面 |
 |---|---|
-| Global Command Center | decision card / decision banner |
+| Global Command Center | decision card |
 | Analytical Overview Workspace | main instrument readout 或 context strip |
 | Catalog / Screener Workspace | task-specific summary strip |
 | Object Hub | object status header |
@@ -167,7 +167,7 @@ Global Command Center 是 Ditto 的全局起点。
 ┌ Rail ┬───────────────────────────────────────────────────────────────┐
 │      │ Global Header                                                │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ Today Strip / Global Pulse                                   │
+│      │ Global Pulse                                                 │
 │      ├───────────────────────────────┬───────────────────────────────┤
 │      │ Main Focus Board              │ Global Alerts / Live Status   │
 │      │                               │                               │
@@ -185,20 +185,21 @@ Global Command Center 是 Ditto 的全局起点。
 - 全局搜索 / command
 - 核心全局动作
 
-**Today Strip / Global Pulse**
+**Global Pulse**
 
-- Pending 数量
-- Critical alerts 数量
+Global Pulse 是单行紧凑状态条，不是五张等权 KPI 卡片。它只承载首屏背景事实：
+
+- 总权益 / 风险 / 市况
+- Pending 数量与 P1 数量
 - Running jobs
-- Broker / data / system 状态
-- 今日焦点摘要
+- Broker / data / system 异常摘要
 
 **Main Focus Board**（主角）
 
-- Pending queue
-- Today tasks
-- My review queue
-- Highest priority signals / incidents
+- 第一块必须是唯一 `decision-card`，同时标记 `data-primary-answer`
+- `decision-card` 必须回答：今天最该处理什么、为什么、风险或机会多大、下一步动作是什么
+- Pending queue 默认只露出 P1/P2；P3+ 进入折叠区或二级入口
+- Activity stream 是辅助记录，不得排在 decision card 之前，也不得在首屏抢占主答案权重
 
 **右侧 Global Alerts / Live Status**
 
@@ -207,6 +208,7 @@ Global Command Center 是 Ditto 的全局起点。
 - Data delays
 - Risk breaches
 - Agent pending approvals
+- Data health 默认只列异常源；正常源以一行折叠摘要呈现
 
 **底部 Quick Actions / Cross-Domain Summary**
 

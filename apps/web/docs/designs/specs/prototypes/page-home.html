@@ -16,8 +16,8 @@
   Note: my-workspace 已从默认视图移除（pending product spec），overlay 保留。
 
   State Variants: 7 components × 3 states (empty/loading/error)
-  - today-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
-  - decision-banner: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - global-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - decision-card: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
   - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
   - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
   - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
@@ -192,16 +192,20 @@
                   0 0 16px color-mix(in oklch, var(--brand-signature-fg) 6%, transparent);
     }
 
-    /* ── Decision Banner visual anchor — left brand border ── */
-    .shell-home .decision-banner {
+    /* ── Decision Card visual anchor — left brand border ── */
+    .shell-home .decision-card {
+      display: grid;
+      grid-template-columns: 5fr 4fr 3fr;
+      gap: var(--space-16);
+      align-items: center;
+      padding: var(--space-12) var(--space-16);
       border-left: 2px solid color-mix(in oklch, var(--brand-signature-fg) 75%, transparent);
-      padding-left: var(--space-16);
       box-shadow: inset 0 1px 0 0 color-mix(in oklch, var(--brand-signature-fg) 5%, transparent),
                   inset 0 -1px 0 0 color-mix(in oklch, var(--brand-signature-fg) 3%, transparent);
     }
 
-    /* ── Decision banner left border glow halo ── */
-    .shell-home .decision-banner::before {
+    /* ── Decision card left border glow halo ── */
+    .shell-home .decision-card::before {
       content: '';
       position: absolute;
       left: -1px;
@@ -474,80 +478,93 @@
      * ══════════════════════════════════════════════ */
 
     /* ══════════════════════════════════════════════
-     * Today Pulse — L1 核心数据面板 (5 指标卡片)
+     * Global Pulse — L3 compact status strip
      * ══════════════════════════════════════════════ */
-    .today-pulse {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: var(--space-2);
-    }
-    .pulse-card {
-      background: var(--surface-panel-base);
+    .global-pulse {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      min-height: 34px;
+      padding: var(--space-6) var(--space-10);
+      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
-      padding: var(--space-10) var(--space-12);
-      cursor: pointer;
-      transition: border-color 150ms ease-out, box-shadow 200ms ease-out, background 200ms ease-out;
-      position: relative;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      scrollbar-width: none;
     }
-    .pulse-card:hover {
-      border-color: color-mix(in oklch, var(--brand-signature-fg) 10%, var(--border-default));
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-signature-fg) 8%, var(--border-default)),
-                  0 1px 4px color-mix(in oklch, var(--brand-signature-fg) 4%, transparent);
+    .global-pulse::-webkit-scrollbar {
+      display: none;
     }
-    .pulse-card.warning {
-      border-color: var(--border-default);
+    .global-pulse-item {
+      display: inline-flex;
+      align-items: baseline;
+      gap: var(--space-4);
+      padding-right: var(--space-8);
+      border-right: 1px solid var(--border-subtle);
+      white-space: nowrap;
     }
-    .pulse-card.warning:hover {
-      border-color: var(--border-default);
-      box-shadow: 0 0 0 1px var(--border-default),
-                  0 1px 4px color-mix(in oklch, var(--risk-medium-fg) 5%, transparent);
+    .global-pulse-item:last-child {
+      padding-right: 0;
+      border-right: 0;
     }
-    .pulse-card-label {
-      font-size: var(--font-size-10);
+    .global-pulse-label {
       color: var(--text-tertiary);
+      font-size: var(--font-size-10);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: var(--space-2);
+      letter-spacing: 0.04em;
     }
-    .pulse-card-value {
-      font-size: var(--font-size-16);
-      font-weight: var(--font-weight-semibold);
+    .global-pulse-value {
       color: var(--text-primary);
       font-family: var(--font-family-numeric);
-      line-height: 1.2;
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
     }
-    .pulse-card-value.positive { color: var(--market-up-fg); }
-    .pulse-card-value.warning { color: var(--risk-medium-fg); }
-    .pulse-card-sub {
-      font-size: var(--font-size-10);
+    .global-pulse-value.warning { color: var(--risk-medium-fg); }
+    .global-pulse-value.positive { color: var(--market-up-fg); }
+    .global-pulse-note {
       color: var(--text-tertiary);
-      margin-top: var(--space-1);
-      font-feature-settings: 'tnum' 1, 'zero' 1;
+      font-size: var(--font-size-11);
     }
-    .pulse-card-sub .indicator-up { color: var(--market-up-fg); }
-    .pulse-card-sub .indicator-down { color: var(--market-down-fg); }
+    .global-pulse-note.positive { color: var(--market-up-fg); }
 
-    /* Pulse card sparkline — inline micro chart */
-    .pulse-card-sparkline {
-      display: block;
-      margin-top: var(--space-2);
-      opacity: 0.6;
+    .decision-card-judgment {
+      margin: 0;
+      color: var(--text-primary);
+      font-family: var(--font-family-heading);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.35;
     }
-
-    /* Pulse card sub conditional coloring */
-    .pulse-card-sub .val-positive { color: var(--market-up-fg); }
-    .pulse-card-sub .val-warning  { color: var(--system-degraded-fg); }
-    .pulse-card-badge {
-      position: absolute;
-      top: var(--space-6);
-      right: var(--space-8);
-      font-size: var(--font-size-10);
-      font-weight: var(--font-weight-medium);
-      color: var(--risk-high-fg);
-      background: color-mix(in oklch, var(--risk-high-fg) 12%, transparent);
-      padding: 1px var(--space-4);
+    .decision-card-risk {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-8);
+    }
+    .decision-card-risk .status-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+    }
+    .decision-card-risk .status-value {
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-18);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    .decision-card-evidence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-6);
+    }
+    .decision-card-evidence span {
+      padding: var(--space-2) var(--space-6);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
     }
 
     /* ── Decision primary metric enhanced presence ── */
@@ -584,15 +601,15 @@
       letter-spacing: 0;
     }
 
-    /* ── Pulse card stagger reveal (R2 animate) ── */
-    .pulse-card {
+    /* ── Global pulse stagger reveal (R2 animate) ── */
+    .global-pulse-item {
       animation: card-reveal 400ms ease-out both;
     }
-    .pulse-card:nth-child(1) { animation-delay: 0ms; }
-    .pulse-card:nth-child(2) { animation-delay: 40ms; }
-    .pulse-card:nth-child(3) { animation-delay: 80ms; }
-    .pulse-card:nth-child(4) { animation-delay: 120ms; }
-    .pulse-card:nth-child(5) { animation-delay: 160ms; }
+    .global-pulse-item:nth-child(1) { animation-delay: 0ms; }
+    .global-pulse-item:nth-child(2) { animation-delay: 40ms; }
+    .global-pulse-item:nth-child(3) { animation-delay: 80ms; }
+    .global-pulse-item:nth-child(4) { animation-delay: 120ms; }
+    .global-pulse-item:nth-child(5) { animation-delay: 160ms; }
     @keyframes card-reveal {
       from { opacity: 0; transform: translateY(3px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -1139,11 +1156,11 @@
       animation-duration: 2.2s;
     }
 
-    /* ── Decision banner ambient brass glow ── */
-    .shell-home .panel[data-contract-slot="decision-banner"] {
+    /* ── Decision card ambient brass glow ── */
+    .shell-home .panel[data-contract-slot="decision-card"] {
       position: relative;
     }
-    .shell-home .panel[data-contract-slot="decision-banner"]::before {
+    .shell-home .panel[data-contract-slot="decision-card"]::before {
       content: '';
       position: absolute;
       top: -8px;
@@ -1158,7 +1175,7 @@
       pointer-events: none;
       z-index: 0;
     }
-    .shell-home .panel[data-contract-slot="decision-banner"] > * {
+    .shell-home .panel[data-contract-slot="decision-card"] > * {
       position: relative;
       z-index: 1;
     }
@@ -1214,6 +1231,11 @@
     }
     .shell-home .health-item:hover {
       background: var(--interaction-hover-subtle-bg);
+    }
+    .shell-home .health-normal-summary {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      padding: var(--space-4) 0;
     }
 
     /* ── Health gauge segment hover ── */
@@ -1405,106 +1427,70 @@
     </div>
 
 
-    <!-- ═══ Main Content (Decision Banner + Execution Queue + Signals/Findings) ═══ -->
+    <!-- ═══ Main Content (Decision Card + Execution Queue + Signals/Findings) ═══ -->
     <div class="shell-main" id="main-content">
-      <!-- ═══ Today Pulse (L1 — core data cards) ═══ -->
-    <div class="today-pulse" data-contract-slot="today-pulse" data-reveal="fade-up" data-mouse-glow="true" data-mouse-glow-size="200px">
-      <div class="pulse-card" data-tooltip="账户总权益 ¥25,432,180，点击查看组合详情" title="总权益">
-        <span class="pulse-card-label">总权益</span>
-        <span class="pulse-card-value">¥25.43M</span>
-        <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近30日权益走势">
-          <polyline points="2,8 14,7 28,6 42,5 54,4" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-        <span class="pulse-card-sub"><span class="indicator-up">+12.6% 本月</span></span>
-      </div>
-      <div class="pulse-card warning" data-tooltip="VaR 已超过 95% 历史分位，点击查看风控详情" title="风险指标">
-        <span class="pulse-card-badge">预警</span>
-        <span class="pulse-card-label">风险</span>
-        <span class="pulse-card-value warning">中等</span>
-        <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日风险走势">
-          <polyline points="2,3 14,2 28,5 42,8 54,10" stroke="var(--market-down-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-        <span class="pulse-card-sub">VaR 95% · <span class="indicator-down">回撤 -3.8%</span></span>
-      </div>
-      <div class="pulse-card" data-tooltip="波动回落 + 北向转暖，市场环境温和" title="市场状态">
-        <span class="pulse-card-label">市况</span>
-        <span class="pulse-card-value">温和偏好</span>
-        <svg class="pulse-card-sparkline" width="56" height="14" viewBox="0 0 56 14" fill="none" aria-label="近5日波动率走势">
-          <polyline points="2,8 14,6 28,10 42,11 54,9" stroke="var(--market-up-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.5"/>
-        </svg>
-        <span class="pulse-card-sub">波动回落 · <span class="val-positive">北向转暖</span></span>
-      </div>
-      <div class="pulse-card" data-tooltip="2 项待处理，含 1 项紧急，点击查看全部" title="待处理事项">
-        <span class="pulse-card-badge">2</span>
-        <span class="pulse-card-label">待处理</span>
-        <span class="pulse-card-value">2</span>
-        <span class="pulse-card-sub">含 <span class="val-warning">1 项 P1</span></span>
-      </div>
-      <div class="pulse-card" data-tooltip="3 个后台任务运行中（回测 1 / 采集 1 / 监控 1）" title="后台任务">
-        <span class="pulse-card-label">后台任务</span>
-        <span class="pulse-card-value">3</span>
-        <span class="pulse-card-sub">回测 · 采集 · 监控</span>
-      </div>
+      <!-- ═══ Global Pulse (L3 — compact operational status) ═══ -->
+    <div class="global-pulse" data-contract-slot="global-pulse" aria-label="今日全局状态" data-reveal="fade-up">
+      <span class="global-pulse-item" data-tooltip="账户总权益 ¥25,432,180">
+        <span class="global-pulse-label">总权益</span>
+        <span class="global-pulse-value">¥25.43M</span>
+        <span class="global-pulse-note positive">+12.6% 本月</span>
+      </span>
+      <span class="global-pulse-item" data-tooltip="VaR 已超过 95% 历史分位">
+        <span class="global-pulse-label">风险</span>
+        <span class="global-pulse-value warning">中等</span>
+        <span class="global-pulse-note">回撤 -3.8%</span>
+      </span>
+      <span class="global-pulse-item" data-tooltip="波动回落 + 北向转暖">
+        <span class="global-pulse-label">市况</span>
+        <span class="global-pulse-value positive">温和偏好</span>
+      </span>
+      <span class="global-pulse-item" data-tooltip="5 项待处理，含 2 项 P1 和 1 项 P2">
+        <span class="global-pulse-label">待处理</span>
+        <span class="global-pulse-value">5</span>
+        <span class="global-pulse-note">P1 2 / P2 1</span>
+      </span>
+      <span class="global-pulse-item" data-tooltip="回测 1 / 采集 1 / 监控 1">
+        <span class="global-pulse-label">后台任务</span>
+        <span class="global-pulse-value">3</span>
+      </span>
     </div>
 
-      <!-- Primary: Decision Banner + Execution Queue -->
+      <!-- Primary: Decision Card + Execution Queue -->
       <div class="main-primary">
-        <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
-        <div class="panel" data-contract-slot="decision-banner" data-primary-answer aria-label="影响范围：全局账户、市场和优先事项">
-          <div class="decision-banner" data-mouse-glow="true" data-reveal="fade-up">
-            <!-- Left: Account primary status (~42%) -->
+        <!-- Decision Card: primary decision + risk evidence + next action -->
+        <div class="panel" data-contract-slot="decision-card" data-primary-answer aria-label="影响范围：全局账户、市场和优先事项">
+          <section class="decision-card" data-mouse-glow="true" data-reveal="fade-up">
+            <!-- Left: today's primary decision -->
             <div class="decision-primary">
-              <span class="metric-label">今日盈亏</span>
-	              <span class="metric-value positive" data-answer-metric data-tooltip="今日实现盈亏 +¥86,472.50">+¥<span>86,472.50</span>
-                <svg class="sparkline" width="64" height="20" viewBox="0 0 64 20" fill="none" aria-label="近 5 日盈亏趋势">
-                  <polyline points="2,14 14,12 26,10 38,8 50,6 62,4" stroke="var(--market-strong-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                </svg>
-              </span>
-              <span class="metric-sub" data-answer-evidence>+0.34% · 总权益 ¥<span data-tooltip="账户总权益">25,432,180</span> · <span class="indicator-up" data-tooltip="较昨日 +¥21,400 (+0.08%)">较昨日 +¥21,400</span></span>
+              <span class="metric-label">今日主决策</span>
+              <p class="decision-card-judgment" data-answer-judgment>优先复核贵州茅台卖出信号，组合回撤接近预警线。</p>
+              <span class="metric-sub" data-answer-scope>全局账户 · 交易信号 · 风控集中度</span>
             </div>
-            <!-- Middle: Market context + judgment (~33%) -->
+            <!-- Middle: why it matters -->
             <div class="decision-judgment">
-              <label for="overlay-ai-advice" class="cursor-pointer" title="查看 AI 操作建议" data-tooltip="点击查看 AI 详细操作建议" data-tooltip-delay="500">
-	              <div class="decision-judgment-text" data-answer-judgment>波动回落，北向转暖，但局部拥挤。</div>
-              </label>
-              <div class="decision-kpi-row" data-reveal="fade-up" data-reveal-delay="100">
-                <div class="decision-judgment-metric" data-answer-evidence>
-                  <span class="status-label" data-tooltip="账户杠杆率">杠杆率</span>
-                  <span class="status-value" data-tooltip="处于安全区间">1.2x</span>
-                </div>
-                <div class="decision-judgment-metric" data-answer-evidence>
-                  <span class="status-label" data-tooltip="组合最大回撤">回撤</span>
-                  <span class="status-value indicator-down" data-tooltip="接近预警线 -5%">-3.8%</span>
-                </div>
+              <div class="decision-card-risk">
+                <span class="status-label">风险窗口</span>
+                <span class="status-value indicator-down" data-answer-metric data-tooltip="组合最大回撤接近 -5% 预警线">-3.8%</span>
               </div>
-              <div class="decision-judgment-metrics">
-                <div class="decision-judgment-metric">
-                  <span class="status-label" data-tooltip="隐含波动率指数">IVIX</span>
-                  <span class="status-value"><span>18.52</span>
-                    <svg data-sparkline='{"data":[20.1,19.8,19.5,19.2,18.9,18.7,18.52],"series":"down","fill":true,"width":36,"height":14}' aria-label="IVIX 走势"></svg>
-                  </span>
-                </div>
-                <div class="decision-judgment-metric">
-                  <span class="status-label" data-tooltip="北向资金净流入">北向资金</span>
-                  <span class="status-value up">+<span>12.4</span> 亿
-                    <svg data-sparkline='{"data":[5.2,6.1,7.8,8.5,9.2,10.8,12.4],"series":"up","fill":true,"width":36,"height":14}' aria-label="北向资金走势"></svg>
-                  </span>
-                </div>
+              <div class="decision-card-evidence">
+                <span data-answer-evidence>Alpha v3 置信度 87%</span>
+                <span data-answer-evidence>科技集中度 37.2%</span>
+                <span data-answer-evidence>VaR 95% 分位</span>
               </div>
             </div>
-            <!-- Right: Routing CTAs (~25%) -->
+            <!-- Right: next action -->
             <div class="decision-execution">
-              <span class="decision-routing-label">操作建议</span>
+              <span class="decision-routing-label">下一步</span>
               <div class="decision-cta-row">
-	                <label for="overlay-signal-detail" class="decision-cta primary" role="button" tabindex="0" data-answer-action>信号详情</label>
-                <button class="decision-cta secondary">研究进展</button>
-                <button class="decision-cta ghost">风控详情</button>
+                <label for="overlay-signal-detail" class="decision-cta primary" role="button" tabindex="0" data-answer-action>复核信号</label>
+                <button class="decision-cta secondary" type="button">查看风控</button>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        <!-- State Variants: Decision Banner -->
+        <!-- State Variants: Decision Card -->
 
 
 
@@ -1555,10 +1541,7 @@
               </div>
             </div>
 
-            <!-- P2/P3 items — collapsed by default -->
-            <details>
-              <summary class="queue-disclosure">+3 更多 ▾</summary>
-            <!-- P2 item -->
+            <!-- P2 item — visible secondary priority -->
             <div class="queue-item">
               <div class="queue-item-bar p2"></div>
               <div class="queue-item-body">
@@ -1576,7 +1559,9 @@
               </div>
             </div>
 
-            <!-- P3 items -->
+            <!-- P3 items — collapsed by default -->
+            <details>
+              <summary class="queue-disclosure">+2 更多低优先级 ▾</summary>
             <div class="queue-item">
               <div class="queue-item-bar p3"></div>
               <div class="queue-item-body">
@@ -1851,24 +1836,7 @@
               <div class="health-gauge-segment healthy" title="新闻资讯"></div>
               <div class="health-gauge-segment degraded" title="另类数据"></div>
             </div>
-            <details>
-              <summary class="context-section-disclosure">正常项目 (3)</summary>
-            <div class="health-item">
-              <span class="health-dot healthy"></span>
-              <span class="health-label" data-tooltip="实时行情数据源">行情数据</span>
-              <span class="health-status ok">正常</span>
-            </div>
-            <div class="health-item">
-              <span class="health-dot healthy"></span>
-              <span class="health-label" data-tooltip="期权链数据源">期权链</span>
-              <span class="health-status ok">正常</span>
-            </div>
-            <div class="health-item">
-              <span class="health-dot healthy"></span>
-              <span class="health-label" data-tooltip="新闻资讯数据源">新闻资讯</span>
-              <span class="health-status ok">正常</span>
-            </div>
-            </details>
+            <div class="health-normal-summary" aria-label="正常数据源折叠显示">正常 3：行情数据 / 期权链 / 新闻资讯</div>
             <div class="health-item">
               <span class="health-dot degraded"></span>
               <span class="health-label" data-tooltip="财报数据源 — 当前延迟">财报数据</span>
