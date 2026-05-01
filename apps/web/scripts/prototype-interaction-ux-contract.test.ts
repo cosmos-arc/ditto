@@ -246,6 +246,7 @@ function evaluateSharedInteractionsScript(window: JSDOM["window"]): void {
 		"getComputedStyle",
 		"CustomEvent",
 		"IntersectionObserver",
+		"MutationObserver",
 		"requestAnimationFrame",
 		"cancelAnimationFrame",
 		"setTimeout",
@@ -259,6 +260,7 @@ function evaluateSharedInteractionsScript(window: JSDOM["window"]): void {
 		window.getComputedStyle.bind(window),
 		window.CustomEvent,
 		window.IntersectionObserver,
+		window.MutationObserver,
 		window.requestAnimationFrame.bind(window),
 		window.cancelAnimationFrame.bind(window),
 		window.setTimeout.bind(window),
@@ -722,6 +724,246 @@ describe("prototype interaction UX contracts", () => {
 		outer.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
 
 		expect(outerClicks).toBe(2);
+	});
+
+	it("caches shared CSS variable reads during interaction initialization", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<div data-mouse-glow></div>
+					<div data-mouse-glow></div>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/css-var-cache-contract.html",
+			},
+		);
+		let computedStyleReads = 0;
+		const originalGetComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+
+		Object.defineProperty(dom.window, "getComputedStyle", {
+			configurable: true,
+			value: (element: Element, pseudoElt?: string | null): CSSStyleDeclaration => {
+				if (element === dom.window.document.documentElement) {
+					computedStyleReads += 1;
+				}
+				return originalGetComputedStyle(element, pseudoElt);
+			},
+		});
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (dom.window.document.readyState === "loading") {
+			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		expect(computedStyleReads).toBeLessThanOrEqual(1);
+	});
+
+	it("invalidates shared CSS variable cache when theme or density attributes change", async () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html style="--brand-accent-subtle: first-glow">
+				<body>
+					<div id="glow" data-mouse-glow></div>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/css-var-invalidation-contract.html",
+			},
+		);
+		let computedStyleReads = 0;
+		const originalGetComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+		const glow = dom.window.document.getElementById("glow");
+
+		expect(glow).not.toBeNull();
+		if (!(glow instanceof dom.window.HTMLElement)) return;
+
+		Object.defineProperty(dom.window, "getComputedStyle", {
+			configurable: true,
+			value: (element: Element, pseudoElt?: string | null): CSSStyleDeclaration => {
+				if (element === dom.window.document.documentElement) {
+					computedStyleReads += 1;
+				}
+				return originalGetComputedStyle(element, pseudoElt);
+			},
+		});
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (dom.window.document.readyState === "loading") {
+			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		expect(glow.style.getPropertyValue("--_glow-color")).toBe("first-glow");
+		expect(computedStyleReads).toBe(1);
+
+		dom.window.document.documentElement.style.setProperty("--brand-accent-subtle", "second-glow");
+		dom.window.document.documentElement.setAttribute("data-theme", "light");
+		await Promise.resolve();
+
+		glow.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 12, clientY: 16, bubbles: true }));
+
+		expect(glow.style.getPropertyValue("--_glow-color")).toBe("second-glow");
+		expect(computedStyleReads).toBe(2);
+	});
+
+	it("throttles mouse glow pointer updates through animation frames", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<div id="glow" data-mouse-glow></div>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/mouse-glow-raf-contract.html",
+			},
+		);
+		const frames: FrameRequestCallback[] = [];
+		const glow = dom.window.document.getElementById("glow");
+		let rectReads = 0;
+
+		expect(glow).not.toBeNull();
+		if (!(glow instanceof dom.window.HTMLElement)) return;
+
+		Object.defineProperty(dom.window, "requestAnimationFrame", {
+			configurable: true,
+			value: (callback: FrameRequestCallback): number => {
+				frames.push(callback);
+				return frames.length;
+			},
+		});
+		Object.defineProperty(glow, "getBoundingClientRect", {
+			configurable: true,
+			value: (): DOMRect => {
+				rectReads += 1;
+				return new dom.window.DOMRect(8, 13, 100, 80);
+			},
+		});
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (dom.window.document.readyState === "loading") {
+			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 18, clientY: 28, bubbles: true }));
+		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 30, clientY: 43, bubbles: true }));
+
+		expect(frames).toHaveLength(1);
+		expect(rectReads).toBe(0);
+
+		frames[0](0);
+
+		expect(rectReads).toBe(1);
+		expect(glow.style.getPropertyValue("--_glow-x")).toBe("22px");
+		expect(glow.style.getPropertyValue("--_glow-y")).toBe("30px");
+	});
+
+	it("restores mouse glow variables after leave and re-enter", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<div id="glow" data-mouse-glow data-mouse-glow-color="contract-color" data-mouse-glow-size="160px"></div>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/mouse-glow-reentry-contract.html",
+			},
+		);
+		const glow = dom.window.document.getElementById("glow");
+
+		expect(glow).not.toBeNull();
+		if (!(glow instanceof dom.window.HTMLElement)) return;
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (dom.window.document.readyState === "loading") {
+			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		glow.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
+
+		expect(glow.style.getPropertyValue("--_glow-color")).toBe("");
+		expect(glow.style.getPropertyValue("--_glow-size")).toBe("");
+
+		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 12, clientY: 16, bubbles: true }));
+
+		expect(glow.style.getPropertyValue("--_glow-color")).toBe("contract-color");
+		expect(glow.style.getPropertyValue("--_glow-size")).toBe("160px");
+		expect(glow.style.backgroundImage).not.toBe("");
+	});
+
+	it("builds compare basket additions without unsafe innerHTML strings", () => {
+		expect(readSharedInteractionsScript()).not.toMatch(/innerHTML\s*=\s*(?:\n\s*)?["'`]\s*</);
+	});
+
+	it("escapes compare basket text through DOM text nodes", () => {
+		const dom = new JSDOM(
+			`<!doctype html>
+			<html>
+				<body>
+					<div data-screener-workflow>
+						<table class="data-table" data-compare-source>
+							<thead>
+								<tr><th>代码</th><th>名称</th><th>涨跌</th></tr>
+							</thead>
+							<tbody>
+								<tr class="row">
+									<td class="cell-ticker"></td>
+									<td class="cell-name"></td>
+									<td class="cell-change-up">+1.2%</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="catalog-detail">
+							<div data-compare-basket-body><button class="compare-cta" type="button">开始对比</button></div>
+						</div>
+						<div class="compare-list"></div>
+						<span data-compare-count>0</span>
+					</div>
+				</body>
+			</html>`,
+			{
+				pretendToBeVisual: true,
+				url: "https://prototype.local/compare-escaping-contract.html",
+			},
+		);
+		const { document } = dom.window;
+		const maliciousTicker = "<script>alert(1)</script>";
+		const maliciousName = `"><img src=x onerror=alert(1)>`;
+
+		const tickerCell = document.querySelector(".cell-ticker");
+		const nameCell = document.querySelector(".cell-name");
+		expect(tickerCell).not.toBeNull();
+		expect(nameCell).not.toBeNull();
+		if (!tickerCell || !nameCell) return;
+
+		tickerCell.textContent = maliciousTicker;
+		nameCell.textContent = maliciousName;
+
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		if (document.readyState === "loading") {
+			document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		}
+
+		const compareButton = document.querySelector("[data-compare-add]");
+		expect(compareButton).not.toBeNull();
+		compareButton?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+
+		expect(document.querySelector(".compare-item-name")?.textContent).toBe(maliciousName);
+		expect(document.querySelector(".compare-row-ticker")?.textContent).toBe(maliciousTicker);
+		expect(document.querySelector(".compare-item img, .compare-row img, .compare-item script, .compare-row script")).toBeNull();
+		expect(document.querySelector("[data-compare-count]")?.textContent).toBe("1");
 	});
 
 	it("updates separated tab panels from shared tab interactions", () => {

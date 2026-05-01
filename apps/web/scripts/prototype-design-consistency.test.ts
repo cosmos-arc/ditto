@@ -1955,6 +1955,60 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
+	it("keeps comfortable density and resize suppression explicit", () => {
+		const densityCss = readFileSync(join(prototypesDir, "tokens-style.css"), "utf8");
+		const layoutCss = stripCssComments(readFileSync(prototypeLayoutCss, "utf8"));
+		const comfortableBlock = /\[data-density="comfortable"\]\s*\{([^}]*)\}/.exec(densityCss)?.[1] ?? "";
+		const requiredComfortableVars = [
+			"--density-panel-padding",
+			"--density-section-gap",
+			"--density-gutter",
+			"--density-strip-height",
+			"--density-toolbar-height",
+			"--density-row-height",
+			"--density-cell-padding-x",
+			"--density-cell-padding-y",
+			"--density-header-height",
+			"--density-input-height",
+			"--density-action-height",
+			"--density-chart-header",
+			"--density-chart-padding",
+			"--density-font-delta",
+		];
+		const expectedComfortableDeclarations = [
+			["--density-panel-padding", "var(--space-16)"],
+			["--density-section-gap", "var(--space-16)"],
+			["--density-gutter", "var(--space-20)"],
+			["--density-strip-height", "2.5rem"],
+			["--density-toolbar-height", "2.5rem"],
+			["--density-row-height", "2.625rem"],
+			["--density-cell-padding-x", "var(--space-16)"],
+			["--density-cell-padding-y", "var(--space-8)"],
+			["--density-header-height", "2.25rem"],
+			["--density-input-height", "2.25rem"],
+			["--density-action-height", "2.25rem"],
+			["--density-chart-header", "2.25rem"],
+			["--density-chart-padding", "var(--space-16)"],
+		] as const;
+		const violations = requiredComfortableVars
+			.filter((token) => !new RegExp(`${token}\\s*:`).test(comfortableBlock))
+			.map((token) => `tokens-style.css:comfortable:${token}`);
+		for (const [token, value] of expectedComfortableDeclarations) {
+			if (!new RegExp(`${token}\\s*:\\s*${value.replace(/[()]/g, "\\$&")}`).test(comfortableBlock)) {
+				violations.push(`tokens-style.css:comfortable-value:${token}`);
+			}
+		}
+
+		if (/html\[data-resizing-panel="true"\]\s+\*/.test(layoutCss)) {
+			violations.push("layout-base.css:global-resize-transition-suppression");
+		}
+		if (!/html\[data-resizing-panel="true"\]\s+(?::is\(\.shell|\.shell)/.test(layoutCss)) {
+			violations.push("layout-base.css:shell-scoped-resize-transition-suppression");
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("defines one shared visual order for global header utilities", () => {
 		const css = readFileSync(prototypeLayoutCss, "utf8");
 		const expectedOrder = [

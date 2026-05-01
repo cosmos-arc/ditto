@@ -83,5 +83,18 @@
 }
 
 [data-density="comfortable"] {
-  --density-font-delta: 0;
+  --density-panel-padding:     var(--space-16);
+  --density-section-gap:       var(--space-16);
+  --density-gutter:            var(--space-20);
+  --density-strip-height:      2.5rem;
+  --density-toolbar-height:    2.5rem;
+  --density-row-height:        2.625rem;
+  --density-cell-padding-x:    var(--space-16);
+  --density-cell-padding-y:    var(--space-8);
+  --density-header-height:     2.25rem;
+  --density-input-height:      2.25rem;
+  --density-action-height:     2.25rem;
+  --density-chart-header:      2.25rem;
+  --density-chart-padding:     var(--space-16);
+  --density-font-delta:        0;
 }

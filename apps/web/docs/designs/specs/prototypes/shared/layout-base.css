@@ -3747,7 +3747,8 @@ html[data-resizing-panel="true"] body {
   user-select: none;
 }
 
-html[data-resizing-panel="true"] * {
+html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-"], .catalog-shell, .object-shell),
+html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-"], .catalog-shell, .object-shell) * {
   transition: none !important;
   animation: none !important;
 }

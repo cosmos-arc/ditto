@@ -25,9 +25,41 @@
   }
 
   /* ── Utility: Resolve CSS custom property ── */
+  var computedStyleCache = null;
+  var cssVarCacheInvalidationReady = false;
+
+  function clearCssVarCache() {
+    computedStyleCache = null;
+  }
+
   function cssVar(name, fallback) {
-    var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+    if (!computedStyleCache) {
+      computedStyleCache = getComputedStyle(document.documentElement);
+    }
+    var v = computedStyleCache.getPropertyValue(name);
     return v ? v.trim() : fallback;
+  }
+
+  function watchCssVarCacheInvalidation() {
+    if (cssVarCacheInvalidationReady) return;
+    cssVarCacheInvalidationReady = true;
+
+    document.addEventListener('themechange', clearCssVarCache);
+    document.addEventListener('densitychange', clearCssVarCache);
+
+    if (typeof MutationObserver === 'undefined') return;
+    var observer = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i += 1) {
+        if (mutations[i].attributeName === 'data-theme' || mutations[i].attributeName === 'data-density') {
+          clearCssVarCache();
+          return;
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'data-density'],
+    });
   }
 
   /* ══════════════════════════════════════════════
@@ -494,12 +526,28 @@
       }
       if (detailBody) {
         var detailItem = document.createElement('div');
+        var detailInfo = document.createElement('div');
+        var detailInfoInner = document.createElement('div');
+        var detailTextGroup = document.createElement('div');
+        var detailName = ScreenerWorkflow._textElement('div', 'compare-item-name', name);
+        var detailCode = ScreenerWorkflow._textElement('div', 'compare-item-code', ticker);
+        var detailActions = document.createElement('div');
+        var detailRemove = ScreenerWorkflow._textElement('span', 'compare-item-remove', '×');
+
         detailItem.className = 'compare-item';
-        detailItem.innerHTML =
-          '<div class="compare-item-info"><div><div class="compare-item-name">' + name +
-          '</div><div class="compare-item-code">' + ticker +
-          '</div></div></div><div class="compare-item-actions"><span class="compare-item-remove" role="button" tabindex="0" aria-label="移除' +
-          name + '">&times;</span></div>';
+        detailInfo.className = 'compare-item-info';
+        detailActions.className = 'compare-item-actions';
+        detailRemove.setAttribute('role', 'button');
+        detailRemove.setAttribute('tabindex', '0');
+        detailRemove.setAttribute('aria-label', '移除' + name);
+
+        detailTextGroup.appendChild(detailName);
+        detailTextGroup.appendChild(detailCode);
+        detailInfoInner.appendChild(detailTextGroup);
+        detailInfo.appendChild(detailInfoInner);
+        detailActions.appendChild(detailRemove);
+        detailItem.appendChild(detailInfo);
+        detailItem.appendChild(detailActions);
         var cta = detailBody.querySelector('.compare-cta');
         detailBody.insertBefore(detailItem, cta || null);
       }
@@ -508,12 +556,18 @@
       if (compareList) {
         var row = document.createElement('div');
         row.className = 'compare-row';
-        row.innerHTML =
-          '<span class="compare-row-ticker">' + ticker +
-          '</span><span class="compare-row-name">' + name +
-          '</span><span class="text-up">' + change + '</span>';
+        row.appendChild(ScreenerWorkflow._textElement('span', 'compare-row-ticker', ticker));
+        row.appendChild(ScreenerWorkflow._textElement('span', 'compare-row-name', name));
+        row.appendChild(ScreenerWorkflow._textElement('span', 'text-up', change));
         compareList.appendChild(row);
       }
+    },
+
+    _textElement: function (tagName, className, text) {
+      var element = document.createElement(tagName);
+      element.className = className;
+      element.textContent = text;
+      return element;
     },
 
     _syncCompareCount: function (root, state) {
@@ -869,23 +923,52 @@
     init: function () {
       if (reducedMotion) return;
       document.querySelectorAll('[data-mouse-glow]').forEach(function (el) {
-        var color = el.getAttribute('data-mouse-glow-color') || cssVar('--brand-accent-subtle', 'oklch(from var(--brand-500) l c h / 0.06)');
-        var size  = el.getAttribute('data-mouse-glow-size')  || '200px';
+        var frame = 0;
+        var lastEvent = null;
+        var background =
+          'radial-gradient(circle var(--_glow-size) at var(--_glow-x, 50%) var(--_glow-y, 50%), var(--_glow-color), transparent)';
 
-        el.addEventListener('mousemove', function (e) {
-          var rect = el.getBoundingClientRect();
-          var x = e.clientX - rect.left;
-          var y = e.clientY - rect.top;
-          el.style.setProperty('--_glow-x', x + 'px');
-          el.style.setProperty('--_glow-y', y + 'px');
-          el.style.backgroundImage =
-            'radial-gradient(circle ' + size + ' at var(--_glow-x) var(--_glow-y), ' + color + ', transparent)';
+        function applyGlowTokens() {
+          var color = el.getAttribute('data-mouse-glow-color') || cssVar('--brand-accent-subtle', 'oklch(from var(--brand-500) l c h / 0.06)');
+          var size = el.getAttribute('data-mouse-glow-size') || '200px';
+
+          el.style.setProperty('--_glow-size', size);
+          el.style.setProperty('--_glow-color', color);
+        }
+
+        applyGlowTokens();
+
+        el.addEventListener('mousemove', function (event) {
+          lastEvent = event;
+          if (!el.style.backgroundImage || !el.style.getPropertyValue('--_glow-size') || !el.style.getPropertyValue('--_glow-color')) {
+            applyGlowTokens();
+            el.style.backgroundImage = background;
+          }
+          if (frame) return;
+
+          frame = requestAnimationFrame(function () {
+            frame = 0;
+            if (!lastEvent) return;
+
+            var rect = el.getBoundingClientRect();
+            var x = lastEvent.clientX - rect.left;
+            var y = lastEvent.clientY - rect.top;
+            el.style.setProperty('--_glow-x', x + 'px');
+            el.style.setProperty('--_glow-y', y + 'px');
+          });
         });
 
         el.addEventListener('mouseleave', function () {
+          if (frame) {
+            cancelAnimationFrame(frame);
+          }
+          frame = 0;
+          lastEvent = null;
           el.style.backgroundImage = '';
           el.style.removeProperty('--_glow-x');
           el.style.removeProperty('--_glow-y');
+          el.style.removeProperty('--_glow-size');
+          el.style.removeProperty('--_glow-color');
         });
       });
     },
@@ -1510,6 +1593,7 @@
 
   /* ── Auto-initialize ── */
   function init() {
+    watchCssVarCacheInvalidation();
     Tabs.init();
     RadioTabLabels.init();
     InteractiveRoleActions.init();
