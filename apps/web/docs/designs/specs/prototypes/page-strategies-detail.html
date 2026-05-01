@@ -135,6 +135,21 @@
       font-weight: var(--font-weight-regular);
     }
 
+    .object-answer-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .object-answer-row strong {
+      font-family: var(--font-family-numeric);
+      color: var(--text-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+
     .object-status {
       display: inline-flex;
       align-items: center;
@@ -985,12 +1000,18 @@
       <div class="object-header" data-primary-answer-equivalent role="banner" aria-label="影响范围：动量因子增强策略对象状态">
         <div class="object-identity">
           <div class="object-name-row">
-            <h1 class="object-name" data-answer-judgment>动量因子增强策略</h1>
-            <span class="object-code" data-answer-metric>多因子 · v3.2</span>
+            <h1 class="object-name">动量因子增强策略</h1>
+            <span class="object-code">多因子 · v3.2</span>
             <span class="object-status active" role="status" aria-label="活跃">
               <span class="object-status-dot"></span>
               活跃
             </span>
+          </div>
+          <div class="object-answer-row">
+            <span data-answer-judgment>策略可继续运行</span>
+            <span data-answer-metric>Sharpe <strong>1.82</strong></span>
+            <span data-answer-evidence>年化 <strong>+18.2%</strong></span>
+            <span data-answer-evidence>最大回撤 <strong>-12.3%</strong></span>
           </div>
         </div>
 

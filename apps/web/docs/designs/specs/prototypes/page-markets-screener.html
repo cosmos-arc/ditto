@@ -2029,7 +2029,7 @@
     </header>
 
     <!-- ═══ Filter Toolbar ═══ -->
-    <div class="filter-toolbar" data-contract-slot="filter-panel" data-primary-answer-equivalent aria-label="影响范围：当前筛选条件下的 A 股标的集合" data-reveal="fade-up" data-reveal-delay="0">
+    <div class="filter-toolbar" data-contract-slot="filter-panel" data-reveal="fade-up" data-reveal-delay="0">
       <div class="filter-group">
         <span class="filter-label">股票池:</span>
         <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹">沪深300</button>
@@ -2060,7 +2060,7 @@
         <button class="filter-chip" data-tooltip="AI评分 >= 0.70 的卖出信号">卖出信号</button>
       </div>
       <div class="filter-spacer"></div>
-      <span class="filter-count" role="status" aria-live="polite" data-answer-judgment data-answer-metric data-tooltip="当前筛选条件下的匹配标的数量">共 238 只</span>
+      <span class="filter-count" role="status" aria-live="polite" data-tooltip="当前筛选条件下的匹配标的数量">共 238 只</span>
     </div>
 
     <!-- State Variants: 筛选条件 / Filter Toolbar -->
@@ -2072,12 +2072,12 @@
 
 
     <!-- ═══ Screener Reading Strip ═══ -->
-    <section class="screener-insight-strip" aria-label="筛选器读图规则" data-reveal="fade-up" data-reveal-delay="50">
-      <div class="screener-insight-item" data-screener-scope>
+    <section class="screener-insight-strip" data-primary-answer-equivalent aria-label="影响范围：当前筛选条件下的 A 股标的集合" data-reveal="fade-up" data-reveal-delay="50">
+      <div class="screener-insight-item" data-screener-scope data-answer-evidence>
         <span class="screener-insight-label">Scope</span>
-        <span class="screener-insight-value">沪深300 · A股 · 238 只</span>
+        <span class="screener-insight-value" data-answer-judgment data-answer-metric>沪深300 · A股 · 238 只</span>
       </div>
-      <div class="screener-insight-item" data-screener-rank>
+      <div class="screener-insight-item" data-screener-rank data-answer-evidence>
         <span class="screener-insight-label">Rank</span>
         <span class="screener-insight-value">排序: 涨跌幅 → 成交额 → 信号强度</span>
       </div>
@@ -2092,11 +2092,11 @@
           <span class="screener-legend-stop" data-step="up-2"></span>
         </span>
       </div>
-      <div class="screener-insight-item" data-screener-filters>
+      <div class="screener-insight-item" data-screener-filters data-answer-evidence>
         <span class="screener-insight-label">Filters</span>
         <span class="screener-insight-value">3 条激活 · 行业/市值/信号</span>
       </div>
-      <div class="screener-insight-item">
+      <div class="screener-insight-item" data-answer-action>
         <span class="screener-insight-label">Destination</span>
         <span class="screener-insight-value">观察 · 标的池 · 研究 · 对比</span>
       </div>

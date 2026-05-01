@@ -371,7 +371,7 @@
     </header>
 
       <!-- ═══ Filter Toolbar ═══ -->
-      <div class="filter-toolbar" data-contract-slot="header" data-primary-answer-equivalent aria-label="影响范围：当前实验列表筛选结果">
+      <div class="filter-toolbar" data-contract-slot="header">
         <div class="filter-group">
           <span class="filter-label">搜索:</span>
           <input type="text" class="filter-search" placeholder="搜索实验名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索实验名称...">
@@ -402,20 +402,20 @@
           <button class="filter-chip">全部</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count" data-answer-judgment data-answer-metric>共 <span>10 个实验</span></span>
+        <span class="filter-count">共 <span>10 个实验</span></span>
       </div>
 
       <!-- ═══ Experiment Summary ═══ -->
-      <div class="experiment-summary" aria-label="实验运行摘要">
-        <div class="experiment-summary-item">
-          <span class="es-label">显著可采纳</span>
-          <span class="es-value positive">4</span>
+      <div class="experiment-summary" data-primary-answer-equivalent aria-label="实验运行摘要">
+        <div class="experiment-summary-item" data-answer-evidence>
+          <span class="es-label" data-answer-judgment>显著可采纳</span>
+          <span class="es-value positive" data-answer-metric>4</span>
         </div>
         <div class="experiment-summary-item">
           <span class="es-label">运行中</span>
           <span class="es-value">2</span>
         </div>
-        <div class="experiment-summary-item">
+        <div class="experiment-summary-item" data-answer-evidence>
           <span class="es-label">待复核</span>
           <span class="es-value">3</span>
         </div>
@@ -423,7 +423,7 @@
           <span class="es-label">失败/阻断</span>
           <span class="es-value negative">1</span>
         </div>
-        <div class="experiment-summary-item">
+        <div class="experiment-summary-item" data-answer-action data-answer-evidence>
           <span class="es-label">平均 uplift</span>
           <span class="es-value positive">+1.21pp</span>
         </div>

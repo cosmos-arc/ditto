@@ -279,7 +279,7 @@
     </header>
 
       <!-- ═══ Filter Toolbar ═══ -->
-      <div class="filter-toolbar" data-contract-slot="header" data-primary-answer-equivalent aria-label="影响范围：当前策略库筛选结果">
+      <div class="filter-toolbar" data-contract-slot="header">
         <div class="filter-group">
           <span class="filter-label">搜索:</span>
           <input type="text" class="filter-search" placeholder="搜索策略名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索策略名称...">
@@ -302,20 +302,20 @@
           <button class="filter-chip">草稿</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count" data-answer-judgment data-answer-metric>共 <span>12 个策略</span></span>
+        <span class="filter-count">共 <span>12 个策略</span></span>
       </div>
 
       <!-- ═══ Performance Summary ═══ -->
-      <div class="perf-summary" aria-label="策略绩效摘要">
-        <div class="perf-item">
-          <span class="perf-label">运行中</span>
+      <div class="perf-summary" data-primary-answer-equivalent aria-label="影响范围：当前策略库筛选结果">
+        <div class="perf-item" data-answer-evidence>
+          <span class="perf-label" data-answer-judgment>运行中</span>
           <span class="perf-value positive">5</span>
         </div>
-        <div class="perf-item">
+        <div class="perf-item" data-answer-evidence>
           <span class="perf-label">平均 Sharpe</span>
-          <span class="perf-value positive">1.51</span>
+          <span class="perf-value positive" data-answer-metric>1.51</span>
         </div>
-        <div class="perf-item">
+        <div class="perf-item" data-answer-evidence>
           <span class="perf-label">平均年化</span>
           <span class="perf-value positive">19.0%</span>
         </div>
@@ -323,7 +323,7 @@
           <span class="perf-label">最大回撤</span>
           <span class="perf-value negative">-14.7%</span>
         </div>
-        <div class="perf-item">
+        <div class="perf-item" data-answer-action>
           <span class="perf-label">最佳策略</span>
           <span class="perf-value strategy-name">Alpha-Momentum-v3</span>
         </div>

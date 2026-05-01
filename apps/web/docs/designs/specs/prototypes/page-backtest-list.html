@@ -281,7 +281,7 @@
     </header>
 
       <!-- ═══ Filter Toolbar ═══ -->
-      <div class="filter-toolbar" data-contract-slot="header" data-primary-answer-equivalent aria-label="影响范围：当前回测列表筛选结果">
+      <div class="filter-toolbar" data-contract-slot="header">
         <div class="filter-group">
           <span class="filter-label">搜索:</span>
           <input type="text" class="filter-search" placeholder="搜索回测名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索回测名称...">
@@ -310,24 +310,24 @@
           <button class="filter-chip">全部</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count" data-answer-judgment data-answer-metric>共 <span>10 次回测</span></span>
+        <span class="filter-count">共 <span>10 次回测</span></span>
       </div>
 
       <!-- ═══ Backtest Summary ═══ -->
-      <div class="backtest-summary" aria-label="回测运行摘要">
-        <div class="backtest-summary-item">
-          <span class="bs-label">已完成</span>
-          <span class="bs-value positive">7 / 10</span>
+      <div class="backtest-summary" data-primary-answer-equivalent aria-label="影响范围：当前回测列表筛选结果">
+        <div class="backtest-summary-item" data-answer-evidence>
+          <span class="bs-label" data-answer-judgment>已完成</span>
+          <span class="bs-value positive" data-answer-metric>7 / 10</span>
         </div>
         <div class="backtest-summary-item">
           <span class="bs-label">运行中</span>
           <span class="bs-value">1</span>
         </div>
-        <div class="backtest-summary-item">
+        <div class="backtest-summary-item" data-answer-action data-answer-evidence>
           <span class="bs-label">最佳 Sharpe</span>
           <span class="bs-value positive">2.12</span>
         </div>
-        <div class="backtest-summary-item">
+        <div class="backtest-summary-item" data-answer-evidence>
           <span class="bs-label">中位 MDD</span>
           <span class="bs-value negative">-9.2%</span>
         </div>

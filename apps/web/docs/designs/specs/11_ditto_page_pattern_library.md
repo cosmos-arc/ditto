@@ -109,6 +109,7 @@ Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主�
 | Queue / Ops Console | incident / service health priority |
 | Ledger / Execution Console | execution / reconciliation priority strip |
 | Config / Integration Console | validation / service health priority |
+| Radar / Market Map | market scope strip + selected map summary |
 
 落地属性：
 

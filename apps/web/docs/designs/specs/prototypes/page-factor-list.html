@@ -442,7 +442,7 @@
     </header>
 
       <!-- ═══ Filter Toolbar ═══ -->
-      <div class="filter-toolbar" data-contract-slot="header" data-primary-answer-equivalent aria-label="影响范围：当前因子库筛选结果">
+      <div class="filter-toolbar" data-contract-slot="header">
         <div class="filter-group">
           <span class="filter-label">搜索:</span>
           <input type="text" class="filter-search" placeholder="搜索因子名称..." data-table-toolbar="search" data-local-search="table" aria-label="搜索因子名称...">
@@ -466,22 +466,22 @@
           <button class="filter-chip">失效</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count" data-answer-judgment data-answer-metric>共 <span>12 个因子</span></span>
+        <span class="filter-count">共 <span>12 个因子</span></span>
       </div>
 
       <!-- ═══ Health Summary ═══ -->
-      <div class="health-summary" aria-label="因子健康摘要">
-        <div class="health-summary-item">
-          <span class="hs-label">正常</span>
-          <span class="hs-value positive">7</span>
+      <div class="health-summary" data-primary-answer-equivalent aria-label="因子健康摘要">
+        <div class="health-summary-item" data-answer-evidence>
+          <span class="hs-label" data-answer-judgment>正常</span>
+          <span class="hs-value positive" data-answer-metric>7</span>
         </div>
         <div class="health-separator"></div>
-        <div class="health-summary-item">
+        <div class="health-summary-item" data-answer-evidence>
           <span class="hs-label">衰减</span>
           <span class="hs-value">3</span>
         </div>
         <div class="health-separator"></div>
-        <div class="health-summary-item">
+        <div class="health-summary-item" data-answer-evidence>
           <span class="hs-label">失效</span>
           <span class="hs-value negative">2</span>
         </div>
@@ -490,7 +490,7 @@
           <span class="hs-label">平均 IC</span>
           <span class="hs-value positive">0.041</span>
         </div>
-        <div class="health-summary-item">
+        <div class="health-summary-item" data-answer-action>
           <span class="hs-label">覆盖策略</span>
           <span class="hs-value">31</span>
         </div>

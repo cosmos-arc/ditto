@@ -12,7 +12,9 @@ function loadDocument(file: string): Document {
 
 describe("prototype expert efficiency", () => {
 	it("makes the 5-second primary answer explicit on expert entry pages", () => {
-		const missing = expertPages.filter((file) => !loadDocument(file).querySelector("[data-primary-answer]"));
+		const missing = expertPages.filter(
+			(file) => !loadDocument(file).querySelector("[data-primary-answer], [data-primary-answer-equivalent]"),
+		);
 
 		expect(missing).toEqual([]);
 	});

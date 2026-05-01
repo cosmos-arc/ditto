@@ -109,6 +109,13 @@
       color: var(--text-tertiary);
       font-weight: var(--font-weight-regular);
     }
+    .object-answer-row {
+      display: flex; align-items: center; gap: var(--space-8);
+      font-size: var(--font-size-12); color: var(--text-secondary); white-space: nowrap;
+    }
+    .object-answer-row strong {
+      font-family: var(--font-family-numeric); color: var(--text-primary); font-weight: var(--font-weight-semibold);
+    }
     .object-status {
       display: inline-flex; align-items: center; gap: var(--space-4);
       font-size: var(--font-size-12); font-weight: var(--font-weight-medium);
@@ -638,12 +645,18 @@
       <div class="object-header" data-primary-answer-equivalent role="banner" aria-label="影响范围：动量 20D 因子对象状态">
         <div class="object-identity">
           <div class="object-name-row">
-            <h1 class="object-name" data-answer-judgment>动量 (20D)</h1>
-            <span class="object-code" data-answer-metric>动量因子 · 日频</span>
+            <h1 class="object-name">动量 (20D)</h1>
+            <span class="object-code">动量因子 · 日频</span>
             <span class="object-status active" role="status" aria-label="活跃">
               <span class="object-status-dot"></span>
               活跃
             </span>
+          </div>
+          <div class="object-answer-row">
+            <span data-answer-judgment>因子可加入回测</span>
+            <span data-answer-metric>IC 均值 <strong>0.082</strong></span>
+            <span data-answer-evidence>IC IR <strong>1.45</strong></span>
+            <span data-answer-evidence>覆盖率 <strong>92.3%</strong></span>
           </div>
         </div>
         <div class="spacer"></div>

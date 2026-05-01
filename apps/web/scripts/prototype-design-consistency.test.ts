@@ -430,11 +430,17 @@ function hasPrimaryAnswerMetric(region: Element): boolean {
 }
 
 function hasPrimaryAnswerAction(region: Element): boolean {
-	return Boolean(
-		region.querySelector(
-			"button, a[href], label[for], [data-answer-action], [role='button'][tabindex], [role='link'][tabindex]",
-		),
+	const actionSelector =
+		"button, a[href], label[for], [data-answer-action], [role='button'][tabindex], [role='link'][tabindex]";
+
+	return (
+		region.matches(actionSelector) ||
+		region.querySelector(actionSelector) !== null
 	);
+}
+
+function getPrimaryAnswerEvidenceCount(region: Element): number {
+	return [...region.querySelectorAll("[data-answer-evidence], .answer-evidence")].filter(hasReadableText).length;
 }
 
 function hasPrimaryAnswerScope(region: Element): boolean {
@@ -621,6 +627,10 @@ describe("prototype design consistency", () => {
 			}
 			if (!hasPrimaryAnswerAction(region)) {
 				violations.push(`${page.id}:missing-action`);
+			}
+			const evidenceCount = getPrimaryAnswerEvidenceCount(region);
+			if (evidenceCount < 2) {
+				violations.push(`${page.id}:missing-evidence:${evidenceCount}`);
 			}
 			if (!hasPrimaryAnswerScope(region)) {
 				violations.push(`${page.id}:missing-scope`);

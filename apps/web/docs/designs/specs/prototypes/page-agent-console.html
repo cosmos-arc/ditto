@@ -1702,7 +1702,7 @@
       <div class="tab-panels">
 
         <!-- ═══ Panel: Plans (default) ═══ -->
-        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-primary-answer data-selected-object-region data-tabs="agent-status-filter" role="tabpanel" aria-labelledby="tab-agent-plans" aria-label="影响范围：平台智能体计划队列" aria-hidden="false">
+        <div class="tab-panel agent-main" data-panel="agent-plans" id="main-content" data-contract-slot="main" data-selected-object-region data-tabs="agent-status-filter" role="tabpanel" aria-labelledby="tab-agent-plans" aria-hidden="false">
 
           <!-- Status Filter Tabs -->
           <div class="flex-row-center gap-4 mb-6" role="tablist" aria-label="计划状态筛选">
@@ -1716,9 +1716,9 @@
           <div data-tab-panel="all" id="panel-agent-filter-all" role="tabpanel" aria-labelledby="tab-agent-filter-all" aria-hidden="false">
 
           <!-- Plan 1: Running (selected) -->
-	          <div class="plan-card selected" data-answer-action data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="Alpha 因子挖掘计划 — 运行中">
+          <div class="plan-card selected" data-primary-answer-equivalent data-answer-action data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-label="影响范围：平台智能体 Alpha 因子挖掘计划">
             <div class="plan-card-header">
-	              <span class="plan-card-name" data-answer-judgment>Alpha 因子挖掘计划</span>
+              <span class="plan-card-name" data-answer-judgment>Alpha 因子挖掘计划</span>
               <span class="plan-card-status running">
                 <span class="plan-card-status-dot"></span>
                 运行中
@@ -1727,22 +1727,22 @@
             <div class="plan-card-meta">
               <span class="plan-card-time">2026-04-01 14:28</span>
               <span class="plan-card-meta-sep"></span>
-              <span class="text-tertiary-hint">预计 15 分钟</span>
+              <span class="text-tertiary-hint" data-answer-evidence>预计 15 分钟</span>
             </div>
             <div class="plan-card-progress-label">
               <span class="plan-card-progress-text">整体进度</span>
-	              <span class="plan-card-progress-pct" data-answer-metric>62%</span>
+              <span class="plan-card-progress-pct" data-answer-metric>62%</span>
             </div>
             <div class="progress-bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="整体进度 62%">
               <div class="progress-bar-fill brand progress-w-62"></div>
             </div>
             <div class="agent-chain">
-              <span class="agent-chain-step done">
+              <span class="agent-chain-step done" data-answer-evidence>
                 <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
                 数据探索
               </span>
               <span class="agent-chain-arrow">&#8594;</span>
-              <span class="agent-chain-step active">
+              <span class="agent-chain-step active" data-answer-evidence>
                 <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
                 Factor 挖掘
               </span>
@@ -1754,7 +1754,7 @@
             <div class="plan-card-output">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
               <span>产出物</span>
-              <span class="plan-card-output-count">8 个因子 · 3 个策略</span>
+              <span class="plan-card-output-count" data-answer-evidence>8 个因子 · 3 个策略</span>
             </div>
           </div>
 
