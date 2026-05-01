@@ -429,6 +429,40 @@ function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
 	return pattern.test(getReadablePrimaryText(element));
 }
 
+function hasExistingIdTarget(element: Element, attribute: string): boolean {
+	const value = element.getAttribute(attribute)?.trim();
+	if (!value) return false;
+
+	return value.split(/\s+/).every((id) => element.ownerDocument.getElementById(id) !== null);
+}
+
+function hasActionTarget(element: Element): boolean {
+	const tagName = element.tagName.toLowerCase();
+	if (tagName === "button") return true;
+	if (tagName === "a") return Boolean(element.getAttribute("href")?.trim());
+
+	return (
+		hasExistingIdTarget(element, "for") ||
+		hasExistingIdTarget(element, "aria-controls") ||
+		element.hasAttribute("onclick") ||
+		element.hasAttribute("data-tab-target") ||
+		element.hasAttribute("data-overlay-ref") ||
+		element.hasAttribute("data-action-target") ||
+		element.hasAttribute("data-drilldown-target")
+	);
+}
+
+function isActionablePrimaryAnswerElement(element: Element): boolean {
+	const tagName = element.tagName.toLowerCase();
+	if (tagName === "button") return true;
+	if (tagName === "a") return Boolean(element.getAttribute("href")?.trim());
+
+	const role = element.getAttribute("role");
+	const tabindex = element.getAttribute("tabindex");
+
+	return (role === "button" || role === "link") && tabindex === "0" && hasActionTarget(element);
+}
+
 function hasPrimaryAnswerJudgment(region: Element): boolean {
 	return (
 		hasReadableText(region.querySelector("[data-answer-judgment], .answer-judgment")) ||
@@ -449,13 +483,12 @@ function hasPrimaryAnswerMetric(region: Element): boolean {
 
 function hasPrimaryAnswerAction(region: Element): boolean {
 	const markedActionSelector = "[data-answer-action], .answer-action";
-	const actionableSelector = "button, a[href], [role='button'][tabindex], [role='link'][tabindex]";
 	const markedActions = [
 		...(region.matches(markedActionSelector) ? [region] : []),
 		...region.querySelectorAll(markedActionSelector),
 	];
 
-	return markedActions.some((element) => element.matches(actionableSelector) && hasReadableText(element));
+	return markedActions.some((element) => isActionablePrimaryAnswerElement(element) && hasReadableText(element));
 }
 
 function getPrimaryAnswerEvidenceCount(region: Element): number {
@@ -690,8 +723,35 @@ describe("prototype design consistency", () => {
 
 		expect(hasPrimaryAnswerAction(unmarkedActionRegion)).toBe(false);
 
+		const untargetedRoleActionRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<div role="button" tabindex="0" data-answer-action>打开详情</div>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(untargetedRoleActionRegion)).toBe(false);
+
+		const unfocusableRoleActionRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<div id="detail-panel">详情</div>
+				<div role="button" tabindex="-1" aria-controls="detail-panel" data-answer-action>打开详情</div>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(unfocusableRoleActionRegion)).toBe(false);
+
+		const targetedRoleActionRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<div id="detail-panel">详情</div>
+				<div role="button" tabindex="0" aria-controls="detail-panel" data-answer-action>打开详情</div>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(targetedRoleActionRegion)).toBe(true);
+
 		const markedActionRegion = getRegion(`
 			<section data-primary-answer aria-label="影响范围：测试页面">
+				<input id="overlay-detail" type="checkbox">
 				<label for="overlay-detail" role="button" tabindex="0" data-answer-action>打开详情</label>
 			</section>
 		`);
