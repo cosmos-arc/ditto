@@ -267,6 +267,12 @@ Selected 是 Ditto 最重要的交互状态之一。
 - 面板尺寸偏好按 route + CSS var 持久化：`ditto:prototype:layout:{pathname}:{varName}`，恢复时必须校验 min / max
 - Header command trigger 必须暴露 `data-command-scope`
 - 当页面存在当前选中对象时，必须暴露 `data-command-context-actions`，值为逗号分隔的上下文动作 id
+- 代表性上下文动作 id 必须保持稳定：
+  - Watchlist: `generate-signal`, `open-instrument-hub`, `send-to-research`, `remove-watch`
+  - Strategy List: `run-backtest`, `clone-strategy`, `view-recent-runs`, `pause-strategy`
+  - Backtest List: `add-to-compare`, `view-curve`, `copy-params`, `generate-report`
+  - Signals Inbox: `approve`, `reject`, `send-to-order`, `view-evidence`
+  - Platform: `retry`, `view-logs`, `mute-alert`, `create-incident`
 - 原型只声明 contract 与静态 affordance；真实 command palette、列持久化、冻结列与对象联动状态进入 React 实现
 
 ### Review Mode
@@ -600,3 +606,11 @@ Bottom Tray 只用于日志、验证结果、执行状态和运行追踪，不�
 - 共享交互脚本必须监听 reduced-motion media query 变化。
 - 当用户偏好变化时，`document.documentElement` 必须实时同步 `data-reduced-motion`。
 - 动画、transition、reveal、状态脉动必须尊重该偏好；不得只在页面首次加载时读取一次。
+
+### 17.6 Prototype 性能与 DOM 安全基线
+
+- 共享交互脚本读取 CSS custom property 时必须缓存 `getComputedStyle(document.documentElement)` 结果；主题或密度变化时必须清除缓存，避免 stale token。
+- 鼠标跟随类效果必须用 `requestAnimationFrame` 合并高频 pointer / mousemove 更新；每帧只读取一次 layout，并使用最后一次事件坐标。
+- `data-mouse-glow` 离开后可以清除临时 inline 变量；再次进入时必须恢复 glow size / color 与背景，且继续尊重 reduced motion。
+- 动态插入 compare / bulk / command 相关文本时，必须使用 `createElement` 与 `textContent`，不得用字符串拼接 `innerHTML`。
+- resize 期间的 transition / animation suppression 只能限定在 shell / catalog / object 工作面内，不得使用 document-wide `html[data-resizing-panel] *`。

@@ -959,6 +959,12 @@ body { height: 100%; overflow: hidden }
 | **Operations Console** | Detail Panel 先于主 Queue 折叠，队列、状态与高风险操作保持常驻 |
 | **Radar Workspace** | Right Rail 折叠为 event / risk summary，资金轮动与主要监控面板保持同屏 |
 
+实现层约束：
+
+- 响应式与 resize 门禁覆盖 `1536x1080`、`1366x768`、`1200x800` 三档专业桌面视口。
+- resize 期间只能在当前 shell / catalog / object 工作面内暂停 transition 与 animation；不得通过 `html[data-resizing-panel] *` 影响全 document。
+- 密度切换必须通过 `tokens-style.css` 的 density semantic variables 生效；`comfortable` 不能是 no-op，必须放宽 panel padding、gutter、row height、input/action height 与 chart padding。
+
 ### 10.1.2 面板内滚动 vs 折叠
 
 单视窗锁定下，面板内容超出时采用**内部滚动**（`overflow-y: auto`）。

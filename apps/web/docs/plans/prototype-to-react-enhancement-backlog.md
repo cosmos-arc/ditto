@@ -71,6 +71,7 @@
 - 表格列宽持久化：按 route + table id 保存列宽，恢复时校验最小宽度与可见列集合
 - 冻结列：Catalog / Queue / Ops 表格支持首列或关键列冻结，并覆盖横向滚动、键盘导航与窄屏降级
 - 完整 Command Palette：读取 `data-command-scope` 与 `data-command-context-actions`，按选中对象、route、权限和状态过滤动作
+- Command Palette 动作 id 首批固定为：Watchlist `generate-signal/open-instrument-hub/send-to-research/remove-watch`，Strategy List `run-backtest/clone-strategy/view-recent-runs/pause-strategy`，Backtest List `add-to-compare/view-curve/copy-params/generate-report`，Signals Inbox `approve/reject/send-to-order/view-evidence`，Platform `retry/view-logs/mute-alert/create-incident`
 - 选中对象驱动跨区域状态：列表选中项同步主表、详情、证据、日志、批量栏与 command context
 - React Modal / Drawer 焦点管理：实现 focus trap、ESC 关闭、返回焦点，并让 overlay 背景 inert
 

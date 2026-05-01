@@ -215,6 +215,16 @@ Ditto 的 Data Views 统一分成三大族：
 
 表格设计的核心目标不是字段完整，而是**扫描效率**与**工作流效率**。
 
+### 5.1 专家效率合同
+
+所有 active Catalog / Queue / Ops 表格必须把高频专家操作声明为稳定 DOM contract，供 React 组件、自动化测试与 command palette 共享：
+
+- 主表格使用 `data-table-column-resize-ready`、`data-table-freeze-ready`、`data-row-context-menu-ready` 标记列宽调整、冻结列与行上下文菜单的落点。
+- 当前筛选摘要使用 `data-active-filters-summary`；可批量处理区域使用 `data-bulk-action-bar`，且该属性必须挂在真实 toolbar / bar 元素上，而不是详情面板本身。
+- 有选中对象联动的页面必须用 `data-selected-object-region` 标记主表、详情、证据、日志或处置区域中的至少一个同步区域。
+- Header command trigger 使用 `data-command-scope`；与选中对象相关的动作使用 `data-command-context-actions`，动作 id 使用稳定业务动词。
+- 原型只声明这些 contract 与静态 affordance；真实列宽持久化、冻结列、对象联动状态和 command palette 过滤逻辑在 React backlog 中实现。
+
 ### 6. Table Views 的四个子类型
 
 #### 6.1 Analytical Table

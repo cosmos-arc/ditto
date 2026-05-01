@@ -312,6 +312,27 @@ React 层在产品/技术批准后再评估并安装 `react-resizable-panels`，
 - L1/L2/L3 默认展开策略是否符合实际工作流优先级。
 - 面板最小/默认/最大宽度、双击重置行为、未来是否支持 snap-to-collapse。
 
+## 七、2026-05-01 Best Review Remediation Closure
+
+### 已在 Prototype 层完成
+
+- Active prototypes 已建立并通过语义 `<h1>`、`aria-hidden` style label、`role="button"` 键盘激活、ARIA tabs、focus-visible、reduced-motion、primary answer、responsive shell、data-viz light scale、contrast usage tier 与专家效率 contract 的机器门禁。
+- Primary Answer 已覆盖每个 active route prototype，并收敛为单一判断区：一句话判断、关键数字、2-3 个证据、主动作与影响范围。
+- Home 首屏已调整为 `global-pulse` + 唯一 `decision-card` 主决策面；普通 activity stream 不再抢占第一判断。
+- Catalog 家族已区分 strategy、backtest、experiment、universe、factor、watchlist 等任务子型，summary strip、detail summary 与 task action 不再共用一套泛化 KPI 语义。
+- 表格专家效率 contract 已落到代表性 Catalog / Queue / Ops 页面：列宽调整、冻结列、行上下文菜单、bulk action bar、active filters summary、selected object region 与 command context actions。
+- Shared interaction hygiene 已完成：CSS var 读取缓存并随主题/密度失效，MouseGlow 使用 `requestAnimationFrame` 节流，compare basket 使用 DOM text node 构造，resize suppression 限定在 shell 工作面内。
+
+### 延后到 React 层
+
+- TanStack / component 层实现真实列宽持久化、冻结列、完整 command palette、selected object 跨区域状态与 modal / drawer focus trap + inert 背景。
+- 若依赖获批，再评估 `react-resizable-panels`；当前 prototype 层只声明和验证交互 contract。
+
+### 剩余风险
+
+- `data-command-context-actions`、表格冻结与列宽持久化目前是 prototype contract 和代表性 coverage；React 落地时必须用 RTL / Playwright 覆盖真实状态过滤、权限过滤与键盘横向滚动。
+- Prototype-only Light Mode data-viz scale 仍是本地例外，产品 token 层接收专用 data-viz scale 后需要迁移。
+
 ---
 
 ## 附录 A：图标审核完整问题清单

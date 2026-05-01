@@ -474,6 +474,16 @@ Catalog / Screener 页面必须把高频专家操作声明成稳定 hook：
 - 有选中行时，主列表、详情预览或证据区域至少一个区域标记 `data-selected-object-region`
 - Header command 入口标记 `data-command-scope`；当前选中对象的 command palette 动作标记 `data-command-context-actions`
 
+代表性 command context action id：
+
+| Page | `data-command-context-actions` |
+|---|---|
+| Watchlist | `generate-signal,open-instrument-hub,send-to-research,remove-watch` |
+| Strategy List | `run-backtest,clone-strategy,view-recent-runs,pause-strategy` |
+| Backtest List | `add-to-compare,view-curve,copy-params,generate-report` |
+| Signals Inbox | `approve,reject,send-to-order,view-evidence` |
+| Platform | `retry,view-logs,mute-alert,create-incident` |
+
 Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列表页都退化成同一种 KPI strip：
 
 | 子型 | 页面 | Main Answer | Inspector 角色 | 推荐 summary metrics |
@@ -481,6 +491,7 @@ Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列
 | Strategy Library Catalog | `/research/strategies` | 哪些策略可运行，哪些策略因风险/状态需要处理，最佳健康策略是什么 | 策略健康、最近运行、风险约束、暂停原因、运行入口 | 可运行、需处理、Sharpe、最近运行、风险约束、最佳健康策略、暂停原因 |
 | Backtest Comparison Ledger | `/research/backtest` | 哪些回测可对比，当前基线和失败项是什么 | equity curve、诊断摘要、加入对比 | 对比、失败、基线、Sharpe、MDD |
 | Experiment Result Matrix | `/research/experiments` | 哪组参数胜出，结果是否稳定且显著 | 参数稳定性、显著性、失败原因、复核动作 | 胜出、参数稳定性、显著性、失败原因、待复核 |
+| Universe Coverage Catalog | `/research/universes` | 当前股票池覆盖是否足够，哪些对象需要纳入或排除 | 覆盖率、缺口、再平衡影响、成员变更、下游策略引用 | 覆盖率、缺口、成员变更、引用策略、再平衡影响 |
 | Factor Quality Catalog | `/research/factors` | 因子质量是否仍可用，哪些因子衰减或覆盖率不足 | IC/IR 诊断、衰减原因、覆盖率、关联策略、失效信号 | IC、IR、衰减、覆盖率、关联策略、最近失效信号 |
 | Watchlist Action Queue | `/markets/watchlist` | 哪个标的触发下一动作，买/卖/观望结构是否可信 | 信号结构、报价新鲜度、trigger reason、send-to workflow | 触发动作、信号结构、stale、下一步 |
 
@@ -1294,6 +1305,6 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 Catalog 页面落地属性：
 
 - 右栏摘要：`data-detail-sticky-summary`。
-- 批量操作：`data-batch-action-bar`。
+- 批量操作：`data-bulk-action-bar`，且必须挂在真实 toolbar / bar 元素上；历史 `data-batch-action-bar` 若继续存在，也必须同时具备 `data-bulk-action-bar`。
 - 选中对象标记：`data-row-selection-marker`。
 - 危险确认摘要：`data-danger-confirmation` 或 `data-high-risk-confirmation`。

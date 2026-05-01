@@ -1016,6 +1016,8 @@ density.ultra.*
 
 默认全站建议使用 compact。
 
+Prototype Edition v1 使用 `compact / default / comfortable` 三档直接偏好，以 `default` 作为不缩小字号的基线；`compact` 收紧间距与行高，`comfortable` 必须真实放宽间距、行高和控件高度。三档都不得直接改写颜色语义。
+
 ### 29. Density token 建议
 
 #### 29.1 布局层
@@ -1054,6 +1056,16 @@ density.ultra.font.delta
 density.compact.chart.header.height
 density.compact.chart.padding
 ```
+
+#### 29.6 Prototype Edition v1 density 映射
+
+`docs/designs/specs/prototypes/tokens-style.css` 的当前事实：
+
+| Mode | Panel padding | Gutter | Row height | Input/action height | Chart padding |
+|---|---:|---:|---:|---:|---:|
+| compact | `var(--space-8)` | `var(--space-12)` | `2.125rem` | `1.75rem` | `var(--space-8)` |
+| default | `var(--space-12)` | `var(--space-16)` | `2.25rem` | `2rem` | `var(--space-12)` |
+| comfortable | `var(--space-16)` | `var(--space-20)` | `2.625rem` | `2.25rem` | `var(--space-16)` |
 
 注意，Density 不应该直接重写颜色和语义，只应影响：
 
