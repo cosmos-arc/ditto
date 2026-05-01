@@ -344,6 +344,13 @@ function activePages(): ManifestPage[] {
 	return readManifest().pages.filter(isActiveRoutePrototype);
 }
 
+function activePageById(id: string): ManifestPage {
+	const page = activePages().find((prototype) => prototype.id === id);
+	if (!page) throw new Error(`Active prototype not found: ${id}`);
+
+	return page;
+}
+
 function readTokenCssBundle(): string {
 	const tokenDir = join(root, "src/styles/design-tokens");
 	const tokenCss = readdirSync(tokenDir)
@@ -365,6 +372,24 @@ function extractCustomPropertyDefinitions(css: string): Set<string> {
 
 function extractCustomPropertyReferences(css: string): Set<string> {
 	return new Set([...css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((match) => match[1]));
+}
+
+function getCssFontSizeValues(body: string): string[] {
+	return [...body.matchAll(/font-size\s*:\s*([^;]+)/gi)].map((match) => match[1].trim());
+}
+
+function getPrototypeCssRules(page: ManifestPage): CssRule[] {
+	return readTopLevelCssRules(stripCssComments(getStyleBlocks(readPrototypeHtml(page))));
+}
+
+function parseFontSizeMinimumPx(value: string): number | undefined {
+	const tokenMatch = /var\(\s*--font-size-(\d+)\s*\)/i.exec(value);
+	if (tokenMatch) return Number.parseInt(tokenMatch[1], 10);
+
+	const pxMatch = /(\d+(?:\.\d+)?)px\b/i.exec(value);
+	if (pxMatch) return Number.parseFloat(pxMatch[1]);
+
+	return undefined;
 }
 
 describe("prototype design consistency", () => {
@@ -901,6 +926,143 @@ describe("prototype design consistency", () => {
 			}
 			if (!defaultView.querySelector(".viz-cell-strong, .viz-cell-selected, [data-viz-cell-strength='strong'], [data-viz-cell-selected]")) {
 				violations.push(`${page.id}:cell-affordance`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps A Shares stock heatmap labels readable and out of tiny-text escape hatches", () => {
+		const page = activePageById("a-shares");
+		const rules = getPrototypeCssRules(page);
+		const violations: string[] = [];
+		const dataLabelRules = rules.filter((rule) =>
+			rule.selectors.some((selector) =>
+				/\.map-view-heatmap|\.heatmap-cell|\.hm-(?:name|change|vol|sign)/.test(selector),
+			),
+		);
+		const hmNameRules = dataLabelRules.filter((rule) =>
+			rule.selectors.some((selector) => selector.includes(".hm-name")),
+		);
+
+		if (hmNameRules.length === 0) {
+			violations.push("a-shares:heatmap-name-font-size:missing");
+		}
+
+		for (const rule of dataLabelRules) {
+			for (const fontSize of getCssFontSizeValues(rule.body)) {
+				const minimumPx = parseFontSizeMinimumPx(fontSize);
+				if (minimumPx !== undefined && minimumPx < 10) {
+					violations.push(`a-shares:${rule.selector}:font-size:${fontSize}`);
+				}
+			}
+		}
+
+		for (const rule of hmNameRules) {
+			const fontSizes = getCssFontSizeValues(rule.body);
+			if (fontSizes.length === 0) continue;
+
+			for (const fontSize of fontSizes) {
+				const minimumPx = parseFontSizeMinimumPx(fontSize);
+				if (minimumPx === undefined || minimumPx < 10) {
+					violations.push(`a-shares:${rule.selector}:hm-name-min:${fontSize}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("requires A Shares heatmap cells to encode direction beyond color", () => {
+		const page = activePageById("a-shares");
+		const document = readPrototypeDocument(page);
+		const violations: string[] = [];
+		const cells = [
+			...document.querySelectorAll<HTMLElement>(
+				'.map-view-heatmap .heatmap-cell[data-direction="up"], .map-view-heatmap .heatmap-cell[data-direction="down"]',
+			),
+		];
+
+		if (cells.length === 0) {
+			violations.push("a-shares:heatmap-cells:missing");
+		}
+
+		for (const [index, cell] of cells.entries()) {
+			const direction = cell.getAttribute("data-direction");
+			const expectedSign = direction === "up" ? "▲" : "▼";
+			const expectedAria = direction === "up" ? "涨幅" : "跌幅";
+			const sign = cell.querySelector<HTMLElement>(':scope > .hm-sign[aria-hidden="true"]');
+			const label = cell.getAttribute("aria-label") ?? "";
+
+			if (sign?.textContent?.trim() !== expectedSign) {
+				violations.push(`a-shares:heatmap-cell:${index + 1}:sign:${direction ?? "missing"}`);
+			}
+			if (!label.includes(expectedAria)) {
+				violations.push(`a-shares:heatmap-cell:${index + 1}:aria:${direction ?? "missing"}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("uses a page-local light map scale for A Shares instead of reusing the dark heatmap scale", () => {
+		const page = activePageById("a-shares");
+		const css = stripCssComments(getStyleBlocks(readPrototypeHtml(page)));
+		const rules = readTopLevelCssRules(css);
+		const lightMapRule = rules.find((rule) =>
+			rule.selectors.some((selector) =>
+				/\[data-theme=["']light["']\]\s+\.map-container/.test(selector),
+			),
+		);
+		const violations: string[] = [];
+
+		if (!lightMapRule) {
+			violations.push("a-shares:light-map-scale:missing");
+		} else {
+			for (const token of [
+				"--heat-up-1",
+				"--heat-up-2",
+				"--heat-up-3",
+				"--heat-up-4",
+				"--heat-down-1",
+				"--heat-down-2",
+				"--heat-down-3",
+				"--heat-down-4",
+				"--heat-up-line-1",
+				"--heat-up-line-2",
+				"--heat-up-line-3",
+				"--heat-up-line-4",
+				"--heat-down-line-1",
+				"--heat-down-line-2",
+				"--heat-down-line-3",
+				"--heat-down-line-4",
+			]) {
+				if (!hasDeclaration(lightMapRule.body, token, /var\(\s*--map-light-(?:up|down)-(?:edge-)?[1-4]\s*\)/)) {
+					violations.push(`a-shares:light-map-scale:${token}`);
+				}
+			}
+		}
+
+		for (const token of [
+			"--map-light-up-1",
+			"--map-light-up-2",
+			"--map-light-up-3",
+			"--map-light-up-4",
+			"--map-light-down-1",
+			"--map-light-down-2",
+			"--map-light-down-3",
+			"--map-light-down-4",
+			"--map-light-up-edge-1",
+			"--map-light-up-edge-2",
+			"--map-light-up-edge-3",
+			"--map-light-up-edge-4",
+			"--map-light-down-edge-1",
+			"--map-light-down-edge-2",
+			"--map-light-down-edge-3",
+			"--map-light-down-edge-4",
+		]) {
+			if (!css.includes(`${token}:`)) {
+				violations.push(`a-shares:light-token:${token}`);
 			}
 		}
 

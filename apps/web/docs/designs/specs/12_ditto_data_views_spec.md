@@ -513,6 +513,27 @@ Visual View 是 Ditto 里承载趋势、分布、阈值、关系、状态变化�
 
 图表也要按角色克制。
 
+#### 15.6 Light / Dark 可视化色阶必须独立校准
+
+热力图、矩阵、分布区块等大面积数据填充不能把 Dark Mode 的底色、alpha 或边界直接复用到 Light Mode。
+Light / Dark 可以共享业务方向语义，但必须分别校准：
+
+- 大面积填充的明度与饱和度。
+- 单元格边界、选中边界和 hover 边界。
+- 中性 / flat 区块与涨跌区块的相对层级。
+- 图例色阶与实际单元格色阶的一致性。
+
+Light Mode 的目标是可扫描、可读、不过度形成大色块；Dark Mode 的目标是保留信号强弱但避免荧光化。
+
+#### 15.7 可视化标签与非颜色通道
+
+真实信息标签不得为追求密度降到不可读级别：
+
+- 承载对象名称、真实数值、涨跌方向或风险阈值的 label 最小字号为 10px，原型中应使用 `--font-size-10` 或更高字号 token。
+- 交互扫描时出现的主 label、tooltip 触发 label、hover readout 目标字号为 12px。
+- 低优先级副标签可以隐藏、折叠或延迟到 hover / tooltip，不得把真实信息 label 缩到 9px。
+- 大面积红绿、热度、风险填充不能是唯一信息通道；必须同时提供箭头、正负号、文字方向、边界强弱、权重或阈值标签中的至少一种。
+
 ---
 
 ## 16. 什么时候该用表，什么时候该用图，什么时候该用 Context View
@@ -695,3 +716,9 @@ Shared state
 | 选中单元 | `data-viz-cell-selected` / `.viz-cell-selected` | 显示当前分析对象 |
 
 适用代表页：A Shares、Cross Market、Risk Center、Regime Monitor、Factor Analysis、Backtest Result。
+
+### 2026-05-01 — Light Mode Data Visualization Guardrail
+
+- **[新增]** Light / Dark 数据可视化色阶必须独立校准；Light Mode 不得直接复用 Dark Mode 的大面积热力图填充和边界强度。
+- **[新增]** 真实信息 label 最小 10px；交互扫描 label 目标 12px；低优先级副标签应隐藏或延迟呈现，不得用 9px 承载真实信息。
+- **[新增]** 热力图方向、强弱、风险不能只靠颜色表达；A Shares 个股热区等红绿填充视图必须保留非颜色方向标记与可访问文本语义。

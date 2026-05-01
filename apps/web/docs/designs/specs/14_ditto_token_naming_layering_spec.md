@@ -479,6 +479,18 @@ visual.timeline.*
 visual.micro.*
 ```
 
+#### 12.1 Prototype-only data-viz light scale exception
+
+在产品 token 层正式接收专用数据可视化 light scale 前，原型页面可以在页面本地定义临时 CSS custom properties，用于校准 Light Mode 的热力图、矩阵或大面积可视化填充。
+
+这个例外必须满足以下约束：
+
+- 只允许出现在 `docs/designs/specs/prototypes/page-*.html` 的页面本地 `<style>` 中，不进入 `src/styles/design-tokens/`。
+- 只能映射现有 surface、border、domain semantic 与 typography token，不新增产品级 token 名称。
+- Light / Dark 色阶要分别声明并映射到同一组件变量入口，避免 Light Mode 直接复用 Dark Mode 的大色块底色。
+- 页面本地变量名称必须带有明确 prototype / module 语境，后续产品 token 接收专用 data-viz scale 后应迁移删除。
+- 任何方向或风险语义仍由 Domain Semantic Layer 承担，页面本地 scale 只负责原型视觉校准，不改变业务语义。
+
 ### 13. Table token 建议
 
 #### 13.1 Analytical Table
