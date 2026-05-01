@@ -12,10 +12,10 @@
 >
 > **v1.3 变更（IA v2.0 同步）**
 > - 全局 Rail 从 6 项缩减为 5 项（移除 AI，Copilot 升级为全局 Sidecar）
-> - §10.2 Markets：移除 `/markets/universes`（迁至 Research）、`/markets/chart-lab`（降级为 Instrument Hub tab）；标记 `/markets/hk`、`/markets/us` 延后
-> - §10.4 Trading：`/trading/positions` + `/trading/trades` 合并为 `/trading/portfolio`
-> - §10.5 AI Section 整体标记 deprecated（Copilot → 全局 Sidecar，Agent Console → `/platform/agents`）
-> - §10.6 Platform：新增 `/platform/agents`（Studio Shell）
+> - §11.2 Markets：移除 `/markets/universes`（迁至 Research）、`/markets/chart-lab`（降级为 Instrument Hub tab）；标记 `/markets/hk`、`/markets/us` 延后
+> - §11.4 Trading：`/trading/positions` + `/trading/trades` 合并为 `/trading/portfolio`
+> - §11.5 AI Section 整体标记 deprecated（Copilot → 全局 Sidecar，Agent Console → `/platform/agents`）
+> - §11.6 Platform：新增 `/platform/agents`（Studio Shell）
 > - §4.2 Shell 定位同步更新
 >
 > **上游**：[00 视觉宪章](./00_ditto_visual_constitution.md)、[01 产品信息架构](./01_product_information_architecture.md)
@@ -1014,7 +1014,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 
 ---
 
-## 12. 前端实现建议
+## 11. 页面与 Shell 映射
 
 ### 11.1 Home
 
@@ -1026,7 +1026,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 <!-- 已降级/合并: `/home/quick-actions` — Home 角色 orient 型，非 execute，降级移除 -->
 <!-- 已降级/合并: `/home/alerts-summary` — Home 角色 orient 型，非 execute，降级移除 -->
 
-### 10.2 Markets & Intelligence
+### 11.2 Markets & Intelligence
 
 | 路径 | Shell |
 |------|-------|
@@ -1038,7 +1038,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 | `/markets/calendar` | Catalog Workspace |
 | `/instruments/[id]` | Object Hub |
 
-<!-- v1.3: `/markets/universes` 已移至 Research 域（§10.3） -->
+<!-- v1.3: `/markets/universes` 已移至 Research 域（§11.3） -->
 <!-- v1.3: `/markets/chart-lab` 已降级为 `/instruments/[id]` 的 tab（Instrument Hub 内置） -->
 <!-- v1.3 延后: `/markets/hk` — 港股总览延后至 v1.5 -->
 <!-- v1.3 延后: `/markets/us` — 美股总览延后至 v2 -->
@@ -1047,7 +1047,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 <!-- 已降级/合并: `/markets/map` — 并入 `/markets` 视图模式 -->
 <!-- 已降级/合并: `/markets/intelligence/*` → `/markets/intelligence` — 收敛为 tab 视图 -->
 
-### 10.3 Research
+### 11.3 Research
 
 | 路径 | Shell |
 |------|-------|
@@ -1073,7 +1073,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 <!-- 已降级/合并: `/research/ml` — 降级为 Research 子域 -->
 <!-- 已降级/合并: `/research/output` — IA 无此路由 -->
 
-### 10.4 Trading
+### 11.4 Trading
 
 | 路径 | Shell |
 |------|-------|
@@ -1090,7 +1090,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 <!-- 已降级/合并: `/trading/portfolios` — IA 无此路由 -->
 <!-- 已降级/合并: `/trading/alerts` — IA 无此路由 -->
 
-### 10.5 AI
+### 11.5 AI
 
 > **v1.3 DEPRECATED — AI 域整体废弃**
 >
@@ -1111,7 +1111,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 <!-- 已降级/合并: `/ai/stock-screener` — 合并为 `/ai/copilot` 内部模式 -->
 <!-- 已降级/合并: `/ai/strategy-assistant` — 合并为 `/ai/copilot` 内部模式 -->
 
-### 10.6 Platform
+### 11.6 Platform
 
 | 路径 | Shell |
 |------|-------|
@@ -1135,7 +1135,7 @@ Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可�
 
 ---
 
-## 11. 前端实现建议
+## 12. 前端实现建议
 
 为了让这份规范真正可落地，前端上建议不要做一个巨型通用 layout，而是做一组 shell layouts。
 
@@ -1167,7 +1167,7 @@ AppShell
 
 ---
 
-## 12. 设计评审时的壳层判断标准
+## 13. 设计评审时的壳层判断标准
 
 当你评审一个页面时，先别问"好不好看"，先问：
 
@@ -1188,7 +1188,7 @@ AppShell
 
 ---
 
-## 13. 壳层反模式清单
+## 14. 壳层反模式清单
 
 以下情况出现任意 **3 条以上**，通常说明壳层选错了或壳层被污染了：
 
@@ -1205,7 +1205,7 @@ AppShell
 
 ---
 
-## 14. 验收标准
+## 15. 验收标准
 
 一套合格的 Ditto Shell Family，必须满足：
 
