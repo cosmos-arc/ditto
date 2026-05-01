@@ -436,6 +436,39 @@ function hasExistingIdTarget(element: Element, attribute: string): boolean {
 	return value.split(/\s+/).every((id) => element.ownerDocument.getElementById(id) !== null);
 }
 
+function hasVisibleAriaControlsTarget(element: Element): boolean {
+	const value = element.getAttribute("aria-controls")?.trim();
+	if (!value) return false;
+
+	return value.split(/\s+/).every((id) => {
+		const target = element.ownerDocument.getElementById(id);
+		return target !== null && target.getAttribute("aria-hidden") !== "true";
+	});
+}
+
+function hasMatchingAttributeTarget(element: Element, attribute: string, targetAttribute: string): boolean {
+	const value = element.getAttribute(attribute)?.trim();
+	if (!value) return false;
+
+	const targets = [...element.ownerDocument.querySelectorAll(`[${targetAttribute}]`)];
+
+	return value.split(/\s+/).every((targetValue) =>
+		targets.some((target) => target.getAttribute(targetAttribute) === targetValue),
+	);
+}
+
+function hasOverlayTarget(element: Element): boolean {
+	const value = element.getAttribute("data-overlay-ref")?.trim();
+	if (!value) return false;
+
+	const overlays = [...element.ownerDocument.querySelectorAll("[data-overlay]")];
+
+	return value.split(/\s+/).every((targetValue) =>
+		element.ownerDocument.getElementById(targetValue) !== null ||
+		overlays.some((overlay) => overlay.getAttribute("data-overlay") === targetValue),
+	);
+}
+
 function hasActionTarget(element: Element): boolean {
 	const tagName = element.tagName.toLowerCase();
 	if (tagName === "button") return true;
@@ -443,12 +476,12 @@ function hasActionTarget(element: Element): boolean {
 
 	return (
 		hasExistingIdTarget(element, "for") ||
-		hasExistingIdTarget(element, "aria-controls") ||
+		hasVisibleAriaControlsTarget(element) ||
 		element.hasAttribute("onclick") ||
-		element.hasAttribute("data-tab-target") ||
-		element.hasAttribute("data-overlay-ref") ||
-		element.hasAttribute("data-action-target") ||
-		element.hasAttribute("data-drilldown-target")
+		hasMatchingAttributeTarget(element, "data-tab-target", "data-tab-panel") ||
+		hasOverlayTarget(element) ||
+		hasExistingIdTarget(element, "data-action-target") ||
+		hasExistingIdTarget(element, "data-drilldown-target")
 	);
 }
 
@@ -748,6 +781,32 @@ describe("prototype design consistency", () => {
 		`);
 
 		expect(hasPrimaryAnswerAction(targetedRoleActionRegion)).toBe(true);
+
+		const hiddenControlsOnlyRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<div id="detail-panel" aria-hidden="true">详情</div>
+				<div role="button" tabindex="0" aria-controls="detail-panel" data-answer-action>打开详情</div>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(hiddenControlsOnlyRegion)).toBe(false);
+
+		const missingDataTargetRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<div role="button" tabindex="0" data-tab-target="missing-panel" data-answer-action>打开详情</div>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(missingDataTargetRegion)).toBe(false);
+
+		const targetedDataTargetRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<div data-tab-panel="detail-panel">详情</div>
+				<div role="button" tabindex="0" data-tab-target="detail-panel" data-answer-action>打开详情</div>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(targetedDataTargetRegion)).toBe(true);
 
 		const markedActionRegion = getRegion(`
 			<section data-primary-answer aria-label="影响范围：测试页面">
