@@ -392,7 +392,13 @@ function parseFontSizeMinimumPx(value: string): number | undefined {
 	return undefined;
 }
 
+function isHiddenFromPrimaryContract(element: Element | null): boolean {
+	return Boolean(element?.closest("[aria-hidden='true']"));
+}
+
 function hasReadableText(element: Element | null): boolean {
+	if (isHiddenFromPrimaryContract(element)) return false;
+
 	const readableValue =
 		element?.textContent?.replace(/\s+/g, " ").trim() ||
 		element?.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
@@ -402,6 +408,8 @@ function hasReadableText(element: Element | null): boolean {
 }
 
 function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
+	if (isHiddenFromPrimaryContract(element)) return false;
+
 	const readableValue =
 		element.textContent?.replace(/\s+/g, " ").trim() ||
 		element.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
@@ -431,7 +439,7 @@ function hasPrimaryAnswerMetric(region: Element): boolean {
 
 function hasPrimaryAnswerAction(region: Element): boolean {
 	const actionSelector =
-		"button, a[href], label[for], [data-answer-action], [role='button'][tabindex], [role='link'][tabindex]";
+		"button, a[href], label[for], [role='button'][tabindex], [role='link'][tabindex]";
 
 	return (
 		region.matches(actionSelector) ||
