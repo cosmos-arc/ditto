@@ -16,6 +16,7 @@ const prototypeLayoutCss = join(prototypesDir, "shared/layout-base.css");
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
+const pagePatternLibrarySpec = join(root, "docs/designs/specs/11_ditto_page_pattern_library.md");
 const tokenStabilizationSpec = join(
 	root,
 	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
@@ -339,6 +340,44 @@ const highRiskActionPages = [
 	"universe-list",
 	"strategy-list",
 ];
+const catalogSubtypeSummaryRequirements: Record<string, Array<{ label: string; pattern: RegExp }>> = {
+	"strategy-list": [
+		{ label: "可运行", pattern: /可运行/ },
+		{ label: "需处理", pattern: /需处理/ },
+		{ label: "Sharpe", pattern: /Sharpe/i },
+		{ label: "风险约束", pattern: /风险约束/ },
+		{ label: "最佳健康策略", pattern: /最佳健康策略/ },
+		{ label: "暂停原因", pattern: /暂停原因/ },
+		{ label: "最近运行", pattern: /最近运行/ },
+	],
+	"backtest-list": [
+		{ label: "对比", pattern: /对比/ },
+		{ label: "失败", pattern: /失败/ },
+		{ label: "基线", pattern: /基线/ },
+		{ label: "MDD", pattern: /MDD/i },
+	],
+	"experiment-list": [
+		{ label: "胜出", pattern: /胜出/ },
+		{ label: "参数稳定性", pattern: /参数稳定性/ },
+		{ label: "显著性", pattern: /显著性/ },
+		{ label: "失败原因", pattern: /失败原因/ },
+		{ label: "待复核", pattern: /待复核/ },
+	],
+	"factor-list": [
+		{ label: "IC", pattern: /\bIC\b/i },
+		{ label: "IR", pattern: /\bIR\b/i },
+		{ label: "衰减", pattern: /衰减/ },
+		{ label: "覆盖率", pattern: /覆盖率/ },
+		{ label: "关联策略", pattern: /关联策略/ },
+		{ label: "最近失效信号", pattern: /最近失效信号/ },
+	],
+	watchlist: [
+		{ label: "触发动作", pattern: /触发动作/ },
+		{ label: "信号结构", pattern: /信号结构/ },
+		{ label: "stale", pattern: /stale/i },
+		{ label: "下一步", pattern: /下一步/ },
+	],
+};
 
 function activePages(): ManifestPage[] {
 	return readManifest().pages.filter(isActiveRoutePrototype);
@@ -1467,6 +1506,87 @@ describe("prototype design consistency", () => {
 			if (/delete|删除|撤销|danger/i.test(defaultView.textContent ?? "") && !defaultView.querySelector("[data-danger-confirmation]")) {
 				violations.push(`${page.id}:danger-confirmation`);
 			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps catalog subtype summary strips task-specific", () => {
+		const violations: string[] = [];
+
+		for (const [pageId, requirements] of Object.entries(catalogSubtypeSummaryRequirements)) {
+			const document = readPrototypeDocument(activePageById(pageId));
+			const defaultView = document.querySelector("#default-view");
+			const summary = defaultView?.querySelector("[data-primary-answer], [data-primary-answer-equivalent]");
+			if (!summary) {
+				violations.push(`${pageId}:summary:missing`);
+				continue;
+			}
+
+			const summaryText = getReadablePrimaryText(summary);
+			for (const requirement of requirements) {
+				if (!requirement.pattern.test(summaryText)) {
+					violations.push(`${pageId}:summary-label:${requirement.label}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps catalog subtype task actions semantically aligned", () => {
+		const violations: string[] = [];
+		const watchlistDocument = readPrototypeDocument(activePageById("watchlist"));
+		const watchlistView = watchlistDocument.querySelector("#default-view");
+		const watchlistSummary = watchlistView?.querySelector(".watchlist-summary");
+		const watchlistTrigger = watchlistSummary?.querySelector(".watchlist-summary-item");
+		const selectedWatchlistRow = watchlistView?.querySelector(".data-table tr.row.selected");
+		const selectedSignal = selectedWatchlistRow?.querySelector(".signal-pill")?.textContent ?? "";
+		const selectedDirection = /(买入|卖出|观望)/.exec(selectedSignal)?.[1];
+		const detailDirection = watchlistView?.querySelector(".detail-direction")?.textContent ?? "";
+		const actionLabel =
+			watchlistSummary?.querySelector("[data-answer-action]")?.getAttribute("aria-label") ?? "";
+
+		if (!selectedDirection) {
+			violations.push("watchlist:selected-direction");
+		} else {
+			const triggerText = getReadablePrimaryText(watchlistTrigger ?? null);
+			if (!triggerText.includes(selectedDirection)) {
+				violations.push("watchlist:summary-direction");
+			}
+			if (!detailDirection.includes(selectedDirection)) {
+				violations.push("watchlist:detail-direction");
+			}
+		}
+		if (!/下一步|发送到研究|研究/.test(actionLabel) || /最强标的/.test(actionLabel)) {
+			violations.push("watchlist:action-aria-label");
+		}
+
+		const backtestDocument = readPrototypeDocument(activePageById("backtest-list"));
+		const blockedBacktestRows = [...backtestDocument.querySelectorAll(".data-table tr.row")].filter((row) =>
+			/运行中|失败|排队中/.test(row.querySelector(".bt-status")?.textContent ?? ""),
+		);
+		for (const row of blockedBacktestRows) {
+			const rowName = row.querySelector(".cell-ticker")?.textContent?.trim() ?? "unknown";
+			const rowActions = row.querySelector(".row-actions");
+			const hasCompareAction =
+				Boolean(rowActions?.querySelector('label[for="overlay-backtest-compare"]')) ||
+				/对比/.test(rowActions?.textContent ?? "");
+			if (hasCompareAction) {
+				violations.push(`backtest-list:blocked-compare:${rowName}`);
+			}
+		}
+		const backtestHtml = readPrototypeHtml(activePageById("backtest-list"));
+		if (!/\.row-action\[aria-disabled="true"\]\s*\{[^}]*cursor:\s*default;[^}]*pointer-events:\s*none;/s.test(backtestHtml)) {
+			violations.push("backtest-list:disabled-action-style");
+		}
+
+		const pagePatternLibrary = readFileSync(pagePatternLibrarySpec, "utf8");
+		if (!/\| Backtest Comparison Ledger \| `\/research\/backtest` \|/.test(pagePatternLibrary)) {
+			violations.push("pattern-library:backtest-route");
+		}
+		if (pagePatternLibrary.includes("`/research/backtests`")) {
+			violations.push("pattern-library:backtest-route-plural");
 		}
 
 		expect(violations).toEqual([]);

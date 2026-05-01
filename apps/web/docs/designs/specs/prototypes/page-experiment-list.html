@@ -408,23 +408,23 @@
       <!-- ═══ Experiment Summary ═══ -->
       <div class="experiment-summary" data-primary-answer-equivalent aria-label="实验运行摘要，影响范围：当前实验列表筛选结果">
         <div class="experiment-summary-item" data-answer-evidence>
-          <span class="es-label" data-answer-judgment>显著可采纳</span>
+          <span class="es-label" data-answer-judgment>胜出参数</span>
           <span class="es-value positive" data-answer-metric>4</span>
         </div>
-        <div class="experiment-summary-item">
-          <span class="es-label">运行中</span>
-          <span class="es-value">2</span>
+        <div class="experiment-summary-item" data-answer-evidence>
+          <span class="es-label">参数稳定性</span>
+          <span class="es-value positive">高</span>
         </div>
         <div class="experiment-summary-item" data-answer-evidence>
-          <span class="es-label">待复核</span>
-          <span class="es-value">3</span>
+          <span class="es-label">显著性</span>
+          <span class="es-value">p&lt;0.05</span>
         </div>
         <div class="experiment-summary-item">
-          <span class="es-label">失败/阻断</span>
-          <span class="es-value negative">1</span>
+          <span class="es-label">待复核</span>
+          <span class="es-value">3 · 失败原因: 数据漂移</span>
         </div>
-        <div class="experiment-summary-item" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看 uplift 实验">
-          <span class="es-label">平均 uplift</span>
+        <div class="experiment-summary-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看胜出实验">
+          <span class="es-label">查看胜出</span>
           <span class="es-value positive">+1.21pp</span>
         </div>
       </div>
@@ -629,7 +629,7 @@
       <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary data-batch-action-bar>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
-            <span class="context-section-title">实验详情</span>
+            <span class="context-section-title">胜出参数</span>
           </div>
           <div class="context-section-body">
             <div class="detail-hero">
@@ -638,6 +638,7 @@
               <div class="detail-meta">
                 <span><span class="meta-label">负责人</span><span class="meta-value">Chen</span></span>
                 <span><span class="meta-label">样本</span><span class="meta-value">252 日</span></span>
+                <span><span class="meta-label">失败原因</span><span class="meta-value">1 组成本约束</span></span>
               </div>
             </div>
           </div>
@@ -683,7 +684,7 @@
         </details>
         <details class="context-section" data-collapse-priority="l2" open>
           <summary class="context-section-header">
-            <span class="context-section-title">采纳检查</span>
+            <span class="context-section-title">参数稳定性 / 显著性</span>
             <span class="collapse-count">3 项</span>
           </summary>
           <div class="context-section-body">

@@ -464,6 +464,16 @@ Catalog / Screener Workspace 用于对象集合的检索、筛选、浏览、批
 
 适用：orders、trades、backtests list、experiments list
 
+Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列表页都退化成同一种 KPI strip：
+
+| 子型 | 页面 | Main Answer | Inspector 角色 | 推荐 summary metrics |
+|---|---|---|---|---|
+| Strategy Library Catalog | `/research/strategies` | 哪些策略可运行，哪些策略因风险/状态需要处理，最佳健康策略是什么 | 策略健康、最近运行、风险约束、暂停原因、运行入口 | 可运行、需处理、Sharpe、最近运行、风险约束、最佳健康策略、暂停原因 |
+| Backtest Comparison Ledger | `/research/backtest` | 哪些回测可对比，当前基线和失败项是什么 | equity curve、诊断摘要、加入对比 | 对比、失败、基线、Sharpe、MDD |
+| Experiment Result Matrix | `/research/experiments` | 哪组参数胜出，结果是否稳定且显著 | 参数稳定性、显著性、失败原因、复核动作 | 胜出、参数稳定性、显著性、失败原因、待复核 |
+| Factor Quality Catalog | `/research/factors` | 因子质量是否仍可用，哪些因子衰减或覆盖率不足 | IC/IR 诊断、衰减原因、覆盖率、关联策略、失效信号 | IC、IR、衰减、覆盖率、关联策略、最近失效信号 |
+| Watchlist Action Queue | `/markets/watchlist` | 哪个标的触发下一动作，买/卖/观望结构是否可信 | 信号结构、报价新鲜度、trigger reason、send-to workflow | 触发动作、信号结构、stale、下一步 |
+
 ### 6.6 主区块说明
 
 **Catalog Header**

@@ -140,6 +140,8 @@
       color: var(--text-tertiary); cursor: pointer; font-size: var(--font-size-12);
     }
     .row-action:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .row-action[aria-disabled="true"] { cursor: default; pointer-events: none; color: var(--text-tertiary); }
+    .row-action[aria-disabled="true"]:hover { background: transparent; color: var(--text-tertiary); }
     .row-action.primary { color: var(--brand-accent); }
 
     .catalog-detail .context-section { flex: 0 0 auto; }
@@ -316,24 +318,24 @@
       <!-- ═══ Backtest Summary ═══ -->
       <div class="backtest-summary" data-primary-answer-equivalent aria-label="影响范围：当前回测列表筛选结果">
         <div class="backtest-summary-item" data-answer-evidence>
-          <span class="bs-label" data-answer-judgment>已完成</span>
+          <span class="bs-label" data-answer-judgment>可加入对比</span>
           <span class="bs-value positive" data-answer-metric>7 / 10</span>
         </div>
         <div class="backtest-summary-item">
-          <span class="bs-label">运行中</span>
+          <span class="bs-label">失败</span>
           <span class="bs-value">1</span>
         </div>
-        <div class="backtest-summary-item" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳 Sharpe 回测">
-          <span class="bs-label">最佳 Sharpe</span>
-          <span class="bs-value positive">2.12</span>
+        <div class="backtest-summary-item" data-answer-evidence>
+          <span class="bs-label">当前基线</span>
+          <span class="bs-value">MOM-v2</span>
         </div>
         <div class="backtest-summary-item" data-answer-evidence>
           <span class="bs-label">中位 MDD</span>
           <span class="bs-value negative">-9.2%</span>
         </div>
-        <div class="backtest-summary-item">
-          <span class="bs-label">Engine</span>
-          <span class="bs-value">09:42 同步</span>
+        <div class="backtest-summary-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳 Sharpe 回测">
+          <span class="bs-label">最佳 Sharpe</span>
+          <span class="bs-value positive">2.12</span>
         </div>
       </div>
 
@@ -414,7 +416,7 @@
                   <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-11.5%</td>
                   <td><span class="bt-status running">运行中</span></td>
                   <td class="right numeric">--</td>
-                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                  <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">等待完成</span><span class="row-action">查看</span></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -462,7 +464,7 @@
                   <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-28.6%</td>
                   <td><span class="bt-status failed">失败</span></td>
                   <td class="right numeric">04-16 11:05</td>
-                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                  <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">失败诊断</span><span class="row-action">查看</span></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -526,7 +528,7 @@
                   <td class="right numeric muted">--</td>
                   <td><span class="bt-status queued">排队中</span></td>
                   <td class="right numeric">--</td>
-                  <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
+                  <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">排队中</span><span class="row-action">查看</span></span></td>
                 </tr>
               </tbody>
             </table>
@@ -549,7 +551,7 @@
       <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
-            <span class="context-section-title">回测预览</span>
+            <span class="context-section-title">对比预览</span>
           </div>
           <div class="context-section-body">
             <div class="detail-hero">
@@ -557,6 +559,7 @@
                 <div class="detail-ticker">MOM-v3-2024Q1</div>
                 <div class="detail-meta">
                   <span><span class="meta-label">策略</span><span class="meta-value">Alpha-Momentum-v3</span></span>
+                  <span><span class="meta-label">基线</span><span class="meta-value">MOM-v2</span></span>
                   <span><span class="meta-label">区间</span><span class="meta-value">2024-Q1</span></span>
                 </div>
               </div>
@@ -596,13 +599,13 @@
         </details>
         <details class="context-section" data-collapse-priority="l2" open>
           <summary class="context-section-header">
-            <span class="context-section-title">回撤诊断</span>
+            <span class="context-section-title">诊断摘要</span>
             <span class="collapse-count">3 项</span>
           </summary>
           <div class="context-section-body">
             <div class="drawdown-bars">
               <div class="drawdown-row">
-                <span>最大</span>
+                <span>MDD</span>
                 <span class="drawdown-track"><span class="drawdown-fill w-31"></span></span>
                 <span class="numeric">-6.8%</span>
               </div>

@@ -111,6 +111,7 @@
     .perf-item .perf-value.strategy-name { font-family: var(--font-family-ui); font-weight: var(--font-weight-medium); color: var(--text-primary); }
     .perf-item .perf-value.positive { color: var(--market-up-fg); }
     .perf-item .perf-value.negative { color: var(--market-down-fg); }
+    .perf-item .perf-sub { color: var(--text-tertiary); font-size: var(--font-size-10); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .perf-separator { display: none; }
 
     .strategy-name-stack { display: flex; flex-direction: column; gap: 1px; }
@@ -308,23 +309,24 @@
       <!-- ═══ Performance Summary ═══ -->
       <div class="perf-summary" data-primary-answer-equivalent aria-label="影响范围：当前策略库筛选结果">
         <div class="perf-item" data-answer-evidence>
-          <span class="perf-label" data-answer-judgment>运行中</span>
+          <span class="perf-label" data-answer-judgment>可运行</span>
           <span class="perf-value positive">5</span>
         </div>
-        <div class="perf-item" data-answer-evidence>
-          <span class="perf-label">平均 Sharpe</span>
-          <span class="perf-value positive" data-answer-metric>1.51</span>
-        </div>
-        <div class="perf-item" data-answer-evidence>
-          <span class="perf-label">平均年化</span>
-          <span class="perf-value positive">19.0%</span>
-        </div>
         <div class="perf-item">
-          <span class="perf-label">最大回撤</span>
-          <span class="perf-value negative">-14.7%</span>
+          <span class="perf-label">需处理</span>
+          <span class="perf-value">2</span>
+        </div>
+        <div class="perf-item" data-answer-evidence>
+          <span class="perf-label">Sharpe / 最近运行</span>
+          <span class="perf-value positive" data-answer-metric>1.51 · 09:32 成功</span>
+        </div>
+        <div class="perf-item" data-answer-evidence>
+          <span class="perf-label">风险约束</span>
+          <span class="perf-value negative">2 暂停</span>
+          <span class="perf-sub">暂停原因: 回撤 / 数据延迟</span>
         </div>
         <div class="perf-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳策略">
-          <span class="perf-label">最佳策略</span>
+          <span class="perf-label">最佳健康策略</span>
           <span class="perf-value strategy-name">Alpha-Momentum-v3</span>
         </div>
       </div>
@@ -558,7 +560,7 @@
       <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
-            <span class="context-section-title">策略详情</span>
+            <span class="context-section-title">策略健康</span>
           </div>
           <div class="context-section-body">
             <div class="detail-hero">
@@ -574,7 +576,7 @@
                 <path class="spark-area" d="M0 44 L18 38 L36 41 L54 31 L72 34 L90 25 L108 28 L126 19 L144 21 L162 14 L180 18 L198 10 L216 13 L240 6 L240 56 L0 56 Z"></path>
                 <path class="spark-line" d="M0 44 L18 38 L36 41 L54 31 L72 34 L90 25 L108 28 L126 19 L144 21 L162 14 L180 18 L198 10 L216 13 L240 6"></path>
               </svg>
-              <div class="strategy-meta">最近运行 2026-04-21 14:35 · 数据同步 18 秒前 · 无风控阻断</div>
+              <div class="strategy-meta">最近运行 2026-04-21 14:35 · 风险约束通过 · 可立即运行</div>
             </div>
           </div>
         </div>
@@ -606,7 +608,7 @@
         </details>
         <details class="context-section" data-collapse-priority="l2" open>
           <summary class="context-section-header">
-            <span class="context-section-title">运行上下文</span>
+            <span class="context-section-title">风险约束</span>
             <span class="collapse-count">4 项</span>
           </summary>
           <div class="context-section-body">
@@ -620,8 +622,12 @@
                 <span class="overlay-field-value">周频</span>
               </div>
               <div class="overlay-field">
-                <span class="overlay-field-label">交易约束</span>
+                <span class="overlay-field-label">风险约束</span>
                 <span class="overlay-field-value">T+1 / 涨跌停</span>
+              </div>
+              <div class="overlay-field">
+                <span class="overlay-field-label">暂停原因</span>
+                <span class="overlay-field-value">无 · 2 个同类策略因回撤/数据延迟暂停</span>
               </div>
               <div class="overlay-field">
                 <span class="overlay-field-label">下游信号</span>
@@ -632,7 +638,7 @@
         </details>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
-            <span class="context-section-title">操作</span>
+            <span class="context-section-title">运行入口</span>
           </div>
           <div class="context-section-body">
             <div class="detail-actions">
