@@ -151,6 +151,15 @@
       font-weight: var(--font-weight-regular);
     }
 
+    .object-answer-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
     .object-price-row {
       display: flex;
       align-items: center;
@@ -2101,7 +2110,7 @@
         <!-- Identity -->
         <div class="object-identity">
           <div class="object-name-row">
-            <h1 class="object-name" data-answer-judgment>贵州茅台</h1>
+            <h1 class="object-name">贵州茅台</h1>
             <span class="object-code">600519.SH</span>
             <span class="object-status trading" role="status" aria-label="正常交易" data-tooltip="交易状态: 正常交易中" data-tooltip-pos="bottom" data-answer-evidence>
               <span class="object-status-dot"></span>
@@ -2123,6 +2132,7 @@
               <span class="object-change-amount">+42.60</span>
             </span>
           </div>
+          <div class="object-answer-row" data-answer-judgment>短线动能偏强，白酒龙头资金回流。</div>
         </div>
 
         <!-- Spacer -->

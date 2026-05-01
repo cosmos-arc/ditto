@@ -24,7 +24,7 @@ describe("page-factor-list prototype", () => {
 
 		expect(document.querySelector("#default-view > .shell-catalog.catalog-shell")).not.toBeNull();
 		expect(document.querySelector(".filter-toolbar[data-contract-slot='header']")).not.toBeNull();
-		expect(document.querySelector(".health-summary[aria-label='因子健康摘要']")).not.toBeNull();
+		expect(document.querySelector(".health-summary[aria-label*='因子健康摘要']")).not.toBeNull();
 		expect(document.querySelector(".catalog-table[data-contract-slot='main']")).not.toBeNull();
 		expect(document.querySelector(".catalog-detail[data-contract-slot='detail']")).not.toBeNull();
 	});

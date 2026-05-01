@@ -629,8 +629,8 @@ describe("prototype design consistency", () => {
 				violations.push(`${page.id}:missing-action`);
 			}
 			const evidenceCount = getPrimaryAnswerEvidenceCount(region);
-			if (evidenceCount < 2) {
-				violations.push(`${page.id}:missing-evidence:${evidenceCount}`);
+			if (evidenceCount < 2 || evidenceCount > 3) {
+				violations.push(`${page.id}:evidence-count:${evidenceCount}`);
 			}
 			if (!hasPrimaryAnswerScope(region)) {
 				violations.push(`${page.id}:missing-scope`);

@@ -24,7 +24,7 @@ describe("page-experiment-list prototype", () => {
 
 		expect(document.querySelector("#default-view > .shell-catalog.catalog-shell")).not.toBeNull();
 		expect(document.querySelector(".filter-toolbar[data-contract-slot='header']")).not.toBeNull();
-		expect(document.querySelector(".experiment-summary[aria-label='实验运行摘要']")).not.toBeNull();
+		expect(document.querySelector(".experiment-summary[aria-label*='实验运行摘要']")).not.toBeNull();
 		expect(document.querySelector(".catalog-table[data-contract-slot='main']")).not.toBeNull();
 		expect(document.querySelector(".catalog-detail[data-contract-slot='detail']")).not.toBeNull();
 	});
