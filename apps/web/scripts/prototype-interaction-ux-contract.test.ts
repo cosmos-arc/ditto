@@ -42,6 +42,30 @@ const bottomTrayUiByState: Record<(typeof bottomTrayStates)[number], { ariaExpan
 	peek: { ariaExpanded: "true", symbol: "▴" },
 	expanded: { ariaExpanded: "true", symbol: "—" },
 };
+const commandContextActionsByPageId: Record<string, string[]> = {
+	watchlist: ["generate-signal", "open-instrument-hub", "send-to-research", "remove-watch"],
+	"strategy-list": ["run-backtest", "clone-strategy", "view-recent-runs", "pause-strategy"],
+	"backtest-list": ["add-to-compare", "view-curve", "copy-params", "generate-report"],
+	"signals-inbox": ["approve", "reject", "send-to-order", "view-evidence"],
+	platform: ["retry", "view-logs", "mute-alert", "create-incident"],
+};
+const tableExpertContractPageIds = [
+	"watchlist",
+	"strategy-list",
+	"backtest-list",
+	"signals-inbox",
+	"platform",
+	"factor-list",
+	"experiment-list",
+	"universe-list",
+	"markets-screener",
+	"orders-ledger",
+] as const;
+const tableExpertContractAttributes = [
+	"data-table-column-resize-ready",
+	"data-table-freeze-ready",
+	"data-row-context-menu-ready",
+] as const;
 const playwrightTestTimeoutMs = 15_000;
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
@@ -387,6 +411,10 @@ function getDirectSummary(element: Element): Element | null {
 	return Array.from(element.children).find((child) => child.tagName.toLowerCase() === "summary") ?? null;
 }
 
+function getDefaultPrototypeRoot(document: Document): ParentNode {
+	return document.querySelector("#default-view") ?? document.body;
+}
+
 function getContextSectionLabel(section: Element, index: number): string {
 	return section.querySelector(contextSectionTitleSelector)?.textContent?.replace(/\s+/g, " ").trim() ?? `section ${index + 1}`;
 }
@@ -456,6 +484,67 @@ function assertResizableGroupContract(pageId: string, group: Element | null, gro
 	});
 
 	return violations;
+}
+
+function createResizablePanelDom(
+	url: string,
+	prepareWindow?: (window: JSDOM["window"]) => void,
+): { document: Document; group: HTMLElement; separator: HTMLElement } {
+	const dom = new JSDOM(
+		`<!doctype html>
+		<html>
+			<body>
+				<div id="workspace" data-resizable-panel-group="test-workspace" data-resize-var="--prototype-detail-width">
+					<section id="test-main"></section>
+					<div
+						class="resize-separator"
+						data-resize-separator
+						data-resize-var="--prototype-detail-width"
+						data-resize-default="320"
+						data-resize-min="220"
+						data-resize-max="520"
+						role="separator"
+						tabindex="0"
+						aria-label="调整测试面板宽度"
+						aria-orientation="vertical"
+						aria-controls="test-main test-detail"
+						aria-valuemin="220"
+						aria-valuemax="520"
+						aria-valuenow="320"
+					></div>
+					<aside id="test-detail"></aside>
+				</div>
+			</body>
+		</html>`,
+		{ pretendToBeVisual: true, url },
+	);
+	const { document } = dom.window;
+	const group = document.getElementById("workspace");
+	const separator = document.querySelector<HTMLElement>("[data-resize-separator]");
+
+	expect(group).not.toBeNull();
+	expect(separator).not.toBeNull();
+	if (!(group instanceof dom.window.HTMLElement) || !separator) {
+		throw new Error("expected resizable panel fixture to be present");
+	}
+
+	prepareWindow?.(dom.window);
+	installInteractiveWindowStubs(dom.window);
+	evaluateSharedInteractionsScript(dom.window);
+	if (document.readyState === "loading") {
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+	}
+
+	return { document, group, separator };
+}
+
+function parseCommandContextActions(element: Element): Set<string> {
+	return new Set(
+		(element.getAttribute("data-command-context-actions") ?? "")
+			.split(",")
+			.map((action) => action.trim())
+			.filter(Boolean),
+	);
 }
 
 async function readBottomTrayStatusMetrics(page: import("playwright").Page) {
@@ -1279,6 +1368,152 @@ describe("prototype interaction UX contracts", () => {
 					),
 				);
 			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("persists resizable panel values with a route-scoped preference key", () => {
+		const { document, separator } = createResizablePanelDom("https://prototype.local/research/strategies");
+		const storageKey = "ditto:prototype:layout:/research/strategies:--prototype-detail-width";
+
+		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+
+		expect(document.defaultView!.localStorage.getItem(storageKey)).toBe("360");
+	});
+
+	it("restores persisted resizable panel values only when they are inside separator bounds", () => {
+		const storageKey = "ditto:prototype:layout:/research/strategies:--prototype-detail-width";
+		const { group, separator } = createResizablePanelDom("https://prototype.local/research/strategies", (window) => {
+			window.localStorage.setItem(storageKey, "448");
+		});
+
+		expect(separator.getAttribute("aria-valuenow")).toBe("448");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("448px");
+
+		const outOfRange = createResizablePanelDom("https://prototype.local/research/strategies", (window) => {
+			window.localStorage.setItem(storageKey, "999");
+		});
+
+		expect(outOfRange.separator.getAttribute("aria-valuenow")).toBe("320");
+		expect(outOfRange.group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
+	});
+
+	it("keeps resizable separator keyboard and double-click efficiency shortcuts explicit", () => {
+		const { document, group, separator } = createResizablePanelDom("https://prototype.local/research/strategies");
+
+		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+		expect(separator.getAttribute("aria-valuenow")).toBe("360");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("360px");
+
+		separator.dispatchEvent(
+			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }),
+		);
+		expect(separator.getAttribute("aria-valuenow")).toBe("352");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("352px");
+
+		separator.dispatchEvent(new document.defaultView!.MouseEvent("dblclick", { bubbles: true }));
+		expect(separator.getAttribute("aria-valuenow")).toBe("320");
+		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
+	});
+
+	it("exposes selected-object regions on active pages with selected rows", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const root = getDefaultPrototypeRoot(document);
+			const selectedRows = root.querySelectorAll(".row.selected, tr[aria-selected='true'], [data-row-selection-marker]");
+			if (selectedRows.length === 0) continue;
+
+			if (!root.querySelector("[data-selected-object-region]")) {
+				violations.push(`${page.id}: selected rows require a [data-selected-object-region] hook`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("exposes command scope on every active page command trigger", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			document.querySelectorAll("[data-shell-utility='command'], .header-command-trigger").forEach((trigger, index) => {
+				if (!trigger.getAttribute("data-command-scope")) {
+					violations.push(`${page.id}: command trigger ${index + 1} is missing data-command-scope`);
+				}
+			});
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("exposes command context actions on selected-object representative pages", () => {
+		const violations: string[] = [];
+
+		for (const [pageId, expectedActions] of Object.entries(commandContextActionsByPageId)) {
+			const document = readPrototypeDocument(getActivePageById(pageId));
+			const root = getDefaultPrototypeRoot(document);
+			const actionContract = root.querySelector("[data-command-context-actions]");
+			if (!actionContract) {
+				violations.push(`${pageId}: missing [data-command-context-actions]`);
+				continue;
+			}
+
+			const actualActions = parseCommandContextActions(actionContract);
+			for (const expectedAction of expectedActions) {
+				if (!actualActions.has(expectedAction)) {
+					violations.push(`${pageId}: missing command context action "${expectedAction}"`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("exposes table expert efficiency hooks on selected-object representative pages", () => {
+		const violations: string[] = [];
+
+		for (const pageId of tableExpertContractPageIds) {
+			const document = readPrototypeDocument(getActivePageById(pageId));
+			const root = getDefaultPrototypeRoot(document);
+			const tables = [...root.querySelectorAll("table.data-table, table.ledger-table")].filter(
+				(table) => !table.closest(".gallery-group"),
+			);
+			if (tables.length === 0) {
+				violations.push(`${pageId}: expected a data table for expert table contracts`);
+				continue;
+			}
+
+			for (const table of tables) {
+				const tableLabel = table.getAttribute("aria-label") ?? "unlabelled table";
+				for (const attribute of tableExpertContractAttributes) {
+					if (!table.hasAttribute(attribute)) {
+						violations.push(`${pageId}: ${tableLabel} missing ${attribute}`);
+					}
+				}
+			}
+			if (!root.querySelector("[data-bulk-action-bar]")) {
+				violations.push(`${pageId}: missing [data-bulk-action-bar]`);
+			}
+			root.querySelectorAll("[data-bulk-action-bar]").forEach((bulkBar, index) => {
+				if (!bulkBar.matches(".bulk-action-bar, .batch-bar, [role='toolbar'], [data-contract-slot='bulk-action-bar']")) {
+					violations.push(`${pageId}: bulk action contract ${index + 1} is not on a toolbar/bar element`);
+				}
+			});
+			if (!root.querySelector("[data-active-filters-summary]")) {
+				violations.push(`${pageId}: missing [data-active-filters-summary]`);
+			}
+			root.querySelectorAll("[data-batch-action-bar]").forEach((legacyBar, index) => {
+				if (!legacyBar.hasAttribute("data-bulk-action-bar")) {
+					violations.push(`${pageId}: legacy batch action bar ${index + 1} missing data-bulk-action-bar`);
+				}
+			});
+		}
+		const sharedLayoutCss = readFileSync(join(prototypesDir, "shared/layout-base.css"), "utf8");
+		if (/\.batch-bar\[data-bulk-action-bar\]/.test(sharedLayoutCss)) {
+			violations.push("shared-layout: batch bars keep page-local styling when marked as bulk contract");
 		}
 
 		expect(violations).toEqual([]);

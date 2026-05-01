@@ -466,7 +466,7 @@
           <button class="filter-chip">失效</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count">共 <span>12 个因子</span></span>
+        <span class="filter-count" data-active-filters-summary>共 <span>12 个因子</span></span>
       </div>
 
       <!-- ═══ Health Summary ═══ -->
@@ -497,10 +497,10 @@
       </div>
 
       <!-- ═══ Main Table Area ═══ -->
-      <div class="catalog-table" data-contract-slot="main">
+      <div class="catalog-table" data-contract-slot="main" data-selected-object-region>
         <div class="catalog-table-inner" id="main-content">
           <div class="table-container">
-            <table class="data-table" aria-label="因子列表">
+            <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="因子列表">
               <caption class="sr-only">因子列表：共 12 个因子</caption>
               <colgroup>
                 <col class="col-factor-name">
@@ -717,13 +717,14 @@
               <span class="pagination-ellipsis">...</span>
             </div>
           </div>
+          <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
         </div>
       </div>
 
       <!-- ═══ Detail Panel ═══ -->
       <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
 
-      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">质量诊断</span>
@@ -930,7 +931,7 @@
             <div class="gallery-card__label">Selected State</div>
             <div class="gallery-card__preview">
               <div class="state-variant-content" data-state="selected">
-                <div class="batch-bar" data-batch-action-bar>
+                <div class="batch-bar" data-batch-action-bar data-bulk-action-bar>
                   <span class="batch-count">已选筛选：动量 / 正常 / IC 降序</span>
                   <span class="batch-spacer"></span>
                   <button class="btn btn-sm">清除</button>

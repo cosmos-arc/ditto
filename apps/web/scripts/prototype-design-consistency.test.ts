@@ -1497,7 +1497,10 @@ describe("prototype design consistency", () => {
 			if (!defaultView.querySelector(".row-selection-marker, .selection-mark, [data-row-selection-marker]")) {
 				violations.push(`${page.id}:selection-marker`);
 			}
-			if (defaultView.querySelector('input[type="checkbox"]') && !defaultView.querySelector("[data-batch-action-bar]")) {
+			if (
+				defaultView.querySelector('input[type="checkbox"]') &&
+				!defaultView.querySelector("[data-bulk-action-bar], [data-batch-action-bar]")
+			) {
 				violations.push(`${page.id}:batch-action-bar`);
 			}
 			if (!defaultView.querySelector("[data-detail-sticky-summary]")) {
@@ -1624,6 +1627,21 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
+	});
+
+	it("keeps page pattern library section numbering unique", () => {
+		const headings = readFileSync(pagePatternLibrarySpec, "utf8")
+			.split("\n")
+			.map((line) => /^###\s+(\d+\.\d+)\s+/.exec(line)?.[1])
+			.filter((section): section is string => Boolean(section));
+		const seen = new Set<string>();
+		const duplicates = headings.filter((section) => {
+			if (seen.has(section)) return true;
+			seen.add(section);
+			return false;
+		});
+
+		expect(duplicates).toEqual([]);
 	});
 
 	it("documents the Edition v1 9-step typography scale as current token truth", () => {

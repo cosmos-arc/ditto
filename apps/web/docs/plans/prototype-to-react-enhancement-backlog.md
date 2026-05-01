@@ -67,6 +67,13 @@
 - 面板 resize 需覆盖 `role="separator"`、方向键、Enter collapse/restore、双击重置、24px hit area
 - 补 Playwright/RTL 测试：Rail 导航语义、Disclosure 键盘行为、Bottom Tray 三态、Resizable separator 键盘调整
 
+### 11. Expert Efficiency Contracts 2026-05-01
+- 表格列宽持久化：按 route + table id 保存列宽，恢复时校验最小宽度与可见列集合
+- 冻结列：Catalog / Queue / Ops 表格支持首列或关键列冻结，并覆盖横向滚动、键盘导航与窄屏降级
+- 完整 Command Palette：读取 `data-command-scope` 与 `data-command-context-actions`，按选中对象、route、权限和状态过滤动作
+- 选中对象驱动跨区域状态：列表选中项同步主表、详情、证据、日志、批量栏与 command context
+- React Modal / Drawer 焦点管理：实现 focus trap、ESC 关闭、返回焦点，并让 overlay 背景 inert
+
 ---
 
 ## 维护说明

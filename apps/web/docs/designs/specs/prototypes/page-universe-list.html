@@ -688,16 +688,16 @@
             <button class="filter-chip">全部</button>
           </div>
         </div>
-        <div class="batch-summary" data-primary-answer-equivalent aria-label="影响范围：当前股票池列表筛选结果">
+        <div class="batch-summary" data-primary-answer-equivalent data-active-filters-summary aria-label="影响范围：当前股票池列表筛选结果">
           <span class="batch-summary__count" data-answer-judgment data-answer-metric data-answer-evidence>12 个股票池</span>
           <span class="batch-summary__hint" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看股票池引用与过期项">1,932 只标的 · 18 个策略引用 · 2 项过期</span>
         </div>
       </div>
 
-      <div class="catalog-table" data-contract-slot="main">
+      <div class="catalog-table" data-contract-slot="main" data-selected-object-region>
         <div class="catalog-table-inner" id="main-content">
           <div class="table-container">
-            <table class="data-table" aria-label="股票池列表">
+            <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="股票池列表">
               <caption class="sr-only">股票池列表：共 12 个股票池</caption>
               <thead>
                 <tr>
@@ -850,12 +850,13 @@
               <span class="pagination-ellipsis">1-12 / 12</span>
             </div>
           </div>
+          <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
         </div>
       </div>
 
       <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
 
-      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">股票池详情</span>
@@ -1117,7 +1118,7 @@
             <div class="gallery-card__label">Bulk Selected State</div>
             <div class="gallery-card__preview">
               <div class="state-variant-content" data-state="bulk">
-                <div class="batch-bar" data-batch-action-bar>
+                <div class="batch-bar" data-batch-action-bar data-bulk-action-bar>
                   <span class="batch-count">已选择 2 个</span>
                   <span class="batch-spacer"></span>
                   <button class="btn btn-sm btn-danger">批量删除</button>

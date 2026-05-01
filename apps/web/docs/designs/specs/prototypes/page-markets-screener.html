@@ -2060,7 +2060,7 @@
         <button class="filter-chip" data-tooltip="AI评分 >= 0.70 的卖出信号">卖出信号</button>
       </div>
       <div class="filter-spacer"></div>
-      <span class="filter-count" role="status" aria-live="polite" data-tooltip="当前筛选条件下的匹配标的数量">共 238 只</span>
+      <span class="filter-count" role="status" aria-live="polite" data-active-filters-summary data-tooltip="当前筛选条件下的匹配标的数量">共 238 只</span>
     </div>
 
     <!-- State Variants: 筛选条件 / Filter Toolbar -->
@@ -2144,10 +2144,10 @@
         </div>
       </section>
     <!-- ═══ Main Table Area ═══ -->
-    <div class="catalog-table" data-contract-slot="results-table">
+    <div class="catalog-table" data-contract-slot="results-table" data-selected-object-region>
       <div class="catalog-table-inner" id="main-content" data-reveal="fade-up" data-reveal-delay="100">
         <div class="table-container">
-          <table class="data-table" aria-label="筛选结果" data-compare-source="screener-results">
+          <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="筛选结果" data-compare-source="screener-results">
             <caption class="sr-only">筛选结果：共 238 只标的</caption>
             <colgroup><col class="col-sorted"></colgroup>
             <thead>
@@ -2491,6 +2491,7 @@
             <button class="pagination-btn">11</button>
           </div>
         </div>
+        <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
       </div>
     </div>
 
@@ -2570,7 +2571,7 @@
     <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
 
     <!-- ═══ Detail Panel (320px right side) ═══ -->
-    <div class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary data-batch-action-bar>
+    <div class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
       <!-- Section 1: 结果去向 -->
       <div class="detail-actions" data-collapse-priority="l1" data-reveal="fade-up" data-reveal-delay="0">
         <div class="context-section-header">

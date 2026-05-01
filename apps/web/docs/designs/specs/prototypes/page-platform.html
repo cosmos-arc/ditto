@@ -2059,6 +2059,7 @@
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
+        <div class="command-context-actions" data-command-context-actions="retry, view-logs, mute-alert, create-incident" hidden></div>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
         </button>
@@ -2082,7 +2083,7 @@
     </header>
 
     <!-- ═══ Health Strip (36px) ═══ -->
-    <div class="ops-health" data-primary-answer-equivalent role="status" aria-label="影响范围：平台服务健康与数据管道" data-reveal="fade-up">
+    <div class="ops-health" data-primary-answer-equivalent data-active-filters-summary role="status" aria-label="影响范围：平台服务健康与数据管道" data-reveal="fade-up">
       <div class="health-metric-group">
         <!-- Overall system health score -->
         <div class="health-score-summary" data-tooltip="系统综合健康评分" data-tooltip-pos="bottom">
@@ -2159,7 +2160,7 @@
             <div class="tab-panels">
               <!-- Tab Panel 1: Data Providers / DQ -->
               <div class="tab-panel" data-panel="tab-providers" data-tab-panel="services" id="panel-providers" role="tabpanel" aria-labelledby="tab-control-providers" aria-hidden="false">
-                <table class="data-table">
+                <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready>
                   <thead>
                     <tr>
                       <th scope="col">数据源</th>
@@ -2318,6 +2319,7 @@
                     </tr>
                   </tbody>
                 </table>
+                <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
 
                 <!-- State Variants: Data Providers -->
                 <div class="ops-evidence-strip" data-ops-evidence-strip>
@@ -2452,7 +2454,7 @@
 
               <!-- Tab Panel 2: Pipelines / Jobs -->
               <div class="tab-panel" data-panel="tab-pipelines" data-tab-panel="performance" id="panel-pipelines" role="tabpanel" aria-labelledby="tab-control-pipelines" aria-hidden="true">
-                <table class="data-table">
+                <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready>
                   <thead>
                     <tr>
                       <th scope="col">管道名称</th>
@@ -2564,7 +2566,7 @@
 
               <!-- Tab Panel 4: Resources / Quotas -->
               <div class="tab-panel" data-panel="tab-resources" data-tab-panel="resources" id="panel-resources" role="tabpanel" aria-labelledby="tab-control-resources" aria-hidden="true">
-                <table class="data-table">
+                <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready>
                   <thead>
                     <tr>
                       <th scope="col">资源</th>

@@ -1922,7 +1922,7 @@
 
 
     <!-- ═══ Status Strip (Radio Tab System) ═══ -->
-    <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="影响范围：订单执行队列" data-primary-answer-equivalent>
+    <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="影响范围：订单执行队列" data-primary-answer-equivalent data-active-filters-summary>
       <!-- Overlay checkbox inputs (placed here for :has() scope) -->
 
 
@@ -1964,7 +1964,7 @@
         </label>
       </div>
       <div class="status-strip-spacer"></div>
-      <div class="status-strip-actions">
+      <div class="status-strip-actions" data-bulk-action-bar role="toolbar" aria-label="订单批量操作">
         <button class="strip-action primary" tabindex="0" role="button" aria-label="批量提交" data-answer-action>提交</button>
         <label for="overlay-batch-cancel" class="strip-action danger label-trigger" tabindex="0" role="button" aria-label="批量撤单">撤单</label>
         <label for="overlay-retry-submit" class="strip-action secondary label-trigger" tabindex="0" role="button" aria-label="批量重试">重试</label>
@@ -2029,10 +2029,10 @@
       <div class="tab-panel" data-panel="orders-done" id="panel-orders-done" role="tabpanel" aria-labelledby="tab-orders-done" aria-hidden="false">
 
     <!-- ═══ Orders Ledger Table ═══ -->
-    <div class="ledger-table-area catalog-main" id="main-content" data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
+    <div class="ledger-table-area catalog-main" id="main-content" data-selected-object-region data-contract-slot="order-list" data-reveal="fade-up" data-reveal-delay="100" role="region" aria-label="订单列表">
       <!-- JS Tab Panel: 全部 (default visible) -->
       <div data-tab-panel="all" data-tab-display="block" id="panel-all" role="tabpanel" aria-labelledby="tab-all" aria-hidden="false">
-      <table class="ledger-table main-ledger-table" aria-label="订单账本">
+      <table class="ledger-table main-ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="订单账本">
         <thead>
           <tr>
             <th scope="col" class="col-wide">订单ID</th>
@@ -2341,7 +2341,7 @@
 
       <!-- JS Tab Panel: 待处理 -->
       <div data-tab-panel="pending" data-tab-display="block" id="panel-pending" role="tabpanel" aria-labelledby="tab-pending" aria-hidden="true">
-      <table class="ledger-table" aria-label="待处理订单">
+      <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="待处理订单">
         <thead>
           <tr>
             <th scope="col" class="col-wide">订单ID</th>
@@ -2410,7 +2410,7 @@
 
       <!-- JS Tab Panel: 已成 -->
       <div data-tab-panel="filled" data-tab-display="block" id="panel-filled" role="tabpanel" aria-labelledby="tab-filled" aria-hidden="true">
-      <table class="ledger-table" aria-label="已成订单">
+      <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="已成订单">
         <thead>
           <tr>
             <th scope="col" class="col-wide">订单ID</th>
@@ -2511,7 +2511,7 @@
 
       <!-- JS Tab Panel: 撤单 -->
       <div data-tab-panel="cancelled" data-tab-display="block" id="panel-cancelled" role="tabpanel" aria-labelledby="tab-cancelled" aria-hidden="true">
-      <table class="ledger-table" aria-label="已撤单订单">
+      <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="已撤单订单">
         <thead>
           <tr>
             <th scope="col" class="col-wide">订单ID</th>
@@ -2555,7 +2555,7 @@
 
 
     <!-- ═══ Order Trace Panel (340px) ═══ -->
-    <aside class="order-trace catalog-detail" id="order-trace" data-contract-slot="execution-trace" data-reveal="fade-up" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
+    <aside class="order-trace catalog-detail" id="order-trace" data-selected-object-region data-contract-slot="execution-trace" data-reveal="fade-up" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
       <!-- Trace Header -->
       <div class="trace-header">
         <div class="trace-title">
@@ -2769,7 +2769,7 @@
         <div class="state-empty-desc">以下订单已由策略引擎生成，等待人工确认或自动提交规则触发</div>
       </div>
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
-        <table class="ledger-table" aria-label="待提交订单">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="待提交订单">
           <thead>
             <tr>
               <th scope="col" class="col-wide">订单ID</th>
@@ -2847,7 +2847,7 @@
     <!-- Tab Panel: 已提交 -->
     <div class="tab-panel" data-panel="orders-submitted" id="panel-orders-submitted" role="tabpanel" aria-labelledby="tab-orders-submitted" aria-hidden="true">
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
-        <table class="ledger-table" aria-label="已提交订单">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="已提交订单">
           <thead>
             <tr>
               <th scope="col" class="col-wide">订单ID</th>
@@ -2898,7 +2898,7 @@
     <!-- Tab Panel: 部分成交 -->
     <div class="tab-panel" data-panel="orders-partial" id="panel-orders-partial" role="tabpanel" aria-labelledby="tab-orders-partial" aria-hidden="true">
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
-        <table class="ledger-table" aria-label="部分成交订单">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="部分成交订单">
           <thead>
             <tr>
               <th scope="col" class="col-wide">订单ID</th>
@@ -2946,7 +2946,7 @@
     <!-- Tab Panel: 失败/撤单 -->
     <div class="tab-panel" data-panel="orders-failed" id="panel-orders-failed" role="tabpanel" aria-labelledby="tab-orders-failed" aria-hidden="true">
       <div class="ledger-table-area" data-reveal="fade-up" data-reveal-delay="50">
-        <table class="ledger-table" aria-label="失败/撤单订单">
+        <table class="ledger-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="失败/撤单订单">
           <thead>
             <tr>
               <th scope="col" class="col-wide">订单ID</th>

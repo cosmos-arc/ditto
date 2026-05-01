@@ -464,6 +464,16 @@ Catalog / Screener Workspace 用于对象集合的检索、筛选、浏览、批
 
 适用：orders、trades、backtests list、experiments list
 
+### 6.6 专家效率 contract
+
+Catalog / Screener 页面必须把高频专家操作声明成稳定 hook：
+
+- 主表格标记 `data-table-column-resize-ready`、`data-table-freeze-ready`、`data-row-context-menu-ready`
+- 当前筛选 / scope 摘要标记 `data-active-filters-summary`
+- 多选或可批量处理区域标记 `data-bulk-action-bar`
+- 有选中行时，主列表、详情预览或证据区域至少一个区域标记 `data-selected-object-region`
+- Header command 入口标记 `data-command-scope`；当前选中对象的 command palette 动作标记 `data-command-context-actions`
+
 Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列表页都退化成同一种 KPI strip：
 
 | 子型 | 页面 | Main Answer | Inspector 角色 | 推荐 summary metrics |
@@ -474,7 +484,7 @@ Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列
 | Factor Quality Catalog | `/research/factors` | 因子质量是否仍可用，哪些因子衰减或覆盖率不足 | IC/IR 诊断、衰减原因、覆盖率、关联策略、失效信号 | IC、IR、衰减、覆盖率、关联策略、最近失效信号 |
 | Watchlist Action Queue | `/markets/watchlist` | 哪个标的触发下一动作，买/卖/观望结构是否可信 | 信号结构、报价新鲜度、trigger reason、send-to workflow | 触发动作、信号结构、stale、下一步 |
 
-### 6.6 主区块说明
+### 6.7 主区块说明
 
 **Catalog Header**
 
@@ -502,7 +512,7 @@ Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列
 - 关键字段
 - 下一步动作
 
-### 6.7 适合的组件
+### 6.8 适合的组件
 
 - Analytical / ledger table
 - Filter chip bar
@@ -511,7 +521,7 @@ Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列
 - Object preview panel
 - Batch action bar
 
-### 6.8 不适合的组件
+### 6.9 不适合的组件
 
 - 常驻底部 analysis band
 - 右侧 full activity stack
@@ -722,7 +732,16 @@ Studio 页面要减少浏览感，强化"手正在工作"的感觉。
 
 适用：agent workspace、multi-step tool run、approval / task execution
 
-### 8.6 主区块说明
+### 8.6 专家效率 contract
+
+Studio / Builder 页面必须支持可恢复工作环境：
+
+- 可调栏使用 `data-resizable-panel-group` 与 `data-resize-separator`，尺寸按 route + CSS var 持久化
+- separator 方向键默认 40px、`Shift + Arrow` 8px、双击恢复默认
+- 主工作面与 inspector / run state 可标记 `data-selected-object-region`，供 React 阶段实现跨区对象状态
+- command trigger 使用 `data-command-scope`，选中对象动作使用 `data-command-context-actions`
+
+### 8.7 主区块说明
 
 **Studio Header**
 
@@ -758,7 +777,7 @@ Studio 页面要减少浏览感，强化"手正在工作"的感觉。
 - Approval block
 - Linked context
 
-### 8.7 适合的组件
+### 8.8 适合的组件
 
 - Command bar
 - Inspector panel
@@ -771,7 +790,7 @@ Studio 页面要减少浏览感，强化"手正在工作"的感觉。
 - Code / formula editor
 - Node graph / chart editor
 
-### 8.8 不适合的组件
+### 8.9 不适合的组件
 
 - 底部 analysis band 作为默认结构
 - 常驻 activity stack
@@ -863,6 +882,14 @@ Queue / Ops Console 用于处置、排查、监控、追踪系统级或流程级
 **Main Queue / Ops Table**（主角）
 
 必须支持：severity / status / owner / updated at / next action
+
+专家效率 contract：
+
+- 队列表格标记 `data-table-column-resize-ready`、`data-table-freeze-ready`、`data-row-context-menu-ready`
+- scope / severity / status 摘要标记 `data-active-filters-summary`
+- 批量处置条标记 `data-bulk-action-bar`
+- 当前告警、信号、任务或数据源选择必须能通过 `data-selected-object-region` 驱动右侧详情、日志或动作区
+- command palette 上下文动作使用 `data-command-context-actions`，动作 id 与业务动词保持稳定
 
 **右侧 Detail / Logs / Actions**
 

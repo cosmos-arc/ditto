@@ -257,6 +257,17 @@ Selected 是 Ditto 最重要的交互状态之一。
 - 一旦多选，出现 bulk action bar
 - 清楚展示选中数量
 - 提供 clear selection
+- 有选中行的页面必须暴露 `data-selected-object-region`，至少标记主列表与详情 / 证据 / 处置区域中的一个可联动区域
+- 表格专家操作必须使用声明式 contract：`data-table-column-resize-ready`、`data-table-freeze-ready`、`data-row-context-menu-ready`
+- 可批量操作的区域必须暴露 `data-bulk-action-bar`；当前筛选摘要必须暴露 `data-active-filters-summary`
+
+### Expert Efficiency Contracts
+
+- 可调面板的 separator 使用 `role="separator"`，方向键默认按 40px 调整，`Shift + Arrow` 按 8px 微调，双击恢复默认值
+- 面板尺寸偏好按 route + CSS var 持久化：`ditto:prototype:layout:{pathname}:{varName}`，恢复时必须校验 min / max
+- Header command trigger 必须暴露 `data-command-scope`
+- 当页面存在当前选中对象时，必须暴露 `data-command-context-actions`，值为逗号分隔的上下文动作 id
+- 原型只声明 contract 与静态 affordance；真实 command palette、列持久化、冻结列与对象联动状态进入 React 实现
 
 ### Review Mode
 

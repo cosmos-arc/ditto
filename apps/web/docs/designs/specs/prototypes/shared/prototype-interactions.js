@@ -1320,7 +1320,7 @@
     init: function () {
       document.querySelectorAll('[data-resizable-panel-group]').forEach(function (group) {
         group.querySelectorAll('[data-resize-separator]').forEach(function (separator) {
-          ResizablePanels._sync(group, separator, ResizablePanels._currentValue(group, separator));
+          ResizablePanels._sync(group, separator, ResizablePanels._initialValue(group, separator));
           if (!separator.getAttribute('title')) {
             separator.setAttribute('title', '拖拽调整面板，双击恢复默认宽度');
           }
@@ -1335,7 +1335,7 @@
             ResizablePanels._onPointerDown(event, group, separator);
           });
           separator.addEventListener('dblclick', function () {
-            ResizablePanels._sync(group, separator, ResizablePanels._defaultValue(group, separator));
+            ResizablePanels._setValue(group, separator, ResizablePanels._defaultValue(group, separator));
           });
         });
       });
@@ -1352,7 +1352,7 @@
       var separatorDirection = event.key === positiveKey ? 1 : -1;
       var edge = separator.getAttribute('data-resize-edge') || 'end';
       var direction = edge === 'start' ? separatorDirection : -separatorDirection;
-      ResizablePanels._sync(group, separator, ResizablePanels._currentValue(group, separator) + (direction * step));
+      ResizablePanels._setValue(group, separator, ResizablePanels._currentValue(group, separator) + (direction * step));
     },
 
     _onPointerDown: function (event, group, separator) {
@@ -1375,7 +1375,7 @@
       var onMove = function (moveEvent) {
         var delta = isHorizontal ? (moveEvent.clientY || 0) - startY : (moveEvent.clientX || 0) - startX;
         var nextValue = edge === 'start' ? startValue + delta : startValue - delta;
-        ResizablePanels._sync(group, separator, nextValue);
+        ResizablePanels._setValue(group, separator, nextValue);
       };
 
       var onEnd = function () {
@@ -1392,10 +1392,21 @@
       window.addEventListener('pointercancel', onEnd);
     },
 
+    _setValue: function (group, separator, value) {
+      var nextValue = ResizablePanels._sync(group, separator, value);
+      ResizablePanels._persist(group, separator, nextValue);
+    },
+
     _sync: function (group, separator, value) {
       var nextValue = ResizablePanels._clamp(value, ResizablePanels._minValue(separator), ResizablePanels._maxValue(separator));
       group.style.setProperty(ResizablePanels._cssVar(group, separator), Math.round(nextValue) + 'px');
       separator.setAttribute('aria-valuenow', String(Math.round(nextValue)));
+      return nextValue;
+    },
+
+    _initialValue: function (group, separator) {
+      var storedValue = ResizablePanels._storedValue(group, separator);
+      return storedValue === null ? ResizablePanels._currentValue(group, separator) : storedValue;
     },
 
     _currentValue: function (group, separator) {
@@ -1429,6 +1440,35 @@
 
     _cssVar: function (group, separator) {
       return separator.getAttribute('data-resize-var') || group.getAttribute('data-resize-var') || '--prototype-detail-width';
+    },
+
+    _storageKey: function (group, separator) {
+      var varName = ResizablePanels._cssVar(group, separator);
+      return 'ditto:prototype:layout:' + window.location.pathname + ':' + varName;
+    },
+
+    _storedValue: function (group, separator) {
+      try {
+        var value = window.localStorage.getItem(ResizablePanels._storageKey(group, separator));
+        if (value === null) return null;
+
+        var parsed = ResizablePanels._number(value, null);
+        if (parsed === null) return null;
+
+        var min = ResizablePanels._minValue(separator);
+        var max = ResizablePanels._maxValue(separator);
+        return parsed >= min && parsed <= max ? parsed : null;
+      } catch (_) {
+        return null;
+      }
+    },
+
+    _persist: function (group, separator, value) {
+      try {
+        window.localStorage.setItem(ResizablePanels._storageKey(group, separator), String(Math.round(value)));
+      } catch (_) {
+        // Prototype storage can be unavailable under opaque origins or locked-down previews.
+      }
     },
 
     _number: function (value, fallback) {

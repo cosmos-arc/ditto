@@ -1852,6 +1852,7 @@
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
+        <div class="command-context-actions" data-command-context-actions="approve, reject, send-to-order, view-evidence" hidden></div>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
         </button>
@@ -1920,12 +1921,12 @@
     </div>
 
     <!-- ═══ Main Content — Tab Panels ═══ -->
-    <main class="signals-main" id="main-content" data-contract-slot="main" role="main" data-mouse-glow="true">
+    <main class="signals-main" id="main-content" data-contract-slot="main" data-selected-object-region role="main" data-mouse-glow="true">
 
       <!-- ══════════ Tab Panel: 待复核 (default) ══════════ -->
       <div class="tab-panel active-by-default" data-panel="tab-pending" role="tabpanel" aria-label="待复核信号" id="panel-pending" aria-labelledby="tab-control-pending" aria-hidden="false">
         <!-- Signals Header (filters) -->
-        <div class="signals-header">
+        <div class="signals-header" data-active-filters-summary>
           <div class="signals-filters">
             <div class="filter-group" role="group" aria-label="信号来源">
               <button class="filter-btn active" aria-pressed="true">全部</button>
@@ -1956,7 +1957,7 @@
 
         <!-- Signal Table -->
         <div class="signals-table-wrap" data-tab-panel="all" id="panel-all" role="tabpanel" aria-labelledby="tab-all" aria-hidden="false">
-          <table class="data-table" role="grid" aria-label="信号列表">
+          <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready role="grid" aria-label="信号列表">
             <thead>
               <tr>
                 <th scope="col" class="sig-col-time">时间</th>
@@ -2190,7 +2191,7 @@
         </div>
 
         <!-- Batch action bar -->
-        <div class="batch-bar">
+        <div class="batch-bar" data-bulk-action-bar>
           <span>已选 <span class="batch-bar-count">3</span> 条信号</span>
           <div class="batch-bar-actions">
             <label for="overlay-batch-confirm" class="batch-btn primary">批量确认</label>
@@ -2280,7 +2281,7 @@
           </div>
         </div>
         <div class="signals-table-wrap">
-          <table class="data-table" role="grid" aria-label="已确认信号列表">
+          <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready role="grid" aria-label="已确认信号列表">
             <thead>
               <tr>
                 <th scope="col" class="sig-col-time">确认时间</th>
@@ -2347,7 +2348,7 @@
           </div>
         </div>
         <div class="signals-table-wrap">
-          <table class="data-table" role="grid" aria-label="已忽略信号列表">
+          <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready role="grid" aria-label="已忽略信号列表">
             <thead>
               <tr>
                 <th scope="col" class="sig-col-time">忽略时间</th>
@@ -2400,7 +2401,7 @@
           </div>
         </div>
         <div class="signals-table-wrap">
-          <table class="data-table" role="grid" aria-label="已转订单信号列表">
+          <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready role="grid" aria-label="已转订单信号列表">
             <thead>
               <tr>
                 <th scope="col" class="sig-col-time">下单时间</th>
@@ -2455,7 +2456,7 @@
     </main>
 
     <!-- ═══ Detail Panel (380px) ═══ -->
-    <aside class="detail-panel" data-contract-slot="detail" role="complementary" aria-label="信号详情" data-mouse-glow="true" data-mouse-glow-size="150px">
+    <aside class="detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-mouse-glow="true" data-mouse-glow-size="150px">
       <div class="detail-header">
         <div>
           <div class="detail-header-title">贵州茅台</div>

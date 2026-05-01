@@ -260,6 +260,7 @@
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
+        <div class="command-context-actions" data-command-context-actions="add-to-compare, view-curve, copy-params, generate-report" hidden></div>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
         </button>
@@ -312,7 +313,7 @@
           <button class="filter-chip">全部</button>
         </div>
         <div class="filter-spacer"></div>
-        <span class="filter-count">共 <span>10 次回测</span></span>
+        <span class="filter-count" data-active-filters-summary>共 <span>10 次回测</span></span>
       </div>
 
       <!-- ═══ Backtest Summary ═══ -->
@@ -340,10 +341,10 @@
       </div>
 
       <!-- ═══ Main Table Area ═══ -->
-      <div class="catalog-table" data-contract-slot="main">
+      <div class="catalog-table" data-contract-slot="main" data-selected-object-region>
         <div class="catalog-table-inner" id="main-content">
           <div class="table-container">
-            <table class="data-table" aria-label="回测列表">
+            <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready aria-label="回测列表">
               <caption class="sr-only">回测列表：共 10 次回测</caption>
               <colgroup>
                 <col class="col-backtest-name">
@@ -532,6 +533,7 @@
                 </tr>
               </tbody>
             </table>
+            <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
           </div>
           <div class="table-footer">
             <div class="table-footer-info">
@@ -548,7 +550,7 @@
       <!-- ═══ Detail Panel ═══ -->
       <div class="resize-separator" data-resize-separator data-resize-var="--prototype-detail-width" data-resize-default="320" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整详情面板宽度" aria-orientation="vertical" aria-controls="main-content catalog-detail-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="320"></div>
 
-      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-detail-sticky-summary>
+      <aside class="catalog-detail" id="catalog-detail-panel" data-contract-slot="detail" data-selected-object-region data-detail-sticky-summary>
         <div class="context-section" data-collapse-priority="l1">
           <div class="context-section-header">
             <span class="context-section-title">对比预览</span>

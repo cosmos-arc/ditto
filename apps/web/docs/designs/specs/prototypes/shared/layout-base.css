@@ -2331,6 +2331,26 @@ details.context-section:not([open]) > .context-section-body {
   white-space: nowrap;
 }
 
+[data-active-filters-summary] {
+  scroll-margin-inline: var(--space-12);
+}
+
+.bulk-action-bar[data-bulk-action-bar] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--density-action-height);
+  padding: var(--space-6) var(--density-gutter);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-panel-base);
+  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+}
+
+.bulk-action-bar[data-bulk-action-bar][hidden] {
+  display: none;
+}
+
 /* ── Data Table ── */
 .table-container {
   grid-area: table;
@@ -2368,6 +2388,32 @@ details.context-section:not([open]) > .context-section-body {
 
 .data-table th:hover {
   color: var(--text-secondary);
+}
+
+.data-table[data-table-column-resize-ready] th {
+  position: relative;
+}
+
+.data-table[data-table-column-resize-ready] th::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  right: 0;
+  width: 1px;
+  height: 50%;
+  background: color-mix(in oklch, var(--border-default) 56%, transparent);
+  opacity: 0;
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.data-table[data-table-column-resize-ready] th:hover::after,
+.data-table[data-table-column-resize-ready] th:focus-within::after {
+  opacity: 1;
+}
+
+.data-table[data-table-freeze-ready] th:first-child,
+.data-table[data-table-freeze-ready] td:first-child {
+  box-shadow: inset -1px 0 0 color-mix(in oklch, var(--border-subtle) 72%, transparent);
 }
 
 .data-table th.sorted {
