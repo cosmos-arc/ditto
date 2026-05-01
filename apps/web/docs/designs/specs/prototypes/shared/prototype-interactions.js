@@ -130,6 +130,48 @@
   };
 
   /* ══════════════════════════════════════════════
+   * 1a. Radio-backed tab labels
+   *     Keeps CSS-radio tab prototypes aligned with ARIA state.
+   * ══════════════════════════════════════════════ */
+  var RadioTabLabels = {
+    init: function () {
+      document.querySelectorAll('[role="tablist"]').forEach(function (tablist) {
+        RadioTabLabels._syncTablist(tablist);
+      });
+
+      document.addEventListener('change', function (event) {
+        if (!event.target || event.target.nodeType !== 1) return;
+        var input = event.target;
+        if (!input.matches('input[type="radio"]')) return;
+
+        document.querySelectorAll('[role="tab"][for="' + input.id + '"]').forEach(function (tab) {
+          var tablist = tab.closest('[role="tablist"]');
+          if (tablist) RadioTabLabels._syncTablist(tablist);
+        });
+      });
+    },
+
+    _syncTablist: function (tablist) {
+      var tabs = Array.from(tablist.querySelectorAll('[role="tab"][for]'));
+      if (!tabs.length) return;
+
+      tabs.forEach(function (tab) {
+        var input = document.getElementById(tab.getAttribute('for'));
+        if (!input || input.type !== 'radio') return;
+
+        var selected = input.checked;
+        tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+        tab.setAttribute('tabindex', selected ? '0' : '-1');
+        tab.classList.toggle('active', selected);
+
+        var panelId = tab.getAttribute('aria-controls');
+        var panel = panelId ? document.getElementById(panelId) : null;
+        if (panel) panel.setAttribute('aria-hidden', selected ? 'false' : 'true');
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
    * 1b. Filter Chips
    *     Container: .filter-group
    *     Buttons:   .filter-chip
@@ -197,7 +239,49 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 1d. ScreenerWorkflow
+   * 1d. Primary Answer Drilldowns
+   *     Elements: [data-answer-action][aria-controls]
+   * ══════════════════════════════════════════════ */
+  var PrimaryAnswerDrilldowns = {
+    init: function () {
+      document.addEventListener('click', function (event) {
+        if (!event.target || event.target.nodeType !== 1) return;
+
+        var action = event.target.closest('[data-answer-action][aria-controls]');
+        if (!action) return;
+
+        PrimaryAnswerDrilldowns._activate(action);
+      });
+    },
+
+    _activate: function (action) {
+      var controls = (action.getAttribute('aria-controls') || '').trim().split(/\s+/).filter(Boolean);
+      if (!controls.length) return;
+
+      var target = controls
+        .map(function (id) { return document.getElementById(id); })
+        .find(function (element) { return element && PrimaryAnswerDrilldowns._isVisible(element); });
+
+      if (!target) return;
+
+      target.setAttribute('data-primary-answer-drilldown', 'active');
+      if (!target.hasAttribute('tabindex')) {
+        target.setAttribute('tabindex', '-1');
+        target.setAttribute('data-primary-answer-temp-tabindex', 'true');
+      }
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    },
+
+    _isVisible: function (element) {
+      if (element.getAttribute('aria-hidden') === 'true') return false;
+      var style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 1e. ScreenerWorkflow
    *     Root: [data-screener-workflow]
    *     Adds visible draft/apply/sort/compare state for screener prototypes
    * ══════════════════════════════════════════════ */
@@ -1384,7 +1468,9 @@
   /* ── Auto-initialize ── */
   function init() {
     Tabs.init();
+    RadioTabLabels.init();
     InteractiveRoleButtons.init();
+    PrimaryAnswerDrilldowns.init();
     FilterChips.init();
     ScreenerWorkflow.init();
     Sparkline.init();
