@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 const prototypesDir = "docs/designs/specs/prototypes";
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const verifier = ".claude/skills/ditto-design-cycle/scripts/verify-gates.mjs";
-const gateViewports = [
+export const gateViewports = [
 	{ name: "VP-STANDARD", width: 1536, height: 1080 },
 	{ name: "VP-COMPACT", width: 1366, height: 768 },
 	{ name: "VP-NARROW", width: 1200, height: 800 },
@@ -54,32 +54,87 @@ function runVerifier(args: string[]): number {
 	return result.status ?? 1;
 }
 
-function viewportArgs(): string[] {
+export function defaultViewportArgs(): string[] {
 	return gateViewports.flatMap((viewport) => [
 		"--viewport",
 		`${viewport.name}=${viewport.width}x${viewport.height}`,
 	]);
 }
 
-const passthroughArgs = process.argv.slice(2);
-
-if (passthroughArgs.includes("--prototype") || passthroughArgs.includes("--help")) {
-	process.exit(runVerifier(passthroughArgs));
+function hasExplicitViewport(args: readonly string[]): boolean {
+	return args.some((arg) => arg === "--viewport" || arg.startsWith("--viewport="));
 }
 
-const failures: string[] = [];
-
-for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
-	const prototypePath = join(prototypesDir, page.file);
-	const outDir = join("test-results/ditto-design-cycle-gates", page.id);
-	console.log(`\n=== prototype:gates ${page.id} ===`);
-	const status = runVerifier(["--prototype", prototypePath, ...viewportArgs(), "--out-dir", outDir]);
-	if (status !== 0) failures.push(page.id);
+function hasPrototypeArg(args: readonly string[]): boolean {
+	return args.some((arg) => arg === "--prototype" || arg.startsWith("--prototype="));
 }
 
-if (failures.length > 0) {
-	console.error(`\nprototype:gates failed for: ${failures.join(", ")}`);
-	process.exit(1);
+function normalizeGateArgs(args: readonly string[]): string[] {
+	return args.flatMap((arg) => {
+		for (const option of ["--prototype", "--viewport", "--out-dir"] as const) {
+			const prefix = `${option}=`;
+			if (arg.startsWith(prefix)) return [option, arg.slice(prefix.length)];
+		}
+
+		return [arg];
+	});
 }
 
-console.log("\nprototype:gates passed for every active route prototype.");
+export function buildPassthroughGateArgs(args: readonly string[]): string[] {
+	const normalizedArgs = normalizeGateArgs(args);
+	if (!hasPrototypeArg(args) || hasExplicitViewport(args)) return normalizedArgs;
+
+	return [...normalizedArgs, ...defaultViewportArgs()];
+}
+
+export function buildDefaultPrototypeGateArgs(prototypePath: string, outDir: string): string[] {
+	return ["--prototype", prototypePath, ...defaultViewportArgs(), "--out-dir", outDir];
+}
+
+function printWrapperHelp(): void {
+	console.log(`Usage:
+  bun run prototype:gates
+  bun run prototype:gates -- --prototype <path> [--viewport NAME=WIDTHxHEIGHT]
+  bun run prototype:gates -- --prototype=<path> [--viewport=NAME=WIDTHxHEIGHT]
+
+Wrapper default viewports:
+  VP-STANDARD=1536x1080
+  VP-COMPACT=1366x768
+  VP-NARROW=1200x800
+
+When --prototype is provided without --viewport, the wrapper injects the same default viewports.
+When any --viewport is provided, the wrapper preserves the explicit viewport list.`);
+}
+
+function main(args: string[]): number {
+	if (args.includes("--help") || args.includes("-h")) {
+		printWrapperHelp();
+		return 0;
+	}
+
+	if (hasPrototypeArg(args)) {
+		return runVerifier(buildPassthroughGateArgs(args));
+	}
+
+	const failures: string[] = [];
+
+	for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
+		const prototypePath = join(prototypesDir, page.file);
+		const outDir = join("test-results/ditto-design-cycle-gates", page.id);
+		console.log(`\n=== prototype:gates ${page.id} ===`);
+		const status = runVerifier(buildDefaultPrototypeGateArgs(prototypePath, outDir));
+		if (status !== 0) failures.push(page.id);
+	}
+
+	if (failures.length > 0) {
+		console.error(`\nprototype:gates failed for: ${failures.join(", ")}`);
+		return 1;
+	}
+
+	console.log("\nprototype:gates passed for every active route prototype.");
+	return 0;
+}
+
+if (import.meta.main) {
+	process.exit(main(process.argv.slice(2)));
+}

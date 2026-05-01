@@ -2,6 +2,11 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
+import {
+	buildDefaultPrototypeGateArgs,
+	buildPassthroughGateArgs,
+	defaultViewportArgs,
+} from "./run-prototype-gates";
 
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
@@ -11,7 +16,6 @@ const prototypeLayoutCss = join(prototypesDir, "shared/layout-base.css");
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
-const prototypeGatesScript = join(root, "scripts/run-prototype-gates.ts");
 const tokenStabilizationSpec = join(
 	root,
 	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
@@ -42,6 +46,21 @@ type PageContract = {
 type CssSource = {
 	label: string;
 	css: string;
+};
+
+type CssBlock = {
+	body: string;
+	start: number;
+	end: number;
+};
+
+type CssRule = {
+	selector: string;
+	selectors: string[];
+	body: string;
+	start: number;
+	end: number;
+	mediaMaxWidth?: number;
 };
 
 function readJson<T>(path: string): T {
@@ -116,6 +135,85 @@ function stripCssComments(css: string): string {
 			.split("")
 			.map((char) => (char === "\n" ? "\n" : " "))
 			.join(""),
+	);
+}
+
+function getBalancedCssBlock(css: string, openBraceIndex: number): CssBlock | undefined {
+	let depth = 0;
+	for (let index = openBraceIndex; index < css.length; index += 1) {
+		const char = css[index];
+		if (char === "{") depth += 1;
+		if (char === "}") depth -= 1;
+		if (depth === 0) {
+			return {
+				body: css.slice(openBraceIndex + 1, index),
+				start: openBraceIndex + 1,
+				end: index,
+			};
+		}
+	}
+
+	return undefined;
+}
+
+function getMediaBlock(css: string, maxWidthPx: number): string | undefined {
+	const mediaMatch = new RegExp(`@media\\s*\\(\\s*max-width\\s*:\\s*${maxWidthPx}px\\s*\\)\\s*\\{`, "i")
+		.exec(css);
+	if (mediaMatch?.index === undefined) return undefined;
+
+	const openBraceIndex = css.indexOf("{", mediaMatch.index);
+	return getBalancedCssBlock(css, openBraceIndex)?.body;
+}
+
+function readTopLevelCssRules(css: string, offset = 0, mediaMaxWidth?: number): CssRule[] {
+	const rules: CssRule[] = [];
+	let index = 0;
+
+	while (index < css.length) {
+		const openBraceIndex = css.indexOf("{", index);
+		if (openBraceIndex === -1) break;
+
+		const selector = css.slice(index, openBraceIndex).trim();
+		const block = getBalancedCssBlock(css, openBraceIndex);
+		if (!block) break;
+
+		if (selector.startsWith("@media")) {
+			const maxWidthMatch = /\(\s*max-width\s*:\s*(\d+)px\s*\)/i.exec(selector);
+			if (maxWidthMatch) {
+				rules.push(
+					...readTopLevelCssRules(
+						block.body,
+						offset + block.start,
+						Number.parseInt(maxWidthMatch[1], 10),
+					),
+				);
+			}
+		} else if (!selector.startsWith("@")) {
+			rules.push({
+				selector,
+				selectors: selector.split(",").map((item) => item.trim()),
+				body: block.body,
+				start: offset + index,
+				end: offset + block.end,
+				mediaMaxWidth,
+			});
+		}
+
+		index = block.end + 1;
+	}
+
+	return rules;
+}
+
+function getSelectorRuleBody(css: string, selector: string): string | undefined {
+	return readTopLevelCssRules(css).find((rule) => rule.selectors.includes(selector))?.body;
+}
+
+function hasDeclaration(body: string | undefined, property: string, valuePattern: RegExp): boolean {
+	if (!body) return false;
+
+	return [...body.matchAll(new RegExp(`${property}\\s*:\\s*([^;]+)`, "gi"))].some((match) =>
+		valuePattern.test(match[1].trim()),
 	);
 }
 
@@ -938,6 +1036,9 @@ describe("prototype design consistency", () => {
 		const layoutCss = stripCssComments(readFileSync(prototypeLayoutCss, "utf8"));
 		const violations: string[] = [];
 		const lockedShellSelectors = [".shell", ".shell-v2", ".shell-catalog", ".shell-agent"];
+		const media1200 = getMediaBlock(layoutCss, 1200);
+		const media1024 = getMediaBlock(layoutCss, 1024);
+		const media768 = getMediaBlock(layoutCss, 768);
 
 		for (const selector of lockedShellSelectors) {
 			const shellRule = new RegExp(`(?:^|\\n)${selector.replace(".", "\\.")}\\s*\\{([^{}]*)\\}`, "m")
@@ -947,26 +1048,108 @@ describe("prototype design consistency", () => {
 			}
 		}
 
-		if (!/@media\s*\(\s*max-width\s*:\s*1200px\s*\)[\s\S]*\.shell-catalog[\s\S]*--prototype-detail-width\s*:\s*min\(300px,\s*28vw\)/.test(layoutCss)) {
+		if (!hasDeclaration(getSelectorRuleBody(media1200 ?? "", ".shell-catalog"), "--prototype-detail-width", /^min\(300px,\s*28vw\)$/)) {
 			violations.push("layout-base.css:breakpoint-1200-catalog-detail");
 		}
-		if (!/@media\s*\(\s*max-width\s*:\s*1024px\s*\)[\s\S]*\.shell-header\s+\[data-header-utility-bar\][\s\S]*max-width\s*:\s*44vw/.test(layoutCss)) {
+		if (!hasDeclaration(getSelectorRuleBody(media1024 ?? "", ".shell-header [data-header-utility-bar]"), "max-width", /^44vw$/)) {
 			violations.push("layout-base.css:breakpoint-1024-header-utilities");
 		}
-		if (!/@media\s*\(\s*max-width\s*:\s*768px\s*\)[\s\S]*\.shell-catalog,[\s\S]*\.shell-studio,[\s\S]*\.shell-agent,[\s\S]*\.shell-radar[\s\S]*overflow-x\s*:\s*auto/.test(layoutCss)) {
-			violations.push("layout-base.css:breakpoint-768-shell-overflow");
+		for (const selector of [".shell-catalog", ".shell-studio", ".shell-agent", ".shell-radar"]) {
+			if (!hasDeclaration(getSelectorRuleBody(media768 ?? "", selector), "overflow-x", /^auto$/)) {
+				violations.push(`layout-base.css:breakpoint-768-shell-overflow:${selector}`);
+			}
 		}
 
 		expect(violations).toEqual([]);
 	});
 
-	it("runs prototype gates across professional desktop viewports", () => {
-		const script = readFileSync(prototypeGatesScript, "utf8");
+	it("builds prototype gates across professional desktop viewports", () => {
+		const defaultViewports = defaultViewportArgs();
+		const fullLoopArgs = buildDefaultPrototypeGateArgs("docs/designs/specs/prototypes/page-home.html", "test-results/home");
+		const passthroughArgs = buildPassthroughGateArgs(["--prototype", "docs/designs/specs/prototypes/page-home.html"]);
+		const equalsPrototypeArgs = buildPassthroughGateArgs(["--prototype=docs/designs/specs/prototypes/page-home.html"]);
+		const explicitViewportArgs = buildPassthroughGateArgs([
+			"--prototype",
+			"docs/designs/specs/prototypes/page-home.html",
+			"--viewport",
+			"VP-CUSTOM=1440x900",
+		]);
+		const equalsViewportArgs = buildPassthroughGateArgs([
+			"--prototype=docs/designs/specs/prototypes/page-home.html",
+			"--viewport=VP-CUSTOM=1440x900",
+		]);
 
-		expect(script).toContain('name: "VP-STANDARD", width: 1536, height: 1080');
-		expect(script).toContain('name: "VP-COMPACT", width: 1366, height: 768');
-		expect(script).toContain('name: "VP-NARROW", width: 1200, height: 800');
-		expect(script).not.toMatch(/VP-(?:MOBILE|PHONE)|\b(?:360|375|390|414)x(?:640|667|736|812|844|896)\b/i);
+		expect(defaultViewports).toEqual([
+			"--viewport",
+			"VP-STANDARD=1536x1080",
+			"--viewport",
+			"VP-COMPACT=1366x768",
+			"--viewport",
+			"VP-NARROW=1200x800",
+		]);
+		expect(fullLoopArgs).toEqual([
+			"--prototype",
+			"docs/designs/specs/prototypes/page-home.html",
+			...defaultViewports,
+			"--out-dir",
+			"test-results/home",
+		]);
+		expect(passthroughArgs).toEqual([
+			"--prototype",
+			"docs/designs/specs/prototypes/page-home.html",
+			...defaultViewports,
+		]);
+		expect(equalsPrototypeArgs).toEqual([
+			"--prototype",
+			"docs/designs/specs/prototypes/page-home.html",
+			...defaultViewports,
+		]);
+		expect(explicitViewportArgs).toContain("VP-CUSTOM=1440x900");
+		expect(explicitViewportArgs).not.toContain("VP-STANDARD=1536x1080");
+		expect(explicitViewportArgs).not.toContain("VP-COMPACT=1366x768");
+		expect(explicitViewportArgs).not.toContain("VP-NARROW=1200x800");
+		expect(equalsViewportArgs).toEqual([
+			"--prototype",
+			"docs/designs/specs/prototypes/page-home.html",
+			"--viewport",
+			"VP-CUSTOM=1440x900",
+		]);
+	});
+
+	it("keeps page-local shell overflow from overriding 768px responsive overflow", () => {
+		const shellSelectorByPage = new Map([
+			["a-shares", ".shell-radar"],
+			["cross-market", ".shell-radar"],
+			["strategy-studio", ".shell-studio"],
+		]);
+		const violations: string[] = [];
+
+		for (const page of activePages().filter((item) => shellSelectorByPage.has(item.id))) {
+			const selector = shellSelectorByPage.get(page.id);
+			if (!selector) continue;
+
+			const css = stripCssComments(getStyleBlocks(readPrototypeHtml(page)));
+			const selectorRules = readTopLevelCssRules(css)
+				.filter((rule) => rule.selectors.includes(selector))
+				.filter((rule) => rule.mediaMaxWidth === undefined || rule.mediaMaxWidth === 768);
+			const baseRules = selectorRules.filter((rule) => rule.mediaMaxWidth === undefined);
+			const lastOverflowRule = selectorRules
+				.filter((rule) => /overflow(?:-x)?\s*:/.test(rule.body))
+				.at(-1);
+
+			if (!baseRules.some((rule) => hasDeclaration(rule.body, "overflow", /^hidden$/))) {
+				violations.push(`${page.id}:${selector}:base-overflow-hidden`);
+				continue;
+			}
+			if (
+				lastOverflowRule?.mediaMaxWidth !== 768 ||
+				!hasDeclaration(lastOverflowRule.body, "overflow-x", /^auto(?:\s*!important)?$/)
+			) {
+				violations.push(`${page.id}:${selector}:last-768-overflow-x-auto`);
+			}
+		}
+
+		expect(violations).toEqual([]);
 	});
 
 	it("keeps overlay component grammar in shared prototype CSS", () => {

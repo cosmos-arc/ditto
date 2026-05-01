@@ -929,7 +929,7 @@ body { height: 100%; overflow: hidden }
 - 页面级滚动（body scroll）— 会让导航和辅助面板消失
 - 所有面板平铺不折叠 — 信息密度过高时导致拥挤
 
-### 10.2 响应式降级策略
+### 10.1.1 响应式降级策略
 
 专业桌面优先的降级目标是**保留主任务面板与全局导航的空间记忆**，优先收窄、折叠或摘要化辅助面板；不在当前阶段定义手机形态。
 
@@ -943,7 +943,7 @@ body { height: 100%; overflow: hidden }
 | **Operations Console** | Detail Panel 先于主 Queue 折叠，队列、状态与高风险操作保持常驻 |
 | **Radar Workspace** | Right Rail 折叠为 event / risk summary，资金轮动与主要监控面板保持同屏 |
 
-### 10.3 面板内滚动 vs 折叠
+### 10.1.2 面板内滚动 vs 折叠
 
 单视窗锁定下，面板内容超出时采用**内部滚动**（`overflow-y: auto`）。
 但内部滚动不应是唯一手段。推荐三层策略：
@@ -954,7 +954,7 @@ body { height: 100%; overflow: hidden }
 | L2 核心上下文 | 默认展开，可折叠 | 信号、评分、备注 — 与当前任务相关的信息 |
 | L3 补充信息 | 默认折叠，可展开 | 筛选预设、关联研究、历史记录 — 低频信息 |
 
-### 10.4 折叠式 Section 规范
+### 10.1.3 折叠式 Section 规范
 
 **交互模式：** 点击 section header 折叠/展开 body 内容。
 
@@ -978,7 +978,7 @@ body { height: 100%; overflow: hidden }
 原型阶段使用 `<details open>` / `<details>`（无 `open`）实现，无需 JavaScript。
 生产阶段可升级为 checkbox + `:has()` 模式以支持上下文联动。
 
-### 10.5 面板空间预算
+### 10.1.4 面板空间预算
 
 1080px viewport 下的典型预算分配：
 
@@ -998,7 +998,7 @@ Viewport:          1080px
     Total visible: ~380-480px ← 无需滚动
 ```
 
-### 10.5 上下文感知联动（Hub 专属）
+### 10.1.5 上下文感知联动（Hub 专属）
 
 Object Hub 的 sidebar 跨所有 tab 共享。Section 的展开/折叠状态可随 tab 切换联动：
 
