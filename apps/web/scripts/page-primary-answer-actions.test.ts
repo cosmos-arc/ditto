@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const navigationTimeoutMs = 10_000;
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
+const primaryAriaControlsActionSelector = "[data-answer-action][aria-controls], .answer-action[aria-controls]";
 let browser: Browser;
 
 type ManifestPage = {
@@ -41,9 +42,9 @@ function pagesWithCustomAriaControlsPrimaryAction(): ManifestPage[] {
 		const html = readFileSync(resolve(prototypesDir, page.file), "utf8");
 		const document = new JSDOM(html).window.document;
 		const region = document.querySelector("[data-primary-answer], [data-primary-answer-equivalent]");
-		const action = region?.matches("[data-answer-action][aria-controls], .answer-action[aria-controls]")
+		const action = region?.matches(primaryAriaControlsActionSelector)
 			? region
-			: region?.querySelector("[data-answer-action][aria-controls], .answer-action[aria-controls]");
+			: region?.querySelector(primaryAriaControlsActionSelector);
 
 		return Boolean(action?.matches("[role='button'][aria-controls], [role='link'][aria-controls]"));
 	});
@@ -117,7 +118,7 @@ describe("prototype primary answer actions", () => {
 	);
 
 	it(
-		"activates every custom aria-controls primary answer drilldown",
+		"activates every intended custom aria-controls primary answer drilldown",
 		async () => {
 			const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 			const violations: string[] = [];
@@ -128,15 +129,23 @@ describe("prototype primary answer actions", () => {
 
 					const result = await page.evaluate(async () => {
 						const region = document.querySelector("[data-primary-answer], [data-primary-answer-equivalent]");
-						const action = region?.matches("[data-answer-action][aria-controls], .answer-action[aria-controls]")
+						const primaryActionSelector = "[data-answer-action][aria-controls], .answer-action[aria-controls]";
+						const action = region?.matches(primaryActionSelector)
 							? (region as HTMLElement)
-							: region?.querySelector<HTMLElement>("[data-answer-action][aria-controls], .answer-action[aria-controls]");
+							: region?.querySelector<HTMLElement>(primaryActionSelector);
 
 						if (!action) return { checked: true, reason: "no-custom-aria-controls-action" };
 
 						const controlledIds = (action.getAttribute("aria-controls") ?? "").trim().split(/\s+/).filter(Boolean);
+						const drilldownTargetId = action.getAttribute("data-drilldown-target")?.trim();
+
+						if (controlledIds.length > 1 && !drilldownTargetId) {
+							return { checked: false, reason: `missing-explicit-target:${controlledIds.join(",")}` };
+						}
+
+						const expectedTargetIds = drilldownTargetId ? [drilldownTargetId] : controlledIds;
 						const wasVisibleById = new Map(
-							controlledIds.map((id) => {
+							expectedTargetIds.map((id) => {
 								const target = document.getElementById(id);
 								if (!target) return [id, false] as const;
 								const style = getComputedStyle(target);
@@ -155,7 +164,7 @@ describe("prototype primary answer actions", () => {
 							requestAnimationFrame(() => requestAnimationFrame(() => resolveFrame()));
 						});
 
-						const activated = controlledIds.some((id) => {
+						const activated = expectedTargetIds.some((id) => {
 							const target = document.getElementById(id);
 							if (!target) return false;
 
@@ -174,7 +183,7 @@ describe("prototype primary answer actions", () => {
 
 						return {
 							checked: activated,
-							reason: activated ? "activated" : `inactive:${controlledIds.join(",")}`,
+							reason: activated ? "activated" : `inactive:${expectedTargetIds.join(",")}`,
 						};
 					});
 
@@ -189,5 +198,47 @@ describe("prototype primary answer actions", () => {
 			}
 		},
 		90_000,
+	);
+
+	it(
+		"supports contract-compatible answer action selectors and role links",
+		async () => {
+			const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+
+			try {
+				await page.setContent(`
+					<!doctype html>
+					<html lang="zh-CN">
+						<head>
+							<meta charset="utf-8">
+							<title>Primary action contract fixture</title>
+						</head>
+						<body>
+							<main>
+								<div class="answer-action" role="link" tabindex="0" aria-controls="answer-detail">打开明细</div>
+								<section id="answer-detail">明细</section>
+							</main>
+						</body>
+					</html>
+				`);
+				await page.addScriptTag({ path: resolve(prototypesDir, "shared/prototype-interactions.js") });
+				await page.focus(".answer-action");
+				await page.keyboard.press("Enter");
+
+				const state = await page.evaluate(() => {
+					const target = document.querySelector<HTMLElement>("#answer-detail");
+
+					return {
+						active: target?.getAttribute("data-primary-answer-drilldown"),
+						focused: target === document.activeElement,
+					};
+				});
+
+				expect(state).toEqual({ active: "active", focused: true });
+			} finally {
+				await page.close();
+			}
+		},
+		15_000,
 	);
 });

@@ -207,47 +207,48 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 1c. Interactive Role Buttons
-   *     Elements: [role="button"]
-   *     Native buttons already handle Enter/Space.
+   * 1c. Interactive Role Actions
+   *     Elements: [role="button"], [role="link"]
+   *     Native buttons and links already handle keyboard activation.
    * ══════════════════════════════════════════════ */
-  var InteractiveRoleButtons = {
+  var InteractiveRoleActions = {
     init: function () {
       document.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         if (!event.target || event.target.nodeType !== 1) return;
 
         var eventTarget = event.target;
-        var target = eventTarget.closest('[role="button"]');
+        var target = eventTarget.closest('[role="button"], [role="link"]');
         if (!target) return;
-        if (InteractiveRoleButtons._isNestedInteractiveControl(eventTarget, target)) return;
+        if (target.getAttribute('role') === 'link' && event.key !== 'Enter') return;
+        if (InteractiveRoleActions._isNestedInteractiveControl(eventTarget, target)) return;
 
         event.preventDefault();
         target.click();
       });
     },
 
-    _isNestedInteractiveControl: function (eventTarget, roleButton) {
-      if (eventTarget === roleButton) return false;
+    _isNestedInteractiveControl: function (eventTarget, roleAction) {
+      if (eventTarget === roleAction) return false;
 
       var interactive = eventTarget.closest(
         'button, input, select, textarea, a[href], area[href], label, summary, details, iframe, object, embed, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"], [role="checkbox"], [role="switch"], [role="radio"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="combobox"], [role="textbox"], [role="searchbox"], [role="slider"], [role="spinbutton"], [role="listbox"], [role="treeitem"], [data-tab-target]'
       );
 
-      return Boolean(interactive && interactive !== roleButton && roleButton.contains(interactive));
+      return Boolean(interactive && interactive !== roleAction && roleAction.contains(interactive));
     },
   };
 
   /* ══════════════════════════════════════════════
    * 1d. Primary Answer Drilldowns
-   *     Elements: [data-answer-action][aria-controls]
+   *     Elements: [data-answer-action][aria-controls], .answer-action[aria-controls]
    * ══════════════════════════════════════════════ */
   var PrimaryAnswerDrilldowns = {
     init: function () {
       document.addEventListener('click', function (event) {
         if (!event.target || event.target.nodeType !== 1) return;
 
-        var action = event.target.closest('[data-answer-action][aria-controls]');
+        var action = event.target.closest('[data-answer-action][aria-controls], .answer-action[aria-controls]');
         if (!action) return;
 
         PrimaryAnswerDrilldowns._activate(action);
@@ -258,7 +259,9 @@
       var controls = (action.getAttribute('aria-controls') || '').trim().split(/\s+/).filter(Boolean);
       if (!controls.length) return;
 
-      var target = controls
+      var drilldownTarget = (action.getAttribute('data-drilldown-target') || '').trim();
+      var targetIds = drilldownTarget ? [drilldownTarget] : controls;
+      var target = targetIds
         .map(function (id) { return document.getElementById(id); })
         .find(function (element) { return element && PrimaryAnswerDrilldowns._isVisible(element); });
 
@@ -1469,7 +1472,7 @@
   function init() {
     Tabs.init();
     RadioTabLabels.init();
-    InteractiveRoleButtons.init();
+    InteractiveRoleActions.init();
     PrimaryAnswerDrilldowns.init();
     FilterChips.init();
     ScreenerWorkflow.init();
