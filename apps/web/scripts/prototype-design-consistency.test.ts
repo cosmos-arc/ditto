@@ -396,27 +396,37 @@ function isHiddenFromPrimaryContract(element: Element | null): boolean {
 	return Boolean(element?.closest("[aria-hidden='true']"));
 }
 
+function getVisibleTextContent(element: Element): string {
+	const collectText = (node: Node): string[] => {
+		if (node.nodeType === 3) return [node.textContent ?? ""];
+		if (node.nodeType !== 1) return [];
+
+		const childElement = node as Element;
+		if (isHiddenFromPrimaryContract(childElement)) return [];
+
+		return [...childElement.childNodes].flatMap(collectText);
+	};
+
+	return collectText(element).join(" ").replace(/\s+/g, " ").trim();
+}
+
+function getReadablePrimaryText(element: Element | null): string {
+	if (!element || isHiddenFromPrimaryContract(element)) return "";
+
+	return (
+		getVisibleTextContent(element) ||
+		element.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
+		element.getAttribute("aria-label")?.replace(/\s+/g, " ").trim() ||
+		""
+	);
+}
+
 function hasReadableText(element: Element | null): boolean {
-	if (isHiddenFromPrimaryContract(element)) return false;
-
-	const readableValue =
-		element?.textContent?.replace(/\s+/g, " ").trim() ||
-		element?.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
-		element?.getAttribute("aria-label")?.replace(/\s+/g, " ").trim();
-
-	return Boolean(readableValue);
+	return Boolean(getReadablePrimaryText(element));
 }
 
 function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
-	if (isHiddenFromPrimaryContract(element)) return false;
-
-	const readableValue =
-		element.textContent?.replace(/\s+/g, " ").trim() ||
-		element.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
-		element.getAttribute("aria-label")?.replace(/\s+/g, " ").trim() ||
-		"";
-
-	return pattern.test(readableValue);
+	return pattern.test(getReadablePrimaryText(element));
 }
 
 function hasPrimaryAnswerJudgment(region: Element): boolean {
@@ -438,13 +448,14 @@ function hasPrimaryAnswerMetric(region: Element): boolean {
 }
 
 function hasPrimaryAnswerAction(region: Element): boolean {
-	const actionSelector =
-		"button, a[href], label[for], [role='button'][tabindex], [role='link'][tabindex]";
+	const markedActionSelector = "[data-answer-action], .answer-action";
+	const actionableSelector = "button, a[href], [role='button'][tabindex], [role='link'][tabindex]";
+	const markedActions = [
+		...(region.matches(markedActionSelector) ? [region] : []),
+		...region.querySelectorAll(markedActionSelector),
+	];
 
-	return (
-		region.matches(actionSelector) ||
-		region.querySelector(actionSelector) !== null
-	);
+	return markedActions.some((element) => element.matches(actionableSelector) && hasReadableText(element));
 }
 
 function getPrimaryAnswerEvidenceCount(region: Element): number {
@@ -455,7 +466,7 @@ function hasPrimaryAnswerScope(region: Element): boolean {
 	if (hasReadableText(region.querySelector("[data-answer-scope], .answer-scope"))) return true;
 
 	const ariaLabel = region.getAttribute("aria-label")?.trim();
-	if (ariaLabel && /\S/.test(ariaLabel)) return true;
+	if (ariaLabel && /(?:scope|范围|覆盖|影响)/i.test(ariaLabel)) return true;
 
 	return hasReadableTextMatch(region, /(?:scope|范围|覆盖|影响|全局|当前|账户|组合|市场|标的|策略|实验|服务)/i);
 }
@@ -646,6 +657,46 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
+	});
+
+	it("binds primary answer validation to visible text and marked actionable controls", () => {
+		const getRegion = (html: string): Element => {
+			const region = new JSDOM(html).window.document.querySelector("[data-primary-answer]");
+			expect(region).not.toBeNull();
+			if (!region) throw new Error("Primary answer fixture did not include a region");
+			return region;
+		};
+
+		const hiddenTextRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<span data-answer-judgment aria-hidden="true">隐藏判断</span>
+				<span data-answer-metric aria-hidden="true">99</span>
+				<span data-answer-evidence>可见证据</span>
+				<span data-answer-evidence aria-hidden="true">隐藏证据</span>
+				<button type="button" data-answer-action>查看</button>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerJudgment(hiddenTextRegion)).toBe(false);
+		expect(hasPrimaryAnswerMetric(hiddenTextRegion)).toBe(false);
+		expect(getPrimaryAnswerEvidenceCount(hiddenTextRegion)).toBe(1);
+
+		const unmarkedActionRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<button type="button">普通按钮</button>
+				<label for="overlay-detail" data-answer-action>打开详情</label>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(unmarkedActionRegion)).toBe(false);
+
+		const markedActionRegion = getRegion(`
+			<section data-primary-answer aria-label="影响范围：测试页面">
+				<label for="overlay-detail" role="button" tabindex="0" data-answer-action>打开详情</label>
+			</section>
+		`);
+
+		expect(hasPrimaryAnswerAction(markedActionRegion)).toBe(true);
 	});
 
 	it("keeps the Pro Max shared CSS and accessibility baseline machine-checkable", () => {

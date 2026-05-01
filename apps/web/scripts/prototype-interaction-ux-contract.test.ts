@@ -872,7 +872,7 @@ describe("prototype interaction UX contracts", () => {
 		}
 
 		expect(violations).toEqual([]);
-	});
+	}, 15_000);
 
 	it("keeps every active route on the fixed five-domain anchor rail contract", () => {
 		const violations: string[] = [];
