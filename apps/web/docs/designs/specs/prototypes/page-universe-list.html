@@ -668,14 +668,14 @@
     </header>
 
       <div class="universe-kpi-strip">
-        <div class="filter-toolbar" data-contract-slot="header">
+        <div class="filter-toolbar" data-contract-slot="header" data-primary-answer-equivalent aria-label="影响范围：当前股票池列表筛选结果">
           <div class="filter-group">
             <span class="filter-label">搜索:</span>
             <input type="text" class="filter-search" placeholder="搜索股票池名称 / 来源" data-table-toolbar="search" data-local-search="table" aria-label="搜索股票池名称 / 来源">
           </div>
           <div class="filter-divider"></div>
           <div class="filter-group">
-            <span class="filter-label">来源:</span>
+            <span class="filter-label" data-answer-judgment>来源:</span>
             <button class="filter-chip active">全部</button>
             <button class="filter-chip">指数成分</button>
             <button class="filter-chip">自定义</button>
@@ -684,7 +684,7 @@
           <div class="filter-divider"></div>
           <div class="filter-group">
             <span class="filter-label">创建时间:</span>
-            <button class="filter-chip active">近 90 日</button>
+            <button class="filter-chip active" data-answer-metric>近 90 日</button>
             <button class="filter-chip">全部</button>
           </div>
         </div>

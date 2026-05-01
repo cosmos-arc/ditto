@@ -98,6 +98,22 @@ Ditto 全站建议固定为 **7 类基础壳层**：
 
 这 7 类壳层已经足以覆盖当前 sitemap 里的绝大多数页面，并且能支撑后续扩展。
 
+### 3.1 Primary Answer 承载面
+
+所有 Shell 都必须暴露一个 Primary Answer 承载面，用于在 5 秒内回答当前页面的核心判断。Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主动作 + 明确影响范围。
+
+| Shell | Primary Answer 对应面 |
+|---|---|
+| Command Center | decision card / decision banner |
+| Analytical | main instrument readout 或 context strip |
+| Catalog | task-specific summary strip |
+| Object Hub | object status header |
+| Studio | current build / run status |
+| Operations Console | incident / service health priority |
+| Radar | market scope strip + selected map summary |
+
+实现时每页只能有一个 `data-primary-answer` 或 `data-primary-answer-equivalent`，已有成熟主区域优先补充语义属性，不新增重复卡片。
+
 ---
 
 ## 4. 七类 Shell 的定位

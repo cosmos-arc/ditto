@@ -1859,7 +1859,7 @@
     </header>
 
     <!-- ═══ Scope Strip (Tabs: pending / confirmed / ignored / ordered) ═══ -->
-    <div class="scope-strip tab-group" role="tablist" aria-label="信号状态" data-tab-group="signals">
+    <div class="scope-strip tab-group" role="tablist" aria-label="影响范围：信号收件箱复核状态" data-tab-group="signals" data-primary-answer-equivalent>
 
       <!-- Tab radios -->
       <input type="radio" name="signals" id="tab-pending" checked class="tab-radio sr-only">
@@ -1868,8 +1868,8 @@
       <input type="radio" name="signals" id="tab-ordered" class="tab-radio sr-only">
 
       <!-- Tab labels -->
-      <label for="tab-pending" class="scope-tab" role="tab" aria-selected="true" id="tab-control-pending" aria-controls="panel-pending">
-        待复核 <span class="tab-count">12</span>
+      <label for="tab-pending" class="scope-tab" role="tab" aria-selected="true" id="tab-control-pending" aria-controls="panel-pending" data-answer-judgment data-answer-action>
+        待复核 <span class="tab-count" data-answer-metric>12</span>
       </label>
       <label for="tab-confirmed" class="scope-tab" role="tab" aria-selected="false" id="tab-control-confirmed" aria-controls="panel-confirmed">
         已确认 <span class="tab-count">34</span>

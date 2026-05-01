@@ -392,6 +392,60 @@ function parseFontSizeMinimumPx(value: string): number | undefined {
 	return undefined;
 }
 
+function hasReadableText(element: Element | null): boolean {
+	const readableValue =
+		element?.textContent?.replace(/\s+/g, " ").trim() ||
+		element?.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
+		element?.getAttribute("aria-label")?.replace(/\s+/g, " ").trim();
+
+	return Boolean(readableValue);
+}
+
+function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
+	const readableValue =
+		element.textContent?.replace(/\s+/g, " ").trim() ||
+		element.getAttribute("value")?.replace(/\s+/g, " ").trim() ||
+		element.getAttribute("aria-label")?.replace(/\s+/g, " ").trim() ||
+		"";
+
+	return pattern.test(readableValue);
+}
+
+function hasPrimaryAnswerJudgment(region: Element): boolean {
+	return (
+		hasReadableText(region.querySelector("[data-answer-judgment], .answer-judgment")) ||
+		[...region.querySelectorAll("h1, h2, h3, h4, [role='heading'], .summary-label, .eyebrow")].some(
+			hasReadableText,
+		)
+	);
+}
+
+function hasPrimaryAnswerMetric(region: Element): boolean {
+	return (
+		hasReadableText(region.querySelector("[data-answer-metric], .answer-metric")) ||
+		[...region.querySelectorAll("[class*='metric'], [class*='kpi'], [class*='stat'], data, output")].some(
+			(element) => hasReadableTextMatch(element, /\d/),
+		)
+	);
+}
+
+function hasPrimaryAnswerAction(region: Element): boolean {
+	return Boolean(
+		region.querySelector(
+			"button, a[href], label[for], [data-answer-action], [role='button'][tabindex], [role='link'][tabindex]",
+		),
+	);
+}
+
+function hasPrimaryAnswerScope(region: Element): boolean {
+	if (hasReadableText(region.querySelector("[data-answer-scope], .answer-scope"))) return true;
+
+	const ariaLabel = region.getAttribute("aria-label")?.trim();
+	if (ariaLabel && /\S/.test(ariaLabel)) return true;
+
+	return hasReadableTextMatch(region, /(?:scope|范围|覆盖|影响|全局|当前|账户|组合|市场|标的|策略|实验|服务)/i);
+}
+
 describe("prototype design consistency", () => {
 	it("keeps exactly 27 active route prototypes", () => {
 		const activePages = readManifest().pages.filter(isActiveRoutePrototype);
@@ -538,6 +592,38 @@ describe("prototype design consistency", () => {
 			}
 			if (visibleStyleLabelCount > 0) {
 				violations.push(`${page.id}:visible-style-label:${visibleStyleLabelCount}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("exposes exactly one complete primary answer contract in every active prototype", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const primaryAnswerRegions = [
+				...document.querySelectorAll("[data-primary-answer], [data-primary-answer-equivalent]"),
+			];
+
+			if (primaryAnswerRegions.length !== 1) {
+				violations.push(`${page.id}:primary-answer-count:${primaryAnswerRegions.length}`);
+				continue;
+			}
+
+			const [region] = primaryAnswerRegions;
+			if (!hasPrimaryAnswerJudgment(region)) {
+				violations.push(`${page.id}:missing-judgment`);
+			}
+			if (!hasPrimaryAnswerMetric(region)) {
+				violations.push(`${page.id}:missing-metric`);
+			}
+			if (!hasPrimaryAnswerAction(region)) {
+				violations.push(`${page.id}:missing-action`);
+			}
+			if (!hasPrimaryAnswerScope(region)) {
+				violations.push(`${page.id}:missing-scope`);
 			}
 		}
 

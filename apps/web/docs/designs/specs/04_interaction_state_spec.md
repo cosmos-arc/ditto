@@ -27,6 +27,22 @@
 
 ---
 
+## 0. Primary Answer 合同
+
+每个可进入的一级工作页必须在 5 秒内给出一个可读的 Primary Answer，回答"我现在最该知道什么、影响哪里、下一步做什么"。
+
+Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主动作 + 明确影响范围。
+
+落地要求：
+
+- 每页只能有一个主答案区域，使用 `data-primary-answer` 或 `data-primary-answer-equivalent` 标记。
+- 主答案必须包含判断句或摘要 label、关键 metric、2-3 个证据点、主动作或 drill-down 入口、明确 scope。
+- 主答案不是 toast、装饰标题或普通说明文；它必须是页面当前业务状态的第一判断。
+- 页面存在 critical / warning / stale 状态时，主答案必须把影响范围说清楚，不允许只靠颜色表达。
+- 对已有成熟主区域，优先补充 `data-answer-judgment`、`data-answer-metric`、`data-answer-evidence`、`data-answer-action`、`data-answer-scope`，避免新增卡片墙。
+
+---
+
 ## 1. 统一状态层级
 
 Ditto 全站统一采用以下状态语义：

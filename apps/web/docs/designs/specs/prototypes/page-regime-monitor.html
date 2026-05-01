@@ -2165,15 +2165,15 @@
     </header>
 
     <!-- ═══ Regime Status Strip ═══ -->
-    <div class="scope-strip">
-      <div class="regime-strip-metric" data-tooltip="Regime Engine 实时判定当前市场处于风险偏好状态">
-        <span class="regime-strip-label">当前 Regime</span>
+    <div class="scope-strip" data-contract-slot="regime-strip" data-primary-answer-equivalent role="status" aria-label="影响范围：研究 Regime 判定与策略暴露">
+      <div class="regime-strip-metric" data-tooltip="Regime Engine 实时判定当前市场处于风险偏好状态" data-answer-action>
+        <span class="regime-strip-label" data-answer-judgment>当前 Regime</span>
         <span class="regime-strip-value up">温和 Risk-On</span>
       </div>
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric" data-tooltip="多因子加权置信度，>70% 为高置信">
         <span class="regime-strip-label">置信度</span>
-        <span class="regime-strip-value up" data-counter="72" data-counter-decimals="0" data-counter-suffix="%">0%</span>
+        <span class="regime-strip-value up" data-counter="72" data-counter-decimals="0" data-counter-suffix="%" data-answer-metric>0%</span>
       </div>
       <div class="regime-strip-separator"></div>
       <div class="regime-strip-metric" data-tooltip="中国版 VIX，反映市场恐慌程度，<20 为低波动">

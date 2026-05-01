@@ -2251,19 +2251,19 @@
 
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
-      <div class="panel" data-contract-slot="decision-banner">
+      <div class="panel" data-contract-slot="decision-banner" data-primary-answer-equivalent aria-label="影响范围：主策略账户交易会话">
         <div class="decision-banner" data-mouse-glow="true" data-mouse-glow-size="180px" aria-live="polite">
           <!-- Left: Primary status (~42%) -->
           <div class="decision-primary">
             <span class="metric-label">今日盈亏</span>
-            <span class="metric-value positive" data-tooltip="今日实现盈亏 + 浮动盈亏合计"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span></span>
+            <span class="metric-value positive" data-answer-metric data-tooltip="今日实现盈亏 + 浮动盈亏合计"><span data-ticker="86472.50" data-decimals="2" data-ticker-prefix="+¥" data-ticker-suffix="">86,472.50</span></span>
             <span class="metric-sub">+0.34% · 总权益 ¥25,432,180 · <span class="indicator-up" data-tooltip="较昨日权益变动 +¥21,400 (+0.08%)">较昨日 +¥21,400</span></span>
           </div>
           <!-- Middle: Context judgment (~33%) -->
           <div class="decision-judgment">
             <div class="decision-judgment-header">
               <span class="decision-regime-tag" data-tooltip="当前市场环境判定：震荡市，适合中性策略">震荡市</span>
-              <span class="decision-judgment-text">科技板块集中度超限 2.2%，贵州茅台出现卖出信号待复核。</span>
+              <span class="decision-judgment-text" data-answer-judgment>科技板块集中度超限 2.2%，贵州茅台出现卖出信号待复核。</span>
             </div>
             <div class="decision-judgment-metrics">
               <div class="decision-judgment-metric">
@@ -2280,7 +2280,7 @@
           <div class="decision-execution">
             <span class="decision-routing-label">下一步</span>
             <div class="decision-cta-row">
-              <button class="decision-cta primary">复核信号</button>
+              <button class="decision-cta primary" data-answer-action>复核信号</button>
               <button class="decision-cta secondary">查看持仓</button>
               <button class="decision-cta ghost">查看风控</button>
             </div>

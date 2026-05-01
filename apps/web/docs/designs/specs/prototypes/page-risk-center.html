@@ -1599,10 +1599,10 @@
     </div>
 
     <!-- ═══ Risk Strip — Key Metrics ═══ -->
-    <div class="scope-strip" data-contract-slot="risk-strip">
+    <div class="scope-strip" data-contract-slot="risk-strip" data-primary-answer-equivalent role="status" aria-label="影响范围：交易组合风险限额">
       <div class="risk-strip-metric">
-        <span class="risk-strip-label">VaR(95%)</span>
-        <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400">1.23%</span>
+        <span class="risk-strip-label" data-answer-judgment>VaR(95%)</span>
+        <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400" data-answer-metric>1.23%</span>
       </div>
       <div class="risk-strip-separator"></div>
       <div class="risk-strip-metric">
@@ -1625,7 +1625,7 @@
         <span class="risk-strip-value neutral" data-tooltip="净多空敞口，中性地带" data-tooltip-delay="400">45.1%</span>
       </div>
       <div class="risk-strip-separator"></div>
-      <div class="risk-strip-metric">
+      <div class="risk-strip-metric" data-answer-action>
         <span class="risk-strip-label">接近阈值</span>
         <span class="risk-strip-value warn" data-tooltip="回撤 69% + 集中度 80.2% 接近阈值" data-tooltip-delay="400">2</span>
       </div>

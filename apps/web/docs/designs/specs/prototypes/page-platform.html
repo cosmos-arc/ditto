@@ -2082,13 +2082,13 @@
     </header>
 
     <!-- ═══ Health Strip (36px) ═══ -->
-    <div class="ops-health" role="status" aria-label="系统健康指标" data-reveal="fade-up">
+    <div class="ops-health" data-primary-answer-equivalent role="status" aria-label="影响范围：平台服务健康与数据管道" data-reveal="fade-up">
       <div class="health-metric-group">
         <!-- Overall system health score -->
         <div class="health-score-summary" data-tooltip="系统综合健康评分" data-tooltip-pos="bottom">
           <div class="health-score-details">
-            <span class="health-score-details-label">系统健康</span>
-            <span class="health-score-readout"><span class="health-score-value" data-counter="97" data-counter-decimals="0">97</span><span class="health-score-unit">%</span><span class="health-score-scale">/100</span></span>
+            <span class="health-score-details-label" data-answer-judgment>系统健康</span>
+            <span class="health-score-readout" data-answer-metric><span class="health-score-value" data-counter="97" data-counter-decimals="0">97</span><span class="health-score-unit">%</span><span class="health-score-scale">/100</span></span>
           </div>
         </div>
       </div>
@@ -2112,7 +2112,7 @@
       <div class="health-metric-group">
         <div class="health-metric" data-tooltip="在线数据源 4/5，聚宽已断开" data-tooltip-pos="bottom">
           <span class="health-metric-dot degraded"></span>
-          <span class="health-metric-label">数据源</span>
+          <span class="health-metric-label" data-answer-action>数据源</span>
           <span class="health-metric-value warn">4/5</span><span class="health-trend warn">!</span> <svg data-sparkline='{"data":[5,5,5,4,5,4,5,4],"series":"down","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
         </div>
         <div class="health-metric" data-tooltip="运行中任务 2/4，1 个已失败" data-tooltip-pos="bottom">

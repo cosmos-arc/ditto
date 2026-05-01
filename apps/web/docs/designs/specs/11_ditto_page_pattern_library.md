@@ -91,6 +91,32 @@ Pattern 可以决定主动作语气，但不能改变全局 chrome 合同。
 | Save/publish strategy | Studio header or workspace toolbar |
 | Settings/config validation | Config workspace toolbar |
 
+### 原则 6：每页必须有一个 Primary Answer
+
+每个 active page pattern 都必须提供一个且只有一个 Primary Answer。它负责在 5 秒内给出页面核心判断，而不是把用户丢进卡片、表格或图表里自己拼答案。
+
+Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主动作 + 明确影响范围。
+
+页面模式对应关系：
+
+| Pattern | Primary Answer 承载面 |
+|---|---|
+| Global Command Center | decision card / decision banner |
+| Analytical Overview Workspace | main instrument readout 或 context strip |
+| Catalog / Screener Workspace | task-specific summary strip |
+| Object Hub | object status header |
+| Studio / Builder | current build / run status |
+| Queue / Ops Console | incident / service health priority |
+| Ledger / Execution Console | execution / reconciliation priority strip |
+| Config / Integration Console | validation / service health priority |
+
+落地属性：
+
+- 主区域标记 `data-primary-answer`；若沿用已有成熟主区域，标记 `data-primary-answer-equivalent`。
+- 子元素优先显式标记 `data-answer-judgment`、`data-answer-metric`、`data-answer-evidence`、`data-answer-action`、`data-answer-scope`。
+- Catalog、Ops、Studio 可以使用紧凑 summary strip；Object Hub 可以使用对象状态 header；Radar 可以使用 scope strip。
+- 不允许多个区域同时宣称 primary answer。若页面已有多个合理候选，必须收敛到一个代表区域。
+
 ---
 
 ## 4. Pattern 01 — Global Command Center

@@ -1922,7 +1922,7 @@
 
 
     <!-- ═══ Status Strip (Radio Tab System) ═══ -->
-    <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="订单状态筛选">
+    <div class="status-strip" data-reveal="fade-up" data-reveal-delay="0" aria-label="影响范围：订单执行队列" data-primary-answer-equivalent>
       <!-- Overlay checkbox inputs (placed here for :has() scope) -->
 
 
@@ -1952,10 +1952,10 @@
           部分成交
           <span class="tab-count">1</span>
         </label>
-        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true" id="tab-orders-done" aria-controls="panel-orders-done">
+        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true" id="tab-orders-done" aria-controls="panel-orders-done" data-answer-judgment>
           <span class="tab-dot done" aria-hidden="true"></span>
           已完成
-          <span class="tab-count">148</span>
+          <span class="tab-count" data-answer-metric>148</span>
         </label>
         <label for="orders-failed" class="status-tab label-tab" role="tab" id="tab-orders-failed" aria-selected="false" aria-controls="panel-orders-failed">
           <span class="tab-dot failed" aria-hidden="true"></span>
@@ -1965,7 +1965,7 @@
       </div>
       <div class="status-strip-spacer"></div>
       <div class="status-strip-actions">
-        <button class="strip-action primary" tabindex="0" role="button" aria-label="批量提交">提交</button>
+        <button class="strip-action primary" tabindex="0" role="button" aria-label="批量提交" data-answer-action>提交</button>
         <label for="overlay-batch-cancel" class="strip-action danger label-trigger" tabindex="0" role="button" aria-label="批量撤单">撤单</label>
         <label for="overlay-retry-submit" class="strip-action secondary label-trigger" tabindex="0" role="button" aria-label="批量重试">重试</label>
       </div>

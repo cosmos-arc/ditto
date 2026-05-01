@@ -1450,12 +1450,12 @@
       <!-- Primary: Decision Banner + Execution Queue -->
       <div class="main-primary">
         <!-- Decision Banner: Account status + Regime judgment + Execution summary -->
-        <div class="panel" data-contract-slot="decision-banner" data-primary-answer>
+        <div class="panel" data-contract-slot="decision-banner" data-primary-answer aria-label="影响范围：全局账户、市场和优先事项">
           <div class="decision-banner" data-mouse-glow="true" data-reveal="fade-up">
             <!-- Left: Account primary status (~42%) -->
             <div class="decision-primary">
               <span class="metric-label">今日盈亏</span>
-              <span class="metric-value positive" data-tooltip="今日实现盈亏 +¥86,472.50">+¥<span>86,472.50</span>
+	              <span class="metric-value positive" data-answer-metric data-tooltip="今日实现盈亏 +¥86,472.50">+¥<span>86,472.50</span>
                 <svg class="sparkline" width="64" height="20" viewBox="0 0 64 20" fill="none" aria-label="近 5 日盈亏趋势">
                   <polyline points="2,14 14,12 26,10 38,8 50,6 62,4" stroke="var(--market-strong-fg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
@@ -1465,7 +1465,7 @@
             <!-- Middle: Market context + judgment (~33%) -->
             <div class="decision-judgment">
               <label for="overlay-ai-advice" class="cursor-pointer" title="查看 AI 操作建议" data-tooltip="点击查看 AI 详细操作建议" data-tooltip-delay="500">
-              <div class="decision-judgment-text">波动回落，北向转暖，但局部拥挤。</div>
+	              <div class="decision-judgment-text" data-answer-judgment>波动回落，北向转暖，但局部拥挤。</div>
               </label>
               <div class="decision-kpi-row" data-reveal="fade-up" data-reveal-delay="100">
                 <div class="decision-judgment-metric">
@@ -1496,7 +1496,7 @@
             <div class="decision-execution">
               <span class="decision-routing-label">操作建议</span>
               <div class="decision-cta-row">
-                <label for="overlay-signal-detail" class="decision-cta primary">信号详情</label>
+	                <label for="overlay-signal-detail" class="decision-cta primary" data-answer-action>信号详情</label>
                 <button class="decision-cta secondary">研究进展</button>
                 <button class="decision-cta ghost">风控详情</button>
               </div>
