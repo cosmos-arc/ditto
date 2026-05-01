@@ -5,6 +5,11 @@ import { spawnSync } from "node:child_process";
 const prototypesDir = "docs/designs/specs/prototypes";
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const verifier = ".claude/skills/ditto-design-cycle/scripts/verify-gates.mjs";
+const gateViewports = [
+	{ name: "VP-STANDARD", width: 1536, height: 1080 },
+	{ name: "VP-COMPACT", width: 1366, height: 768 },
+	{ name: "VP-NARROW", width: 1200, height: 800 },
+] as const;
 
 type ManifestPage = {
 	id: string;
@@ -49,6 +54,13 @@ function runVerifier(args: string[]): number {
 	return result.status ?? 1;
 }
 
+function viewportArgs(): string[] {
+	return gateViewports.flatMap((viewport) => [
+		"--viewport",
+		`${viewport.name}=${viewport.width}x${viewport.height}`,
+	]);
+}
+
 const passthroughArgs = process.argv.slice(2);
 
 if (passthroughArgs.includes("--prototype") || passthroughArgs.includes("--help")) {
@@ -61,7 +73,7 @@ for (const page of readManifest().pages.filter(isActiveRoutePrototype)) {
 	const prototypePath = join(prototypesDir, page.file);
 	const outDir = join("test-results/ditto-design-cycle-gates", page.id);
 	console.log(`\n=== prototype:gates ${page.id} ===`);
-	const status = runVerifier(["--prototype", prototypePath, "--out-dir", outDir]);
+	const status = runVerifier(["--prototype", prototypePath, ...viewportArgs(), "--out-dir", outDir]);
 	if (status !== 0) failures.push(page.id);
 }
 

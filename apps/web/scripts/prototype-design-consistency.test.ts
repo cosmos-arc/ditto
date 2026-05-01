@@ -11,6 +11,7 @@ const prototypeLayoutCss = join(prototypesDir, "shared/layout-base.css");
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
+const prototypeGatesScript = join(root, "scripts/run-prototype-gates.ts");
 const tokenStabilizationSpec = join(
 	root,
 	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
@@ -931,6 +932,41 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
+	});
+
+	it("defines responsive viewport hardening rules in shared shell CSS", () => {
+		const layoutCss = stripCssComments(readFileSync(prototypeLayoutCss, "utf8"));
+		const violations: string[] = [];
+		const lockedShellSelectors = [".shell", ".shell-v2", ".shell-catalog", ".shell-agent"];
+
+		for (const selector of lockedShellSelectors) {
+			const shellRule = new RegExp(`(?:^|\\n)${selector.replace(".", "\\.")}\\s*\\{([^{}]*)\\}`, "m")
+				.exec(layoutCss)?.[1];
+			if (!shellRule || !/\b(?:height|min-height)\s*:\s*(?:calc\()?100dvh\b/.test(shellRule)) {
+				violations.push(`layout-base.css:${selector}:100dvh`);
+			}
+		}
+
+		if (!/@media\s*\(\s*max-width\s*:\s*1200px\s*\)[\s\S]*\.shell-catalog[\s\S]*--prototype-detail-width\s*:\s*min\(300px,\s*28vw\)/.test(layoutCss)) {
+			violations.push("layout-base.css:breakpoint-1200-catalog-detail");
+		}
+		if (!/@media\s*\(\s*max-width\s*:\s*1024px\s*\)[\s\S]*\.shell-header\s+\[data-header-utility-bar\][\s\S]*max-width\s*:\s*44vw/.test(layoutCss)) {
+			violations.push("layout-base.css:breakpoint-1024-header-utilities");
+		}
+		if (!/@media\s*\(\s*max-width\s*:\s*768px\s*\)[\s\S]*\.shell-catalog,[\s\S]*\.shell-studio,[\s\S]*\.shell-agent,[\s\S]*\.shell-radar[\s\S]*overflow-x\s*:\s*auto/.test(layoutCss)) {
+			violations.push("layout-base.css:breakpoint-768-shell-overflow");
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("runs prototype gates across professional desktop viewports", () => {
+		const script = readFileSync(prototypeGatesScript, "utf8");
+
+		expect(script).toContain('name: "VP-STANDARD", width: 1536, height: 1080');
+		expect(script).toContain('name: "VP-COMPACT", width: 1366, height: 768');
+		expect(script).toContain('name: "VP-NARROW", width: 1200, height: 800');
+		expect(script).not.toMatch(/VP-(?:MOBILE|PHONE)|\b(?:360|375|390|414)x(?:640|667|736|812|844|896)\b/i);
 	});
 
 	it("keeps overlay component grammar in shared prototype CSS", () => {

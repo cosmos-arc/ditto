@@ -3540,6 +3540,32 @@ details.context-section:not([open]) > .context-section-body {
   grid-area: separator;
 }
 
+/* ── Responsive Shell Degradation ── */
+@media (max-width: 1200px) {
+  .shell-catalog {
+    --prototype-detail-width: min(300px, 28vw);
+  }
+
+  .shell-catalog[data-resizable-panel-group="catalog-main-detail"] {
+    grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 1px minmax(220px, min(300px, 28vw));
+  }
+}
+
+@media (max-width: 1024px) {
+  .shell-header [data-header-utility-bar] {
+    max-width: 44vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .shell-catalog,
+  .shell-studio,
+  .shell-agent,
+  .shell-radar {
+    overflow-x: auto;
+  }
+}
+
 /* ── Prototype Resizable Panels ── */
 .resize-separator,
 [data-resize-separator] {
