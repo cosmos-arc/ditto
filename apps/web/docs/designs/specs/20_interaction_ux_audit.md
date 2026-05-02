@@ -7,6 +7,7 @@
 > **审核框架**: UI/UX Pro Max Priority 1-10 + 项目视觉验证规范
 > **关联 Spec**: 04_interaction_state_spec.md, 10_ditto_shell_family_spec.md, 11_ditto_page_pattern_library.md
 > **状态说明**: 评分为原始审计快照；2026-04-30 prototype remediation 进展见第六节。
+> **2026-05-02 补充**: 重要 market / risk / stale 状态必须具备非颜色文本标记；相关性正负号、风险告警标记、stale 文案已纳入 `prototype-design-consistency` 自动审计。
 
 ---
 
@@ -18,6 +19,12 @@
 | **图标语义** | 5.5/10 | 严重碰撞 + 语义弱映射，详见第二节 |
 | **折叠/展开** | 6.0/10 | 有基础设施但覆盖不足、默认策略未体系化，详见第三节 |
 | **可调尺寸** | 2.0/10 | 零基础设施，所有面板固定宽度，详见第四节 |
+
+### 1.1 2026-05-02 非颜色状态编码补充
+
+- Market 矩阵与热力图不能只靠色阶表达方向；正负相关、涨跌方向必须在可见文本或 marker 中出现。
+- Risk warning 不能只靠红 / 黄颜色；可见文案必须包含 `!`、`突破`、`接近` 或等价 severity 标记。
+- Stale / degraded 状态不能只靠弱化或圆点；文案必须明确说明 `过期`、`延迟`、`不是最新`、`最后更新` 等状态原因。
 
 ---
 

@@ -40,6 +40,8 @@ Primary Answer = 一句话判断 + 1 个关键数字 + 2-3 个证据 + 1 个主�
 - 主答案不是 toast、装饰标题或普通说明文；它必须是页面当前业务状态的第一判断。
 - 页面存在 critical / warning / stale 状态时，主答案必须把影响范围说清楚，不允许只靠颜色表达。
 - 对已有成熟主区域，优先补充 `data-answer-judgment`、`data-answer-metric`、`data-answer-evidence`、`data-answer-action`、`data-answer-scope`，避免新增卡片墙。
+- Queue / Ops / Agent / Studio 主答案必须暴露动作链：输入来源、当前输出、目标去向和审批状态；不能只显示进度百分比或总数。
+- 交易执行和配置类页面的主动作必须说清是重试、撤单、重新授权、查看 Diff 还是提交到下一结果页。
 
 ---
 
@@ -266,14 +268,16 @@ Selected 是 Ditto 最重要的交互状态之一。
 - 可调面板的 separator 使用 `role="separator"`，方向键默认按 40px 调整，`Shift + Arrow` 按 8px 微调，双击恢复默认值
 - 面板尺寸偏好按 route + CSS var 持久化：`ditto:prototype:layout:{pathname}:{varName}`，恢复时必须校验 min / max
 - Header command trigger 必须暴露 `data-command-scope`
-- 当页面存在当前选中对象时，必须暴露 `data-command-context-actions`，值为逗号分隔的上下文动作 id
+- 当页面存在当前选中对象时，必须在同一 contract 上暴露 `data-command-context-object` 与 `data-command-context-actions`，后者值为逗号分隔的上下文动作 id
+- 原型 command surface 打开时只展示可见建议项，建议项使用 `data-command-suggestion` / `data-command-action`，并保持键盘可达；完整执行逻辑进入 React backlog
 - 代表性上下文动作 id 必须保持稳定：
+  - Home: `review-signal`, `open-risk`, `open-orders`, `explain-priority`
   - Watchlist: `generate-signal`, `open-instrument-hub`, `send-to-research`, `remove-watch`
   - Strategy List: `run-backtest`, `clone-strategy`, `view-recent-runs`, `pause-strategy`
   - Backtest List: `add-to-compare`, `view-curve`, `copy-params`, `generate-report`
   - Signals Inbox: `approve`, `reject`, `send-to-order`, `view-evidence`
   - Platform: `retry`, `view-logs`, `mute-alert`, `create-incident`
-- 原型只声明 contract 与静态 affordance；真实 command palette、列持久化、冻结列与对象联动状态进入 React 实现
+- 原型只声明 contract 与静态 affordance；列持久化、冻结列与对象联动状态进入 React 实现
 
 ### Review Mode
 

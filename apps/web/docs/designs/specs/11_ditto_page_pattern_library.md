@@ -494,6 +494,19 @@ Edition v1 的 Catalog 家族必须进一步区分任务子型，避免所有列
 | Universe Coverage Catalog | `/research/universes` | 当前股票池覆盖是否足够，哪些对象需要纳入或排除 | 覆盖率、缺口、再平衡影响、成员变更、下游策略引用 | 覆盖率、缺口、成员变更、引用策略、再平衡影响 |
 | Factor Quality Catalog | `/research/factors` | 因子质量是否仍可用，哪些因子衰减或覆盖率不足 | IC/IR 诊断、衰减原因、覆盖率、关联策略、失效信号 | IC、IR、衰减、覆盖率、关联策略、最近失效信号 |
 | Watchlist Action Queue | `/markets/watchlist` | 哪个标的触发下一动作，买/卖/观望结构是否可信 | 信号结构、报价新鲜度、trigger reason、send-to workflow | 触发动作、信号结构、stale、下一步 |
+| Event Calendar Catalog | `/markets/calendar` | 未来窗口里哪个事件会改变交易/研究节奏 | 事件详情、提醒、AI 解读、关联标的 | 时间窗口、事件数、关键日、影响等级、处理入口 |
+| Screener Result Routing | `/markets/screener` | 当前筛选结果是否足够可执行，下一步去观察、研究还是交易 | 筛选条件、排序解释、候选去向、保存视图 | scope、命中数量、排名、过滤器、结果去向 |
+
+Catalog Primary Answer 公式：
+
+- `strategy-health`: 可运行 / 需处理 / 最佳健康策略 / 暂停原因 / 运行入口。
+- `backtest-comparison`: 可加入对比 / 失败项 / 当前基线 / 最佳 Sharpe / 加入对比入口。
+- `experiment-result-matrix`: 胜出参数 / 稳定性 / 显著性 / 失败原因 / 查看胜出入口。
+- `factor-validity`: IC / IR / 衰减 / 覆盖率 / 诊断衰减入口。
+- `universe-impact`: 股票池数量 / 标的数 / 策略引用 / 过期项 / 成分变更 / 引用影响入口。
+- `watchlist-next-action`: 触发动作 / 信号结构 / 新鲜度 / 下一步去向。
+- `event-calendar`: 事件窗口 / 关键日 / 影响等级 / 提醒或 AI 解读入口。
+- `screener-result-routing`: 筛选 scope / 命中数量 / 排名依据 / 过滤器 / 结果路由入口。
 
 ### 6.7 主区块说明
 

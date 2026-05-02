@@ -322,6 +322,12 @@
       font-variant-numeric: tabular-nums slashed-zero;
     }
 
+    .health-metric-action {
+      color: var(--system-degraded-fg);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+    }
+
     /* Brand accent touchpoint: task-running value */
     .health-metric-value.brand {
       color: var(--brand-accent);
@@ -1037,6 +1043,9 @@
      * R3: Row-down action hint
      * ══════════════════════════════════════════════ */
     .row-action {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
       font-size: var(--font-size-12);
       color: color-mix(in oklch, var(--brand-accent) 60%, transparent);
       cursor: pointer;
@@ -2059,7 +2068,7 @@
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
-        <div class="command-context-actions" data-command-context-actions="retry, view-logs, mute-alert, create-incident" hidden></div>
+        <div class="command-context-actions" data-command-context-object="data-source-joinquant" data-command-context-actions="retry, view-logs, mute-alert, create-incident" hidden></div>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
         </button>
@@ -2088,7 +2097,7 @@
         <!-- Overall system health score -->
         <div class="health-score-summary" data-tooltip="系统综合健康评分" data-tooltip-pos="bottom">
           <div class="health-score-details">
-            <span class="health-score-details-label" data-answer-judgment>系统健康</span>
+            <span class="health-score-details-label" data-answer-judgment>系统健康 97%，优先恢复聚宽数据源连接</span>
             <span class="health-score-readout" data-answer-metric><span class="health-score-value" data-counter="97" data-counter-decimals="0">97</span><span class="health-score-unit">%</span><span class="health-score-scale">/100</span></span>
           </div>
         </div>
@@ -2111,10 +2120,10 @@
         </div>
       </div>
       <div class="health-metric-group">
-        <div class="health-metric" data-tooltip="在线数据源 4/5，聚宽已断开" data-tooltip-pos="bottom" data-answer-evidence data-answer-action role="button" tabindex="0" aria-controls="panel-providers" aria-label="查看数据源连接">
+        <div class="health-metric" data-tooltip="在线数据源 4/5，聚宽已断开" data-tooltip-pos="bottom" data-answer-evidence data-answer-action role="button" tabindex="0" aria-controls="panel-providers" aria-label="重试聚宽连接并查看日志">
           <span class="health-metric-dot degraded"></span>
           <span class="health-metric-label">数据源</span>
-          <span class="health-metric-value warn">4/5</span><span class="health-trend warn">!</span> <svg data-sparkline='{"data":[5,5,5,4,5,4,5,4],"series":"down","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
+          <span class="health-metric-value warn">4/5</span><span class="health-trend warn">!</span><span class="health-metric-action">重试聚宽</span> <svg data-sparkline='{"data":[5,5,5,4,5,4,5,4],"series":"down","width":40,"height":14,"strokeWidth":1.2}' width="40" height="14"></svg>
         </div>
         <div class="health-metric" data-tooltip="运行中任务 2/4，1 个已失败" data-tooltip-pos="bottom">
           <span class="health-metric-dot brand"></span>

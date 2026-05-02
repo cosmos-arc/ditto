@@ -1317,7 +1317,221 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 13. BottomTray
+   * 13. SidebarToggle
+   *     Shared right sidebar expanded/collapsed state
+   * ══════════════════════════════════════════════ */
+  var SidebarToggle = {
+    states: ['expanded', 'collapsed'],
+
+    init: function () {
+      document.querySelectorAll('[data-sidebar-shell]').forEach(function (shell) {
+        var toggle = shell.querySelector('[data-sidebar-toggle]');
+        var sidebar = shell.querySelector('[data-sidebar]');
+        if (!toggle || !sidebar) return;
+
+        var state = SidebarToggle._state(shell);
+        SidebarToggle._sync(shell, sidebar, toggle, state);
+
+        if (toggle.getAttribute('data-sidebar-toggle-ready') === 'true') return;
+        toggle.setAttribute('data-sidebar-toggle-ready', 'true');
+        toggle.addEventListener('click', function () {
+          var next = SidebarToggle._state(shell) === 'expanded' ? 'collapsed' : 'expanded';
+          SidebarToggle._sync(shell, sidebar, toggle, next);
+        });
+      });
+    },
+
+    _state: function (shell) {
+      var state = shell.getAttribute('data-sidebar-state') || 'expanded';
+      return SidebarToggle.states.indexOf(state) >= 0 ? state : 'expanded';
+    },
+
+    _sync: function (shell, sidebar, toggle, state) {
+      var isExpanded = state === 'expanded';
+      var collapsedStrip = sidebar.querySelector('[data-sidebar-collapsed-strip]');
+
+      shell.setAttribute('data-sidebar-state', state);
+      toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      toggle.setAttribute('aria-label', isExpanded ? '折叠侧边栏' : '展开侧边栏');
+      toggle.setAttribute('title', isExpanded ? '折叠侧边栏' : '展开侧边栏');
+      toggle.textContent = isExpanded ? '»' : '«';
+
+      sidebar.querySelectorAll('.context-section').forEach(function (section) {
+        section.setAttribute('aria-hidden', isExpanded ? 'false' : 'true');
+      });
+
+      if (collapsedStrip) {
+        collapsedStrip.setAttribute('aria-hidden', isExpanded ? 'true' : 'false');
+      }
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 14. CommandPalette
+   *     Prototype-only selected object command suggestions
+   * ══════════════════════════════════════════════ */
+  var CommandPalette = {
+    labels: {
+      'add-to-compare': '加入对比',
+      approve: '批准',
+      'clone-strategy': '复制策略',
+      'copy-params': '复制参数',
+      'create-incident': '创建事件',
+      'explain-priority': '解释优先级',
+      'generate-report': '生成报告',
+      'generate-signal': '生成信号',
+      'mute-alert': '静音告警',
+      'open-instrument-hub': '打开标的 Hub',
+      'open-orders': '打开订单',
+      'open-risk': '打开风控',
+      'pause-strategy': '暂停策略',
+      reject: '拒绝',
+      'remove-watch': '移出观察',
+      retry: '重试',
+      'review-signal': '复核信号',
+      'run-backtest': '运行回测',
+      'send-to-order': '发送到订单',
+      'send-to-research': '发送到研究',
+      'view-curve': '查看曲线',
+      'view-evidence': '查看证据',
+      'view-logs': '查看日志',
+      'view-recent-runs': '查看近期运行',
+    },
+
+    init: function () {
+      var triggers = Array.from(document.querySelectorAll('[data-shell-utility="command"], .header-command-trigger'));
+      if (!triggers.length) return;
+
+      var palette = CommandPalette._ensurePalette();
+      CommandPalette._render(palette);
+
+      triggers.forEach(function (trigger) {
+        trigger.setAttribute('aria-haspopup', 'dialog');
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-controls', palette.id);
+
+        if (trigger.getAttribute('data-command-trigger-ready') === 'true') return;
+        trigger.setAttribute('data-command-trigger-ready', 'true');
+        trigger.addEventListener('click', function () {
+          CommandPalette._open(palette, trigger);
+        });
+      });
+
+      if (document.documentElement.getAttribute('data-command-palette-ready') === 'true') return;
+      document.documentElement.setAttribute('data-command-palette-ready', 'true');
+      document.addEventListener('keydown', function (event) {
+        var key = event.key ? event.key.toLowerCase() : '';
+        if ((event.ctrlKey || event.metaKey) && key === 'k') {
+          event.preventDefault();
+          CommandPalette._open(palette, triggers[0]);
+        } else if (key === 'escape' && !palette.hidden) {
+          CommandPalette._close(palette);
+        }
+      });
+    },
+
+    _ensurePalette: function () {
+      var existing = document.querySelector('[data-command-palette]');
+      if (existing) return existing;
+
+      var palette = document.createElement('section');
+      palette.id = 'prototype-command-palette';
+      palette.className = 'ditto-command-palette';
+      palette.setAttribute('data-command-palette', '');
+      palette.setAttribute('role', 'dialog');
+      palette.setAttribute('aria-label', '上下文命令');
+      palette.setAttribute('aria-hidden', 'true');
+      palette.hidden = true;
+
+      var title = document.createElement('div');
+      title.className = 'ditto-command-title';
+      title.textContent = '上下文命令';
+
+      var context = document.createElement('div');
+      context.className = 'ditto-command-context';
+      context.setAttribute('data-command-context-label', '');
+
+      var list = document.createElement('div');
+      list.className = 'ditto-command-list';
+      list.setAttribute('data-command-suggestion-list', '');
+
+      palette.appendChild(title);
+      palette.appendChild(context);
+      palette.appendChild(list);
+      document.body.appendChild(palette);
+
+      return palette;
+    },
+
+    _readContext: function () {
+      var context = document.querySelector('[data-command-context-object]') || document.querySelector('[data-command-context-actions]');
+      var actions = ((context && context.getAttribute('data-command-context-actions')) || '')
+        .split(',')
+        .map(function (action) { return action.trim(); })
+        .filter(Boolean);
+
+      return {
+        object: (context && context.getAttribute('data-command-context-object')) || 'global',
+        actions: actions,
+      };
+    },
+
+    _render: function (palette) {
+      var context = CommandPalette._readContext();
+      var contextLabel = palette.querySelector('[data-command-context-label]');
+      var list = palette.querySelector('[data-command-suggestion-list]');
+      if (!list || !contextLabel) return;
+
+      contextLabel.textContent = '对象: ' + context.object;
+      while (list.firstChild) {
+        list.removeChild(list.firstChild);
+      }
+
+      if (!context.actions.length) {
+        var empty = document.createElement('div');
+        empty.className = 'ditto-command-empty';
+        empty.textContent = '当前页面暂无对象上下文动作';
+        list.appendChild(empty);
+        return;
+      }
+
+      context.actions.forEach(function (action) {
+        var item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'ditto-command-item';
+        item.setAttribute('data-command-suggestion', '');
+        item.setAttribute('data-command-action', action);
+        item.setAttribute('data-command-context-object', context.object);
+        item.textContent = (CommandPalette.labels[action] || action) + ' · ' + action;
+        list.appendChild(item);
+      });
+    },
+
+    _open: function (palette, trigger) {
+      CommandPalette._render(palette);
+      palette.hidden = false;
+      palette.setAttribute('aria-hidden', 'false');
+      document.body.setAttribute('data-command-palette-open', 'true');
+      if (trigger) trigger.setAttribute('aria-expanded', 'true');
+
+      var firstItem = palette.querySelector('[data-command-suggestion]');
+      if (firstItem && firstItem.focus) {
+        firstItem.focus();
+      }
+    },
+
+    _close: function (palette) {
+      palette.hidden = true;
+      palette.setAttribute('aria-hidden', 'true');
+      document.body.removeAttribute('data-command-palette-open');
+      document.querySelectorAll('[data-shell-utility="command"], .header-command-trigger').forEach(function (trigger) {
+        trigger.setAttribute('aria-expanded', 'false');
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 15. BottomTray
    *     Shared collapsed → peek → expanded state contract
    * ══════════════════════════════════════════════ */
   var BottomTray = {
@@ -1393,7 +1607,7 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 14. ResizablePanels
+   * 16. ResizablePanels
    *     Prototype-only panel resize contract
    * ══════════════════════════════════════════════ */
   var ResizablePanels = {
@@ -1611,6 +1825,8 @@
     AnimatedCounter.init();
     TooltipSystem.init();
     CollapsibleContextSections.init();
+    SidebarToggle.init();
+    CommandPalette.init();
     BottomTray.init();
     ResizablePanels.init();
   }

@@ -15,16 +15,15 @@
 
   Note: my-workspace 已从默认视图移除（pending product spec），overlay 保留。
 
-  State Variants: 7 components × 3 states (empty/loading/error)
+  State Variants: 6 components × 3 states (empty/loading/error)
   - global-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
   - decision-card: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
   - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
   - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
-  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
-  - agent-findings: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented] (merged intelligence stream)
   - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
 
-  Coverage Score: 60% (21/35 states covered; stale/selected not yet implemented)
+  Coverage Score: 61% (18/30 states covered; stale/selected not yet implemented)
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="home">
 <head>
@@ -195,10 +194,10 @@
     /* ── Decision Card visual anchor — left brand border ── */
     .shell-home .decision-card {
       display: grid;
-      grid-template-columns: 5fr 4fr 3fr;
-      gap: var(--space-16);
-      align-items: center;
-      padding: var(--space-12) var(--space-16);
+      grid-template-columns: minmax(280px, 4fr) minmax(360px, 5fr) minmax(174px, 2fr);
+      gap: var(--space-12);
+      align-items: stretch;
+      padding: var(--space-10) var(--space-14);
       border-left: 2px solid color-mix(in oklch, var(--brand-signature-fg) 75%, transparent);
       box-shadow: inset 0 1px 0 0 color-mix(in oklch, var(--brand-signature-fg) 5%, transparent),
                   inset 0 -1px 0 0 color-mix(in oklch, var(--brand-signature-fg) 3%, transparent);
@@ -481,11 +480,11 @@
      * Global Pulse — L3 compact status strip
      * ══════════════════════════════════════════════ */
     .global-pulse {
-      display: flex;
-      align-items: center;
-      gap: var(--space-8);
-      min-height: 34px;
-      padding: var(--space-6) var(--space-10);
+      display: grid;
+      grid-template-columns: repeat(8, minmax(104px, 1fr));
+      align-items: stretch;
+      min-height: 56px;
+      padding: 0;
       background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
@@ -497,16 +496,20 @@
       display: none;
     }
     .global-pulse-item {
-      display: inline-flex;
-      align-items: baseline;
-      gap: var(--space-4);
-      padding-right: var(--space-8);
+      display: grid;
+      align-content: center;
+      gap: var(--space-1);
+      min-width: 104px;
+      padding: var(--space-6) var(--space-8);
       border-right: 1px solid var(--border-subtle);
       white-space: nowrap;
     }
     .global-pulse-item:last-child {
-      padding-right: 0;
       border-right: 0;
+    }
+    .global-pulse-item[data-operating-category="risk"],
+    .global-pulse-item[data-operating-category="data"] {
+      background: color-mix(in oklch, var(--risk-high-fg) 4%, transparent);
     }
     .global-pulse-label {
       color: var(--text-tertiary);
@@ -528,6 +531,7 @@
       font-size: var(--font-size-11);
     }
     .global-pulse-note.positive { color: var(--market-up-fg); }
+    .global-pulse-note.warning { color: var(--risk-medium-fg); }
 
     .decision-card-judgment {
       margin: 0;
@@ -565,6 +569,69 @@
       color: var(--text-secondary);
       font-size: var(--font-size-11);
       white-space: nowrap;
+    }
+    .decision-impact {
+      display: grid;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-6);
+    }
+    .impact-row {
+      display: grid;
+      gap: var(--space-3);
+      min-width: 0;
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 60%, transparent);
+    }
+    .impact-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .impact-values {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-4);
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .impact-after {
+      color: var(--text-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+    .impact-arrow {
+      color: var(--text-quaternary);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+    }
+    .impact-cost {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .decision-execution {
+      display: grid;
+      align-content: center;
+      gap: var(--space-6);
+      min-width: 0;
+    }
+    .decision-cta-row {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
     }
 
     /* ── Decision primary metric enhanced presence ── */
@@ -610,6 +677,9 @@
     .global-pulse-item:nth-child(3) { animation-delay: 80ms; }
     .global-pulse-item:nth-child(4) { animation-delay: 120ms; }
     .global-pulse-item:nth-child(5) { animation-delay: 160ms; }
+    .global-pulse-item:nth-child(6) { animation-delay: 200ms; }
+    .global-pulse-item:nth-child(7) { animation-delay: 240ms; }
+    .global-pulse-item:nth-child(8) { animation-delay: 280ms; }
     @keyframes card-reveal {
       from { opacity: 0; transform: translateY(3px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -867,6 +937,120 @@
     .queue-item:hover .queue-item-bar.p2 {
       box-shadow: 0 0 6px 1px color-mix(in oklch, var(--system-degraded-fg) 20%, transparent);
     }
+    .worklist-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+    .worklist-summary-item {
+      display: grid;
+      gap: var(--space-2);
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 56%, transparent);
+    }
+    .worklist-summary-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      white-space: nowrap;
+    }
+    .worklist-summary-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-13);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+    }
+    .worklist-table {
+      display: grid;
+      gap: 1px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      overflow: hidden;
+      background: var(--border-subtle);
+    }
+    .worklist-header,
+    .worklist-row {
+      display: grid;
+      grid-template-columns: 38px 56px minmax(128px, 1.1fr) minmax(220px, 2fr) 78px 76px;
+      align-items: center;
+      gap: var(--space-8);
+      min-width: 0;
+      padding: var(--space-5) var(--space-8);
+      background: color-mix(in oklch, var(--surface-panel-base) 94%, transparent);
+    }
+    .worklist-header {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .worklist-row {
+      min-height: 34px;
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .worklist-row:hover {
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .worklist-row.queue-item {
+      display: grid;
+      gap: var(--space-8);
+      padding: var(--space-5) var(--space-8);
+    }
+    .worklist-row.queue-item:hover {
+      margin: 0;
+      padding: var(--space-5) var(--space-8);
+    }
+    .worklist-priority {
+      justify-self: start;
+      min-width: 28px;
+      padding: 1px var(--space-4);
+      border-radius: var(--radius-2);
+      color: var(--text-primary);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      text-align: center;
+    }
+    .worklist-priority.p1 { background: var(--risk-high-bg); color: var(--risk-high-fg); }
+    .worklist-priority.p2 { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
+    .worklist-priority.p3 { background: var(--interaction-hover-subtle-bg); color: var(--text-tertiary); }
+    .worklist-type {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      white-space: nowrap;
+    }
+    .worklist-object {
+      min-width: 0;
+      color: var(--text-primary);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .worklist-impact {
+      min-width: 0;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .worklist-sla {
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .worklist-action {
+      min-width: 0;
+      justify-content: center;
+      white-space: nowrap;
+    }
 
     /* ── Pulse metric hover lift ── */
     .shell-sidebar .pulse-metric {
@@ -1107,6 +1291,100 @@
       color: var(--text-tertiary);
       margin-top: var(--space-1);
       font-feature-settings: 'tnum' 1, 'zero' 1;
+    }
+    .activity-item[data-stream-entry="insight"] {
+      background: color-mix(in oklch, var(--agent-running-fg) 4%, transparent);
+      border: 1px solid color-mix(in oklch, var(--agent-running-fg) 10%, transparent);
+    }
+    .activity-item[data-stream-entry="insight"]::before {
+      display: none;
+    }
+    .constraint-stack {
+      display: grid;
+      gap: var(--space-6);
+    }
+    .constraint-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-8);
+      align-items: baseline;
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 56%, transparent);
+    }
+    .constraint-label {
+      min-width: 0;
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .constraint-value {
+      color: var(--text-primary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .constraint-value.warning {
+      color: var(--risk-medium-fg);
+    }
+    .sidebar-collapsed-strip {
+      display: none;
+      flex-direction: column;
+      gap: var(--space-8);
+      align-items: center;
+      width: 100%;
+    }
+    .sidebar-collapsed-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      color: var(--text-secondary);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 56%, transparent);
+      position: relative;
+    }
+    .sidebar-collapsed-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .sidebar-collapsed-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--risk-high-fg);
+      color: var(--text-inverse);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 14px;
+      text-align: center;
+    }
+    .shell-home[data-sidebar-state="collapsed"] {
+      grid-template-columns: var(--shell-rail-width) 1fr var(--shell-sidebar-collapsed-width);
+    }
+    .shell-home[data-sidebar-state="collapsed"] .context-rail {
+      align-items: center;
+      padding: var(--space-8) 0;
+      gap: var(--space-8);
+    }
+    .shell-home[data-sidebar-state="collapsed"] .context-section {
+      display: none;
+    }
+    .shell-home[data-sidebar-state="collapsed"] .sidebar-collapsed-strip {
+      display: flex;
+    }
+    .shell-home[data-sidebar-state="collapsed"] .sidebar-toggle {
+      margin-top: auto;
     }
 
     /* ── Research icon badge — semantic differentiation ── */
@@ -1355,7 +1633,7 @@
 
   <div class="style-label" aria-hidden="true">Compact 适中 · 12px · 36px rows · 56px rail · A股</div>
 
-  <div class="shell-v2 shell-home">
+  <div class="shell-v2 shell-home" data-sidebar-shell data-sidebar-state="expanded">
     <!-- R1: Noise texture overlay -->
     <div class="noise-layer" aria-hidden="true"></div>
     <!-- R1: Top-edge ambient light -->
@@ -1386,6 +1664,7 @@
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
         </button>
+        <div class="command-context-actions" data-command-context-object="600519" data-command-context-actions="review-signal, open-risk, open-orders, explain-priority" hidden></div>
         <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
         </button>
@@ -1430,36 +1709,53 @@
     <!-- ═══ Main Content (Decision Card + Execution Queue + Signals/Findings) ═══ -->
     <div class="shell-main" id="main-content">
       <!-- ═══ Global Pulse (L3 — compact operational status) ═══ -->
-    <div class="global-pulse" data-contract-slot="global-pulse" aria-label="今日全局状态" data-reveal="fade-up">
-      <span class="global-pulse-item" data-tooltip="账户总权益 ¥25,432,180">
+    <div class="global-pulse" data-contract-slot="global-pulse" data-operating-summary aria-label="今日全局操作总览" data-reveal="fade-up">
+      <span class="global-pulse-item" data-operating-metric data-operating-category="account" data-tooltip="账户总权益 ¥25,432,180">
         <span class="global-pulse-label">总权益</span>
         <span class="global-pulse-value">¥25.43M</span>
         <span class="global-pulse-note positive">+12.6% 本月</span>
       </span>
-      <span class="global-pulse-item" data-tooltip="VaR 已超过 95% 历史分位">
-        <span class="global-pulse-label">风险</span>
-        <span class="global-pulse-value warning">中等</span>
-        <span class="global-pulse-note">回撤 -3.8%</span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="account" data-tooltip="今日收益 ¥182,400">
+        <span class="global-pulse-label">日盈亏</span>
+        <span class="global-pulse-value positive">+0.72%</span>
+        <span class="global-pulse-note">¥182.4K</span>
       </span>
-      <span class="global-pulse-item" data-tooltip="波动回落 + 北向转暖">
-        <span class="global-pulse-label">市况</span>
-        <span class="global-pulse-value positive">温和偏好</span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="risk" data-tooltip="风险预算剩余 21%，科技集中度占用偏高">
+        <span class="global-pulse-label">风险预算</span>
+        <span class="global-pulse-value warning">21%</span>
+        <span class="global-pulse-note warning">集中度占用</span>
       </span>
-      <span class="global-pulse-item" data-tooltip="5 项待处理，含 2 项 P1 和 1 项 P2">
+      <span class="global-pulse-item" data-operating-metric data-operating-category="risk" data-tooltip="VaR 已超过 95% 历史分位，组合回撤 -3.8%">
+        <span class="global-pulse-label">VaR / 回撤</span>
+        <span class="global-pulse-value warning">95%</span>
+        <span class="global-pulse-note">DD -3.8%</span>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="work" data-tooltip="6 项待处理，含 2 项 P1 和 2 项 P2">
         <span class="global-pulse-label">待处理</span>
-        <span class="global-pulse-value">5</span>
-        <span class="global-pulse-note">P1 2 / P2 1</span>
+        <span class="global-pulse-value">6</span>
+        <span class="global-pulse-note">P1 2 / P2 2</span>
       </span>
-      <span class="global-pulse-item" data-tooltip="回测 1 / 采集 1 / 监控 1">
-        <span class="global-pulse-label">后台任务</span>
-        <span class="global-pulse-value">3</span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="execution" data-tooltip="待下单 1，阻塞订单 0，成交回报正常">
+        <span class="global-pulse-label">执行</span>
+        <span class="global-pulse-value">1 待下单</span>
+        <span class="global-pulse-note">0 阻塞</span>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="model" data-tooltip="1 个模型漂移预警，2 个回测待审">
+        <span class="global-pulse-label">模型</span>
+        <span class="global-pulse-value warning">1 异常</span>
+        <span class="global-pulse-note">2 待审</span>
+      </span>
+      <span class="global-pulse-item" data-operating-metric data-operating-category="data" data-tooltip="2 个数据源降级：财报延迟、另类数据陈旧">
+        <span class="global-pulse-label">数据</span>
+        <span class="global-pulse-value warning">2 降级</span>
+        <span class="global-pulse-note">5/7 正常</span>
       </span>
     </div>
 
       <!-- Primary: Decision Card + Execution Queue -->
       <div class="main-primary">
         <!-- Decision Card: primary decision + risk evidence + next action -->
-        <div class="panel" data-contract-slot="decision-card" data-primary-answer aria-label="影响范围：全局账户、市场和优先事项">
+        <div class="panel" data-contract-slot="decision-card" data-primary-answer data-command-decision-card aria-label="影响范围：全局账户、市场和优先事项">
           <section class="decision-card" data-mouse-glow="true" data-reveal="fade-up">
             <!-- Left: today's primary decision -->
             <div class="decision-primary">
@@ -1467,17 +1763,23 @@
               <p class="decision-card-judgment" data-answer-judgment>优先复核贵州茅台卖出信号，组合回撤接近预警线。</p>
               <span class="metric-sub" data-answer-scope>全局账户 · 交易信号 · 风控集中度</span>
             </div>
-            <!-- Middle: why it matters -->
-            <div class="decision-judgment">
-              <div class="decision-card-risk">
-                <span class="status-label">风险窗口</span>
-                <span class="status-value indicator-down" data-answer-metric data-tooltip="组合最大回撤接近 -5% 预警线">-3.8%</span>
+            <!-- Middle: expected impact if the action is adopted -->
+            <div class="decision-impact" data-decision-impact aria-label="采纳主决策后的影响预览">
+              <div class="impact-grid">
+                <div class="impact-row" data-impact-row data-impact-kind="concentration" data-answer-evidence>
+                  <span class="impact-label">科技集中度</span>
+                  <span class="impact-values"><span data-impact-before>37.2%</span><span class="impact-arrow">→</span><span class="impact-after" data-impact-after>34.8%</span></span>
+                </div>
+                <div class="impact-row" data-impact-row data-impact-kind="var" data-answer-evidence>
+                  <span class="impact-label">VaR 分位</span>
+                  <span class="impact-values"><span data-impact-before>95%</span><span class="impact-arrow">→</span><span class="impact-after" data-impact-after data-answer-metric>92%</span></span>
+                </div>
+                <div class="impact-row" data-impact-row data-impact-kind="risk-budget" data-answer-evidence>
+                  <span class="impact-label">风险预算</span>
+                  <span class="impact-values"><span data-impact-before>21%</span><span class="impact-arrow">→</span><span class="impact-after" data-impact-after>27%</span></span>
+                </div>
               </div>
-              <div class="decision-card-evidence">
-                <span data-answer-evidence>Alpha v3 置信度 87%</span>
-                <span data-answer-evidence>科技集中度 37.2%</span>
-                <span data-answer-evidence>VaR 95% 分位</span>
-              </div>
+              <span class="impact-cost" data-impact-cost>预估冲击成本 ¥5.9K · 交易后仍保留消费核心仓位</span>
             </div>
             <!-- Right: next action -->
             <div class="decision-execution">
@@ -1499,103 +1801,89 @@
         <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-mouse-glow="true" data-mouse-glow-size="160px" data-reveal="fade-up">
           <div class="panel-header">
             <span class="panel-title">今日优先事项 <span class="panel-subtitle">多来源待办</span></span>
-            <span class="panel-count">5</span>
+            <span class="panel-count">6</span>
             <div class="panel-actions">
               <button class="panel-action">查看全部 →</button>
             </div>
           </div>
           <div class="panel-body">
-            <!-- P1 items first -->
-            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="50">
-              <div class="queue-item-bar p1"></div>
-              <div class="queue-item-body">
-                <div class="queue-item-header">
-                  <span class="queue-item-title">贵州茅台（600519）出现卖出信号</span>
-                  <span class="queue-item-tag trade" data-tooltip="交易类信号">交易</span><span class="queue-item-tag priority" data-tooltip="最高优先级，需立即处理">P1</span>
-                </div>
-                <div class="queue-item-detail">
-                  <span class="queue-item-reason">RSI 背离叠加放量，Alpha v3 置信度 87%，建议查看卖出上下文。</span>
-                </div>
-                <div class="queue-item-footer">
-                  <span class="queue-item-source">策略引擎 · 3分钟前</span>
-
-                  <label for="overlay-signal-detail" class="panel-action cursor-pointer">查看详情</label>
-                </div>
+            <div class="worklist-summary" aria-label="今日优先事项摘要">
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">需复核</span>
+                <span class="worklist-summary-value">3</span>
+              </div>
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">需执行</span>
+                <span class="worklist-summary-value">1</span>
+              </div>
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">阻塞风险</span>
+                <span class="worklist-summary-value">2</span>
+              </div>
+              <div class="worklist-summary-item">
+                <span class="worklist-summary-label">最短 SLA</span>
+                <span class="worklist-summary-value">12m</span>
               </div>
             </div>
 
-            <div class="queue-item" data-reveal="fade-up" data-reveal-delay="100">
-              <div class="queue-item-bar p1"></div>
-              <div class="queue-item-body">
-                <div class="queue-item-header">
-                  <span class="queue-item-title">行业集中度超限 — 科技板块 > 35%</span>
-                  <span class="queue-item-tag risk" data-tooltip="风险控制警告">风控</span><span class="queue-item-tag priority" data-tooltip="最高优先级，需立即处理">P1</span>
-                </div>
-                <div class="queue-item-detail">
-                  <span class="queue-item-reason">当前占比 37.2%，超过规则上限，需评估是否降集中度。</span>
-                </div>
-                <div class="queue-item-footer">
-                  <span class="queue-item-source">风控引擎 · 12分钟前</span>
-                  <button class="panel-action">查看详情</button>
-                </div>
+            <div class="worklist-table" role="table" aria-label="今日优先事项工作队列">
+              <div class="worklist-header" role="row">
+                <span>级别</span>
+                <span>类型</span>
+                <span>对象</span>
+                <span>影响</span>
+                <span>SLA</span>
+                <span>动作</span>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P1" data-reveal="fade-up" data-reveal-delay="50">
+                <span class="worklist-priority p1 queue-item-tag priority" data-worklist-level>P1</span>
+                <span class="worklist-type" data-worklist-domain>交易</span>
+                <span class="worklist-object" data-worklist-object>贵州茅台 600519</span>
+                <span class="worklist-impact" data-worklist-impact>卖出信号 87% · 采纳后 VaR 95% → 92%</span>
+                <span class="worklist-sla" data-worklist-sla>12m</span>
+                <label for="overlay-signal-detail" class="panel-action worklist-action cursor-pointer" data-worklist-action>复核</label>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P1" data-reveal="fade-up" data-reveal-delay="100">
+                <span class="worklist-priority p1 queue-item-tag priority" data-worklist-level>P1</span>
+                <span class="worklist-type" data-worklist-domain>风控</span>
+                <span class="worklist-object" data-worklist-object>科技集中度</span>
+                <span class="worklist-impact" data-worklist-impact>37.2% 超 35% 上限 · 需降至 34.8%</span>
+                <span class="worklist-sla" data-worklist-sla>18m</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>查看</button>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P2">
+                <span class="worklist-priority p2 queue-item-tag priority" data-worklist-level>P2</span>
+                <span class="worklist-type" data-worklist-domain>研究</span>
+                <span class="worklist-object" data-worklist-object>价值因子 Q1</span>
+                <span class="worklist-impact" data-worklist-impact>Sharpe 1.42 · 最大回撤 -8.3% · 待部署判断</span>
+                <span class="worklist-sla" data-worklist-sla>今日</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>报告</button>
+              </div>
+              <div class="worklist-row queue-item" role="row" data-worklist-row data-priority="P2">
+                <span class="worklist-priority p2 queue-item-tag priority" data-worklist-level>P2</span>
+                <span class="worklist-type" data-worklist-domain>模型</span>
+                <span class="worklist-object" data-worklist-object>情绪 Alpha v2</span>
+                <span class="worklist-impact" data-worklist-impact>IC 0.041 → 0.028 · 低于监控阈值</span>
+                <span class="worklist-sla" data-worklist-sla>2h</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>诊断</button>
+              </div>
+              <div class="worklist-row" role="row" data-worklist-row data-priority="P3">
+                <span class="worklist-priority p3" data-worklist-level>P3</span>
+                <span class="worklist-type" data-worklist-domain>平台</span>
+                <span class="worklist-object" data-worklist-object>Tushare API</span>
+                <span class="worklist-impact" data-worklist-impact>4,820 / 5,000 次 · 3 小时后重置</span>
+                <span class="worklist-sla" data-worklist-sla>3h</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>用量</button>
+              </div>
+              <div class="worklist-row" role="row" data-worklist-row data-priority="P3">
+                <span class="worklist-priority p3" data-worklist-level>P3</span>
+                <span class="worklist-type" data-worklist-domain>数据</span>
+                <span class="worklist-object" data-worklist-object>沪深300 1m K线</span>
+                <span class="worklist-impact" data-worklist-impact>14:32–14:33 缺失 · 自动补全中</span>
+                <span class="worklist-sla" data-worklist-sla>42m</span>
+                <button class="panel-action worklist-action" type="button" data-worklist-action>详情</button>
               </div>
             </div>
-
-            <!-- P2 item — visible secondary priority -->
-            <div class="queue-item">
-              <div class="queue-item-bar p2"></div>
-              <div class="queue-item-body">
-                <div class="queue-item-header">
-                  <span class="queue-item-title">价值因子 2026 Q1 回测完成</span>
-                  <span class="queue-item-tag research" data-tooltip="研究任务完成">研究</span><span class="queue-item-tag priority" data-tooltip="中等优先级，建议今日处理">P2</span>
-                </div>
-                <div class="queue-item-detail">
-                  <span class="queue-item-reason">Sharpe 1.42，最大回撤 -8.3%，建议审阅后决定是否部署。</span>
-                </div>
-                <div class="queue-item-footer">
-                  <span class="queue-item-source">回测引擎 · 1小时前</span>
-                  <button class="panel-action">查看报告</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- P3 items — collapsed by default -->
-            <details>
-              <summary class="queue-disclosure">+2 更多低优先级 ▾</summary>
-            <div class="queue-item">
-              <div class="queue-item-bar p3"></div>
-              <div class="queue-item-body">
-                <div class="queue-item-header">
-                  <span class="queue-item-title">Tushare API 频率接近上限</span>
-                  <span class="queue-item-tag platform" data-tooltip="平台系统通知">平台</span>
-                </div>
-                <div class="queue-item-detail">
-                  <span class="queue-item-reason">今日已用 4,820 / 5,000 次，3 小时后重置。</span>
-                </div>
-                <div class="queue-item-footer">
-                  <span class="queue-item-source">系统监控 · 2小时前</span>
-                  <button class="panel-action">查看用量</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="queue-item">
-              <div class="queue-item-bar p3"></div>
-              <div class="queue-item-body">
-                <div class="queue-item-header">
-                  <span class="queue-item-title">沪深300 1 分钟 K线缺失</span>
-                  <span class="queue-item-tag data" data-tooltip="数据管道状态">数据</span>
-                </div>
-                <div class="queue-item-detail">
-                  <span class="queue-item-reason">14:32–14:33 数据缺失，正在自动补全，建议关注修复结果。</span>
-                </div>
-                <div class="queue-item-footer">
-                  <span class="queue-item-source">数据管道 · 42分钟前</span>
-                  <button class="panel-action">查看详情</button>
-                </div>
-              </div>
-            </div>
-            </details>
           </div>
         </div>
 
@@ -1610,16 +1898,16 @@
 
 
 
-        <!-- Activity Feed (unified timeline: signals · research · backtest) -->
+        <!-- Intelligence Stream (merged activity + AI insights) -->
         <div class="panel" data-contract-slot="recent-signals" data-selected-object-region data-reveal="fade-up" data-reveal-delay="150">
           <div class="panel-header">
-            <span class="panel-title">活动流 <span class="panel-subtitle">信号 · 研究 · 回测</span></span>
+            <span class="panel-title">智能脉络 <span class="panel-subtitle">事件 · 洞察 · 约束</span></span>
             <button class="panel-action">查看全部 →</button>
           </div>
           <div class="panel-body scrollbar-subtle">
-            <div class="activity-feed">
+            <div class="activity-feed" data-intelligence-stream aria-label="活动与 AI 洞察合并时间线">
               <!-- T1: Signal event (most recent) -->
-              <div class="activity-item" data-activity-type="signal">
+              <div class="activity-item" data-stream-entry="activity" data-activity-type="signal">
                 <span class="activity-icon icon-brand">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
                 </span>
@@ -1632,8 +1920,22 @@
                   <div class="activity-source">策略引擎 · 25分钟前</div>
                 </div>
               </div>
-              <!-- T2: Model monitoring event -->
-              <div class="activity-item" data-activity-type="model">
+              <!-- T2: AI correlation insight -->
+              <div class="activity-item" data-stream-entry="insight" data-activity-type="insight">
+                <span class="activity-icon icon-agent">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag platform">洞察</span>
+                    贵州茅台↔沪深300 相关性 0.82 → 0.65
+                  </div>
+                  <div class="activity-summary">市场风格切换信号增强，当前组合偏向单一因子，需与卖出信号联动复核。</div>
+                  <div class="activity-source">风控监控 · 1小时前</div>
+                </div>
+              </div>
+              <!-- T3: Model monitoring event -->
+              <div class="activity-item" data-stream-entry="activity" data-activity-type="model">
                 <span class="activity-icon icon-warning">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
                 </span>
@@ -1646,8 +1948,22 @@
                   <div class="activity-source">模型监控 · 2小时前</div>
                 </div>
               </div>
-              <!-- T3: Backtest completed -->
-              <div class="activity-item" data-activity-type="backtest">
+              <!-- T4: Data-source insight -->
+              <div class="activity-item" data-stream-entry="insight" data-activity-type="insight">
+                <span class="activity-icon icon-risk">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
+                </span>
+                <div class="activity-body">
+                  <div class="activity-text">
+                    <span class="activity-tag risk">约束</span>
+                    财报数据延迟已持续 2 小时
+                  </div>
+                  <div class="activity-summary">上交所接口响应超时，基本面相关因子本轮只作为次级证据，建议切换备用源。</div>
+                  <div class="activity-source">数据监控 · 2小时前</div>
+                </div>
+              </div>
+              <!-- T5: Backtest completed -->
+              <div class="activity-item" data-stream-entry="activity" data-activity-type="backtest">
                 <span class="activity-icon icon-healthy">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
                 </span>
@@ -1660,8 +1976,8 @@
                   <div class="activity-source">回测引擎 · 1小时前</div>
                 </div>
               </div>
-              <!-- T4: Factor research event -->
-              <div class="activity-item" data-activity-type="research">
+              <!-- T6: Factor research event -->
+              <div class="activity-item" data-stream-entry="activity" data-activity-type="research">
                 <span class="activity-icon icon-muted">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
                 </span>
@@ -1674,8 +1990,8 @@
                   <div class="activity-source">因子研究 · 4小时前</div>
                 </div>
               </div>
-              <!-- T5: Strategy optimization -->
-              <div class="activity-item" data-activity-type="research">
+              <!-- T7: Strategy optimization -->
+              <div class="activity-item" data-stream-entry="activity" data-activity-type="research">
                 <span class="activity-icon icon-muted">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
                 </span>
@@ -1692,49 +2008,7 @@
           </div>
         </div>
 
-        <!-- State Variants: Recent Signals / Runs -->
-
-
-
-
-        <!-- Agent Insights (cross-domain intelligence summary) -->
-        <div class="panel" data-contract-slot="agent-findings" data-reveal="fade-up" data-reveal-delay="200">
-          <div class="panel-header">
-            <span class="panel-title">AI 洞察 <span class="panel-subtitle">关联分析</span></span>
-            <button class="panel-action">查看全部 →</button>
-          </div>
-          <div class="panel-body scrollbar-subtle">
-          <div class="finding-item">
-            <span class="finding-icon icon-agent">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-            </span>
-            <div>
-              <div class="finding-text">贵州茅台↔沪深300 相关性从 0.82 降至 0.65 — 市场风格切换信号，当前组合偏向单一因子。</div>
-              <div class="finding-source">风控监控 · 1小时前</div>
-            </div>
-          </div>
-          <div class="finding-item">
-            <span class="finding-icon icon-risk">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
-            </span>
-            <div>
-              <div class="finding-text">财报数据延迟已持续 2 小时 — 上交所接口响应超时，建议切换备用源。</div>
-              <div class="finding-source">数据监控 · 2小时前</div>
-            </div>
-          </div>
-          <div class="finding-item">
-            <span class="finding-icon icon-brand">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
-            </span>
-            <div>
-              <div class="finding-text">公募 Q4 持仓数据更新完毕 — 电子板块获增配 2.3%，消费板块减配 1.8%。</div>
-              <div class="finding-source">研究扫描 · 3小时前</div>
-            </div>
-          </div>
-          </div>
-        </div>
-
-        <!-- State Variants: Agent Findings -->
+        <!-- State Variants: Recent Signals / Intelligence Stream -->
 
 
 
@@ -1742,8 +2016,24 @@
     </div>
 
     <!-- ═══ Sidebar (full-height context rail: Market Pulse → Alerts → Health) ═══ -->
-    <div class="shell-sidebar">
-      <div class="context-rail">
+    <div class="shell-sidebar" id="home-sidebar" data-sidebar>
+      <div class="context-rail" data-command-center-rail>
+        <div class="sidebar-collapsed-strip" data-sidebar-collapsed-strip aria-label="折叠侧栏摘要" aria-hidden="true">
+          <span class="sidebar-collapsed-icon" title="市场脉搏">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 14l4-4 3 2 7-7"/><path d="M13 5h4v4"/></svg>
+          </span>
+          <span class="sidebar-collapsed-icon" title="全局预警">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2h.01"/></svg>
+            <span class="sidebar-collapsed-badge">4</span>
+          </span>
+          <span class="sidebar-collapsed-icon" title="下单前约束">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 4h10v12H5z"/><path d="M8 8h4"/><path d="M8 11h4"/><path d="M8 14h2"/></svg>
+          </span>
+          <span class="sidebar-collapsed-icon" title="数据健康">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6c0-1.1 2.7-2 6-2s6 .9 6 2-2.7 2-6 2-6-.9-6-2z"/><path d="M4 6v4c0 1.1 2.7 2 6 2s6-.9 6-2V6"/><path d="M4 10v4c0 1.1 2.7 2 6 2s6-.9 6-2v-4"/></svg>
+            <span class="sidebar-collapsed-badge">2</span>
+          </span>
+        </div>
         <!-- Market Pulse (context-first — lightest ambient data) -->
         <details class="context-section" data-collapse-priority="l2" data-contract-slot="market-pulse" data-reveal="fade-right" data-reveal-delay="100" open>
           <summary class="context-section-header">
@@ -1815,6 +2105,34 @@
           </div>
         </details>
 
+        <!-- Decision Constraints -->
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="decision-constraints" data-reveal="fade-right" data-reveal-delay="250" open>
+          <summary class="context-section-header">
+            <span class="context-section-title">下单前约束</span>
+            <span class="collapse-count">4 条</span>
+          </summary>
+          <div class="context-section-body">
+            <div class="constraint-stack">
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="卖出 600519 后科技集中度仍需控制在规则上限以内">集中度目标</span>
+                <span class="constraint-value">≤ 35%</span>
+              </div>
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="单笔市价单预估冲击成本">冲击成本</span>
+                <span class="constraint-value warning">¥5.9K</span>
+              </div>
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="券商连接当前可用，但需确认成交回报">券商通道</span>
+                <span class="constraint-value">中信可用</span>
+              </div>
+              <div class="constraint-row" data-constraint-row>
+                <span class="constraint-label" data-tooltip="财报数据延迟，基本面因子只作为次级证据">证据可信度</span>
+                <span class="constraint-value warning">次级</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
         <!-- State Variants: Alerts / Market Snapshot -->
 
 
@@ -1858,7 +2176,7 @@
 
 
         <!-- Sidebar Toggle -->
-        <button class="sidebar-toggle" aria-label="折叠侧边栏" title="折叠侧边栏">&#x00BB;</button>
+        <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="home-sidebar" aria-expanded="true" aria-label="折叠侧边栏" title="折叠侧边栏">&#x00BB;</button>
       </div>
     </div>
   </div>

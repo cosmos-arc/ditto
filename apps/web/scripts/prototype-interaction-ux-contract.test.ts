@@ -43,6 +43,7 @@ const bottomTrayUiByState: Record<(typeof bottomTrayStates)[number], { ariaExpan
 	expanded: { ariaExpanded: "true", symbol: "—" },
 };
 const commandContextActionsByPageId: Record<string, string[]> = {
+	home: ["review-signal", "open-risk", "open-orders", "explain-priority"],
 	watchlist: ["generate-signal", "open-instrument-hub", "send-to-research", "remove-watch"],
 	"strategy-list": ["run-backtest", "clone-strategy", "view-recent-runs", "pause-strategy"],
 	"backtest-list": ["add-to-compare", "view-curve", "copy-params", "generate-report"],
@@ -65,6 +66,18 @@ const tableExpertContractAttributes = [
 	"data-table-column-resize-ready",
 	"data-table-freeze-ready",
 	"data-row-context-menu-ready",
+] as const;
+const interactiveSelector = [
+	"button",
+	"a[href]",
+	"[role='button']",
+	"[role='tab']",
+	"label[role='button']",
+	"[data-answer-action]",
+].join(",");
+const targetSizeAuditViewports = [
+	{ name: "1366x768", width: 1366, height: 768 },
+	{ name: "1536x1080", width: 1536, height: 1080 },
 ] as const;
 const playwrightTestTimeoutMs = 15_000;
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
@@ -1585,6 +1598,87 @@ describe("prototype interaction UX contracts", () => {
 		}
 	}, playwrightTestTimeoutMs);
 
+	it("keeps visible interactive targets at least 24px by 24px or explicitly exempted", async () => {
+		const browser = await chromium.launch({ channel: "chromium" });
+		const violations: string[] = [];
+
+		try {
+			for (const pageMeta of activePages()) {
+				for (const viewport of targetSizeAuditViewports) {
+					const page = await browser.newPage({ viewport });
+
+					try {
+						await page.goto(getPrototypeUrl(pageMeta), { waitUntil: "load" });
+						const pageViolations = await page.$$eval(interactiveSelector, (elements) => {
+							function isInsideClosedDetails(element: Element): boolean {
+								const closedDetails = element.closest("details:not([open])");
+								return Boolean(closedDetails && !element.closest("summary"));
+							}
+
+							function isVisibleTarget(element: Element): boolean {
+								if (element.closest("[hidden], [aria-hidden='true']")) return false;
+								if (isInsideClosedDetails(element)) return false;
+
+								const rect = element.getBoundingClientRect();
+								if (rect.width <= 0 || rect.height <= 0) return false;
+								if (
+									rect.right <= 0 ||
+									rect.bottom <= 0 ||
+									rect.left >= window.innerWidth ||
+									rect.top >= window.innerHeight
+								) {
+									return false;
+								}
+
+								const style = getComputedStyle(element);
+								return style.display !== "none" && style.visibility !== "hidden";
+							}
+
+							function targetLabel(element: Element): string {
+								const htmlElement = element as HTMLElement;
+								return [
+									element.getAttribute("aria-label"),
+									element.getAttribute("title"),
+									htmlElement.innerText,
+									element.id ? `#${element.id}` : "",
+									element.className ? `.${String(element.className).trim().replace(/\s+/g, ".")}` : "",
+									element.tagName.toLowerCase(),
+								]
+									.filter(Boolean)
+									.join(" ")
+									.replace(/\s+/g, " ")
+									.trim()
+									.slice(0, 96);
+							}
+
+							return elements.flatMap((element) => {
+								if (element.closest("[data-target-size-exception]")) return [];
+								if (!isVisibleTarget(element)) return [];
+
+								const rect = element.getBoundingClientRect();
+								if (rect.width >= 24 && rect.height >= 24) return [];
+
+								return [
+									`${targetLabel(element)} ${Math.round(rect.width * 10) / 10}x${Math.round(rect.height * 10) / 10}`,
+								];
+							});
+						});
+
+						violations.push(
+							...pageViolations.map((violation) => `${pageMeta.id}@${viewport.name}: ${violation}`),
+						);
+					} finally {
+						await page.close();
+					}
+				}
+			}
+		} finally {
+			await browser.close();
+		}
+
+		expect(violations).toEqual([]);
+	}, 60_000);
+
 	it("exposes P0 resizable panel groups with accessible separators", () => {
 		const violations: string[] = [];
 
@@ -1697,16 +1791,58 @@ describe("prototype interaction UX contracts", () => {
 		for (const [pageId, expectedActions] of Object.entries(commandContextActionsByPageId)) {
 			const document = readPrototypeDocument(getActivePageById(pageId));
 			const root = getDefaultPrototypeRoot(document);
-			const actionContract = root.querySelector("[data-command-context-actions]");
+			const actionContract = root.querySelector("[data-command-context-object][data-command-context-actions]");
 			if (!actionContract) {
-				violations.push(`${pageId}: missing [data-command-context-actions]`);
+				violations.push(`${pageId}: missing [data-command-context-object][data-command-context-actions]`);
 				continue;
+			}
+			if (!actionContract.getAttribute("data-command-context-object")?.trim()) {
+				violations.push(`${pageId}: missing selected command context object`);
 			}
 
 			const actualActions = parseCommandContextActions(actionContract);
 			for (const expectedAction of expectedActions) {
 				if (!actualActions.has(expectedAction)) {
 					violations.push(`${pageId}: missing command context action "${expectedAction}"`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("renders keyboard-reachable command suggestions from selected-object context", () => {
+		const violations: string[] = [];
+
+		for (const [pageId, expectedActions] of Object.entries(commandContextActionsByPageId)) {
+			const document = readInteractivePrototypeDocument(getActivePageById(pageId));
+			const trigger = document.querySelector<HTMLElement>("[data-shell-utility='command'], .header-command-trigger");
+			if (!trigger) {
+				violations.push(`${pageId}: missing command trigger`);
+				continue;
+			}
+
+			trigger.click();
+
+			const palette = document.querySelector<HTMLElement>("[data-command-palette]");
+			if (!palette) {
+				violations.push(`${pageId}: missing command palette`);
+				continue;
+			}
+			if (palette.hidden || palette.getAttribute("aria-hidden") === "true") {
+				violations.push(`${pageId}: command palette did not open`);
+			}
+
+			for (const expectedAction of expectedActions) {
+				const suggestion = palette.querySelector<HTMLElement>(
+					`[data-command-suggestion][data-command-action="${expectedAction}"]`,
+				);
+				if (!suggestion) {
+					violations.push(`${pageId}: missing command suggestion "${expectedAction}"`);
+					continue;
+				}
+				if (suggestion.tabIndex < 0) {
+					violations.push(`${pageId}: command suggestion "${expectedAction}" is not keyboard reachable`);
 				}
 			}
 		}

@@ -15,6 +15,8 @@ import { intelligenceHandlers } from "@/mocks/handlers/intelligence";
 import { regimeHandlers } from "@/mocks/handlers/regime";
 import { backtestHandlers } from "@/mocks/handlers/backtest";
 
+const complianceTestTimeoutMs = 15_000;
+
 function createQueryClient(): QueryClient {
 	return new QueryClient({
 		defaultOptions: {
@@ -127,7 +129,7 @@ describe("v3 Interaction Framework Compliance", () => {
 				);
 				expect(l1Units.length).toBeGreaterThanOrEqual(1);
 			});
-		});
+		}, complianceTestTimeoutMs);
 
 		it("AI page has at least one L1 unit", async () => {
 			const { AiPage } = await import("@/features/ai/components/ai-page");

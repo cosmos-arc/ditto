@@ -40,6 +40,60 @@ button {
   font-family: var(--font-family-ui);
 }
 
+.hit-target-24 {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.hit-target-y-24 {
+  min-height: 24px;
+}
+
+.hit-target-inline-24 {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+/* Shared WCAG 2.2 target-size floor for compact prototype controls. */
+:is(
+  button,
+  a[href],
+  [role="button"],
+  [role="tab"],
+  label[role="button"],
+  [data-answer-action],
+  .filter-chip,
+  .pagination-btn,
+  .filter-btn,
+  .order-tab,
+  .status-tab,
+  .regime-time-btn,
+  .agent-filter-tab,
+  .strip-action,
+  .trace-action-btn,
+  .row-action,
+  .rail-section-action,
+  .health-metric,
+  .scope-status-item,
+  .risk-strip-metric,
+  .regime-strip-metric,
+  .health-summary-item,
+  .perf-item,
+  .backtest-summary-item,
+  .experiment-summary-item,
+  .batch-summary__hint,
+  .scope-tag
+) {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+:is(a[href], span[role="button"], span[role="tab"], span[data-answer-action], label[role="button"]) {
+  display: inline-flex;
+  align-items: center;
+}
+
 .skip-link {
   position: absolute;
   top: var(--space-16);
@@ -639,6 +693,79 @@ h1.header-title {
   font-family: var(--font-family-code);
   font-size: var(--font-size-10);
   line-height: 1.3;
+}
+
+.ditto-command-palette {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  z-index: 80;
+  width: min(360px, calc(100vw - 32px));
+  padding: var(--space-10);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-8);
+  background: var(--surface-panel-elevated);
+  box-shadow: 0 16px 40px color-mix(in oklch, var(--text-primary) 18%, transparent);
+}
+
+.ditto-command-palette[hidden] {
+  display: none !important;
+}
+
+.ditto-command-title {
+  color: var(--text-primary);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.3;
+}
+
+.ditto-command-context {
+  margin-top: var(--space-2);
+  color: var(--text-tertiary);
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-10);
+  line-height: 1.3;
+}
+
+.ditto-command-list {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-8);
+}
+
+.ditto-command-item {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-6);
+  background: var(--surface-panel-base);
+  color: var(--text-secondary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ditto-command-item:hover {
+  border-color: var(--brand-accent);
+  color: var(--text-primary);
+}
+
+.ditto-command-item:focus-visible {
+  border-color: var(--brand-accent);
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--interaction-focus-ring);
+}
+
+.ditto-command-empty {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-12);
+  line-height: 1.4;
 }
 
 .shell-header .header-avatar {
@@ -2242,6 +2369,7 @@ details.context-section:not([open]) > .context-section-body {
 
 .filter-chip {
   font-size: var(--font-size-12);
+  min-height: 24px;
   padding: var(--space-2) var(--space-8);
   border-radius: var(--radius-4);
   border: 1px solid var(--border-subtle);
@@ -2580,6 +2708,8 @@ details.context-section:not([open]) > .context-section-body {
 .pagination-btn {
   font-family: var(--font-family-ui);
   font-size: var(--font-size-12);
+  min-width: 24px;
+  min-height: 24px;
   padding: var(--space-2) var(--space-6);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-4);
@@ -2701,6 +2831,8 @@ details.context-section:not([open]) > .context-section-body {
   font-family: var(--font-family-ui);
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-medium);
+  min-width: 24px;
+  min-height: 24px;
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-4);
   border: 1px solid var(--border-subtle);
@@ -2752,6 +2884,7 @@ details.context-section:not([open]) > .context-section-body {
 }
 
 .btn-sm {
+  min-height: 25px;
   padding: 2px var(--space-6);
   font-size: var(--font-size-10);
 }

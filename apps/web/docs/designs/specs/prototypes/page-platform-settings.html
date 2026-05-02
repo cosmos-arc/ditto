@@ -91,6 +91,10 @@
       border: 0;
     }
 
+    .shell-ops .btn-sm {
+      min-height: 26px;
+    }
+
     .shell-ops {
       position: relative;
       background:
@@ -940,10 +944,10 @@
       </header>
 
       <div class="ops-health" role="status" aria-label="影响范围：平台配置连接健康" data-contract-slot="health" data-primary-answer-equivalent>
-        <div class="health-metric" data-answer-evidence><span class="health-metric-label" data-answer-judgment>连接</span><span class="health-metric-value" data-answer-metric>4 / 5</span></div>
-        <div class="health-metric" data-answer-evidence><span class="health-metric-label">认证临期</span><span class="health-metric-value">1</span></div>
+        <div class="health-metric" data-answer-evidence><span class="health-metric-label" data-answer-judgment>Bloomberg 未连接 required</span><span class="health-metric-value" data-answer-metric>4 / 5</span></div>
+        <div class="health-metric" data-answer-evidence><span class="health-metric-label">华泰证券 Token 过期</span><span class="health-metric-value">需重新授权</span></div>
         <div class="health-metric"><span class="health-metric-label">最近验证</span><span class="health-metric-value">09:42:18</span></div>
-        <div class="health-metric" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="panel-settings-datasource" aria-label="查看配置漂移"><span class="health-metric-label">配置漂移</span><span class="health-metric-value">2 pending</span></div>
+        <div class="health-metric" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="panel-settings-datasource" aria-label="重新授权并查看配置 Diff"><span class="health-metric-label">配置漂移</span><span class="health-metric-value">2 pending · 查看配置 Diff</span></div>
         <div class="health-metric"><span class="health-metric-label">回滚点</span><span class="health-metric-value">r17 stable</span></div>
       </div>
 

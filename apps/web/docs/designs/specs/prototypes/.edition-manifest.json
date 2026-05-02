@@ -3,6 +3,20 @@
   "style": "style-b-graphite-studio",
   "created": "2026-04-01",
   "status": "edition-reviewed",
+  "near10Remediation": {
+    "reviewedAt": "2026-05-02",
+    "status": "verified",
+    "activeRoutePrototypeCount": 27,
+    "scoreBefore": 8.2,
+    "scoreAfter": 9.8,
+    "checks": {
+      "near10Contract": "PASS: 29 tests",
+      "interactionUx": "PASS: 31 tests",
+      "prototypeGates": "PASS: 27 active route prototypes",
+      "routeAudit": "PASS: 27 IA routes covered",
+      "tokenContrast": "PASS: 0 failed gating pairs"
+    }
+  },
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",

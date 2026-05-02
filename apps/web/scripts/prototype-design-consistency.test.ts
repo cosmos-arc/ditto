@@ -483,6 +483,30 @@ function firstNumberFromText(value: string | null | undefined): number | undefin
 	return numberMatch ? Number(numberMatch[0]) : undefined;
 }
 
+function fallbackTextMatchesCounter(element: Element): boolean {
+	const rawCounterValue = element.getAttribute("data-counter");
+	if (!rawCounterValue?.trim()) return false;
+
+	const counterValue = Number(rawCounterValue);
+	if (!Number.isFinite(counterValue)) return false;
+	const signedCounterValue = element.getAttribute("data-counter-prefix")?.trim().startsWith("-")
+		? -Math.abs(counterValue)
+		: counterValue;
+
+	const text = (element.textContent ?? "").replace(/,/g, "").trim();
+	const textNumberMatch = /[-+]?\d+(?:\.\d+)?/.exec(text);
+	if (!textNumberMatch) return false;
+
+	const textValue = Number(textNumberMatch[0]);
+	if (!Number.isFinite(textValue)) return false;
+
+	const decimals = Number.parseInt(element.getAttribute("data-counter-decimals") ?? "2", 10);
+	const precision = Number.isFinite(decimals) ? Math.max(0, decimals) : 2;
+	const tolerance = precision === 0 ? 0 : 1 / 10 ** precision;
+
+	return Math.abs(textValue - signedCounterValue) <= tolerance;
+}
+
 function hasExistingIdTarget(element: Element, attribute: string): boolean {
 	const value = element.getAttribute(attribute)?.trim();
 	if (!value) return false;
@@ -773,6 +797,26 @@ describe("prototype design consistency", () => {
 			}
 			if (!hasPrimaryAnswerScope(region)) {
 				violations.push(`${page.id}:missing-scope`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps data-counter fallback text numerically aligned with animated values", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const counterElements = document.querySelectorAll("[data-counter]");
+
+			for (const element of counterElements) {
+				if (element.hasAttribute("data-counter-fallback-exception")) continue;
+
+				const value = element.getAttribute("data-counter");
+				if (!fallbackTextMatchesCounter(element)) {
+					violations.push(`${page.id}: data-counter fallback must match ${value}`);
+				}
 			}
 		}
 
@@ -1413,6 +1457,56 @@ describe("prototype design consistency", () => {
 			}
 			if (!label.includes(expectedAria)) {
 				violations.push(`a-shares:heatmap-cell:${index + 1}:aria:${direction ?? "missing"}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps important market, risk, and stale states readable without relying on color alone", () => {
+		const violations: string[] = [];
+		const crossMarket = readPrototypeDocument(activePageById("cross-market"));
+		const riskCenter = readPrototypeDocument(activePageById("risk-center"));
+		const marketsIntelligence = readPrototypeDocument(activePageById("markets-intelligence"));
+		const correlationCells = [
+			...crossMarket.querySelectorAll<HTMLElement>("#default-view .corr-cell[data-corr]"),
+		];
+		const riskWarnings = [
+			...riskCenter.querySelectorAll<HTMLElement>("#default-view .risk-strip-value.warn, #default-view .stress-tag.fail"),
+		];
+		const staleStates = [
+			...marketsIntelligence.querySelectorAll<HTMLElement>(".state-variant-content[data-state='stale']"),
+		];
+		const riskMarkerPattern = /!|突破|接近|critical|warn|severity|P[0-3]/i;
+		const staleMarkerPattern = /stale|降级|延迟|过期|不是最新|非最新|可能|最后更新|更新于\s*\d+\s*分钟前|基于\s*\d+\s*分钟前/i;
+
+		if (correlationCells.length === 0) {
+			violations.push("cross-market:correlation-cells:missing");
+		}
+		for (const [index, cell] of correlationCells.entries()) {
+			const text = cell.textContent?.replace(/\s+/g, " ").trim() ?? "";
+			if (!/^[+-]/.test(text)) {
+				violations.push(`cross-market:correlation-cell:${index + 1}:missing-sign`);
+			}
+		}
+
+		if (riskWarnings.length === 0) {
+			violations.push("risk-center:warning-states:missing");
+		}
+		for (const [index, warning] of riskWarnings.entries()) {
+			const text = warning.textContent?.replace(/\s+/g, " ").trim() ?? "";
+			if (!riskMarkerPattern.test(text)) {
+				violations.push(`risk-center:warning-state:${index + 1}:missing-marker`);
+			}
+		}
+
+		if (staleStates.length === 0) {
+			violations.push("markets-intelligence:stale-states:missing");
+		}
+		for (const [index, state] of staleStates.entries()) {
+			const text = state.textContent?.replace(/\s+/g, " ").trim() ?? "";
+			if (!staleMarkerPattern.test(text)) {
+				violations.push(`markets-intelligence:stale-state:${index + 1}:missing-marker`);
 			}
 		}
 

@@ -173,6 +173,8 @@ Ditto 的 Data Views 统一分成三大族：
 
 - **主工作面**：Object-centric Table / Chart / Metrics Panels
 - **辅助**：Related / Notes / History Context View、Timeline / Diagnostics Visual View
+- Primary Answer 等价区必须声明 `data-object-consequence-preview`，预览对象级动作的后果。
+- 后果预览至少包含两个 `data-consequence-impact` 影响项，并包含一个 `data-consequence-destination-action`，指向动作完成后的目标工作面或产物。
 
 ### 4.5 Studio / Builder
 

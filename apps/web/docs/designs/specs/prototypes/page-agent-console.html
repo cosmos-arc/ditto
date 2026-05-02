@@ -306,6 +306,19 @@
       line-height: 1.4;
     }
 
+    .plan-card-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .plan-card-summary {
+      font-size: var(--font-size-12);
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
     .plan-card-status {
       display: inline-flex;
       align-items: center;
@@ -1718,7 +1731,10 @@
           <!-- Plan 1: Running (selected) -->
           <div class="plan-card selected" data-primary-answer-equivalent data-answer-action data-reveal="fade-up" data-reveal-delay="50" tabindex="0" role="button" aria-controls="agent-detail-panel" aria-label="影响范围：平台智能体 Alpha 因子挖掘计划">
             <div class="plan-card-header">
-              <span class="plan-card-name" data-answer-judgment>Alpha 因子挖掘计划</span>
+              <div class="plan-card-title-group">
+                <span class="plan-card-name">Alpha 因子挖掘计划</span>
+                <span class="plan-card-summary" data-answer-judgment>Factor 挖掘 Agent 正在分析动量因子，下一审批点为策略验证</span>
+              </div>
               <span class="plan-card-status running">
                 <span class="plan-card-status-dot"></span>
                 运行中
@@ -1739,12 +1755,12 @@
             <div class="agent-chain">
               <span class="agent-chain-step done" data-answer-evidence>
                 <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 10l4 4 6-8"/></svg>
-                数据探索
+                已读取 4,832 行
               </span>
               <span class="agent-chain-arrow">&#8594;</span>
               <span class="agent-chain-step active" data-answer-evidence>
                 <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>
-                Factor 挖掘
+                产出 8 个因子
               </span>
               <span class="agent-chain-arrow">&#8594;</span>
               <span class="agent-chain-step">策略验证</span>
@@ -1753,8 +1769,8 @@
             </div>
             <div class="plan-card-output">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12v12H4z"/><path d="M4 9h12"/></svg>
-              <span>产出物</span>
-              <span class="plan-card-output-count" data-answer-evidence>8 个因子 · 3 个策略</span>
+              <span>发送到 Factor List / Strategy Studio / Signals</span>
+              <span class="plan-card-output-count" data-answer-evidence data-answer-action>3 个策略候选 · 等待研究员复核</span>
             </div>
           </div>
 
