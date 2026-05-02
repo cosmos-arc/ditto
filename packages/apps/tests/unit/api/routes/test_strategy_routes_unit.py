@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
-from ditto_application.command.strategy import (
+from ditto_application.commands.strategy import (
     CreateStrategyHandler,
     PublishStrategyHandler,
     UpdateStrategyHandler,
 )
-from ditto_application.query.strategy import StrategyQueryFacade
+from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.strategy import router
 from ditto_apps.middleware import api_error_handler

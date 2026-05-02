@@ -77,21 +77,21 @@ instrument / order / market / identity: 无子域间依赖
 | `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Interfaces |
 | `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
-| `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Engine |
+| `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
 | `CalendarId` | market.py | `Literal["cn_stock"]` | Analytics |
 | `GrainId` | market.py | `Literal["1d", "1m"]` | Analytics |
-| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
+| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Strategy |
 | `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, App, Interfaces |
 | `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App, Interfaces |
 | `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Engine |
-| `DerivedSpec` | strategy.py | frozen dataclass | Analytics, Engine |
-| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
-| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
-| `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Engine |
-| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine, Data, Interfaces, App |
+| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Strategy |
+| `DerivedSpec` | strategy.py | frozen dataclass | Analytics, Strategy |
+| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Strategy |
+| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Strategy |
+| `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution, App |
+| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Interfaces, App |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Engine, App |
+| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, App |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
@@ -106,7 +106,7 @@ instrument / order / market / identity: 无子域间依赖
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
 | `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
-| `pearson_correlation` | math.py | 纯函数 | Engine, App |
+| `pearson_correlation` | math.py | 纯函数 | Backtest, App |
 
 ## 导入规范
 
@@ -146,7 +146,7 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 │  所有业务包都可以依赖 Kernel                  │
 │  interfaces → kernel ✅                     │
 │  app → kernel ✅                            │
-│  engine → kernel ✅                         │
+│  strategy/portfolio/risk/execution/backtest → kernel ✅ │
 │  analytics → kernel ✅                      │
 │  data → kernel ✅                           │
 └─────────────────────────────────────────────┘
@@ -155,7 +155,11 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 │  Kernel 禁止依赖其他层                       │
 │  kernel → interfaces ❌                     │
 │  kernel → app ❌                            │
-│  kernel → engine ❌                         │
+│  kernel → strategy ❌                       │
+│  kernel → portfolio ❌                      │
+│  kernel → risk ❌                           │
+│  kernel → execution ❌                      │
+│  kernel → backtest ❌                       │
 │  kernel → analytics ❌                      │
 │  kernel → data ❌                           │
 │  kernel → infra ❌                          │

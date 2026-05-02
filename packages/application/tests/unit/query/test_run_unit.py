@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_application.query.run import RunReadModel
-from ditto_data.models.strategy_run import StrategyRunRecord
+from ditto_application.queries.run import RunReadModel
 from ditto_kernel.strategy import RunStatus
+from ditto_strategy.runs.models import StrategyRunRecord
 
 
 def _make_record(**overrides: object) -> StrategyRunRecord:

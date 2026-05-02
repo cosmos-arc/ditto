@@ -7,7 +7,10 @@ from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
-from ditto_application.query.research import ResearchDatasetFacade, _sanitize_table_name
+from ditto_application.queries.research import (
+    ResearchDatasetFacade,
+    _sanitize_table_name,
+)
 
 
 def _make_snapshot(**overrides: object) -> DatasetSnapshot:

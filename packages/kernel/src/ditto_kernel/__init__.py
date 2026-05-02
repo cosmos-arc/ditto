@@ -25,7 +25,7 @@ from ditto_kernel.market import (
     MacroFrequency,
     TimeSpec,
 )
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import (
     DecisionFrame,
     DerivedRole,
@@ -71,6 +71,7 @@ __all__ = [
     "MaterializationProfile",
     "NoIdentifierProvidedError",
     "OrderSide",
+    "OrderType",
     "RealtimeClock",
     "RiskScope",
     "RunStatus",

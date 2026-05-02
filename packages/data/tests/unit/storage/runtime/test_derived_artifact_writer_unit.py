@@ -10,15 +10,15 @@ from unittest.mock import patch
 import orjson
 import polars as pl
 import pytest
-from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_data.storage.runtime.derived_artifact_writer import (
+from ditto_features.expression import Analysis, CompileIdentity
+from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
+from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
 )
-from ditto_features.expression import Analysis, CompileIdentity
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 _TIME_KEY = "trade_date"
@@ -98,7 +98,7 @@ class TestWriteEphemeralResult:
 
     def test_write_ephemeral_result_creates_parquet(self, tmp_path: Path) -> None:
         """write_ephemeral_result should create parquet in ephemeral directory."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -139,7 +139,7 @@ class TestWriteDurablePartitions:
         self, tmp_path: Path
     ) -> None:
         """write_durable_partitions should create per-year parquet files."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -168,7 +168,7 @@ class TestWriteDurablePartitions:
 
     def test_write_durable_partitions_computes_checksums(self, tmp_path: Path) -> None:
         """Each partition should have a SHA256 checksum."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -197,7 +197,7 @@ class TestWriteDurablePartitions:
 
     def test_write_durable_partitions_uses_atomic_write(self, tmp_path: Path) -> None:
         """Partitions should be written atomically (tmp then rename)."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -227,7 +227,7 @@ class TestWriteArtifactMetadata:
 
     def test_write_artifact_metadata_writes_metadata(self, tmp_path: Path) -> None:
         """write_artifact_metadata should write artifact_metadata.json."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -286,7 +286,7 @@ class TestWriteArtifactMetadata:
         self, tmp_path: Path
     ) -> None:
         """source_snapshot_id=None should produce empty input_snapshots list."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -330,7 +330,7 @@ class TestUpdateArtifactMetadata:
     def test_update_artifact_metadata_injects_publication(self, tmp_path: Path) -> None:
         """update_artifact_metadata should read existing JSON and inject publication."""
 
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -422,7 +422,7 @@ class TestUpdateArtifactMetadata:
         self, tmp_path: Path
     ) -> None:
         """source_snapshot_id=None should produce empty input_snapshots on update."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -492,7 +492,7 @@ class TestExtractPartitionKeys:
 
     def test_extracts_unique_years(self) -> None:
         """Should extract unique year keys from the time column."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             extract_partition_keys,
         )
 
@@ -504,7 +504,7 @@ class TestExtractPartitionKeys:
 
     def test_single_year(self) -> None:
         """Should return single key for single-year data."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             extract_partition_keys,
         )
 
@@ -520,7 +520,7 @@ class TestTwoPhaseCommit:
 
     def test_multi_partition_all_or_nothing(self, tmp_path: Path) -> None:
         """Mid-write failure should leave NO final parquet files on disk."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -564,7 +564,7 @@ class TestTwoPhaseCommit:
 
     def test_multi_partition_temp_files_cleaned_up(self, tmp_path: Path) -> None:
         """After successful write, no .tmp.parquet files should remain."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -601,7 +601,7 @@ class TestEphemeralAtomicWrite:
 
     def test_ephemeral_result_uses_atomic_write(self, tmp_path: Path) -> None:
         """write_ephemeral_result should delegate to atomic_write."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -623,7 +623,7 @@ class TestEphemeralAtomicWrite:
         )
 
         with patch(
-            "ditto_data.storage.runtime.derived_artifact_writer.atomic_write"
+            "ditto_features.storage.derived_artifact_writer.atomic_write"
         ) as mock_atomic:
             writer.write_ephemeral_result(
                 spec=spec_record,
@@ -636,7 +636,7 @@ class TestEphemeralAtomicWrite:
 
     def test_ephemeral_result_writes_readable_parquet(self, tmp_path: Path) -> None:
         """write_ephemeral_result should produce a readable parquet file."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -672,7 +672,7 @@ class TestMetadataAtomicWrite:
 
     def test_artifact_metadata_uses_atomic_write(self, tmp_path: Path) -> None:
         """write_artifact_metadata should delegate to atomic_bytes_write."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -703,7 +703,7 @@ class TestMetadataAtomicWrite:
         )
 
         with patch(
-            "ditto_data.storage.runtime.derived_artifact_writer.atomic_bytes_write"
+            "ditto_features.storage.derived_artifact_writer.atomic_bytes_write"
         ) as mock_atomic:
             writer.write_artifact_metadata(
                 ArtifactMetadataParams(
@@ -725,7 +725,7 @@ class TestMetadataAtomicWrite:
 
     def test_update_artifact_metadata_uses_atomic_write(self, tmp_path: Path) -> None:
         """update_artifact_metadata should delegate to atomic_bytes_write."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -787,7 +787,7 @@ class TestMetadataAtomicWrite:
         )
 
         with patch(
-            "ditto_data.storage.runtime.derived_artifact_writer.atomic_bytes_write"
+            "ditto_features.storage.derived_artifact_writer.atomic_bytes_write"
         ) as mock_atomic:
             writer.update_artifact_metadata(
                 spec=spec_record,
@@ -834,7 +834,7 @@ class TestIncrementalPartitionMerge:
 
     def test_incremental_partition_creates_new_if_missing(self, tmp_path: Path) -> None:
         """No existing file -> just writes the new partition data."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -868,7 +868,7 @@ class TestIncrementalPartitionMerge:
 
     def test_incremental_partition_merges_with_existing(self, tmp_path: Path) -> None:
         """existing + new -> merged with both datasets present."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -917,7 +917,7 @@ class TestIncrementalPartitionMerge:
 
     def test_incremental_partition_new_overwrites_old(self, tmp_path: Path) -> None:
         """Duplicate (instrument_id, trade_date) -> new value overwrites old."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -966,7 +966,7 @@ class TestIncrementalPartitionMerge:
 
     def test_incremental_partition_multi_year(self, tmp_path: Path) -> None:
         """Incremental data spanning multiple years merges each independently."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -1031,7 +1031,7 @@ class TestConfigurableCompression:
 
     def test_default_compression_zstd_ephemeral(self, tmp_path: Path) -> None:
         """Default compression should be zstd for ephemeral writes."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -1063,7 +1063,7 @@ class TestConfigurableCompression:
 
     def test_configurable_compression_snappy_ephemeral(self, tmp_path: Path) -> None:
         """Snappy compression should produce readable parquet for ephemeral writes."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -1095,7 +1095,7 @@ class TestConfigurableCompression:
 
     def test_configurable_compression_snappy_durable(self, tmp_path: Path) -> None:
         """Snappy compression should be used in durable partition writes."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 
@@ -1122,7 +1122,7 @@ class TestConfigurableCompression:
 
     def test_configurable_compression_snappy_incremental(self, tmp_path: Path) -> None:
         """Snappy compression should be used in incremental partition writes."""
-        from ditto_data.storage.runtime.derived_artifact_writer import (
+        from ditto_features.storage.derived_artifact_writer import (
             DerivedArtifactWriter,
         )
 

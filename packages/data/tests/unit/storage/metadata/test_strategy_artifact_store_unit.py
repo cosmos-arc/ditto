@@ -5,12 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
-from ditto_data.storage.metadata.strategy_artifact_store import (
+from ditto_platform.foundation import SQLitePool
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
+from ditto_strategy.storage.sqlite.strategy_artifact_store import (
     SQLiteStrategyArtifactReader,
     SQLiteStrategyArtifactWriter,
 )
-from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture

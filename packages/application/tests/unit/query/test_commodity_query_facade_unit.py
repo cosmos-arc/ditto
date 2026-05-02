@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.query.commodity import CommodityQueryFacade
+from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_data.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
     VIX_CODE_TO_INSTRUMENT_ID,

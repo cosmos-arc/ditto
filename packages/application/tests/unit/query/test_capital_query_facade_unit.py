@@ -6,7 +6,7 @@ from datetime import date
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.capital import CapitalQueryFacade
+from ditto_application.queries.capital import CapitalQueryFacade
 
 
 class TestCapitalQueryFacadeGetMarginTrading:

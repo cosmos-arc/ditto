@@ -9,18 +9,8 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_engine.backtest.config import EngineConfig
-from ditto_engine.backtest.engine import EngineLoop, EngineOptions
-from ditto_portfolio.rebalancing.allocation import (
-    AllocationStage,
-    EqualWeightAllocator,
-    InverseVolAllocator,
-)
-from ditto_portfolio.rebalancing.constraints import (
-    ConstraintChecker,
-    ConstraintStage,
-    MaxWeightConstraint,
-)
+from ditto_backtest.config import EngineConfig
+from ditto_backtest.engine import EngineLoop, EngineOptions
 from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
@@ -31,7 +21,7 @@ from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.builtins.scoring import ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.specs import ParamConstraint
 from ditto_strategy.alpha.templates.stock_selection_trend import (
     MultiFactorSignalStage,
@@ -286,65 +276,23 @@ class TestMultiFactorSignalStage:
 
 
 class TestBuildStockSelectionTrendPipeline:
-    def test_default_config_builds_pipeline(self) -> None:
-        """默认配置构建合法 Pipeline。"""
+    def test_default_config_builds_stages(self) -> None:
+        """默认配置构建合法 alpha stages 列表。"""
         config = StockSelectionTrendConfig()
-        pipeline = build_stock_selection_trend_pipeline(config)
-        assert pipeline is not None
-        # MultiFactor + TrendFilter + Scoring + RiskLock +
-        # Select + Allocate + Constraint
-        assert len(pipeline._stages) == 7
+        stages = build_stock_selection_trend_pipeline(config)
+        assert isinstance(stages, list)
+        # MultiFactor + TrendFilter + Scoring + RiskLock + Select
+        assert len(stages) == 5
 
     def test_pipeline_stage_order(self) -> None:
-        """Pipeline 阶段顺序正确。"""
+        """alpha stages 顺序正确。"""
         config = StockSelectionTrendConfig()
-        pipeline = build_stock_selection_trend_pipeline(config)
-        stages = pipeline._stages
+        stages = build_stock_selection_trend_pipeline(config)
         assert isinstance(stages[0], MultiFactorSignalStage)
         assert isinstance(stages[1], TrendFilterStage)
         assert isinstance(stages[2], ScoringStage)
         assert isinstance(stages[3], RiskLockFilter)
         assert isinstance(stages[4], SelectionStage)
-        assert isinstance(stages[5], AllocationStage)
-        assert isinstance(stages[6], ConstraintStage)
-
-    def test_max_weight_constraint_present(self) -> None:
-        """ConstraintStage 中包含 MaxWeightConstraint。"""
-        config = StockSelectionTrendConfig(max_weight=0.20)
-        pipeline = build_stock_selection_trend_pipeline(config)
-        constraint_stage = pipeline._stages[6]
-        assert isinstance(constraint_stage, ConstraintStage)
-        assert isinstance(constraint_stage.checker, ConstraintChecker)
-        # The checker should contain a MaxWeightConstraint
-        has_max_weight = any(
-            isinstance(c, MaxWeightConstraint)
-            for c in constraint_stage.checker._constraints
-        )
-        assert has_max_weight
-
-    def test_inverse_vol_allocation(self) -> None:
-        """inverse_vol 分配方式正确使用 InverseVolAllocator。"""
-        config = StockSelectionTrendConfig(
-            allocation_method="inverse_vol",
-            cash_target=0.1,
-        )
-        pipeline = build_stock_selection_trend_pipeline(config)
-        allocation_stage = pipeline._stages[5]
-        assert isinstance(allocation_stage, AllocationStage)
-        assert isinstance(allocation_stage.allocator, InverseVolAllocator)
-        assert allocation_stage.allocator.cash_target == 0.1
-
-    def test_equal_weight_allocation(self) -> None:
-        """equal_weight 分配方式正确使用 EqualWeightAllocator。"""
-        config = StockSelectionTrendConfig(
-            allocation_method="equal_weight",
-            cash_target=0.05,
-        )
-        pipeline = build_stock_selection_trend_pipeline(config)
-        allocation_stage = pipeline._stages[5]
-        assert isinstance(allocation_stage, AllocationStage)
-        assert isinstance(allocation_stage.allocator, EqualWeightAllocator)
-        assert allocation_stage.allocator.cash_target == 0.05
 
 
 # ---------------------------------------------------------------------------
@@ -371,9 +319,9 @@ class TestPipelineE2E:
             signal_weights=(1.0,),
             top_k=2,
             trend_threshold=0.0,
-            allocation_method="equal_weight",
         )
-        pipeline = build_stock_selection_trend_pipeline(config)
+        stages = build_stock_selection_trend_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, multi_factor_bundle)
         assert len(target.positions) == 2
         # ascending=False inverts: STK005 (rank 0.2→score 1.0)
@@ -421,9 +369,9 @@ class TestPipelineE2E:
             signal_weights=(1.0,),
             top_k=10,
             trend_threshold=0.4,
-            allocation_method="equal_weight",
         )
-        pipeline = build_stock_selection_trend_pipeline(config)
+        stages = build_stock_selection_trend_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, bundle)
 
         # Ranks (descending=False): STK005(-0.10)→0.2, STK004(0.05)→0.4,
@@ -432,75 +380,24 @@ class TestPipelineE2E:
         assert "STK005" not in target.positions
         assert len(target.positions) == 4
 
-    def test_e2e_max_weight_constraint_applied(
-        self,
-        empty_context: StrategyContext,
-    ) -> None:
-        """max_weight 约束生效，无权重超过上限。"""
-        ids = [f"STK{i:03d}" for i in range(1, 6)]
-        instruments = pl.DataFrame({"instrument_id": ids})
-        market_data = pl.DataFrame(
-            {
-                "instrument_id": ids,
-                "close": [10.0] * 5,
-                "open": [10.0] * 5,
-                "high": [10.5] * 5,
-                "low": [9.5] * 5,
-                "volume": [1_000_000.0] * 5,
-            },
-        )
-        signal_values = pl.DataFrame(
-            {
-                "instrument_id": ids,
-                "signal_value": [0.20, 0.18, 0.15, 0.10, 0.05],
-            },
-        )
-        bundle = StrategyInputBundle(
-            trade_date="2026-03-22",
-            strategy_id="test",
-            run_id="run_001",
-            instruments=instruments,
-            market_data=market_data,
-            signal_values=signal_values,
-        )
-
-        config = StockSelectionTrendConfig(
-            signal_factors=("signal_value",),
-            signal_weights=(1.0,),
-            top_k=5,
-            max_weight=0.15,
-            trend_threshold=0.0,
-            allocation_method="equal_weight",
-        )
-        pipeline = build_stock_selection_trend_pipeline(config)
-        target = pipeline.run(empty_context, bundle)
-
-        # All weights should be <= 0.15
-        for weight in target.positions.values():
-            assert weight <= 0.15
-
     def test_regime_config_inserts_scoring_step(
         self,
     ) -> None:
-        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        """有 regime_config 时 stages 包含 RegimeScoringStep 和 RegimeAware."""
         regime_config = RegimeConfig(
             indicators=(TrendIndicator(threshold=0.01),),
         )
         config = StockSelectionTrendConfig(regime_config=regime_config)
-        pipeline = build_stock_selection_trend_pipeline(config)
+        stages = build_stock_selection_trend_pipeline(config)
 
-        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
-        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeScoringStep) for s in stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in stages)
 
         scoring_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeScoringStep)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeScoringStep)
         )
         aware_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeAwareAllocationStage)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
-from ditto_application.query.artifact_utils import compute_total_return
+from ditto_application.queries.artifact_utils import compute_total_return
 from ditto_apps.jobs.flows.backtest import (
     run_backtest_flow,
 )
@@ -370,7 +370,7 @@ class TestRunBacktestFlowCostConfig:
         mock_facade: Mock,
     ) -> None:
         """无 cost_config 时 options.fee_model 为 AShareFeeModel 默认实例."""
-        from ditto_engine.execution.reality.fee import AShareFeeModel
+        from ditto_execution.reality.fee import AShareFeeModel
 
         RUNNER(
             run_id="run-010",
@@ -417,7 +417,7 @@ class TestRunBacktestFlowCostConfig:
         mock_facade: Mock,
     ) -> None:
         """无 cost_config 时 options.slippage_model 为 FixedBpsSlippage 默认实例."""
-        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+        from ditto_execution.reality.slippage import FixedBpsSlippage
 
         RUNNER(
             run_id="run-012",

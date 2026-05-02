@@ -41,6 +41,7 @@ from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
@@ -175,7 +176,7 @@ def _build_engine_with_risk_and_audit(
     )
 
     pipeline_config = pipeline_config or ETFRotationConfig(top_k=3, cash_target=0.0)
-    pipeline = build_etf_rotation_pipeline(pipeline_config)
+    pipeline = StrategyPipeline(build_etf_rotation_pipeline(pipeline_config))
 
     account = Account(
         cash=CashBook(

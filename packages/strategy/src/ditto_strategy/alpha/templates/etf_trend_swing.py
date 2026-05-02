@@ -1,14 +1,13 @@
 """
-etf_trend_swing 策略模板 -- ETF 趋势追踪的标准 Pipeline.
+etf_trend_swing 策略模板 -- ETF 趋势追踪的 alpha stages.
 
 标准流程:
-  Signal -> TrendFilter -> Score -> RiskLockFilter
-  -> Select -> Allocate -> [Regime] -> TrailingStop
+  Signal -> TrendFilter -> Score -> RiskLockFilter -> Select -> [Regime] -> TrailingStop
 
 提供:
 - ETFTrendSwingConfig: 策略模板运行时配置
 - TrailingStopStage: 追踪止损约束
-- build_etf_trend_swing_pipeline: 组装标准 Pipeline
+- build_etf_trend_swing_pipeline: 组装 alpha stages
 """
 
 from __future__ import annotations
@@ -16,12 +15,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
-from ditto_portfolio.rebalancing.allocation import (
-    AllocationStage,
-    EqualWeightAllocator,
-    InverseVolAllocator,
-    WeightAllocator,
-)
 
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
 from ditto_strategy.alpha.builtins.regime import RegimeConfig
@@ -33,7 +26,6 @@ from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.protocols import DecisionStage
 
 __all__ = [
@@ -153,19 +145,21 @@ class ETFTrendSwingConfig:
 
 def build_etf_trend_swing_pipeline(
     config: ETFTrendSwingConfig,
-) -> StrategyPipeline:
+) -> list[DecisionStage]:
     """
-    组装 etf_trend_swing 的标准 Pipeline.
+    组装 etf_trend_swing 的 alpha stages.
 
     流程:
       Signal -> TrendFilter -> Score -> RiskLockFilter ->
-      Select -> Allocate -> [Regime] -> TrailingStop
+      Select -> [Regime] -> TrailingStop
+
+    分配由 application 层根据 config 参数独立配置。
 
     Args:
         config: 运行时配置。
 
     Returns:
-        配置完成的 StrategyPipeline。
+        alpha DecisionStage 列表。
 
     """
     stages: list[DecisionStage] = [
@@ -183,24 +177,15 @@ def build_etf_trend_swing_pipeline(
         SelectionStage(top_k=config.max_positions),
     ]
 
-    # Allocator
-    if config.allocation_method == "inverse_vol":
-        allocator: WeightAllocator = InverseVolAllocator(
-            cash_target=config.cash_target,
-        )
-    else:
-        allocator = EqualWeightAllocator(cash_target=config.cash_target)
-    stages.append(AllocationStage(allocator=allocator))
-
-    # Regime-aware allocation (optional, post-allocate)
+    # Regime-aware allocation (optional, strategy-internal)
     if config.regime_config is not None:
         stages.append(RegimeScoringStep(config.regime_config))
         stages.append(RegimeAwareAllocationStage())
 
-    # Trailing Stop (post-allocation)
+    # Trailing Stop (post-selection)
     if config.trailing_stop_pct > 0:
         stages.append(
             TrailingStopStage(trailing_stop_pct=config.trailing_stop_pct),
         )
 
-    return StrategyPipeline(stages)
+    return stages

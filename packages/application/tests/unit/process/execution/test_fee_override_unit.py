@@ -15,14 +15,14 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
-from ditto_application.command.backtest import CostConfig
-from ditto_application.process.execution.fee_override import (
+from ditto_application.commands.backtest import CostConfig
+from ditto_application.processes.execution.fee_override import (
     OverrideFeeModel,
     build_fee_model,
     build_slippage_model,
 )
-from ditto_engine.execution.reality.fee import AShareFeeModel
-from ditto_engine.execution.rules import FeeSchedule
+from ditto_execution.reality.fee import AShareFeeModel
+from ditto_execution.rules import FeeSchedule
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.strategy import ImpactModel
@@ -307,7 +307,7 @@ class TestBuildSlippageModel:
 
     def test_none_returns_default_fixed_bps(self) -> None:
         """cost_config=None 返回 FixedBpsSlippage 默认 2.0 bps."""
-        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+        from ditto_execution.reality.slippage import FixedBpsSlippage
 
         model = build_slippage_model(None)
         assert isinstance(model, FixedBpsSlippage)
@@ -315,7 +315,7 @@ class TestBuildSlippageModel:
 
     def test_impact_model_none_returns_fixed_bps_with_custom_bps(self) -> None:
         """impact_model='none' 使用 cost_config.slippage_bps."""
-        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+        from ditto_execution.reality.slippage import FixedBpsSlippage
 
         cost_config = CostConfig(slippage_bps=5.0, impact_model=ImpactModel.NONE)
         model = build_slippage_model(cost_config)
@@ -324,7 +324,7 @@ class TestBuildSlippageModel:
 
     def test_impact_model_volume_share(self) -> None:
         """impact_model='volume_share' 返回 VolumeShareSlippage."""
-        from ditto_engine.execution.reality.slippage import VolumeShareSlippage
+        from ditto_execution.reality.slippage import VolumeShareSlippage
 
         cost_config = CostConfig(
             slippage_bps=3.0,

@@ -1,9 +1,9 @@
 """
-stock_sector_rotation 策略模板 -- 行业轮动 + 行业内选股的两层 Pipeline.
+stock_sector_rotation 策略模板 -- 行业轮动 + 行业内选股的两层 alpha stages.
 
 标准流程:
   SectorSignal -> SectorScoreAndSelect -> IntraSectorSelect -> RiskLockFilter ->
-  SectorWeight -> [Regime] -> Constraint(max_weight) -> FinalFilter(non-sector)
+  SectorWeight -> [Regime] -> FinalFilter(non-sector)
 
 提供:
 - StockSectorRotationConfig: 策略模板运行时配置
@@ -14,7 +14,7 @@ stock_sector_rotation 策略模板 -- 行业轮动 + 行业内选股的两层 Pi
 - FinalStockFilterStage: 过滤行业 ETF 行，仅保留个股
 - validate_config: 配置校验
 - get_param_constraints: 参数扫描元数据
-- build_stock_sector_rotation_pipeline: 组装标准 Pipeline
+- build_stock_sector_rotation_pipeline: 组装 alpha stages
 
 DecisionFrame 额外约定列:
   sector_id: str      -- 个股所属行业 ID（行业 ETF 行 = 自身 ID）
@@ -26,12 +26,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
-from ditto_portfolio.rebalancing.constraints import (
-    Constraint,
-    ConstraintChecker,
-    ConstraintStage,
-    MaxWeightConstraint,
-)
 
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.regime import RegimeConfig
@@ -40,7 +34,6 @@ from ditto_strategy.alpha.builtins.regime_allocation import (
 )
 from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.specs import ParamConstraint
 
@@ -537,20 +530,21 @@ class FinalStockFilterStage:
 
 def build_stock_sector_rotation_pipeline(
     config: StockSectorRotationConfig,
-) -> StrategyPipeline:
+) -> list[DecisionStage]:
     """
-    组装 stock_sector_rotation 的标准 Pipeline.
+    组装 stock_sector_rotation 的 alpha stages.
 
     流程:
       SectorSignal -> SectorScoreAndSelect -> IntraSectorSelect ->
-      RiskLockFilter -> SectorWeight -> [Regime] -> Constraint(max_weight) ->
-      FinalStockFilter
+      RiskLockFilter -> SectorWeight -> [Regime] -> FinalStockFilter
+
+    约束由 application 层根据 config.max_weight 独立配置。
 
     Args:
         config: 运行时配置。
 
     Returns:
-        配置完成的 StrategyPipeline。
+        alpha DecisionStage 列表。
 
     """
     stages: list[DecisionStage] = [
@@ -570,18 +564,12 @@ def build_stock_sector_rotation_pipeline(
         ),
     ]
 
-    # Regime-aware allocation (optional, post-weight)
+    # Regime-aware allocation (optional, strategy-internal)
     if config.regime_config is not None:
         stages.append(RegimeScoringStep(config.regime_config))
         stages.append(RegimeAwareAllocationStage())
 
-    # Constraint: MaxWeightConstraint (always present)
-    constraint_list: list[Constraint] = [
-        MaxWeightConstraint(max_weight=config.max_weight),
-    ]
-    stages.append(ConstraintStage(checker=ConstraintChecker(constraint_list)))
-
     # Filter out sector ETF rows before building TargetPortfolio
     stages.append(FinalStockFilterStage())
 
-    return StrategyPipeline(stages)
+    return stages

@@ -13,7 +13,7 @@ class TestSignalRecord:
     """SignalRecord — 交易意图持久化记录."""
 
     def test_construction_with_required_fields(self) -> None:
-        from ditto_data.models.trade import SignalRecord
+        from ditto_execution.models import SignalRecord
 
         record = SignalRecord(
             intent_id="intent-1",
@@ -34,7 +34,7 @@ class TestSignalRecord:
         assert record.created_at == ""
 
     def test_frozen_immutability(self) -> None:
-        from ditto_data.models.trade import SignalRecord
+        from ditto_execution.models import SignalRecord
 
         record = SignalRecord(
             intent_id="intent-1",
@@ -54,7 +54,7 @@ class TestFillRecord:
     """FillRecord — 人工成交持久化记录."""
 
     def test_construction_with_required_fields(self) -> None:
-        from ditto_data.models.trade import FillRecord
+        from ditto_execution.models import FillRecord
 
         record = FillRecord(
             fill_id="fill-1",
@@ -81,7 +81,7 @@ class TestPositionRecord:
     """PositionRecord — 实际持仓快照持久化记录."""
 
     def test_construction_with_required_fields(self) -> None:
-        from ditto_data.models.trade import PositionRecord
+        from ditto_execution.models import PositionRecord
 
         record = PositionRecord(
             snapshot_id="snap-1",
@@ -267,7 +267,7 @@ class TestDtoRecordMapping:
 
     def test_record_to_intent(self) -> None:
         from ditto_application.execution_dto import record_to_intent
-        from ditto_data.models.trade import SignalRecord
+        from ditto_execution.models import SignalRecord
 
         record = SignalRecord(
             intent_id="intent-1",
@@ -287,7 +287,7 @@ class TestDtoRecordMapping:
 
     def test_record_to_fill(self) -> None:
         from ditto_application.execution_dto import record_to_fill
-        from ditto_data.models.trade import FillRecord
+        from ditto_execution.models import FillRecord
 
         record = FillRecord(
             fill_id="fill-1",
@@ -308,7 +308,7 @@ class TestDtoRecordMapping:
 
     def test_record_to_snapshot(self) -> None:
         from ditto_application.execution_dto import record_to_snapshot
-        from ditto_data.models.trade import PositionRecord
+        from ditto_execution.models import PositionRecord
 
         record = PositionRecord(
             snapshot_id="snap-1",

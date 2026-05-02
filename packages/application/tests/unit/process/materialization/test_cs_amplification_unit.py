@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     apply_cs_amplification,
 )
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile

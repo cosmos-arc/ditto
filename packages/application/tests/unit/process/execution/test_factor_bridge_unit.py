@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.process.execution.factor_bridge import (
+from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
     build_signal_spec,

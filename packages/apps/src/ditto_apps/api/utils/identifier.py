@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel import AmbiguousTickerError, NoIdentifierProvidedError
 from ditto_platform.foundation import logger
 

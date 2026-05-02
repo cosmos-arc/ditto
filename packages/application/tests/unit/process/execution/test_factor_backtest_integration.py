@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_application.process.execution.backtest_process import (
+from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_application.process.execution.factor_bridge import (
+from ditto_application.processes.execution.factor_bridge import (
     FactorBridge,
 )
-from ditto_engine.backtest.data_feed import Slice
-from ditto_engine.backtest.steps import StepContext
+from ditto_backtest.data_feed import Slice
+from ditto_backtest.steps import StepContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
 

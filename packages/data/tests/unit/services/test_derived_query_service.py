@@ -10,12 +10,13 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_data.errors import DerivedNotFoundError
-from ditto_data.models.derived import (
+from ditto_features.materialization.models import DerivedVersionStatus
+from ditto_features.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_data.services.derived import (
+from ditto_features.services.derived import (
     COMPARE_RESULT_COLUMNS,
     LATEST_RESULT_COLUMNS,
     SERIES_RESULT_COLUMNS,
@@ -29,12 +30,11 @@ from ditto_data.services.derived import (
     empty_latest_result,
     empty_series_result,
 )
-from ditto_data.services.derived_catalog_service import DerivedCatalogService
-from ditto_data.storage.runtime.derived_sqlite import (
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 

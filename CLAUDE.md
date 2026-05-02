@@ -63,17 +63,22 @@
 
 ### 架构原则
 ```
-依赖层级（从高到低）:
-  ditto_apps → ditto_application → ditto_engine → ditto_data → ditto_platform
-  ditto_apps → ditto_analytics → ditto_kernel
-  ditto_apps → ditto_data → ditto_kernel, ditto_platform
-  ditto_application → ditto_analytics → ditto_kernel
+依赖层级:
+  ditto_apps → ditto_application → {data, features, strategy, portfolio, risk, execution, backtest, analysis} → kernel
+  ditto_apps → ditto_platform
+  platform 是横向技术基础设施
 
 允许的跨层依赖:
   - apps 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
   - apps 可以直接依赖 platform.foundation
   - apps 禁止直接依赖 data.storage/runtime（仅 registry 例外）
   - apps.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
+
+硬性约束:
+  - 生产包禁止依赖 ditto_analysis
+  - ditto_strategy 禁止依赖 ditto_execution
+  - ditto_execution 禁止依赖 ditto_backtest
+  - ditto_backtest 禁止导入真实券商网关
 
 详细约束见 .importlinter 配置
 ```
@@ -88,12 +93,19 @@
 - Platform → [packages/platform/CLAUDE.md](packages/platform/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
-- Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
-- Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
+- Features → [packages/features/CLAUDE.md](packages/features/CLAUDE.md)
+- Strategy → [packages/strategy/CLAUDE.md](packages/strategy/CLAUDE.md)
+- Portfolio → [packages/portfolio/CLAUDE.md](packages/portfolio/CLAUDE.md)
+- Risk → [packages/risk/CLAUDE.md](packages/risk/CLAUDE.md)
+- Execution → [packages/execution/CLAUDE.md](packages/execution/CLAUDE.md)
+- Backtest → [packages/backtest/CLAUDE.md](packages/backtest/CLAUDE.md)
+- Analysis → [packages/analysis/CLAUDE.md](packages/analysis/CLAUDE.md)
 - Application → [packages/application/CLAUDE.md](packages/application/CLAUDE.md)
-- Interfaces → [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md)
+- Apps → [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md)
 
-架构心智模型以 diamond 为准：`data`、`analytics`、`engine` 是并列核心平面；
+架构心智模型以能力包为准：`data`、`features`、`analysis` 是数据/计算平面，
+capability packages（strategy/portfolio/risk/execution/backtest）是并列领域能力平面；
+`application` 编排所有能力包；`apps` 作为入口和 composition root。
 `.importlinter` 中的 layers 顺序是工具表达限制，不代表业务层级高低。
 平面互斥由 explicit forbidden contracts 固化。
 
@@ -255,13 +267,18 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ```
 ditto/
 ├── packages/           # 核心包
-│   ├── platform/        # 基础设施
+│   ├── platform/        # 基础设施（横向技术能力）
 │   ├── kernel/       # 共享内核（零业务行为类型）
-│   ├── data/          # 数据访问层
-│   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
-│   ├── application/  # 应用编排层（CQRS: query/process/command/builders）
-│   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
-├── apps/                   # → 已迁移至 packages/apps/（唯一应用入口 API/CLI/Jobs + DI Composition Root）
+│   ├── data/          # 数据平台（数据源、存储、质量、摄取）
+│   ├── features/     # 因子与表达式计算（编译、物化、评估）
+│   ├── strategy/     # 策略定义与信号生成
+│   ├── portfolio/    # 组合构建与管理
+│   ├── risk/         # 风险管理
+│   ├── execution/    # 交易执行
+│   ├── backtest/     # 回测引擎
+│   ├── analysis/     # 纯研究分析（报告、诊断、实验）
+│   ├── application/  # 应用编排层（CQRS: queries/commands/processes/builders）
+│   └── apps/         # 应用入口（API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

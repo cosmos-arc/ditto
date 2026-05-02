@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_application.process.ingestion.metadata_manager import MetadataManager
+from ditto_application.processes.ingestion.metadata_manager import MetadataManager
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability import init, reset_for_testing

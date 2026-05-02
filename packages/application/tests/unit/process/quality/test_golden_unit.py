@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_application.command.quality_reconciliation import ReconcileSourcesHandler
+from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 from ditto_data.quality.golden import GoldenDatasetOptions, GoldenDatasetSpec
 
 
@@ -207,7 +207,7 @@ class TestGoldenDatasetFilter:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -266,7 +266,7 @@ class TestGoldenDatasetFilter:
         mock_instrument_store.enrich_with_ticker.return_value = enriched_df
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 

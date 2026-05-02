@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from ditto_application.execution_dto import TradeIntent
-from ditto_application.process.execution.delivery import DeliveryRouter
+from ditto_application.processes.execution.delivery import DeliveryRouter
 from ditto_platform.services.notification import AlertManager, NotificationLevel
 
 

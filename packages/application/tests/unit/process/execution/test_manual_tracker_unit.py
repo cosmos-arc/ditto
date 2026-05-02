@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from ditto_application.execution_dto import ManualExecutionFill
-from ditto_application.process.execution.manual_tracker import ManualTracker
+from ditto_application.processes.execution.manual_tracker import ManualTracker
 
 # ---------------------------------------------------------------------------
 # 辅助函数

@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.macro import MacroQueryFacade
+from ditto_application.queries.macro import MacroQueryFacade
 from ditto_data.services.macro_service import MacroQuery
 
 

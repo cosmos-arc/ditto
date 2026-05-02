@@ -12,27 +12,31 @@
 
 from __future__ import annotations
 
+import importlib.util
 from datetime import UTC, datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_engine.backtest.data_feed import Slice
-from ditto_engine.backtest.engine import EngineLoop, EngineOptions
+from ditto_backtest.data_feed import Slice
+from ditto_backtest.engine import EngineLoop, EngineOptions
 from ditto_kernel.clock import SimulatedClock
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.templates.stock_sector_rotation import (
     StockSectorRotationConfig,
     build_stock_sector_rotation_pipeline,
 )
 
-from .conftest import (
-    INITIAL_CASH,
-    SECTOR_INSTRUMENT_IDS,
-    TRADE_DATES_10,
-    assert_cash_conservation,
-    build_snapshot_engine,
-    make_sector_10day_data,
-)
+_conftest_path = Path(__file__).parent / "conftest.py"
+_spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+INITIAL_CASH = _mod.INITIAL_CASH
+SECTOR_INSTRUMENT_IDS = _mod.SECTOR_INSTRUMENT_IDS
+TRADE_DATES_10 = _mod.TRADE_DATES_10
+assert_cash_conservation = _mod.assert_cash_conservation
+build_snapshot_engine = _mod.build_snapshot_engine
+make_sector_10day_data = _mod.make_sector_10day_data
 
 # ---------------------------------------------------------------------------
 # 行业映射 — instrument_id → (sector_id, is_sector)
@@ -140,7 +144,8 @@ def _build_sector_engine(
         cash_target=0.0,
         rebalance_freq=rebalance_freq,
     )
-    pipeline = build_stock_sector_rotation_pipeline(config)
+    stages = build_stock_sector_rotation_pipeline(config)
+    pipeline = StrategyPipeline(stages)
 
     base_engine = build_snapshot_engine(
         tmp_path=tmp_path,

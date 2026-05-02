@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_application.command.quality_check import CheckDataQualityHandler
+from ditto_application.commands.quality_check import CheckDataQualityHandler
 
 
 @pytest.mark.unit

@@ -55,7 +55,7 @@ src/ditto_data/                       packages/data/tests/unit/
 ├── models/                  →          ├── models/
 └── runtime/                 →          └── runtime/
 
-src/ditto_interfaces/                   interfaces/tests/unit/
+src/ditto_apps/                   packages/apps/tests/unit/
 ├── cli/                      →          ├── cli/
 ├── jobs/                     →          ├── jobs/
 ├── models/                   →          ├── models/
@@ -323,7 +323,7 @@ def test_facade_delegates_correctly(mocker):
 def test_cli_stock_daily_calls_ingest_function(mocker, tmp_path: Path):
     """测试 CLI 命令调用了正确的摄入函数"""
     # Mock 内部函数（验证调用，不关心结果）
-    mock_ingest = mocker.patch("ditto_interfaces.cli.ingest.ingest_stock_daily")
+    mock_ingest = mocker.patch("ditto_apps.cli.ingest.ingest_stock_daily")
 
     # 执行 CLI 命令
     result = runner.invoke(
@@ -354,7 +354,7 @@ def test_cli_validates_date_format():
 @pytest.mark.integration
 def test_cli_stock_daily_result(mocker, tmp_path: Path):
     """错误：测试函数执行结果（应该是单元测试）"""
-    mock_ingest = mocker.patch("ditto_interfaces.cli.ingest.ingest_stock_daily")
+    mock_ingest = mocker.patch("ditto_apps.cli.ingest.ingest_stock_daily")
     mock_ingest.return_value = 100  # ← 不要在集成测试中验证返回值
 
     result = runner.invoke(app, ["stock", "daily", "2024-01-02"])
@@ -1010,7 +1010,7 @@ def check_structure(src_path, test_path, name):
 all_ok = True
 all_ok &= check_structure('packages/platform/src', 'packages/platform/tests/unit', 'Platform')
 all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'Data')
-all_ok &= check_structure('interfaces/src', 'interfaces/tests/unit', 'Interfaces')
+all_ok &= check_structure('packages/apps/src', 'packages/apps/tests/unit', 'Apps')
 
 if all_ok:
     print('✅ 所有包目录结构一致')
@@ -1165,7 +1165,7 @@ pixi run -e dev pytest tests/integration -n 1
 **修复**: 在 `conftest.py` 中添加装饰器 mock
 
 ```python
-# interfaces/tests/unit/conftest.py
+# packages/apps/tests/unit/conftest.py
 import prefect.tasks
 
 @pytest.fixture(autouse=True, scope="session")

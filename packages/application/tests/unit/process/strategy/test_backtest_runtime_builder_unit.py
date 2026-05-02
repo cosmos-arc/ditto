@@ -9,17 +9,17 @@ from ditto_application.builders import (
     BacktestRuntimeBuilder,
     PublishedStrategyRuntime,
 )
-from ditto_application.process.execution.backtest_process import BacktestServiceConfig
-from ditto_data.models.strategy import StrategySpecRecord
+from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_backtest.data_feed import ProviderBackedDataFeed
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
-from ditto_engine.backtest.data_feed import ProviderBackedDataFeed
-from ditto_engine.execution.brokerage import BacktestBrokerage
-from ditto_engine.execution.planner import SimpleExecutionPlanner
-from ditto_engine.execution.reality import AShareFeeModel
+from ditto_execution.brokerage import BacktestBrokerage
+from ditto_execution.planner import SimpleExecutionPlanner
+from ditto_execution.reality import AShareFeeModel
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.models import StrategySpecRecord
 
 
 def _make_strategy_spec() -> StrategySpec:

@@ -6,7 +6,7 @@ from datetime import date
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.fundamental import FundamentalQueryFacade
+from ditto_application.queries.fundamental import FundamentalQueryFacade
 
 
 class TestFundamentalQueryFacadeGetBalanceSheet:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from ditto_application.execution_dto import ManualExecutionFill
-from ditto_application.query.comparison_math import (
+from ditto_application.queries.comparison_math import (
     ComparisonMetrics,
     _align_nav_series,
     _compute_max_nav_diff_bps,

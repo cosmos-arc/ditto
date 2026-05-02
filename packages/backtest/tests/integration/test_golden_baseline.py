@@ -4,8 +4,8 @@
 任何破坏回测结果一致性的代码变更都会导致断言失败。
 
 快照值通过 inline-snapshot 自动管理，更新方式:
-  pixi run -e dev pytest packages/engine/tests/integration/ \\
-    backtest/test_golden_baseline.py --snapshot-update -v
+  pixi run -e dev pytest packages/backtest/tests/integration/ \\
+    test_golden_baseline.py --snapshot-update -v
 
 基线值通过 3 日 / 5 日固定 parquet 数据 + etf_rotation 策略建立。
 """

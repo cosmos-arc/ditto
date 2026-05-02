@@ -7,14 +7,18 @@ Application 层是 **Application Layer（应用层）**，负责 Use Case 编排
 **核心原则**：
 - 纯编排层，不包含核心业务逻辑
 - 通过 CQRS 模式分离读写职责
-- 协调 Engine（领域计算）+ Data（数据服务）
+- 协调 capability packages（领域计算）+ Data（数据服务）
 
 ## 依赖
 
 ```
 ditto_application → ditto_kernel ✅
 ditto_application → ditto_data ✅
-ditto_application → ditto_engine ✅
+ditto_application → ditto_strategy ✅
+ditto_application → ditto_portfolio ✅
+ditto_application → ditto_risk ✅
+ditto_application → ditto_execution ✅
+ditto_application → ditto_backtest ✅
 ditto_application → ditto_features ✅
 ditto_application → ditto_platform ✅
 ditto_application 禁止 → ditto_apps ❌
@@ -29,7 +33,7 @@ Application 层允许使用 `ditto_platform.foundation` 和 `ditto_platform.serv
 
 ```
 ditto_application/
-├── query/              # 只读查询（零写入）
+├── queries/             # 只读查询（零写入）
 │   ├── metadata.py    # 元数据查询
 │   ├── market.py      # 行情查询
 │   ├── capital.py     # 资金查询
@@ -56,7 +60,7 @@ ditto_application/
 │   ├── strategy.py     # 策略只读查询
 │   ├── trade.py        # 交易意图查询
 │   └── universe.py     # Universe 只读查询
-├── command/            # Command DTO + Handler（原子写操作）
+├── commands/            # Command DTO + Handler（原子写操作）
 │   ├── ingestion.py              # IngestDateCommand + IngestDateHandler
 │   ├── quality_check.py          # CheckDataQualityCommand + Handler
 │   ├── quality_reconciliation.py # ReconcileSourcesCommand + Handler
@@ -65,7 +69,7 @@ ditto_application/
 │   ├── strategy.py               # 策略 Spec CRUD（创建/更新/发布）
 │   ├── trade.py                  # 成交录入 + 意图状态更新
 │   └── universe.py               # 自定义 Universe CRUD
-├── process/            # Process Manager（有状态长流程）
+├── processes/           # Process Manager（有状态长流程）
 │   ├── ingestion/      # 数据摄取流程
 │   │   ├── coordinator.py           # IngestionCoordinator 主类
 │   │   ├── coordinator_factory.py   # create_coordinator 工厂
@@ -116,6 +120,7 @@ ditto_application/
 │   ├── service_factory.py   # 服务工厂
 │   ├── _resolution.py       # 依赖解析工具
 │   └── _spec_deserializer.py # 衍生规格反序列化
+├── runtime/             # 运行时工具（预留）
 ├── providers.py            # DI Provider 聚合入口（6 个 Provider）
 ├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
 ├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
@@ -140,16 +145,16 @@ ditto_application/
 
 | 方向 | 规则 |
 |------|------|
-| query → process | r8-query-no-process ❌ |
-| query → builders | r8-query-no-builders ❌ |
-| query → command | r8-query-no-command ❌ |
-| builders → query | r8-builders-no-query ❌ |
-| command → query | r8-command-no-query ❌ |
-| command → builders | r8-command-no-builders ❌ |
-| process → query | ✅ 允许（编排可调用查询） |
-| process ↔ builders | ✅ 允许（双向） |
-| command → process | ✅ 允许（委托执行） |
-| process → command | ✅ 允许（Process Manager 注入 Handler） |
+| queries → processes | r8-queries-no-processes ❌ |
+| queries → builders | r8-queries-no-builders ❌ |
+| queries → commands | r8-queries-no-commands ❌ |
+| builders → queries | r8-builders-no-queries ❌ |
+| commands → queries | r8-commands-no-queries ❌ |
+| commands → builders | r8-commands-no-builders ❌ |
+| processes → queries | ✅ 允许（编排可调用查询） |
+| processes ↔ builders | ✅ 允许（双向） |
+| commands → processes | ✅ 允许（委托执行） |
+| processes → commands | ✅ 允许（Process Manager 注入 Handler） |
 
 ## 测试规范
 

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 from ditto_application.execution_dto import TradeIntent
-from ditto_application.process.execution.delivery import DeliveryRouter
+from ditto_application.processes.execution.delivery import DeliveryRouter
 from jinja2 import Template
 
 TEMPLATES_DIR = Path(
-    "packages/infra/src/ditto_platform/services/notification/templates"
+    "packages/platform/src/ditto_platform/services/notification/templates"
 )
 
 

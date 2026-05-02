@@ -17,9 +17,9 @@ from typing import ClassVar
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.events import OrderSubmitted
-from ditto_execution.reality import FeeModel
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
+from ditto_kernel.trading import FeeModel
 from ditto_portfolio.accounting.buying_power import CashAccountBuyingPower
 from ditto_portfolio.accounting.order_book import Order
 from ditto_risk.pre_trade import (

@@ -4,9 +4,6 @@ from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
     BacktestArtifactReader,
     BacktestArtifactReaderProtocol,
 )
-from ditto_strategy.storage.sqlite.services.instrument_rule_provider import (
-    InstrumentRuleProvider,
-)
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -20,7 +17,6 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
 __all__ = [
     "BacktestArtifactReader",
     "BacktestArtifactReaderProtocol",
-    "InstrumentRuleProvider",
     "StrategyArtifactService",
     "StrategyCatalogService",
     "StrategyRunLifecycleStore",

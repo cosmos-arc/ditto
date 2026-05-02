@@ -9,7 +9,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_data.models.trade import (
+from ditto_execution.models import (
     FillRecord,
     PositionRecord,
 )
@@ -91,7 +91,9 @@ class TestGetLatestPositions:
 
     def test_delegates_to_trade_service(self) -> None:
         """委托到 TradeService.list_positions 并映射为 DTO."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         record = _make_position_record(instrument_id=1)
@@ -107,7 +109,9 @@ class TestGetLatestPositions:
 
     def test_empty_positions(self) -> None:
         """无持仓时返回空列表."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         mock_trade_service.list_positions.return_value = []
@@ -119,7 +123,9 @@ class TestGetLatestPositions:
 
     def test_multiple_positions(self) -> None:
         """多个持仓全部映射."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         records = [
@@ -146,7 +152,9 @@ class TestGetPositionHistory:
 
     def test_delegates_with_snapshot_date(self) -> None:
         """传递 snapshot_date 参数."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         record = _make_position_record(snapshot_date="2026-04-09")
@@ -163,7 +171,9 @@ class TestGetPositionHistory:
 
     def test_delegates_without_snapshot_date(self) -> None:
         """不传 snapshot_date 时默认 None."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         mock_trade_service.list_positions.return_value = []
@@ -187,7 +197,9 @@ class TestGetFills:
 
     def test_delegates_to_trade_service(self) -> None:
         """委托到 TradeService.list_fills 并映射为 DTO."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         record = _make_fill_record()
@@ -207,7 +219,9 @@ class TestGetFills:
 
     def test_fills_with_date_range(self) -> None:
         """传递日期范围参数."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         mock_trade_service.list_fills.return_value = []
@@ -227,7 +241,9 @@ class TestGetFills:
 
     def test_fills_empty(self) -> None:
         """无成交时返回空列表."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         mock_trade_service.list_fills.return_value = []
@@ -248,7 +264,7 @@ class TestComputePnl:
 
     def test_empty_positions_returns_zero(self) -> None:
         """无持仓时返回全零 PnlSummary."""
-        from ditto_application.query.portfolio_actual import (
+        from ditto_application.queries.portfolio_actual import (
             PnlSummary,
             PortfolioActualQueryFacade,
         )
@@ -268,7 +284,9 @@ class TestComputePnl:
 
     def test_single_position_pnl(self) -> None:
         """单标的 P&L: net = realized + unrealized - fees."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         record = _make_position_record(
@@ -289,7 +307,9 @@ class TestComputePnl:
 
     def test_multiple_positions_aggregation(self) -> None:
         """多标的 P&L 聚合."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         records = [
@@ -319,7 +339,9 @@ class TestComputePnl:
 
     def test_negative_net_pnl(self) -> None:
         """净亏损场景."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         record = _make_position_record(
@@ -337,7 +359,9 @@ class TestComputePnl:
 
     def test_compute_pnl_passes_snapshot_date(self) -> None:
         """snapshot_date 正确传递给 TradeService."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_trade_service = MagicMock()
         mock_trade_service.list_positions.return_value = []
@@ -360,7 +384,7 @@ class TestPnlSummaryFrozen:
     """PnlSummary — frozen dataclass 验证."""
 
     def test_frozen(self) -> None:
-        from ditto_application.query.portfolio_actual import PnlSummary
+        from ditto_application.queries.portfolio_actual import PnlSummary
 
         summary = PnlSummary(
             total_realized_pnl=100.0,

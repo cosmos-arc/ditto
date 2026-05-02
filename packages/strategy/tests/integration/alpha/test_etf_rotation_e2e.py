@@ -1,8 +1,7 @@
 """E2E integration tests for etf_rotation strategy template.
 
 测试完整 Pipeline:
-  输入 -> Signal -> Score -> RiskLock -> Select -> Allocate
-  -> Constraint -> TargetPortfolio
+  输入 -> Signal -> Score -> RiskLock -> Select -> TargetPortfolio
 """
 
 from __future__ import annotations
@@ -10,7 +9,7 @@ from __future__ import annotations
 import polars as pl
 import pytest
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
@@ -83,11 +82,13 @@ class TestETFRotationE2E:
     ) -> None:
         """完整 E2E: 输入 -> Pipeline -> TargetPortfolio。"""
         config = ETFRotationConfig(top_k=5)
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         context = StrategyContext()
         target = pipeline.run(context, sample_bundle)
 
         assert len(target.positions) == 5
+        # Equal weight fallback (no AllocationStage): 1.0 / 5 = 0.2
         assert abs(sum(target.positions.values()) - 1.0) < 1e-9
         # ETF001-ETF005 should be selected (highest momentum)
         assert "ETF001" in target.positions
@@ -104,7 +105,8 @@ class TestETFRotationE2E:
         context.lock_instrument("ETF002", "hit stop-loss")
 
         config = ETFRotationConfig(top_k=5)
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(context, sample_bundle)
 
         assert "ETF001" not in target.positions
@@ -122,35 +124,11 @@ class TestETFRotationE2E:
             context.lock_instrument(f"ETF{i:03d}", "market halt")
 
         config = ETFRotationConfig(top_k=5)
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(context, sample_bundle)
 
         assert len(target.positions) == 0
-
-    def test_with_max_weight_constraint(
-        self,
-        sample_bundle: StrategyInputBundle,
-    ) -> None:
-        """带权重上限约束。"""
-        config = ETFRotationConfig(top_k=5, max_weight=0.25)
-        pipeline = build_etf_rotation_pipeline(config)
-        context = StrategyContext()
-        target = pipeline.run(context, sample_bundle)
-
-        for weight in target.positions.values():
-            assert weight <= 0.25 + 1e-9
-
-    def test_cash_target(
-        self,
-        sample_bundle: StrategyInputBundle,
-    ) -> None:
-        """现金保留。"""
-        config = ETFRotationConfig(top_k=5, cash_target=0.1)
-        pipeline = build_etf_rotation_pipeline(config)
-        context = StrategyContext()
-        target = pipeline.run(context, sample_bundle)
-
-        assert abs(sum(target.positions.values()) - 0.9) < 1e-9
 
     def test_fewer_instruments_than_top_k(self) -> None:
         """标的数 < top_k。"""
@@ -182,43 +160,13 @@ class TestETFRotationE2E:
         )
 
         config = ETFRotationConfig(top_k=10)
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         context = StrategyContext()
         target = pipeline.run(context, bundle)
 
         assert len(target.positions) == 3
         assert abs(sum(target.positions.values()) - 1.0) < 1e-9
-
-    def test_score_weight_allocation(
-        self,
-        sample_bundle: StrategyInputBundle,
-    ) -> None:
-        """score_weight 分配产生非等权结果。"""
-        config = ETFRotationConfig(
-            top_k=5,
-            allocation_method="score_weight",
-        )
-        pipeline = build_etf_rotation_pipeline(config)
-        context = StrategyContext()
-        target = pipeline.run(context, sample_bundle)
-
-        # 权重不全相等（score_weight 按排名分配）
-        weights = list(target.positions.values())
-        assert len(set(weights)) > 1  # 非等权
-        assert abs(sum(weights) - 1.0) < 1e-9
-
-    def test_with_max_positions_constraint(
-        self,
-        sample_bundle: StrategyInputBundle,
-    ) -> None:
-        """max_positions 约束裁剪持仓数。"""
-        config = ETFRotationConfig(top_k=8, max_positions=3)
-        pipeline = build_etf_rotation_pipeline(config)
-        context = StrategyContext()
-        target = pipeline.run(context, sample_bundle)
-
-        active_positions = [w for w in target.positions.values() if w > 0]
-        assert len(active_positions) <= 3
 
     def test_target_portfolio_metadata(
         self,
@@ -226,7 +174,8 @@ class TestETFRotationE2E:
     ) -> None:
         """TargetPortfolio 保留元数据。"""
         config = ETFRotationConfig(top_k=5)
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         context = StrategyContext()
         target = pipeline.run(context, sample_bundle)
 

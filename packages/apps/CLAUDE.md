@@ -11,7 +11,7 @@ Apps 层是 **Application Boundary Layer（应用边界层）**，负责：
 **核心原则**：
 - 纯编排层，不包含业务逻辑
 - 通过 DI 容器获取依赖
-- 业务逻辑已迁入 `ditto_app` 包
+- 业务逻辑已迁入 `ditto_application` 包
 
 ## 模块结构
 
@@ -36,7 +36,7 @@ ditto_apps/
 │   ├── flows/         # Flow 定义（backfill/backtest/daily/deploy/eod/materialization/repair/research）
 │   └── tasks/         # Task 实现（aliases/dq_batch/monitoring/t0_meta）
 ├── models/            # API 数据模型（Pydantic）（backtest/capital/commodity/fundamental/fx/ingestion/lineage/macro/market/metadata/strategy/trade/universe）
-├── services/          # 已清空（业务逻辑已迁入 ditto_app）
+├── services/          # 已清空（业务逻辑已迁入 ditto_application）
 ├── registry/          # DI 容器（Dishka Composition Root）
 │   ├── container.py   # 容器定义
 │   ├── init_providers.py  # Provider 初始化
@@ -55,19 +55,20 @@ ditto_apps/
 ```
 ┌─────────────────────────────────────┐
 │  Apps 可依赖                  │
-│  apps → app ✅               │
-│  apps → engine ✅            │
+│  apps → application ✅        │
+│  apps → strategy/portfolio/risk/execution/backtest ✅ │
 │  apps → data ✅              │
-│  apps → analytics ✅         │
-│  apps → infra ✅             │
+│  apps → features ✅          │
+│  apps → analysis ✅          │
+│  apps → platform ✅          │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
 │  Apps 禁止被依赖              │
-│  app → apps ❌               │
-│  engine → apps ❌            │
+│  application → apps ❌       │
+│  strategy → apps ❌          │
 │  data → apps ❌              │
-│  analytics → apps ❌         │
+│  features → apps ❌          │
 └─────────────────────────────────────┘
 ```
 
@@ -75,9 +76,9 @@ ditto_apps/
 
 | 访问类型 | ✅ 允许 | ❌ 禁止 |
 |---------|--------|--------|
-| **App 层服务** | `from ditto_app.process.*` | - |
-| **App 层查询** | `from ditto_app.query.*` | - |
-| **App 层配置** | `from ditto_app.config` | - |
+| **Application 层服务** | `from ditto_application.processes.*` | - |
+| **Application 层查询** | `from ditto_application.queries.*` | - |
+| **Application 层配置** | `from ditto_application.config` | - |
 | **Data Service** | `from ditto_data.services.*` | - |
 | **Data Sources** | `from ditto_data.sources.*` | - |
 | **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
@@ -100,18 +101,18 @@ ditto_apps/
 
 ### 业务逻辑去向
 
-业务逻辑已迁移到 `ditto_app` 包中：
+业务逻辑已迁移到 `ditto_application` 包中：
 
 | 原位置 | 新位置 | 内容 |
 |--------|--------|------|
-| `services/ingestion/` | `ditto_app.process.ingestion` | 数据摄取服务 |
-| `services/ingestion/quality/` | `ditto_app.process.quality` | 质量校验服务 |
-| `services/strategy/` | `ditto_app.process.execution` | 策略运行服务 |
-| `services/strategy/*.builder` | `ditto_app.builders.strategy` | 策略构建器 |
-| `services/derived/materialization*` | `ditto_app.process.materialization` | 衍生物化服务 |
-| `services/derived/query_facade*` | `ditto_app.query.derived` | 衍生查询服务 |
-| `services/derived/research*` | `ditto_app.query.research` | 研究数据集服务 |
-| `models/config` | `ditto_app.config` | 数据集配置 |
+| `services/ingestion/` | `ditto_application.processes.ingestion` | 数据摄取服务 |
+| `services/ingestion/quality/` | `ditto_application.processes.quality` | 质量校验服务 |
+| `services/strategy/` | `ditto_application.processes.execution` | 策略运行服务 |
+| `services/strategy/*.builder` | `ditto_application.builders.strategy` | 策略构建器 |
+| `services/derived/materialization*` | `ditto_application.processes.materialization` | 衍生物化服务 |
+| `services/derived/query_facade*` | `ditto_application.queries.derived` | 衍生查询服务 |
+| `services/derived/research*` | `ditto_application.queries.research` | 研究数据集服务 |
+| `models/config` | `ditto_application.config` | 数据集配置 |
 | `models/ingestion` | `ditto_data.models.ingestion` | 摄取结果类型 |
 
 ## FastAPI 规范
@@ -159,13 +160,13 @@ ditto_apps/
 
 | 禁止 | 替代 |
 |------|------|
-| 在 Flow 中写业务逻辑 | 抽取到 Task 或 `ditto_app` |
+| 在 Flow 中写业务逻辑 | 抽取到 Task 或 `ditto_application` |
 | 隐式依赖 | 显式 `wait_for` |
 | 无限重试 | `max_attempts=3` |
 
 ## 数据摄入
 
-Apps 层通过 CLI/Jobs 编排数据摄取流程，业务逻辑在 `ditto_app.process.ingestion` 中。
+Apps 层通过 CLI/Jobs 编排数据摄取流程，业务逻辑在 `ditto_application.processes.ingestion` 中。
 具体 T0/T1/T2/T3 分层规则和游标管理详见 [Data 层规范](../../packages/data/CLAUDE.md)。
 
 ## CLI 规范
@@ -240,7 +241,7 @@ pixi run -e dev test --integration # 只运行集成测试
    YES → Apps 层 ✅
 
 5. 是否是业务逻辑（数据处理、策略计算）？
-   YES → App 层 (ditto_app) ❌
+   YES → Application 层 (ditto_application) ❌
 
 6. 是否是 DI 注册（Composition Root）？
    YES → Apps 层 (registry/) ✅

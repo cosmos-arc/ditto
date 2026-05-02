@@ -367,15 +367,15 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.storage.market import MarketReader  # 直接访问存储层
 ```
 
-### Interfaces 层导入
+### Apps 层导入
 
 ```python
 # ✅ 正确
-from ditto_interfaces.api.errors import error_handler
-from ditto_interfaces.exceptions import DittoError
+from ditto_apps.api.errors import error_handler
+from ditto_apps.exceptions import DittoError
 
 # ❌ 错误
-from ditto_interfaces.api.dependencies import get_hub  # 直接导入内部实现
+from ditto_apps.api.dependencies import get_hub  # 直接导入内部实现
 ```
 
 ## Re-export 规范
@@ -501,7 +501,7 @@ def process_data(data):
 
 #### 目录示例
 - `packages/foo/src/foo/py.typed`
-- `interfaces/src/ditto_interfaces/py.typed`（interfaces 也会作为库被引用）
+- `packages/apps/src/ditto_apps/py.typed`（apps 也会作为库被引用）
 
 #### 实施检查清单
 
@@ -526,11 +526,16 @@ tar -tzf dist/*.whl | grep py.typed
 
 | 包 | py.typed 状态 | 路径 |
 |---|--------------|------|
-| ditto_engine | ✅ | `packages/engine/src/ditto_engine/py.typed` |
-| ditto_data | ✅ | `packages/data/src/ditto_data/py.typed` |
-| ditto_platform | ✅ | `packages/platform/src/ditto_platform/py.typed` |
 | ditto_kernel | ✅ | `packages/kernel/src/ditto_kernel/py.typed` |
-| ditto_analytics | ✅ | `packages/analytics/src/ditto_analytics/py.typed` |
+| ditto_platform | ✅ | `packages/platform/src/ditto_platform/py.typed` |
+| ditto_data | ✅ | `packages/data/src/ditto_data/py.typed` |
+| ditto_features | ✅ | `packages/features/src/ditto_features/py.typed` |
+| ditto_strategy | ✅ | `packages/strategy/src/ditto_strategy/py.typed` |
+| ditto_portfolio | ✅ | `packages/portfolio/src/ditto_portfolio/py.typed` |
+| ditto_risk | ✅ | `packages/risk/src/ditto_risk/py.typed` |
+| ditto_execution | ✅ | `packages/execution/src/ditto_execution/py.typed` |
+| ditto_backtest | ✅ | `packages/backtest/src/ditto_backtest/py.typed` |
+| ditto_analysis | ✅ | `packages/analysis/src/ditto_analysis/py.typed` |
 | ditto_application | ✅ | `packages/application/src/ditto_application/py.typed` |
 | ditto_apps | ✅ | `packages/apps/src/ditto_apps/py.typed` |
 

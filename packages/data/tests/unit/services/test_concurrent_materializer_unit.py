@@ -9,7 +9,7 @@ class TestMaterializationTaskResult:
     """Tests for MaterializationTaskResult dataclass."""
 
     def test_is_frozen(self) -> None:
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             MaterializationTaskResult,
         )
 
@@ -23,7 +23,7 @@ class TestMaterializationTaskResult:
             result.derived_id = "other"  # type: ignore[misc]
 
     def test_success_result(self) -> None:
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             MaterializationTaskResult,
         )
 
@@ -38,7 +38,7 @@ class TestMaterializationTaskResult:
         assert result.error is None
 
     def test_failure_result(self) -> None:
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             MaterializationTaskResult,
         )
 
@@ -57,7 +57,7 @@ class TestConcurrentMaterializer:
 
     def test_batch_materializes_all_specs(self) -> None:
         """ConcurrentMaterializer should process all specs and return success."""
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             ConcurrentMaterializer,
         )
 
@@ -81,7 +81,7 @@ class TestConcurrentMaterializer:
 
     def test_batch_collects_exceptions(self) -> None:
         """ConcurrentMaterializer should return error info for failed specs."""
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             ConcurrentMaterializer,
         )
 
@@ -111,7 +111,7 @@ class TestConcurrentMaterializer:
         # With 3 workers in parallel, should finish in ~0.2s.
         import time
 
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             ConcurrentMaterializer,
         )
 
@@ -131,7 +131,7 @@ class TestConcurrentMaterializer:
 
     def test_batch_empty_ids(self) -> None:
         """Empty derived_ids should return empty results."""
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             ConcurrentMaterializer,
         )
 
@@ -145,7 +145,7 @@ class TestConcurrentMaterializer:
 
     def test_single_worker(self) -> None:
         """max_workers=1 should still produce correct results."""
-        from ditto_data.services.derived.concurrent_materializer import (
+        from ditto_features.services.derived.concurrent_materializer import (
             ConcurrentMaterializer,
         )
 

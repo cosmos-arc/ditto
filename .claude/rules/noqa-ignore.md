@@ -7,7 +7,7 @@ paths:
 
 ## 核心原则
 
-**核心源码零容忍**：`packages/**/src` 和 `interfaces/**/src` 中不应有任何 `# noqa` 或 `# type: ignore`。
+**核心源码零容忍**：`packages/**/src` 中不应有任何 `# noqa` 或 `# type: ignore`。
 
 **测试代码适度豁免**：测试文件可使用合理豁免（已在 `pyproject.toml` 配置）。
 
@@ -210,13 +210,13 @@ class ClassB:
 
 ```bash
 # 检查 noqa（除 S608/S108/S110）
-git grep "# noqa" packages/*/src interfaces/*/src | grep -v "S608\|S108\|S110"
+git grep "# noqa" packages/*/src | grep -v "S608\|S108\|S110"
 
 # 检查 type: ignore
-git grep "# type: ignore" packages/*/src interfaces/*/src
+git grep "# type: ignore" packages/*/src
 
 # 检查 global 语句
-git grep "^global " packages/*/src interfaces/*/src
+git grep "^global " packages/*/src
 ```
 
 ### 验证标准

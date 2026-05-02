@@ -3,7 +3,7 @@ Portfolio boundary types — decoupled from backtest module.
 
 Defines the minimal interface that the portfolio comparison logic requires
 from a backtest report, allowing portfolio to depend only on its own
-boundary types rather than on ditto_engine.backtest.statistics.
+boundary types rather than on ditto_backtest.statistics.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ class BacktestReportView(Protocol):
     """
     Minimal interface for a backtest report consumed by comparison logic.
 
-    ``ditto_engine.backtest.statistics.BacktestReport`` satisfies this protocol
+    ``ditto_backtest.statistics.BacktestReport`` satisfies this protocol
     without any changes.
     """
 

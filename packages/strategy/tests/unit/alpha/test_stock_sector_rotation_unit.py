@@ -10,17 +10,12 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_portfolio.rebalancing.constraints import (
-    ConstraintChecker,
-    ConstraintStage,
-    MaxWeightConstraint,
-)
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.regime import RegimeConfig, TrendIndicator
 from ditto_strategy.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
 from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.specs import ParamConstraint
 from ditto_strategy.alpha.templates.stock_sector_rotation import (
     FinalStockFilterStage,
@@ -884,46 +879,31 @@ class TestFinalStockFilterStage:
 
 
 class TestBuildPipeline:
-    def test_default_config_builds_pipeline(self) -> None:
-        """默认配置构建合法 Pipeline。"""
+    def test_default_config_builds_stages(self) -> None:
+        """默认配置构建合法 alpha stages 列表。"""
         config = StockSectorRotationConfig()
-        pipeline = build_stock_sector_rotation_pipeline(config)
-        assert pipeline is not None
+        stages = build_stock_sector_rotation_pipeline(config)
+        assert isinstance(stages, list)
         # SectorSignal + SectorScoreAndSelect + IntraSectorSelect +
-        # RiskLockFilter + SectorWeight + Constraint + FinalStockFilter = 7
-        assert len(pipeline._stages) == 7
+        # RiskLockFilter + SectorWeight + FinalStockFilter = 6
+        assert len(stages) == 6
 
     def test_pipeline_stage_order(self) -> None:
-        """Pipeline 阶段顺序正确。"""
+        """alpha stages 顺序正确。"""
         config = StockSectorRotationConfig()
-        pipeline = build_stock_sector_rotation_pipeline(config)
-        stages = pipeline._stages
+        stages = build_stock_sector_rotation_pipeline(config)
         assert isinstance(stages[0], SectorSignalStage)
         assert isinstance(stages[1], SectorScoreAndSelectStage)
         assert isinstance(stages[2], IntraSectorSelectStage)
         assert isinstance(stages[3], RiskLockFilter)
         assert isinstance(stages[4], SectorWeightStage)
-        assert isinstance(stages[5], ConstraintStage)
-        assert isinstance(stages[6], FinalStockFilterStage)
-
-    def test_max_weight_constraint_present(self) -> None:
-        """ConstraintStage 中包含 MaxWeightConstraint。"""
-        config = StockSectorRotationConfig(max_weight=0.20)
-        pipeline = build_stock_sector_rotation_pipeline(config)
-        constraint_stage = pipeline._stages[5]
-        assert isinstance(constraint_stage, ConstraintStage)
-        assert isinstance(constraint_stage.checker, ConstraintChecker)
-        has_max_weight = any(
-            isinstance(c, MaxWeightConstraint)
-            for c in constraint_stage.checker._constraints
-        )
-        assert has_max_weight
+        assert isinstance(stages[5], FinalStockFilterStage)
 
     def test_cash_target_propagated(self) -> None:
         """cash_target 正确传递到 SectorWeightStage。"""
         config = StockSectorRotationConfig(cash_target=0.1)
-        pipeline = build_stock_sector_rotation_pipeline(config)
-        weight_stage = pipeline._stages[4]
+        stages = build_stock_sector_rotation_pipeline(config)
+        weight_stage = stages[4]
         assert isinstance(weight_stage, SectorWeightStage)
         assert weight_stage.cash_target == 0.1
 
@@ -950,9 +930,9 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=2,
             stocks_per_sector=2,
-            max_weight=1.0,  # No max weight constraint effectively
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         # No sector ETFs in final portfolio
@@ -980,9 +960,9 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=2,
             stocks_per_sector=2,
-            max_weight=1.0,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         total_weight = sum(target.positions.values())
@@ -997,10 +977,10 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=2,
             stocks_per_sector=2,
-            max_weight=1.0,
             cash_target=0.1,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         total_weight = sum(target.positions.values())
@@ -1015,9 +995,9 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=3,
             stocks_per_sector=3,
-            max_weight=1.0,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         # All 9 stocks selected, 3 sectors x 3 stocks
@@ -1027,25 +1007,6 @@ class TestPipelineE2E:
         weights = list(target.positions.values())
         assert all(w == pytest.approx(weights[0]) for w in weights)
         assert weights[0] == pytest.approx(1.0 / 9.0)
-
-    def test_e2e_max_weight_constraint(
-        self,
-        empty_context: StrategyContext,
-        sector_rotation_bundle: StrategyInputBundle,
-    ) -> None:
-        """max_weight 约束生效。"""
-        config = StockSectorRotationConfig(
-            top_sectors=1,
-            stocks_per_sector=1,
-            max_weight=0.05,
-        )
-        pipeline = build_stock_sector_rotation_pipeline(config)
-        target = pipeline.run(empty_context, sector_rotation_bundle)
-
-        # With 1 sector and 1 stock, weight would be 1.0
-        # MaxWeightConstraint should cap it at 0.05
-        for weight in target.positions.values():
-            assert weight <= 0.05
 
     def test_e2e_risk_lock_filter(
         self,
@@ -1058,9 +1019,9 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=2,
             stocks_per_sector=2,
-            max_weight=1.0,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(context, sector_rotation_bundle)
 
         # Locked stock should not be in portfolio
@@ -1079,9 +1040,9 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=1,
             stocks_per_sector=2,
-            max_weight=1.0,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         # Only TECH sector selected (highest signal 0.08)
@@ -1101,9 +1062,9 @@ class TestPipelineE2E:
         config = StockSectorRotationConfig(
             top_sectors=3,
             stocks_per_sector=1,
-            max_weight=1.0,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         assert len(target.positions) == 3
@@ -1136,7 +1097,8 @@ class TestPipelineE2E:
             ),
         )
         config = StockSectorRotationConfig()
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, bundle)
         assert len(target.positions) == 0
 
@@ -1195,9 +1157,9 @@ class TestPipelineE2E:
             stock_signal="stock_momentum",
             top_sectors=2,
             stocks_per_sector=2,
-            max_weight=1.0,
         )
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, bundle)
 
         assert len(target.positions) == 4
@@ -1209,24 +1171,20 @@ class TestPipelineE2E:
     def test_regime_config_inserts_scoring_step(
         self,
     ) -> None:
-        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        """有 regime_config 时 stages 包含 RegimeScoringStep 和 RegimeAware."""
         regime_config = RegimeConfig(
             indicators=(TrendIndicator(threshold=0.01),),
         )
         config = StockSectorRotationConfig(regime_config=regime_config)
-        pipeline = build_stock_sector_rotation_pipeline(config)
+        stages = build_stock_sector_rotation_pipeline(config)
 
-        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
-        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeScoringStep) for s in stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in stages)
 
         scoring_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeScoringStep)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeScoringStep)
         )
         aware_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeAwareAllocationStage)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx

@@ -8,22 +8,27 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
-from ditto_engine.backtest.engine import EngineLoop
+from ditto_backtest.engine import EngineLoop
+from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.templates.etf_trend_swing import (
     ETFTrendSwingConfig,
     build_etf_trend_swing_pipeline,
 )
 
-from .conftest import (
-    ETF_INSTRUMENT_IDS,
-    INITIAL_CASH,
-    TRADE_DATES_5,
-    assert_cash_conservation,
-    build_snapshot_engine,
-    make_etf_5day_data,
-)
+_conftest_path = Path(__file__).parent / "conftest.py"
+_spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+ETF_INSTRUMENT_IDS = _mod.ETF_INSTRUMENT_IDS
+INITIAL_CASH = _mod.INITIAL_CASH
+TRADE_DATES_5 = _mod.TRADE_DATES_5
+assert_cash_conservation = _mod.assert_cash_conservation
+build_snapshot_engine = _mod.build_snapshot_engine
+make_etf_5day_data = _mod.make_etf_5day_data
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -46,7 +51,8 @@ def _build_trend_swing_engine(
         allocation_method="equal_weight",
         cash_target=0.0,
     )
-    pipeline = build_etf_trend_swing_pipeline(config)
+    stages = build_etf_trend_swing_pipeline(config)
+    pipeline = StrategyPipeline(stages)
 
     return build_snapshot_engine(
         tmp_path=tmp_path,

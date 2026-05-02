@@ -5,7 +5,10 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import polars as pl
-from ditto_application.query.evaluation import EvaluationOptions, FactorEvaluationFacade
+from ditto_application.queries.evaluation import (
+    EvaluationOptions,
+    FactorEvaluationFacade,
+)
 from ditto_features.evaluation.report import (
     FactorEvaluationReport,
     ICSummary,
@@ -64,7 +67,7 @@ def _make_report(**overrides: object) -> FactorEvaluationReport:
 class TestFactorEvaluationFacadeEvaluate:
     """FactorEvaluationFacade.evaluate -- 委托到 artifact_reader + FactorEvaluator."""
 
-    @patch("ditto_application.query.evaluation.FactorEvaluator")
+    @patch("ditto_application.queries.evaluation.FactorEvaluator")
     def test_delegates_and_stamps_identity(self, mock_evaluator_cls: MagicMock) -> None:
         """验证 read_frame + FactorEvaluator.evaluate 被调用,
         且 report 的 factor_id/factor_version 被覆写.

@@ -6,13 +6,12 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from ditto_backtest.steps import ExecutionStep, StepContext, TradingStep
-
-from ._helpers import (
+from _helpers import (
     _make_clock,
     _make_fill,
     _make_slice,
 )
+from ditto_backtest.steps import ExecutionStep, StepContext, TradingStep
 
 
 class TestExecutionStep:

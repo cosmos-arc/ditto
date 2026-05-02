@@ -6,7 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_application.query.derived import (
+from ditto_application.queries.derived import (
     DerivedQueryFacade,
     LatestDerivedRequest,
     SeriesDerivedRequest,
@@ -15,7 +15,7 @@ from ditto_application.query.derived import (
 from ditto_data.services import (
     DerivedSourceScope,
 )
-from ditto_data.services.derived import (
+from ditto_features.services.derived import (
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedSeriesQuery,

@@ -63,11 +63,22 @@ def analyze_slow_tests() -> None:
     # 分析单元测试
     print("[*] 分析单元测试...")
     unit_durations = {}
-    for package in ["kernel", "data", "infra", "app", "engine", "analytics"]:
+    for package in [
+        "kernel",
+        "platform",
+        "data",
+        "features",
+        "strategy",
+        "portfolio",
+        "risk",
+        "execution",
+        "backtest",
+        "analysis",
+        "application",
+        "apps",
+    ]:
         path = f"packages/{package}/tests/unit"
         unit_durations.update(get_durations(path, count=50))
-    path = "interfaces/tests/unit"
-    unit_durations.update(get_durations(path, count=50))
 
     slow_unit_tests = {
         name: duration
@@ -78,11 +89,22 @@ def analyze_slow_tests() -> None:
     # 分析集成测试
     print("[*] 分析集成测试...")
     integration_durations = {}
-    for package in ["kernel", "data", "infra", "app", "engine", "analytics"]:
+    for package in [
+        "kernel",
+        "platform",
+        "data",
+        "features",
+        "strategy",
+        "portfolio",
+        "risk",
+        "execution",
+        "backtest",
+        "analysis",
+        "application",
+        "apps",
+    ]:
         path = f"packages/{package}/tests/integration"
         integration_durations.update(get_durations(path, count=50))
-    path = "interfaces/tests/integration"
-    integration_durations.update(get_durations(path, count=50))
 
     slow_integration_tests = {
         name: duration

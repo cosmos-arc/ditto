@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from ditto_application.execution_dto import ActualPositionSnapshot, ManualExecutionFill
-from ditto_application.query.comparison import ComparisonQueryFacade
-from ditto_application.query.comparison_math import ComparisonMetrics
+from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.comparison_math import ComparisonMetrics
 
 
 def _make_backtest_facade(
@@ -223,11 +223,11 @@ class TestExtractAlphaStatsWarning:
 
     def test_logs_warning_on_unparseable_alpha_stats(self) -> None:
         """alpha_stats 类型异常时记录 warning 并返回零值."""
-        from ditto_application.query.comparison import _extract_alpha_stats
+        from ditto_application.queries.comparison import _extract_alpha_stats
 
         # alpha_stats 是字符串，float() 转换会失败
         report = {"alpha_stats": "not_a_dict"}
-        with patch("ditto_application.query.comparison.logger") as mock_logger:
+        with patch("ditto_application.queries.comparison.logger") as mock_logger:
             result = _extract_alpha_stats(report)
 
         expected = {"annualized_return": 0.0, "sharpe_ratio": 0.0, "total_fees": 0.0}
@@ -238,10 +238,10 @@ class TestExtractAlphaStatsWarning:
 
     def test_logs_warning_on_attribute_error(self) -> None:
         """alpha_stats 字段缺少 .get 方法时记录 warning."""
-        from ditto_application.query.comparison import _extract_alpha_stats
+        from ditto_application.queries.comparison import _extract_alpha_stats
 
         report = {"alpha_stats": 42}
-        with patch("ditto_application.query.comparison.logger") as mock_logger:
+        with patch("ditto_application.queries.comparison.logger") as mock_logger:
             result = _extract_alpha_stats(report)
 
         expected = {"annualized_return": 0.0, "sharpe_ratio": 0.0, "total_fees": 0.0}

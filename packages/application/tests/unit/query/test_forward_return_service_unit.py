@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.forward_return_service import (
+from ditto_application.queries.forward_return_service import (
     ForwardReturnService,
     _extend_end_date,
 )

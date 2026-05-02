@@ -5,19 +5,21 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ditto_application.process.execution.backtest_process import (
+from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_engine.backtest.statistics import BacktestReport
+from ditto_backtest.statistics import BacktestReport
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-ENGINE_LOOP_PATH = "ditto_application.process.execution.backtest_process.EngineLoop"
-BUILD_REPORT_PATH = "ditto_application.process.execution.backtest_process.build_report"
+ENGINE_LOOP_PATH = "ditto_application.processes.execution.backtest_process.EngineLoop"
+BUILD_REPORT_PATH = (
+    "ditto_application.processes.execution.backtest_process.build_report"
+)
 
 
 def _make_service_config(

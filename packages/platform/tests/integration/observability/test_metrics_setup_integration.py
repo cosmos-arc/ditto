@@ -9,9 +9,11 @@
 import pytest
 from ditto_platform.foundation import Metrics, ObservabilityConfig, reset_for_testing
 from ditto_platform.foundation.observability.metrics import (
+    SafeCounter,
+    SafeGauge,
+    SafeHistogram,
     configure_metrics,
 )
-from opentelemetry import metrics
 
 
 @pytest.mark.integration
@@ -91,9 +93,9 @@ class TestMSetup:
         Metrics.setup(meter)
 
         # Verify Histogram 类型
-        assert isinstance(Metrics.data_update_duration, metrics.Histogram)
-        assert isinstance(Metrics.factor_calc_duration, metrics.Histogram)
-        assert isinstance(Metrics.api_duration, metrics.Histogram)
+        assert isinstance(Metrics.data_update_duration, SafeHistogram)
+        assert isinstance(Metrics.factor_calc_duration, SafeHistogram)
+        assert isinstance(Metrics.api_duration, SafeHistogram)
 
     def test_m_setup_counter_types(self) -> None:
         """测试 Metrics.setup() 正确创建 Counter 类型."""
@@ -105,9 +107,9 @@ class TestMSetup:
         Metrics.setup(meter)
 
         # Verify Counter 类型
-        assert isinstance(Metrics.data_records, metrics.Counter)
-        assert isinstance(Metrics.signal_total, metrics.Counter)
-        assert isinstance(Metrics.kill_switch_total, metrics.Counter)
+        assert isinstance(Metrics.data_records, SafeCounter)
+        assert isinstance(Metrics.signal_total, SafeCounter)
+        assert isinstance(Metrics.kill_switch_total, SafeCounter)
 
     def test_m_setup_gauge_types(self) -> None:
         """测试 Metrics.setup() 正确创建 Gauge 类型."""
@@ -119,7 +121,6 @@ class TestMSetup:
         Metrics.setup(meter)
 
         # Verify SafeGauge 类型
-        from ditto_platform.foundation.observability.metrics import SafeGauge
 
         assert isinstance(Metrics.data_freshness, SafeGauge)
         assert isinstance(Metrics.factor_ic, SafeGauge)
@@ -172,8 +173,8 @@ class TestMSetup:
         second_data_records = Metrics.data_records
 
         # [REVIEW] Counter 类型
-        assert isinstance(first_data_records, metrics.Counter)
-        assert isinstance(second_data_records, metrics.Counter)
+        assert isinstance(first_data_records, SafeCounter)
+        assert isinstance(second_data_records, SafeCounter)
 
 
 @pytest.mark.integration

@@ -9,8 +9,12 @@ from dishka import (
     make_async_container,
     make_container,
 )
+from ditto_analysis.di import get_analysis_providers
 from ditto_application.providers import get_app_providers
 from ditto_data.di import get_data_providers
+from ditto_execution.di import get_execution_providers
+from ditto_features.di import get_features_providers
+from ditto_strategy.di import get_strategy_providers
 
 from .infra import get_infra_providers
 
@@ -22,6 +26,10 @@ def _get_base_providers() -> tuple[Provider, ...]:
     return (
         *get_infra_providers(),  # Infrastructure 层
         *get_data_providers(),  # Data 层（含原 Core + Data DQ）
+        *get_strategy_providers(),  # Strategy 存储层
+        *get_features_providers(),  # Features 存储层
+        *get_analysis_providers(),  # Analysis 存储层
+        *get_execution_providers(),  # Execution 存储层
         *get_app_providers(),  # App 层
     )
 

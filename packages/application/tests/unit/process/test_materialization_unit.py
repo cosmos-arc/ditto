@@ -1,7 +1,7 @@
 """_compute_value_jump_rate 单元测试 — 阈值基于 pct_change 自身分布的 z-score。"""
 
 import polars as pl
-from ditto_application.process.materialization.minimal_dq import (
+from ditto_application.processes.materialization.minimal_dq import (
     _compute_value_jump_rate,
 )
 

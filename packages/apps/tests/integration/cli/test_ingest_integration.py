@@ -9,9 +9,8 @@ from pathlib import Path
 
 import pytest
 from ditto_apps.cli.main import app
+from helpers import assert_cli_result
 from typer.testing import CliRunner
-
-from .helpers import assert_cli_result
 
 runner = CliRunner()
 
@@ -54,6 +53,7 @@ class TestIngestMarket:
         assert "etf" in result.stdout
         assert "index" in result.stdout
         assert "adj" in result.stdout
+        assert "adj-fund" in result.stdout
         assert "status" in result.stdout
 
     def test_ingest_market_stock_help(self) -> None:
@@ -79,7 +79,7 @@ class TestIngestMarket:
         result = runner.invoke(app, ["ingest", "market", "adj", "--help"])
         assert result.exit_code == 0
         assert "交易日期" in result.stdout or "date" in result.stdout.lower()
-        assert "--fund" in result.stdout
+        assert "adj-fund" in result.stdout
 
     def test_ingest_market_status_help(self) -> None:
         """测试 ingest market status --help."""
@@ -160,7 +160,7 @@ class TestIngestMarketDaily:
         )
 
     def test_ingest_market_adj_fund_with_data_root(self, tmp_path: Path) -> None:
-        """测试 ingest market adj --fund 使用自定义数据根目录."""
+        """测试 ingest market adj-fund 使用自定义数据根目录."""
         result = runner.invoke(
             app,
             [
@@ -168,9 +168,8 @@ class TestIngestMarketDaily:
                 str(tmp_path),
                 "ingest",
                 "market",
-                "adj",
+                "adj-fund",
                 "2024-01-02",
-                "--fund",
             ],
         )
         assert_cli_result(

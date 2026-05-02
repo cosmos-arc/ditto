@@ -6,11 +6,11 @@ from types import MappingProxyType
 from unittest.mock import MagicMock
 
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import Order, OrderType
+from ditto_portfolio.accounting.order_book import Order
 from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     Decision,
@@ -49,12 +49,20 @@ def _order(quantity: int = 100) -> Order:
 
 
 class _AlwaysAccept:
-    def check_order(self, order: Order, context: PreTradeContext) -> OrderCheckResult:
+    def check_order(
+        self,
+        order: Order,
+        context: PreTradeContext,
+    ) -> OrderCheckResult:
         return OrderCheckResult(decision=Decision.ACCEPT, order_id=order.order_id)
 
 
 class _AlwaysReject:
-    def check_order(self, order: Order, context: PreTradeContext) -> OrderCheckResult:
+    def check_order(
+        self,
+        order: Order,
+        context: PreTradeContext,
+    ) -> OrderCheckResult:
         return OrderCheckResult(
             decision=Decision.REJECT,
             order_id=order.order_id,
@@ -66,7 +74,11 @@ class _AlwaysReject:
 class _AlwaysResize:
     """每次 resize +100。"""
 
-    def check_order(self, order: Order, context: PreTradeContext) -> OrderCheckResult:
+    def check_order(
+        self,
+        order: Order,
+        context: PreTradeContext,
+    ) -> OrderCheckResult:
         return OrderCheckResult(
             decision=Decision.RESIZE,
             order_id=order.order_id,
@@ -82,7 +94,11 @@ class _ResizeOnceThenAccept:
     def __init__(self) -> None:
         self.called = 0
 
-    def check_order(self, order: Order, context: PreTradeContext) -> OrderCheckResult:
+    def check_order(
+        self,
+        order: Order,
+        context: PreTradeContext,
+    ) -> OrderCheckResult:
         self.called += 1
         if self.called == 1:
             return OrderCheckResult(

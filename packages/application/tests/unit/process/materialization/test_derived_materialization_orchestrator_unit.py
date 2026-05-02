@@ -9,28 +9,16 @@ from unittest.mock import MagicMock
 
 import orjson
 import polars as pl
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
 )
-from ditto_application.process.materialization.types import InMemoryDerivedInputProvider
+from ditto_application.processes.materialization.types import (
+    InMemoryDerivedInputProvider,
+)
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
-)
-from ditto_data.models.derived import (
-    DerivedCheckpointRecord,
-    DerivedSpecRecord,
-    DerivedStateRecord,
-    DerivedVersionRecord,
-)
-from ditto_data.services.derived.artifact_persistence_service import (
-    ArtifactPersistenceService,
-)
-from ditto_data.services.derived_catalog_service import DerivedCatalogService
-from ditto_data.storage.runtime.derived_sqlite import (
-    SQLiteDerivedCatalogReader,
-    SQLiteDerivedCatalogWriter,
 )
 from ditto_data.storage.runtime.publication_safety import (
     CertificationReader,
@@ -49,7 +37,21 @@ from ditto_features.materialization.models import (
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
+from ditto_features.models.derived import (
+    DerivedCheckpointRecord,
+    DerivedSpecRecord,
+    DerivedStateRecord,
+    DerivedVersionRecord,
+)
 from ditto_features.publication_safety import CompatibilityManifest
+from ditto_features.services.derived.artifact_persistence_service import (
+    ArtifactPersistenceService,
+)
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.storage.sqlite.derived import (
+    SQLiteDerivedCatalogReader,
+    SQLiteDerivedCatalogWriter,
+)
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 

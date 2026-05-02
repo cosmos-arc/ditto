@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_application.query.source import SourceQueryFacade
+from ditto_application.queries.source import SourceQueryFacade
 
 
 class TestSourceQueryFacadeGetDatasetAssetClass:

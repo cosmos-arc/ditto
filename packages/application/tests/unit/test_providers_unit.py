@@ -12,18 +12,18 @@ from ditto_application.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_application.command.quality_check import CheckDataQualityHandler
-from ditto_application.process.execution.strategy_run_process import StrategyFacade
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_application.commands.quality_check import CheckDataQualityHandler
+from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_application.process.materialization.publication_facade import (
+from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.process.quality import QualityPatrolService
+from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.providers import (
     AppBuilderFactory,
     AppCommandProvider,
@@ -33,11 +33,10 @@ from ditto_application.providers import (
 from ditto_application.providers_market import AppMarketQueryProvider
 from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
-from ditto_application.query.derived import DerivedQueryFacade
+from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
     CapitalProvider,
-    DerivedProvider,
     FundamentalProvider,
     MacroProvider,
     MarketProvider,
@@ -293,6 +292,9 @@ class TestAppProviderIntegration:
     @pytest.fixture
     def app_container(self, monkeypatch, tmp_path):
         """构建包含所有层级的完整测试容器."""
+        from ditto_analysis.di import AnalysisStorageProvider
+        from ditto_features.di import FeaturesStorageProvider
+
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
 
@@ -308,7 +310,8 @@ class TestAppProviderIntegration:
             CapitalProvider(),
             FundamentalProvider(),
             MacroProvider(),
-            DerivedProvider(),
+            FeaturesStorageProvider(),
+            AnalysisStorageProvider(),
             TradeProvider(),
             _notification_provider(),
             *get_app_providers(),
@@ -366,7 +369,7 @@ class TestAppProviderIntegration:
 
     def test_manual_tracker_receives_trading_calendar(self, app_container) -> None:
         """ManualTracker 应从 MetadataService 加载交易日历（非空 tuple）."""
-        from ditto_application.process.execution.manual_tracker import ManualTracker
+        from ditto_application.processes.execution.manual_tracker import ManualTracker
 
         tracker = app_container.get(ManualTracker)
         assert isinstance(tracker, ManualTracker)

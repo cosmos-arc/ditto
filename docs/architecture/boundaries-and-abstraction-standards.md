@@ -35,20 +35,20 @@ Ditto 当前的大分层已经成立，质量门禁也较强。主要不足不�
 
 ## 3. 架构心智模型
 
-不要只把系统理解成一条线性的 `interfaces -> app -> engine -> data -> infra`。更准确的模型是：
+不要只把系统理解成一条线性的依赖链。更准确的模型是：
 
 ```text
-                 interfaces
+                    apps
                      |
-                    app
-        ┌────────────┼────────────┐
-        |            |            |
-      data       analytics      engine
-        |            |            |
-        └────────────┴────────────┘
-                  kernel
-
-infra 是横向基础设施，不表达业务领域。
+              application
+    ┌────┬────┬────┼────┬────┬────┐
+    |    |    |    |    |    |    |
+   data feat strat port risk exec back
+    |              |              |
+    └──────┬───────┴──────┬───────┘
+           kernel         analysis
+platform 是横向基础设施，不表达业务领域。
+（analysis 仅限研究用途，生产包禁止依赖）
 ```
 
 ### 3.1 各平面定位
@@ -56,26 +56,36 @@ infra 是横向基础设施，不表达业务领域。
 | 平面 | 定位 | 典型职责 | 不应承担 |
 |---|---|---|---|
 | `kernel` | 跨领域最小稳定语言 | 共享值对象、协议根、错误根、基础枚举 | 数据源、存储、回测、API、配置读取 |
-| `infra` | 通用技术能力 | 配置基础设施、观测、并发、通知等 | 业务规则、数据目录、交易语义 |
+| `platform` | 通用技术能力 | 配置基础设施、观测、并发、通知等 | 业务规则、数据目录、交易语义 |
 | `data` | 数据平台平面 | 数据源、存储、目录、质量、摄取状态、数据查询 | 策略决策、回测执行、接口传输 |
-| `analytics` | 分析研究平面 | 表达式、因子、物化计划、评估、研究数据集 | 外部 I/O、API、回测状态推进 |
-| `engine` | 交易与模拟平面 | 订单、成交、组合、风险、策略 pipeline、回测 runtime | 数据源适配、物理存储、HTTP/CLI |
-| `app` | 用例编排与组合平面 | command/query/process、对象装配、跨平面用例 | 核心领域规则、物理 I/O 细节、传输协议 |
-| `interfaces` | 传输适配平面 | FastAPI、CLI、Prefect job、请求响应模型 | 业务计算、数据读写实现、引擎内部逻辑 |
+| `features` | 因子计算平面 | 表达式、因子、物化计划、评估 | 策略决策、交易执行、外部 I/O |
+| `strategy` | 策略定义平面 | 策略 pipeline、alpha 模板、信号生成 | 交易执行、回测运行、数据存储 |
+| `portfolio` | 组合管理平面 | 持仓、会计、调仓、目标组合 | 交易执行、风控决策、数据源 |
+| `risk` | 风险管理平面 | 盘前/盘后风控、约束、暴露度、回撤 | 策略决策、回测运行、数据存储 |
+| `execution` | 交易执行平面 | 订单、成交、券商网关、费用、审计 | 回测运行、数据源适配、HTTP/CLI |
+| `backtest` | 回测引擎平面 | 回测 runtime、step chain、绩效统计 | 数据源适配、HTTP/CLI、真实券商 |
+| `analysis` | 研究分析平面 | 报告、诊断、实验、研究数据集 | 被生产包导入、外部 I/O |
+| `application` | 用例编排与组合平面 | commands/queries/processes、对象装配、跨平面用例 | 核心领域规则、物理 I/O 细节、传输协议 |
+| `apps` | 传输适配平面 | FastAPI、CLI、Prefect job、请求响应模型、DI composition root | 业务计算、数据读写实现、引擎内部逻辑 |
 
 ### 3.2 垂直调用与水平平面
 
-`data`、`analytics`、`engine` 是并列核心平面。`app` 负责编排它们，`interfaces` 负责暴露它们。不要把 `engine` 理解成天然高于 `data` 的上层，也不要把 `analytics` 理解成 `app` 的子模块。
+`data`、`features`、`strategy`、`portfolio`、`risk`、`execution`、`backtest` 是并列能力包。`application` 负责编排它们，`apps` 负责暴露它们。不要把某个能力包理解成天然高于另一个。
 
 判断规则：
 
 | 问题 | 放置倾向 |
 |---|---|
-| 它描述“数据是什么、从哪来、怎么存、质量如何” | `data` |
-| 它描述“表达式、因子、统计评价、研究快照如何计算” | `analytics` |
-| 它描述“订单、成交、组合、风险、回测时间如何推进” | `engine` |
-| 它描述“一次用户用例如何串起数据、分析、引擎” | `app` |
-| 它描述“HTTP/CLI/job 如何接收请求并返回结果” | `interfaces` |
+| 它描述”数据是什么、从哪来、怎么存、质量如何” | `data` |
+| 它描述”表达式、因子、统计评价、物化如何计算” | `features` |
+| 它描述”策略定义、alpha pipeline、信号生成” | `strategy` |
+| 它描述”持仓、会计、调仓、目标组合” | `portfolio` |
+| 它描述”盘前/盘后风控、约束、暴露度” | `risk` |
+| 它描述”订单、成交、券商网关、费用” | `execution` |
+| 它描述”回测 runtime、step chain、绩效统计” | `backtest` |
+| 它描述”报告、诊断、实验、研究” | `analysis` |
+| 它描述”一次用户用例如何串起各能力包” | `application` |
+| 它描述”HTTP/CLI/job 如何接收请求并返回结果” | `apps` |
 
 ## 4. 包级职责标准
 
@@ -99,9 +109,9 @@ infra 是横向基础设施，不表达业务领域。
 
 判断句：如果一个类型只被一个平面需要，它不属于 `kernel`。
 
-### 4.2 Infra
+### 4.2 Platform
 
-`infra` 是通用技术能力，不表达 Ditto 领域知识。
+`platform`（原 infra）是通用技术能力，不表达 Ditto 领域知识。
 
 允许：
 
@@ -115,7 +125,7 @@ infra 是横向基础设施，不表达业务领域。
 - 数据源 token 的业务含义。
 - 策略、订单、回测、数据集目录。
 
-判断句：如果把 Ditto 换成另一个业务系统后该模块仍成立，它才可能属于 `infra`。
+判断句：如果把 Ditto 换成另一个业务系统后该模块仍成立，它才可能属于 `platform`。
 
 ### 4.3 Data
 
@@ -138,14 +148,14 @@ infra 是横向基础设施，不表达业务领域。
 
 Data 禁止：
 
-- 依赖 `engine`、`analytics`、`app`、`interfaces`。
+- 依赖 `features`、`strategy`、`portfolio`、`risk`、`execution`、`backtest`、`analysis`、`application`、`apps`。
 - 把策略决策或回测执行逻辑塞进 service。
 - 在 `models` 中承载过多服务行为。
 - 用裸字符串长期代表重要数据集概念。
 
-### 4.4 Analytics
+### 4.4 Features
 
-`analytics` 是分析计算平面，应该保持无外部 I/O。
+`features`（原 analytics 表达式/因子部分）是因子计算平面，应该保持无外部 I/O。
 
 目标内部层级：
 
@@ -154,71 +164,81 @@ contracts/models
   -> expression
   -> factors
   -> materialization
-  -> evaluation/research
+  -> evaluation
 ```
 
 规则：
 
 - `expression` 不应依赖 `materialization`。
-- `factors` 应依赖表达式和因子 spec，而不是依赖 app process。
+- `factors` 应依赖表达式和因子 spec，而不是依赖 application process。
 - `materialization` 负责计划和产物语义，不直接读写物理存储。
 - `evaluation` 负责评价指标，不启动数据摄取或回测流程。
+
+### 4.4b Analysis
+
+`analysis`（原 analytics 研究部分）是纯研究平面。
+
 - `research` 负责研究数据集语义，不成为 Data catalog 的替代品。
+- 生产包禁止依赖 analysis，只有 apps 的研究入口可以调用。
+- 研究存储使用独立 SQLite。
 
-当前需要特别警惕：表达式分析结果、分析 warning、编译产物等契约应位于更底层的 contracts，而不是挂在 materialization 下让 expression 反向依赖。
+### 4.5 Capability Packages（Strategy/Portfolio/Risk/Execution/Backtest）
 
-### 4.5 Engine
+Engine 已拆分为独立能力包。各包应该可以在没有 API、没有真实数据源、没有物理存储的情况下独立测试。
 
-`engine` 是交易、执行、组合、风险与模拟的领域平面。它应该可以在没有 API、没有真实数据源、没有物理存储的情况下独立测试。
-
-目标内部方向：
+依赖方向：
 
 ```text
-accounting / execution / portfolio / risk / alpha
-  -> backtest
+strategy → portfolio → risk → execution
+backtest 可依赖以上所有包
 ```
 
-更精确地说：`backtest` 是 runtime，可以依赖其他 engine 子域；其他 engine 子域不应依赖 `backtest`。
+硬性约束：
 
-规则：
+- `strategy` 不依赖 `execution`、`backtest`。
+- `execution` 不依赖 `backtest`。
+- `backtest` 不导入真实券商网关。
+- 生产包不依赖 `analysis`。
 
-- 订单、成交、持仓、费用、滑点、风险属于核心领域模型。
-- 回测主循环、data feed、audit collector、step chain 属于 simulation runtime。
-- 时间必须来自显式输入或 `Clock`，不应在领域对象中写死默认时间。
-- 运行期合约失败应使用领域异常或 typed result，不应使用 `AssertionError`。
-- flush、delayed signal、audit 等尾部阶段失败不能静默丢失。
+各能力包规则：
 
-### 4.6 App
+- `strategy`：策略 pipeline、alpha 模板、信号生成。时间必须来自显式输入。
+- `portfolio`：持仓、会计、调仓。纯领域模型，不依赖 data 或 execution。
+- `risk`：盘前/盘后风控、约束。依赖 portfolio 和 execution 的模型。
+- `execution`：订单、成交、券商网关、费用、审计。不依赖 backtest。
+- `backtest`：回测 runtime、step chain、绩效统计。是模拟层，可依赖所有能力包。
 
-`app` 是唯一业务用例编排层，也是对象装配的主要位置。它不应该包含底层领域规则，也不应该知道传输协议细节。
+### 4.6 Application
+
+`application`（原 app）是唯一业务用例编排层，也是对象装配的主要位置。它不应该包含底层领域规则，也不应该知道传输协议细节。
 
 内部职责：
 
 | 子目录 | 职责 | 禁止 |
 |---|---|---|
-| `query` | 只读 facade，聚合读模型 | 写入、启动长流程、调用 command |
-| `command` | 写入命令 DTO 和 handler | 复杂长流程、查询 facade、对象构建 |
-| `process` | 长流程和跨服务编排 | 传输协议、物理存储细节、核心领域算法 |
+| `queries` | 只读 facade，聚合读模型 | 写入、启动长流程、调用 command |
+| `commands` | 写入命令 DTO 和 handler | 复杂长流程、查询 facade、对象构建 |
+| `processes` | 长流程和跨服务编排 | 传输协议、物理存储细节、核心领域算法 |
 | `builders` | 对象图构建和运行时装配 | 业务决策、外部 I/O、写入副作用 |
 | `providers` | DI wiring | 业务流程、散落环境变量读取 |
 
 判断规则：
 
-- 如果是用户可触发的一次完整业务动作，优先看 `command` 或 `process`。
-- 如果只是查询和组装读模型，放 `query`。
+- 如果是用户可触发的一次完整业务动作，优先看 `commands` 或 `processes`。
+- 如果只是查询和组装读模型，放 `queries`。
 - 如果只是创建对象图，放 `builders`。
 - 如果只是注册对象，放 `providers`。
 
-### 4.7 Interfaces
+### 4.7 Apps
 
-`interfaces` 是传输适配，不是业务层。
+`apps`（原 interfaces）是传输适配和 DI composition root，不是业务层。
 
 允许：
 
 - HTTP request/response DTO。
 - CLI 参数解析。
 - Prefect task/job 入口。
-- 调用 app facade 或 app command。
+- 调用 application facade 或 application command。
 - 把领域错误映射成 HTTP/CLI/job 响应。
 
 禁止：
@@ -229,7 +249,7 @@ accounting / execution / portfolio / risk / alpha
 - 用 `type(exc).__name__` 字符串匹配业务错误。
 - 通过 `TYPE_CHECKING` 绕开边界。
 
-组合根规则：`interfaces.registry` 目前有必要豁免，但长期目标是让 `app.bootstrap` 或 `app.composition` 承担业务对象装配；`interfaces.registry` 只绑定传输入口和 app facade。
+组合根规则：`apps.registry` 目前有必要豁免，但长期目标是让 `application.bootstrap` 或 `application.composition` 承担业务对象装配；`apps.registry` 只绑定传输入口和 application facade。
 
 ## 5. 命名词典
 
@@ -287,13 +307,13 @@ accounting / execution / portfolio / risk / alpha
 
 例如：
 
-- Engine 需要数据，应定义 Engine 需要的 `DataPortal`/`MarketDataPort` 语义。
+- Strategy/Backtest 需要数据，应定义需要的数据 port 语义。
 - Data 可以实现这个 port。
-- App 负责把 Data 实现注入 Engine。
+- Application 负责把 Data 实现注入消费方。
 
 不要让实现方定义上游世界观。否则上游会逐步依赖实现层语言。
 
-当前项目中 `ditto_data.provider.DataProvider` 被 Engine 使用，是一个可运行折中。后续新增跨平面 port 时，应优先放在消费者包内，或放在 `kernel` 的最小共享契约中，并用 import-linter 固化。
+当前项目中 `ditto_data.provider.DataProvider` 被策略/回测包使用，是一个可运行折中。后续新增跨平面 port 时，应优先放在消费者包内，或放在 `kernel` 的最小共享契约中，并用 import-linter 固化。
 
 ### 6.3 领域目录优先于字符串枚举
 
@@ -318,7 +338,7 @@ accounting / execution / portfolio / risk / alpha
 | `utils/date.py` | `ingestion/date_range.py` |
 | `helpers/path.py` | `storage/pathing.py` |
 | `helpers/rules.py` | `quality/rule_selection.py` |
-| `helpers/factor.py` | `analytics/factors/...` |
+| `helpers/factor.py` | `features/factors/...` |
 
 允许 helper 的条件：
 
@@ -347,22 +367,37 @@ accounting / execution / portfolio / risk / alpha
    - 是：考虑 `kernel`。
    - 否：继续。
 2. 它是否是通用技术能力，和 Ditto 业务无关？
-   - 是：考虑 `infra`。
+   - 是：考虑 `platform`。
    - 否：继续。
 3. 它是否处理数据源、数据目录、存储、质量、摄取状态？
    - 是：考虑 `data`。
    - 否：继续。
-4. 它是否处理表达式、因子、统计评价、研究数据集？
-   - 是：考虑 `analytics`。
+4. 它是否处理表达式、因子、统计评价、物化？
+   - 是：考虑 `features`。
    - 否：继续。
-5. 它是否处理订单、成交、组合、风险、策略 pipeline、回测 runtime？
-   - 是：考虑 `engine`。
+5. 它是否处理策略定义、alpha pipeline、信号生成？
+   - 是：考虑 `strategy`。
    - 否：继续。
-6. 它是否把多个平面串成一次用户用例？
-   - 是：考虑 `app.process` / `app.command` / `app.query`。
+6. 它是否处理持仓、会计、调仓？
+   - 是：考虑 `portfolio`。
    - 否：继续。
-7. 它是否只是 HTTP/CLI/job 的入口、参数、响应、错误映射？
-   - 是：考虑 `interfaces`。
+7. 它是否处理风控、约束、暴露度？
+   - 是：考虑 `risk`。
+   - 否：继续。
+8. 它是否处理订单、成交、券商网关？
+   - 是：考虑 `execution`。
+   - 否：继续。
+9. 它是否处理回测 runtime、step chain、绩效统计？
+   - 是：考虑 `backtest`。
+   - 否：继续。
+10. 它是否处理报告、诊断、实验、研究？
+   - 是：考虑 `analysis`。
+   - 否：继续。
+11. 它是否把多个能力包串成一次用户用例？
+   - 是：考虑 `application.processes` / `application.commands` / `application.queries`。
+   - 否：继续。
+12. 它是否只是 HTTP/CLI/job 的入口、参数、响应、错误映射？
+   - 是：考虑 `apps`。
    - 否：暂停，补充架构讨论。
 
 ## 8. 扩展 Playbook
@@ -376,14 +411,14 @@ accounting / execution / portfolio / risk / alpha
 3. source fetcher/adapter。
 4. ingestion 规则、日期语义、游标/日志。
 5. quality 规则。
-6. app query/process facade。
-7. interfaces 只新增参数和响应，不复制数据集清单。
+6. application queries/processes facade。
+7. apps 只新增参数和响应，不复制数据集清单。
 
 不应修改：
 
-- Engine 核心模型，除非该数据集改变回测语义。
-- Interfaces route 中的硬编码业务分支。
-- Analytics 因子目录，除非该数据集直接提供因子输入。
+- Capability packages 核心模型，除非该数据集改变回测语义。
+- Apps route 中的硬编码业务分支。
+- Features 因子目录，除非该数据集直接提供因子输入。
 
 ### 8.2 新增数据源
 
@@ -396,53 +431,53 @@ accounting / execution / portfolio / risk / alpha
 
 不应放：
 
-- `app.process` 中直接调用外部 API。
-- `interfaces` 中直接实例化 source。
+- `application.processes` 中直接调用外部 API。
+- `apps` 中直接实例化 source。
 - `storage` 中包含 source API 逻辑。
 
 ### 8.3 新增因子或表达式函数
 
 应放：
 
-- 表达式语言能力：`analytics.expression`。
-- 因子 spec：`analytics.factors`。
-- 物化计划：`analytics.materialization`。
+- 表达式语言能力：`features.expression`。
+- 因子 spec：`features.factors`。
+- 物化计划：`features.materialization`。
 - 数据保存：`data.storage` / `data.services`。
-- 用例编排：`app.process.materialization`。
+- 用例编排：`application.processes.materialization`。
 
 不应放：
 
-- Engine 中实现因子计算。
-- Interfaces route 中拼接计算逻辑。
+- Capability packages 中实现因子计算。
+- Apps route 中拼接计算逻辑。
 - Data storage 中写 factor 算法。
 
 ### 8.4 新增回测执行模型
 
 应放：
 
-- 成交/费用/滑点/交收：`engine.execution.reality`。
-- 订单、成交、账户状态：`engine.accounting`。
-- 回测 runtime 接入：`engine.backtest`。
-- 策略运行装配：`app.builders` / `app.process.execution`。
-- API 参数映射：`interfaces`。
+- 成交/费用/滑点/交收：`execution.reality`。
+- 订单、成交、账户状态：`portfolio.accounting`。
+- 回测 runtime 接入：`backtest`。
+- 策略运行装配：`application.builders` / `application.processes.execution`。
+- API 参数映射：`apps`。
 
 不应放：
 
 - Data service 中写执行模型。
-- Interfaces route 中计算成交。
-- App provider 中写交易规则。
+- Apps route 中计算成交。
+- Application provider 中写交易规则。
 
 ### 8.5 新增 API
 
 应放：
 
-- Request/Response：`interfaces`。
-- 权限、参数解析、错误映射：`interfaces`。
-- 只读业务：`app.query`。
-- 写入命令：`app.command`。
-- 长流程：`app.process`。
+- Request/Response：`apps`。
+- 权限、参数解析、错误映射：`apps`。
+- 只读业务：`application.queries`。
+- 写入命令：`application.commands`。
+- 长流程：`application.processes`。
 
-route 只做薄适配。若 route 中出现超过少量分支的业务计算，应下沉到 `app`。
+route 只做薄适配。若 route 中出现超过少量分支的业务计算，应下沉到 `application`。
 
 ### 8.6 新增质量规则
 
@@ -450,19 +485,19 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 - 规则定义和执行：`data.quality`。
 - 质量记录持久化：`data.ingestion` / `data.storage.runtime.quality`。
-- 巡检编排：`app.process.quality`。
-- job/API 触发：`interfaces`。
+- 巡检编排：`application.processes.quality`。
+- job/API 触发：`apps`。
 
 不应放：
 
-- Interfaces job 中硬编码完整规则逻辑。
+- Apps job 中硬编码完整规则逻辑。
 - Data source adapter 中直接决定 DQ 结果。
 
 ## 9. 常见反模式
 
 | 反模式 | 为什么危险 | 正确方向 |
 |---|---|---|
-| Route 中做业务计算 | 传输层变业务层，测试和复用困难 | 下沉到 `app.query` 或 `app.process` |
+| Route 中做业务计算 | 传输层变业务层，测试和复用困难 | 下沉到 `application.queries` 或 `application.processes` |
 | Provider 中写业务流程 | DI 层变隐式 use case | Provider 只 wiring，流程进 process/service |
 | Manager 泛化 | 名字不能表达职责 | 改成具体领域名词，或证明其生命周期资源 |
 | Dataset enum 继续膨胀 | enum 变数据目录和规则引擎 | 引入 catalog/spec |
@@ -474,8 +509,8 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 ## 10. 机器门禁解释原则
 
-当 `.importlinter` 的 layers 表达与 diamond 图看似冲突时，
-以 diamond 作为架构语义，以 explicit forbidden contracts 作为平面隔离依据。
+当 `.importlinter` 的 layers 表达与架构模型看似冲突时，
+以架构模型作为语义，以 explicit forbidden contracts 作为平面隔离依据。
 
 ## 11. 建议增加的架构门禁
 
@@ -483,10 +518,12 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 | 门禁 | 目的 | 状态 |
 |---|---|---|
-| `analytics.expression` 禁止依赖 `analytics.materialization` | 固化 Analytics 内部抽象方向 | **已添加** ✅ |
-| `engine.accounting/execution/risk/portfolio/alpha` 禁止依赖 `engine.backtest` | 防止 runtime 污染核心领域 | 待添加 |
-| `interfaces.api.routes` 禁止依赖 `ditto_data.services` / `ditto_data.storage` | route 保持传输适配 | 待添加 |
-| `app.providers` 禁止读取 `os.environ` | 配置入口集中 | 待添加 |
+| `features.expression` 禁止依赖 `features.materialization` | 固化 Features 内部抽象方向 | **已添加** ✅ |
+| `strategy` 禁止依赖 `execution`、`backtest` | 防止下游依赖 | **已添加** ✅ |
+| `execution` 禁止依赖 `backtest` | 防止 runtime 污染执行 | **已添加** ✅ |
+| 生产包禁止依赖 `analysis` | 研究层隔离 | **已添加** ✅ |
+| `apps.api.routes` 禁止依赖 `ditto_data.services` / `ditto_data.storage` | route 保持传输适配 | 待添加 |
+| `application.providers` 禁止读取 `os.environ` | 配置入口集中 | 待添加 |
 | `data.storage` 只允许依赖明确的 storage model/contracts | 收紧 storage-model 豁免 | 待添加 |
 | `helpers/utils` 新增文件需要架构审查 | 防止无语义目录扩张 | 待添加 |
 
@@ -519,11 +556,11 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 
 按架构清晰度优先级排序：
 
-1. 明确 `app` 的 composition root 边界，把 provider 从“可能做事”收紧为“只 wiring”。
+1. 明确 `application` 的 composition root 边界，把 provider 从”可能做事”收紧为”只 wiring”。
 2. 将 dataset 语义从 enum/string 迁向 catalog/spec。
 3. 将消费者 port 放回消费者侧，减少实现方定义上游接口。
-4. 给 Analytics 和 Engine 增加包内部 import-linter 合约。
-5. 把 `interfaces.registry` 的 composition root 豁免逐步迁到 `app.bootstrap` 或 `app.composition`。
+4. 给 Features 和各能力包增加包内部 import-linter 合约。
+5. 把 `apps.registry` 的 composition root 豁免逐步迁到 `application.bootstrap` 或 `application.composition`。
 6. 限制 `Manager`、`helpers`、`utils` 的新增。
 7. 为每个包建立稳定 public API 清单。
 

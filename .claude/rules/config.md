@@ -105,16 +105,16 @@ config/
 |------|------|------|
 | `get_environment()` | 获取运行时环境 | `platform/foundation/config/environment.py` |
 | `ConfigLoader` | 定位配置文件路径 | `platform/foundation/config/loader.py` |
-| `load_env_file()` | 加载 .env 文件 | `interfaces/config/loader.py` |
-| `ConfigProvider` | DI 装配 | `interfaces/registry/platform/config.py` |
+| `load_env_file()` | 加载 .env 文件 | `packages/apps/config/loader.py` |
+| `ConfigProvider` | DI 装配 | `packages/apps/registry/platform/config.py` |
 
 ### 配置加载位置约束
 
-**核心原则**：配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。
+**核心原则**：配置仅在 **Apps 层** 加载，其他层通过 DI 获取。
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  interfaces/registry/platform/config.py（唯一加载点）              │
+│  packages/apps/registry/platform/config.py（唯一加载点）              │
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │
@@ -125,7 +125,7 @@ config/
           │ DI 注入
           ▼
 ┌────────────────────────────────────────────────────────────┐
-│  packages/data/   packages/engine/   packages/platform/      │
+│  packages/data/   packages/strategy/   packages/platform/      │
 │  （通过构造函数/方法参数获取配置，禁止自己加载）           │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -282,7 +282,7 @@ settings.data_root = Path("/other")  # frozen dataclass 也不允许
 
 | ❌ 禁止 | ✅ 正确 | 原因 |
 |---------|---------|------|
-| 非 Interfaces 层加载配置 | Interfaces 层加载 + DI 注入 | 单一职责、可测试性 |
+| 非 Apps 层加载配置 | Apps 层加载 + DI 注入 | 单一职责、可测试性 |
 | 模型内读取 `os.environ` | 通过 `load_env_file()` 传入 | 配置来源可追溯 |
 | 使用 `BaseSettings` | 使用纯 `BaseModel` | 显式加载、可控 |
 | 硬编码路径 | 使用 `DataStoreSettings` 属性 | 唯一真源 |

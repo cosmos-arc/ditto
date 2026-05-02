@@ -5,7 +5,6 @@ from __future__ import annotations
 from dishka import Provider
 
 from .capital import CapitalProvider
-from .derived import DerivedProvider
 from .fundamental import FundamentalProvider
 from .golden import GoldenDatasetProvider
 from .macro import MacroProvider
@@ -23,8 +22,9 @@ def get_data_providers() -> list[Provider]:
     """
     返回 Data 层的所有 Provider.
 
-    包含 Data 层的 11 个 Provider，
-    统一由 Data 包管理 DI 注册。
+    包含 Data 层的 10 个 Provider。
+    能力包（strategy/features/analysis/execution）的存储 DI
+    由各自包的 di/ 模块提供。
     """
     return [
         SourcesProvider(),
@@ -34,7 +34,6 @@ def get_data_providers() -> list[Provider]:
         FundamentalProvider(),
         CapitalProvider(),
         MacroProvider(),
-        DerivedProvider(),
         GoldenDatasetProvider(),
         QualityProvider(),
         TradeProvider(),

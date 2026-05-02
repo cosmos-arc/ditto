@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import FrozenInstanceError
 
 import pytest
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.strategy.strategy_catalog_service import (
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from pytest_mock import MockerFixture

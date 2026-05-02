@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ditto_application.process.ingestion.coordinator_factory import (
+from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
 )
@@ -31,7 +31,7 @@ def _make_services() -> CoordinatorServices:
 def _patch_coordinator_init():
     """patch IngestionCoordinator.__init__ 避免真实初始化."""
     with patch(
-        "ditto_application.process.ingestion.coordinator_factory.IngestionCoordinator"
+        "ditto_application.processes.ingestion.coordinator_factory.IngestionCoordinator"
     ) as mock_cls:
         mock_instance = MagicMock()
         mock_cls.return_value = mock_instance

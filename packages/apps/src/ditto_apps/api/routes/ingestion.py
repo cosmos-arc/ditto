@@ -7,7 +7,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.query.ingestion_status import (
+from ditto_application.queries.ingestion_status import (
     IngestionStatusQueryFacade,
 )
 from ditto_data.models.common import Dataset

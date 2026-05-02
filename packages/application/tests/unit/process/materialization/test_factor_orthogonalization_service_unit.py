@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     FactorOrthogonalizationService,
 )
 

@@ -5,6 +5,7 @@ version = "0.1.0"
 dependencies = [
     "ditto-kernel",
     "ditto-data",
+    "ditto-platform",
     "polars",
     "numpy",
     "cachebox",

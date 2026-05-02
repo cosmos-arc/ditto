@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from ditto_backtest.data_feed import ProviderBackedDataFeed, Slice
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
-from ditto_engine.backtest.data_feed import ProviderBackedDataFeed, Slice
 
 from ditto_application.builders._resolution import (
     resolve_benchmark,

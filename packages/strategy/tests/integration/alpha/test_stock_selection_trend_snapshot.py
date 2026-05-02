@@ -11,22 +11,27 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
-from ditto_engine.backtest.engine import EngineLoop
+from ditto_backtest.engine import EngineLoop
+from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.templates.stock_selection_trend import (
     StockSelectionTrendConfig,
     build_stock_selection_trend_pipeline,
 )
 
-from .conftest import (
-    INITIAL_CASH,
-    STOCK_INSTRUMENT_IDS,
-    TRADE_DATES_10,
-    assert_cash_conservation,
-    build_snapshot_engine,
-    make_stock_10day_data,
-)
+_conftest_path = Path(__file__).parent / "conftest.py"
+_spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+INITIAL_CASH = _mod.INITIAL_CASH
+STOCK_INSTRUMENT_IDS = _mod.STOCK_INSTRUMENT_IDS
+TRADE_DATES_10 = _mod.TRADE_DATES_10
+assert_cash_conservation = _mod.assert_cash_conservation
+build_snapshot_engine = _mod.build_snapshot_engine
+make_stock_10day_data = _mod.make_stock_10day_data
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -46,7 +51,8 @@ def _build_daily_engine(tmp_path: Path) -> EngineLoop:
         trend_threshold=0.0,
         rebalance_freq="daily",
     )
-    pipeline = build_stock_selection_trend_pipeline(config)
+    stages = build_stock_selection_trend_pipeline(config)
+    pipeline = StrategyPipeline(stages)
 
     return build_snapshot_engine(
         tmp_path=tmp_path,
@@ -74,7 +80,8 @@ def _build_weekly_engine(tmp_path: Path) -> EngineLoop:
         trend_threshold=0.0,
         rebalance_freq="weekly",
     )
-    pipeline = build_stock_selection_trend_pipeline(config)
+    stages = build_stock_selection_trend_pipeline(config)
+    pipeline = StrategyPipeline(stages)
 
     return build_snapshot_engine(
         tmp_path=tmp_path,

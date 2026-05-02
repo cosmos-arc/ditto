@@ -1,18 +1,18 @@
-# ditto-app
+# ditto-application
 
 **版本**: v0.4.0
-**最后更新**: 2026-04-16
+**最后更新**: 2026-05-01
 **状态**: 应用编排层（CQRS）
 
 ## 概要
 
-应用编排层 -- 采用 CQRS 模式组织 Use Case，协调 Engine（领域计算）与 Data（数据服务）。
+应用编排层 -- 采用 CQRS 模式组织 Use Case，协调 capability packages（领域计算）与 Data（数据服务）。
 
 ## 模块结构
 
 ```
-ditto_app/
-├── query/              # 只读查询（零写入）
+ditto_application/
+├── queries/             # 只读查询（零写入）
 │   ├── metadata.py    # 元数据查询
 │   ├── market.py      # 行情查询
 │   ├── capital.py     # 资金查询
@@ -39,7 +39,7 @@ ditto_app/
 │   ├── strategy.py     # 策略只读查询
 │   ├── trade.py        # 交易意图查询
 │   └── universe.py     # Universe 只读查询
-├── command/            # Command DTO + Handler（原子写操作）
+├── commands/            # Command DTO + Handler（原子写操作）
 │   ├── ingestion.py              # IngestDateCommand + IngestDateHandler
 │   ├── quality_check.py          # CheckDataQualityCommand + Handler
 │   ├── quality_reconciliation.py # ReconcileSourcesCommand + Handler
@@ -48,58 +48,18 @@ ditto_app/
 │   ├── strategy.py               # 策略 Spec CRUD（创建/更新/发布）
 │   ├── trade.py                  # 成交录入 + 意图状态更新
 │   └── universe.py               # 自定义 Universe CRUD
-├── process/            # Process Manager（有状态长流程）
+├── processes/           # Process Manager（有状态长流程）
 │   ├── ingestion/      # 数据摄取流程
-│   │   ├── coordinator.py           # IngestionCoordinator 主类
-│   │   ├── coordinator_factory.py   # create_coordinator 工厂
-│   │   ├── config.py                # 摄取配置
-│   │   ├── data_writer.py           # 数据写入器
-│   │   ├── result_handler.py        # 摄取结果处理器
-│   │   ├── metadata_manager.py      # 元数据管理器
-│   │   ├── list_date_inference.py   # 上市日期推断
-│   │   ├── auto_init.py             # 自动初始化
-│   │   ├── backfill_handler.py      # 回填处理器
-│   │   ├── backfill_manager.py      # BackfillManager
-│   │   ├── retry_manager.py         # RetryManager
-│   │   ├── range_process.py         # IngestRangeProcess + BackfillRangeProcess
-│   │   ├── commodity_fetcher.py     # 商品数据获取
-│   │   ├── coordinator_constants.py # 共享常量
-│   │   ├── fetch_handlers.py        # 获取处理器构建
-│   │   └── ports.py                 # 摄取流程 Handler Protocol（解耦 command 依赖）
 │   ├── materialization/ # 因子物化流程
-│   │   ├── orchestrator.py          # DerivedMaterializationOrchestrator
-│   │   ├── cascade_orchestrator.py  # InvalidationCascadeOrchestrator
-│   │   ├── publication_facade.py    # 发布门面
-│   │   ├── types.py                 # 物化类型定义
-│   │   ├── dependencies.py          # 物化依赖
-│   │   ├── helpers.py               # 物化辅助函数
-│   │   ├── certification_rules.py   # 认证规则
-│   │   ├── factor_orthogonalization.py # 因子正交化
-│   │   ├── runtime_input_provider.py   # 运行时输入提供器
-│   │   └── publication_helpers.py   # 发布辅助函数
 │   ├── execution/      # 策略执行流程
-│   │   ├── backtest_process.py      # BacktestService
-│   │   ├── strategy_run_process.py  # StrategyRunService + StrategyFacade
-│   │   ├── strategy_types.py        # Protocol + Trigger DTO
-│   │   ├── strategy_input.py        # StrategyInputAssembler
-│   │   ├── backtest_serialization.py # 回测序列化
-│   │   ├── comparison.py            # 回测 vs 实际对比计算
-│   │   ├── delivery.py              # 信号推送路由器
-│   │   ├── factor_bridge.py         # 因子桥接（表达式→编译→信号）
-│   │   ├── fee_override.py          # CostConfig 费率覆盖工厂
-│   │   ├── manual_tracker.py        # 人工持仓聚合追踪器（T+1 交收）
-│   │   ├── replay_process.py        # 回测重放编排
-│   │   ├── signal_snapshot.py       # 信号快照 + 交易意图推导
-│   │   └── ports.py                 # 人工执行闭环 Port 定义
 │   └── quality/        # 质量巡检流程
-│       ├── __init__.py              # re-export shim
-│       └── patrol.py                # QualityPatrolService（原 L3BatchService）
 ├── builders/           # 运行时装配（DI 构造）
 │   ├── runtime_builder.py   # 运行时构建器
 │   ├── slice_builder.py     # 切片构建器
 │   ├── service_factory.py   # 服务工厂
 │   ├── _resolution.py       # 依赖解析工具
 │   └── _spec_deserializer.py # 衍生规格反序列化
+├── runtime/             # 运行时工具（预留）
 ├── providers.py            # DI Provider 聚合入口（6 个 Provider）
 ├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
 ├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
@@ -112,9 +72,9 @@ ditto_app/
 ## 架构定位
 
 ```
-interfaces → app → engine → data → infra
-                → analytics
-                → kernel
+apps → application → strategy/portfolio/risk/execution/backtest → data → platform
+                   → features
+                   → kernel
 ```
 
 **允许的依赖**:
@@ -123,29 +83,33 @@ interfaces → app → engine → data → infra
 |------|------|
 | `ditto_kernel` | 共享类型 |
 | `ditto_data` | 数据服务 |
-| `ditto_engine` | 领域计算 |
+| `ditto_strategy` | 策略定义与信号生成 |
+| `ditto_portfolio` | 组合构建与管理 |
+| `ditto_risk` | 风险管理 |
+| `ditto_execution` | 交易执行 |
+| `ditto_backtest` | 回测引擎 |
 | `ditto_features` | 表达式编译 / 物化 |
 | `ditto_platform` | 基础设施（仅 foundation） |
 
-**禁止依赖**: interfaces
+**禁止依赖**: ditto_apps
 
 ## CQRS 模式
 
-App 层采用 CQRS 模式分离读写职责：
+Application 层采用 CQRS 模式分离读写职责：
 
 | 模块 | 职责 | 规则 |
 |------|------|------|
-| `query/` | 只读查询 | 禁止写入、禁止调用 process/builders/command |
-| `process/` | 编排流程 | 可调用 query，可双向访问 builders |
-| `command/` | 纯写入 | 禁止调用 query/builders |
-| `builders/` | 运行时装配 | 禁止调用 query |
+| `queries/` | 只读查询 | 禁止写入、禁止调用 processes/builders/commands |
+| `processes/` | 编排流程 | 可调用 queries，可双向访问 builders |
+| `commands/` | 纯写入 | 禁止调用 queries/builders |
+| `builders/` | 运行时装配 | 禁止调用 queries |
 
 ## 使用示例
 
 ### DI 注册
 
 ```python
-from ditto_app.providers import get_app_providers
+from ditto_application.providers import get_app_providers
 
 providers = get_app_providers()  # [AppMarketQueryProvider, AppStrategyQueryProvider, AppPortfolioQueryProvider, ...]
 ```
@@ -153,7 +117,7 @@ providers = get_app_providers()  # [AppMarketQueryProvider, AppStrategyQueryProv
 ### 查询服务
 
 ```python
-from ditto_app.query.market import MarketQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
 
 facade = container.get(MarketQueryFacade)
 bars = facade.list_bars(code="159915.SZ", start="2024-01-01", end="2024-12-31")
@@ -161,5 +125,5 @@ bars = facade.list_bars(code="159915.SZ", start="2024-01-01", end="2024-12-31")
 
 ## 相关文档
 
-- [App 层规范](CLAUDE.md)
+- [Application 层规范](CLAUDE.md)
 - [架构规则](../../.claude/rules/architecture.md)

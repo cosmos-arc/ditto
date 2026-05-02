@@ -5,14 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_data.models.derived import (
+from ditto_features.models.derived import (
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
     DerivedVersionRecord,
 )
-from ditto_data.services.derived.garbage_collector import DerivedGarbageCollector
-from ditto_data.services.derived.gc_models import GcConfig, GcPlan, GcReport
+from ditto_features.services.derived.garbage_collector import DerivedGarbageCollector
+from ditto_features.services.derived.gc_models import GcConfig, GcPlan, GcReport
 
 # ---------------------------------------------------------------------------
 # Test doubles

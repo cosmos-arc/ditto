@@ -8,7 +8,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_analysis.research.artifact_service import ResearchArtifactService
 from polars.testing import assert_frame_equal
 
 

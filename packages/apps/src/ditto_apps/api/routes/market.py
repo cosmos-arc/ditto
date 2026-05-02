@@ -7,7 +7,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.query.market import MarketQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
 from fastapi import APIRouter
 
 from ditto_apps.models.common import APIResponse

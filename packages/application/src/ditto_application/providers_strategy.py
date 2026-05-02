@@ -3,28 +3,28 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.strategy.backtest_artifact_reader import (
+from ditto_execution.audit import ExecutionAuditService
+from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
     BacktestArtifactReader,
 )
-from ditto_data.services.strategy.strategy_artifact_service import (
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_data.services.strategy.strategy_catalog_service import (
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import (
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
-from ditto_application.query.backtest import BacktestQueryFacade
-from ditto_application.query.backtest_trade import BacktestTradeQueryFacade
-from ditto_application.query.comparison import ComparisonQueryFacade
-from ditto_application.query.lineage import LineageQueryFacade
-from ditto_application.query.market import MarketQueryFacade
-from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-from ditto_application.query.run import RunReadModel
-from ditto_application.query.strategy import StrategyQueryFacade
+from ditto_application.queries.backtest import BacktestQueryFacade
+from ditto_application.queries.backtest_trade import BacktestTradeQueryFacade
+from ditto_application.queries.comparison import ComparisonQueryFacade
+from ditto_application.queries.lineage import LineageQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
+from ditto_application.queries.run import RunReadModel
+from ditto_application.queries.strategy import StrategyQueryFacade
 
 __all__ = ["AppStrategyQueryProvider"]
 

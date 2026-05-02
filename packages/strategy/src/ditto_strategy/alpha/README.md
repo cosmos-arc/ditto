@@ -52,7 +52,7 @@ alpha/
 ## 依赖
 
 - 上游: `ditto_data` (数据访问)
-- 下游: 被 `ditto_engine.portfolio`、`ditto_engine.execution` 和 App 层消费
+- 下游: 被 `ditto_portfolio.rebalancing`、`ditto_execution` 和 App 层消费
 
 ## Port 侧入口
 

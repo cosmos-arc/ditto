@@ -9,10 +9,14 @@
   "typeCheckingMode": "basic",
   "extraPaths": [
     "packages/kernel/src",
-    "packages/engine/src",
     "packages/platform/src",
     "packages/data/src",
     "packages/features/src",
+    "packages/strategy/src",
+    "packages/portfolio/src",
+    "packages/risk/src",
+    "packages/execution/src",
+    "packages/backtest/src",
     "packages/analysis/src",
     "packages/application/src",
     "packages/apps/src"

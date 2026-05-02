@@ -1,6 +1,6 @@
 """Tests for SQLite-backed research catalog stores."""
 
-from ditto_data.storage.runtime.research_sqlite import (
+from ditto_analysis.storage.sqlite.research import (
     SQLiteResearchCatalogReader,
     SQLiteResearchCatalogWriter,
 )

@@ -7,7 +7,7 @@ import inspect
 
 import polars as pl
 import pytest
-from ditto_application.process.materialization.types import (
+from ditto_application.processes.materialization.types import (
     DerivedInputProvider,
     InMemoryDerivedInputProvider,
     InputContext,

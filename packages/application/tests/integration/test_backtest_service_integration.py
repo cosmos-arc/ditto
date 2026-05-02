@@ -122,7 +122,7 @@ class TestEngineOptionsAssembly:
 
     def test_engine_options_accepts_clock_and_event_bus(self) -> None:
         """EngineOptions 应接受 SimulatedClock 和 SimpleEventBus 参数。"""
-        from ditto_engine.backtest.engine import EngineOptions
+        from ditto_backtest.engine import EngineOptions
 
         clock = SimulatedClock(initial=datetime(2024, 1, 2, tzinfo=UTC))
         event_bus = SimpleEventBus()
@@ -136,7 +136,7 @@ class TestEngineOptionsAssembly:
 
     def test_engine_options_clock_only(self) -> None:
         """EngineOptions 应支持只传入 clock（event_bus 可选）。"""
-        from ditto_engine.backtest.engine import EngineOptions
+        from ditto_backtest.engine import EngineOptions
 
         clock = SimulatedClock(initial=datetime(2024, 1, 2, tzinfo=UTC))
 
@@ -148,7 +148,7 @@ class TestEngineOptionsAssembly:
         """EngineOptions 是 frozen dataclass，创建后不可变。"""
         from dataclasses import FrozenInstanceError
 
-        from ditto_engine.backtest.engine import EngineOptions
+        from ditto_backtest.engine import EngineOptions
 
         clock = SimulatedClock(initial=datetime(2024, 1, 2, tzinfo=UTC))
         options = EngineOptions(clock=clock)

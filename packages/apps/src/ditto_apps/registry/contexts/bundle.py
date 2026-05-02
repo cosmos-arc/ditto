@@ -2,27 +2,29 @@
 
 from dataclasses import dataclass
 
-from ditto_application.process.execution.strategy_run_process import StrategyFacade
-from ditto_application.process.execution.strategy_types import RunLifecycleService
-from ditto_application.process.ingestion.backfill_manager import BackfillManager
-from ditto_application.process.ingestion.coordinator import IngestionCoordinator
-from ditto_application.process.ingestion.retry_manager import RetryManager
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.ingestion.backfill_manager import BackfillManager
+from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
+from ditto_application.processes.ingestion.retry_manager import RetryManager
+from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_application.process.materialization.publication_facade import (
+from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.query.metadata import MetadataQueryFacade
-from ditto_application.query.research import ResearchDatasetFacade
-from ditto_data.services.strategy.strategy_catalog_service import (
+from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import StrategyRunWriterProtocol
-from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunWriterProtocol,
+)
 
 
 @dataclass(frozen=True)

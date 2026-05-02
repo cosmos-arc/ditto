@@ -10,9 +10,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
-from ditto_portfolio.accounting.order_book import OrderType
 
 __all__ = [
     "ConstraintSpec",

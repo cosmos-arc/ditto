@@ -7,10 +7,6 @@ from unittest.mock import MagicMock
 
 import ditto_application.builders as strategy_services
 import pytest
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.strategy.strategy_catalog_service import (
-    StrategyCatalogService,
-)
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import (
@@ -19,6 +15,10 @@ from ditto_strategy.alpha.specs import (
     ScorerSpec,
     SelectorSpec,
     StrategySpec,
+)
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
 )
 
 

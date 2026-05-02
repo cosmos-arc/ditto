@@ -2,26 +2,32 @@
 
 from unittest.mock import MagicMock
 
-from dishka import Provider, Scope, make_container, provide
+from dishka import Container, Provider, Scope, make_container, provide
+from ditto_analysis.di import AnalysisStorageProvider
 from ditto_apps.registry.infra import ConfigProvider
 from ditto_data.di import RuntimeProvider
-from ditto_data.models.strategy import (
+from ditto_data.services import DerivedCatalogService
+from ditto_data.sources.source import DataSources
+from ditto_execution.audit import ExecutionAuditService
+from ditto_execution.audit.models import RiskScanPayload, RiskScope
+from ditto_execution.di import ExecutionStorageProvider
+from ditto_features.di import FeaturesStorageProvider
+from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_strategy.di import StrategyStorageProvider
+from ditto_strategy.models import (
     ArtifactKind,
     StrategyArtifactRecord,
     StrategySpecRecord,
 )
-from ditto_data.models.strategy_audit import RiskScanPayload, RiskScope
-from ditto_data.services import DerivedCatalogService
-from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_data.services.strategy.strategy_artifact_service import (
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
-from ditto_data.services.strategy.strategy_catalog_service import (
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import StrategyRunLifecycleStore
-from ditto_data.sources.source import DataSources
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunLifecycleStore,
+)
 
 
 def _sources_provider() -> Provider:
@@ -35,6 +41,19 @@ def _sources_provider() -> Provider:
     return SourcesProvider()
 
 
+def _make_container() -> Container:
+    """构建包含所有 capability storage provider 的完整容器。"""
+    return make_container(
+        ConfigProvider(),
+        _sources_provider(),
+        RuntimeProvider(),
+        FeaturesStorageProvider(),
+        AnalysisStorageProvider(),
+        StrategyStorageProvider(),
+        ExecutionStorageProvider(),
+    )
+
+
 class TestRuntimeProviderDerivedCatalog:
     """Tests for RuntimeProvider derived catalog service wiring."""
 
@@ -46,11 +65,7 @@ class TestRuntimeProviderDerivedCatalog:
         """RuntimeProvider should build DerivedCatalogService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service = container.get(DerivedCatalogService)
 
@@ -65,11 +80,7 @@ class TestRuntimeProviderDerivedCatalog:
         """DerivedCatalogService should be an app-scoped singleton."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service_1 = container.get(DerivedCatalogService)
         service_2 = container.get(DerivedCatalogService)
@@ -85,11 +96,7 @@ class TestRuntimeProviderDerivedCatalog:
         """RuntimeProvider should build DerivedShadowSlotService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service = container.get(DerivedShadowSlotService)
 
@@ -104,11 +111,7 @@ class TestRuntimeProviderDerivedCatalog:
         """RuntimeProvider 应提供可持久化的 StrategyRunService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service = container.get(StrategyRunLifecycleStore)
         service.create_run(
@@ -135,11 +138,7 @@ class TestRuntimeProviderDerivedCatalog:
         """RuntimeProvider 应提供可持久化的 StrategyCatalogService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service = container.get(StrategyCatalogService)
         service.save_spec(
@@ -169,11 +168,7 @@ class TestRuntimeProviderDerivedCatalog:
         """RuntimeProvider 应提供可持久化的 StrategyArtifactService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service = container.get(StrategyArtifactService)
         service.save_artifact(
@@ -204,11 +199,7 @@ class TestRuntimeProviderDerivedCatalog:
         """RuntimeProvider 应提供已初始化 schema 的 ExecutionAuditService。"""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
-        container = make_container(
-            ConfigProvider(),
-            _sources_provider(),
-            RuntimeProvider(),
-        )
+        container = _make_container()
 
         service = container.get(ExecutionAuditService)
         count = service.save_risk_log(

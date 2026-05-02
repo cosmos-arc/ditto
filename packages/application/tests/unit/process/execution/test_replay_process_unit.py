@@ -12,9 +12,9 @@ from unittest.mock import MagicMock
 
 import orjson
 import pytest
-from ditto_engine.backtest.manifest import RunManifest, RunMode
-from ditto_engine.backtest.replay import ManifestDiff, ReplayValidationResult
-from ditto_engine.backtest.statistics import BacktestReport
+from ditto_backtest.manifest import RunManifest, RunMode
+from ditto_backtest.replay import ManifestDiff, ReplayValidationResult
+from ditto_backtest.statistics import BacktestReport
 
 # ---------------------------------------------------------------------------
 # 辅助函数
@@ -117,7 +117,7 @@ class TestLoadManifest:
 
     def test_load_manifest_success(self, tmp_path: Path) -> None:
         """正常加载 manifest.json."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         raw = _make_manifest_raw()
         manifest_path = tmp_path / "manifest.json"
@@ -132,14 +132,14 @@ class TestLoadManifest:
 
     def test_load_manifest_file_not_found(self, tmp_path: Path) -> None:
         """manifest.json 不存在时抛出 FileNotFoundError."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         with pytest.raises(FileNotFoundError, match=r"manifest\.json not found"):
             ReplayProcess._load_manifest(tmp_path)
 
     def test_load_manifest_defaults(self, tmp_path: Path) -> None:
         """最小 manifest — 使用默认值."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         raw = {}  # 空字典
         manifest_path = tmp_path / "manifest.json"
@@ -164,7 +164,7 @@ class TestLoadReport:
 
     def test_load_report_success(self, tmp_path: Path) -> None:
         """正常加载 backtest_report.json."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report_dict = _make_report_dict()
         report_path = tmp_path / "backtest_report.json"
@@ -177,7 +177,7 @@ class TestLoadReport:
 
     def test_load_report_file_not_found(self, tmp_path: Path) -> None:
         """backtest_report.json 不存在时抛出 FileNotFoundError."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         with pytest.raises(FileNotFoundError, match=r"backtest_report\.json not found"):
             ReplayProcess._load_report(tmp_path)
@@ -193,7 +193,7 @@ class TestBuildConfig:
 
     def test_build_config_defaults(self) -> None:
         """默认值 — period 为空时使用空字符串, initial_cash 默认 100 万."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         manifest = MagicMock(spec=RunManifest)
         manifest.strategy_id = "strat-1"
@@ -219,7 +219,7 @@ class TestBuildConfig:
 
     def test_build_config_with_values(self) -> None:
         """完整配置 — 从 report 恢复 period / cash / freq."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         manifest = MagicMock(spec=RunManifest)
         manifest.strategy_id = "strat-1"
@@ -258,7 +258,7 @@ class TestExtractNav:
 
     def test_extract_nav_series(self) -> None:
         """有 nav_series 时直接返回."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report = {"nav_series": [1.0, 1.01, 1.02, 1.015]}
         nav = ReplayProcess._extract_nav(report)
@@ -266,7 +266,7 @@ class TestExtractNav:
 
     def test_extract_nav_final_only(self) -> None:
         """无 nav_series 时退而求其次用 final_nav."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report = {"final_nav": 1.05}
         nav = ReplayProcess._extract_nav(report)
@@ -274,7 +274,7 @@ class TestExtractNav:
 
     def test_extract_nav_empty(self) -> None:
         """无 nav_series 也无 final_nav 时返回空列表."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report: dict[str, object] = {}
         nav = ReplayProcess._extract_nav(report)
@@ -282,7 +282,7 @@ class TestExtractNav:
 
     def test_extract_nav_series_priority_over_final(self) -> None:
         """nav_series 优先级高于 final_nav."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report = {"nav_series": [1.0, 1.1], "final_nav": 1.05}
         nav = ReplayProcess._extract_nav(report)
@@ -299,7 +299,7 @@ class TestExtractNavFromReport:
 
     def test_extract_from_report_with_nav_series(self) -> None:
         """有 nav_series 时返回对应 NAV 值."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report = _make_backtest_report(
             nav_series=(("2026-01-01", 1.0), ("2026-01-02", 1.02)),
@@ -310,7 +310,7 @@ class TestExtractNavFromReport:
 
     def test_extract_from_report_final_nav_fallback(self) -> None:
         """无 nav_series 时用 final_nav."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report = _make_backtest_report(
             final_nav=1.05,
@@ -322,7 +322,7 @@ class TestExtractNavFromReport:
 
     def test_extract_from_report_empty(self) -> None:
         """无 nav_series 且无 final_nav 时返回空列表."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         report = _make_backtest_report(final_nav=0.0, nav_series=())
 
@@ -340,7 +340,7 @@ class TestFindArtifactDir:
 
     def test_find_success(self) -> None:
         """找到匹配的 artifact 记录."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         mock_artifact_service = MagicMock()
         mock_record = MagicMock()
@@ -359,7 +359,7 @@ class TestFindArtifactDir:
 
     def test_find_not_found_raises(self) -> None:
         """找不到匹配的 artifact 时抛出 FileNotFoundError."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         mock_artifact_service = MagicMock()
         mock_artifact_service.list_artifacts.return_value = []
@@ -383,7 +383,7 @@ class TestReplaySuccess:
 
     def test_replay_happy_path(self, tmp_path: Path) -> None:
         """端到端成功重放."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         # --- 准备 original artifact 目录 ---
         orig_dir = tmp_path / "artifacts" / "run-original"
@@ -455,7 +455,7 @@ class TestReplaySuccess:
 
     def test_replay_non_numeric_version(self, tmp_path: Path) -> None:
         """strategy_version 非数字时 version 传 None."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         orig_dir = tmp_path / "artifacts" / "run-original"
         orig_dir.mkdir(parents=True)
@@ -508,7 +508,7 @@ class TestReplayErrors:
 
     def test_replay_artifact_not_found(self) -> None:
         """原始运行的 artifact 不存在时抛出 FileNotFoundError."""
-        from ditto_application.process.execution.replay_process import ReplayProcess
+        from ditto_application.processes.execution.replay_process import ReplayProcess
 
         mock_artifact_service = MagicMock()
         mock_artifact_service.list_artifacts.return_value = []
@@ -531,28 +531,28 @@ class TestExtractRebalanceFreq:
     """_extract_rebalance_freq — 从 report 提取调仓频率."""
 
     def test_valid_string(self) -> None:
-        from ditto_application.process.execution.replay_process import (
+        from ditto_application.processes.execution.replay_process import (
             _extract_rebalance_freq,
         )
 
         assert _extract_rebalance_freq({"rebalance_freq": "weekly"}) == "weekly"
 
     def test_empty_string_defaults(self) -> None:
-        from ditto_application.process.execution.replay_process import (
+        from ditto_application.processes.execution.replay_process import (
             _extract_rebalance_freq,
         )
 
         assert _extract_rebalance_freq({"rebalance_freq": ""}) == "daily"
 
     def test_missing_key_defaults(self) -> None:
-        from ditto_application.process.execution.replay_process import (
+        from ditto_application.processes.execution.replay_process import (
             _extract_rebalance_freq,
         )
 
         assert _extract_rebalance_freq({}) == "daily"
 
     def test_non_string_type_defaults(self) -> None:
-        from ditto_application.process.execution.replay_process import (
+        from ditto_application.processes.execution.replay_process import (
             _extract_rebalance_freq,
         )
 

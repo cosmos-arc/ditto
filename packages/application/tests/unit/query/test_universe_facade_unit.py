@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.universe import UniverseQueryFacade
+from ditto_application.queries.universe import UniverseQueryFacade
 
 
 class TestListUniverses:

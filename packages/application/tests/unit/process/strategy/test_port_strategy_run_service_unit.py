@@ -7,23 +7,23 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_application.process.execution.strategy_input import StrategyInputAssembler
-from ditto_application.process.execution.strategy_run_process import (
+from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
+from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunResult,
     StrategyRunService,
     StrategyRunServiceConfig,
 )
-from ditto_data.models.strategy import StrategyArtifactRecord
-from ditto_data.services.strategy.strategy_artifact_service import (
-    StrategyArtifactService,
-)
-from ditto_engine.backtest.data_feed import Slice
-from ditto_engine.execution.reality.market import MarketSnapshot
+from ditto_backtest.data_feed import Slice
+from ditto_execution.reality.market import MarketSnapshot
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import ParamConstraint, StrategySpec
+from ditto_strategy.models import StrategyArtifactRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

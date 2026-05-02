@@ -80,8 +80,8 @@ class TestDeployFunctions:
 
         configs = _get_flow_configs()
 
-        # 应该有 5 个 flow 配置 (移除了 dq_batch_check task)
-        assert len(configs) == 5
+        # 应该有 7 个 flow 配置
+        assert len(configs) == 7
 
         # 验证每个配置都有必需的字段
         for config in configs:

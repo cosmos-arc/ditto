@@ -10,7 +10,7 @@ BacktestReportSerializer 单元测试 — JSON 输出格式兼容 replay 反序�
 from __future__ import annotations
 
 import orjson
-from ditto_engine.backtest.statistics import (
+from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
     BacktestReport,
@@ -94,7 +94,7 @@ class TestPeriodFormat:
 
     def test_period_is_dict_not_list(self) -> None:
         """序列化后 period 应为 dict，replay 按 .get('start') 读取."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -111,7 +111,7 @@ class TestPeriodFormat:
 
     def test_period_dict_keys_match_tuple(self) -> None:
         """period dict 的 start/end 应与 report.period 元组对应."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -133,7 +133,7 @@ class TestRebalanceFreq:
 
     def test_rebalance_freq_present(self) -> None:
         """序列化后 JSON 应包含 rebalance_freq 字段."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -145,7 +145,7 @@ class TestRebalanceFreq:
 
     def test_rebalance_freq_default_daily(self) -> None:
         """默认 rebalance_freq 应为 'daily'."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -166,7 +166,7 @@ class TestNavSeries:
 
     def test_nav_series_present(self) -> None:
         """序列化后 JSON 应包含 nav_series 字段."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -178,7 +178,7 @@ class TestNavSeries:
 
     def test_nav_series_values_match_report(self) -> None:
         """nav_series 应只包含数值列表（不含日期）."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -196,7 +196,7 @@ class TestNavSeries:
 
     def test_nav_series_none_when_empty(self) -> None:
         """nav_series 为空时，JSON 中应为 None."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -217,7 +217,7 @@ class TestRoundTripCompatibility:
 
     def test_replay_can_extract_start_end_from_period(self) -> None:
         """replay._build_config 通过 period.get('start') 读取日期."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -235,7 +235,7 @@ class TestRoundTripCompatibility:
 
     def test_replay_can_extract_rebalance_freq(self) -> None:
         """replay._extract_rebalance_freq 通过 report.get('rebalance_freq') 读取."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 
@@ -250,7 +250,7 @@ class TestRoundTripCompatibility:
 
     def test_replay_can_extract_nav_series(self) -> None:
         """replay._extract_nav 通过 report.get('nav_series') 读取."""
-        from ditto_application.process.execution.backtest_serialization import (
+        from ditto_application.processes.execution.backtest_serialization import (
             serialize_report,
         )
 

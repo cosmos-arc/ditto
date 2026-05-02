@@ -30,32 +30,32 @@ from ditto_data.services import (
     DerivedQueryService,
     DerivedShadowSlotService,
 )
-from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.derived.artifact_persistence_service import (
-    ArtifactPersistenceService,
-)
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.strategy.strategy_artifact_service import (
-    StrategyArtifactService,
-)
-from ditto_data.services.strategy.strategy_catalog_service import (
-    StrategyCatalogService,
-)
-from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunLifecycleStore,
-)
-from ditto_data.services.trade import TradeService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
+from ditto_execution.audit import ExecutionAuditService
+from ditto_execution.storage.sqlite.trade import TradeService
 
 # ---------------------------------------------------------------------------
 # Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
 # ---------------------------------------------------------------------------
 from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.services.derived.artifact_persistence_service import (
+    ArtifactPersistenceService,
+)
 from ditto_platform.foundation.config.settings import TradingSettings
 from ditto_platform.services.notification import AlertManager
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunLifecycleStore,
+)
 
 # ---------------------------------------------------------------------------
 # App Builder 层
@@ -70,52 +70,52 @@ from ditto_application.builders import (
 # ---------------------------------------------------------------------------
 # App Command 层
 # ---------------------------------------------------------------------------
-from ditto_application.command.backtest import (
+from ditto_application.commands.backtest import (
     BacktestRunHandler,
     CancelRunHandler,
     RetryRunHandler,
 )
-from ditto_application.command.quality_check import CheckDataQualityHandler
-from ditto_application.command.quality_reconciliation import ReconcileSourcesHandler
-from ditto_application.command.strategy import (
+from ditto_application.commands.quality_check import CheckDataQualityHandler
+from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
+from ditto_application.commands.strategy import (
     CreateStrategyHandler,
     PublishStrategyHandler,
     UpdateStrategyHandler,
 )
-from ditto_application.command.trade import (
+from ditto_application.commands.trade import (
     RecordFillHandler,
     UpdateIntentStatusHandler,
 )
-from ditto_application.command.universe import (
+from ditto_application.commands.universe import (
     CreateCustomUniverseHandler,
     DeleteCustomUniverseHandler,
     UpdateCustomUniverseHandler,
 )
-from ditto_application.process.execution.factor_bridge import FactorBridge
-from ditto_application.process.execution.manual_tracker import ManualTracker
-from ditto_application.process.execution.replay_process import ReplayProcess
-from ditto_application.process.execution.strategy_run_process import StrategyFacade
-from ditto_application.process.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.execution.factor_bridge import FactorBridge
+from ditto_application.processes.execution.manual_tracker import ManualTracker
+from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.execution.strategy_types import RunLifecycleService
 
 # ---------------------------------------------------------------------------
 # App Process 层
 # ---------------------------------------------------------------------------
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
 )
-from ditto_application.process.materialization.publication_facade import (
+from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.process.quality import QualityPatrolService
+from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.providers_market import AppMarketQueryProvider
 from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
-from ditto_application.query.market import MarketQueryFacade
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 
 __all__ = [
     "AppBuilderFactory",

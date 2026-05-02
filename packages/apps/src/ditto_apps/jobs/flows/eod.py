@@ -31,7 +31,7 @@ EOD (End-of-Day) 编排 Flow。
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from ditto_application.process.execution.strategy_run_process import (
+from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunServiceConfig,
 )

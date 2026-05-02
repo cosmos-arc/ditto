@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 
 from ditto_portfolio.errors import StateTransitionError
 
@@ -26,15 +26,6 @@ __all__ = [
     "OrderType",
     "StateTransitionError",
 ]
-
-
-class OrderType(StrEnum):
-    """订单类型。"""
-
-    MARKET = "market"
-    LIMIT = "limit"
-    STOP_MARKET = "stop_market"
-    MARKET_ON_CLOSE = "market_on_close"
 
 
 class OrderStatus(StrEnum):

@@ -1,25 +1,25 @@
 """Tests for Macro API router.
 
-使用 FastAPI TestClient 测试路由，mock MacroService.
+使用 FastAPI TestClient 测试路由，mock MacroQueryFacade.
 """
 
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.services.macro_service import MacroService
+from ditto_application.queries.macro import MacroQueryFacade
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def mock_macro_service() -> MagicMock:
-    """创建 mock MacroService."""
-    return MagicMock(spec=MacroService)
+def mock_macro_facade() -> MagicMock:
+    """创建 mock MacroQueryFacade."""
+    return MagicMock(spec=MacroQueryFacade)
 
 
 @pytest.fixture
-def app(mock_macro_service: MagicMock) -> FastAPI:
+def app(mock_macro_facade: MagicMock) -> FastAPI:
     """创建测试 FastAPI 应用."""
     from dishka import Provider, Scope, make_async_container, provide
     from dishka.integrations.fastapi import setup_dishka
@@ -32,12 +32,12 @@ def app(mock_macro_service: MagicMock) -> FastAPI:
     class TestProvider(Provider):
         """测试 Provider."""
 
-        scope = Scope.APP
+        scope = Scope.REQUEST
 
         @provide
-        def get_macro_service(self) -> MacroService:
-            """返回 mock MacroService."""
-            return mock_macro_service
+        def get_macro_facade(self) -> MacroQueryFacade:
+            """返回 mock MacroQueryFacade."""
+            return mock_macro_facade
 
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
@@ -60,11 +60,11 @@ class TestGetIndicators:
     def test_post_indicators_with_valid_params(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试有效参数查询宏观指标."""
         # Arrange
-        mock_macro_service.find_indicators.return_value = pl.DataFrame(
+        mock_macro_facade.find_indicators.return_value = pl.DataFrame(
             {
                 "indicator_id": [1, 1],
                 "code": ["GDP", "GDP"],
@@ -98,11 +98,11 @@ class TestGetIndicators:
     def test_post_indicators_with_category_filter(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试按类别过滤."""
         # Arrange
-        mock_macro_service.find_indicators.return_value = pl.DataFrame(
+        mock_macro_facade.find_indicators.return_value = pl.DataFrame(
             {
                 "indicator_id": [1],
                 "code": ["GDP"],
@@ -132,16 +132,16 @@ class TestGetIndicators:
         assert data["data"][0]["category"] == "economic"
 
         # 验证 service 被正确调用
-        mock_macro_service.find_indicators.assert_called_once()
+        mock_macro_facade.find_indicators.assert_called_once()
 
     def test_post_indicators_with_frequency_filter(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试按频率过滤."""
         # Arrange
-        mock_macro_service.find_indicators.return_value = pl.DataFrame(
+        mock_macro_facade.find_indicators.return_value = pl.DataFrame(
             {
                 "indicator_id": [1],
                 "code": ["GDP"],
@@ -173,11 +173,11 @@ class TestGetIndicators:
     def test_post_indicators_empty_result(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试空结果."""
         # Arrange
-        mock_macro_service.find_indicators.return_value = pl.DataFrame()
+        mock_macro_facade.find_indicators.return_value = pl.DataFrame()
 
         # Act
         response = client.post(
@@ -196,7 +196,7 @@ class TestGetIndicators:
     def test_post_indicators_with_invalid_date_range(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试无效日期范围 (start_date > end_date)."""
         # Act
@@ -214,7 +214,7 @@ class TestGetIndicators:
     def test_post_indicators_with_invalid_category(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试无效的类别."""
         # Act
@@ -231,7 +231,7 @@ class TestGetIndicators:
     def test_post_indicators_with_invalid_frequency(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试无效的频率."""
         # Act
@@ -248,11 +248,11 @@ class TestGetIndicators:
     def test_post_indicators_without_params(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试不提供参数（返回所有指标）."""
         # Arrange
-        mock_macro_service.find_indicators.return_value = pl.DataFrame()
+        mock_macro_facade.find_indicators.return_value = pl.DataFrame()
 
         # Act
         response = client.post(
@@ -268,11 +268,11 @@ class TestGetIndicators:
     def test_post_indicators_with_indicator_ids(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试使用指标 ID 列表查询."""
         # Arrange
-        mock_macro_service.find_indicators.return_value = pl.DataFrame(
+        mock_macro_facade.find_indicators.return_value = pl.DataFrame(
             {
                 "indicator_id": [1, 2],
                 "code": ["GDP", "CPI"],
@@ -306,11 +306,11 @@ class TestGetIndicatorsMetadata:
     def test_get_metadata_with_valid_params(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试获取指标元数据列表."""
         # Arrange
-        mock_macro_service.list_indicators.return_value = pl.DataFrame(
+        mock_macro_facade.list_indicators.return_value = pl.DataFrame(
             {
                 "indicator_id": [1, 2],
                 "code": ["GDP", "CPI"],
@@ -342,11 +342,11 @@ class TestGetIndicatorsMetadata:
     def test_get_metadata_with_category_filter(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试按类别获取元数据."""
         # Arrange
-        mock_macro_service.list_indicators.return_value = pl.DataFrame(
+        mock_macro_facade.list_indicators.return_value = pl.DataFrame(
             {
                 "indicator_id": [1],
                 "code": ["GDP"],
@@ -376,8 +376,8 @@ class TestGetIndicatorsMetadata:
         assert data["data"][0]["category"] == "economic"
 
         # 验证 service 被正确调用
-        mock_macro_service.list_indicators.assert_called_once()
-        call_kwargs = mock_macro_service.list_indicators.call_args.kwargs
+        mock_macro_facade.list_indicators.assert_called_once()
+        call_kwargs = mock_macro_facade.list_indicators.call_args.kwargs
         assert call_kwargs["start"] == "2024-01-01"
         assert call_kwargs["end"] == "2024-12-31"
         assert call_kwargs["category"] == "economic"
@@ -385,11 +385,11 @@ class TestGetIndicatorsMetadata:
     def test_get_metadata_empty_result(
         self,
         client: TestClient,
-        mock_macro_service: MagicMock,
+        mock_macro_facade: MagicMock,
     ) -> None:
         """测试空结果."""
         # Arrange
-        mock_macro_service.list_indicators.return_value = pl.DataFrame()
+        mock_macro_facade.list_indicators.return_value = pl.DataFrame()
 
         # Act
         response = client.get(

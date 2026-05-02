@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from ditto_application.process.execution.backtest_process import BacktestServiceConfig
-from ditto_application.process.execution.strategy_run_process import (
+from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunServiceConfig,
 )

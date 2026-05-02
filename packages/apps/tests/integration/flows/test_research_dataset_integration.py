@@ -11,27 +11,23 @@ import orjson
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_analysis.research.catalog_service import ResearchCatalogService
+from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
-from ditto_application.process.materialization.publication_facade import (
+from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.query.research import ResearchDatasetFacade
+from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_apps.jobs.flows.research import research_dataset_build_flow
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
-from ditto_data.di import (
-    DerivedProvider,
-    MetadataProvider,
-    RuntimeProvider,
-)
-from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
-from ditto_data.services import DerivedCatalogService, ResearchCatalogService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_features.materialization.models import DerivedVersionStatus
+from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_kernel.research import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
@@ -60,12 +56,12 @@ def _sources_provider() -> Provider:
 
 
 def _make_test_container():
+    from ditto_apps.registry.container import _get_base_providers
+
     return make_container(
         ConfigProvider(),
         _sources_provider(),
-        RuntimeProvider(),
-        MetadataProvider(),
-        DerivedProvider(),
+        *_get_base_providers(),
     )
 
 
@@ -221,7 +217,7 @@ def _write_artifact(
 
 @contextmanager
 def _materialization_bundle_context():
-    from ditto_application.process.materialization.orchestrator import (
+    from ditto_application.processes.materialization.orchestrator import (
         DerivedMaterializationOrchestrator,
     )
 

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_application.execution_dto import ManualExecutionFill
-from ditto_application.query.comparison import _build_actual_navs
+from ditto_application.queries.comparison import _build_actual_navs
 
 
 def _make_fill(

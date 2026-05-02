@@ -6,8 +6,11 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.backtest_trade import BacktestTradeQueryFacade, TradeRecord
-from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
+from ditto_application.queries.backtest_trade import (
+    BacktestTradeQueryFacade,
+    TradeRecord,
+)
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
 
 
 def _make_artifact_record(

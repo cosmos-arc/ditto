@@ -205,10 +205,10 @@ class TestInterfacesMerge:
 class TestPerPackageDomainRoots:
     """各包域根验证."""
 
-    def test_engine_error_exists(self) -> None:
-        from ditto_engine.exceptions import EngineError
+    def test_execution_error_exists(self) -> None:
+        from ditto_execution.errors import ExecutionError
 
-        assert issubclass(EngineError, DittoError)
+        assert issubclass(ExecutionError, DittoError)
 
     def test_analytics_error_exists(self) -> None:
         from ditto_features.errors import AnalyticsError
@@ -240,10 +240,10 @@ class TestPerPackageDomainRoots:
 
     def test_app_orphans_use_domain_root(self) -> None:
         from ditto_application.exceptions import AppError
-        from ditto_application.process.materialization.cascade_orchestrator import (
+        from ditto_application.processes.materialization.cascade_orchestrator import (
             CascadeDepthExceededError,
         )
-        from ditto_application.process.materialization.types import (
+        from ditto_application.processes.materialization.types import (
             MissingDependencyError,
         )
 

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_data.services.trade import TradeService
+from ditto_execution.storage.sqlite.trade import TradeService
 
-from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-from ditto_application.query.signal import SignalQueryFacade
-from ditto_application.query.trade import TradeQueryFacade
+from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
+from ditto_application.queries.signal import SignalQueryFacade
+from ditto_application.queries.trade import TradeQueryFacade
 
 __all__ = ["AppPortfolioQueryProvider"]
 

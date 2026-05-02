@@ -4,8 +4,8 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_application.process.ingestion.config import IngestionCoordinatorConfig
-from ditto_application.process.ingestion.coordinator import (
+from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
+from ditto_application.processes.ingestion.coordinator import (
     IngestionCoordinator,
     IngestionServices,
     MarketServices,
@@ -773,7 +773,7 @@ class TestIngestDate:
         mock_source.fetch_stock_daily.return_value = source_df
 
         # 模拟 DQ 质量检查阻断：CheckDataQualityHandler 返回 has_errors=True
-        from ditto_application.command.quality_check import CheckDataQualityHandler
+        from ditto_application.commands.quality_check import CheckDataQualityHandler
 
         mock_quality_checker = mocker.Mock(spec=CheckDataQualityHandler)
         mock_quality_checker.handle.return_value = (

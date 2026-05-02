@@ -20,9 +20,6 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Protocol
 
-from ditto_execution.reality import FeeModel
-from ditto_execution.reality.market import MarketSnapshot
-from ditto_execution.rules import FeeSchedule, InstrumentRules
 from ditto_kernel.identity import (
     InstrumentId as _InstrumentId,
 )
@@ -31,6 +28,10 @@ from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_LOT_SIZE,
     DEFAULT_MIN_COMMISSION,
+    FeeModel,
+    FeeSchedule,
+    InstrumentRules,
+    MarketSnapshot,
 )
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel

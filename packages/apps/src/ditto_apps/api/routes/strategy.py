@@ -16,7 +16,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.command.strategy import (
+from ditto_application.commands.strategy import (
     CreateStrategyCommand,
     CreateStrategyHandler,
     PublishStrategyCommand,
@@ -25,7 +25,7 @@ from ditto_application.command.strategy import (
     UpdateStrategyHandler,
 )
 from ditto_application.contracts import StrategySpecInfo
-from ditto_application.query.strategy import StrategyQueryFacade
+from ditto_application.queries.strategy import StrategyQueryFacade
 from fastapi import APIRouter, Depends
 
 from ditto_apps.api.deps import paginate, pagination_params

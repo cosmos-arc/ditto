@@ -9,7 +9,7 @@ from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
 )
-from ditto_engine.backtest.statistics import (
+from ditto_backtest.statistics import (
     AggregatedTradeStatistics,
     AlphaStatistics,
     BacktestReport,
@@ -179,7 +179,7 @@ class TestComparisonMetrics:
 
     def test_construction(self) -> None:
         """基本构造."""
-        from ditto_application.query.comparison_math import ComparisonMetrics
+        from ditto_application.queries.comparison_math import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=10.0,
@@ -202,7 +202,7 @@ class TestComparisonMetrics:
 
     def test_frozen(self) -> None:
         """frozen dataclass 不可变."""
-        from ditto_application.query.comparison_math import ComparisonMetrics
+        from ditto_application.queries.comparison_math import ComparisonMetrics
 
         metrics = ComparisonMetrics(
             backtest_return=10.0,
@@ -232,7 +232,7 @@ class TestComputeComparison:
 
     def test_basic_computation(self) -> None:
         """基本对比指标正确计算."""
-        from ditto_application.process.execution.comparison import compute_comparison
+        from ditto_application.processes.execution.comparison import compute_comparison
 
         report = _make_backtest_report()
         fills = [
@@ -284,7 +284,7 @@ class TestComputeComparison:
 
     def test_empty_actual_data(self) -> None:
         """空 actual 数据 → None / 安全默认值."""
-        from ditto_application.process.execution.comparison import compute_comparison
+        from ditto_application.processes.execution.comparison import compute_comparison
 
         report = _make_backtest_report()
         result = compute_comparison(
@@ -306,7 +306,7 @@ class TestComputeComparison:
 
     def test_nav_correlation_perfect(self) -> None:
         """NAV 完全相关 → correlation ≈ 1.0."""
-        from ditto_application.process.execution.comparison import compute_comparison
+        from ditto_application.processes.execution.comparison import compute_comparison
 
         nav_series = tuple(
             (f"2024-01-{d:02d}", 1_000_000.0 + d * 10_000.0) for d in range(2, 13)
@@ -324,7 +324,7 @@ class TestComputeComparison:
 
     def test_return_diff_bps_calculation(self) -> None:
         """基点偏差计算正确."""
-        from ditto_application.process.execution.comparison import compute_comparison
+        from ditto_application.processes.execution.comparison import compute_comparison
 
         # 回测收益 10%, 实际收益 9.5%
         alpha_stats = _make_alpha_stats(annualized_return=10.0)
@@ -347,7 +347,7 @@ class TestComputeComparison:
 
     def test_tracking_error_with_divergent_navs(self) -> None:
         """NAV 序列发散 → 跟踪误差 > 0."""
-        from ditto_application.process.execution.comparison import compute_comparison
+        from ditto_application.processes.execution.comparison import compute_comparison
 
         backtest_navs = tuple(
             (f"2024-01-{d:02d}", 1_000_000.0 * (1 + d * 0.01)) for d in range(2, 12)
@@ -378,7 +378,7 @@ class TestPnlSummary:
 
     def test_construction(self) -> None:
         """基本构造."""
-        from ditto_application.query.portfolio_actual import PnlSummary
+        from ditto_application.queries.portfolio_actual import PnlSummary
 
         summary = PnlSummary(
             total_realized_pnl=1000.0,
@@ -393,7 +393,7 @@ class TestPnlSummary:
 
     def test_net_pnl_formula(self) -> None:
         """net_pnl = realized + unrealized - fees."""
-        from ditto_application.query.portfolio_actual import PnlSummary
+        from ditto_application.queries.portfolio_actual import PnlSummary
 
         summary = PnlSummary(
             total_realized_pnl=2000.0,
@@ -405,7 +405,7 @@ class TestPnlSummary:
 
     def test_frozen(self) -> None:
         """frozen dataclass 不可变."""
-        from ditto_application.query.portfolio_actual import PnlSummary
+        from ditto_application.queries.portfolio_actual import PnlSummary
 
         summary = PnlSummary(
             total_realized_pnl=0.0,
@@ -427,8 +427,10 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
 
     def test_returns_mapped_snapshots(self) -> None:
         """从 TradeService 获取 positions 并映射为 DTO."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import PositionRecord
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+        from ditto_execution.models import PositionRecord
 
         mock_service = _make_mock_trade_service()
         records = [
@@ -472,7 +474,9 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
 
     def test_empty_positions(self) -> None:
         """无持仓时返回空列表."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_service = _make_mock_trade_service()
         facade = PortfolioActualQueryFacade(trade_service=mock_service)
@@ -486,8 +490,10 @@ class TestPortfolioActualQueryFacadeGetFills:
 
     def test_get_all_fills(self) -> None:
         """获取全部成交记录."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import FillRecord
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+        from ditto_execution.models import FillRecord
 
         mock_service = _make_mock_trade_service()
         records = [
@@ -518,7 +524,9 @@ class TestPortfolioActualQueryFacadeGetFills:
 
     def test_get_fills_with_date_filter(self) -> None:
         """按日期过滤成交记录."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_service = _make_mock_trade_service()
         mock_service.list_fills.return_value = []
@@ -534,7 +542,9 @@ class TestPortfolioActualQueryFacadeGetFills:
 
     def test_empty_fills(self) -> None:
         """无成交记录时返回空列表."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_service = _make_mock_trade_service()
         facade = PortfolioActualQueryFacade(trade_service=mock_service)
@@ -548,8 +558,10 @@ class TestPortfolioActualQueryFacadeGetPositionHistory:
 
     def test_get_history(self) -> None:
         """获取持仓历史快照."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import PositionRecord
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+        from ditto_execution.models import PositionRecord
 
         mock_service = _make_mock_trade_service()
         records = [
@@ -600,8 +612,10 @@ class TestPortfolioActualQueryFacadeComputePnl:
 
     def test_compute_pnl_aggregation(self) -> None:
         """多持仓 P&L 正确汇总."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import PositionRecord
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+        from ditto_execution.models import PositionRecord
 
         mock_service = _make_mock_trade_service()
         records = [
@@ -648,7 +662,9 @@ class TestPortfolioActualQueryFacadeComputePnl:
 
     def test_compute_pnl_empty(self) -> None:
         """无持仓时返回零值 P&L."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
 
         mock_service = _make_mock_trade_service()
         facade = PortfolioActualQueryFacade(trade_service=mock_service)
@@ -664,8 +680,10 @@ class TestPortfolioActualQueryFacadeComputePnl:
 
     def test_compute_pnl_single_position(self) -> None:
         """单持仓 P&L 汇总."""
-        from ditto_application.query.portfolio_actual import PortfolioActualQueryFacade
-        from ditto_data.models.trade import PositionRecord
+        from ditto_application.queries.portfolio_actual import (
+            PortfolioActualQueryFacade,
+        )
+        from ditto_execution.models import PositionRecord
 
         mock_service = _make_mock_trade_service()
         record = PositionRecord(

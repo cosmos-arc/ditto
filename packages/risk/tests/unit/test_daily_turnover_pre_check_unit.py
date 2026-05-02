@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 
 from ditto_execution.reality.market import MarketSnapshot
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import Order, OrderTicket, OrderType
+from ditto_portfolio.accounting.order_book import Order, OrderTicket
 from ditto_risk.pre_trade import DailyTurnoverPreCheck, Decision, PreTradeContext
 
 IID_A = InstrumentId(1)
@@ -118,6 +118,7 @@ class TestDailyTurnoverPreCheck:
             _ctx(nav=10_000.0, pending=pending),
         )
         assert result.decision == Decision.REJECT
+        assert result.reason is not None
         assert "daily_turnover" in result.reason
 
     def test_within_limit_accepted(self) -> None:

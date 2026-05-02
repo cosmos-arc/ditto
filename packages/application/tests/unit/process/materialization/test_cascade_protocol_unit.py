@@ -6,15 +6,11 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_application.processes.materialization.cascade_orchestrator import (
     REALTIME_CASCADE_MAX_DEPTH,
     CascadeDepthExceededError,
     CascadeStatus,
     InvalidationCascadeOrchestrator,
-)
-from ditto_data.models.derived import (
-    DerivedDependencyRecord,
-    DerivedInvalidationRecord,
 )
 from ditto_features.materialization import (
     DerivedInvalidationEvent,
@@ -22,6 +18,10 @@ from ditto_features.materialization import (
 )
 from ditto_features.materialization.models import (
     DerivedRunStatus,
+)
+from ditto_features.models.derived import (
+    DerivedDependencyRecord,
+    DerivedInvalidationRecord,
 )
 from ditto_kernel.strategy import MaterializationProfile
 

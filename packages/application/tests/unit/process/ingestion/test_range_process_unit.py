@@ -4,9 +4,9 @@ from datetime import date
 from unittest.mock import create_autospec
 
 import pytest
-from ditto_application.command.ingestion import IngestDateHandler
+from ditto_application.commands.ingestion import IngestDateHandler
 from ditto_application.contracts import IngestDateCommand
-from ditto_application.process.ingestion.backfill_manager import BackfillManager
+from ditto_application.processes.ingestion.backfill_manager import BackfillManager
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability import init, reset_for_testing
@@ -44,7 +44,7 @@ class TestIngestRangeProcess:
             row_count=10,
         )
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             IngestRangeProcess,
             IngestRangeTrigger,
         )
@@ -69,7 +69,7 @@ class TestIngestRangeProcess:
             status="success",
         )
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             IngestRangeProcess,
             IngestRangeTrigger,
         )
@@ -108,7 +108,7 @@ class TestIngestRangeProcess:
             status="success",
         )
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             IngestRangeProcess,
             IngestRangeTrigger,
         )
@@ -141,7 +141,7 @@ class TestIngestRangeProcess:
             ),
         ]
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             IngestRangeProcess,
             IngestRangeTrigger,
         )
@@ -176,7 +176,7 @@ class TestBackfillRangeProcess:
         )
         manager.backfill_range.return_value = expected
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             BackfillRangeProcess,
             BackfillRangeTrigger,
         )
@@ -211,7 +211,7 @@ class TestBackfillRangeProcess:
             results=(),
         )
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             BackfillRangeProcess,
             BackfillRangeTrigger,
         )
@@ -237,7 +237,7 @@ class TestBackfillRangeProcess:
         manager = create_autospec(BackfillManager, instance=True)
         manager.backfill_range.side_effect = ValueError("dataset not found")
 
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             BackfillRangeProcess,
             BackfillRangeTrigger,
         )
@@ -258,7 +258,9 @@ class TestIngestRangeTrigger:
 
     def test_creation(self) -> None:
         """基本创建测试."""
-        from ditto_application.process.ingestion.range_process import IngestRangeTrigger
+        from ditto_application.processes.ingestion.range_process import (
+            IngestRangeTrigger,
+        )
 
         trigger = IngestRangeTrigger(
             dataset="test",
@@ -273,7 +275,9 @@ class TestIngestRangeTrigger:
 
     def test_frozen(self) -> None:
         """Trigger 是 frozen dataclass."""
-        from ditto_application.process.ingestion.range_process import IngestRangeTrigger
+        from ditto_application.processes.ingestion.range_process import (
+            IngestRangeTrigger,
+        )
 
         trigger = IngestRangeTrigger(
             dataset="test",
@@ -293,7 +297,7 @@ class TestBackfillRangeTrigger:
 
     def test_creation(self) -> None:
         """基本创建测试."""
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             BackfillRangeTrigger,
         )
 
@@ -306,7 +310,7 @@ class TestBackfillRangeTrigger:
 
     def test_custom_parallel(self) -> None:
         """自定义并行度."""
-        from ditto_application.process.ingestion.range_process import (
+        from ditto_application.processes.ingestion.range_process import (
             BackfillRangeTrigger,
         )
 

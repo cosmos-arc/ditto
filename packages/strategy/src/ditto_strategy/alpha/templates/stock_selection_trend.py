@@ -1,16 +1,16 @@
 """
-stock_selection_trend 策略模板 -- 多因子选股趋势追踪的标准 Pipeline.
+stock_selection_trend 策略模板 -- 多因子选股趋势追踪的 alpha stages.
 
 标准流程:
   MultiFactorSignal -> TrendFilter -> Scoring -> RiskLockFilter ->
-  Select(top_k) -> Allocate -> [Regime] -> Constraint(max_weight)
+  Select(top_k) -> [Regime]
 
 提供:
 - StockSelectionTrendConfig: 策略模板运行时配置
 - MultiFactorSignalStage: 多因子加权信号 Stage
 - validate_config: 配置校验
 - get_param_constraints: 参数扫描元数据
-- build_stock_selection_trend_pipeline: 组装标准 Pipeline
+- build_stock_selection_trend_pipeline: 组装 alpha stages
 """
 
 from __future__ import annotations
@@ -18,18 +18,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
-from ditto_portfolio.rebalancing.allocation import (
-    AllocationStage,
-    EqualWeightAllocator,
-    InverseVolAllocator,
-    WeightAllocator,
-)
-from ditto_portfolio.rebalancing.constraints import (
-    Constraint,
-    ConstraintChecker,
-    ConstraintStage,
-    MaxWeightConstraint,
-)
 
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter, TrendFilterStage
 from ditto_strategy.alpha.builtins.regime import RegimeConfig
@@ -40,7 +28,6 @@ from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.specs import ParamConstraint
 
@@ -262,19 +249,21 @@ class MultiFactorSignalStage:
 
 def build_stock_selection_trend_pipeline(
     config: StockSelectionTrendConfig,
-) -> StrategyPipeline:
+) -> list[DecisionStage]:
     """
-    组装 stock_selection_trend 的标准 Pipeline.
+    组装 stock_selection_trend 的 alpha stages.
 
     流程:
       MultiFactorSignal -> TrendFilter -> Scoring -> RiskLockFilter ->
-      Select(top_k) -> Allocate -> [Regime] -> Constraint(max_weight)
+      Select(top_k) -> [Regime]
+
+    分配与约束由 application 层根据 config 参数独立配置。
 
     Args:
         config: 运行时配置。
 
     Returns:
-        配置完成的 StrategyPipeline。
+        alpha DecisionStage 列表。
 
     """
     stages: list[DecisionStage] = [
@@ -293,24 +282,9 @@ def build_stock_selection_trend_pipeline(
         SelectionStage(top_k=config.top_k),
     ]
 
-    # Allocator
-    if config.allocation_method == "inverse_vol":
-        allocator: WeightAllocator = InverseVolAllocator(
-            cash_target=config.cash_target,
-        )
-    else:
-        allocator = EqualWeightAllocator(cash_target=config.cash_target)
-    stages.append(AllocationStage(allocator=allocator))
-
-    # Regime-aware allocation (optional, post-allocate)
+    # Regime-aware allocation (optional, strategy-internal)
     if config.regime_config is not None:
         stages.append(RegimeScoringStep(config.regime_config))
         stages.append(RegimeAwareAllocationStage())
 
-    # Constraint: MaxWeightConstraint (always present)
-    constraint_list: list[Constraint] = [
-        MaxWeightConstraint(max_weight=config.max_weight),
-    ]
-    stages.append(ConstraintStage(checker=ConstraintChecker(constraint_list)))
-
-    return StrategyPipeline(stages)
+    return stages

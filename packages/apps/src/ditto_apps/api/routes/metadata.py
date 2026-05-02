@@ -7,7 +7,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel.instrument import AssetClass
 from fastapi import APIRouter, Depends
 

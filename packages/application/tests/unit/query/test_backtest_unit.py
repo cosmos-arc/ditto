@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.query.backtest import RunSummary
-from ditto_data.models.strategy import ArtifactKind, StrategyArtifactRecord
-from ditto_data.models.strategy_run import StrategyRunRecord
+from ditto_application.queries.backtest import RunSummary
+from ditto_strategy.models import ArtifactKind, StrategyArtifactRecord
+from ditto_strategy.runs.models import StrategyRunRecord
 
 
 def _make_run_record(
@@ -79,7 +79,7 @@ def _make_facade(
 ) -> object:
     """构造 BacktestQueryFacade 实例，注入 mock 依赖."""
     # 延迟导入确保测试在实现前可编写
-    from ditto_application.query.backtest import BacktestQueryFacade
+    from ditto_application.queries.backtest import BacktestQueryFacade
 
     return BacktestQueryFacade(
         trade_facade=trade_facade

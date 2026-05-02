@@ -26,7 +26,7 @@ from typing import Annotated, Any, cast
 import orjson as _orjson
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.command.backtest import (
+from ditto_application.commands.backtest import (
     BacktestRunCommand,
     BacktestRunHandler,
     BacktestRunResult,
@@ -36,11 +36,11 @@ from ditto_application.command.backtest import (
     RetryRunCommand,
     RetryRunHandler,
 )
-from ditto_application.process.execution.replay_process import ReplayProcess
-from ditto_application.process.execution.strategy_types import RunLifecycleService
-from ditto_application.query.backtest import BacktestQueryFacade, RunSummary
-from ditto_application.query.backtest_trade import TradeRecord
-from ditto_application.query.lineage import LineageQueryFacade
+from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_application.queries.backtest import BacktestQueryFacade, RunSummary
+from ditto_application.queries.backtest_trade import TradeRecord
+from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_kernel.strategy import RunStatus
 from fastapi import APIRouter, Depends, Query
 from loguru import logger

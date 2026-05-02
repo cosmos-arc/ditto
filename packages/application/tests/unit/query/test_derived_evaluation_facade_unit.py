@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.query.evaluation import (
+from ditto_application.queries.evaluation import (
     EvaluationOptions,
     FactorEvaluationFacade,
 )

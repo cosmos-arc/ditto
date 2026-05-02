@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 
 from ditto_execution.reality.market import MarketSnapshot
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import Order, OrderType
+from ditto_portfolio.accounting.order_book import Order
 from ditto_portfolio.accounting.position import Position
 from ditto_risk.pre_trade import ConcentrationPreCheck, Decision, PreTradeContext
 
@@ -104,6 +104,7 @@ class TestConcentrationPreCheck:
             _ctx(nav=100_000.0, positions={IID: _pos(market_value=30_000.0)}),
         )
         assert result.decision == Decision.REJECT
+        assert result.reason is not None
         assert "concentration" in result.reason
 
     def test_within_limit_accepted(self) -> None:

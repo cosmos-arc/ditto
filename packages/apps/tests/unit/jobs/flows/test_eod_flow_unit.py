@@ -171,7 +171,7 @@ class TestEodFlowHappyPath:
         )
 
         # 模拟已发布策略
-        from ditto_data.models.strategy import StrategySpecRecord
+        from ditto_strategy.models import StrategySpecRecord
 
         spec1 = StrategySpecRecord(
             strategy_id="alpha_momentum",
@@ -200,7 +200,7 @@ class TestEodFlowHappyPath:
 
         # 模拟 StrategyFacade
         mock_facade = mocker.MagicMock()
-        from ditto_application.process.execution.strategy_run_process import (
+        from ditto_application.processes.execution.strategy_run_process import (
             StrategyRunResult,
         )
 
@@ -421,7 +421,7 @@ class TestEodFlowStrategyPartialFailure:
         )
 
         # 两个已发布策略
-        from ditto_data.models.strategy import StrategySpecRecord
+        from ditto_strategy.models import StrategySpecRecord
 
         spec1 = StrategySpecRecord(
             strategy_id="alpha_good",
@@ -442,7 +442,7 @@ class TestEodFlowStrategyPartialFailure:
         mock_catalog.list_specs.return_value = [spec1, spec2]
 
         mock_facade = mocker.MagicMock()
-        from ditto_application.process.execution.strategy_run_process import (
+        from ditto_application.processes.execution.strategy_run_process import (
             StrategyRunResult,
         )
         from ditto_strategy.alpha.models import TargetPortfolio
@@ -520,7 +520,7 @@ class TestEodFlowMaterializationFailure:
         mock_materialization.side_effect = RuntimeError("物化服务不可用")
 
         # 模拟已发布策略
-        from ditto_data.models.strategy import StrategySpecRecord
+        from ditto_strategy.models import StrategySpecRecord
 
         spec = StrategySpecRecord(
             strategy_id="alpha_test",
@@ -534,7 +534,7 @@ class TestEodFlowMaterializationFailure:
         mock_catalog.list_specs.return_value = [spec]
 
         mock_facade = mocker.MagicMock()
-        from ditto_application.process.execution.strategy_run_process import (
+        from ditto_application.processes.execution.strategy_run_process import (
             StrategyRunResult,
         )
         from ditto_strategy.alpha.models import TargetPortfolio

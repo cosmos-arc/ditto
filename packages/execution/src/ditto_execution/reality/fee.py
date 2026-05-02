@@ -1,16 +1,13 @@
 """
-FeeModel — 手续费模型协议 + 简单实现 + A 股实现.
+FeeModel — 手续费具体实现（SimpleFeeModel + AShareFeeModel）.
 
-Phase 3 升级 (R6 三层分离签名):
-  calculate(order, fill_price, fill_quantity, fee_schedule) -> float   # 实际成交
-  estimate(order, estimated_price, fee_schedule) -> float  # 预交易估算
+FeeModel Protocol 定义在 ditto_kernel.trading；此处提供具体实现。
 """
 
 from __future__ import annotations
 
-from typing import Protocol
-
 from ditto_kernel.order import OrderSide
+from ditto_kernel.trading import FeeModel
 from ditto_portfolio.accounting.order_book import Order
 
 from ditto_execution.reality.constants import (
@@ -20,29 +17,6 @@ from ditto_execution.reality.constants import (
 from ditto_execution.rules import FeeSchedule
 
 __all__ = ["AShareFeeModel", "FeeModel", "SimpleFeeModel"]
-
-
-class FeeModel(Protocol):
-    """手续费模型协议。"""
-
-    def calculate(
-        self,
-        order: Order,
-        fill_price: float,
-        fill_quantity: int,
-        fee_schedule: FeeSchedule,
-    ) -> float:
-        """计算实际成交手续费。"""
-        ...
-
-    def estimate(
-        self,
-        order: Order,
-        estimated_price: float,
-        fee_schedule: FeeSchedule,
-    ) -> float:
-        """估算手续费（预交易）。"""
-        ...
 
 
 class SimpleFeeModel:

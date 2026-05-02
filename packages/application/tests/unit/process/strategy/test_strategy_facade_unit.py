@@ -5,15 +5,15 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from ditto_application.builders import StrategyServiceFactory, StrategySliceBuilder
-from ditto_application.process.execution.backtest_process import BacktestServiceConfig
-from ditto_application.process.execution.strategy_run_process import (
+from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.strategy_run_process import (
     StrategyFacade,
     StrategyRunMode,
     StrategyRunResult,
     StrategyRunServiceConfig,
 )
-from ditto_engine.backtest.data_feed import Slice
-from ditto_engine.backtest.statistics import BacktestReport
+from ditto_backtest.data_feed import Slice
+from ditto_backtest.statistics import BacktestReport
 from ditto_strategy.alpha.models import TargetPortfolio
 
 

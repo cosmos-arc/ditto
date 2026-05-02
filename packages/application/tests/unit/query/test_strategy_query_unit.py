@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from ditto_application.contracts import StrategySpecInfo
-from ditto_application.query.strategy import StrategyQueryFacade
-from ditto_data.models.strategy import StrategySpecRecord
+from ditto_application.queries.strategy import StrategyQueryFacade
+from ditto_strategy.models import StrategySpecRecord
 
 
 def _make_record(

@@ -9,25 +9,25 @@ from ditto_application.builders import (
     PublishedBacktestRuntime,
     StrategyServiceFactory,
 )
-from ditto_application.process.execution.backtest_process import (
+from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_application.process.execution.strategy_types import RunLifecycleService
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.strategy.strategy_artifact_service import (
-    StrategyArtifactService,
-)
-from ditto_engine.backtest.data_feed import DataFeed
-from ditto_engine.execution.brokerage import BacktestBrokerage
-from ditto_engine.execution.planner import SimpleExecutionPlanner
-from ditto_engine.execution.reality import AShareFeeModel
+from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_backtest.data_feed import DataFeed
+from ditto_execution.audit import ExecutionAuditService
+from ditto_execution.brokerage import BacktestBrokerage
+from ditto_execution.planner import SimpleExecutionPlanner
+from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 
 def _make_runtime() -> PublishedBacktestRuntime:
@@ -168,7 +168,7 @@ class TestStrategyServiceFactory:
 
     def test_build_backtest_options_preserves_slippage_model(self) -> None:
         """_build_backtest_options 保留调用方传入的 slippage_model (R6)."""
-        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+        from ditto_execution.reality.slippage import FixedBpsSlippage
 
         factory = StrategyServiceFactory(
             audit_service=MagicMock(spec=ExecutionAuditService),
@@ -237,7 +237,7 @@ class TestBuildPublishedRuntimeCostModels:
 
     def test_build_published_runtime_accepts_slippage_model(self) -> None:
         """build_published_runtime 接受 slippage_model 参数。"""
-        from ditto_engine.execution.reality.slippage import FixedBpsSlippage
+        from ditto_execution.reality.slippage import FixedBpsSlippage
 
         runtime = _make_runtime()
         runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)

@@ -11,12 +11,12 @@ import orjson
 import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
+from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
-from ditto_application.query.research import ResearchDatasetFacade
+from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_data.di import (
     CapitalProvider,
-    DerivedProvider,
     FundamentalProvider,
     MacroProvider,
     MarketProvider,
@@ -24,12 +24,12 @@ from ditto_data.di import (
     RuntimeProvider,
     TradeProvider,
 )
-from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
-from ditto_data.services import DerivedCatalogService, ResearchCatalogService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_features.materialization.models import DerivedVersionStatus
+from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_kernel.research import (
     ResearchDatasetSpecRecord,
     ResearchSpineSpecRecord,
@@ -58,7 +58,9 @@ def _sources_provider() -> Provider:
 
 
 def _make_container(*, monkeypatch, tmp_path: Path):
+    from ditto_analysis.di import AnalysisStorageProvider
     from ditto_application.providers_market import AppMarketQueryProvider
+    from ditto_features.di import FeaturesStorageProvider
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
     monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
@@ -69,7 +71,8 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         MetadataProvider(),
         MarketProvider(),
         CapitalProvider(),
-        DerivedProvider(),
+        FeaturesStorageProvider(),
+        AnalysisStorageProvider(),
         FundamentalProvider(),
         MacroProvider(),
         TradeProvider(),

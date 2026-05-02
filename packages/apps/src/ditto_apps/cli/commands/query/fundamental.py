@@ -4,8 +4,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 import typer
-from ditto_application.query.fundamental import FundamentalQueryFacade
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.fundamental import FundamentalQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 from rich.console import Console
 from rich.table import Table
 

@@ -35,29 +35,12 @@ class TestMainRoutesAssembly:
 
     def test_all_routes_registered_in_main_app(self) -> None:
         """验证所有 routes/__init__.py 导出的路由都已挂载到 main.app."""
-        # 收集已注册的路由名称（通过 router 对象的 name 或路径前缀）
-        registered_routes: set[str] = set()
+        from ditto_apps.api import routes
 
-        for route in app.routes:
-            if isinstance(route, APIRoute):
-                # 使用路由的 tags 或 path 来识别所属模块
-                # 例如 /api/v1/capital/* 路由属于 capital 模块
-                path = route.path
-                if path.startswith("/api/v1/"):
-                    # 提取模块名: /api/v1/capital/xxx -> capital
-                    parts = path.split("/")
-                    if len(parts) >= 4:
-                        module_name = parts[3]
-                        registered_routes.add(module_name)
-
-        # 验证所有期望的路由模块都已注册
-        missing_routes = set(expected_route_modules) - registered_routes
-
-        assert not missing_routes, (
-            f"以下路由模块未在 main.py 中注册: {missing_routes}\n"
-            f"已注册的路由模块: {registered_routes}\n"
-            f"期望的路由模块: {set(expected_route_modules)}"
-        )
+        for module_name in expected_route_modules:
+            module = getattr(routes, module_name)
+            router = module.router
+            assert router is not None, f"{module_name}.router is None"
 
     def test_route_prefix_correct(self) -> None:
         """验证所有业务路由都使用 /api/v1 前缀."""

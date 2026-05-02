@@ -8,10 +8,6 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_portfolio.rebalancing.allocation import (
-    AllocationStage,
-    InverseVolAllocator,
-)
 from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
@@ -23,7 +19,7 @@ from ditto_strategy.alpha.builtins.scoring import ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.templates.etf_trend_swing import (
     ETFTrendSwingConfig,
     TrailingStopStage,
@@ -73,7 +69,7 @@ class TestETFTrendSwingConfig:
         assert config.trend_threshold == 0.0
         assert config.trailing_stop_pct == 0.08
         assert config.max_positions == 10
-        assert config.scoring_method == "rank"
+        assert config.scoring_method.value == "rank"
         assert config.scoring_ascending is True
         assert config.allocation_method == "equal_weight"
         assert config.cash_target == 0.0
@@ -255,52 +251,38 @@ class TestTrailingStopStage:
 
 
 class TestBuildETFTrendSwingPipeline:
-    def test_default_config_builds_pipeline(self) -> None:
-        """默认配置构建合法 Pipeline。"""
+    def test_default_config_builds_stages(self) -> None:
+        """默认配置构建合法 alpha stages 列表。"""
         config = ETFTrendSwingConfig()
-        pipeline = build_etf_trend_swing_pipeline(config)
-        assert pipeline is not None
-        # Signal + TrendFilter + Score + RiskLock + Select + Allocate + TrailingStop
-        assert len(pipeline._stages) == 7
+        stages = build_etf_trend_swing_pipeline(config)
+        assert isinstance(stages, list)
+        # Signal + TrendFilter + Score + RiskLock + Select + TrailingStop
+        assert len(stages) == 6
 
     def test_pipeline_stage_order(self) -> None:
-        """Pipeline 阶段顺序正确。"""
+        """alpha stages 顺序正确。"""
         config = ETFTrendSwingConfig()
-        pipeline = build_etf_trend_swing_pipeline(config)
-        stages = pipeline._stages
+        stages = build_etf_trend_swing_pipeline(config)
         assert isinstance(stages[0], SignalStage)
         assert isinstance(stages[1], TrendFilterStage)
         assert isinstance(stages[2], ScoringStage)
         assert isinstance(stages[3], RiskLockFilter)
         assert isinstance(stages[4], SelectionStage)
-        assert isinstance(stages[5], AllocationStage)
-        assert isinstance(stages[6], TrailingStopStage)
-
-    def test_inverse_vol_allocation(self) -> None:
-        """inverse_vol 分配方式正确使用 InverseVolAllocator。"""
-        config = ETFTrendSwingConfig(
-            allocation_method="inverse_vol",
-            cash_target=0.1,
-        )
-        pipeline = build_etf_trend_swing_pipeline(config)
-        allocation = pipeline._stages[5]
-        assert isinstance(allocation, AllocationStage)
-        assert isinstance(allocation.allocator, InverseVolAllocator)
-        assert allocation.allocator.cash_target == 0.1
+        assert isinstance(stages[5], TrailingStopStage)
 
     def test_trailing_stop_stage_present(self) -> None:
         """默认配置包含 TrailingStopStage。"""
         config = ETFTrendSwingConfig()
-        pipeline = build_etf_trend_swing_pipeline(config)
-        assert any(isinstance(s, TrailingStopStage) for s in pipeline._stages)
+        stages = build_etf_trend_swing_pipeline(config)
+        assert any(isinstance(s, TrailingStopStage) for s in stages)
 
     def test_trailing_stop_disabled_when_zero(self) -> None:
         """trailing_stop_pct=0 时不添加 TrailingStopStage。"""
         config = ETFTrendSwingConfig(trailing_stop_pct=0.0)
-        pipeline = build_etf_trend_swing_pipeline(config)
-        assert not any(isinstance(s, TrailingStopStage) for s in pipeline._stages)
-        # Should be 6 stages instead of 7
-        assert len(pipeline._stages) == 6
+        stages = build_etf_trend_swing_pipeline(config)
+        assert not any(isinstance(s, TrailingStopStage) for s in stages)
+        # Should be 5 stages instead of 6
+        assert len(stages) == 5
 
     def test_pipeline_run_e2e(
         self,
@@ -340,21 +322,22 @@ class TestBuildETFTrendSwingPipeline:
             trend_threshold=0.0,
             trailing_stop_pct=0.0,  # disable trailing stop for e2e
         )
-        pipeline = build_etf_trend_swing_pipeline(config)
+        stages = build_etf_trend_swing_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, bundle)
 
         # ETF003 has negative signal, filtered by TrendFilter (long, threshold=0)
         assert len(target.positions) == 2
         assert 20 in target.positions
         assert 21 in target.positions
-        # Equal weight: 1.0 / 2 = 0.5
+        # Equal weight fallback (no AllocationStage): 1.0 / 2 = 0.5
         assert target.positions[20] == pytest.approx(0.5)
         assert target.positions[21] == pytest.approx(0.5)
 
     def test_regime_config_inserts_scoring_step(
         self,
     ) -> None:
-        """有 regime_config 时 Pipeline 包含 RegimeScoringStep 和 RegimeAware."""
+        """有 regime_config 时 stages 包含 RegimeScoringStep 和 RegimeAware."""
         regime_config = RegimeConfig(
             indicators=(TrendIndicator(threshold=0.01),),
         )
@@ -363,20 +346,16 @@ class TestBuildETFTrendSwingPipeline:
             trailing_stop_pct=0.0,
             regime_config=regime_config,
         )
-        pipeline = build_etf_trend_swing_pipeline(config)
+        stages = build_etf_trend_swing_pipeline(config)
 
-        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
-        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+        assert any(isinstance(s, RegimeScoringStep) for s in stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in stages)
 
         # RegimeScoringStep 应在 RegimeAwareAllocationStage 之前
         scoring_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeScoringStep)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeScoringStep)
         )
         aware_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeAwareAllocationStage)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx

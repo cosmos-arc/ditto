@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_portfolio.rebalancing.allocation import AllocationStage, ScoreWeightAllocator
-from ditto_portfolio.rebalancing.constraints import ConstraintStage
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.regime import RegimeConfig, TrendIndicator
 from ditto_strategy.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
 from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
+from ditto_strategy.alpha.builtins.scoring import ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.context import StrategyContext
-from ditto_strategy.alpha.pipeline import StrategyInputBundle
+from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
@@ -73,7 +72,7 @@ class TestETFRotationConfig:
         """默认配置值正确。"""
         config = ETFRotationConfig()
         assert config.top_k == 10
-        assert config.scoring_method == "rank"
+        assert config.scoring_method.value == "rank"
         assert config.allocation_method == "equal_weight"
         assert config.cash_target == 0.0
         assert config.signal_column == "signal_value"
@@ -93,58 +92,26 @@ class TestETFRotationConfig:
 
 
 class TestBuildETFRotationPipeline:
-    def test_default_config_builds_pipeline(self) -> None:
-        """默认配置构建合法 Pipeline。"""
+    def test_default_config_builds_stages(self) -> None:
+        """默认配置构建合法 alpha stages 列表。"""
         config = ETFRotationConfig(top_k=5)
-        pipeline = build_etf_rotation_pipeline(config)
-        assert pipeline is not None
-        # Signal + Score + RiskLock + Select + Allocate
-        assert len(pipeline._stages) == 5
+        stages = build_etf_rotation_pipeline(config)
+        assert isinstance(stages, list)
+        assert len(stages) == 4
 
     def test_custom_top_k(self) -> None:
         """自定义 top_k 正确传递到 SelectionStage。"""
         config = ETFRotationConfig(top_k=3)
-        pipeline = build_etf_rotation_pipeline(config)
-        # 4th stage is SelectionStage
-        selection = pipeline._stages[3]
+        stages = build_etf_rotation_pipeline(config)
+        selection = stages[3]
         assert isinstance(selection, SelectionStage)
         assert selection.top_k == 3
 
-    def test_score_weight_allocation(self) -> None:
-        """score_weight 分配方式正确使用 ScoreWeightAllocator。"""
-        config = ETFRotationConfig(
-            allocation_method="score_weight",
-            cash_target=0.1,
-        )
-        pipeline = build_etf_rotation_pipeline(config)
-        allocation = pipeline._stages[4]
-        assert isinstance(allocation, AllocationStage)
-        assert isinstance(allocation.allocator, ScoreWeightAllocator)
-        assert allocation.allocator.cash_target == 0.1
-
-    def test_pipeline_contains_risklock_filter(self) -> None:
-        """Pipeline 包含 RiskLockFilter。"""
+    def test_stages_contain_risklock_filter(self) -> None:
+        """alpha stages 包含 RiskLockFilter。"""
         config = ETFRotationConfig()
-        pipeline = build_etf_rotation_pipeline(config)
-        assert any(isinstance(s, RiskLockFilter) for s in pipeline._stages)
-
-    def test_with_max_weight_constraint(self) -> None:
-        """带 max_weight 约束时 Pipeline 包含 ConstraintStage。"""
-        config = ETFRotationConfig(max_weight=0.25)
-        pipeline = build_etf_rotation_pipeline(config)
-        assert any(isinstance(s, ConstraintStage) for s in pipeline._stages)
-
-    def test_with_max_positions_constraint(self) -> None:
-        """带 max_positions 约束时 Pipeline 包含 ConstraintStage。"""
-        config = ETFRotationConfig(max_positions=5)
-        pipeline = build_etf_rotation_pipeline(config)
-        assert any(isinstance(s, ConstraintStage) for s in pipeline._stages)
-
-    def test_empty_constraints_no_constraint_stage(self) -> None:
-        """无约束时 Pipeline 不包含 ConstraintStage。"""
-        config = ETFRotationConfig()
-        pipeline = build_etf_rotation_pipeline(config)
-        assert not any(isinstance(s, ConstraintStage) for s in pipeline._stages)
+        stages = build_etf_rotation_pipeline(config)
+        assert any(isinstance(s, RiskLockFilter) for s in stages)
 
     def test_empty_selection_returns_empty_portfolio(
         self,
@@ -156,7 +123,8 @@ class TestBuildETFRotationPipeline:
             top_k=0,
             signal_column="momentum_20d",
         )
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sample_bundle)
 
         assert len(target.positions) == 0
@@ -167,17 +135,17 @@ class TestBuildETFRotationPipeline:
             top_k=3,
             signal_column="momentum_20d",
         )
-        pipeline = build_etf_rotation_pipeline(config)
-        signal_stage = pipeline._stages[0]
+        stages = build_etf_rotation_pipeline(config)
+        signal_stage = stages[0]
         assert isinstance(signal_stage, SignalStage)
         assert signal_stage.source_column == "momentum_20d"
 
-    def test_regime_config_inserts_scoring_step_before_allocation(
+    def test_regime_config_inserts_scoring_step(
         self,
         sample_bundle: StrategyInputBundle,
         empty_context: StrategyContext,
     ) -> None:
-        """regime_config 时 Pipeline 包含 RegimeScoringStep 且 frame 含三列."""
+        """regime_config 时 stages 包含 RegimeScoringStep 且 frame 含三列."""
         regime_config = RegimeConfig(
             indicators=(TrendIndicator(threshold=0.01),),
         )
@@ -186,28 +154,34 @@ class TestBuildETFRotationPipeline:
             signal_column="momentum_20d",
             regime_config=regime_config,
         )
-        pipeline = build_etf_rotation_pipeline(config)
+        stages = build_etf_rotation_pipeline(config)
 
-        # Pipeline 应包含 RegimeScoringStep 和 RegimeAwareAllocationStage
-        assert any(isinstance(s, RegimeScoringStep) for s in pipeline._stages)
-        assert any(isinstance(s, RegimeAwareAllocationStage) for s in pipeline._stages)
+        # stages 应包含 RegimeScoringStep 和 RegimeAwareAllocationStage
+        assert any(isinstance(s, RegimeScoringStep) for s in stages)
+        assert any(isinstance(s, RegimeAwareAllocationStage) for s in stages)
 
         # RegimeScoringStep 应在 RegimeAwareAllocationStage 之前
         scoring_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeScoringStep)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeScoringStep)
         )
         aware_idx = next(
-            i
-            for i, s in enumerate(pipeline._stages)
-            if isinstance(s, RegimeAwareAllocationStage)
+            i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx
 
         # 运行 pipeline 验证 frame 包含 regime 三列
+        pipeline = StrategyPipeline(stages)
         target = pipeline.run(empty_context, sample_bundle)
         assert len(target.positions) > 0
+
+    def test_pipeline_stage_order(self) -> None:
+        """Pipeline 阶段顺序正确。"""
+        config = ETFRotationConfig()
+        stages = build_etf_rotation_pipeline(config)
+        assert isinstance(stages[0], SignalStage)
+        assert isinstance(stages[1], ScoringStage)
+        assert isinstance(stages[2], RiskLockFilter)
+        assert isinstance(stages[3], SelectionStage)
 
 
 # ---------------------------------------------------------------------------

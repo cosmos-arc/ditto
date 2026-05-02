@@ -983,7 +983,7 @@ git commit -m "refactor: extract risk package"
 
 ---
 
-### Task 9: Extract Execution
+### Task 9: Extract Execution ✅ DONE
 
 **Files:**
 - Move: `packages/engine/src/ditto_engine/execution/` -> `packages/execution/src/ditto_execution/`
@@ -1127,7 +1127,7 @@ git commit -m "refactor: extract execution package"
 
 ---
 
-### Task 10: Extract Backtest
+### Task 10: Extract Backtest ✅ DONE
 
 **Files:**
 - Move: `packages/engine/src/ditto_engine/backtest/` -> `packages/backtest/src/ditto_backtest/`
@@ -1219,7 +1219,7 @@ git commit -m "refactor: extract backtest package"
 
 ---
 
-### Task 11: Remove Empty Engine Package
+### Task 11: Remove Empty Engine Package ✅ DONE
 
 **Files:**
 - Delete: `packages/engine/`
@@ -1281,7 +1281,7 @@ git commit -m "refactor: remove legacy engine package"
 
 ---
 
-### Task 12: Normalize Application Internal Directories
+### Task 12: Normalize Application Internal Directories ✅ DONE
 
 **Files:**
 - Move: `packages/application/src/ditto_application/command/` -> `packages/application/src/ditto_application/commands/`
@@ -1361,7 +1361,7 @@ git commit -m "refactor: normalize application cqrs directories"
 
 ---
 
-### Task 13: Slim Data Package Ownership
+### Task 13: Slim Data Package Ownership ✅ DONE
 
 **Files:**
 - Move: `packages/data/src/ditto_data/storage/factors/` -> `packages/features/src/ditto_features/storage/parquet/factors/`
@@ -1482,7 +1482,7 @@ git commit -m "refactor: move business data ownership out of data package"
 
 ---
 
-### Task 14: Finalize Import-Linter Capability Contracts
+### Task 14: Finalize Import-Linter Capability Contracts ✅ DONE
 
 **Files:**
 - Modify: `.importlinter`
@@ -1583,7 +1583,7 @@ git commit -m "test: enforce capability package architecture boundaries"
 
 ---
 
-### Task 15: Update Project Docs and Package Guides
+### Task 15: Update Project Docs and Package Guides ✅ DONE
 
 **Files:**
 - Modify: `CLAUDE.md`
@@ -1659,7 +1659,7 @@ git commit -m "docs: update architecture guides for capability packages"
 
 ---
 
-### Task 16: Update AI Coding Constraints and Agent Rules
+### Task 16: Update AI Coding Constraints and Agent Rules ✅ DONE
 
 **Files:**
 - Modify: `AGENTS.md`
@@ -1925,7 +1925,7 @@ git commit -m "docs: update AI coding rules for capability packages"
 
 ---
 
-### Task 17: Final Cleanup of Configuration and Tooling
+### Task 17: Final Cleanup of Configuration and Tooling ✅ DONE
 
 **Files:**
 - Modify: `pixi.toml`
@@ -2023,7 +2023,7 @@ git commit -m "chore: clean tooling for capability packages"
 
 ---
 
-### Task 18: Full Verification and Final Commit
+### Task 18: Full Verification and Final Commit ✅ DONE
 
 **Files:**
 - Modify only files required by verification failures.

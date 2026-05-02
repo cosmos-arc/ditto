@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.query.market import MarketQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
 
 
 class TestMarketQueryFacadeFindBars:

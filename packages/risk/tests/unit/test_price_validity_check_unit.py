@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 
 from ditto_execution.reality.market import MarketSnapshot
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import Order, OrderType
+from ditto_portfolio.accounting.order_book import Order
 from ditto_risk.pre_trade import Decision, PreTradeContext, PriceValidityCheck
 
 IID = InstrumentId(1)
@@ -106,6 +106,7 @@ class TestPriceValidityCheck:
             _ctx(snapshots={IID: _snapshot(limit_up=11.0, limit_down=9.0)}),
         )
         assert result.decision == Decision.REJECT
+        assert result.reason is not None
         assert "price_validity" in result.reason
 
     def test_price_below_limit_rejected(self) -> None:
@@ -115,6 +116,7 @@ class TestPriceValidityCheck:
             _ctx(snapshots={IID: _snapshot(limit_up=11.0, limit_down=9.0)}),
         )
         assert result.decision == Decision.REJECT
+        assert result.reason is not None
         assert "price_validity" in result.reason
 
     def test_price_at_limit_boundary(self) -> None:

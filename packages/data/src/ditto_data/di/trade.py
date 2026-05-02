@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-
-from ditto_data.services.deps import ExecutionReaders, ExecutionWriters
-from ditto_data.services.trade import TradeService
-from ditto_data.storage.execution import (
+from ditto_execution.storage.sqlite.legacy import (
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
@@ -17,7 +14,11 @@ from ditto_data.storage.execution import (
     SignalReader,
     SignalWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_execution.storage.sqlite.trade import TradeService
+from ditto_execution.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLitePool
+
+from ditto_data.services.deps import ExecutionReaders, ExecutionWriters
 
 __all__ = ["TradeProvider"]
 
@@ -26,6 +27,11 @@ class TradeProvider(Provider):
     """交易闭环服务的 Data 层 DI 注册."""
 
     scope = Scope.APP
+
+    @provide
+    def execution_sqlite_client(self, sqlite_pool: SQLitePool) -> SQLiteClient:
+        """Execution 域 SQLiteClient（独立于 data 域实例）。"""
+        return SQLiteClient(sqlite_pool)
 
     @provide
     def execution_readers(self, sqlite_client: SQLiteClient) -> ExecutionReaders:

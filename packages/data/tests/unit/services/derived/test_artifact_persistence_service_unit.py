@@ -7,15 +7,15 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_data.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_data.storage.runtime.derived_artifact_writer import (
+from ditto_features.expression import Analysis, CompileIdentity
+from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
+from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
 )
-from ditto_features.expression import Analysis, CompileIdentity
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
@@ -125,7 +125,7 @@ class TestServiceDelegatesWriteEphemeralResult:
 
     def test_service_delegates_write_ephemeral_result(self) -> None:
         """Should delegate write_ephemeral_result to the underlying writer."""
-        from ditto_data.services.derived.artifact_persistence_service import (
+        from ditto_features.services.derived.artifact_persistence_service import (
             ArtifactPersistenceService,
         )
 
@@ -157,7 +157,7 @@ class TestServiceDelegatesWriteDurablePartitions:
         self,
     ) -> None:
         """Should delegate write_durable_partitions and return PartitionInfo tuple."""
-        from ditto_data.services.derived.artifact_persistence_service import (
+        from ditto_features.services.derived.artifact_persistence_service import (
             ArtifactPersistenceService,
         )
 
@@ -200,7 +200,7 @@ class TestServiceDelegatesWriteArtifactMetadata:
 
     def test_service_delegates_write_artifact_metadata(self) -> None:
         """Should delegate write_artifact_metadata to the underlying writer."""
-        from ditto_data.services.derived.artifact_persistence_service import (
+        from ditto_features.services.derived.artifact_persistence_service import (
             ArtifactPersistenceService,
         )
 
@@ -235,7 +235,7 @@ class TestServiceDelegatesUpdateArtifactMetadata:
 
     def test_service_update_artifact_metadata(self) -> None:
         """Should delegate update_artifact_metadata to the underlying writer."""
-        from ditto_data.services.derived.artifact_persistence_service import (
+        from ditto_features.services.derived.artifact_persistence_service import (
             ArtifactPersistenceService,
         )
 

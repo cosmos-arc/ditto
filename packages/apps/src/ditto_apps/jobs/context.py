@@ -12,8 +12,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
-from ditto_application.query.market import MarketQueryFacade
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.protocols import QualityEngineProtocol
 

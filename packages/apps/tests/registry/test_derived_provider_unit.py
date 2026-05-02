@@ -1,22 +1,22 @@
-"""Tests for DerivedProvider (slimmed) and App Provider wiring."""
+"""Tests for FeaturesStorageProvider/AnalysisStorageProvider and App Provider wiring."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
-from ditto_application.process.materialization.orchestrator import (
+from ditto_analysis.di import AnalysisStorageProvider
+from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_application.process.materialization.publication_facade import (
+from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.query.derived import DerivedQueryFacade
+from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.infra import NotificationProvider
 from ditto_data.di import (
     CapitalProvider,
-    DerivedProvider,
     FundamentalProvider,
     MacroProvider,
     MarketProvider,
@@ -24,13 +24,13 @@ from ditto_data.di import (
     QualityProvider,
     RuntimeProvider,
     TradeProvider,
-    get_data_providers,
 )
 from ditto_data.quality.golden import GoldenDatasetSpec
-from ditto_data.services import DerivedQueryService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
+from ditto_features.di import FeaturesStorageProvider
+from ditto_features.services.derived import DerivedQueryService
 
 _tdx_mock = MagicMock(spec=TdxSource)
 
@@ -72,6 +72,8 @@ class _GoldenNoneProvider(Provider):
 def _make_full_container():
     """构建包含 Data + App 层 Provider 的完整容器。"""
     from ditto_application.providers import get_app_providers
+    from ditto_execution.di import ExecutionStorageProvider
+    from ditto_strategy.di import StrategyStorageProvider
 
     return make_container(
         ConfigProvider(),
@@ -85,22 +87,23 @@ def _make_full_container():
         CapitalProvider(),
         FundamentalProvider(),
         MacroProvider(),
-        DerivedProvider(),
+        FeaturesStorageProvider(),
+        AnalysisStorageProvider(),
         TradeProvider(),
         NotificationProvider(),
+        StrategyStorageProvider(),
+        ExecutionStorageProvider(),
         *get_app_providers(),
     )
 
-
-class TestDerivedProvider:
-    """Tests for slimmed DerivedProvider (仅 Data 层服务)."""
+    """Tests for FeaturesStorageProvider and AnalysisStorageProvider."""
 
     def test_provider_builds_query_service(
         self,
         monkeypatch,
         tmp_path,
     ) -> None:
-        """DerivedProvider should wire the Data DerivedQueryService."""
+        """FeaturesStorageProvider should wire the DerivedQueryService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = make_container(
@@ -110,7 +113,7 @@ class TestDerivedProvider:
             MetadataProvider(),
             MarketProvider(),
             CapitalProvider(),
-            DerivedProvider(),
+            FeaturesStorageProvider(),
         )
 
         query_service = container.get(DerivedQueryService)
@@ -118,20 +121,23 @@ class TestDerivedProvider:
         assert isinstance(query_service, DerivedQueryService)
         container.close()
 
-    def test_registry_exports_derived_provider(self) -> None:
-        """DerivedProvider should be defined in ditto_data.di."""
-        import ditto_data.di as data_di
+    def test_registry_exports_features_storage_provider(self) -> None:
+        """FeaturesStorageProvider should be exported from ditto_features.di."""
+        import ditto_features.di as features_di
 
-        provider_names = [type(provider).__name__ for provider in get_data_providers()]
+        assert "FeaturesStorageProvider" in features_di.__all__
 
-        assert "DerivedProvider" in provider_names
-        assert "DerivedProvider" in data_di.__all__
+    def test_registry_exports_analysis_storage_provider(self) -> None:
+        """AnalysisStorageProvider should be exported from ditto_analysis.di."""
+        import ditto_analysis.di as analysis_di
 
-    def test_derived_provider_only_has_data_methods(self) -> None:
-        """DerivedProvider 应仅包含 Data 层方法。"""
+        assert "AnalysisStorageProvider" in analysis_di.__all__
+
+    def test_features_storage_provider_methods(self) -> None:
+        """FeaturesStorageProvider 应包含衍生数据相关方法。"""
         from dishka import Provider as BaseProvider
 
-        provider = DerivedProvider()
+        provider = FeaturesStorageProvider()
         base_methods = {name for name in dir(BaseProvider) if not name.startswith("_")}
         all_methods = {
             name
@@ -140,8 +146,30 @@ class TestDerivedProvider:
         }
         provide_methods = all_methods - base_methods
         expected = {
-            "research_artifact_service",
+            "derived_catalog_reader",
+            "derived_catalog_writer",
+            "derived_catalog_service",
             "derived_query_service",
+        }
+        assert expected == provide_methods
+
+    def test_analysis_storage_provider_methods(self) -> None:
+        """AnalysisStorageProvider 应包含研究相关方法。"""
+        from dishka import Provider as BaseProvider
+
+        provider = AnalysisStorageProvider()
+        base_methods = {name for name in dir(BaseProvider) if not name.startswith("_")}
+        all_methods = {
+            name
+            for name in dir(provider)
+            if not name.startswith("_") and callable(getattr(provider, name))
+        }
+        provide_methods = all_methods - base_methods
+        expected = {
+            "research_catalog_reader",
+            "research_catalog_writer",
+            "research_catalog_service",
+            "research_artifact_service",
         }
         assert expected == provide_methods
 

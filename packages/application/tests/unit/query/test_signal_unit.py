@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from ditto_application.query.signal import SignalQueryFacade
-from ditto_data.models.trade import SignalRecord
+from ditto_application.queries.signal import SignalQueryFacade
+from ditto_execution.models import SignalRecord
 
 
 def _make_intent_record(

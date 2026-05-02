@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ditto_apps.models._date_helpers import DateField
 
 # Re-export for internal use — avoids repeated literal magic numbers.
-# Commission defaults mirror ditto_engine.execution.reality.constants.
+# Commission defaults mirror ditto_execution reality constants.
 # Stamp duty / slippage are A-share standard rates not yet centralized there.
 _DEFAULT_COMMISSION_RATE: float = 0.0003
 _DEFAULT_COMMISSION_MIN: float = 5.0

@@ -1,26 +1,26 @@
 """Tests for Market API router.
 
-使用 FastAPI TestClient 测试路由，mock MarketService.
+使用 FastAPI TestClient 测试路由，mock MarketQueryFacade.
 """
 
 from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.queries.market import MarketQueryFacade
 from ditto_apps.api.routes.market import router
-from ditto_data.services.market_service import MarketService
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def mock_market_service() -> MagicMock:
-    """创建 mock MarketService."""
-    return MagicMock(spec=MarketService)
+def mock_market_facade() -> MagicMock:
+    """创建 mock MarketQueryFacade."""
+    return MagicMock(spec=MarketQueryFacade)
 
 
 @pytest.fixture
-def app(mock_market_service: MagicMock) -> FastAPI:
+def app(mock_market_facade: MagicMock) -> FastAPI:
     """创建测试 FastAPI 应用."""
     app = FastAPI()
 
@@ -34,9 +34,9 @@ def app(mock_market_service: MagicMock) -> FastAPI:
         scope = Scope.APP
 
         @provide
-        def get_market_service(self) -> MarketService:
-            """返回 mock MarketService."""
-            return mock_market_service
+        def get_market_facade(self) -> MarketQueryFacade:
+            """返回 mock MarketQueryFacade."""
+            return mock_market_facade
 
     container = make_async_container(TestProvider())
     setup_dishka(container=container, app=app)
@@ -59,11 +59,11 @@ class TestPostBars:
     def test_post_bars_with_valid_params(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试有效参数查询 K 线."""
         # Arrange
-        mock_market_service.find_bars.return_value = pl.DataFrame(
+        mock_market_facade.find_bars.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 1],
                 "trade_date": ["2024-01-15", "2024-01-16"],
@@ -97,11 +97,11 @@ class TestPostBars:
     def test_post_bars_with_qfq_adjustment(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试前复权查询."""
         # Arrange
-        mock_market_service.find_bars.return_value = pl.DataFrame(
+        mock_market_facade.find_bars.return_value = pl.DataFrame(
             {
                 "instrument_id": [1],
                 "trade_date": ["2024-01-15"],
@@ -128,20 +128,19 @@ class TestPostBars:
         data = response.json()
         assert len(data["data"]) == 1
 
-        # 验证 service 被正确调用
-        mock_market_service.find_bars.assert_called_once()
-        call_args = mock_market_service.find_bars.call_args
-        query = call_args[0][0]
-        assert query.adj.value == "qfq"
+        # 验证 facade 被正确调用（adj 参数传递为关键字参数）
+        mock_market_facade.find_bars.assert_called_once()
+        call_kwargs = mock_market_facade.find_bars.call_args.kwargs
+        assert call_kwargs["adj"] == "qfq"
 
     def test_post_bars_with_limit(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试限制返回数量."""
         # Arrange
-        mock_market_service.find_bars.return_value = pl.DataFrame(
+        mock_market_facade.find_bars.return_value = pl.DataFrame(
             {
                 "instrument_id": [1, 2, 3],
                 "trade_date": ["2024-01-15", "2024-01-15", "2024-01-15"],
@@ -172,11 +171,11 @@ class TestPostBars:
     def test_post_bars_empty_result(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试空结果."""
         # Arrange
-        mock_market_service.find_bars.return_value = pl.DataFrame()
+        mock_market_facade.find_bars.return_value = pl.DataFrame()
 
         # Act
         response = client.post(
@@ -195,7 +194,7 @@ class TestPostBars:
     def test_post_bars_with_invalid_date_range(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试无效日期范围 (start_date > end_date)."""
         # Act
@@ -214,7 +213,7 @@ class TestPostBars:
     def test_post_bars_with_invalid_adjustment(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试无效的复权类型."""
         # Act
@@ -232,7 +231,7 @@ class TestPostBars:
     def test_post_bars_with_invalid_limit(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试无效的 limit 值."""
         # Act
@@ -250,7 +249,7 @@ class TestPostBars:
     def test_post_bars_with_limit_too_large(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试 limit 超过最大值."""
         # Act
@@ -268,11 +267,11 @@ class TestPostBars:
     def test_post_bars_without_instrument_ids(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试不提供 instrument_ids (允许为空)."""
         # Arrange
-        mock_market_service.find_bars.return_value = pl.DataFrame()
+        mock_market_facade.find_bars.return_value = pl.DataFrame()
 
         # Act
         response = client.post(
@@ -288,11 +287,11 @@ class TestPostBars:
     def test_post_bars_with_turnover_rate(
         self,
         client: TestClient,
-        mock_market_service: MagicMock,
+        mock_market_facade: MagicMock,
     ) -> None:
         """测试返回换手率."""
         # Arrange
-        mock_market_service.find_bars.return_value = pl.DataFrame(
+        mock_market_facade.find_bars.return_value = pl.DataFrame(
             {
                 "instrument_id": [1],
                 "trade_date": ["2024-01-15"],
@@ -317,4 +316,5 @@ class TestPostBars:
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["data"][0]["turnover_rate"] == 0.025
+        # format_float 保留 2 位小数，0.025 → 0.03
+        assert data["data"][0]["turnover_rate"] == 0.03

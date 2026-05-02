@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_application.query.fx import FXQueryFacade
+from ditto_application.queries.fx import FXQueryFacade
 from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 
 

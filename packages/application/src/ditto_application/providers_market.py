@@ -5,35 +5,35 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
+from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_service import IngestionLogService
 from ditto_data.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
     DerivedQueryService,
-    ResearchCatalogService,
 )
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.research_artifact_service import ResearchArtifactService
 from ditto_data.services.source_service import SourceService
 
-from ditto_application.query.capital import CapitalQueryFacade
-from ditto_application.query.commodity import CommodityQueryFacade
-from ditto_application.query.derived import DerivedQueryFacade
-from ditto_application.query.forward_return_service import ForwardReturnService
-from ditto_application.query.fundamental import FundamentalQueryFacade
-from ditto_application.query.fx import FXQueryFacade
-from ditto_application.query.ingestion_status import IngestionStatusQueryFacade
-from ditto_application.query.macro import MacroQueryFacade
-from ditto_application.query.market import MarketQueryFacade
-from ditto_application.query.metadata import MetadataQueryFacade
-from ditto_application.query.research import ResearchDatasetFacade
-from ditto_application.query.source import SourceQueryFacade
-from ditto_application.query.universe import UniverseQueryFacade
+from ditto_application.queries.capital import CapitalQueryFacade
+from ditto_application.queries.commodity import CommodityQueryFacade
+from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.forward_return_service import ForwardReturnService
+from ditto_application.queries.fundamental import FundamentalQueryFacade
+from ditto_application.queries.fx import FXQueryFacade
+from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
+from ditto_application.queries.macro import MacroQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.queries.source import SourceQueryFacade
+from ditto_application.queries.universe import UniverseQueryFacade
 
 __all__ = ["AppMarketQueryProvider"]
 

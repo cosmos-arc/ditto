@@ -1,7 +1,7 @@
 """Tests for RetryManager."""
 
 import pytest
-from ditto_application.process.ingestion.retry_manager import RetryManager
+from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_data.models.ingestion import IngestionResult, RetryResult
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability import init, reset_for_testing

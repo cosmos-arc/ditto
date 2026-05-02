@@ -1,7 +1,7 @@
 """测试结果统计辅助函数。"""
 
 import pytest
-from ditto_application.process.ingestion.result_handler import count_results
+from ditto_application.processes.ingestion.result_handler import count_results
 from ditto_data.models.ingestion import IngestionResult
 
 

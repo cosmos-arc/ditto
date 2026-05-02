@@ -6,18 +6,17 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from ditto_backtest.audit import ExecutionAuditCollector
-from ditto_backtest.steps import RiskScanStep, StepContext, TradingStep
-from ditto_risk.post_trade import RiskActionType, RiskScope
-from ditto_strategy.alpha.context import StrategyContext
-
-from ._helpers import (
+from _helpers import (
     IID_1,
     _make_account_view,
     _make_clock,
     _make_risk_action,
     _make_slice,
 )
+from ditto_backtest.audit import ExecutionAuditCollector
+from ditto_backtest.steps import RiskScanStep, StepContext, TradingStep
+from ditto_risk.post_trade import RiskActionType, RiskScope
+from ditto_strategy.alpha.context import StrategyContext
 
 
 class TestRiskScanStep:

@@ -10,18 +10,6 @@ from ditto_data.storage.metadata.fee_schedule_reader import (
 from ditto_data.storage.metadata.fee_schedule_writer import (
     SQLiteFeeScheduleWriter,
 )
-from ditto_data.storage.metadata.strategy_artifact_store import (
-    SQLiteStrategyArtifactReader,
-    SQLiteStrategyArtifactWriter,
-)
-from ditto_data.storage.metadata.strategy_run_store import (
-    SQLiteStrategyRunReader,
-    SQLiteStrategyRunWriter,
-)
-from ditto_data.storage.metadata.strategy_spec_store import (
-    SQLiteStrategySpecReader,
-    SQLiteStrategySpecWriter,
-)
 from ditto_data.storage.metadata.trading_rule_reader import SQLiteTradingRuleReader
 from ditto_data.storage.metadata.trading_rule_writer import SQLiteTradingRuleWriter
 
@@ -30,19 +18,13 @@ _READER_METHOD_PREFIXES = ("get", "list", "read", "count")
 _WRITE_PREFIXES = ("write", "save", "delete", "update", "load")
 
 _READER_CLASSES = (
-    SQLiteStrategySpecReader,
     SQLiteFeeScheduleReader,
     SQLiteTradingRuleReader,
-    SQLiteStrategyArtifactReader,
-    SQLiteStrategyRunReader,
 )
 
 _WRITER_CLASSES = (
-    SQLiteStrategySpecWriter,
     SQLiteFeeScheduleWriter,
     SQLiteTradingRuleWriter,
-    SQLiteStrategyArtifactWriter,
-    SQLiteStrategyRunWriter,
 )
 
 

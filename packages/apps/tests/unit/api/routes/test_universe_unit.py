@@ -10,7 +10,7 @@ logic directly without the DI container.
 from __future__ import annotations
 
 import pytest
-from ditto_application.command.universe import (
+from ditto_application.commands.universe import (
     CreateCustomUniverseCommand,
     DeleteCustomUniverseCommand,
     UpdateCustomUniverseCommand,

@@ -12,13 +12,15 @@ class TestAdjFactorIngestion:
 
     def test_ingest_adj_factor_uses_source_ticker_column(self, mocker):
         """Test that adj_factor ingestion uses source_ticker column for ID mapping."""
-        from ditto_application.process.ingestion.config import (
+        from ditto_application.processes.ingestion.config import (
             IngestionCoordinatorConfig,
         )
-        from ditto_application.process.ingestion.coordinator import (
+        from ditto_application.processes.ingestion.coordinator import (
             IngestionCoordinator,
+            IngestionServices,
             MarketServices,
         )
+        from ditto_application.processes.ingestion.types import SourceFetchers
         from ditto_data.ingestion.ingestion_log_service import IngestionLogService
         from ditto_data.services.capital_service import CapitalService
         from ditto_data.services.fundamental_service import FundamentalService
@@ -35,26 +37,33 @@ class TestAdjFactorIngestion:
         mock_capital_service = mocker.MagicMock(spec=CapitalService)
         mock_macro_service = mocker.MagicMock(spec=MacroService)
         mock_ingestion_log_service = mocker.MagicMock(spec=IngestionLogService)
-        mock_source = mocker.MagicMock()
 
         # Mock return values
         mock_market_write_service.save_adj_factor.return_value = 2
-        mock_metadata_service.resolve_or_create_instruments_batch.return_value = {
+        mock_metadata_service.resolve_instrument_ids_batch.return_value = {
             "000001.SZ": 1_000_001,
             "000002.SZ": 1_000_002,
         }
 
         # Create coordinator
         coordinator = IngestionCoordinator(
-            metadata_service=mock_metadata_service,
-            market_services=MarketServices(
-                query=mock_market_service,
-                write=mock_market_write_service,
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_service,
+                capital=mock_capital_service,
+                macro=mock_macro_service,
             ),
-            fundamental_service=mock_fundamental_service,
-            capital_service=mock_capital_service,
-            macro_service=mock_macro_service,
-            source=mock_source,
+            fetchers=SourceFetchers(
+                metadata=mocker.MagicMock(),
+                market=mocker.MagicMock(),
+                fundamental=mocker.MagicMock(),
+                capital=mocker.MagicMock(),
+                macro=mocker.MagicMock(),
+            ),
             config=IngestionCoordinatorConfig(
                 ingestion_log_service=mock_ingestion_log_service,
             ),
@@ -91,22 +100,22 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_metadata_service.resolve_or_create_instruments_batch.assert_called_once_with(
-            df=mocker.ANY,
-            source="tushare",
-            asset_class="stock",
-            source_ticker_col="source_ticker",
-        )
+        mock_metadata_service.resolve_instrument_ids_batch.assert_called_once()
+        call = mock_metadata_service.resolve_instrument_ids_batch.call_args
+        assert set(call.kwargs["identifiers"]) == {"000001.SZ", "000002.SZ"}
+        assert call.kwargs["source"] == "tushare"
 
     def test_ingest_fund_adj_uses_source_ticker_column(self, mocker):
         """Test that fund_adj ingestion uses source_ticker column for ID mapping."""
-        from ditto_application.process.ingestion.config import (
+        from ditto_application.processes.ingestion.config import (
             IngestionCoordinatorConfig,
         )
-        from ditto_application.process.ingestion.coordinator import (
+        from ditto_application.processes.ingestion.coordinator import (
             IngestionCoordinator,
+            IngestionServices,
             MarketServices,
         )
+        from ditto_application.processes.ingestion.types import SourceFetchers
         from ditto_data.ingestion.ingestion_log_service import IngestionLogService
         from ditto_data.services.capital_service import CapitalService
         from ditto_data.services.fundamental_service import FundamentalService
@@ -123,26 +132,33 @@ class TestAdjFactorIngestion:
         mock_capital_service = mocker.MagicMock(spec=CapitalService)
         mock_macro_service = mocker.MagicMock(spec=MacroService)
         mock_ingestion_log_service = mocker.MagicMock(spec=IngestionLogService)
-        mock_source = mocker.MagicMock()
 
         # Mock return values
         mock_market_write_service.save_adj_factor.return_value = 2
-        mock_metadata_service.resolve_or_create_instruments_batch.return_value = {
+        mock_metadata_service.resolve_instrument_ids_batch.return_value = {
             "510300.SH": 2_000_001,
             "510500.SH": 2_000_002,
         }
 
         # Create coordinator
         coordinator = IngestionCoordinator(
-            metadata_service=mock_metadata_service,
-            market_services=MarketServices(
-                query=mock_market_service,
-                write=mock_market_write_service,
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_service,
+                capital=mock_capital_service,
+                macro=mock_macro_service,
             ),
-            fundamental_service=mock_fundamental_service,
-            capital_service=mock_capital_service,
-            macro_service=mock_macro_service,
-            source=mock_source,
+            fetchers=SourceFetchers(
+                metadata=mocker.MagicMock(),
+                market=mocker.MagicMock(),
+                fundamental=mocker.MagicMock(),
+                capital=mocker.MagicMock(),
+                macro=mocker.MagicMock(),
+            ),
             config=IngestionCoordinatorConfig(
                 ingestion_log_service=mock_ingestion_log_service,
             ),
@@ -179,9 +195,7 @@ class TestAdjFactorIngestion:
         assert "source_ticker" in df_written.columns, (
             "source_ticker column missing in written dataframe"
         )
-        mock_metadata_service.resolve_or_create_instruments_batch.assert_called_once_with(
-            df=mocker.ANY,
-            source="tushare",
-            asset_class="etf",
-            source_ticker_col="source_ticker",
-        )
+        mock_metadata_service.resolve_instrument_ids_batch.assert_called_once()
+        call = mock_metadata_service.resolve_instrument_ids_batch.call_args
+        assert set(call.kwargs["identifiers"]) == {"510300.SH", "510500.SH"}
+        assert call.kwargs["source"] == "tushare"

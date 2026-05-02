@@ -6,7 +6,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.query.fx import FXQueryFacade
+from ditto_application.queries.fx import FXQueryFacade
 from fastapi import APIRouter
 
 from ditto_apps.api.routes.shared_bars import handle_bars_post

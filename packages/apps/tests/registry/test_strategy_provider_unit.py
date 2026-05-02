@@ -11,40 +11,40 @@ from ditto_application.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
-from ditto_application.process.execution.backtest_process import (
+from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
 )
-from ditto_application.process.execution.strategy_input import StrategyInputAssembler
-from ditto_application.process.execution.strategy_run_process import (
+from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
+from ditto_application.processes.execution.strategy_run_process import (
     StrategyFacade,
     StrategyRunMode,
     StrategyRunService,
     StrategyRunServiceConfig,
 )
 from ditto_apps.registry import ConfigProvider
+from ditto_backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_data.di import RuntimeProvider
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.derived.query_service import DerivedQueryService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.strategy.strategy_artifact_service import (
-    StrategyArtifactService,
-)
-from ditto_data.services.strategy.strategy_catalog_service import (
-    StrategyCatalogService,
-)
-from ditto_data.services.strategy.strategy_run_service import (
-    StrategyRunLifecycleStore as DataStrategyRunLifecycleStore,
-)
 from ditto_data.sources.source import DataSources
-from ditto_engine.backtest.data_feed import DataFeed, ProviderBackedDataFeed
-from ditto_engine.execution.brokerage import Brokerage
-from ditto_engine.execution.planner import ExecutionPlanner
+from ditto_execution.audit import ExecutionAuditService
+from ditto_execution.brokerage import Brokerage
+from ditto_execution.planner import ExecutionPlanner
+from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunLifecycleStore as DataStrategyRunLifecycleStore,
+)
 
 
 def _sources_provider() -> Provider:
@@ -80,6 +80,8 @@ def _strategy_runtime_deps_provider() -> Provider:
 def _make_test_container() -> Container:
     from ditto_application.providers import AppBuilderFactory
     from ditto_data.di import QualityProvider
+    from ditto_execution.di import ExecutionStorageProvider
+    from ditto_strategy.di import StrategyStorageProvider
 
     return make_container(
         ConfigProvider(),
@@ -88,6 +90,8 @@ def _make_test_container() -> Container:
         _strategy_runtime_deps_provider(),
         QualityProvider(),
         AppBuilderFactory(),
+        StrategyStorageProvider(),
+        ExecutionStorageProvider(),
     )
 
 

@@ -6,14 +6,13 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from ditto_backtest.audit import ExecutionAuditCollector
-from ditto_backtest.steps import AuditStep, StepContext, TradingStep
-
-from ._helpers import (
+from _helpers import (
     _make_account_view,
     _make_fill,
     _make_slice,
 )
+from ditto_backtest.audit import ExecutionAuditCollector
+from ditto_backtest.steps import AuditStep, StepContext, TradingStep
 
 
 class TestAuditStep:

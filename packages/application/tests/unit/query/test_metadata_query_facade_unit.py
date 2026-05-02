@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 
 
 class TestMetadataQueryFacadeGetInstrument:

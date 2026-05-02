@@ -6,11 +6,11 @@ from types import MappingProxyType
 from unittest.mock import MagicMock
 
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import Order, OrderType
+from ditto_portfolio.accounting.order_book import Order
 from ditto_portfolio.accounting.position import Position
 from ditto_risk.pre_trade import Decision, NoShortSellCheck, PreTradeContext
 
@@ -70,6 +70,7 @@ class TestNoShortSellCheck:
         """无持仓时卖出被拒。"""
         result = self.check.check_order(_order(OrderSide.SELL), _ctx())
         assert result.decision == Decision.REJECT
+        assert result.reason is not None
         assert "no_short_sell" in result.reason
         assert "available=0" in result.reason
 
@@ -80,6 +81,7 @@ class TestNoShortSellCheck:
             _ctx(positions={IID: _pos(300, 300)}),
         )
         assert result.decision == Decision.REJECT
+        assert result.reason is not None
         assert "available=300" in result.reason
 
     def test_sell_sufficient_accepted(self) -> None:

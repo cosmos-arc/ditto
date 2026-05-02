@@ -2,7 +2,7 @@
 
 import polars as pl
 import pytest
-from ditto_application.command.quality_reconciliation import ReconcileSourcesHandler
+from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
 
 
 @pytest.mark.unit
@@ -68,7 +68,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -118,7 +118,7 @@ class TestDailyReconciliationSuccess:
         mock_tdx_source.fetch_stock_daily_bars.return_value = pl.DataFrame()
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -164,7 +164,7 @@ class TestDailyReconciliationSuccess:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -213,7 +213,7 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -260,7 +260,7 @@ class TestDailyReconciliationWithIssues:
         )
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -304,7 +304,7 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Act & Assert
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -350,7 +350,7 @@ class TestDailyReconciliationEdgeCases:
         mock_quality_engine.check_cross_source.return_value = sample_dq_result_passed
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 
@@ -398,7 +398,7 @@ class TestDailyReconciliationEdgeCases:
         )
 
         # Act
-        from ditto_application.command.quality_reconciliation import (
+        from ditto_application.commands.quality_reconciliation import (
             ReconcileSourcesCommand,
         )
 

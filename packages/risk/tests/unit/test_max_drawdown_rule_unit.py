@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
+from types import MappingProxyType, SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,8 +28,8 @@ def _account_view(nav: float = 100_000.0) -> AccountView:
     )
 
 
-def _slice() -> object:
-    return MagicMock(bars={})
+def _slice() -> SimpleNamespace:
+    return SimpleNamespace(bars={})
 
 
 class TestMaxDrawdownRule:

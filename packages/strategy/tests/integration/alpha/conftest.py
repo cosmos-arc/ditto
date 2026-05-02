@@ -13,17 +13,17 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_data.provider import BarQuery, InstrumentQuery
-from ditto_engine.backtest.data_feed import ProviderBackedDataFeed
-from ditto_engine.backtest.engine import (
+from ditto_backtest.data_feed import ProviderBackedDataFeed
+from ditto_backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
 )
-from ditto_engine.execution.brokerage import BacktestBrokerage
-from ditto_engine.execution.planner import SimpleExecutionPlanner
-from ditto_engine.execution.reality import (
+from ditto_data.provider import BarQuery, InstrumentQuery
+from ditto_execution.brokerage import BacktestBrokerage
+from ditto_execution.planner import SimpleExecutionPlanner
+from ditto_execution.reality import (
     BrokerageModel,
     FeeModel,
     SimpleFeeModel,

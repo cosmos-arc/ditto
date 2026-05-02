@@ -97,17 +97,16 @@ unfixable = []
 # MetadataService.__init__ - 构造器注入 16 个依赖，参数数量不可避免
 "packages/data/src/ditto_data/services/metadata_service.py" = ["PLR0913"]
 # DerivedArtifactReader.read_frame - @overload 模式下无法拆分参数
-"packages/data/src/ditto_data/services/derived/artifact_reader.py" = ["PLR0913"]
+"packages/features/src/ditto_features/services/derived/artifact_reader.py" = ["PLR0913"]
 # MarketService.list_bars - 便利方法，参数透传到 MarketBarsQuery
 "packages/data/src/ditto_data/services/market_service.py" = ["PLR0913"]
 # ResearchDatasetFacade.export() - 表名来自系统 dataset_id，非用户输入
 "packages/apps/src/ditto_apps/services/derived/research.py" = ["S608"]
 # ResearchQuery.export() - 表名来自内部枚举，非用户输入
-"packages/application/src/ditto_application/query/research.py" = ["S608"]
+"packages/application/src/ditto_application/queries/research.py" = ["S608"]
 # EngineLoop.__init__ - DI 注入 8 个依赖，参数数量不可避免
-"packages/engine/src/ditto_engine/backtest/engine.py" = ["PLR0913"]
+"packages/backtest/src/ditto_backtest/engine.py" = ["PLR0913"]
 # Protocol 属性用 ``...`` 省略体是标准惯例，D102 不适用
-"packages/engine/src/ditto_engine/portfolio/report_views.py" = ["D102"]
 "packages/portfolio/src/ditto_portfolio/rebalancing/report_views.py" = ["D102"]
 # Protocol 接口方法用 ``...`` 省略体是标准惯例，D102 不适用
 "packages/data/src/ditto_data/storage/base/protocols.py" = ["D102"]
@@ -265,7 +264,6 @@ reportImplicitStringConcatenation = "error"
 
 # 告诉 Pyright 源码根目录（解决 import 路径问题）
 extraPaths = [
-    "packages/engine/src",
     "packages/platform/src",
     "packages/kernel/src",
     "packages/data/src",
@@ -274,6 +272,8 @@ extraPaths = [
     "packages/strategy/src",
     "packages/portfolio/src",
     "packages/risk/src",
+    "packages/execution/src",
+    "packages/backtest/src",
     "packages/application/src",
     "packages/apps/src",
 ]
@@ -283,12 +283,12 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
+importmode = "importlib"
 testpaths = ["packages/*/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 pythonpath = [
-    "packages/engine/src",
     "packages/platform/src",
     "packages/kernel/src",
     "packages/data/src",
@@ -297,6 +297,8 @@ pythonpath = [
     "packages/strategy/src",
     "packages/portfolio/src",
     "packages/risk/src",
+    "packages/execution/src",
+    "packages/backtest/src",
     "packages/application/src",
     "packages/apps/src",
 ]
@@ -372,10 +374,18 @@ name = "cz_conventional_commits"
 version = "0.1.0"
 tag_format = "v$version"
 version_files = [
-    "packages/engine/src/ditto_engine/__init__.py:__version__",
-    "packages/platform/src/ditto_platform/__init__.py:__version__",
     "packages/kernel/src/ditto_kernel/__init__.py:__version__",
+    "packages/platform/src/ditto_platform/__init__.py:__version__",
     "packages/data/src/ditto_data/__init__.py:__version__",
+    "packages/features/src/ditto_features/__init__.py:__version__",
+    "packages/strategy/src/ditto_strategy/__init__.py:__version__",
+    "packages/portfolio/src/ditto_portfolio/__init__.py:__version__",
+    "packages/risk/src/ditto_risk/__init__.py:__version__",
+    "packages/execution/src/ditto_execution/__init__.py:__version__",
+    "packages/backtest/src/ditto_backtest/__init__.py:__version__",
+    "packages/analysis/src/ditto_analysis/__init__.py:__version__",
+    "packages/application/src/ditto_application/__init__.py:__version__",
+    "packages/apps/src/ditto_apps/__init__.py:__version__",
 ]
 update_changelog_on_bump = true
 changelog_incremental = true

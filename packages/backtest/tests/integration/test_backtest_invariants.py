@@ -47,6 +47,7 @@ from ditto_risk.pre_trade import (
     PreTradeContext,
 )
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.pipeline import StrategyPipeline
 
 _conftest_path = Path(__file__).parent / "conftest.py"
 _spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
@@ -1269,8 +1270,10 @@ class TestSuspendedE2E:
             strategy_id="test-suspended",
             strategy_run_id="run-suspended",
         )
-        pipeline = build_etf_rotation_pipeline(
-            ETFRotationConfig(top_k=3, cash_target=0.0),
+        pipeline = StrategyPipeline(
+            build_etf_rotation_pipeline(
+                ETFRotationConfig(top_k=3, cash_target=0.0),
+            )
         )
         fee_model = SimpleFeeModel()
         account = Account(
@@ -1408,8 +1411,10 @@ class TestExitOrderRules:
         )
 
         # top_k=2 — 只选前 2 名, 排除表现最差的 ETF-003
-        pipeline = build_etf_rotation_pipeline(
-            ETFRotationConfig(top_k=2, cash_target=0.0),
+        pipeline = StrategyPipeline(
+            build_etf_rotation_pipeline(
+                ETFRotationConfig(top_k=2, cash_target=0.0),
+            )
         )
         fee_model = SimpleFeeModel()
         brokerage = BacktestBrokerage(
@@ -1547,8 +1552,10 @@ class TestRuleRefsPreserved:
             fee_schedules=fee_schedules,
         )
 
-        pipeline = build_etf_rotation_pipeline(
-            ETFRotationConfig(top_k=3, cash_target=0.0),
+        pipeline = StrategyPipeline(
+            build_etf_rotation_pipeline(
+                ETFRotationConfig(top_k=3, cash_target=0.0),
+            )
         )
         fee_model = SimpleFeeModel()
         account = Account(

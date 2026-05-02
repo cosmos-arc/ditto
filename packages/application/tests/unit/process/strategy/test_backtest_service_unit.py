@@ -7,15 +7,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ditto_application.process.execution.backtest_process import (
+from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_engine.backtest.audit import ExecutionAuditCollector
-from ditto_engine.backtest.engine import EngineConfig, EngineLoop, EngineResult
-from ditto_engine.backtest.manifest import RunManifest, RunMode
-from ditto_engine.backtest.statistics import BacktestReport
+from ditto_backtest.audit import ExecutionAuditCollector
+from ditto_backtest.engine import EngineConfig, EngineLoop, EngineResult
+from ditto_backtest.manifest import RunManifest, RunMode
+from ditto_backtest.statistics import BacktestReport
 from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ class TestBacktestServiceRun:
     """测试 BacktestService 核心运行流程。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_returns_backtest_report(
         self,
         mock_build_report: MagicMock,
@@ -214,7 +214,7 @@ class TestBacktestServiceRun:
         mock_engine_run.assert_called_once()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_creates_audit_collector(
         self,
         mock_build_report: MagicMock,
@@ -233,7 +233,7 @@ class TestBacktestServiceRun:
         assert isinstance(collector, ExecutionAuditCollector)
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_builds_engine_config_from_service_config(
         self,
         mock_build_report: MagicMock,
@@ -268,7 +268,7 @@ class TestAuditPersistence:
     """测试审计日志持久化。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_persists_risk_log_when_audit_service_provided(
         self,
         mock_build_report: MagicMock,
@@ -287,7 +287,7 @@ class TestAuditPersistence:
         mock_audit.save_risk_log.assert_called_once()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_persists_pre_trade_log_when_audit_service_provided(
         self,
         mock_build_report: MagicMock,
@@ -306,7 +306,7 @@ class TestAuditPersistence:
         mock_audit.save_pre_trade_log.assert_called_once()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_no_audit_persistence_without_service(
         self,
         mock_build_report: MagicMock,
@@ -324,14 +324,14 @@ class TestAuditPersistence:
         # No error should occur — service should skip persistence gracefully
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_maps_portfolio_wide_id_to_asterisk(
         self,
         mock_build_report: MagicMock,
         mock_engine_run: MagicMock,
     ) -> None:
         """Portfolio-wide 风控记录在持久化时 instrument_id=None, scope='portfolio'。"""
-        from ditto_engine.backtest.audit import RiskScanRecord
+        from ditto_backtest.audit import RiskScanRecord
         from ditto_risk.post_trade import (
             RiskActionType,
             RiskScope,
@@ -374,12 +374,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_application.process.execution.backtest_process.write_backtest_artifacts",
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_persists_artifact_when_artifact_service_provided(
         self,
         mock_build_report: MagicMock,
@@ -417,7 +417,7 @@ class TestArtifactPersistence:
         assert call_arg.artifact_type == "backtest_report"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_no_artifact_persistence_without_service(
         self,
         mock_build_report: MagicMock,
@@ -436,10 +436,10 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_application.process.execution.backtest_process.write_backtest_artifacts",
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={},
     )
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_persist_artifact_empty_map_no_error(
         self,
         mock_build_report: MagicMock,
@@ -466,12 +466,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_application.process.execution.backtest_process.write_backtest_artifacts",
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/test/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_serializes_report_when_artifact_dir_provided(
         self,
         mock_build_report: MagicMock,
@@ -519,12 +519,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_application.process.execution.backtest_process.write_backtest_artifacts",
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_artifact_without_dir_file_path_resolved(
         self,
         mock_build_report: MagicMock,
@@ -566,12 +566,12 @@ class TestArtifactPersistence:
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
-        "ditto_application.process.execution.backtest_process.write_backtest_artifacts",
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/test/run-001/backtest_report.json"),
         },
     )
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_artifact_file_path_is_directory_not_file(
         self,
         mock_build_report: MagicMock,
@@ -615,19 +615,19 @@ class TestArtifactPersistence:
         # file_path 应该是目录路径，与读取侧 _build_path 兼容
         assert call_arg.file_path == "/tmp/test/run-001"
         # 验证目录路径可以用 _build_path 正确拼接文件名
-        from ditto_application.query.backtest import _build_path
+        from ditto_application.queries.backtest import _build_path
 
         report_path = _build_path(call_arg.file_path, "backtest_report.json")
         assert report_path == "/tmp/test/run-001/backtest_report.json"
 
     @patch(
-        "ditto_application.process.execution.backtest_process.write_backtest_artifacts",
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={
             "backtest_report": Path("/tmp/ditto/run-001/backtest_report.json"),
             "manifest": Path("/tmp/ditto/run-001/manifest.json"),
         },
     )
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_passes_engine_manifest_to_artifact_writer(
         self,
         mock_build_report: MagicMock,
@@ -687,7 +687,7 @@ class TestRunIdPropagation:
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_id_propagates_to_report(
         self,
         mock_build_report: MagicMock,
@@ -712,7 +712,7 @@ class TestRunIdPropagation:
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_empty_run_id_is_generated_before_engine_construction(
         self,
         mock_build_report: MagicMock,
@@ -736,7 +736,7 @@ class TestRunIdPropagation:
 
     @patch.object(EngineLoop, "__init__", return_value=None)
     @patch.object(EngineLoop, "run")
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_id_propagates_to_audit_service(
         self,
         mock_build_report: MagicMock,
@@ -771,7 +771,7 @@ class TestWithoutPersistence:
     """测试不提供持久化服务时的行为。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_without_persistence_services(
         self,
         mock_build_report: MagicMock,
@@ -818,7 +818,7 @@ class TestBuildFactorAwareBundleBuilder:
         date: str = "2026-04-10",
     ) -> MagicMock:
         """构建 StepContext mock (含 bars slice)."""
-        from ditto_engine.backtest.data_feed import Slice
+        from ditto_backtest.data_feed import Slice
 
         iid1 = InstrumentId(510050)
         iid2 = InstrumentId(159915)
@@ -840,7 +840,7 @@ class TestBuildFactorAwareBundleBuilder:
         mock_slice.bars = {iid1: bar1, iid2: bar2}
         mock_slice.benchmark_close = 3000.0
 
-        from ditto_engine.backtest.steps import StepContext
+        from ditto_backtest.steps import StepContext
 
         ctx = StepContext(date=date, is_rebalance_day=True)
         ctx.slice_ = mock_slice
@@ -849,7 +849,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_compiled_nonempty_returns_bundle_builder(self) -> None:
         """compiled_expressions 非空 → 返回可调用的 bundle_builder."""
         import polars as pl
-        from ditto_application.process.execution.factor_bridge import (
+        from ditto_application.processes.execution.factor_bridge import (
             CompiledExpressions,
         )
         from ditto_features.expression.contracts import (
@@ -921,7 +921,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_run_id_param_propagated_to_bundle(self) -> None:
         """传入的 run_id 参数应传递到生成的 StrategyInputBundle.run_id (F10)."""
         import polars as pl
-        from ditto_application.process.execution.factor_bridge import (
+        from ditto_application.processes.execution.factor_bridge import (
             CompiledExpressions,
         )
         from ditto_features.expression.contracts import (
@@ -997,7 +997,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_compilation_failure_propagates_error(self) -> None:
         """当 FactorBridge.compute_signals 因无效表达式抛异常时，builder 传播异常."""
         import polars as pl
-        from ditto_application.process.execution.factor_bridge import (
+        from ditto_application.processes.execution.factor_bridge import (
             CompiledExpressions,
         )
         from ditto_features.expression.contracts import (
@@ -1049,7 +1049,7 @@ class TestBuildFactorAwareBundleBuilder:
 
     def test_builder_raises_on_missing_slice(self) -> None:
         """StepContext.slice_ 为 None 时，builder 抛出 ValueError."""
-        from ditto_application.process.execution.factor_bridge import (
+        from ditto_application.processes.execution.factor_bridge import (
             CompiledExpressions,
         )
 
@@ -1067,7 +1067,7 @@ class TestBuildFactorAwareBundleBuilder:
         )
 
         # 构建 slice_ 为 None 的 StepContext
-        from ditto_engine.backtest.steps import StepContext
+        from ditto_backtest.steps import StepContext
 
         ctx = StepContext(date="2026-04-10", is_rebalance_day=True)
         ctx.slice_ = None
@@ -1078,7 +1078,7 @@ class TestBuildFactorAwareBundleBuilder:
     def test_lookback_days_from_compiled_max_lookback(self) -> None:
         """lookback_days 应取 compiled.expressions 中 analysis.lookback 的最大值."""
         import polars as pl
-        from ditto_application.process.execution.factor_bridge import (
+        from ditto_application.processes.execution.factor_bridge import (
             CompiledExpressions,
         )
         from ditto_features.expression.contracts import (
@@ -1170,7 +1170,7 @@ class TestRunServiceLifecycle:
     """测试 BacktestService 与 RunLifecycleService 的交互。"""
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_lifecycle_create_then_running_on_start(
         self,
         mock_build_report: MagicMock,
@@ -1208,7 +1208,7 @@ class TestRunServiceLifecycle:
         mock_run_svc.mark_running.assert_called_once_with("lifecycle-001")
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_run_creates_record_with_config_json_content(
         self,
         mock_build_report: MagicMock,
@@ -1251,7 +1251,7 @@ class TestRunServiceLifecycle:
         assert config_data["benchmark_id"] == "idx-000300"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_lifecycle_skips_create_run_when_record_exists(
         self,
         mock_build_report: MagicMock,
@@ -1288,7 +1288,7 @@ class TestRunServiceLifecycle:
         mock_run_svc.mark_running.assert_called_once_with("r4-existing-001")
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_lifecycle_mark_completed_on_success(
         self,
         mock_build_report: MagicMock,
@@ -1348,7 +1348,7 @@ class TestRunServiceLifecycle:
         mock_run_svc.mark_completed.assert_not_called()
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_lifecycle_not_called_when_run_service_none(
         self,
         mock_build_report: MagicMock,
@@ -1367,7 +1367,7 @@ class TestRunServiceLifecycle:
         assert result is fake_report
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
-    @patch("ditto_application.process.execution.backtest_process.build_report")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
     def test_lifecycle_parent_run_id_propagated(
         self,
         mock_build_report: MagicMock,

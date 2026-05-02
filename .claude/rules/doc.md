@@ -76,8 +76,8 @@ docs/plans/2025-01-15-sprint2-task1-dq-engine.md
 1-2 句话描述
 
 ## 涉及文件
-- `packages/engine/src/xxx.py`
-- `packages/engine/tests/test_xxx.py`
+- `packages/strategy/src/ditto_strategy/xxx.py`
+- `packages/strategy/tests/unit/test_xxx_unit.py`
 
 ## TDD 计划
 

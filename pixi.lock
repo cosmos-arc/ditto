@@ -299,8 +299,9 @@ environments:
       - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
+      - pypi: ./packages/backtest
       - pypi: ./packages/data
-      - pypi: ./packages/engine
+      - pypi: ./packages/execution
       - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
@@ -564,8 +565,9 @@ environments:
       - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
+      - pypi: ./packages/backtest
       - pypi: ./packages/data
-      - pypi: ./packages/engine
+      - pypi: ./packages/execution
       - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
@@ -973,8 +975,9 @@ environments:
       - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
+      - pypi: ./packages/backtest
       - pypi: ./packages/data
-      - pypi: ./packages/engine
+      - pypi: ./packages/execution
       - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
@@ -1341,8 +1344,9 @@ environments:
       - pypi: ./packages/analysis
       - pypi: ./packages/application
       - pypi: ./packages/apps
+      - pypi: ./packages/backtest
       - pypi: ./packages/data
-      - pypi: ./packages/engine
+      - pypi: ./packages/execution
       - pypi: ./packages/features
       - pypi: ./packages/kernel
       - pypi: ./packages/platform
@@ -2412,11 +2416,12 @@ packages:
 - pypi: ./packages/analysis
   name: ditto-analysis
   version: 0.1.0
-  sha256: 70c498dddf3ea4b03744d46ea258e5146c30311fe572c89fe97ba4e117f77c40
+  sha256: cfcc303953061379243fcbd2416cc53543ef10fe054d30313fda8124db260c3d
   requires_dist:
   - ditto-kernel
   - ditto-data
   - ditto-features
+  - ditto-platform
   - polars
   - numpy
   - orjson
@@ -2424,16 +2429,17 @@ packages:
 - pypi: ./packages/application
   name: ditto-application
   version: 0.1.0
-  sha256: 5b6333755cc3a51c32578dc73a4ab2f3bb53023443e9474f449cdabd3919b5ca
+  sha256: 3bbc831de794b5b03f673d6b8eaf3b7c44f5c8127ec8c35c4a47f11a8be1f447
   requires_dist:
   - ditto-kernel
   - ditto-data
-  - ditto-engine
   - ditto-features
   - ditto-analysis
   - ditto-strategy
   - ditto-portfolio
   - ditto-risk
+  - ditto-execution
+  - ditto-backtest
   - ditto-platform
   requires_python: '>=3.13'
 - pypi: ./packages/apps
@@ -2441,30 +2447,52 @@ packages:
   version: 0.1.0
   sha256: c20b437bab544da2b37022d2eb074f8c2ce5ddbd2cdede5675b0b31477a6c541
   requires_python: '>=3.13'
+- pypi: ./packages/backtest
+  name: ditto-backtest
+  version: 0.1.0
+  sha256: 5a61a4a36809e6afa2ef5437aab20f27f8de4be02b3a127d45f37542c962bec7
+  requires_dist:
+  - ditto-kernel
+  - ditto-data
+  - ditto-strategy
+  - ditto-portfolio
+  - ditto-risk
+  - ditto-execution
+  - polars
+  - numpy
+  - orjson
+  requires_python: '>=3.13'
 - pypi: ./packages/data
   name: ditto-data
   version: 0.1.0
-  sha256: 3fcc5cd740b283c0637bb504ebeed0208bbd8f67775697129158cac221da8f98
+  sha256: 0d8fbdea2f96cc2fd5fda74ec3cc8e0d4745efbf3212204b547b20ca8f91ba20
   requires_dist:
   - ditto-kernel
   - ditto-platform
+  - ditto-execution
+  - ditto-features
+  - ditto-strategy
+  - ditto-analysis
   requires_python: '>=3.13'
-- pypi: ./packages/engine
-  name: ditto-engine
+- pypi: ./packages/execution
+  name: ditto-execution
   version: 0.1.0
-  sha256: 776c9a904f3d57a0f9380ef538b56db8bd6c9dcde578e18714ee1ea86236230d
+  sha256: 1b8c6c5c6e8c1983b59c9f98855a8b674b818f3f0dd1e11a85b79fb58b0ee6b2
   requires_dist:
-  - ditto-data
   - ditto-kernel
   - ditto-portfolio
+  - ditto-risk
+  - ditto-platform
+  - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/features
   name: ditto-features
   version: 0.1.0
-  sha256: 409e8243d91e238d9215fd1446e31cdc996ee246fa1bd2aabd526fd1293a1200
+  sha256: 7849ee2936d6eee58347bc71a4061df94b7e1c05d21f585892e0774c896a46c0
   requires_dist:
   - ditto-kernel
   - ditto-data
+  - ditto-platform
   - polars
   - numpy
   - cachebox
@@ -2491,23 +2519,22 @@ packages:
 - pypi: ./packages/risk
   name: ditto-risk
   version: 0.1.0
-  sha256: d0d741233022f5ff0e9901b6b89d5fce6aa9964d6b69709f99e1a4cdccfc196e
+  sha256: d291182a9faaf89ff62615f785834549836530ddb16f1d979024b6efe1943eef
   requires_dist:
   - ditto-kernel
   - ditto-portfolio
-  - ditto-engine
   - polars
   - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/strategy
   name: ditto-strategy
   version: 0.1.0
-  sha256: 19345e26d6b7c8c699bc5cae4a8e030f7206206d7903baa9d8bb53fdd3d7ef48
+  sha256: d430a543c85676ff4b6acee2c01a5f0f93272da60aea322246e34cb2ddd2f002
   requires_dist:
   - ditto-kernel
   - ditto-data
+  - ditto-platform
   - ditto-features
-  - ditto-engine
   - ditto-portfolio
   - polars
   - orjson

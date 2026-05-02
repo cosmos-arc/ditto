@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_application.processes.materialization.cascade_orchestrator import (
     RepairBatchResult,
 )
 from ditto_apps.jobs.flows.materialization import (

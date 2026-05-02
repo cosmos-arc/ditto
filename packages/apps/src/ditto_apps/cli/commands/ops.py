@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 import typer
-from ditto_application.process.quality.patrol import QualityPatrolService
-from ditto_application.query.ingestion_status import IngestionStatusQueryFacade
+from ditto_application.processes.quality.patrol import QualityPatrolService
+from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_data.models.common import Dataset
 
 from ditto_apps.cli.utils.output import output_json_dicts

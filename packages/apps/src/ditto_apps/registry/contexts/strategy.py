@@ -3,11 +3,11 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from ditto_application.process.execution.strategy_run_process import StrategyFacade
-from ditto_data.services.strategy.strategy_catalog_service import (
+from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
-from ditto_data.services.strategy.strategy_run_service import (
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
     StrategyRunWriterProtocol,
 )

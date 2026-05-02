@@ -15,6 +15,7 @@ from uuid import uuid4
 import orjson
 import polars as pl
 from ditto_analysis.research.artifact_service import ResearchArtifactService
+from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.research.domain import (
     DatasetSnapshot,
     KnownAtPolicy,
@@ -24,7 +25,7 @@ from ditto_analysis.research.domain import (
     SpineSpec,
 )
 from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
-from ditto_data.services import DerivedArtifactReader, ResearchCatalogService
+from ditto_data.services import DerivedArtifactReader
 from ditto_data.services.metadata_service import MetadataService
 from ditto_features.services.derived import VersionResolutionStrategy
 from ditto_kernel.market import CalendarId, GrainId

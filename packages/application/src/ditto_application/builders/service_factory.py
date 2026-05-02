@@ -5,22 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.provider import DataProvider
-from ditto_data.services.audit import ExecutionAuditService
-from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.strategy.strategy_artifact_service import (
-    StrategyArtifactService,
-)
-from ditto_engine.backtest.data_feed import (
+from ditto_backtest.data_feed import (
     DataFeed,
     ProviderBackedDataFeed,
 )
-from ditto_engine.execution.brokerage import BacktestBrokerage, Brokerage
-from ditto_engine.execution.planner import ExecutionPlanner, SimpleExecutionPlanner
-from ditto_engine.execution.reality import AShareFeeModel, BrokerageModel, FeeModel
-from ditto_engine.execution.reality.slippage import FixedBpsSlippage, SlippageModel
+from ditto_data.provider import DataProvider
+from ditto_data.services.metadata_service import MetadataService
+from ditto_execution.audit import ExecutionAuditService
+from ditto_execution.brokerage import BacktestBrokerage, Brokerage
+from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
+from ditto_execution.reality import AShareFeeModel, BrokerageModel
+from ditto_execution.reality.slippage import FixedBpsSlippage, SlippageModel
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import FeeModel
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_risk.pre_trade import (
@@ -30,6 +27,10 @@ from ditto_risk.pre_trade import (
 )
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
 
 from ditto_application.builders._resolution import (
     resolve_benchmark,
@@ -37,18 +38,18 @@ from ditto_application.builders._resolution import (
 )
 from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
-from ditto_application.process.execution.backtest_process import (
+from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
-from ditto_application.process.execution.factor_bridge import CompiledExpressions
-from ditto_application.process.execution.strategy_input import StrategyInputAssembler
-from ditto_application.process.execution.strategy_run_process import (
+from ditto_application.processes.execution.factor_bridge import CompiledExpressions
+from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
+from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunService,
     StrategyRunServiceConfig,
 )
-from ditto_application.process.execution.strategy_types import RunLifecycleService
+from ditto_application.processes.execution.strategy_types import RunLifecycleService
 
 __all__ = [
     "BacktestRuntimeBuilder",

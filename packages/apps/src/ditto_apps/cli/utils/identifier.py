@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typer
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 
 
 def resolve_identifier_for_cli(

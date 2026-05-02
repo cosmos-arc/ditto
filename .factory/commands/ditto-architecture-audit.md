@@ -8,8 +8,7 @@ implementation: .claude/commands/architecture-audit.py
 
 ## 审计范围
 
-- `packages/` - kernel、data、infra、engine、analytics、app
-- `interfaces/` - API/CLI/Jobs + DI Composition Root
+- `packages/` - kernel、platform、data、features、strategy、portfolio、risk、execution、backtest、analysis、application、apps
 - `tests/` - 单元测试、集成测试、fixtures
 
 ## 执行步骤

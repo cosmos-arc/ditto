@@ -4,11 +4,11 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from ditto_application.query.capital import CapitalQueryFacade
-from ditto_application.query.fundamental import FundamentalQueryFacade
-from ditto_application.query.macro import MacroQueryFacade
-from ditto_application.query.market import MarketQueryFacade
-from ditto_application.query.metadata import MetadataQueryFacade
+from ditto_application.queries.capital import CapitalQueryFacade
+from ditto_application.queries.fundamental import FundamentalQueryFacade
+from ditto_application.queries.macro import MacroQueryFacade
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService

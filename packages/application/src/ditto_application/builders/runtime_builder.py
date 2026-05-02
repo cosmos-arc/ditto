@@ -6,8 +6,21 @@ from dataclasses import dataclass, replace
 
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
+from ditto_portfolio.rebalancing.allocation import (
+    AllocationStage,
+    EqualWeightAllocator,
+    InverseVolAllocator,
+    ScoreWeightAllocator,
+)
+from ditto_portfolio.rebalancing.constraints import (
+    ConstraintChecker,
+    ConstraintStage,
+    MaxPositionsConstraint,
+    MaxWeightConstraint,
+)
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod
 from ditto_strategy.alpha.pipeline import StrategyPipeline
+from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.specs import (
     ConstraintSpec,
     CostModelSpec,
@@ -342,6 +355,12 @@ class StrategyRuntimeBuilder:
 
     def _build_pipeline(self, spec: StrategySpec) -> StrategyPipeline:
         """根据模板类型构造对应的 ``StrategyPipeline``。"""
+        alpha_stages = self._build_alpha_stages(spec)
+        portfolio_stages = self._build_portfolio_stages(spec)
+        return StrategyPipeline([*alpha_stages, *portfolio_stages])
+
+    def _build_alpha_stages(self, spec: StrategySpec) -> list[DecisionStage]:
+        """根据模板类型构建 alpha pipeline stages。"""
         if spec.template == "etf_rotation":
             return build_etf_rotation_pipeline(self._build_etf_rotation_config(spec))
         if spec.template == "etf_trend_swing":
@@ -359,6 +378,49 @@ class StrategyRuntimeBuilder:
 
         msg = f"不支持的策略模板: {spec.template}"
         raise ValueError(msg)
+
+    def _build_portfolio_stages(self, spec: StrategySpec) -> list[DecisionStage]:
+        """从 StrategySpec 构建 allocation + constraint stages。"""
+        params = spec.params
+        stages: list[DecisionStage] = []
+
+        # Allocation — stock_sector_rotation 使用内置 SectorWeightStage，跳过
+        if spec.template != "stock_sector_rotation":
+            method = (
+                read_optional_str(params.get("allocation_method")) or "equal_weight"
+            )
+            cash_target = read_float(
+                params.get("cash_target", 0.0),
+                field_name="params.cash_target",
+            )
+            if method == "score_weight":
+                allocator = ScoreWeightAllocator(cash_target=cash_target)
+            elif method == "inverse_vol":
+                allocator = InverseVolAllocator(cash_target=cash_target)
+            else:
+                allocator = EqualWeightAllocator(cash_target=cash_target)
+            stages.append(AllocationStage(allocator=allocator))
+
+        # Constraints
+        constraint_list: list[MaxWeightConstraint | MaxPositionsConstraint] = []
+        max_weight = read_optional_float(
+            params.get("max_weight"),
+            field_name="params.max_weight",
+        )
+        if max_weight is not None:
+            constraint_list.append(MaxWeightConstraint(max_weight=max_weight))
+        max_positions = read_optional_int(
+            params.get("max_positions"),
+            field_name="params.max_positions",
+        )
+        if max_positions is not None:
+            constraint_list.append(
+                MaxPositionsConstraint(max_positions=max_positions),
+            )
+        if constraint_list:
+            stages.append(ConstraintStage(checker=ConstraintChecker(constraint_list)))
+
+        return stages
 
     def _build_etf_rotation_config(self, spec: StrategySpec) -> ETFRotationConfig:
         params = spec.params

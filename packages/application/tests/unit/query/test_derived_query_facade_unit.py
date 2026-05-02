@@ -6,7 +6,7 @@ from datetime import date
 from unittest.mock import MagicMock
 
 import polars as pl
-from ditto_application.query.derived import (
+from ditto_application.queries.derived import (
     DerivedCompareResult,
     DerivedLatestResult,
     DerivedQueryFacade,

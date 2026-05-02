@@ -9,14 +9,25 @@
 
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+
 import pytest
 from ditto_platform.foundation import Metrics, ObservabilityConfig, reset_for_testing
 from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.observability.metrics import configure_metrics
-from opentelemetry.sdk.metrics import Counter as SDKCounter
-from opentelemetry.sdk.metrics import Histogram as SDKHistogram
+from ditto_platform.foundation.observability.metrics import (
+    SafeCounter,
+    SafeHistogram,
+    configure_metrics,
+)
 
-from .conftest import MetricReaderWrapper, wait_for_export
+_conftest_path = Path(__file__).parent / "conftest.py"
+_spec = importlib.util.spec_from_file_location("_conftest", _conftest_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+MetricReaderWrapper = _mod.MetricReaderWrapper
+wait_for_export = _mod.wait_for_export
 
 
 @pytest.mark.integration
@@ -933,9 +944,9 @@ class TestMetricDefinitions:
         # [REVIEW]
 
         # data_update_duration 应该是 Histogram
-        assert isinstance(Metrics.data_update_duration, SDKHistogram)
+        assert isinstance(Metrics.data_update_duration, SafeHistogram)
         # data_records 应该是 Counter
-        assert isinstance(Metrics.data_records, SDKCounter)
+        assert isinstance(Metrics.data_records, SafeCounter)
         # data_freshness 应该是 SafeGauge (有 set 方法)
         assert hasattr(Metrics.data_freshness, "set")
 

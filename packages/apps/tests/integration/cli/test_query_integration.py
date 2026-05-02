@@ -12,9 +12,8 @@ from pathlib import Path
 
 import pytest
 from ditto_apps.cli.main import app
+from helpers import assert_cli_result
 from typer.testing import CliRunner
-
-from .helpers import assert_cli_result
 
 runner = CliRunner()
 

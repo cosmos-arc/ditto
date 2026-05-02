@@ -3,16 +3,16 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from ditto_application.process.materialization.cascade_orchestrator import (
+from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
-from ditto_application.process.materialization.orchestrator import (
+from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
-from ditto_application.process.materialization.publication_facade import (
+from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_application.query.research import ResearchDatasetFacade
+from ditto_application.queries.research import ResearchDatasetFacade
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.bundle import MaterializationBundle

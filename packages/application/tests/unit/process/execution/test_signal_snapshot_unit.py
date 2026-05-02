@@ -49,7 +49,7 @@ class TestGenerateIntents:
     def test_empty_positions_with_target_generates_all_buy(self) -> None:
         """空持仓 + 有目标 -> 全部生成 BUY intents."""
         from ditto_application.execution_dto import TradeIntent
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -78,7 +78,7 @@ class TestGenerateIntents:
 
     def test_holdings_with_no_target_generates_all_sell(self) -> None:
         """有持仓 + 无目标（空 target）-> 全部生成 SELL intents."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -100,7 +100,7 @@ class TestGenerateIntents:
 
     def test_mixed_positions_partial_buy_sell(self) -> None:
         """混合持仓 -> 生成部分 BUY/SELL intents."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -137,7 +137,7 @@ class TestGenerateIntents:
 
     def test_below_threshold_no_intent(self) -> None:
         """低于阈值 -> 不生成 intent."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -159,7 +159,7 @@ class TestGenerateIntents:
 
     def test_exactly_at_threshold_no_intent(self) -> None:
         """delta 恰好等于阈值 -> 不生成 intent（严格大于才触发）."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -181,7 +181,7 @@ class TestGenerateIntents:
 
     def test_just_above_threshold_generates_intent(self) -> None:
         """delta 略大于阈值 -> 生成 intent."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -204,7 +204,7 @@ class TestGenerateIntents:
 
     def test_default_threshold_is_0_01(self) -> None:
         """默认阈值 0.01 — delta = 0.005 不触发, delta = 0.02 触发."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -231,7 +231,7 @@ class TestGenerateIntents:
 
     def test_no_change_no_intents(self) -> None:
         """目标与持仓完全一致 -> 无 intent."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -261,7 +261,7 @@ class TestSignalDelivery:
 
     def test_calls_send_signal_with_intents(self) -> None:
         """生成 intents 后调用 signal_delivery.send_signal()."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -283,7 +283,7 @@ class TestSignalDelivery:
 
     def test_no_delivery_does_not_raise(self) -> None:
         """无推送器时不抛异常（graceful degradation）."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -301,7 +301,7 @@ class TestSignalDelivery:
 
     def test_delivery_not_called_when_no_intents(self) -> None:
         """无 intents 时不调用 send_signal."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -336,7 +336,7 @@ class TestTradeIntentFields:
 
     def test_buy_intent_fields(self) -> None:
         """BUY intent: target_weight > current_weight, delta > 0."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -362,7 +362,7 @@ class TestTradeIntentFields:
 
     def test_sell_intent_fields(self) -> None:
         """SELL intent: target_weight < current_weight, delta < 0."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -386,7 +386,7 @@ class TestTradeIntentFields:
 
     def test_intent_ids_are_unique(self) -> None:
         """每个 intent 的 intent_id 唯一."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 
@@ -405,7 +405,7 @@ class TestTradeIntentFields:
 
     def test_liquidation_intent_target_weight_zero(self) -> None:
         """清仓 intent: target_weight = 0.0."""
-        from ditto_application.process.execution.signal_snapshot import (
+        from ditto_application.processes.execution.signal_snapshot import (
             SignalSnapshotProcess,
         )
 

@@ -1,28 +1,14 @@
 """
-etf_rotation 策略模板 -- ETF 动量轮动的标准 Pipeline.
+etf_rotation 策略模板 -- ETF 动量轮动的 alpha stages.
 
 标准流程:
-  Signal -> Score -> RiskLockFilter -> Select -> Allocate -> Constraint
-  (可选: Allocate 之后插入 RegimeAwareAllocationStage)
+  Signal -> Score -> RiskLockFilter -> Select
+  (可选: RegimeScoringStep -> RegimeAwareAllocationStage)
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-
-from ditto_portfolio.rebalancing.allocation import (
-    AllocationStage,
-    EqualWeightAllocator,
-    ScoreWeightAllocator,
-    WeightAllocator,
-)
-from ditto_portfolio.rebalancing.constraints import (
-    Constraint,
-    ConstraintChecker,
-    ConstraintStage,
-    MaxPositionsConstraint,
-    MaxWeightConstraint,
-)
 
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.regime import RegimeConfig
@@ -33,7 +19,6 @@ from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
-from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.protocols import DecisionStage
 
 __all__ = ["ETFRotationConfig", "build_etf_rotation_pipeline"]
@@ -70,18 +55,20 @@ class ETFRotationConfig:
 
 def build_etf_rotation_pipeline(
     config: ETFRotationConfig,
-) -> StrategyPipeline:
+) -> list[DecisionStage]:
     """
-    组装 etf_rotation 的标准 Pipeline.
+    组装 etf_rotation 的 alpha stages.
 
     标准流程:
-      Signal -> Score -> RiskLockFilter -> Select -> Allocate -> [Regime] -> Constraint
+      Signal -> Score -> RiskLockFilter -> Select -> [Regime]
+
+    分配与约束由 application 层根据 config 参数独立配置。
 
     Args:
         config: 运行时配置。
 
     Returns:
-        配置完成的 StrategyPipeline。
+        alpha DecisionStage 列表。
 
     """
     stages: list[DecisionStage] = [
@@ -91,33 +78,9 @@ def build_etf_rotation_pipeline(
         SelectionStage(top_k=config.top_k),
     ]
 
-    # Allocator
-    if config.allocation_method == "score_weight":
-        allocator: WeightAllocator = ScoreWeightAllocator(
-            cash_target=config.cash_target,
-        )
-    else:
-        allocator = EqualWeightAllocator(cash_target=config.cash_target)
-    stages.append(AllocationStage(allocator=allocator))
-
-    # Regime-aware allocation (optional, post-allocate)
+    # Regime-aware allocation (optional, strategy-internal)
     if config.regime_config is not None:
         stages.append(RegimeScoringStep(config.regime_config))
         stages.append(RegimeAwareAllocationStage())
 
-    # Constraints
-    if config.max_weight is not None or config.max_positions is not None:
-        constraint_list: list[Constraint] = []
-        if config.max_weight is not None:
-            constraint_list.append(
-                MaxWeightConstraint(max_weight=config.max_weight),
-            )
-        if config.max_positions is not None:
-            constraint_list.append(
-                MaxPositionsConstraint(max_positions=config.max_positions),
-            )
-        stages.append(
-            ConstraintStage(checker=ConstraintChecker(constraint_list)),
-        )
-
-    return StrategyPipeline(stages)
+    return stages

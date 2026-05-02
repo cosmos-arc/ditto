@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from ditto_data.models.trade import FillRecord, PositionRecord, SignalRecord
+from ditto_execution.models import FillRecord, PositionRecord, SignalRecord
 
 __all__ = [
     "ActualPositionSnapshot",

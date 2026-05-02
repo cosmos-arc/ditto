@@ -3,7 +3,7 @@
 from datetime import date
 
 import pytest
-from ditto_application.process.execution.strategy_types import (
+from ditto_application.processes.execution.strategy_types import (
     BacktestTrigger,
     StrategySliceTrigger,
 )
