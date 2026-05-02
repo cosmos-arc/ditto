@@ -7,7 +7,6 @@ dependencies = [
     "ditto-data",
     "ditto-platform",
     "ditto-features",
-    "ditto-portfolio",
     "polars",
     "orjson",
 ]

@@ -15,7 +15,7 @@ Strategy 层是 **策略定义与信号生成** 能力包，负责 alpha pipelin
 ditto_strategy → ditto_kernel ✅
 ditto_strategy → ditto_data ✅ (DataProvider Protocol)
 ditto_strategy → ditto_features ✅
-ditto_strategy → ditto_portfolio ✅ （策略模板作为完整交易配方，需要引用分配器和约束类型）
+ditto_strategy 禁止 → ditto_portfolio ❌
 ditto_strategy 禁止 → ditto_apps ❌
 ditto_strategy 禁止 → ditto_application ❌
 ditto_strategy 禁止 → ditto_execution ❌

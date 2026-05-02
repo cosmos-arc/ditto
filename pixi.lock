@@ -2529,13 +2529,12 @@ packages:
 - pypi: ./packages/strategy
   name: ditto-strategy
   version: 0.1.0
-  sha256: d430a543c85676ff4b6acee2c01a5f0f93272da60aea322246e34cb2ddd2f002
+  sha256: 3be4f020682b337b3935ebaee30d458d1c45ca4869e7c0898aed1ec9f3d702e2
   requires_dist:
   - ditto-kernel
   - ditto-data
   - ditto-platform
   - ditto-features
-  - ditto-portfolio
   - polars
   - orjson
   requires_python: '>=3.13'

@@ -305,12 +305,8 @@ forbidden_modules =
     ditto_execution.**
     ditto_backtest.**
 ignore_imports =
-    # Analysis 引用 data.errors 是合法的：DerivedNotImplementedError 等共享错误类型
-    ditto_analysis.** -> ditto_data.errors
     # Analysis 引用 data.storage 是合法的：moved-from-data 的 research 存储
     ditto_analysis.** -> ditto_data.storage.sqlite_client
-    # Analysis 引用 features.errors 是合法的：AnalyticsError 基类定义在 features.errors 中
-    ditto_analysis.** -> ditto_features.errors
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════

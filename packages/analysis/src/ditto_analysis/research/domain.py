@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 import polars as pl
-from ditto_data.errors import (
-    DerivedNotImplementedError,
-    DerivedValidationError,
-)
-from ditto_features.errors import AnalyticsError
 from ditto_kernel.market import CalendarId, GrainId
+
+from ditto_analysis.errors import (
+    AnalysisError,
+    ResearchDatasetError,
+)
 
 __all__ = [
     "DatasetSnapshot",
@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-class LateArrivalError(AnalyticsError):
+class LateArrivalError(AnalysisError):
     """Raised when late-arriving data is detected with REQUIRE_REBUILD policy."""
 
 
@@ -61,19 +61,16 @@ class SpineSpec:
     def validate_spec(self) -> None:
         """Validate current v1 boundaries."""
         if self.calendar != "cn_stock":
-            raise DerivedNotImplementedError(
-                feature="research spine v1 仅支持 calendar='cn_stock'",
-                derived_id=self.spine_id,
+            raise ResearchDatasetError(
+                f"research spine v1 仅支持 calendar='cn_stock': {self.spine_id}",
             )
         if self.grain != "1d":
-            raise DerivedNotImplementedError(
-                feature="research spine v1 仅支持 grain='1d'",
-                derived_id=self.spine_id,
+            raise ResearchDatasetError(
+                f"research spine v1 仅支持 grain='1d': {self.spine_id}",
             )
         if self.entity_key != "instrument_id":
-            raise DerivedNotImplementedError(
-                feature="research spine v1 仅支持 entity_key='instrument_id'",
-                derived_id=self.spine_id,
+            raise ResearchDatasetError(
+                f"research spine v1 仅支持 entity_key='instrument_id': {self.spine_id}",
             )
 
 
@@ -93,21 +90,16 @@ class ResearchDatasetSpec:
     def validate_spec(self) -> None:
         """Validate current v1 boundaries."""
         if not self.derived_ids:
-            raise DerivedValidationError(
-                field="derived_ids",
-                value="()",
-                reason="research dataset must include at least one derived_id",
-                derived_id=self.dataset_id,
+            raise ResearchDatasetError(
+                f"research dataset needs >=1 derived_id: {self.dataset_id}",
             )
         if self.join_policy != "left_preserving_pit":
-            raise DerivedNotImplementedError(
-                feature="research dataset v1 仅支持 join_policy='left_preserving_pit'",
-                derived_id=self.dataset_id,
+            raise ResearchDatasetError(
+                f"v1 仅支持 join_policy='left_preserving_pit': {self.dataset_id}",
             )
         if any(derived_id.startswith("market.") for derived_id in self.derived_ids):
-            raise DerivedNotImplementedError(
-                feature="research dataset v1 仅支持 derived ids 作为输入",
-                derived_id=self.dataset_id,
+            raise ResearchDatasetError(
+                f"v1 仅支持 derived ids 作为输入: {self.dataset_id}",
             )
 
 

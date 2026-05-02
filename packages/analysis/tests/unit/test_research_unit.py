@@ -7,6 +7,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_analysis.errors import ResearchDatasetError
 from ditto_analysis.research.domain import (
     DatasetSnapshot,
     KnownAtPolicy,
@@ -18,7 +19,6 @@ from ditto_analysis.research.domain import (
     _apply_late_arrival_policy,
     _detect_late_arrivals,
 )
-from ditto_data.errors import DerivedNotImplementedError, DerivedValidationError
 
 
 class TestSpineSpec:
@@ -60,7 +60,7 @@ class TestSpineSpec:
             calendar="us_stock",  # type: ignore[reportArgumentType]
         )
 
-        with pytest.raises(DerivedNotImplementedError, match="cn_stock"):
+        with pytest.raises(ResearchDatasetError, match="cn_stock"):
             spec.validate_spec()
 
     def test_validate_spec_rejects_non_1d_grain(self) -> None:
@@ -71,7 +71,7 @@ class TestSpineSpec:
             grain="1m",
         )
 
-        with pytest.raises(DerivedNotImplementedError, match="grain"):
+        with pytest.raises(ResearchDatasetError, match="grain"):
             spec.validate_spec()
 
     def test_validate_spec_rejects_non_instrument_id_entity_key(self) -> None:
@@ -82,7 +82,7 @@ class TestSpineSpec:
             entity_key="sector_id",
         )
 
-        with pytest.raises(DerivedNotImplementedError, match="entity_key"):
+        with pytest.raises(ResearchDatasetError, match="entity_key"):
             spec.validate_spec()
 
 
@@ -118,7 +118,7 @@ class TestResearchDatasetSpec:
             derived_ids=("market.close",),
         )
 
-        with pytest.raises(DerivedNotImplementedError, match="derived"):
+        with pytest.raises(ResearchDatasetError, match="derived"):
             spec.validate_spec()
 
     def test_late_arrival_policy_defaults_to_require_rebuild(self) -> None:
@@ -139,7 +139,7 @@ class TestResearchDatasetSpec:
             derived_ids=(),
         )
 
-        with pytest.raises(DerivedValidationError, match="derived_id"):
+        with pytest.raises(ResearchDatasetError, match="derived_id"):
             spec.validate_spec()
 
     def test_validate_spec_rejects_non_left_preserving_pit_join(self) -> None:
@@ -151,7 +151,7 @@ class TestResearchDatasetSpec:
             join_policy="inner",
         )
 
-        with pytest.raises(DerivedNotImplementedError, match="join_policy"):
+        with pytest.raises(ResearchDatasetError, match="join_policy"):
             spec.validate_spec()
 
     def test_validate_spec_passes_with_valid_derived_ids(self) -> None:
