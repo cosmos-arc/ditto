@@ -43,7 +43,6 @@ from ditto_data.di import (
     MetadataProvider,
     QualityProvider,
     RuntimeProvider,
-    TradeProvider,
 )
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services.market_service import MarketService
@@ -293,6 +292,7 @@ class TestAppProviderIntegration:
     def app_container(self, monkeypatch, tmp_path):
         """构建包含所有层级的完整测试容器."""
         from ditto_analysis.di import AnalysisStorageProvider
+        from ditto_execution.di import ExecutionStorageProvider
         from ditto_features.di import FeaturesStorageProvider
 
         monkeypatch.setenv("ENVIRONMENT", "testing")
@@ -312,7 +312,7 @@ class TestAppProviderIntegration:
             MacroProvider(),
             FeaturesStorageProvider(),
             AnalysisStorageProvider(),
-            TradeProvider(),
+            ExecutionStorageProvider(),
             _notification_provider(),
             *get_app_providers(),
             _runtime_deps_provider(),

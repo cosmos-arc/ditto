@@ -23,7 +23,6 @@ from ditto_data.di import (
     MetadataProvider,
     QualityProvider,
     RuntimeProvider,
-    TradeProvider,
 )
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
@@ -89,10 +88,9 @@ def _make_full_container():
         MacroProvider(),
         FeaturesStorageProvider(),
         AnalysisStorageProvider(),
-        TradeProvider(),
+        ExecutionStorageProvider(),
         NotificationProvider(),
         StrategyStorageProvider(),
-        ExecutionStorageProvider(),
         *get_app_providers(),
     )
 

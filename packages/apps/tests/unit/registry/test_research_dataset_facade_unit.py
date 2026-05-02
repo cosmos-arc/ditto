@@ -22,7 +22,6 @@ from ditto_data.di import (
     MarketProvider,
     MetadataProvider,
     RuntimeProvider,
-    TradeProvider,
 )
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
@@ -60,6 +59,7 @@ def _sources_provider() -> Provider:
 def _make_container(*, monkeypatch, tmp_path: Path):
     from ditto_analysis.di import AnalysisStorageProvider
     from ditto_application.providers_market import AppMarketQueryProvider
+    from ditto_execution.di import ExecutionStorageProvider
     from ditto_features.di import FeaturesStorageProvider
 
     monkeypatch.setenv("ENVIRONMENT", "testing")
@@ -75,7 +75,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
         AnalysisStorageProvider(),
         FundamentalProvider(),
         MacroProvider(),
-        TradeProvider(),
+        ExecutionStorageProvider(),
         AppMarketQueryProvider(),
     )
 

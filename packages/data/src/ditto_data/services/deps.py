@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
-
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
 )
@@ -260,8 +258,6 @@ class CapitalWriters:
 __all__ = [
     "CapitalReaders",
     "CapitalWriters",
-    "ExecutionReaders",
-    "ExecutionWriters",
     "FundamentalReaders",
     "FundamentalWriters",
     "MarketReaders",

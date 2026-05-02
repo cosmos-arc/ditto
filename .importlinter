@@ -53,8 +53,7 @@ layers =
     ditto_data
     ditto_platform
 ignore_imports =
-    # Data DI bridges (trade → execution, runtime → features/analysis)
-    ditto_data.di.trade -> ditto_execution.**
+    # Data DI bridges (runtime → features/analysis)
     ditto_data.di.runtime -> ditto_features.**
     ditto_data.di.runtime -> ditto_analysis.**
     ditto_data.services -> ditto_features.**
@@ -126,12 +125,9 @@ forbidden_modules =
     ditto_risk.**
     ditto_execution.**
     ditto_backtest.**
-# Data DI 桥接：data/di/trade.py 导入 execution storage（合法桥接）
-# data/di/runtime.py 导入 features.services + analysis.services（文件路径桥接）
+# Data DI 桥接：data/di/runtime.py 导入 features.services + analysis.services（文件路径桥接）
 # data/providers 导入 features.services（DataProvider 桥接）
 ignore_imports =
-    ditto_data.di.trade -> ditto_execution.**
-    ditto_data.services.deps -> ditto_execution.storage.deps
     ditto_data.di.runtime -> ditto_features.**
     ditto_data.di.runtime -> ditto_analysis.**
     ditto_data.providers.** -> ditto_features.**

@@ -13,7 +13,6 @@ from .metadata import MetadataProvider
 from .quality import QualityProvider
 from .runtime import RuntimeProvider
 from .sources import SourcesProvider
-from .trade import TradeProvider
 
 __all__ = ["get_data_providers"]
 
@@ -22,7 +21,7 @@ def get_data_providers() -> list[Provider]:
     """
     返回 Data 层的所有 Provider.
 
-    包含 Data 层的 10 个 Provider。
+    包含 Data 层的 9 个 Provider。
     能力包（strategy/features/analysis/execution）的存储 DI
     由各自包的 di/ 模块提供。
     """
@@ -36,5 +35,4 @@ def get_data_providers() -> list[Provider]:
         MacroProvider(),
         GoldenDatasetProvider(),
         QualityProvider(),
-        TradeProvider(),
     ]
