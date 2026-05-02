@@ -1,13 +1,15 @@
-"""Tests for research dataset models."""
+"""Tests for research domain models (domain.py)."""
 
 from __future__ import annotations
 
+import warnings
 from datetime import date
 
 import polars as pl
 import pytest
 from ditto_analysis.research.domain import (
     DatasetSnapshot,
+    KnownAtPolicy,
     LateArrivalError,
     LateArrivalPolicy,
     ResearchDatasetSpec,
@@ -16,7 +18,7 @@ from ditto_analysis.research.domain import (
     _apply_late_arrival_policy,
     _detect_late_arrivals,
 )
-from ditto_data.errors import DerivedNotImplementedError
+from ditto_data.errors import DerivedNotImplementedError, DerivedValidationError
 
 
 class TestSpineSpec:
@@ -55,10 +57,32 @@ class TestSpineSpec:
         spec = SpineSpec(
             spine_id="spine.us_stock.default",
             universe_id="universe.us.all",
-            calendar="us_stock",
+            calendar="us_stock",  # type: ignore[reportArgumentType]
         )
 
         with pytest.raises(DerivedNotImplementedError, match="cn_stock"):
+            spec.validate_spec()
+
+    def test_validate_spec_rejects_non_1d_grain(self) -> None:
+        """V1 spine spec should reject grain != '1d'."""
+        spec = SpineSpec(
+            spine_id="spine.cn_stock.min",
+            universe_id="universe.cn.all",
+            grain="1m",
+        )
+
+        with pytest.raises(DerivedNotImplementedError, match="grain"):
+            spec.validate_spec()
+
+    def test_validate_spec_rejects_non_instrument_id_entity_key(self) -> None:
+        """V1 spine spec should reject entity_key != 'instrument_id'."""
+        spec = SpineSpec(
+            spine_id="spine.cn_stock.by_sector",
+            universe_id="universe.cn.all",
+            entity_key="sector_id",
+        )
+
+        with pytest.raises(DerivedNotImplementedError, match="entity_key"):
             spec.validate_spec()
 
 
@@ -106,6 +130,39 @@ class TestResearchDatasetSpec:
         )
 
         assert spec.late_arrival_policy == LateArrivalPolicy.REQUIRE_REBUILD
+
+    def test_validate_spec_rejects_empty_derived_ids(self) -> None:
+        """Research dataset spec should reject empty derived_ids."""
+        spec = ResearchDatasetSpec(
+            dataset_id="research.empty",
+            spine_id="spine.cn_stock.default",
+            derived_ids=(),
+        )
+
+        with pytest.raises(DerivedValidationError, match="derived_id"):
+            spec.validate_spec()
+
+    def test_validate_spec_rejects_non_left_preserving_pit_join(self) -> None:
+        """Research dataset spec should reject unsupported join_policy."""
+        spec = ResearchDatasetSpec(
+            dataset_id="research.inner",
+            spine_id="spine.cn_stock.default",
+            derived_ids=("factor.alpha",),
+            join_policy="inner",
+        )
+
+        with pytest.raises(DerivedNotImplementedError, match="join_policy"):
+            spec.validate_spec()
+
+    def test_validate_spec_passes_with_valid_derived_ids(self) -> None:
+        """Valid derived_ids should pass validation."""
+        spec = ResearchDatasetSpec(
+            dataset_id="research.valid",
+            spine_id="spine.cn_stock.default",
+            derived_ids=("factor.alpha", "factor.beta"),
+        )
+
+        spec.validate_spec()
 
 
 class TestSpineSnapshot:
@@ -158,7 +215,7 @@ class TestDatasetSnapshot:
             row_count=2,
             data_path="derived/research/datasets/research.alpha_beta/snapshots/rds-001/data.parquet",
             manifest_hash="manifest-001",
-            known_at_policy="sample_time",
+            known_at_policy=KnownAtPolicy.SAMPLE_TIME,
             effective_cutoff=None,
         )
 
@@ -177,7 +234,7 @@ class TestDatasetSnapshot:
             row_count=2,
             data_path="derived/research/datasets/research.alpha_beta/snapshots/rds-001/data.parquet",
             manifest_hash="manifest-001",
-            known_at_policy="sample_time",
+            known_at_policy=KnownAtPolicy.SAMPLE_TIME,
             effective_cutoff=None,
         )
 
@@ -197,7 +254,7 @@ class TestDatasetSnapshot:
             row_count=2,
             data_path="derived/research/datasets/research.alpha_beta/snapshots/rds-001/data.parquet",
             manifest_hash="manifest-001",
-            known_at_policy="sample_time",
+            known_at_policy=KnownAtPolicy.SAMPLE_TIME,
             effective_cutoff=None,
         )
 
@@ -216,7 +273,7 @@ class TestDatasetSnapshot:
             row_count=2,
             data_path="derived/research/datasets/research.alpha_beta/snapshots/rds-001/data.parquet",
             manifest_hash="manifest-001",
-            known_at_policy="sample_time",
+            known_at_policy=KnownAtPolicy.SAMPLE_TIME,
             effective_cutoff=None,
             resolved_versions={"factor.alpha": 2, "factor.beta": 1},
             resolved_inputs=(
@@ -243,6 +300,32 @@ class TestDatasetSnapshot:
             "market:20260311-001",
         )
         assert snapshot.builder_version == "unified-derived-research-v1"
+
+
+class TestKnownAtPolicy:
+    """Tests for KnownAtPolicy enum."""
+
+    def test_sample_time_value(self) -> None:
+        assert KnownAtPolicy.SAMPLE_TIME == "sample_time"
+
+    def test_explicit_cutoff_value(self) -> None:
+        assert KnownAtPolicy.EXPLICIT_CUTOFF == "explicit_cutoff"
+
+
+class TestLateArrivalPolicy:
+    """Tests for LateArrivalPolicy enum."""
+
+    def test_exclude_value(self) -> None:
+        assert (
+            LateArrivalPolicy.EXCLUDE_FROM_CURRENT_SNAPSHOT
+            == "exclude_from_current_snapshot"
+        )
+
+    def test_shift_value(self) -> None:
+        assert LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT == "shift_to_next_snapshot"
+
+    def test_require_rebuild_value(self) -> None:
+        assert LateArrivalPolicy.REQUIRE_REBUILD == "require_rebuild"
 
 
 # ============ Late Arrival Detection & Policy Tests ============
@@ -281,9 +364,6 @@ class TestDetectLateArrivals:
 
         result = _detect_late_arrivals(frame, derived_id)
 
-        # Row 0: availability (3/10) == known_at (3/10) -> not late
-        # Row 1: availability (3/12) > known_at (3/11) -> late
-        # Row 2: availability (3/10) == known_at (3/10) -> not late
         assert result.height == 3
         flags = result["is_late"].to_list()
         assert flags == [False, True, False]
@@ -388,15 +468,18 @@ class TestApplyLateArrivalPolicy:
         )
         late_flags = pl.Series([True, False])
 
-        result = _apply_late_arrival_policy(
-            frame,
-            LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT,
-            late_flags,
-        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = _apply_late_arrival_policy(
+                frame,
+                LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT,
+                late_flags,
+            )
 
-        # v1: SHIFT 原样返回，不修改
         assert result.height == 2
         assert result.equals(frame)
+        assert len(caught) == 1
+        assert "SHIFT" in str(caught[0].message)
 
     def test_apply_late_arrival_policy_rebuild_raises(
         self,
@@ -462,3 +545,36 @@ class TestApplyLateArrivalPolicy:
         )
 
         assert result.is_empty()
+
+    def test_apply_late_arrival_policy_unknown_raises(self) -> None:
+        """未知策略应抛出 ValueError."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "factor.alpha": [1.0, 2.0],
+            }
+        )
+        late_flags = pl.Series([True, False])
+
+        with pytest.raises(ValueError, match="Unknown late arrival policy"):
+            _apply_late_arrival_policy(frame, "unknown_policy", late_flags)
+
+    def test_apply_late_arrival_no_late_returns_unchanged(self) -> None:
+        """无延迟行时所有策略都应原样返回."""
+
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "factor.alpha": [1.0, 2.0],
+            }
+        )
+        late_flags = pl.Series([False, False])
+
+        result = _apply_late_arrival_policy(
+            frame,
+            LateArrivalPolicy.EXCLUDE_FROM_CURRENT_SNAPSHOT,
+            late_flags,
+        )
+
+        assert result.equals(frame)

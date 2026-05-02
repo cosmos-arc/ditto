@@ -15,10 +15,17 @@ Strategy 层是 **策略定义与信号生成** 能力包，负责 alpha pipelin
 ditto_strategy → ditto_kernel ✅
 ditto_strategy → ditto_data ✅ (DataProvider Protocol)
 ditto_strategy → ditto_features ✅
-ditto_strategy → ditto_engine ✅ (临时：portfolio/execution 常量，Task 7-9 后移除)
+ditto_strategy → ditto_portfolio ✅ （策略模板作为完整交易配方，需要引用分配器和约束类型）
 ditto_strategy 禁止 → ditto_apps ❌
 ditto_strategy 禁止 → ditto_application ❌
+ditto_strategy 禁止 → ditto_execution ❌
 ```
+
+## 技术债务
+
+strategy 模板当前直接引用 portfolio 的 allocation/constraints 类型。
+长期演进方向：策略只产信号，分配方案由 application 层独立配置。
+参见 LEAN 架构的 AlphaModel → PortfolioConstructionModel 解耦模式。
 
 ## 内部目录职责
 
