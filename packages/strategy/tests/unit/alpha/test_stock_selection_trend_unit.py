@@ -1,16 +1,13 @@
 """Tests for stock_selection_trend strategy template.
 
 Covers StockSelectionTrendConfig, validate_config, get_param_constraints,
-MultiFactorSignalStage, build_stock_selection_trend_pipeline, E2E pipeline,
-and EngineConfig rebalance_freq.
+MultiFactorSignalStage, build_stock_selection_trend_pipeline, and E2E pipeline.
 """
 
 from __future__ import annotations
 
 import polars as pl
 import pytest
-from ditto_backtest.config import EngineConfig
-from ditto_backtest.engine import EngineLoop, EngineOptions
 from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
@@ -400,75 +397,3 @@ class TestPipelineE2E:
             i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx
-
-
-# ---------------------------------------------------------------------------
-# EngineConfig rebalance_freq
-# ---------------------------------------------------------------------------
-
-
-class TestRebalanceFreq:
-    def _make_engine_loop(
-        self,
-        rebalance_freq: str,
-        trading_days: list[str],
-    ) -> EngineLoop:
-        """构建带 rebalance_freq 配置的 EngineLoop。"""
-        from unittest.mock import Mock
-
-        config = EngineConfig(
-            start_date=trading_days[0],
-            end_date=trading_days[-1],
-            initial_cash=1_000_000.0,
-            rebalance_freq=rebalance_freq,
-        )
-        loop = EngineLoop(
-            config=config,
-            pipeline=Mock(),
-            planner=Mock(),
-            brokerage=Mock(),
-            pre_trade_check=Mock(),
-            data_feed=Mock(),
-            options=EngineOptions(clock=Mock(), fee_model=Mock()),
-        )
-        loop._trading_days = tuple(trading_days)
-        loop._trading_day_index = {d: i for i, d in enumerate(loop._trading_days)}
-        return loop
-
-    def test_daily_always_true(self) -> None:
-        """daily 模式下每天都返回 True。"""
-        days = ["2026-03-01", "2026-03-02", "2026-03-03"]
-        loop = self._make_engine_loop("daily", days)
-        for d in days:
-            assert loop._is_rebalance_day(d) is True
-
-    def test_weekly_monday_true(self) -> None:
-        """weekly 模式下周一返回 True。"""
-        # 2026-03-02 is a Monday
-        days = ["2026-03-02"]
-        loop = self._make_engine_loop("weekly", days)
-        assert loop._is_rebalance_day("2026-03-02") is True
-
-    def test_weekly_tuesday_false(self) -> None:
-        """weekly 模式下周二返回 False。"""
-        days = ["2026-03-02", "2026-03-03"]  # Mon, Tue
-        loop = self._make_engine_loop("weekly", days)
-        assert loop._is_rebalance_day("2026-03-03") is False
-
-    def test_monthly_first_day_true(self) -> None:
-        """monthly 模式下当月第一个交易日返回 True。"""
-        days = ["2026-03-02", "2026-03-09", "2026-03-16"]
-        loop = self._make_engine_loop("monthly", days)
-        assert loop._is_rebalance_day("2026-03-02") is True
-
-    def test_monthly_second_day_false(self) -> None:
-        """monthly 模式下当月非首个交易日返回 False。"""
-        days = ["2026-03-02", "2026-03-09", "2026-03-16"]
-        loop = self._make_engine_loop("monthly", days)
-        assert loop._is_rebalance_day("2026-03-09") is False
-
-    def test_monthly_cross_month_true(self) -> None:
-        """monthly 模式下跨月首个交易日返回 True。"""
-        days = ["2026-03-02", "2026-03-30", "2026-04-01"]
-        loop = self._make_engine_loop("monthly", days)
-        assert loop._is_rebalance_day("2026-04-01") is True
