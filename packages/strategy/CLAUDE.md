@@ -9,23 +9,29 @@ Strategy 层是 **策略定义与信号生成** 能力包，负责 alpha pipelin
 - 通过 Pipeline + Stage 模式组合策略行为
 - 信号存储通过 Protocol 注入，不持有具体实现
 
-## 依赖
+## 允许依赖
 
 ```
 ditto_strategy → ditto_kernel ✅
 ditto_strategy → ditto_data ✅ (DataProvider Protocol)
 ditto_strategy → ditto_features ✅
-ditto_strategy 禁止 → ditto_portfolio ❌
-ditto_strategy 禁止 → ditto_apps ❌
-ditto_strategy 禁止 → ditto_application ❌
-ditto_strategy 禁止 → ditto_execution ❌
+ditto_strategy → ditto_platform ✅ (storage/sqlite: SQLitePool, logger, traced)
 ```
 
-## 技术债务
+外部依赖：polars, orjson
 
-strategy 模板当前直接引用 portfolio 的 allocation/constraints 类型。
-长期演进方向：策略只产信号，分配方案由 application 层独立配置。
-参见 LEAN 架构的 AlphaModel → PortfolioConstructionModel 解耦模式。
+**技术债务**：strategy 模板当前直接引用 portfolio 的 allocation/constraints 类型（仅 runtime_builder 和集成测试）。长期演进方向：策略只产信号，分配方案由 application 层独立配置。参见 LEAN 架构的 AlphaModel → PortfolioConstructionModel 解耦模式。
+
+## 禁止依赖
+
+```
+ditto_strategy → ditto_portfolio ❌ (技术债务豁免：runtime_builder / 集成测试)
+ditto_strategy → ditto_execution ❌
+ditto_strategy → ditto_backtest ❌
+ditto_strategy → ditto_analysis ❌
+ditto_strategy → ditto_application ❌
+ditto_strategy → ditto_apps ❌
+```
 
 ## 内部目录职责
 
@@ -44,9 +50,21 @@ ditto_strategy/
 │   └── validation.py   # validate_spec_params
 ├── signals/            # 信号契约（Protocol 定义）
 │   ├── store.py        # SignalStore Protocol
-│   └── models.py       # 信号模型（预留）
+│   └── models.py       # 信号模型
+├── storage/            # 策略持久化
+│   └── sqlite/         # SQLite 存储
+│       ├── strategy_spec_store.py
+│       ├── strategy_run_store.py
+│       ├── strategy_artifact_store.py
+│       └── services/   # 策略目录/运行/工件服务
+├── runs/               # 策略运行模型
+│   └── models.py
+├── audit/              # 审计追踪（待扩展）
+├── di/                 # 依赖注入
+│   └── storage.py
 ├── contracts.py        # 包级公共契约
-└── errors.py           # StrategyError 异常层级
+├── errors.py           # StrategyError 异常层级
+└── models.py           # 策略域模型
 ```
 
 ## 测试位置
