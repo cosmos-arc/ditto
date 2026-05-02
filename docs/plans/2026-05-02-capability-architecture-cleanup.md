@@ -30,7 +30,7 @@ pixi run -e dev check
 
 ---
 
-## Task 1: 迁移 FeeModel Protocol 到 kernel `[L]`
+## Task 1: 迁移 FeeModel Protocol 到 kernel `[L]` ✅ DONE (dd0915ee)
 
 **问题：** `ditto_risk.pre_trade` 为获取 `FeeModel` Protocol 被迫依赖 `ditto_execution`，违反 `risk-no-execution` 硬性约束。当前通过 `.importlinter` 的 `ignore_imports` 压制。
 
@@ -132,7 +132,7 @@ git commit -m "refactor: move FeeModel protocol to kernel, remove risk→executi
 
 ---
 
-## Task 2: 迁移 data/di/trade.py 到 execution/di/ `[L]`
+## Task 2: 迁移 data/di/trade.py 到 execution/di/ `[L]` ✅ DONE (a70ec403)
 
 **问题：** `data/di/trade.py` 注册 execution 域的全部 DI（TradeService、DDL schema、readers/writers），导致 data 包硬依赖 `ditto-execution`。依赖方向倒挂。
 
@@ -217,7 +217,7 @@ git commit -m "refactor: migrate trade DI from data to execution package"
 
 ---
 
-## Task 3: 拆分 data/di/runtime.py 中的 features/analysis 桥接 `[M]`
+## Task 3: 拆分 data/di/runtime.py 中的 features/analysis 桥接 `[M]` ✅ DONE (7f01ba95)
 
 **问题：** `data/di/runtime.py` 仍实例化 `ditto_features` 和 `ditto_analysis` 的服务（DerivedQueryService、ResearchArtifactService），是 data→features/analysis 反向依赖的残留。
 
@@ -292,7 +292,7 @@ git commit -m "refactor: remove data→features/analysis DI bridging"
 
 ---
 
-## Task 4: 移除 strategy 死依赖 `[S]`
+## Task 4: 移除 strategy 死依赖 `[S]` ✅ DONE (38a2ecd7)
 
 **问题：** `packages/strategy/pyproject.toml` 声明 `ditto-portfolio` 依赖，但源码中零 `from ditto_portfolio` 导入。
 
@@ -330,7 +330,7 @@ git commit -m "chore: remove unused ditto-portfolio dependency from strategy"
 
 ---
 
-## Task 5: 补齐缺失的 errors.py `[S]`
+## Task 5: 补齐缺失的 errors.py `[S]` ✅ DONE (38a2ecd7)
 
 **问题：** `analysis` 缺少 `errors.py`，直接借用 `ditto_data.errors` 和 `ditto_features.errors.AnalyticsError`。这违反了"analysis 不被生产路径依赖"原则的反面 — analysis 也不应依赖 production 包的错误类型。
 
@@ -398,7 +398,7 @@ git commit -m "refactor: add analysis error hierarchy, decouple from features/da
 
 ---
 
-## Task 6: 最终验证与文档同步 `[S]`
+## Task 6: 最终验证与文档同步 `[S]` ✅ DONE
 
 **Files:**
 - Modify: `packages/data/CLAUDE.md` — 更新依赖声明（移除 capability 包引用）

@@ -231,12 +231,14 @@ class TestPerPackageDomainRoots:
         assert issubclass(StateTransitionError, DittoError)
 
     def test_analytics_orphans_use_domain_root(self) -> None:
+        from ditto_analysis.errors import AnalysisError
         from ditto_analysis.research.domain import LateArrivalError
         from ditto_features.errors import AnalyticsError
         from ditto_features.expression.diagnostics import ExpressionCompileError
 
         assert issubclass(ExpressionCompileError, AnalyticsError)
-        assert issubclass(LateArrivalError, AnalyticsError)
+        assert issubclass(AnalysisError, DittoError)
+        assert issubclass(LateArrivalError, AnalysisError)
 
     def test_app_orphans_use_domain_root(self) -> None:
         from ditto_application.exceptions import AppError

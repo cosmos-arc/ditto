@@ -10,7 +10,7 @@ ditto_data/
 │   ├── data_store.py             # 数据存储配置（含 all_directories() 目录唯一真源）
 │   ├── dataset_checksum.py       # 数据集校验和排序键映射（dataset_sort_keys()）
 │   └── storage.py                # 存储路径配置
-├── di/                  # DI 注册（data 域 Provider；strategy/execution/features/analysis 存储 DI 已迁移至各能力包）
+├── di/                  # DI 注册（data 域 Provider；trade/strategy/execution/features/analysis DI 已迁移至各能力包）
 │   ├── builders.py      # DI Builder
 │   ├── _factory.py      # DI 工厂
 │   ├── sources.py       # 数据源 Provider
@@ -19,7 +19,6 @@ ditto_data/
 │   ├── fundamental.py   # 基本面 Provider
 │   ├── macro.py         # 宏观 Provider
 │   ├── capital.py       # 资金 Provider
-│   ├── trade.py         # 交易 Provider
 │   ├── quality.py       # 质量 Provider
 │   ├── golden.py        # 黄金标准 Provider
 │   └── runtime.py       # 运行时 Provider
