@@ -14,10 +14,11 @@ root_packages =
     ditto_data
     ditto_features
     ditto_analysis
-    ditto_engine
     ditto_strategy
     ditto_portfolio
     ditto_risk
+    ditto_execution
+    ditto_backtest
     ditto_application
     ditto_apps
 
@@ -37,7 +38,7 @@ type = layers
 # This is not the domain architecture model.
 #
 # Domain architecture is a diamond:
-#   interfaces -> app -> {data, analytics, engine} -> kernel
+#   apps -> application -> {data, features, strategy, portfolio, risk, execution, backtest, analysis} -> kernel
 #   platform is horizontal foundation.
 #
 # import-linter `layers` needs a sequence, so this contract only guards
@@ -46,15 +47,22 @@ type = layers
 layers =
     ditto_apps
     ditto_application
-    ditto_engine
     ditto_portfolio
     ditto_analysis
     ditto_features
     ditto_data
     ditto_platform
-# NOTE: ditto_strategy and ditto_risk not in layers — temporarily have
-# bidirectional module dependencies with ditto_engine. Will be added
-# back after Tasks 9-10 extract execution/backtest from engine.
+ignore_imports =
+    # DI composition root wires capability-package services
+    ditto_data.di.** -> ditto_features.**
+    ditto_data.di.** -> ditto_analysis.**
+    ditto_data.di.** -> ditto_strategy.**
+    ditto_data.services -> ditto_features.**
+    ditto_data.services -> ditto_analysis.**
+    ditto_data.providers.** -> ditto_features.**
+# NOTE: ditto_strategy, ditto_risk, ditto_execution, and ditto_backtest not in
+# layers — they have bidirectional or cross-layer dependencies with other packages.
+# Isolation is enforced by explicit forbidden contracts below.
 
 # ═══════════════════════════════════════════════════════════════════
 # Kernel 层隔离：禁止依赖其他层
@@ -65,7 +73,6 @@ type = forbidden
 source_modules =
     ditto_kernel.**
 forbidden_modules =
-    ditto_engine.**
     ditto_data.**
     ditto_apps.**
     ditto_application.**
@@ -75,6 +82,8 @@ forbidden_modules =
     ditto_strategy.**
     ditto_portfolio.**
     ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Platform 层隔离：禁止依赖其他层
@@ -86,13 +95,14 @@ source_modules =
     ditto_platform.**
 forbidden_modules =
     ditto_data.**
-    ditto_engine.**
     ditto_apps.**
     ditto_kernel.**
     ditto_features.**
     ditto_analysis.**
     ditto_strategy.**
     ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
     ditto_application.**
 # PlatformError 继承 DittoError（全局异常根），这是跨层共享的合法依赖
 ignore_imports =
@@ -108,7 +118,6 @@ type = forbidden
 source_modules =
     ditto_data.**
 forbidden_modules =
-    ditto_engine.**
     ditto_apps.**
     ditto_application.**
     ditto_features.**
@@ -116,6 +125,17 @@ forbidden_modules =
     ditto_strategy.**
     ditto_portfolio.**
     ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
+# Data DI wires moved-out storage/services (Task 9: execution, Task 13: features/strategy/analysis).
+ignore_imports =
+    ditto_data.di.** -> ditto_execution.**
+    ditto_data.services.deps -> ditto_execution.storage.deps
+    ditto_data.** -> ditto_features.**
+    ditto_data.di.** -> ditto_strategy.**
+    ditto_data.** -> ditto_analysis.**
+    ditto_data.providers.** -> ditto_features.**
+unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
 # Features 层隔离：禁止依赖 Data/Engine/Strategy 等
@@ -127,16 +147,23 @@ source_modules =
     ditto_features.**
 forbidden_modules =
     ditto_data.**
-    ditto_engine.**
     ditto_apps.**
     ditto_application.**
     ditto_analysis.**
     ditto_strategy.**
     ditto_portfolio.**
     ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
 ignore_imports =
-    # Features 引用 data.errors 是合法的：DerivedNotImplementedError 等类型供编译/验证使用
+    # Features 引用 data base types 是合法的：moved-from-data 的存储/模型/错误类型
     ditto_features.** -> ditto_data.errors
+    ditto_features.** -> ditto_data.models
+    ditto_features.** -> ditto_data.models.common
+    ditto_features.** -> ditto_data.models.publication_safety
+    ditto_features.** -> ditto_data.models.storage
+    ditto_features.** -> ditto_data.storage.base
+    ditto_features.** -> ditto_data.storage.sqlite_client
 unmatched_ignore_imports_alerting = warn
 
 # Features 内部方向：expression 禁止依赖 materialization
@@ -149,6 +176,31 @@ forbidden_modules =
     ditto_features.materialization.**
 
 # ═══════════════════════════════════════════════════════════════════
+# Strategy 层边界：禁止依赖 application/apps，storage 禁止依赖 execution
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:strategy-boundary]
+name = Strategy must not depend on application/apps/backtest/analysis/execution
+type = forbidden
+source_modules =
+    ditto_strategy.**
+forbidden_modules =
+    ditto_apps.**
+    ditto_application.**
+    ditto_backtest.**
+    ditto_analysis.**
+    ditto_execution.**
+unmatched_ignore_imports_alerting = warn
+
+[importlinter:contract:strategy-storage-no-execution]
+name = Strategy storage must not depend on execution
+type = forbidden
+source_modules =
+    ditto_strategy.storage.**
+forbidden_modules =
+    ditto_execution.**
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
 # Portfolio 层隔离：禁止依赖下游能力包
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:portfolio-boundary]
@@ -157,14 +209,67 @@ type = forbidden
 source_modules =
     ditto_portfolio.**
 forbidden_modules =
-    ditto_engine.**
     ditto_apps.**
     ditto_application.**
     ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
-# Analysis 层隔离：禁止被生产包依赖
+# Risk 层隔离：禁止依赖 execution/backtest/application/apps
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:risk-boundary]
+name = Risk must not depend on execution/backtest/application/apps
+type = forbidden
+source_modules =
+    ditto_risk.**
+forbidden_modules =
+    ditto_apps.**
+    ditto_application.**
+    ditto_backtest.**
+    ditto_analysis.**
+    ditto_execution.**
+# pre_trade 需要执行层值对象（FeeModel, MarketSnapshot 等），待重构共享类型后移除
+ignore_imports =
+    ditto_risk.pre_trade -> ditto_execution.reality
+    ditto_risk.pre_trade -> ditto_execution.reality.market
+    ditto_risk.pre_trade -> ditto_execution.rules
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# Execution 层隔离：禁止依赖 backtest/analysis/application/apps
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:execution-boundary]
+name = Execution must not depend on backtest/analysis/application/apps
+type = forbidden
+source_modules =
+    ditto_execution.**
+forbidden_modules =
+    ditto_apps.**
+    ditto_application.**
+    ditto_backtest.**
+    ditto_analysis.**
+    ditto_strategy.**
+    ditto_data.**
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# Backtest 层隔离：禁止依赖 broker gateways / analysis / apps / application
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:backtest-boundary]
+name = Backtest must not depend on broker gateways/analysis/application/apps
+type = forbidden
+source_modules =
+    ditto_backtest.**
+forbidden_modules =
+    ditto_analysis.**
+    ditto_apps.**
+    ditto_application.**
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# 生产包禁止依赖 Analysis 层
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:analysis-no-production-dependency]
 name = Analysis must not depend on production packages
@@ -173,55 +278,22 @@ source_modules =
     ditto_analysis.**
 forbidden_modules =
     ditto_data.**
-    ditto_engine.**
     ditto_apps.**
     ditto_application.**
     ditto_features.**
     ditto_strategy.**
     ditto_portfolio.**
     ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
 ignore_imports =
     # Analysis 引用 data.errors 是合法的：DerivedNotImplementedError 等共享错误类型
     ditto_analysis.** -> ditto_data.errors
+    # Analysis 引用 data.storage 是合法的：moved-from-data 的 research 存储
+    ditto_analysis.** -> ditto_data.storage.sqlite_client
     # Analysis 引用 features.errors 是合法的：AnalyticsError 基类定义在 features.errors 中
     ditto_analysis.** -> ditto_features.errors
 unmatched_ignore_imports_alerting = warn
-
-# ═══════════════════════════════════════════════════════════════════
-# Engine ↔ Data 边界：双向禁止互相依赖
-# 两者均可依赖 ditto_kernel
-# Engine 仅保留 DataProvider Protocol 依赖
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:engine-no-data-dependency]
-name = Engine must not depend on Data (except provider)
-type = forbidden
-source_modules =
-    ditto_engine.**
-forbidden_modules =
-    ditto_data.**
-ignore_imports =
-    # DataProvider Protocol 位置（Phase 5 从 kernel 移入 ditto_data，需 polars 返回类型）
-    ditto_engine.** -> ditto_data.provider
-unmatched_ignore_imports_alerting = warn
-
-[importlinter:contract:data-no-engine-dependency]
-name = Data must not depend on Engine
-type = forbidden
-source_modules =
-    ditto_data.**
-forbidden_modules =
-    ditto_engine.**
-
-# ═══════════════════════════════════════════════════════════════════
-# Engine 层隔离：禁止依赖 Platform
-# ═══════════════════════════════════════════════════════════════════
-[importlinter:contract:engine-no-platform-dependency]
-name = Engine must not depend on Platform
-type = forbidden
-source_modules =
-    ditto_engine.**
-forbidden_modules =
-    ditto_platform.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Apps 层边界：禁止直接依赖 Data 存储/运行时实现
@@ -306,51 +378,51 @@ ignore_imports =
 #   command -> process 允许（委托执行）
 # ═══════════════════════════════════════════════════════════════════
 
-[importlinter:contract:r8-query-no-process]
-name = R8: app.query must not import app.process
+[importlinter:contract:r8-queries-no-processes]
+name = R8: app.queries must not import app.processes
 type = forbidden
 source_modules =
-    ditto_application.query.**
+    ditto_application.queries.**
 forbidden_modules =
-    ditto_application.process.**
+    ditto_application.processes.**
 
-[importlinter:contract:r8-query-no-builders]
-name = R8: app.query must not import app.builders
+[importlinter:contract:r8-queries-no-builders]
+name = R8: app.queries must not import app.builders
 type = forbidden
 source_modules =
-    ditto_application.query.**
+    ditto_application.queries.**
 forbidden_modules =
     ditto_application.builders.**
 
-[importlinter:contract:r8-builders-no-query]
-name = R8: app.builders must not import app.query
+[importlinter:contract:r8-builders-no-queries]
+name = R8: app.builders must not import app.queries
 type = forbidden
 source_modules =
     ditto_application.builders.**
 forbidden_modules =
-    ditto_application.query.**
+    ditto_application.queries.**
 
-[importlinter:contract:r8-query-no-command]
-name = R8: app.query must not import app.command
+[importlinter:contract:r8-queries-no-commands]
+name = R8: app.queries must not import app.commands
 type = forbidden
 source_modules =
-    ditto_application.query.**
+    ditto_application.queries.**
 forbidden_modules =
-    ditto_application.command.**
+    ditto_application.commands.**
 
-[importlinter:contract:r8-command-no-query]
-name = R8: app.command must not import app.query
+[importlinter:contract:r8-commands-no-queries]
+name = R8: app.commands must not import app.queries
 type = forbidden
 source_modules =
-    ditto_application.command.**
+    ditto_application.commands.**
 forbidden_modules =
-    ditto_application.query.**
+    ditto_application.queries.**
 
-[importlinter:contract:r8-command-no-builders]
-name = R8: app.command must not import app.builders
+[importlinter:contract:r8-commands-no-builders]
+name = R8: app.commands must not import app.builders
 type = forbidden
 source_modules =
-    ditto_application.command.**
+    ditto_application.commands.**
 forbidden_modules =
     ditto_application.builders.**
 
@@ -371,10 +443,6 @@ ignore_imports =
     ditto_data.storage.** -> ditto_data.models.storage
     ditto_data.storage.** -> ditto_data.models.metadata
     ditto_data.storage.** -> ditto_data.models.macro
-    ditto_data.storage.** -> ditto_data.models.strategy
-    ditto_data.storage.** -> ditto_data.models.strategy_run
-    ditto_data.storage.** -> ditto_data.models.trade
-    ditto_data.storage.** -> ditto_data.models.derived
     ditto_data.storage.** -> ditto_data.models.publication_safety
     ditto_data.storage.** -> ditto_data.models.ingestion
     ditto_data.storage.** -> ditto_data.models.common
@@ -438,9 +506,6 @@ forbidden_modules =
     ditto_data.storage.capital.**
     ditto_data.storage.metadata.**
     ditto_data.storage.runtime.**
-    ditto_data.storage.execution.**
-    ditto_data.storage.factors.**
-    ditto_data.storage.features.**
     ditto_data.storage.macro.**
 unmatched_ignore_imports_alerting = warn
 
@@ -454,9 +519,6 @@ forbidden_modules =
     ditto_data.storage.capital.**
     ditto_data.storage.metadata.**
     ditto_data.storage.runtime.**
-    ditto_data.storage.execution.**
-    ditto_data.storage.factors.**
-    ditto_data.storage.features.**
     ditto_data.storage.macro.**
 unmatched_ignore_imports_alerting = warn
 
@@ -470,9 +532,6 @@ forbidden_modules =
     ditto_data.storage.fundamental.**
     ditto_data.storage.metadata.**
     ditto_data.storage.runtime.**
-    ditto_data.storage.execution.**
-    ditto_data.storage.factors.**
-    ditto_data.storage.features.**
     ditto_data.storage.macro.**
 unmatched_ignore_imports_alerting = warn
 
@@ -486,9 +545,6 @@ forbidden_modules =
     ditto_data.storage.fundamental.**
     ditto_data.storage.capital.**
     ditto_data.storage.runtime.**
-    ditto_data.storage.execution.**
-    ditto_data.storage.factors.**
-    ditto_data.storage.features.**
     ditto_data.storage.macro.**
 unmatched_ignore_imports_alerting = warn
 
@@ -502,25 +558,6 @@ forbidden_modules =
     ditto_data.storage.fundamental.**
     ditto_data.storage.capital.**
     ditto_data.storage.metadata.**
-    ditto_data.storage.execution.**
-    ditto_data.storage.factors.**
-    ditto_data.storage.features.**
-    ditto_data.storage.macro.**
-unmatched_ignore_imports_alerting = warn
-
-[importlinter:contract:data-storage-execution-isolation]
-name = Data storage execution must not import other storage subdomains
-type = forbidden
-source_modules =
-    ditto_data.storage.execution.**
-forbidden_modules =
-    ditto_data.storage.market.**
-    ditto_data.storage.fundamental.**
-    ditto_data.storage.capital.**
-    ditto_data.storage.metadata.**
-    ditto_data.storage.runtime.**
-    ditto_data.storage.factors.**
-    ditto_data.storage.features.**
     ditto_data.storage.macro.**
 unmatched_ignore_imports_alerting = warn
 
@@ -537,10 +574,11 @@ ancestors =
     ditto_data
     ditto_features
     ditto_analysis
-    ditto_engine
     ditto_strategy
     ditto_portfolio
     ditto_risk
+    ditto_execution
+    ditto_backtest
     ditto_application
     ditto_apps
 depth = 10

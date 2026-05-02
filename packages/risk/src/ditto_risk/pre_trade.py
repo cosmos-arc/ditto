@@ -20,18 +20,18 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Protocol
 
-from ditto_engine.execution.reality import FeeModel
-from ditto_engine.execution.reality.constants import (
-    DEFAULT_COMMISSION_RATE,
-    DEFAULT_LOT_SIZE,
-    DEFAULT_MIN_COMMISSION,
-)
-from ditto_engine.execution.reality.market import MarketSnapshot
-from ditto_engine.execution.rules import FeeSchedule, InstrumentRules
+from ditto_execution.reality import FeeModel
+from ditto_execution.reality.market import MarketSnapshot
+from ditto_execution.rules import FeeSchedule, InstrumentRules
 from ditto_kernel.identity import (
     InstrumentId as _InstrumentId,
 )
 from ditto_kernel.order import OrderSide
+from ditto_kernel.trading import (
+    DEFAULT_COMMISSION_RATE,
+    DEFAULT_LOT_SIZE,
+    DEFAULT_MIN_COMMISSION,
+)
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook

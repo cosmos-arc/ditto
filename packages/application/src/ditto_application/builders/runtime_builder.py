@@ -4,12 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.services.strategy.strategy_catalog_service import (
-    StrategyCatalogService,
-)
-from ditto_engine.execution.reality.constants import DEFAULT_COMMISSION_RATE
 from ditto_kernel.strategy import ImpactModel
+from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import (
@@ -39,6 +35,10 @@ from ditto_strategy.alpha.templates import (
 from ditto_strategy.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
+    StrategyCatalogService,
+)
 
 from ditto_application.builders._spec_deserializer import (
     as_float_tuple,
@@ -55,7 +55,7 @@ from ditto_application.builders._spec_deserializer import (
     read_required_str,
     read_str_value,
 )
-from ditto_application.process.execution.factor_bridge import (
+from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
 )

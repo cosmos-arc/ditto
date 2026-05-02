@@ -15,12 +15,12 @@ from datetime import date
 from typing import Any
 
 import polars as pl
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_engine.execution.reality.constants import (
+from ditto_kernel.strategy import ImpactModel
+from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_MIN_COMMISSION,
 )
-from ditto_kernel.strategy import ImpactModel
+from ditto_strategy.models import StrategySpecRecord
 
 REGIME_DEFAULT_LOOKBACK = 60
 """Regime detection minimum lookback days (MomentumIndicator, ts_mean, ts_std)."""
