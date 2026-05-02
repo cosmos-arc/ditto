@@ -42,6 +42,8 @@ describe("page-strategy-studio prototype", () => {
 		expect(html).toMatch(
 			/grid-template-rows:\s*var\(--shell-header-height\)\s+auto\s+minmax\(0,\s*1fr\)\s+auto;/,
 		);
+		expect(html).toMatch(/\.studio-logs\s*\{[^}]*--bottom-tray-expanded-content-max-height:\s*min\(24vh,\s*16rem\);/s);
+		expect(html).toMatch(/\.logs-header\s*\{[^}]*gap:\s*var\(--space-8\);/s);
 		expect(document.querySelector("[data-bottom-tray]")?.getAttribute("data-bottom-tray-state")).toBe("collapsed");
 	});
 
@@ -55,6 +57,44 @@ describe("page-strategy-studio prototype", () => {
 		}
 		expect(defaultView.querySelectorAll("[data-ticker], [data-counter]")).toHaveLength(0);
 	});
+
+	it("keeps the strategy header on one readable row in compact desktop viewports", async () => {
+		const browser = await chromium.launch({ channel: "chromium" });
+		const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+
+		try {
+			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
+
+			const header = await page.evaluate(() => {
+				const shellHeader = document.querySelector<HTMLElement>(".studio-header");
+				const strategyName = document.querySelector<HTMLElement>(".strategy-name");
+				const actions = document.querySelector<HTMLElement>(".studio-actions");
+				if (!shellHeader || !strategyName || !actions) return null;
+
+				const headerRect = shellHeader.getBoundingClientRect();
+				const strategyRect = strategyName.getBoundingClientRect();
+				const actionsRect = actions.getBoundingClientRect();
+
+				return {
+					headerHeight: Math.round(headerRect.height),
+					headerScrollHeight: shellHeader.scrollHeight,
+					headerClientHeight: shellHeader.clientHeight,
+					strategyHeight: Math.round(strategyRect.height),
+					actionsCenterGap: Math.round(
+						Math.abs((actionsRect.top + actionsRect.height / 2) - (strategyRect.top + strategyRect.height / 2)),
+					),
+				};
+			});
+
+			expect(header).not.toBeNull();
+			if (!header) return;
+			expect(header.headerScrollHeight).toBeLessThanOrEqual(header.headerClientHeight + 1);
+			expect(header.strategyHeight).toBeLessThanOrEqual(header.headerHeight);
+			expect(header.actionsCenterGap).toBeLessThanOrEqual(2);
+		} finally {
+			await browser.close();
+		}
+	}, playwrightTestTimeoutMs);
 
 	it("keeps the factor preprocessing pipeline within the source rail", async () => {
 		const browser = await chromium.launch({ channel: "chromium" });

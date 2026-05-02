@@ -1698,7 +1698,13 @@
       var nextValue = ResizablePanels._clamp(value, ResizablePanels._minValue(separator), ResizablePanels._maxValue(separator));
       group.style.setProperty(ResizablePanels._cssVar(group, separator), Math.round(nextValue) + 'px');
       separator.setAttribute('aria-valuenow', String(Math.round(nextValue)));
+      separator.setAttribute('aria-valuetext', ResizablePanels._valueText(separator, nextValue));
       return nextValue;
+    },
+
+    _valueText: function (separator, value) {
+      var label = separator.getAttribute('data-resize-value-label') || separator.getAttribute('aria-label') || '面板宽度';
+      return label + ' ' + Math.round(value) + ' 像素';
     },
 
     _initialValue: function (group, separator) {

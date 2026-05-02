@@ -209,6 +209,7 @@ button {
  * root class when they need an extra context or status row.
  */
 .shell-hub {
+  --shell-header-height: 76px;
   display: grid;
   grid-template-columns: var(--shell-rail-width) minmax(0, 1fr);
   grid-template-rows: var(
@@ -277,6 +278,34 @@ button {
 .shell-hub .shell-header,
 .shell-agent .shell-header {
   grid-area: header;
+}
+
+.shell-hub .shell-header {
+  padding-inline: var(--space-20) var(--space-16);
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.shell-hub .object-header {
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.shell-hub .object-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.shell-hub .object-name-row,
+.shell-hub .object-answer-row,
+.shell-hub .object-price-row {
+  min-width: 0;
+}
+
+.shell-hub .object-answer-row {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+  white-space: normal;
 }
 
 .shell-hub--with-context {
@@ -2843,7 +2872,9 @@ details.context-section:not([open]) > .context-section-body {
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-4);
+  line-height: 1;
 }
 
 .btn:hover {

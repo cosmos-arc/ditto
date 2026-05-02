@@ -19,6 +19,16 @@ function loadPage() {
 }
 
 describe("page-experiment-list prototype", () => {
+	it("inherits centered button content for primary and detail actions", () => {
+		const layoutCss = readFileSync(
+			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-base.css"),
+			"utf-8",
+		);
+
+		expect(layoutCss).toMatch(/\.btn\s*\{[^}]*justify-content:\s*center;/s);
+		expect(layoutCss).toMatch(/\.btn\s*\{[^}]*line-height:\s*1;/s);
+	});
+
 	it("uses a gate-recognizable catalog shell with filter, summary, table, and detail regions", () => {
 		const document = loadPage();
 

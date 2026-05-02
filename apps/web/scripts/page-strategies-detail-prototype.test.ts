@@ -19,6 +19,16 @@ function loadPage() {
 }
 
 describe("page-strategies-detail prototype", () => {
+	it("inherits the relaxed Object Hub header rhythm shared by detail pages", () => {
+		const layoutCss = readFileSync(
+			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-base.css"),
+			"utf-8",
+		);
+
+		expect(layoutCss).toMatch(/\.shell-hub\s*\{[^}]*--shell-header-height:\s*76px;/s);
+		expect(layoutCss).toMatch(/\.shell-hub\s+\.shell-header\s*\{[^}]*padding-inline:/s);
+	});
+
 	it("keeps the object hub regions inside one gate-recognizable shell", () => {
 		const document = loadPage();
 		const shell = document.querySelector("#default-view > .shell-hub.object-shell");

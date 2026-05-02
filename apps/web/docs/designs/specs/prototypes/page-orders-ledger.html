@@ -116,16 +116,21 @@
      * ══════════════════════════════════════════════ */
     .shell-ledger {
       display: grid;
-      grid-template-columns: var(--shell-rail-width) 1fr 340px;
+      --prototype-ops-detail-width: var(--shell-ops-detail-width);
+      grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 1px minmax(280px, var(--prototype-ops-detail-width));
       grid-template-rows: var(--shell-header-height) auto auto 1fr;
       grid-template-areas:
-        "rail header  header"
-        "rail strip  strip"
-        "rail kpi    trace"
-        "rail table   trace";
+        "rail header  header    header"
+        "rail strip   strip     strip"
+        "rail kpi     separator trace"
+        "rail table   separator trace";
       min-height: calc(100dvh - var(--shell-status-bar-height));
       width: 100vw;
       overflow-y: auto;
+    }
+
+    .shell-ledger > .resize-separator {
+      grid-area: separator;
     }
 
     /* ── Frosted glass header ── */
@@ -717,13 +722,17 @@
     }
 
     .trace-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-size: var(--font-size-12);
-      min-height: 25px;
+      min-height: 26px;
       padding: var(--space-2) var(--space-8);
       border-radius: var(--radius-4);
       cursor: pointer;
       border: none;
       font-weight: var(--font-weight-medium);
+      line-height: 1;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard),
                   color var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -1195,13 +1204,17 @@
     :root:has(#orders-done:checked)
       [data-panel="orders-done"] { display: contents; }
     :root:has(#orders-pending:checked)
-      [data-panel="orders-pending"] { display: block; }
+      [data-panel="orders-pending"] { display: contents; }
     :root:has(#orders-submitted:checked)
       [data-panel="orders-submitted"] { display: contents; }
     :root:has(#orders-partial:checked)
       [data-panel="orders-partial"] { display: contents; }
     :root:has(#orders-failed:checked)
       [data-panel="orders-failed"] { display: contents; }
+
+    .shell-ledger .tab-panel > .state-empty {
+      display: none;
+    }
 
     /* Tab label active state — driven by :has() */
     :root:has(#orders-pending:checked)  label[for="orders-pending"],
@@ -1831,7 +1844,7 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label" aria-hidden="true">Graphite Studio — Execution Ledger · Compact · A股</div>
 
-  <div class="shell-ledger catalog-shell" data-tabs="order-tabs">
+  <div class="shell-ledger catalog-shell" data-tabs="order-tabs" data-resizable-panel-group="ops-main-detail" data-resize-var="--prototype-ops-detail-width">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
@@ -2556,7 +2569,7 @@
 
 
     <!-- ═══ Order Trace Panel (340px) ═══ -->
-    <aside class="order-trace catalog-detail" id="order-trace" data-selected-object-region data-contract-slot="execution-trace" data-reveal="fade-up" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
+    <aside class="order-trace catalog-detail" id="order-trace-panel" data-selected-object-region data-contract-slot="execution-trace" data-reveal="fade-up" data-reveal-delay="150" role="complementary" aria-label="订单追踪">
       <!-- Trace Header -->
       <div class="trace-header">
         <div class="trace-title">
@@ -2986,6 +2999,8 @@
     </div><!-- /tab-panel orders-failed -->
 
     </div><!-- /tab-group -->
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-ops-detail-width" data-resize-default="340" data-resize-min="280" data-resize-max="560" role="separator" tabindex="0" aria-label="调整执行追踪宽度" aria-orientation="vertical" aria-controls="main-content order-trace-panel" aria-valuemin="280" aria-valuemax="560" aria-valuenow="340" aria-valuetext="调整执行追踪宽度 340 像素"></div>
 
   </div><!-- /shell-ledger -->
 

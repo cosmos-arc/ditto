@@ -312,6 +312,17 @@
       display: flex;
       align-items: center;
       gap: var(--space-8);
+      flex: 1 1 0;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .strategy-name-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .status-badge {
@@ -335,6 +346,7 @@
     .strategy-run-chip {
       display: inline-flex;
       align-items: center;
+      flex: 0 0 auto;
       height: var(--badge-md-height);
       padding: var(--space-2) var(--space-6);
       border: 1px solid var(--border-subtle);
@@ -346,13 +358,14 @@
       white-space: nowrap;
     }
 
-    .header-spacer { flex: 1; }
+    .header-spacer { flex: 0 0 var(--space-4); }
 
     /* ── Studio Actions (CTA buttons) ── */
     .studio-actions {
       display: flex;
       align-items: center;
       gap: var(--space-6);
+      flex-shrink: 0;
     }
 
     .studio-action {
@@ -1073,6 +1086,7 @@
      * ══════════════════════════════════════════════ */
     .studio-logs {
       grid-area: logs;
+      --bottom-tray-expanded-content-max-height: min(24vh, 16rem);
       background: var(--surface-panel-base);
       border-top: 1px solid var(--border-subtle);
       display: flex;
@@ -1097,7 +1111,7 @@
       padding: 0 var(--density-panel-padding);
       height: var(--density-strip-height);
       border-bottom: 1px solid var(--border-subtle);
-      gap: var(--space-16);
+      gap: var(--space-8);
       flex-shrink: 0;
     }
 
@@ -1388,9 +1402,16 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
+      flex-shrink: 0;
       transition: color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .header-delete-btn:hover { color: var(--risk-critical-fg); }
+
+    @media (max-width: 1440px) {
+      .strategy-run-chip--optional {
+        display: none;
+      }
+    }
 
     /* ── Breadcrumb separator ── */
     .breadcrumb-sep {
@@ -2072,7 +2093,7 @@
           <path d="M7 7h6M7 10h3"/>
           <path d="M7 14l2 2 4-5"/>
         </svg>
-        多因子动量策略 v2.3
+        <span class="strategy-name-text">多因子动量策略 v2.3</span>
         <span class="status-badge">
           <span class="status-badge-dot"></span>
           已保存
@@ -2080,7 +2101,7 @@
         <span class="strategy-run-chip" data-answer-judgment>校验通过，Dry Run 可执行</span>
         <span class="strategy-run-chip" data-answer-metric data-answer-evidence>11 / 12 通过</span>
         <span class="strategy-run-chip" data-answer-evidence>1 项警告</span>
-        <span class="strategy-run-chip" data-answer-evidence>目标 Backtest Result</span>
+        <span class="strategy-run-chip strategy-run-chip--optional" data-answer-evidence>目标 Backtest Result</span>
 
         <label for="overlay-delete-strategy" class="header-delete-btn" title="删除策略" tabindex="0">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V3h6v2M6 5v12a1 1 0 001 1h6a1 1 0 001-1V5"/></svg>
@@ -2281,7 +2302,7 @@
       </div>
     </aside>
 
-    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-studio-source-width" data-resize-default="240" data-resize-min="180" data-resize-max="360" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整资源栏宽度" aria-orientation="vertical" aria-controls="studio-sources-panel main-content" aria-valuemin="180" aria-valuemax="360" aria-valuenow="240"></div>
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-studio-source-width" data-resize-default="240" data-resize-min="180" data-resize-max="360" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整资源栏宽度" aria-orientation="vertical" aria-controls="studio-sources-panel main-content" aria-valuemin="180" aria-valuemax="360" aria-valuenow="240" aria-valuetext="调整资源栏宽度 240 像素"></div>
 
     <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
     <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-selected-object-region role="main">
@@ -2579,7 +2600,7 @@
     </main>
 
     <!-- ═══ Inspector Panel (Right) ═══ -->
-    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-studio-inspector-width" data-resize-default="300" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整检查器宽度" aria-orientation="vertical" aria-controls="main-content studio-inspector-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="300"></div>
+    <div class="resize-separator" data-resize-separator data-resize-var="--prototype-studio-inspector-width" data-resize-default="300" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整检查器宽度" aria-orientation="vertical" aria-controls="main-content studio-inspector-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="300" aria-valuetext="调整检查器宽度 300 像素"></div>
 
     <aside class="studio-inspector" id="studio-inspector-panel" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region>
       <!-- AI Assistant (always visible above tabs) -->

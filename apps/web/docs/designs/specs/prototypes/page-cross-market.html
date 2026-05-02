@@ -311,6 +311,48 @@
       background: color-mix(in oklch, var(--market-up-fg) 8%, var(--surface-frosted-subtle));
       box-shadow: inset 0 1px 0 color-mix(in oklch, var(--color-white) 46%, transparent);
     }
+    .scope-strip .scope-strip-item--lead .context-bar-label {
+      padding-right: var(--space-6);
+      border-right: 1px solid color-mix(in oklch, var(--market-up-fg) 28%, var(--border-subtle));
+    }
+    .scope-strip .scope-strip-item--lead .context-bar-value {
+      max-width: min(44rem, 52vw);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pin-viewpoint-trigger {
+      border: 1px solid transparent;
+      border-radius: var(--radius-6);
+      padding: var(--space-2) var(--space-6);
+      transition:
+        background var(--motion-duration-fast) var(--motion-easing-standard),
+        border-color var(--motion-duration-fast) var(--motion-easing-standard),
+        color var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .pin-viewpoint-trigger:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-subtle);
+    }
+    .pin-viewpoint-status {
+      display: none;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-6);
+      background: var(--interaction-selected-bg);
+      color: var(--brand-accent);
+      font-size: var(--font-size-12);
+      white-space: nowrap;
+    }
+    :root:has(#overlay-pin-viewpoint:checked) .pin-viewpoint-trigger {
+      border-color: color-mix(in oklch, var(--brand-accent) 34%, var(--border-subtle));
+      background: var(--brand-accent-subtle);
+      color: var(--text-primary);
+    }
+    :root:has(#overlay-pin-viewpoint:checked) .pin-viewpoint-status {
+      display: inline-flex;
+    }
 
     /* Silent indicator dot — replaces badge for non-counted warnings */
     .context-bar-indicator {
@@ -1145,8 +1187,6 @@
       [data-overlay="overlay-filter-panel"] { display: flex; }
     :root:has(#overlay-event-detail:checked)
       [data-overlay="overlay-event-detail"] { display: flex; }
-    :root:has(#overlay-pin-viewpoint:checked)
-      [data-overlay="overlay-pin-viewpoint"] { display: flex; }
     .overlay-close {
       background: none;
       border: none;
@@ -1635,9 +1675,10 @@
           <span class="context-bar-indicator" aria-label="2 条预警"></span>
         </div>
         <div class="context-bar-sep"></div>
-        <label for="overlay-pin-viewpoint" class="context-bar-item cursor-pointer" title="固定当前视角">
+        <label for="overlay-pin-viewpoint" class="context-bar-item cursor-pointer pin-viewpoint-trigger" title="固定当前视角">
           <span class="context-bar-label">固定视角</span>
         </label>
+        <span class="pin-viewpoint-status" data-pin-viewpoint-status role="status" aria-live="polite">已固定</span>
       </div>
 
       <!-- State Variants: Context Bar -->
@@ -2464,23 +2505,6 @@
           <p>美股（纳指/标普）、美债收益率、美元指数、黄金。若数据低于预期，降息预期升温，利好权益与黄金；若高于预期，利率上行压力加大。</p>
           <div class="overlay-actions">
             <button class="overlay-btn overlay-btn-secondary">加入日历提醒</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Overlay 5: Pin Viewpoint (inline toast — simplified, no full overlay) -->
-    <div class="overlay-backdrop" data-overlay="overlay-pin-viewpoint">
-      <label class="overlay-dismiss" for="overlay-pin-viewpoint" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet pin-sheet" role="dialog" aria-modal="true" aria-label="固定视角" aria-modal="true">
-        <div class="overlay-header">
-          <span class="overlay-title">固定视角</span>
-          <label for="overlay-pin-viewpoint" class="overlay-close" aria-label="关闭">✕</label>
-        </div>
-        <div class="overlay-body">
-          <div class="pin-toast">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
-            当前视角已固定 — 关闭弹窗后保持筛选状态
           </div>
         </div>
       </div>

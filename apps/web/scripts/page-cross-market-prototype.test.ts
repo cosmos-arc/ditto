@@ -20,6 +20,18 @@ describe("page-cross-market prototype", () => {
 		expect(html).toMatch(/\.scope-strip\s*\{[^}]*box-shadow:/s);
 		expect(html).toMatch(/\.scope-strip\s+\.scope-strip-item--lead\s*\{[^}]*background:/s);
 		expect(html).toMatch(/\.scope-strip\s+\.scope-strip-item--lead\s*\{[^}]*border:/s);
+		expect(html).toMatch(/\.scope-strip\s+\.scope-strip-item--lead\s+\.context-bar-label\s*\{[^}]*border-right:/s);
+		expect(html).toMatch(/\.scope-strip\s+\.scope-strip-item--lead\s+\.context-bar-value\s*\{[^}]*max-width:/s);
+	});
+
+	it("uses a non-modal pin state for fixed viewpoint instead of blocking the market workspace", () => {
+		const document = loadPage();
+		const html = readFileSync(prototypePath, "utf-8");
+
+		expect(document.querySelector("#default-view [data-pin-viewpoint-status]")).not.toBeNull();
+		expect(document.querySelector("#default-view [data-overlay='overlay-pin-viewpoint']")).toBeNull();
+		expect(html).toMatch(/:root:has\(#overlay-pin-viewpoint:checked\)\s+\.pin-viewpoint-trigger/s);
+		expect(html).toMatch(/\.pin-viewpoint-status\s*\{[^}]*display:\s*none;/s);
 	});
 
 	it("keeps all prototype markup free of inline style attributes", () => {

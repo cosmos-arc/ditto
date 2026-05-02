@@ -79,6 +79,7 @@ const targetSizeAuditViewports = [
 	{ name: "1366x768", width: 1366, height: 768 },
 	{ name: "1536x1080", width: 1536, height: 1080 },
 ] as const;
+const navigationTimeoutMs = 10_000;
 const playwrightTestTimeoutMs = 15_000;
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
@@ -447,7 +448,7 @@ function assertResizableGroupContract(pageId: string, group: Element | null, gro
 	const violations: string[] = [];
 	const document = group.ownerDocument;
 	const separators = Array.from(group.querySelectorAll<HTMLElement>("[data-resize-separator]"));
-	const requiredAttributes = ["aria-controls", "aria-valuemin", "aria-valuemax", "aria-valuenow"] as const;
+	const requiredAttributes = ["aria-controls", "aria-valuemin", "aria-valuemax", "aria-valuenow", "aria-valuetext"] as const;
 
 	if (separators.length === 0) {
 		violations.push(`${pageId}:${groupName}: expected at least one [data-resize-separator]`);
@@ -526,6 +527,7 @@ function createResizablePanelDom(
 						aria-valuemin="220"
 						aria-valuemax="520"
 						aria-valuenow="320"
+						aria-valuetext="调整测试面板宽度 320 像素"
 					></div>
 					<aside id="test-detail"></aside>
 				</div>
@@ -1603,12 +1605,13 @@ describe("prototype interaction UX contracts", () => {
 		const violations: string[] = [];
 
 		try {
-			for (const pageMeta of activePages()) {
-				for (const viewport of targetSizeAuditViewports) {
-					const page = await browser.newPage({ viewport });
+			for (const viewport of targetSizeAuditViewports) {
+				const page = await browser.newPage({ viewport });
+				page.setDefaultNavigationTimeout(navigationTimeoutMs);
 
-					try {
-						await page.goto(getPrototypeUrl(pageMeta), { waitUntil: "load" });
+				try {
+					for (const pageMeta of activePages()) {
+						await page.goto(getPrototypeUrl(pageMeta), { waitUntil: "load", timeout: navigationTimeoutMs });
 						const pageViolations = await page.$$eval(interactiveSelector, (elements) => {
 							function isInsideClosedDetails(element: Element): boolean {
 								const closedDetails = element.closest("details:not([open])");
@@ -1667,9 +1670,9 @@ describe("prototype interaction UX contracts", () => {
 						violations.push(
 							...pageViolations.map((violation) => `${pageMeta.id}@${viewport.name}: ${violation}`),
 						);
-					} finally {
-						await page.close();
 					}
+				} finally {
+					await page.close();
 				}
 			}
 		} finally {
@@ -1740,16 +1743,19 @@ describe("prototype interaction UX contracts", () => {
 
 		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("360");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 360 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("360px");
 
 		separator.dispatchEvent(
 			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }),
 		);
 		expect(separator.getAttribute("aria-valuenow")).toBe("352");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 352 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("352px");
 
 		separator.dispatchEvent(new document.defaultView!.MouseEvent("dblclick", { bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("320");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 320 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
 	});
 
@@ -1920,6 +1926,7 @@ describe("prototype interaction UX contracts", () => {
 					aria-valuemin="220"
 					aria-valuemax="520"
 					aria-valuenow="320"
+					aria-valuetext="调整测试面板宽度 320 像素"
 				></div>
 				<aside id="test-detail"></aside>
 				<div
@@ -1938,6 +1945,7 @@ describe("prototype interaction UX contracts", () => {
 					aria-valuemin="180"
 					aria-valuemax="360"
 					aria-valuenow="240"
+					aria-valuetext="调整测试资源栏宽度 240 像素"
 				></div>
 				<aside id="test-source"></aside>
 			`;
@@ -1954,34 +1962,40 @@ describe("prototype interaction UX contracts", () => {
 
 		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("360");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 360 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("360px");
 
 		separator.dispatchEvent(
 			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }),
 		);
 		expect(separator.getAttribute("aria-valuenow")).toBe("352");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 352 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("352px");
 
 		separator.dispatchEvent(new document.defaultView!.MouseEvent("pointerdown", { clientX: 400, bubbles: true }));
 		document.defaultView!.dispatchEvent(new document.defaultView!.MouseEvent("pointermove", { clientX: 360, bubbles: true }));
 		document.defaultView!.dispatchEvent(new document.defaultView!.MouseEvent("pointerup", { bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("392");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 392 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("392px");
 
 		separator.dispatchEvent(new document.defaultView!.MouseEvent("dblclick", { bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("320");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 320 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
 
 		startEdgeSeparator.dispatchEvent(
 			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
 		);
 		expect(startEdgeSeparator.getAttribute("aria-valuenow")).toBe("280");
+		expect(startEdgeSeparator.getAttribute("aria-valuetext")).toBe("调整测试资源栏宽度 280 像素");
 		expect(group.style.getPropertyValue("--prototype-source-width")).toBe("280px");
 
 		startEdgeSeparator.dispatchEvent(
 			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", shiftKey: true, bubbles: true }),
 		);
 		expect(startEdgeSeparator.getAttribute("aria-valuenow")).toBe("272");
+		expect(startEdgeSeparator.getAttribute("aria-valuetext")).toBe("调整测试资源栏宽度 272 像素");
 		expect(group.style.getPropertyValue("--prototype-source-width")).toBe("272px");
 	});
 });

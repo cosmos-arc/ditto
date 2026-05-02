@@ -1,14 +1,24 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { chromium } from "playwright";
-import { describe, expect, it } from "vitest";
+import { chromium, type Browser, type Page } from "playwright";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-orders-ledger.html",
 );
 const navigationTimeoutMs = 10_000;
+let browser: Browser | undefined;
+
+beforeAll(async () => {
+	browser = await chromium.launch({ channel: "chromium" });
+}, 30_000);
+
+afterAll(async () => {
+	await browser?.close();
+	browser = undefined;
+});
 
 function loadPage() {
 	const html = readFileSync(prototypePath, "utf-8");
@@ -32,20 +42,54 @@ describe("page-orders-ledger prototype", () => {
 		const document = loadPage();
 
 		expect(document.querySelector("#default-view > .shell-ledger.catalog-shell")).not.toBeNull();
+		expect(
+			document.querySelector('#default-view > .shell-ledger[data-resizable-panel-group="ops-main-detail"]'),
+		).not.toBeNull();
+		expect(document.querySelector("#default-view .resize-separator[aria-controls='main-content order-trace-panel']")).not.toBeNull();
 		expect(document.querySelector(".ledger-table-area.catalog-main[data-contract-slot='order-list']")).not.toBeNull();
 		expect(document.querySelector(".order-trace.catalog-detail[data-contract-slot='execution-trace']")).not.toBeNull();
 	});
 
 	it(
+		"keeps every order status tab attached to the ledger grid without list drift",
+		async () => {
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
+				for (const tabId of ["orders-done", "orders-pending", "orders-submitted", "orders-partial", "orders-failed"]) {
+					await page.locator(`label[for="${tabId}"]`).click();
+
+					const layout = await page.evaluate((activeTabId) => {
+						const panel = document.querySelector<HTMLElement>(`[data-panel="${activeTabId}"]`);
+						const tableArea = panel?.querySelector<HTMLElement>(".ledger-table-area");
+						const shell = document.querySelector<HTMLElement>("#default-view > .shell-ledger");
+						if (!panel || !tableArea || !shell) return null;
+
+						const panelDisplay = getComputedStyle(panel).display;
+						const tableGridArea = getComputedStyle(tableArea).gridArea;
+						const tableRect = tableArea.getBoundingClientRect();
+						const shellRect = shell.getBoundingClientRect();
+
+						return {
+							panelDisplay,
+							tableGridArea,
+							tableLeft: Math.round(tableRect.left),
+							shellLeft: Math.round(shellRect.left),
+						};
+					}, tabId);
+
+					expect(layout).not.toBeNull();
+					expect(layout?.panelDisplay).toBe("contents");
+					expect(layout?.tableGridArea).toBe("table");
+					expect(layout?.tableLeft).toBeGreaterThan(layout?.shellLeft ?? 0);
+				}
+			});
+		},
+		15_000,
+	);
+
+	it(
 		"keeps the quick order filters wired so only one table panel is visible",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				await expectVisiblePanels(page, ["all"]);
 
 				await page.locator('[data-tab-target="pending"]').click();
@@ -53,9 +97,7 @@ describe("page-orders-ledger prototype", () => {
 
 				await page.locator('[data-tab-target="filled"]').click();
 				await expectVisiblePanels(page, ["filled"]);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
@@ -63,13 +105,7 @@ describe("page-orders-ledger prototype", () => {
 	it(
 		"keeps the terminal status bar out of the compact viewport table content",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				const overlap = await page.evaluate(() => {
 					const statusBar = document.querySelector("#default-view > .status-bar");
 					const table = document.querySelector("#default-view .ledger-table");
@@ -90,9 +126,7 @@ describe("page-orders-ledger prototype", () => {
 				});
 
 				expect(overlap).toEqual({ intersects: false, overlapHeight: expect.any(Number) });
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
@@ -123,13 +157,7 @@ describe("page-orders-ledger prototype", () => {
 	it(
 		"uses the full default ledger width for scan-ready columns",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1536, height: 1080 }, async (page) => {
 				const trailingGap = await page.evaluate(() => {
 					const table = document.querySelector('#default-view [data-tab-panel="all"] .ledger-table');
 					const lastCell = document.querySelector(
@@ -144,9 +172,7 @@ describe("page-orders-ledger prototype", () => {
 				});
 
 				expect(trailingGap).toBeLessThanOrEqual(4);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
@@ -154,13 +180,7 @@ describe("page-orders-ledger prototype", () => {
 	it(
 		"supports order status tabs, prototype zones, and overlay triggers at runtime",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				await page.locator('label[for="orders-pending"]').click();
 				await expectCssVisible(page, '[data-panel="orders-pending"]', true);
 				await expectCssVisible(page, '[data-panel="orders-done"]', false);
@@ -173,13 +193,27 @@ describe("page-orders-ledger prototype", () => {
 				await page.locator('label[for="overlay-batch-cancel"]').first().click();
 				await expect(await page.locator("#overlay-batch-cancel").evaluate((element) => element.checked)).toBe(true);
 				await expectCssVisible(page, '[data-overlay="overlay-batch-cancel"]', true);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
 });
+
+async function withPrototypePage(viewport: { width: number; height: number }, run: (page: Page) => Promise<void>) {
+	if (!browser) {
+		throw new Error("Chromium browser was not initialized");
+	}
+
+	const page = await browser.newPage({ viewport });
+	page.setDefaultTimeout(2_000);
+
+	try {
+		await page.goto(`file://${prototypePath}`, { waitUntil: "load", timeout: navigationTimeoutMs });
+		await run(page);
+	} finally {
+		await page.close();
+	}
+}
 
 async function expectVisiblePanels(page: import("playwright").Page, visiblePanels: string[]) {
 	const panelStates = await page.locator("[data-tab-panel]").evaluateAll((panels) =>
@@ -198,8 +232,15 @@ async function expectCssVisible(page: import("playwright").Page, selector: strin
 	const isVisible = await page.locator(selector).first().evaluate((element) => {
 		const style = getComputedStyle(element);
 		const rect = element.getBoundingClientRect();
+		const hasVisibleBox = rect.width > 0 && rect.height > 0;
+		const hasVisibleChildBox = Array.from(element.children).some((child) => {
+			const childStyle = getComputedStyle(child);
+			const childRect = child.getBoundingClientRect();
 
-		return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+			return childStyle.display !== "none" && childStyle.visibility !== "hidden" && childRect.width > 0 && childRect.height > 0;
+		});
+
+		return style.display !== "none" && style.visibility !== "hidden" && (hasVisibleBox || hasVisibleChildBox);
 	});
 
 	expect(isVisible).toBe(visible);

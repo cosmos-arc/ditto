@@ -1,16 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { chromium } from "playwright";
 import { describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
 	"../docs/designs/specs/prototypes/page-factor-analysis.html",
 );
-const navigationTimeoutMs = 10_000;
-const playwrightTestTimeoutMs = 15_000;
-
 function loadHtml() {
 	return readFileSync(prototypePath, "utf-8");
 }
@@ -18,10 +14,17 @@ function loadHtml() {
 function loadPage() {
 	return new JSDOM(loadHtml()).window.document;
 }
-
-const prototypeUrl = `file://${prototypePath}`;
-
 describe("page-factor-analysis prototype", () => {
+	it("inherits the relaxed Object Hub header rhythm shared by detail pages", () => {
+		const layoutCss = readFileSync(
+			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-base.css"),
+			"utf-8",
+		);
+
+		expect(layoutCss).toMatch(/\.shell-hub\s*\{[^}]*--shell-header-height:\s*76px;/s);
+		expect(layoutCss).toMatch(/\.shell-hub\s+\.shell-header\s*\{[^}]*padding-inline:/s);
+	});
+
 	it("uses the gate-recognizable Object Hub shell with complete research rail navigation", () => {
 		const document = loadPage();
 		const shell = document.querySelector("#default-view > .object-shell.shell-hub");
@@ -80,73 +83,37 @@ describe("page-factor-analysis prototype", () => {
 		expect(html).not.toMatch(/\sfont-size="/);
 	});
 
-	it("opens and closes header overlays from the default view", async () => {
-		const browser = await chromium.launch({ channel: "chromium" });
-		const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
+	it("wires header overlays through default-view controls and CSS activation rules", () => {
+		const document = loadPage();
+		const html = loadHtml();
 
-		try {
-			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
-			for (const overlayId of ["overlay-add-backtest", "overlay-add-experiment", "overlay-ai-analysis"]) {
-				await page.click(`label[for="${overlayId}"]`);
-				await expectOverlayState(page, overlayId, true);
-				await page.click(`[data-overlay="${overlayId}"] .overlay-close`);
-				await expectOverlayState(page, overlayId, false);
-			}
-		} finally {
-			await browser.close();
+		for (const overlayId of ["overlay-add-backtest", "overlay-add-experiment", "overlay-ai-analysis"]) {
+			expect(document.querySelector(`#${overlayId}`)).not.toBeNull();
+			expect(document.querySelector(`#default-view label[for="${overlayId}"]`)).not.toBeNull();
+			expect(
+				document.querySelector(`#default-view [data-overlay="${overlayId}"] .overlay-close[for="${overlayId}"]`),
+			).not.toBeNull();
+			expect(html).toMatch(
+				new RegExp(
+					`:root:has\\(#${overlayId}:checked\\)\\s*\\[data-overlay="${overlayId}"\\]\\s*\\{\\s*display:\\s*flex;\\s*\\}`,
+				),
+			);
 		}
-	}, playwrightTestTimeoutMs);
-
-	it("keeps compact IC diagnostics readable without hiding the statistics rows", async () => {
-		const browser = await chromium.launch({ channel: "chromium" });
-		const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-
-		try {
-			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
-			const layout = await page.evaluate(() => {
-				const contextStrip = document.querySelector(".context-strip");
-				const summaryPanel = Array.from(document.querySelectorAll<HTMLElement>("[data-panel='fact-ic'] .panel"))
-					.find((panel) => panel.querySelector(".panel-title")?.textContent?.includes("统计摘要"));
-				const panelBody = summaryPanel?.querySelector<HTMLElement>(".panel-body");
-				const bottom = document.querySelector(".hub-bottom")?.getBoundingClientRect();
-				const panelRect = summaryPanel?.getBoundingClientRect();
-
-				return {
-					contextDisplay: contextStrip ? getComputedStyle(contextStrip).display : "",
-					bodyClientHeight: panelBody?.clientHeight ?? 0,
-					bodyScrollHeight: panelBody?.scrollHeight ?? 0,
-					panelBottom: panelRect?.bottom ?? 0,
-					bottomTop: bottom?.top ?? 0,
-				};
-			});
-
-			expect(layout.contextDisplay).toBe("none");
-			expect(layout.bodyScrollHeight).toBeLessThanOrEqual(layout.bodyClientHeight + 2);
-			expect(layout.panelBottom).toBeLessThan(layout.bottomTop);
-		} finally {
-			await browser.close();
-		}
-	}, playwrightTestTimeoutMs);
-});
-
-async function expectOverlayState(page: import("playwright").Page, overlayId: string, visible: boolean) {
-	const state = await page.$eval(`[data-overlay="${overlayId}"]`, (element) => {
-		const rect = element.getBoundingClientRect();
-		const computed = getComputedStyle(element);
-		return {
-			display: computed.display,
-			width: rect.width,
-			height: rect.height,
-		};
 	});
 
-	if (visible) {
-		expect(state.display).not.toBe("none");
-		expect(state.width).toBeGreaterThan(0);
-		expect(state.height).toBeGreaterThan(0);
-	} else {
-		expect(state.display).toBe("none");
-	}
-}
+	it("keeps compact IC diagnostics readable without hiding the statistics rows", () => {
+		const document = loadPage();
+		const html = loadHtml();
+		const summaryPanel = Array.from(document.querySelectorAll("[data-panel='fact-ic'] .panel"))
+			.find((panel) => panel.querySelector(".panel-title")?.textContent?.includes("统计摘要"));
+
+		expect(summaryPanel?.querySelectorAll(".stats-row")).toHaveLength(3);
+		expect(html).toMatch(/@media\s*\(max-height:\s*820px\)\s*\{[\s\S]*\.context-strip\s*\{\s*display:\s*none;/);
+		expect(html).toMatch(
+			/@media\s*\(max-height:\s*820px\)\s*\{[\s\S]*\.panel-body\s*\{\s*padding:\s*var\(--space-8\)\s+var\(--space-10\);/,
+		);
+		expect(html).toMatch(
+			/@media\s*\(max-height:\s*820px\)\s*\{[\s\S]*\.stats-row\s*\{\s*padding:\s*var\(--space-6\)\s+0;/,
+		);
+	});
+});

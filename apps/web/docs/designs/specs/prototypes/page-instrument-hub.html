@@ -209,6 +209,53 @@
       color: var(--text-tertiary);
     }
 
+    .object-identity {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      grid-template-areas:
+        "name price"
+        "judgment consequence";
+      align-items: center;
+      column-gap: var(--space-16);
+      row-gap: var(--space-2);
+    }
+
+    .object-name-row {
+      grid-area: name;
+    }
+
+    .object-price-row {
+      grid-area: price;
+      min-width: 0;
+      gap: var(--space-8);
+    }
+
+    .object-price {
+      font-size: var(--font-size-20);
+      line-height: 1;
+    }
+
+    .object-answer-row {
+      min-width: 0;
+      line-height: 1.25;
+    }
+
+    .object-answer-row[data-answer-judgment] {
+      grid-area: judgment;
+    }
+
+    .object-answer-row[data-object-consequence-preview] {
+      grid-area: consequence;
+      gap: var(--space-6);
+      overflow: hidden;
+    }
+
+    .object-answer-row[data-object-consequence-preview] > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .object-status {
       display: inline-flex;
       align-items: center;
@@ -1124,20 +1171,24 @@
 
     /* ── Timeline ── */
     .timeline-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-8);
       flex: 1;
+      min-width: 0;
     }
 
     .timeline-item {
       display: flex;
       align-items: flex-start;
-      gap: var(--space-12);
-      padding: var(--space-6) 0;
+      gap: var(--space-8);
+      padding: var(--space-6) var(--space-8);
       position: relative;
-      border-radius: var(--radius-3);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-panel-base);
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      min-width: 0;
     }
 
     .timeline-item:hover {
@@ -1146,12 +1197,7 @@
 
     .timeline-item::before {
       content: '';
-      position: absolute;
-      left: var(--timeline-line-left);
-      top: var(--timeline-line-top);
-      bottom: -6px;
-      width: 1px;
-      background: var(--border-subtle);
+      display: none;
     }
 
     .timeline-item:last-child::before {
@@ -1343,8 +1389,16 @@
         padding: var(--space-6) var(--space-12);
       }
 
+      .timeline-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       .timeline-item {
-        padding: var(--space-4) 0;
+        padding: var(--space-4) var(--space-8);
+      }
+
+      .timeline-item:nth-child(n+4) {
+        display: none;
       }
 
       .timeline-desc {

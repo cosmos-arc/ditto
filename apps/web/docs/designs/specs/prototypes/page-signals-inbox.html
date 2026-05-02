@@ -123,16 +123,24 @@
      * ══════════════════════════════════ */
     .shell-signals {
       display: grid;
-      grid-template-columns: var(--shell-rail-width) 1fr var(--shell-signals-detail-width);
+      grid-template-columns:
+        var(--shell-rail-width)
+        minmax(0, 1fr)
+        1px
+        minmax(300px, var(--shell-signals-detail-width));
       grid-template-rows: var(--shell-header-height) var(--density-strip-height) minmax(0, 1fr);
       grid-template-areas:
-        "rail header  header"
-        "rail scope   scope"
-        "rail main    detail";
+        "rail header  header    header"
+        "rail scope   scope     scope"
+        "rail main    separator detail";
       height: calc(100dvh - var(--shell-status-bar-height));
       min-height: 0;
       width: 100vw;
       overflow: hidden;
+    }
+
+    .shell-signals > .resize-separator {
+      grid-area: separator;
     }
 
     /* ── Rail ── */
@@ -394,9 +402,18 @@
 
     /* Table container */
     .signals-table-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
       flex: 1;
       overflow: auto;
       min-height: 0;
+      inline-size: 100%;
+    }
+
+    .signals-table-wrap .data-table {
+      inline-size: 100%;
+      table-layout: fixed;
     }
 
     /* ── Signal source badges ── */
@@ -1008,6 +1025,7 @@
       flex: 1;
       flex-direction: column;
       min-height: 0;
+      position: relative;
     }
     .shell-signals:has(#tab-pending:checked) .tab-panel.active-by-default { display: flex; }
 
@@ -1048,6 +1066,10 @@
       border-top: 1px solid var(--border-subtle);
       font-size: var(--font-size-12);
       color: var(--text-secondary);
+      position: absolute;
+      inset-inline: 0;
+      bottom: 0;
+      z-index: 2;
     }
     .batch-bar-count {
       font-family: var(--font-family-numeric);
@@ -1094,6 +1116,10 @@
     .shell-signals [data-panel="tab-pending"] .signals-table-wrap[data-tab-panel="all"] .data-table {
       width: 100%;
       table-layout: fixed;
+    }
+
+    .shell-signals [data-panel="tab-pending"] .signals-table-wrap[data-tab-panel="all"] {
+      padding-bottom: calc(var(--density-action-height) + var(--space-20));
     }
 
     .shell-signals [data-panel="tab-pending"] .signals-table-wrap[data-tab-panel="all"] .data-table :is(th, td):nth-child(1) { width: 11%; }
@@ -1818,7 +1844,7 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <div class="style-label" aria-hidden="true">Graphite Studio — Signals Inbox · Compact · A股</div>
 
-  <div class="shell-signals shell-ops">
+  <div class="shell-signals shell-ops" data-resizable-panel-group="ops-main-detail" data-resize-var="--shell-signals-detail-width">
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
@@ -2455,8 +2481,10 @@
 
     </main>
 
+    <div class="resize-separator" data-resize-separator data-resize-var="--shell-signals-detail-width" data-resize-default="380" data-resize-min="300" data-resize-max="560" role="separator" tabindex="0" aria-label="调整信号详情宽度" aria-orientation="vertical" aria-controls="main-content signal-detail-panel" aria-valuemin="300" aria-valuemax="560" aria-valuenow="380" aria-valuetext="调整信号详情宽度 380 像素"></div>
+
     <!-- ═══ Detail Panel (380px) ═══ -->
-    <aside class="detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-mouse-glow="true" data-mouse-glow-size="150px">
+    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-mouse-glow="true" data-mouse-glow-size="150px">
       <div class="detail-header">
         <div>
           <div class="detail-header-title">贵州茅台</div>

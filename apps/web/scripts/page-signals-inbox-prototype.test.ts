@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { chromium } from "playwright";
-import { describe, expect, it } from "vitest";
+import { chromium, type Browser, type Page } from "playwright";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
@@ -16,6 +16,17 @@ function loadPage() {
 
 const prototypeUrl = `file://${prototypePath}`;
 const navigationTimeoutMs = 10_000;
+let browser: Browser | undefined;
+
+beforeAll(async () => {
+	browser = await chromium.launch({ channel: "chromium" });
+}, 30_000);
+
+afterAll(async () => {
+	await browser?.close();
+	browser = undefined;
+});
+
 const expectedRailItems = [
 	{ domain: "home", label: "首页", icon: "home", current: false },
 	{ domain: "markets", label: "市场", icon: "trending-up", current: false },
@@ -31,6 +42,8 @@ describe("page-signals-inbox prototype", () => {
 		const railItems = Array.from(shell?.querySelectorAll<HTMLElement>(".shell-rail .rail-icon[data-rail-domain]") ?? []);
 
 		expect(shell).not.toBeNull();
+		expect(shell?.getAttribute("data-resizable-panel-group")).toBe("ops-main-detail");
+		expect(shell?.querySelector(".resize-separator[aria-controls='main-content signal-detail-panel']")).not.toBeNull();
 		expect(shell?.querySelector(".shell-rail")).not.toBeNull();
 		expect(
 			railItems.map((item) => ({
@@ -81,15 +94,49 @@ describe("page-signals-inbox prototype", () => {
 	});
 
 	it(
+		"keeps every signal status tab list stretched to the available panel width and height",
+		async () => {
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
+				for (const tabId of ["tab-pending", "tab-confirmed", "tab-ignored", "tab-ordered"]) {
+					await page.locator(`label[for="${tabId}"]`).click();
+
+					const geometry = await page.evaluate((activeTabId) => {
+						const panelName = activeTabId;
+						const panel = document.querySelector<HTMLElement>(`[data-panel="${panelName}"]`);
+						const wrapper = panel?.querySelector<HTMLElement>(".signals-table-wrap");
+						const table = wrapper?.querySelector<HTMLTableElement>(".data-table");
+						if (!panel || !wrapper || !table) return null;
+
+						const panelRect = panel.getBoundingClientRect();
+						const wrapperRect = wrapper.getBoundingClientRect();
+						const tableRect = table.getBoundingClientRect();
+
+						return {
+							wrapperRight: Math.round(wrapperRect.right),
+							panelRight: Math.round(panelRect.right),
+							wrapperBottom: Math.round(wrapperRect.bottom),
+							panelBottom: Math.round(panelRect.bottom),
+							tableRight: Math.round(tableRect.right),
+							wrapperLeft: Math.round(wrapperRect.left),
+						};
+					}, tabId);
+
+					expect(geometry).not.toBeNull();
+					if (!geometry) continue;
+					expect(geometry.wrapperRight).toBeGreaterThanOrEqual(geometry.panelRight - 1);
+					expect(geometry.wrapperBottom).toBeGreaterThanOrEqual(geometry.panelBottom - 1);
+					expect(geometry.tableRight).toBeGreaterThanOrEqual(geometry.wrapperRight - 1);
+					expect(geometry.wrapperLeft).toBeLessThan(geometry.wrapperRight);
+				}
+			});
+		},
+		15_000,
+	);
+
+	it(
 		"keeps the shell header title and subtitle visually separated",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				const headerTitle = await page.evaluate(() => {
 					const group = document.querySelector<HTMLElement>(".shell-header .header-title-group");
 					const title = document.querySelector<HTMLElement>(".shell-header .header-title");
@@ -122,9 +169,7 @@ describe("page-signals-inbox prototype", () => {
 				});
 				expect(headerTitle?.gap).toBeGreaterThanOrEqual(6);
 				expect(headerTitle?.subtitleColor).not.toBe(headerTitle?.titleColor);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
@@ -132,13 +177,7 @@ describe("page-signals-inbox prototype", () => {
 	it(
 		"stretches the pending signal table columns across the full frame",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				const tableGeometry = await page.evaluate(() => {
 					const wrapper = document.querySelector<HTMLElement>(
 						'[data-panel="tab-pending"] [data-tab-panel="all"].signals-table-wrap',
@@ -172,9 +211,7 @@ describe("page-signals-inbox prototype", () => {
 				expect(tableGeometry.headerRight).toBeGreaterThanOrEqual(tableGeometry.wrapperRight - 1);
 				expect(tableGeometry.bodyRight).toBeGreaterThanOrEqual(tableGeometry.wrapperRight - 1);
 				expect(tableGeometry.occupiedWidth).toBeGreaterThanOrEqual(tableGeometry.tableWidth - 1);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
@@ -182,13 +219,7 @@ describe("page-signals-inbox prototype", () => {
 	it(
 		"keeps the terminal status bar out of the signal detail viewport",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1536, height: 1080 }, async (page) => {
 				const geometry = await page.evaluate(() => {
 					const shell = document.querySelector("#default-view > .shell-signals");
 					const detail = document.querySelector('[data-contract-slot="detail"]');
@@ -216,9 +247,7 @@ describe("page-signals-inbox prototype", () => {
 				}
 				expect(geometry.shellBottom).toBeLessThanOrEqual(geometry.statusTop + 1);
 				expect(geometry.detailBottom).toBeLessThanOrEqual(geometry.statusTop + 1);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
@@ -226,13 +255,7 @@ describe("page-signals-inbox prototype", () => {
 	it(
 		"supports signal status tabs, prototype zones, and overlay triggers at runtime",
 		async () => {
-			const browser = await chromium.launch({ channel: "chromium" });
-			const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-			page.setDefaultTimeout(2_000);
-
-			try {
-				await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+			await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 				await page.locator('label[for="tab-confirmed"]').click();
 				await expectCssVisible(page, '[data-panel="tab-confirmed"]', true);
 				await expectCssVisible(page, '[data-panel="tab-pending"]', false);
@@ -250,13 +273,27 @@ describe("page-signals-inbox prototype", () => {
 					),
 				).toBe(true);
 				await expectCssVisible(page, '[data-overlay="overlay-batch-confirm"]', true);
-			} finally {
-				await browser.close();
-			}
+			});
 		},
 		15_000,
 	);
 });
+
+async function withPrototypePage(viewport: { width: number; height: number }, run: (page: Page) => Promise<void>) {
+	if (!browser) {
+		throw new Error("Chromium browser was not initialized");
+	}
+
+	const page = await browser.newPage({ viewport });
+	page.setDefaultTimeout(2_000);
+
+	try {
+		await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
+		await run(page);
+	} finally {
+		await page.close();
+	}
+}
 
 async function expectCssVisible(page: import("playwright").Page, selector: string, visible: boolean) {
 	const isVisible = await page.locator(selector).first().evaluate((element) => {
