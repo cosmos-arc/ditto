@@ -21,10 +21,6 @@ from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedShadowSlotRecord,
 )
-from ditto_data.services import (
-    DerivedArtifactReader,
-    DerivedCatalogService,
-)
 from ditto_features.materialization import DerivedRunStatus, DerivedVersionStatus
 from ditto_features.models.derived import (
     DerivedSpecRecord,
@@ -36,6 +32,8 @@ from ditto_features.publication_safety import (
     CertificationStage,
     ShadowDiffReport,
 )
+from ditto_features.services.derived import DerivedArtifactReader
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 

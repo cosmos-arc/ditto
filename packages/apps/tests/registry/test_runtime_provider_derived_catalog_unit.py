@@ -6,12 +6,13 @@ from dishka import Container, Provider, Scope, make_container, provide
 from ditto_analysis.di import AnalysisStorageProvider
 from ditto_apps.registry.infra import ConfigProvider
 from ditto_data.di import RuntimeProvider
-from ditto_data.services import DerivedCatalogService
 from ditto_data.sources.source import DataSources
+from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.audit.models import RiskScanPayload, RiskScope
 from ditto_execution.di import ExecutionStorageProvider
 from ditto_features.di import FeaturesStorageProvider
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_strategy.di import StrategyStorageProvider
 from ditto_strategy.models import (
@@ -88,18 +89,31 @@ class TestRuntimeProviderDerivedCatalog:
         assert service_1 is service_2
         container.close()
 
-    def test_runtime_provider_provides_shadow_slot_service(
+    def test_shadow_slot_service_assembled_from_data_and_features(
         self,
         monkeypatch,
         tmp_path,
     ) -> None:
-        """RuntimeProvider should build DerivedShadowSlotService."""
+        """DerivedShadowSlotService assembles from data reader/writer + features."""
+        from ditto_data.storage.runtime.publication_shadow_sqlite import (
+            SQLiteDerivedShadowSlotReader,
+            SQLiteDerivedShadowSlotWriter,
+        )
+
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = _make_container()
 
-        service = container.get(DerivedShadowSlotService)
+        # Verify the data layer provides the reader/writer
+        sqlite_client = container.get(SQLiteClient)
+        reader = SQLiteDerivedShadowSlotReader(sqlite_client)
+        writer = SQLiteDerivedShadowSlotWriter(sqlite_client)
 
+        # Verify features service can be assembled from data components
+        service = DerivedShadowSlotService(
+            slot_reader=reader,
+            slot_writer=writer,
+        )
         assert isinstance(service, DerivedShadowSlotService)
         container.close()
 

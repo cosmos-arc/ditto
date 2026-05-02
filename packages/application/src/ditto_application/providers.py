@@ -21,19 +21,16 @@ from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
 )
 from ditto_data.ingestion.quality_record_service import QualityRecordService
-from ditto_data.providers.provider import ServiceBackedDataProvider
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
-from ditto_data.services import (
-    DerivedArtifactReader,
-    DerivedCatalogService,
-    DerivedQueryService,
-    DerivedShadowSlotService,
-)
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
+from ditto_data.storage.runtime.publication_shadow_sqlite import (
+    SQLiteDerivedShadowSlotReader,
+    SQLiteDerivedShadowSlotWriter,
+)
 from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.storage.sqlite.trade import TradeService
@@ -42,8 +39,14 @@ from ditto_execution.storage.sqlite.trade import TradeService
 # Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
 # ---------------------------------------------------------------------------
 from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.services.derived import DerivedArtifactReader
 from ditto_features.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
+)
+from ditto_features.services.derived.query_service import DerivedQueryService
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services.derived_shadow_slot_service import (
+    DerivedShadowSlotService,
 )
 from ditto_platform.foundation.config.settings import TradingSettings
 from ditto_platform.services.notification import AlertManager
@@ -66,6 +69,7 @@ from ditto_application.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
+from ditto_application.builders.data_provider import ServiceBackedDataProvider
 
 # ---------------------------------------------------------------------------
 # App Command 层
@@ -307,6 +311,17 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
+
+    @provide
+    def derived_shadow_slot_service(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> DerivedShadowSlotService:
+        """Shadow slot 控制面服务 — 组装 data 层 reader/writer 与 features 层服务."""
+        return DerivedShadowSlotService(
+            slot_reader=SQLiteDerivedShadowSlotReader(sqlite_client),
+            slot_writer=SQLiteDerivedShadowSlotWriter(sqlite_client),
+        )
 
     @provide
     def compile_cache_service(

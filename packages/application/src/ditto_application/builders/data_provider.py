@@ -1,18 +1,17 @@
 """
-DataProvider 实现 — ServiceBackedDataProvider.
+DataProvider implementation — ServiceBackedDataProvider.
 
-Facade 模式：组合 MarketService + MetadataService + DerivedQueryService，
-满足 DataProvider Protocol，为 engine 层提供统一数据访问。
+Facade pattern: composes MarketService + MetadataService + DerivedQueryService,
+satisfying the DataProvider Protocol for unified data access.
 """
 
 from __future__ import annotations
 
 import polars as pl
-from ditto_features.services.derived.query_service import DerivedQueryService
-
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 from ditto_data.services.metadata_service import MetadataService
+from ditto_features.services.derived.query_service import DerivedQueryService
 
 __all__ = ["ServiceBackedDataProvider"]
 

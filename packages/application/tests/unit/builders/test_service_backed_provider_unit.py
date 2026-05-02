@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock
 
 import polars as pl
+from ditto_application.builders.data_provider import ServiceBackedDataProvider
 from ditto_data.provider import BarQuery, InstrumentQuery
-from ditto_data.providers.provider import ServiceBackedDataProvider
 
 
 def _make_mock_service(name: str) -> MagicMock:

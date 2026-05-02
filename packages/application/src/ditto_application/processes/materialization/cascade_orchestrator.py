@@ -18,7 +18,6 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import uuid4
 
-from ditto_data.services import DerivedCatalogService
 from ditto_features.materialization import (
     DerivedInvalidationEvent,
     DerivedMaterializationRequest,
@@ -27,6 +26,7 @@ from ditto_features.materialization import (
     DerivedRunTrigger,
 )
 from ditto_features.models.derived import DerivedInvalidationRecord
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppError

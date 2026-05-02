@@ -7,15 +7,13 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 import polars as pl
-from ditto_data.services import (
-    DerivedQueryService,
-    DerivedSourceScope,
-)
 from ditto_features.services.derived import (
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedSeriesQuery,
+    DerivedSourceScope,
 )
+from ditto_features.services.derived.query_service import DerivedQueryService
 
 type TemporalValue = date | datetime
 

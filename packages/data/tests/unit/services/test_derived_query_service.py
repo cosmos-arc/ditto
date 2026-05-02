@@ -943,10 +943,11 @@ class TestStreamingMemoryManagement:
         assert collected.height == 2
 
 
-def test_services_exports_switch_to_derived_query_contract() -> None:
-    """Top-level exports should no longer expose feature/factor query services."""
+def test_services_exports_no_cross_package_re_exports() -> None:
+    """data.services should not re-export features/analysis services."""
     from ditto_data import services
 
-    assert "DerivedQueryService" in services.__all__
-    assert "FeatureService" not in services.__all__
-    assert "FactorService" not in services.__all__
+    assert "DerivedQueryService" not in services.__all__
+    assert "DerivedCatalogService" not in services.__all__
+    assert "DerivedShadowSlotService" not in services.__all__
+    assert "DerivedArtifactReader" not in services.__all__

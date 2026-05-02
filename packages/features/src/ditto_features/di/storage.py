@@ -1,8 +1,12 @@
 """Features storage DI Provider — 衍生数据 SQLite 存储装配."""
 
+from pathlib import Path
+
 from dishka import Provider, Scope, provide
 from ditto_data.storage.sqlite_client import SQLiteClient
 
+from ditto_features.services.derived import DerivedArtifactReader
+from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
@@ -43,4 +47,19 @@ class FeaturesStorageProvider(Provider):
         return DerivedCatalogService(
             catalog_reader=derived_catalog_reader,
             catalog_writer=derived_catalog_writer,
+        )
+
+    @provide
+    def derived_query_service(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        data_root: Path,
+    ) -> DerivedQueryService:
+        """衍生查询服务（组合 catalog 服务与 artifact reader）."""
+        return DerivedQueryService(
+            catalog_service=derived_catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=derived_catalog_service,
+                artifact_root=data_root,
+            ),
         )

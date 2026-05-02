@@ -7,19 +7,6 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_analysis.research.artifact_service import (
-    ResearchArtifactService,
-)
-from ditto_features.services.derived import (
-    DerivedArtifactReader,
-    DerivedQueryService,
-)
-from ditto_features.services.derived_catalog_service import (
-    DerivedCatalogService,
-)
-from ditto_features.services.derived_shadow_slot_service import (
-    DerivedShadowSlotService,
-)
 from ditto_platform.foundation import SQLitePool
 from ditto_platform.foundation.concurrency import FileLockManager
 
@@ -288,44 +275,9 @@ class RuntimeProvider(Provider):
         )
 
     @provide
-    def derived_shadow_slot_service(
-        self,
-        derived_shadow_slot_reader: SQLiteDerivedShadowSlotReader,
-        derived_shadow_slot_writer: SQLiteDerivedShadowSlotWriter,
-    ) -> DerivedShadowSlotService:
-        """Shadow slot 控制面服务."""
-        return DerivedShadowSlotService(
-            slot_reader=derived_shadow_slot_reader,
-            slot_writer=derived_shadow_slot_writer,
-        )
-
-    @provide
     def source_service(self, sources: DataSources) -> SourceService:
         """外部数据源访问服务."""
         return SourceService(sources)
-
-    @provide
-    def research_artifact_service(
-        self,
-        settings: DataStoreSettings,
-    ) -> ResearchArtifactService:
-        """Research artifact file I/O service."""
-        return ResearchArtifactService(artifact_root=Path(settings.data_root))
-
-    @provide
-    def derived_query_service(
-        self,
-        derived_catalog_service: DerivedCatalogService,
-        settings: DataStoreSettings,
-    ) -> DerivedQueryService:
-        """衍生查询服务（桥接 features 服务与 data 配置）."""
-        return DerivedQueryService(
-            catalog_service=derived_catalog_service,
-            artifact_reader=DerivedArtifactReader(
-                catalog_service=derived_catalog_service,
-                artifact_root=Path(settings.data_root),
-            ),
-        )
 
     # ========================================================================
     # SQL Engine

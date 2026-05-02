@@ -19,10 +19,6 @@ from ditto_data.models.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_data.services import (
-    DerivedArtifactReader,
-    DerivedCatalogService,
-)
 from ditto_data.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
@@ -50,6 +46,8 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.publication_safety import CertificationStage
+from ditto_features.services.derived import DerivedArtifactReader
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,

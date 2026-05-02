@@ -2465,13 +2465,10 @@ packages:
 - pypi: ./packages/data
   name: ditto-data
   version: 0.1.0
-  sha256: 1a1a912d45f12d82d74d537184f8b556b785ca9288d5b3d9f1fe0d9a728ecd6e
+  sha256: 2b1bc416775052a8af328aa12983071d0a548ffc8c95fd70c81bd3085ab6c2f0
   requires_dist:
   - ditto-kernel
   - ditto-platform
-  - ditto-features
-  - ditto-strategy
-  - ditto-analysis
   requires_python: '>=3.13'
 - pypi: ./packages/execution
   name: ditto-execution

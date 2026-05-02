@@ -9,17 +9,15 @@ from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-from ditto_data.services import (
-    DerivedArtifactReader,
-    DerivedCatalogService,
-    DerivedQueryService,
-)
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
+from ditto_features.services.derived import DerivedArtifactReader
+from ditto_features.services.derived.query_service import DerivedQueryService
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade

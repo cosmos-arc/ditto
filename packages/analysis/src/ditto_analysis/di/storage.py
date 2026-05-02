@@ -1,8 +1,11 @@
 """Analysis storage DI Provider — 研究 SQLite 存储装配."""
 
+from pathlib import Path
+
 from dishka import Provider, Scope, provide
 from ditto_data.storage.sqlite_client import SQLiteClient
 
+from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.storage.sqlite.research import (
     SQLiteResearchCatalogReader,
@@ -44,3 +47,8 @@ class AnalysisStorageProvider(Provider):
             catalog_reader=research_catalog_reader,
             catalog_writer=research_catalog_writer,
         )
+
+    @provide
+    def research_artifact_service(self, data_root: Path) -> ResearchArtifactService:
+        """Research artifact file I/O service."""
+        return ResearchArtifactService(artifact_root=data_root)
