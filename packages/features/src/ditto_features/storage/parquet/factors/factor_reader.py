@@ -11,8 +11,8 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
 
 
 class _FactorParquetReader(ParquetStore):

@@ -9,10 +9,8 @@ from typing import Any, cast
 
 import polars as pl
 from ditto_platform.foundation import Metrics, SQLitePool, logger, traced
+from ditto_platform.foundation.storage.types import OnDuplicate, WriteStoreResult
 from ditto_platform.foundation.util.io import file_md5
-
-from ditto_data.models import OnDuplicate
-from ditto_data.models.storage import WriteStoreResult
 
 
 class SQLiteStore:

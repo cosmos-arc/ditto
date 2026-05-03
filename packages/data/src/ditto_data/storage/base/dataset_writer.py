@@ -5,9 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
+from ditto_platform.foundation.storage.types import OnDuplicate, WriteStoreResult
 
-from ditto_data.models import OnDuplicate
-from ditto_data.models.storage import WriteStoreResult
 from ditto_data.storage.base.parquet_store import ParquetStore
 
 

@@ -3,7 +3,7 @@
 from typing import Any
 
 import orjson
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage import SQLiteClient
 
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,

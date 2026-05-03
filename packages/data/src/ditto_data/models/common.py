@@ -260,12 +260,9 @@ class Source(StrEnum):
 
 
 # ============ Store 枚举 ============
-class OnDuplicate(Enum):
-    """策略：处理写入时的重复数据."""
-
-    ERROR = "error"  # 遇到重复时报错（默认，最安全）
-    KEEP_FIRST = "keep_first"  # 保留现有数据，忽略新数据
-    KEEP_LAST = "keep_last"  # 使用新数据覆盖现有数据（Last-Write-Wins）
+# Re-exported from platform — canonical definition lives in
+# ditto_platform.foundation.storage.types.OnDuplicate.
+from ditto_platform.foundation.storage.types import OnDuplicate  # noqa: E402
 
 
 class InstrumentIdRange(NamedTuple):

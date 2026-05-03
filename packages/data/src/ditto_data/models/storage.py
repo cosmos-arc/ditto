@@ -1,35 +1,22 @@
-"""Storage models for Data."""
+"""
+Storage models for Data.
+
+WriteResult / WriteStoreResult are re-exported from platform;
+FreezeManifest is data-specific and stays local.
+"""
 
 from dataclasses import dataclass, field
+
+from ditto_platform.foundation.storage.types import (
+    WriteResult,
+    WriteStoreResult,
+)
 
 __all__ = [
     "FreezeManifest",
     "WriteResult",
     "WriteStoreResult",
 ]
-
-
-@dataclass(frozen=True)
-class WriteResult:
-    """写入结果统计"""
-
-    file_path: str
-    checksum: str
-    rows_written: int
-    rows_total: int
-    blocked: bool
-
-
-@dataclass(frozen=True)
-class WriteStoreResult:
-    """存储层写入结果统计."""
-
-    file_path: str
-    checksum: str
-    added: int
-    updated: int
-    skipped: int
-    is_merge: bool
 
 
 @dataclass(frozen=True)

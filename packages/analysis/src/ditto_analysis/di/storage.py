@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage import SQLiteClient
 
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService

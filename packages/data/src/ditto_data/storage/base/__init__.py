@@ -1,16 +1,22 @@
-"""Base store abstractions."""
+"""
+Base store abstractions.
 
-from ditto_data.storage.base.parquet_store import MergeResult, ParquetStore
-from ditto_data.storage.base.partition_strategy import (
+Re-exports generic storage types from platform; data-specific types remain local.
+"""
+
+from ditto_platform.foundation.storage import (
+    MergeResult,
+    ParquetStore,
     PartitionStrategy,
     YearlyPartition,
 )
-from ditto_data.storage.base.protocols import (
+from ditto_platform.foundation.storage.protocols import (
     DatasetReader,
     DatasetWriter,
     SqliteReader,
     SqliteWriter,
 )
+
 from ditto_data.storage.base.sqlite_store import SQLiteStore
 
 __all__ = [

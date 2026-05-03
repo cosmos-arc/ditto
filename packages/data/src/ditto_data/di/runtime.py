@@ -9,6 +9,9 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLitePool
 from ditto_platform.foundation.concurrency import FileLockManager
+from ditto_platform.foundation.storage.sqlite_client import (
+    SQLiteClient,
+)
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_service import FreezeService
@@ -50,7 +53,6 @@ from ditto_data.storage.runtime.quality import (
     QuarantineReader,
     QuarantineWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["RuntimeProvider"]
 

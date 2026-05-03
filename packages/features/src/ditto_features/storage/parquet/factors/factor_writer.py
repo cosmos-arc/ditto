@@ -10,10 +10,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from ditto_data.models import OnDuplicate
-from ditto_data.models.storage import WriteStoreResult as WriteResult
-from ditto_data.storage.base import MergeResult, ParquetStore, YearlyPartition
 from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation.storage import (
+    MergeResult,
+    OnDuplicate,
+    ParquetStore,
+    YearlyPartition,
+)
+from ditto_platform.foundation.storage import (
+    WriteStoreResult as WriteResult,
+)
 
 
 class _FactorParquetWriter(ParquetStore):
