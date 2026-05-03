@@ -101,7 +101,7 @@
       inset: 0;
       background: var(--surface-app);
       filter: url(#noise-filter);
-      opacity: 0.018;
+      opacity: 0.028;
       pointer-events: none;
     }
 
@@ -487,7 +487,7 @@
       grid-template-columns: 72px 1fr auto;
       gap: var(--space-10);
       align-items: start;
-      padding: var(--space-9) 0;
+      padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
       font-size: var(--font-size-11);
     }
@@ -546,7 +546,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-6);
       background: var(--surface-panel-base);
-      padding: var(--space-9);
+      padding: var(--space-10);
     }
 
     .node-kind,
@@ -889,6 +889,8 @@
     /* ── P0: Score direction indicators ── */
     .card-value[data-delta="up"] { color: var(--system-healthy-fg); }
     .card-value[data-delta="down"] { color: var(--risk-critical-fg); }
+    .card-value[data-delta="up"]::before { content: "▲ "; font-size: 8px; }
+    .card-value[data-delta="down"]::before { content: "▼ "; font-size: 8px; }
 
     /* ── Non-color status encoding (CVD-safe) ── */
     .status-pill.running::before { content: "● "; font-size: 6px; }
@@ -942,7 +944,7 @@
       position: absolute;
       left: 32px;
       top: 0;
-      bottom: calc(-1 * var(--space-9));
+      bottom: calc(-1 * var(--space-8));
       border-left: 1px solid var(--border-subtle);
     }
 
