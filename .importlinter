@@ -142,12 +142,7 @@ forbidden_modules =
 ignore_imports =
     # Features 引用 data base types 是合法的：moved-from-data 的存储/模型/错误类型
     ditto_features.** -> ditto_data.errors
-    ditto_features.** -> ditto_data.models
-    ditto_features.** -> ditto_data.models.common
     ditto_features.** -> ditto_data.models.publication_safety
-    ditto_features.** -> ditto_data.models.storage
-    ditto_features.** -> ditto_data.storage.base
-    ditto_features.** -> ditto_data.storage.sqlite_client
 unmatched_ignore_imports_alerting = warn
 
 # Features 内部方向：expression 禁止依赖 materialization

@@ -11,7 +11,7 @@ from ditto_kernel.exceptions import DataError, DittoError, IdentifierError
 
 # ---------------------------------------------------------------------------
 # Derived* error hierarchy — canonical definition (Data layer owns these
-# because Data services raise them without depending on Engine).
+# because Data services raise them without depending on Features).
 # ---------------------------------------------------------------------------
 
 

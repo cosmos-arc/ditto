@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
-from ditto_data.models.common import (
+from ditto_kernel.json_types import (
     JsonDict,
     JsonValue,
     require_bool,
