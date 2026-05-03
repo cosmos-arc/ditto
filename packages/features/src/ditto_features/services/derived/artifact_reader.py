@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal, Protocol, overload
 
 import polars as pl
-from ditto_data.errors import DerivedNotFoundError, DerivedVersionError
+from ditto_kernel.exceptions import DerivedNotFoundError, DerivedVersionError
 
 from ditto_features.models.derived import (
     DerivedSpecRecord,
