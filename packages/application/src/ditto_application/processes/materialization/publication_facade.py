@@ -16,11 +16,6 @@ from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
 )
-from ditto_data.models.publication_safety import (
-    CertificationReportRecord,
-    CompatibilityManifestRecord,
-    DerivedShadowSlotRecord,
-)
 from ditto_features.materialization import DerivedRunStatus, DerivedVersionStatus
 from ditto_features.models.derived import (
     DerivedSpecRecord,
@@ -35,6 +30,11 @@ from ditto_features.publication_safety import (
 from ditto_features.services.derived import DerivedArtifactReader
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_kernel.publication_safety import (
+    CertificationReportRecord,
+    CompatibilityManifestRecord,
+    DerivedShadowSlotRecord,
+)
 from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 from ditto_application.config import now_iso

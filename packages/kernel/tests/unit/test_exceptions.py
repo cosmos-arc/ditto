@@ -210,10 +210,10 @@ class TestPerPackageDomainRoots:
 
         assert issubclass(ExecutionError, DittoError)
 
-    def test_analytics_error_exists(self) -> None:
-        from ditto_features.errors import AnalyticsError
+    def test_features_error_exists(self) -> None:
+        from ditto_features.errors import FeaturesError
 
-        assert issubclass(AnalyticsError, DittoError)
+        assert issubclass(FeaturesError, DittoError)
 
     def test_app_error_exists(self) -> None:
         from ditto_application.exceptions import AppError
@@ -233,10 +233,10 @@ class TestPerPackageDomainRoots:
     def test_analytics_orphans_use_domain_root(self) -> None:
         from ditto_analysis.errors import AnalysisError
         from ditto_analysis.research.domain import LateArrivalError
-        from ditto_features.errors import AnalyticsError
+        from ditto_features.errors import FeaturesError
         from ditto_features.expression.diagnostics import ExpressionCompileError
 
-        assert issubclass(ExpressionCompileError, AnalyticsError)
+        assert issubclass(ExpressionCompileError, FeaturesError)
         assert issubclass(AnalysisError, DittoError)
         assert issubclass(LateArrivalError, AnalysisError)
 

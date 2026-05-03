@@ -3,13 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.config.settings import (
-    ObservabilitySettings,
-    Settings,
-    SystemSettings,
-    TradingSettings,
-)
+from ditto_application.settings import TradingSettings
 
 
 class TestTradingSettings:
@@ -68,54 +62,3 @@ class TestTradingSettings:
             }
         )
         assert settings.default_universe == "csi300"
-
-
-class TestSettingsWithTrading:
-    """Settings 聚合中 trading 字段测试."""
-
-    def test_settings_without_trading(self) -> None:
-        """Settings 在不提供 trading 时应该正常工作."""
-        settings = Settings(
-            system=SystemSettings(environment=Environment.TESTING),
-            observability=ObservabilitySettings(),
-        )
-
-        assert settings.trading is None
-
-    def test_settings_with_trading(self) -> None:
-        """Settings 应该能包含 trading 配置."""
-        trading = TradingSettings(
-            default_universe="csi500",
-            max_position_pct=0.2,
-        )
-        settings = Settings(
-            system=SystemSettings(environment=Environment.TESTING),
-            observability=ObservabilitySettings(),
-            trading=trading,
-        )
-
-        assert settings.trading is not None
-        assert settings.trading.default_universe == "csi500"
-        assert settings.trading.max_position_pct == 0.2
-
-    def test_settings_trading_none_explicit(self) -> None:
-        """Settings 显式传入 trading=None 应该正常工作."""
-        settings = Settings(
-            system=SystemSettings(environment=Environment.TESTING),
-            observability=ObservabilitySettings(),
-            trading=None,
-        )
-
-        assert settings.trading is None
-
-    def test_settings_properties_work_with_trading(self) -> None:
-        """Settings 的环境属性在包含 trading 时仍然正常工作."""
-        settings = Settings(
-            system=SystemSettings(environment=Environment.TESTING),
-            observability=ObservabilitySettings(),
-            trading=TradingSettings(),
-        )
-
-        assert settings.is_testing is True
-        assert settings.is_development is False
-        assert settings.is_production is False

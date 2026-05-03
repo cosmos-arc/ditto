@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_data.models.publication_safety import (
+from ditto_kernel.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )

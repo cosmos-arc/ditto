@@ -48,7 +48,6 @@ from ditto_features.services.derived_catalog_service import DerivedCatalogServic
 from ditto_features.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
 )
-from ditto_platform.foundation.config.settings import TradingSettings
 from ditto_platform.services.notification import AlertManager
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
@@ -120,6 +119,7 @@ from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.settings import TradingSettings
 
 __all__ = [
     "AppBuilderFactory",

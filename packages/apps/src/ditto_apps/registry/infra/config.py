@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from dishka import Provider, Scope, provide
+from ditto_application.settings import TradingSettings
 from ditto_data.config import DataSourceSettings, FileStorageSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_data.config.data_store import DataStoreSettings
@@ -25,7 +26,6 @@ from ditto_platform.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
     SystemSettings,
-    TradingSettings,
 )
 from ditto_platform.services.notification import NotificationSettings
 

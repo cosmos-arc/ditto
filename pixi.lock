@@ -2416,11 +2416,9 @@ packages:
 - pypi: ./packages/analysis
   name: ditto-analysis
   version: 0.1.0
-  sha256: cfcc303953061379243fcbd2416cc53543ef10fe054d30313fda8124db260c3d
+  sha256: 993f6b3d0dab9273bc43f7a4488b6933d4500971f206020b5005b9a7ba50cf72
   requires_dist:
   - ditto-kernel
-  - ditto-data
-  - ditto-features
   - ditto-platform
   - polars
   - numpy
@@ -2445,7 +2443,10 @@ packages:
 - pypi: ./packages/apps
   name: ditto-apps
   version: 0.1.0
-  sha256: c20b437bab544da2b37022d2eb074f8c2ce5ddbd2cdede5675b0b31477a6c541
+  sha256: 9dd5a7681a01b8b070ddf6b417f8d7e8cd432bb0910190726285391f6f8c92a3
+  requires_dist:
+  - ditto-application
+  - ditto-platform
   requires_python: '>=3.13'
 - pypi: ./packages/backtest
   name: ditto-backtest

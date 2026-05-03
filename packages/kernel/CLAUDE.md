@@ -19,7 +19,15 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 | 2 | 零业务行为 | 纯值对象 / 枚举 / NewType。frozen dataclass 允许纯计算型 `@property`（无副作用、无 I/O、仅基于自身字段） |
 | 3 | 稳定性高 | 不会随某个子域的迭代频繁变更 |
 | 4 | 无外部依赖 | 只依赖 Python 标准库 |
-| 5 | 纯值语义 | 不含序列化、持久化关注点 |
+| 5 | 纯值语义 | 不含 I/O、持久化关注点。允许结构转换方法（`to_json_dict`/`from_json_dict`）：仅做 dict ↔ dataclass 内存转换，不涉及文件/网络/数据库 |
+
+### 允许的结构转换方法
+
+frozen dataclass 可包含 `to_json_dict()` / `from_json_dict()` 类方法，前提：
+- 仅做 dict ↔ dataclass 的内存结构转换
+- 不涉及文件 I/O、网络请求、数据库操作
+- 仅依赖同包内的 `json_types` 辅助函数
+- 示例：`publication_safety.py` 中的 6 个记录类型
 
 ### Protocol / 薄实现准入标准
 
@@ -59,6 +67,7 @@ ditto_kernel/
 ├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
 ├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
 ├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
+├── publication_safety.py  # 发布安全运行时记录（frozen dataclass × 6，含结构转换方法）
 ├── exceptions.py      # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── math.py            # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
@@ -101,6 +110,12 @@ instrument / order / market / identity: 无子域间依赖
 | `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
 | `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
 | `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
+| `CompatibilityManifestRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
+| `DerivedMinimalDQSummaryRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
+| `ShadowDiffReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
+| `ShadowTraceRecordRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
+| `CertificationReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
+| `DerivedShadowSlotRecord` | publication_safety.py | frozen dataclass | Data, Features, Application |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
 | `DataError` | exceptions.py | `DittoError`（数据域根） | Data, App, Interfaces |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |

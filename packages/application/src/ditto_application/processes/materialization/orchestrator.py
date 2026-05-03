@@ -16,7 +16,6 @@ import polars as pl
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
 )
-from ditto_data.models.publication_safety import DerivedMinimalDQSummaryRecord
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.expression import CompiledDerivedExpression, CompileIdentity
 from ditto_features.materialization import (
@@ -42,6 +41,7 @@ from ditto_features.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_kernel.publication_safety import DerivedMinimalDQSummaryRecord
 from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 
 from ditto_application.config import now_iso

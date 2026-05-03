@@ -1,10 +1,22 @@
-"""
-Risk contracts — 跨模块共享的 Protocol 定义。
+"""Risk domain contracts — Protocol definitions for risk consumers."""
 
-定义 RiskConstraint、RiskReport 等 Protocol，供 application 层
-和其它能力包依赖。所有风控对外暴露的能力接口应在此注册，
-包括约束检查器、风险评估器等可注入的抽象。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from typing import Protocol, runtime_checkable
+
+from ditto_risk.post_trade import RiskAction
+
+__all__ = ["PostTradeGuard"]
+
+
+@runtime_checkable
+class PostTradeGuard(Protocol):
+    """盘后风控扫描接口 — 检查账户状态并返回风控动作."""
+
+    def scan(self, account_view: object, context: object) -> list[RiskAction]:
+        """扫描账户状态，返回触发的风控动作列表."""
+        ...
+
+    def reset(self) -> None:
+        """重置风控扫描状态."""
+        ...

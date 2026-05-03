@@ -159,9 +159,6 @@ forbidden_modules =
     ditto_risk.**
     ditto_execution.**
     ditto_backtest.**
-ignore_imports =
-    # Features 引用 data publication safety 记录类型是合法的：记录含序列化方法不符合 kernel 准则
-    ditto_features.** -> ditto_data.models.publication_safety
 unmatched_ignore_imports_alerting = warn
 
 # Features 内部方向：expression 禁止依赖 materialization

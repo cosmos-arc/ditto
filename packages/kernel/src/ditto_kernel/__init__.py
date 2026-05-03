@@ -26,6 +26,14 @@ from ditto_kernel.market import (
     TimeSpec,
 )
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.publication_safety import (
+    CertificationReportRecord,
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
+    DerivedShadowSlotRecord,
+    ShadowDiffReportRecord,
+    ShadowTraceRecordRecord,
+)
 from ditto_kernel.strategy import (
     DecisionFrame,
     DerivedRole,
@@ -51,10 +59,14 @@ __all__ = [
     "GRAIN_TO_TIME_KEYS",
     "AmbiguousTickerError",
     "AssetClass",
+    "CertificationReportRecord",
     "Clock",
+    "CompatibilityManifestRecord",
     "DataError",
     "DecisionFrame",
+    "DerivedMinimalDQSummaryRecord",
     "DerivedRole",
+    "DerivedShadowSlotRecord",
     "DerivedSpec",
     "DittoError",
     "DomainEvent",
@@ -75,6 +87,8 @@ __all__ = [
     "RealtimeClock",
     "RiskScope",
     "RunStatus",
+    "ShadowDiffReportRecord",
+    "ShadowTraceRecordRecord",
     "SimpleEventBus",
     "SimulatedClock",
     "TimeSpec",

@@ -151,6 +151,8 @@ unfixable = []
 
 # Kernel tracing — Protocol __call__ 和通用装饰器签名不可避免使用 Any
 "packages/kernel/src/ditto_kernel/tracing.py" = ["ANN401", "D102"]
+# Kernel publication_safety — 结构转换方法自文档化，D102 不适用
+"packages/kernel/src/ditto_kernel/publication_safety.py" = ["D102"]
 # Observability bridge — 桥接函数签名需匹配 TraceHandler Protocol（Any）
 "packages/apps/src/ditto_apps/registry/infra/observability.py" = ["ANN401"]
 

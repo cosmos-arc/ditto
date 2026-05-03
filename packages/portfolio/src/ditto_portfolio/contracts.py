@@ -1,10 +1,28 @@
-"""
-Portfolio contracts — 组合包公共契约。
+"""Portfolio domain contracts — Protocol definitions for portfolio consumers."""
 
-供 portfolio 消费者依赖的 Protocol 定义，包括
-PortfolioState、RebalanceTarget 等跨模块接口。
-扩展时应在此注册所有 portfolio 对外暴露的能力接口。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from typing import Protocol, runtime_checkable
+
+from ditto_portfolio.accounting.account import AccountView
+
+__all__ = ["PortfolioStateReader", "RebalanceTarget"]
+
+
+@runtime_checkable
+class PortfolioStateReader(Protocol):
+    """组合状态读取接口 — 提供只读账户快照."""
+
+    def get_view(self) -> AccountView:
+        """返回当前账户状态快照."""
+        ...
+
+
+@runtime_checkable
+class RebalanceTarget(Protocol):
+    """调仓目标接口 — 描述期望的目标持仓权重."""
+
+    @property
+    def positions(self) -> dict[int, float]:
+        """目标持仓权重映射 (instrument_id -> weight)."""
+        ...

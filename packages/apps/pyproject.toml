@@ -2,6 +2,10 @@
 name = "ditto-apps"
 requires-python = ">= 3.13"
 version = "0.1.0"
+dependencies = [
+    "ditto-application",
+    "ditto-platform",
+]
 
 [project.scripts]
 server = "ditto_apps.main:app"

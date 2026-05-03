@@ -9,15 +9,15 @@ All functions are pure (module-level) — no facade or service dependencies.
 
 from __future__ import annotations
 
-from ditto_data.models.publication_safety import (
-    DerivedMinimalDQSummaryRecord,
-    ShadowDiffReportRecord,
-)
 from ditto_features.publication_safety import (
     CertificationCheckResult,
     CertificationStage,
     CompatibilityManifest,
     PublicationSafetySeverity,
+)
+from ditto_kernel.publication_safety import (
+    DerivedMinimalDQSummaryRecord,
+    ShadowDiffReportRecord,
 )
 from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 

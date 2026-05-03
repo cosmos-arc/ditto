@@ -7,18 +7,17 @@ from typing import cast
 from uuid import uuid4
 
 import polars as pl
-from ditto_data.models.publication_safety import (
-    CompatibilityManifestRecord,
-    JsonDict,
-    JsonValue,
-    ShadowDiffReportRecord,
-    ShadowTraceRecordRecord,
-)
 from ditto_features.publication_safety import (
     CertificationReport,
     CompatibilityManifest,
     ShadowDiffReport,
     ShadowTraceRecord,
+)
+from ditto_kernel.json_types import JsonDict, JsonValue
+from ditto_kernel.publication_safety import (
+    CompatibilityManifestRecord,
+    ShadowDiffReportRecord,
+    ShadowTraceRecordRecord,
 )
 
 from ditto_application.config import now_iso
