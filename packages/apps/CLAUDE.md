@@ -13,7 +13,7 @@ Apps 层是 **Application Boundary Layer（应用边界层）**，负责：
 - 通过 DI 容器获取依赖
 - 业务逻辑已迁入 `ditto_application` 包
 
-## 模块结构
+## 内部目录职责
 
 ```
 ditto_apps/
@@ -50,26 +50,24 @@ ditto_apps/
 └── main.py            # 启动入口
 ```
 
-## 依赖规则
+## 允许依赖
 
 ```
-┌─────────────────────────────────────┐
-│  Apps 可依赖                  │
-│  apps → application ✅        │
-│  apps → strategy/portfolio/risk/execution/backtest ✅ │
-│  apps → data ✅              │
-│  apps → features ✅          │
-│  apps → analysis ✅          │
-│  apps → platform ✅          │
-└─────────────────────────────────────┘
+apps → application ✅
+apps → strategy/portfolio/risk/execution/backtest ✅
+apps → data ✅
+apps → features ✅
+apps → analysis ✅
+apps → platform ✅
+```
 
-┌─────────────────────────────────────┐
-│  Apps 禁止被依赖              │
-│  application → apps ❌       │
-│  strategy → apps ❌          │
-│  data → apps ❌              │
-│  features → apps ❌          │
-└─────────────────────────────────────┘
+## 禁止依赖
+
+```
+application → apps ❌
+strategy → apps ❌
+data → apps ❌
+features → apps ❌
 ```
 
 ### 层级访问规则
@@ -203,9 +201,7 @@ def daily(date: str):
     save(transformed)
 ```
 
-## 测试规范
-
-### 测试文件位置
+## 测试位置
 
 ```
 apps/
@@ -215,12 +211,24 @@ apps/
     └── integration/    # 集成测试
 ```
 
-### 运行测试
+## 典型导入示例
+
+```python
+from ditto_apps.cli.main import create_cli
+from ditto_apps.api.main import create_app
+from ditto_apps.jobs.flows.daily import daily_flow
+from ditto_apps.registry.container import AppContainer
+from ditto_apps.config.loader import load_config
+```
+
+## 常用验证命令
 
 ```bash
 pixi run -e dev test              # 单元测试（并行）
 pixi run -e dev test --unit       # 只运行单元测试
 pixi run -e dev test --integration # 只运行集成测试
+pixi run -e dev type
+pixi run -e dev arch-check
 ```
 
 ## 判断决策树

@@ -9,7 +9,7 @@ Application 层是 **Application Layer（应用层）**，负责 Use Case 编排
 - 通过 CQRS 模式分离读写职责
 - 协调 capability packages（领域计算）+ Data（数据服务）
 
-## 依赖
+## 允许依赖
 
 ```
 ditto_application → ditto_kernel ✅
@@ -21,15 +21,18 @@ ditto_application → ditto_execution ✅
 ditto_application → ditto_backtest ✅
 ditto_application → ditto_features ✅
 ditto_application → ditto_platform ✅
-ditto_application 禁止 → ditto_apps ❌
 ```
-
-## Application→Platform Scope 限制
 
 Application 层允许使用 `ditto_platform.foundation` 和 `ditto_platform.services`（通知、告警等），**禁止**直接使用 `ditto_platform.config`。
 配置加载由 Apps 层负责。
 
-## CQRS 模块结构
+## 禁止依赖
+
+```
+ditto_application → ditto_apps ❌
+```
+
+## 内部目录职责
 
 ```
 ditto_application/
@@ -156,7 +159,7 @@ ditto_application/
 | commands → processes | ✅ 允许（委托执行） |
 | processes → commands | ✅ 允许（Process Manager 注入 Handler） |
 
-## 测试规范
+## 测试位置
 
 ```
 packages/application/
@@ -166,8 +169,20 @@ packages/application/
     └── integration/
 ```
 
-### 运行测试
+## 典型导入示例
+
+```python
+from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
+from ditto_application.processes.materialization.orchestrator import DerivedMaterializationOrchestrator
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.commands.ingestion import IngestDateCommand, IngestDateHandler
+from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
+```
+
+## 常用验证命令
 
 ```bash
-pixi run -e dev pytest packages/application/tests/
+pixi run -e dev pytest packages/application/tests/ -q
+pixi run -e dev type
+pixi run -e dev arch-check
 ```
