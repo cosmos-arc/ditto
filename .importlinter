@@ -102,6 +102,26 @@ ignore_imports =
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
+# Platform storage 纯技术基础设施：禁止包含业务逻辑
+# ═══════════════════════════════════════════════════════════════════
+[importlinter:contract:platform-storage-no-business]
+name = Platform storage must not contain business logic
+type = forbidden
+source_modules =
+    ditto_platform.foundation.storage.**
+forbidden_modules =
+    ditto_data.**
+    ditto_features.**
+    ditto_strategy.**
+    ditto_portfolio.**
+    ditto_risk.**
+    ditto_execution.**
+    ditto_backtest.**
+    ditto_analysis.**
+    ditto_application.**
+    ditto_apps.**
+
+# ═══════════════════════════════════════════════════════════════════
 # Data 层边界：禁止依赖 Engine/Apps/App
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:data-boundary]
@@ -140,8 +160,7 @@ forbidden_modules =
     ditto_execution.**
     ditto_backtest.**
 ignore_imports =
-    # Features 引用 data base types 是合法的：moved-from-data 的存储/模型/错误类型
-    ditto_features.** -> ditto_data.errors
+    # Features 引用 data publication safety 记录类型是合法的：记录含序列化方法不符合 kernel 准则
     ditto_features.** -> ditto_data.models.publication_safety
 unmatched_ignore_imports_alerting = warn
 
@@ -279,9 +298,6 @@ forbidden_modules =
     ditto_risk.**
     ditto_execution.**
     ditto_backtest.**
-ignore_imports =
-    # Analysis 引用 data.storage 是合法的：moved-from-data 的 research 存储
-    ditto_analysis.** -> ditto_data.storage.sqlite_client
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════

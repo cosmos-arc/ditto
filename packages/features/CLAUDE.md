@@ -18,9 +18,10 @@ Features 是**因子与表达式计算平面**，负责：
 
 ```
 ditto_features → ditto_kernel ✅
-ditto_features → ditto_data ✅
 ditto_features → ditto_platform ✅
 ```
+
+**技术债务**：3 处 `ditto_data.models.publication_safety` 导入（记录含序列化方法，不符合 kernel 准则，由 importlinter ignore_imports 覆盖）。
 
 外部依赖：polars, numpy, cachebox, orjson
 
