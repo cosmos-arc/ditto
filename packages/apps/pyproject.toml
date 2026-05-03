@@ -3,8 +3,14 @@ name = "ditto-apps"
 requires-python = ">= 3.13"
 version = "0.1.0"
 dependencies = [
+    "ditto-analysis",
     "ditto-application",
+    "ditto-data",
+    "ditto-execution",
+    "ditto-features",
+    "ditto-kernel",
     "ditto-platform",
+    "ditto-strategy",
 ]
 
 [project.scripts]

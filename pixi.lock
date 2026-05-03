@@ -2443,10 +2443,16 @@ packages:
 - pypi: ./packages/apps
   name: ditto-apps
   version: 0.1.0
-  sha256: 9dd5a7681a01b8b070ddf6b417f8d7e8cd432bb0910190726285391f6f8c92a3
+  sha256: f579d236bb5418672c8636684fe101d67fde8f822080284287c26b3c967d2084
   requires_dist:
+  - ditto-analysis
   - ditto-application
+  - ditto-data
+  - ditto-execution
+  - ditto-features
+  - ditto-kernel
   - ditto-platform
+  - ditto-strategy
   requires_python: '>=3.13'
 - pypi: ./packages/backtest
   name: ditto-backtest
@@ -2474,21 +2480,19 @@ packages:
 - pypi: ./packages/execution
   name: ditto-execution
   version: 0.1.0
-  sha256: 1b8c6c5c6e8c1983b59c9f98855a8b674b818f3f0dd1e11a85b79fb58b0ee6b2
+  sha256: 9c3adea6a93fdb0d778c0f21d5b85abbc21486c21c7751d87ffe13b58e8f4f42
   requires_dist:
   - ditto-kernel
   - ditto-portfolio
-  - ditto-risk
   - ditto-platform
   - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/features
   name: ditto-features
   version: 0.1.0
-  sha256: 7849ee2936d6eee58347bc71a4061df94b7e1c05d21f585892e0774c896a46c0
+  sha256: 44657556b5eb69a30706c5dfc8eaaf48c6e714181460e10d24f7cb538ad67168
   requires_dist:
   - ditto-kernel
-  - ditto-data
   - ditto-platform
   - polars
   - numpy
@@ -2497,13 +2501,15 @@ packages:
   requires_python: '>=3.13'
 - pypi: ./packages/kernel
   name: ditto-kernel
-  version: 0.2.0
-  sha256: 57697b29483fe8c1efda956b1ba91585e024ffc35df7773f9565d8f2718c03a1
+  version: 0.1.0
+  sha256: f47a4780024268dacab63379782bc6f5b4cf3c1fab137d185d8ae090d3f350ae
   requires_python: '>=3.13'
 - pypi: ./packages/platform
   name: ditto-platform
   version: 0.1.0
-  sha256: 03a3c3185adc2678e42d73265ca05d94e3109894e7b89471d2ef45176d60d3d8
+  sha256: 846f4693e45e985010e21e6d6bea3534f1c6a6f1397710d3dd2a95aa20e0d930
+  requires_dist:
+  - ditto-kernel
   requires_python: '>=3.13'
 - pypi: ./packages/portfolio
   name: ditto-portfolio
@@ -2526,12 +2532,10 @@ packages:
 - pypi: ./packages/strategy
   name: ditto-strategy
   version: 0.1.0
-  sha256: 3be4f020682b337b3935ebaee30d458d1c45ca4869e7c0898aed1ec9f3d702e2
+  sha256: 463f7da69f54832aa21051eb0945bb97c998e921650503d108f617dc7fc3dd18
   requires_dist:
   - ditto-kernel
-  - ditto-data
   - ditto-platform
-  - ditto-features
   - polars
   - orjson
   requires_python: '>=3.13'

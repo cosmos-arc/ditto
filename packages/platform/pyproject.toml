@@ -7,6 +7,9 @@ build-backend = "setuptools.build_meta"
 name = "ditto-platform"
 requires-python = ">= 3.13"
 version = "0.1.0"
+dependencies = [
+    "ditto-kernel",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

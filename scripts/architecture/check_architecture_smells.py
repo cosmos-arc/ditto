@@ -18,6 +18,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -275,6 +277,107 @@ def check_ai_rule_stale_references() -> list[str]:
     return errors
 
 
+_IMPORT_TO_PKG: dict[str, str] = {
+    "ditto_kernel": "kernel",
+    "ditto_platform": "platform",
+    "ditto_data": "data",
+    "ditto_features": "features",
+    "ditto_strategy": "strategy",
+    "ditto_portfolio": "portfolio",
+    "ditto_risk": "risk",
+    "ditto_execution": "execution",
+    "ditto_backtest": "backtest",
+    "ditto_analysis": "analysis",
+    "ditto_application": "application",
+    "ditto_apps": "apps",
+}
+
+_PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
+
+
+def _scan_pkg_imports(src_dir: Path, pkg_name: str) -> set[str]:
+    """Scan actual internal ditto-* imports from a package's src/."""
+    actual: set[str] = set()
+    for py_file in src_dir.rglob("*.py"):
+        if "__pycache__" in py_file.parts:
+            continue
+        try:
+            tree = ast.parse(py_file.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            mods: list[str] = []
+            if isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                mods = [node.module]
+            for mod in mods:
+                dep = _IMPORT_TO_PKG.get(mod.split(".")[0])
+                if dep and dep != pkg_name:
+                    actual.add(_PKG_TO_DEP[dep])
+    return actual
+
+
+def _check_version_mismatch(
+    pyproject: Path,
+    src_dir: Path,
+    pkg_dir_name: str,
+    pyproject_version: str | None,
+    root: Path,
+) -> list[str]:
+    """Check _version.py matches pyproject.toml version."""
+    if not pyproject_version:
+        return []
+    version_file = src_dir / pkg_dir_name.replace("-", "_") / "_version.py"
+    if not version_file.exists():
+        return []
+    for line in version_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith("__version__"):
+            src_ver = line.split("=")[1].strip().strip("\"'")
+            if src_ver != pyproject_version:
+                msg = (
+                    f"{pyproject.relative_to(root)}:"
+                    f" version {pyproject_version}"
+                    f" != {version_file.relative_to(root)} {src_ver}"
+                )
+                return [msg]
+            break
+    return []
+
+
+def check_package_metadata(root: Path) -> list[str]:
+    """Check pyproject.toml deps match actual source imports."""
+    errors: list[str] = []
+    for pkg_dir in sorted((root / "packages").iterdir()):
+        if not pkg_dir.is_dir():
+            continue
+        pyproject = pkg_dir / "pyproject.toml"
+        src_dir = pkg_dir / "src"
+        if not pyproject.exists() or not src_dir.is_dir():
+            continue
+
+        actual = _scan_pkg_imports(src_dir, pkg_dir.name)
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        declared = set(data.get("project", {}).get("dependencies", []))
+
+        missing = actual - declared
+        stale = declared - actual - {d for d in declared if not d.startswith("ditto-")}
+        if missing:
+            errors.append(
+                f"{pyproject.relative_to(root)}: missing dependencies {sorted(missing)}"
+            )
+        if stale:
+            errors.append(
+                f"{pyproject.relative_to(root)}: stale dependencies {sorted(stale)}"
+            )
+
+        pv = data.get("project", {}).get("version")
+        errors.extend(
+            _check_version_mismatch(pyproject, src_dir, pkg_dir.name, pv, root)
+        )
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Architecture smell checks for Ditto")
     parser.add_argument(
@@ -303,6 +406,13 @@ def main() -> int:
         errors.extend(ai_rule_errors)
     elif args.verbose:
         print("[OK] No stale AI rule references found")
+
+    # Check: Package metadata matches source imports
+    metadata_errors = check_package_metadata(ROOT)
+    if metadata_errors:
+        errors.extend(metadata_errors)
+    elif args.verbose:
+        print("[OK] Package metadata matches source imports")
 
     if errors:
         print("\nArchitecture smell check failed:\n")

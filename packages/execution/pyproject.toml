@@ -5,7 +5,6 @@ version = "0.1.0"
 dependencies = [
     "ditto-kernel",
     "ditto-portfolio",
-    "ditto-risk",
     "ditto-platform",
     "orjson",
 ]
