@@ -31,17 +31,34 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  interfaces (ditto_interfaces)                               │
+│  apps (ditto_apps)                                           │
 │  FastAPI API / Typer CLI / Prefect Jobs / DI Composition Root│
 └───────┬──────────────┬──────────────┬───────────────┬────────┘
         │              │              │               │
         v              v              v               v
 ┌──────────────┐ ┌───────────┐ ┌───────────┐ ┌──────────────┐
-│ ditto_app    │ │ ditto_    │ │ ditto_    │ │ ditto_data   │
-│ CQRS 编排    │ │ analytics │ │ engine    │ │ 数据访问层    │
-│ query/process│ │ 表达式编译 │ │ 策略/回测  │ │ CQRS + PIT   │
-│ command/     │ │ 因子/研究  │ │ 执行/组合  │ │ 13+ 域服务   │
-│ builders     │ │ 物化/评估  │ │ 风控/编排  │ │ 质量引擎     │
+│ ditto_       │ │ ditto_    │ │ ditto_    │ │ ditto_data   │
+│ application  │ │ features  │ │ strategy  │ │ 数据访问层    │
+│ CQRS 编排    │ │ 表达式编译 │ │ 策略/信号  │ │ CQRS + PIT   │
+│ query/process│ │ 因子/物化  │ │           │ │ 13+ 域服务   │
+│ command/     │ │           │ │           │ │ 质量引擎     │
+│ builders     │ │           │ │           │ │             │
+├──────────────┤ ├───────────┤ ├───────────┤ │             │
+│              │ │ ditto_    │ │ ditto_    │ │             │
+│              │ │ analysis  │ │ portfolio │ │             │
+│              │ │ 研究/评估  │ │ 组合构建   │ │             │
+├──────────────┤ │           │ ├───────────┤ │             │
+│              │ │           │ │ ditto_    │ │             │
+│              │ │           │ │ risk      │ │             │
+│              │ │           │ │ 风控      │ │             │
+├──────────────┤ │           │ ├───────────┤ │             │
+│              │ │           │ │ ditto_    │ │             │
+│              │ │           │ │ execution │ │             │
+│              │ │           │ │ 执行      │ │             │
+├──────────────┤ │           │ ├───────────┤ │             │
+│              │ │           │ │ ditto_    │ │             │
+│              │ │           │ │ backtest  │ │             │
+│              │ │           │ │ 回测引擎   │ │             │
 └──────┬───────┘ └─────┬─────┘ └─────┬─────┘ └──────┬───────┘
        │               │             │               │
        v               v             v               v
@@ -56,32 +73,32 @@
 **依赖方向**（import-linter 强制检查）：
 
 ```
-interfaces → app → engine → kernel
-interfaces → app → data → kernel, infra
-interfaces → analytics → kernel
-interfaces → data → kernel, infra
-app → data, engine, analytics, kernel, infra
-engine → kernel
-analytics → kernel, infra (logger)
-data → kernel, infra
+apps → application → {strategy, portfolio, risk, execution, backtest} → kernel
+apps → application → data → kernel, platform
+apps → features → kernel
+apps → data → kernel, platform
+application → data, strategy, portfolio, risk, execution, backtest, features, kernel, platform
+strategy → kernel
+features → kernel, platform (logger)
+data → kernel, platform
 ```
 
 ## 项目结构
 
 ```
 ditto/
-├── interfaces/                  # 应用入口（API / CLI / Jobs + DI）
-│   └── src/ditto_interfaces/
-│       ├── api/                 # FastAPI 路由
-│       ├── cli/                 # Typer CLI
-│       ├── jobs/                # Prefect 任务编排
-│       ├── models/              # API 模型
-│       ├── registry/            # Dishka DI 容器
-│       ├── config/              # 接口层配置
-│       └── main.py              # 启动入口
 ├── packages/
-│   ├── app/                     # 应用编排层（CQRS）
-│   │   └── src/ditto_app/
+│   ├── apps/                    # 应用入口（API / CLI / Jobs + DI）
+│   │   └── src/ditto_apps/
+│   │       ├── api/                 # FastAPI 路由
+│   │       ├── cli/                 # Typer CLI
+│   │       ├── jobs/                # Prefect 任务编排
+│   │       ├── models/              # API 模型
+│   │       ├── registry/            # Dishka DI 容器
+│   │       ├── config/              # 接口层配置
+│   │       └── main.py              # 启动入口
+│   ├── application/             # 应用编排层（CQRS）
+│   │   └── src/ditto_application/
 │   │       ├── query/           # 查询编排（26 Facade）
 │   │       ├── process/         # 流程编排（ingestion/execution/materialization/quality）
 │   │       ├── command/         # 命令编排（8 Handler）
@@ -90,23 +107,34 @@ ditto/
 │   │       ├── contracts.py     # 共享契约类型
 │   │       ├── execution_dto.py # 执行层 DTO
 │   │       └── config.py
-│   ├── engine/                  # 核心引擎
-│   │   └── src/ditto_engine/
+│   ├── strategy/                # 策略定义与信号生成
+│   │   └── src/ditto_strategy/
 │   │       ├── alpha/           # Alpha 信号（Pipeline + 8 Stage + 4 模板）
-│   │       ├── execution/       # 执行层（Brokerage/TradeBuilder/Reality Model）
-│   │       ├── backtest/        # 回测引擎（EngineLoop + Steps + Audit）
-│   │       ├── portfolio/       # 组合构建（Allocator/Constraints/Comparison）
-│   │       ├── accounting/      # 账户核算
-│   │       ├── risk/            # 风控（PreTrade/PostTrade）
 │   │       └── events.py
-│   ├── analytics/               # 分析层
-│   │   └── src/ditto_analytics/
+│   ├── portfolio/               # 组合构建与管理
+│   │   └── src/ditto_portfolio/
+│   │       └── ...
+│   ├── risk/                    # 风险管理
+│   │   └── src/ditto_risk/
+│   │       └── ...
+│   ├── execution/               # 交易执行
+│   │   └── src/ditto_execution/
+│   │       ├── brokerage/       # 执行层（Brokerage/TradeBuilder/Reality Model）
+│   │       └── accounting/      # 账户核算
+│   ├── backtest/                # 回测引擎
+│   │   └── src/ditto_backtest/
+│   │       ├── engine.py        # EngineLoop + Steps + Audit
+│   │       └── ...
+│   ├── features/                # 因子与表达式计算
+│   │   └── src/ditto_features/
 │   │       ├── expression/      # Expression DSL（lexer/parser/ast/codegen/compiler）
 │   │       ├── factors/         # 因子库（15 类因子）
-│   │       ├── evaluation/      # 因子评估（IC/FactorAnalysis/Portfolio/TailRisk）
-│   │       ├── research/        # 研究
 │   │       ├── materialization/ # 物化编排
 │   │       └── compile_cache.py
+│   ├── analysis/                # 纯研究分析
+│   │   └── src/ditto_analysis/
+│   │       ├── evaluation/      # 因子评估（IC/FactorAnalysis/Portfolio/TailRisk）
+│   │       └── research/        # 研究
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
 │   │       ├── services/        # 域服务（13 Facade + audit/derived/metadata/strategy）
@@ -133,7 +161,7 @@ ditto/
 │   │       ├── research.py      # 研究数据集类型
 │   │       ├── exceptions.py    # 共享异常
 │   │       └── math.py          # 数学工具函数
-│   └── infra/                   # 基础设施
+│   └── platform/                # 基础设施
 │       └── src/ditto_platform/
 │           ├── foundation/      # cache/checksum/concurrency/config/db/observability/util
 │           └── services/        # notification（Telegram/Email/Webhook）
@@ -150,7 +178,7 @@ ditto/
 │   ├── research/                # 研究文档
 │   └── sprints/                 # Sprint 计划
 ├── scripts/                     # 工具脚本
-└── (测试在各包内: packages/*/tests/ 和 interfaces/tests/)
+└── (测试在各包内: packages/*/tests/)
 ```
 
 ## 快速开始
@@ -246,13 +274,14 @@ pixi run -e dev arch-check       # 分层依赖检查
 ## 相关文档
 
 - [CLAUDE.md](CLAUDE.md) — 开发规范
-- [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md) — Engine 层规范
+- [packages/strategy/CLAUDE.md](packages/strategy/CLAUDE.md) — Strategy 层规范
 - [packages/data/CLAUDE.md](packages/data/CLAUDE.md) — Data 层规范
-- [packages/app/CLAUDE.md](packages/app/CLAUDE.md) — App 层规范
-- [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md) — Analytics 层规范
+- [packages/application/CLAUDE.md](packages/application/CLAUDE.md) — Application 层规范
+- [packages/features/CLAUDE.md](packages/features/CLAUDE.md) — Features 层规范
+- [packages/analysis/CLAUDE.md](packages/analysis/CLAUDE.md) — Analysis 层规范
 - [packages/platform/CLAUDE.md](packages/platform/CLAUDE.md) — Platform 层规范
 - [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md) — Kernel 层规范
-- [interfaces/CLAUDE.md](interfaces/CLAUDE.md) — Interfaces 层规范
+- [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md) — Apps 层规范
 
 ## 变更记录
 
@@ -298,7 +327,7 @@ pixi run -e dev arch-check       # 分层依赖检查
 - 实际持仓聚合（ManualTracker — T+1 交收 + 加权平均成本 + 已实现/未实现 P&L）
 - 回测 vs 实际对比（ComparisonMetrics — Sharpe/Return/成本/跟踪误差 12 指标）
 - 交易 API 路由（/trade/intents, /trade/fills, /trade/positions, /trade/pnl）
-- 共享 DTO 迁移至 ditto_app.types（解决 R8 互斥规则 query↔process 冲突）
+- 共享 DTO 迁移至 ditto_application.types（解决 R8 互斥规则 query↔process 冲突）
 - DI 注册 6 个新 Provider 方法（TradeService, ManualTracker, handlers, facades）
 - 114 个新测试，4272 全通过
 
@@ -310,10 +339,10 @@ pixi run -e dev arch-check       # 分层依赖检查
 
 ### v0.10.0 (2026-04-04)
 **Phase 4 App 层提取完成**
-- App 层独立为 `ditto_app` 包（CQRS: query/process/command + builders）
-- Engine 独立为 `ditto_engine` 包（从 core 拆分 alpha/portfolio/execution/accounting/backtest/orchestrator/risk）
+- App 层独立为 `ditto_application` 包（CQRS: query/process/command + builders）
+- Engine 独立为 capability packages（从 core 拆分 strategy/portfolio/execution/backtest/risk）
 - Kernel 独立为 `ditto_kernel`（零依赖共享内核: instrument/order/market/strategy/identity/clock/events/quality/research/exceptions/math）
-- 目录结构扁平化：`interfaces/` 提升至根层级，移除 `apps/` 目录
+- 目录结构扁平化：`packages/apps/` 提升至根层级，移除旧 `apps/` 目录
 - DI 泄漏修复 + engine 去冗余 + 测试迁移
 
 ### v0.9.0 (2026-03-24)

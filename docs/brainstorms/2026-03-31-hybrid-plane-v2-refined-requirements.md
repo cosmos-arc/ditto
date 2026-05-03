@@ -3,6 +3,9 @@ date: 2026-03-31
 topic: hybrid-plane-v2-refined
 ---
 
+
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Hybrid 平面架构 v2 — 修订版需求文档
 
 **源文档**: `docs/plans/2026-03-30-architecture-hybrid-plane-design.md`

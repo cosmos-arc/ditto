@@ -1,5 +1,7 @@
 # 摄入与 API 能力验证计划 (2025)
 
+> **[已废弃]** 本文档为 2025 年验证计划，包名引用已过时。仅作历史参考。
+
 > **目标**：全面验证 ditto 项目的数据摄入和 API 查询能力，确保所有入口点功能正常
 > **时间范围**：2025-01-01 ~ 2025-12-31（全年，覆盖财报季、分红除权、复权事件）
 > **验证日期**：2026-02-24（首次）、2026-02-25（完整重验）
@@ -81,7 +83,7 @@
 rm -f data/metadata.db
 
 # 重新初始化数据库 schema
-pixi run -e dev python -m ditto_interfaces.cli.main init db
+pixi run -e dev python -m ditto_apps.cli.main init db
 ```
 
 ### 2.2 清理摄入日志
@@ -117,7 +119,7 @@ rm -rf data/macro/
 pixi run --help
 
 # 初始化数据库
-pixi run -e dev python -m ditto_interfaces.cli.main init db
+pixi run -e dev python -m ditto_apps.cli.main init db
 
 # 检查数据源配置
 cat config/development/data_source.env
@@ -396,10 +398,10 @@ pixi run ingest market status 2025-01-02
 
 ```bash
 # 按日期摄入汇率数据
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market fx 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest market fx 2025-01-02
 
 # 验证命令帮助
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market fx --help
+pixi run -e dev python -m ditto_apps.cli.main ingest market fx --help
 ```
 
 **验证项**：
@@ -425,10 +427,10 @@ pixi run -e dev python -m ditto_interfaces.cli.main ingest market fx --help
 
 ```bash
 # 按日期摄入商品数据（输入日期为北京时间）
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market commodity 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest market commodity 2025-01-02
 
 # 验证命令帮助
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market commodity --help
+pixi run -e dev python -m ditto_apps.cli.main ingest market commodity --help
 ```
 
 **验证项**：
@@ -838,7 +840,7 @@ pixi run backfill fundamental -s 2025-01-01 -e 2025-12-31
 pixi run -e dev server
 
 # 或使用 granian
-pixi run -e dev granian ditto_interfaces.main:app --port 8000
+pixi run -e dev granian ditto_apps.main:app --port 8000
 ```
 
 **验证项**：
@@ -1398,10 +1400,10 @@ rm -rf data/market/stock/
 
 ```bash
 # 第一次摄入
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest market stock 2025-01-02
 
 # 第二次摄入（应该跳过或覆盖，不应报错）
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest market stock 2025-01-02
 ```
 
 **预期结果**：
@@ -1418,10 +1420,10 @@ pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock 2025-01-
 
 ```bash
 # 第一次摄入
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock --ticker 000001 -s 2025-01-01 -e 2025-01-31
+pixi run -e dev python -m ditto_apps.cli.main ingest market stock --ticker 000001 -s 2025-01-01 -e 2025-01-31
 
 # 第二次摄入（应该跳过或覆盖，不应报错）
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock --ticker 000001 -s 2025-01-01 -e 2025-01-31
+pixi run -e dev python -m ditto_apps.cli.main ingest market stock --ticker 000001 -s 2025-01-01 -e 2025-01-31
 ```
 
 **预期结果**：
@@ -1438,8 +1440,8 @@ pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock --ticker
 
 ```bash
 # 资产负债表重复摄入
-pixi run -e dev python -m ditto_interfaces.cli.main ingest fundamental balance --ticker 000001 -s 2025-01-01 -e 2025-03-31
-pixi run -e dev python -m ditto_interfaces.cli.main ingest fundamental balance --ticker 000001 -s 2025-01-01 -e 2025-03-31
+pixi run -e dev python -m ditto_apps.cli.main ingest fundamental balance --ticker 000001 -s 2025-01-01 -e 2025-03-31
+pixi run -e dev python -m ditto_apps.cli.main ingest fundamental balance --ticker 000001 -s 2025-01-01 -e 2025-03-31
 ```
 
 **预期结果**：幂等性保证
@@ -1845,7 +1847,7 @@ echo "=== API 验证完成 ==="
 | P021 | 🟡 脚本 | CLI Query 命令参数错误 | ✅ 已修复 |
 
 **P018 详情 - 交易日历只摄入单天数据**:
-- **位置**: `interfaces/src/ditto_interfaces/services/ingestion/coordinator.py:758-760`
+- **位置**: `packages/apps/src/ditto_apps/services/ingestion/coordinator.py:758-760`
 - **原因**: `fetch_calendar(trade_date, trade_date)` 传入相同的开始和结束日期
 - **修复**: 使用整年日期范围 `f"{year}-01-01"` 到 `f"{year}-12-31"`
 - **修复代码**:
@@ -1862,9 +1864,9 @@ echo "=== API 验证完成 ==="
 | 错误类型 | 错误命令 | 正确命令 |
 |---------|---------|---------|
 | 数据库路径 | `data/metadata.db` | `data/metadata/metadata.sqlite` |
-| 初始化 | `pixi run init` | `pixi run -e dev python -m ditto_interfaces.cli.main init db --force` |
-| 摄入 | `pixi run ingest ...` | `pixi run -e dev python -m ditto_interfaces.cli.main ingest ...` |
-| 查询 | `pixi run query ...` | `pixi run -e dev python -m ditto_interfaces.cli.main query ...` |
+| 初始化 | `pixi run init` | `pixi run -e dev python -m ditto_apps.cli.main init db --force` |
+| 摄入 | `pixi run ingest ...` | `pixi run -e dev python -m ditto_apps.cli.main ingest ...` |
+| 查询 | `pixi run query ...` | `pixi run -e dev python -m ditto_apps.cli.main query ...` |
 | 元数据查询 | `query metadata instrument --ticker` | `query metadata instrument <instrument_id>` |
 | 行情查询 | `query market bar` | `query market bars -i <instrument_id>` |
 | 基本面查询 | `query fundamental balance` | `query fundamental financials -t balance_sheet` |
@@ -1972,7 +1974,7 @@ print(f'可用 FRED 指标: {len(indicators)} 个')
 ```bash
 # 验证每日摄入流程（指定日期）
 pixi run -e dev python -c "
-from ditto_interfaces.jobs.flows.daily import daily_ingestion_flow
+from ditto_apps.jobs.flows.daily import daily_ingestion_flow
 
 # 执行 flow（指定交易日）
 result = daily_ingestion_flow(trade_date='2025-01-02')
@@ -1981,7 +1983,7 @@ print(f'Flow 执行结果: {result}')
 
 # 验证修补流程
 pixi run -e dev python -c "
-from ditto_interfaces.jobs.flows.repair import retry_failed_flow
+from ditto_apps.jobs.flows.repair import retry_failed_flow
 
 # 执行修补流程
 result = retry_failed_flow.with_options().from_source(
@@ -2009,7 +2011,7 @@ print(f'修补流程结果: {result}')
 ```bash
 # 验证按标的回填流程
 pixi run -e dev python -c "
-from ditto_interfaces.jobs.flows.backfill import backfill_flow
+from ditto_apps.jobs.flows.backfill import backfill_flow
 
 # 配置按标的回填
 config = {
@@ -2026,7 +2028,7 @@ print(f'按标的回填结果: {result}')
 
 # 验证空洞修补流程
 pixi run -e dev python -c "
-from ditto_interfaces.jobs.flows.repair import repair_holes_flow
+from ditto_apps.jobs.flows.repair import repair_holes_flow
 
 # 执行空洞修补
 result = repair_holes_flow(dataset='stock_daily', days_back=30)
@@ -2053,7 +2055,7 @@ pixi run prefect server start &
 sleep 10
 
 # 部署 flows 到本地服务器
-pixi run -e dev python -m ditto_interfaces.jobs.flows.deploy
+pixi run -e dev python -m ditto_apps.jobs.flows.deploy
 ```
 
 **验证项**：
@@ -2179,7 +2181,7 @@ curl http://localhost:8000/healthz
 
 ```bash
 # 按日期摄入汇率数据
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market fx 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest market fx 2025-01-02
 ```
 
 **验证项**：
@@ -2213,7 +2215,7 @@ curl -X POST http://localhost:8000/api/v1/market/fx \
 
 ```bash
 # 按日期摄入商品数据（需要 FRED API Key）
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market commodity 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest market commodity 2025-01-02
 ```
 
 **验证项**：
@@ -2262,8 +2264,8 @@ curl -X POST http://localhost:8000/api/v1/market/commodity \
 
 ```bash
 # 仅验证元数据和行情
-pixi run -e dev python -m ditto_interfaces.cli.main ingest metadata basic stock
-pixi run -e dev python -m ditto_interfaces.cli.main ingest market stock 2025-01-02
+pixi run -e dev python -m ditto_apps.cli.main ingest metadata basic stock
+pixi run -e dev python -m ditto_apps.cli.main ingest market stock 2025-01-02
 
 # 仅验证 API 端点
 pixi run -e dev server &

@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # ADR-011: 盘中微批量处理模式（Intraday Micro-Batch Mode）
 
 **状态**: ⏸️ 暂缓

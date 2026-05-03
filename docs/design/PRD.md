@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # 个人量化交易系统「Ditto」产品需求文档（PRD）
 
 **版本：v1.0 Final – 行业轮动 + 指数增强 + ML 辅助**

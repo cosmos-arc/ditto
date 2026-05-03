@@ -120,7 +120,7 @@ print(f'当前环境: {get_environment().value}')
 # 查看数据目录
 pixi run -e dev python -c "
 from dishka import make_container
-from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
@@ -347,7 +347,7 @@ NEW_OPTION=my_value
 3. **在 ConfigProvider 中加载**（如果需要新配置文件）
 
 ```python
-# interfaces/src/ditto_interfaces/registry/infra/config.py
+# packages/apps/src/ditto_apps/registry/infra/config.py
 @provide
 def new_settings(self, config_loader: ConfigLoader) -> NewSettings:
     values = load_env_file(config_loader, "new_config")
@@ -409,7 +409,7 @@ print(get_environment())
 # 查看完整配置（需要 DI 容器）
 pixi run -e dev python -c "
 from dishka import make_container
-from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
@@ -546,7 +546,7 @@ pixi run -e dev python -c "
 import os
 os.environ['ENVIRONMENT'] = 'development'
 from dishka import make_container
-from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_platform.foundation.config.settings import Settings
 
 c = make_container(ConfigProvider())

@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Ditto 设计质量分析 — 过度设计、缺乏抽象与遗留代码
 
 > **视角**: YAGNI / KISS / DRY / Simple Design

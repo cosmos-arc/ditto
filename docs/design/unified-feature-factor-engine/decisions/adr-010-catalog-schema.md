@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # ADR-010: Catalog 完整表结构与存储架构
 
 **状态**: 已决策（2026-03-04，2026-03-07 合并 ADR-016）

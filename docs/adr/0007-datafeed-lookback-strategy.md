@@ -1,5 +1,7 @@
 # ADR 0007: 回测引擎 DataFeed 数据加载策略
 
+> **[历史参考]** 本文档记录架构演进过程中的决策，包名引用可能已过时。当前包名请参考 CLAUDE.md。
+
 **状态**: 已接受
 **日期**: 2026-04-13
 **决策者**: 架构团队
@@ -32,7 +34,7 @@
 `StrategyServiceFactory._build_backtest_runtime()` 在构造 `ProviderBackedDataFeed` 时，将 `start_date` 向前偏移 `max_lookback * 2` 个日历日：
 
 ```python
-# packages/app/src/ditto_app/builders/service_factory.py
+# packages/application/src/ditto_application/builders/service_factory.py
 
 max_lookback = _compute_max_lookback(runtime.compiled_expressions)
 data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
@@ -58,7 +60,7 @@ data_feed = ProviderBackedDataFeed(
 `EngineLoop.run()` 从 DataFeed 获取完整交易日列表后，过滤到 `config.start_date` 之后：
 
 ```python
-# packages/engine/src/ditto_engine/backtest/engine.py
+# packages/backtest/src/ditto_backtest/engine.py
 
 days = self._data_feed.trading_days()
 trading_days = [d for d in days if d >= self._config.start_date]
