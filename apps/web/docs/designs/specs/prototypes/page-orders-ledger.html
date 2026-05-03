@@ -103,10 +103,8 @@
     .status-tab:focus-visible,
     .ledger-table tr:focus-visible,
     .filter-btn:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ══════════════════════════════════════════════
@@ -721,7 +719,7 @@
       gap: var(--space-4);
     }
 
-    .trace-action-btn {
+    .trace-actions .trace-action-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;

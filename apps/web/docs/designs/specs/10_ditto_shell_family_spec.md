@@ -1,8 +1,12 @@
 # Ditto Shell Family 规范
 
-> **版本**：v1.4
-> **日期**：2026-04-19
+> **版本**：v1.5
+> **日期**：2026-05-02
 > **状态**：Final
+>
+> **v1.5 变更（AI Feature IA v2.1 同步）**
+> - `/research/alpha` 新增为 Research 域 Studio Shell 页面（Alpha Explorer）
+> - `/research/strategies/[id]` 保持 Object Hub，策略编辑 / 生成继续由 Strategy Studio 承担
 >
 > **v1.4 变更（审计修复）**
 > - Radar 从 Analytical 子变体升级为第 7 个独立 Shell Family（§4.7 Radar Workspace Shell）
@@ -341,6 +345,7 @@ Ditto 全站建议固定为 **7 类基础壳层**：
 
 **对应页面**
 
+- `/research/alpha`
 - `/research/strategies/[id]/studio`
 - `/platform/agents` **[v1.3: 从 `/ai/agent` 迁入]**
 
@@ -1076,6 +1081,7 @@ Home 的 Command Center 首屏必须先给出一个轻量 `global-pulse` 状态�
 | 路径 | Shell |
 |------|-------|
 | `/research` | Analytical Workspace |
+| `/research/alpha` | Studio **[v1.4 新增：Alpha Explorer]** |
 | `/research/factors` | Catalog Workspace |
 | `/research/factors/[id]` | Object Hub |
 | `/research/strategies` | Catalog Workspace |
@@ -1091,6 +1097,7 @@ Home 的 Command Center 首屏必须先给出一个轻量 `global-pulse` 状态�
 <!-- 已降级/合并: `/research/strategies/new` — 统一为 `/research/strategies/[id]/studio` -->
 <!-- 已降级/合并: `/research/strategies/[id]/editor` — 统一为 `/research/strategies/[id]/studio` -->
 <!-- v1.4: `/research/strategies/[id]` 新增路由（Strategy Detail 查看态），使用 Object Hub -->
+<!-- v1.4: `/research/alpha` 新增路由（Alpha Explorer），使用 Studio Shell -->
 <!-- 已降级/合并: `/research/backtest/new` — IA 无此路由 -->
 <!-- 已降级/合并: `/research/backtest/compare` — IA 无此路由 -->
 <!-- 已降级/合并: `/research/experiments/[id]` — IA 无此路由 -->

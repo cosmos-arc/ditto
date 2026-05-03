@@ -1547,9 +1547,8 @@
 
     /* ── Panel action enhanced focus ── */
     .panel-action:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent);
-      border-radius: var(--radius-4);
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ── Sidebar toggle brass tint ── */
@@ -1688,7 +1687,7 @@
     </header>
 
     <!-- ═══ Status Bar (L3 — lightweight operational status) ═══ -->
-    <div class="shell-status-bar">
+    <footer class="shell-status-bar" role="status" aria-label="首页市场与数据状态">
       <div class="status-bar-item">
         <span class="status-bar-label">盘中</span>
         <span class="status-bar-value">2026-03-28 · 盘中交易</span>
@@ -1703,7 +1702,7 @@
         <span class="status-bar-label">数据源</span>
         <span class="status-bar-value">5/7 数据源正常</span>
       </div>
-    </div>
+    </footer>
 
 
     <!-- ═══ Main Content (Decision Card + Execution Queue + Signals/Findings) ═══ -->
@@ -2711,7 +2710,7 @@
               <div class="gallery-card__preview">
                 <div class="gallery-collapsed-sidebar">
                   <div class="gallery-collapsed-btn" title="市场脉搏" aria-label="市场脉搏">
-                    <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"series":"up","width":24,"height":12}'></svg>
+                    <svg data-sparkline='{"data":[3380,3395,3388,3402,3410,3420,3432],"series":"up","width":24,"height":12}' aria-label="市场脉搏缩略走势"></svg>
                   </div>
                   <div class="gallery-collapsed-btn" title="全局预警 (3)" aria-label="全局预警 (3)">
                     <svg viewBox="0 0 20 20" fill="none">

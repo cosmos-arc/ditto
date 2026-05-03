@@ -1,10 +1,10 @@
 # Ditto 产品信息架构
-### v2.0
+### v2.1
 
 > Ditto v1 的正式产品信息架构文档。
 > 本文档用于替代旧的"大而全产品设计稿"，作为后续 UI 设计、AI 设计探索、AICoding 落地的唯一上游产品结构输入。
 >
-> **v2.0 变更摘要**：AI 域拆散嵌入（Copilot 升级为全局 Sidecar，Agent Console 迁入 Platform），域结构从 6 域收敛为 5 域，路由总数从 29 精简为 27。
+> **v2.1 变更摘要**：在 AI 域拆散嵌入的基础上，新增 Research 域业务页 `/research/alpha`，承载因子发现、AutoResearch 审阅和 Factor Lab 工作流。域结构保持 5 域，路由总数为 28。
 
 ---
 
@@ -171,6 +171,7 @@ Ditto v1 只优先做强主工作流上的核心页面与核心对象。
 - 市场总览与筛选
 - 资产对象页
 - 研究工作台
+- Alpha Explorer
 - 因子分析
 - 策略构建与编辑
 - 回测结果
@@ -252,8 +253,9 @@ Ditto
 │   ├── /markets/calendar
 │   └── /instruments/[id]
 │
-├── Research (11)
+├── Research (12)
 │   ├── /research
+│   ├── /research/alpha             ← Alpha Explorer（因子发现 / AutoResearch 审阅 / Factor Lab，v2.1）
 │   ├── /research/factors
 │   ├── /research/factors/[id]
 │   ├── /research/strategies
@@ -282,8 +284,12 @@ Ditto
     └── Regime Indicator          ← Shell 级全局组件（Status Bar 胶囊 → 展开面板）
 ```
 
-**路由统计**：5 域，27 条路由 + 2 个全局组件。
+**路由统计**：5 域，28 条路由 + 2 个全局组件。
 
+> **v2.1 变更**：
+> - 新增 `/research/alpha`，作为 Research 域内的 Alpha Explorer，不恢复 AI 一级域
+> - Alpha Discovery 从泛 Copilot 模式升级为完整研究工作台，Agent Console 只保留长任务治理与深链入口
+>
 > **v2.0 变更**：
 > - 移除 AI 域（Copilot → 全局 Sidecar，Agent Console → `/platform/agents`）
 > - `/markets/universes` 移入 Research 域
@@ -362,7 +368,7 @@ Markets 不再等于中国 A 股页，而是覆盖跨市场扫描与单市场下
 
 - **Copilot** → 全局 Sidecar（右侧可折叠面板），任何页面可唤出，不属于任何域
 - **Agent Console** → `/platform/agents`（从 `/ai/agent` 迁入 Platform 域）
-- **AI Overview** 内容 → 拆分归入 Home（Agent Findings 区块）和 Platform/Agents
+- **AI Overview** 内容 → 拆分归入 Home（Daily Brief / Priority Findings）和 Platform/Agents
 - **AI 因子发现 / 策略生成** → 嵌入 Research 域对应页面
 
 详见 §13 AI 嵌入方案。
@@ -411,7 +417,7 @@ Platform 不做"后台大全"，聚焦：
 - 今日优先事项（跨域 3-5 条，预览级）
 - 市场脉搏（4 指标，极轻）
 - 全局预警（3-4 条，单行预览）
-- 研究进展 + Agent Findings（底部双栏）
+- Priority Findings + Research Queue（底部双栏）
 - 数据健康（preview 摘要）
 
 **不再扩展为独立心智的内容**：
@@ -653,19 +659,20 @@ Ditto v1 不应按所有页面平均推进。
 5. Trading Overview
 6. Platform Ops Console
 
-### 第二批：形成闭环的 4 页
+### 第二批：形成闭环的 5 页
 
 7. Instrument Hub
-8. Strategy Studio
-9. Backtest Result
-10. Signals Inbox
+8. Alpha Explorer
+9. Strategy Studio
+10. Backtest Result
+11. Signals Inbox
 
 ### 第三批：执行与 Agent 深化的 4 页
 
-11. Orders / Execution Ledger
-12. Risk Center
-13. Portfolio（Positions / Trades / Attribution）
-14. Agent Console（`/platform/agents`）
+12. Orders / Execution Ledger
+13. Risk Center
+14. Portfolio（Positions / Trades / Attribution）
+15. Agent Console（`/platform/agents`）
 
 ---
 
@@ -710,7 +717,7 @@ Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管�
 
 ## 12. AI 嵌入方案
 
-> **v2.0 新增**。AI 域拆散后，AI 能力以嵌入方式分布在 Ditto 各处。本节明确每种 AI 能力的归属位置与交互形态。
+> **v2.1 更新**。AI 域拆散后，AI 能力以嵌入方式分布在 Ditto 各处；其中因子发现升级为 Research 域业务页 `/research/alpha`。本节明确每种 AI 能力的归属位置与交互形态。
 
 ### 12.1 AI Copilot Sidecar
 
@@ -744,18 +751,25 @@ Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管�
 
 | 能力 | 嵌入位置 | 交互形态 |
 |------|---------|---------|
-| Agent Findings | Home 底部区块 | 摘要卡片，点击展开详情或跳转 `/platform/agents` |
-| 因子发现 | `/research/factors` | Copilot Sidecar 内的 Factor Discovery Mode |
-| 策略生成 | `/research/strategies/[id]/studio` | Copilot Sidecar 内的 Strategy Draft Mode |
+| Daily Quant Brief | `/` | 结构化 Finding、Pending Approval、Data Health 和 Research Queue |
+| Priority Findings | `/` | 首页摘要卡片，按严重度和时效聚合 Agent Finding、Signal Review、Factor Candidate |
+| Alpha Discovery | `/research/alpha` | Search Space Config、Exploration Stream、Pareto Frontier、Candidate Inspector、Adoption Queue |
+| AutoResearch Review | `/platform/agents` + `/research/alpha?run=$id` | Console 负责 Run 治理，Alpha Explorer 负责因子研究审阅 |
+| 因子诊断 | `/research/factors/[id]` | 对已入库因子的 IC、换手、暴露、相关性和衰减做诊断 |
+| 策略生成 | `/research/strategies/[id]/studio` | Manual / Guided / Agent 三模式，产出 StrategySpecDraft 和 BacktestDraft |
+| 策略维护 | `/research/strategies/[id]` 优化 tab | Optimization Proposal、Simulation Drawer、Change Diff |
+| Trading AI Review | `/trading/signals` | AI Interpretation、Risk Officer Decision、Evidence Chain、Approval Actions |
 | 市场分析 | `/markets`、`/markets/a-shares` | Copilot Sidecar 内的 Market Analysis Mode |
 | 选股辅助 | `/markets/screener` | Copilot Sidecar 内的 Stock Discovery Mode |
-| AI 概览内容 | Home + `/platform/agents` | Agent Findings 区块（Home）/ Agent 任务列表（Platform） |
+| Agent Quality | `/platform/agents` Quality tab | Eval Task Set、Score Board、Regression History、Failure Gallery |
+| AI Governance | `/platform/settings` AI section | Model Policy、Tool Permission、Budget、Approval、Guardrail、Audit Retention |
+| AI 概览内容 | Home + `/platform/agents` | Daily Brief / Priority Findings（Home）+ Agent 任务列表（Platform） |
 
 ### 12.4 已废弃的 AI 路由
 
 | 路由 | 处理方式 |
 |------|---------|
-| `/ai` | 拆分内容归入 Home（Agent Findings）和 `/platform/agents` |
+| `/ai` | 拆分内容归入 Home（Daily Brief / Priority Findings）和 `/platform/agents` |
 | `/ai/copilot` | 升级为全局 Copilot Sidecar |
 | `/ai/agent` | 迁移至 `/platform/agents` |
 
@@ -819,6 +833,13 @@ Platform 的重点是状态、任务、日志、修复、可用性和 Agent 管�
 ---
 
 ## Changelog
+
+### 2026-05-02 — v2.1
+
+- **[新增路由]** `/research/alpha`，作为 Research 域内的 Alpha Explorer，不恢复 AI 一级域。
+- **[IA 收敛]** AutoResearch 的治理入口保留在 `/platform/agents`，研究审阅入口深链到 `/research/alpha`。
+- **[AI 嵌入]** 补齐 Daily Brief、Strategy AI、Signals AI Review、Agent Quality、AI Governance 的页面归属。
+- **[路由统计]** 从 27 路由调整为 28 路由 + 2 个全局组件。
 
 ### 2026-04-18 — v2.0
 

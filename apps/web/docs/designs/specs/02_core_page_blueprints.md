@@ -1,11 +1,11 @@
 # Ditto 核心页面蓝图
 
-> **版本**：v2.2
-> **日期**：2026-04-18
+> **版本**：v2.3
+> **日期**：2026-05-02
 > **状态**：Final
 > **上游**：[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[03 对象页统一规范](./03_object_hub_spec.md)、[04 交互与状态规范](./04_interaction_state_spec.md)
-> **职责**：27 个页面模板 + 1 个全局组件——目标、主辅工作面、关键区块、主 CTA、wireframe、Page Contract Mapping
+> **职责**：28 个页面模板 + 1 个全局组件——目标、主辅工作面、关键区块、主 CTA、wireframe、Page Contract Mapping
 
 ---
 
@@ -51,18 +51,20 @@ Alerts / Market Snapshot / Recent Findings
 
 ### 默认信息顺序
 
-Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs → Agent Findings → My Workspace
+Today Pulse → Daily Brief Strip → Decision Banner → Priority Findings → Pending Approvals → Alerts → Recent Signals / Runs → Data Health → Research Queue
 
 ### 核心区块
 
 - Global Header
 - Today Pulse
+- Daily Brief Strip
 - Decision Banner
-- Pending / Next Actions
+- Priority Findings
+- Pending Approvals
 - Alerts / Market Snapshot
 - Recent Signals / Runs
-- Agent Findings / Data Health
-- My Workspace
+- Data Health
+- Research Queue
 
 ### 主 CTA
 
@@ -75,7 +77,7 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 - 待处理 → Signals / Orders / Alerts / Approvals
 - 市场快照 → Markets Overview
 - 最近回测 → Backtest Result
-- Agent Findings → AI / Agent
+- Priority Findings / Pending Approvals → `/platform/agents`、`/research/alpha`、Signals / Orders
 
 ### Wireframe
 
@@ -85,11 +87,13 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 │      ├───────────────────────────────────────────────────────────────┤
 │      │ Today Pulse: pnl / risk / regime / pending / jobs            │
 │      ├───────────────────────────────────────────────────────────────┤
+│      │ Daily Brief: pre-market / intraday / post-market / freshness │
+│      ├───────────────────────────────────────────────────────────────┤
 │      │ Decision Banner: total assets | today pnl | risk | advice    │
 │      ├───────────────────────────────┬───────────────────────────────┤
-│      │ Pending / Next Actions        │ Alerts / Market Snapshot      │
+│      │ Priority Findings             │ Pending Approvals             │
 │      ├───────────────────────────────┼───────────────────────────────┤
-│      │ Recent Signals / Runs         │ Agent Findings / Data Health  │
+│      │ Recent Signals / Runs         │ Data Health / Research Queue  │
 │      ├───────────────────────────────┴───────────────────────────────┤
 │      │ My Workspace: customizable widgets                            │
 └──────┴───────────────────────────────────────────────────────────────┘
@@ -109,6 +113,21 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 - **数据字段**: 总资产（来源: Portfolio Engine）、当日 PnL 金额与百分比（来源: Portfolio Engine）、风险等级（来源: Risk Engine）、AI 建议文本（来源: AI Agent）
 - **交互说明**: Banner 根据风险等级变色（绿/黄/红）；AI 建议区域点击展开完整解读 Drawer
 
+#### 区域: Daily Brief Strip
+- **子模块**: 盘前 / 盘中 / 盘后摘要、数据新鲜度、生成时间、关键风险一句话。
+- **数据字段**: DailyBrief、dataFreshness、generatedAt、priorityFindingIds（来源: Agent Engine + Data Health Service）
+- **交互说明**: 只展示结构化摘要，不展示长文本；点击完整 Trace 跳转 `/platform/agents`。
+
+#### 区域: Priority Findings
+- **子模块**: 结构化 Finding 前 5 条，按风险和时效排序。
+- **数据字段**: Finding 类型、严重度、置信度、关键指标、主动作、evidenceRefs。
+- **交互说明**: Home 只展示结论摘要、严重度、关键指标和主动作；完整 Trace 必须跳转 Agent Console。
+
+#### 区域: Pending Approvals
+- **子模块**: Agent、Signal、Strategy、Factor Adoption 的待审批事项。
+- **数据字段**: ApprovalRequest、blockedAction、riskSummary、expiresAt。
+- **交互说明**: 支持快速查看，但审批确认必须打开对应 Approval Modal 或跳转业务页。
+
 #### 区域: Pending / Next Actions
 - **子模块**: 跨域待处理事项列表（信号/订单/预警/审批/回测）
 - **数据字段**: 事项类型图标（来源: 系统枚举）、事项摘要（来源: Signals/Orders/Alerts Engine）、优先级标签（来源: 业务规则）、时间戳（来源: 事项创建时间）
@@ -124,10 +143,10 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 - **数据字段**: 信号摘要与状态（来源: Signals Engine）、回测名称与状态（来源: Backtest Engine）、完成时间（来源: 对应 Engine）
 - **交互说明**: 最近 5 条预览；点击跳转对应详情页
 
-#### 区域: Agent Findings / Data Health
-- **子模块**: Agent 发现摘要、数据健康概览
-- **数据字段**: 发现摘要与状态（来源: Agent Engine）、数据源健康状态（来源: Data Quality Service）、异常计数（来源: Data Quality Service）
-- **交互说明**: 数据异常时红色标识；点击跳转 AI 域或 Platform 域
+#### 区域: Data Health / Research Queue
+- **子模块**: 数据健康概览、研究运行队列、最近 AutoResearch 状态。
+- **数据字段**: 数据源健康状态（来源: Data Quality Service）、异常计数（来源: Data Quality Service）、ResearchRun 状态、nextAction、linkedArtifact。
+- **交互说明**: 数据异常时用非颜色危险标记；Research Run 点击跳转 Agent Console 或 Alpha Explorer，并携带 run context。
 
 #### 区域: My Workspace
 - **子模块**: 可定制 widget 网格（默认: 持仓概览 / 关注列表 / 快捷入口 / 市场日历）
@@ -163,9 +182,12 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 | Today Pulse | 各指标卡片正常展示 | 指标 skeleton + 脉冲动画 | "开始使用 Ditto"引导 CTA | "数据加载失败" + 重试按钮 | 黄色圆点 + "数据延迟" | 选中指标卡片边框高亮 |
 | Decision Banner | 资产/PnL/风险/建议正常展示 | 数字 skeleton + 建议区 skeleton | "开始使用 Ditto"引导 CTA | "加载失败" + 重试 | 数据时戳标记 | 不适用 |
 | Pending / Next Actions | 事项列表（3-5 条预览） | 列表 skeleton（3 行） | "暂无待处理事项" + 绿色对勾 | "加载失败" + 重试 | 事项旁灰色圆点 | 选中事项行高亮 |
+| Daily Brief Strip | 最新结构化摘要 + fresh 标记 | 摘要骨架 + 时间戳占位 | "等待下一次 Brief" | "Brief 生成失败" + 查看 Trace | fresh 标记降级为 stale | 不适用 |
+| Priority Findings | Finding 摘要 + 严重度 + 主动作 | Finding skeleton（3 行） | "暂无高优先级发现" | "Finding 加载失败" + 重试 | Finding 时戳标记 | 选中 Finding 高亮 |
+| Pending Approvals | Approval 列表 + blocked action | Approval skeleton（2 行） | "暂无待审批" | "审批队列异常" + 重试 | 到期时间黄色标记 | 选中 Approval 高亮 |
 | Alerts / Market Snapshot | 预警列表 + 市场脉搏指标 | skeleton 列表 + 指标 skeleton | 预警区"一切正常"状态标识 | "加载失败" + 重试 | 红色预警持续高亮 | 选中预警行高亮 |
 | Recent Signals / Runs | 最近 5 条信号/回测预览 | skeleton 列表（2 行） | "暂无近期活动" | "加载失败" + 重试 | 灰色时戳标记 | 选中条目高亮 |
-| Agent Findings | Agent 摘要列表 | skeleton 列表（2 行） | "暂无 Agent 活动" | "AI 服务异常" + 重试 | 黄色圆点 | 不适用 |
+| Research Queue | 最近 ResearchRun / AutoResearch 状态 | queue skeleton（2 行） | "暂无研究运行" | "研究队列异常" + 重试 | Run 时戳标记 | 选中 Run 高亮 |
 | Data Health | 健康状态面板 | skeleton 面板 | "所有数据源正常" + 绿色标识 | "数据源连接异常" + 重试 | 异常数据源黄色标记 | 不适用 |
 | My Workspace | widget 网格正常展示 | widget skeleton 占位 | 空网格 + "添加 widget"CTA | "加载工作台失败" + 重试 | widget 边框黄色标记 | 选中 widget 边框高亮
 
@@ -182,11 +204,13 @@ Today Pulse → Decision Banner → Pending → Alerts → Recent Signals / Runs
 | 模块 | Slot |
 |------|------|
 | decision-banner | main |
-| priority-queue | main |
+| daily-brief | main |
+| priority-findings | main |
+| pending-approvals | main |
 | market-pulse | sidebar |
 | alerts | sidebar |
 | data-health | sidebar |
-| agent-findings | main |
+| research-queue | main |
 | my-workspace | main |
 
 ---
@@ -1373,6 +1397,164 @@ IC → 收益 → 分布与相关 → 换手
 
 ---
 
+## 6A. Alpha Explorer
+
+> **路由**：`/research/alpha`
+> **Pattern**：Studio Builder / Research Lab
+> **新增于**：v2.3
+
+### 页面目标
+
+让用户在一个连续工作台内完成因子发现、候选评估、实验追踪和入库采纳。
+
+Alpha Explorer 不是聊天页，也不是普通因子列表。它的任务是把 Copilot Explore、AutoResearch Review 和 Factor Lab 三种研究模式统一到同一个可追溯页面中。
+
+### 页面角色
+
+Research Studio / Alpha Discovery Workbench
+
+### 主工作面
+
+Exploration Stream + Pareto Frontier + Candidate Inspector
+
+### 辅工作面
+
+Search Space Config / Constraint Panel / Experiment Graph / Adoption Queue / Copilot Sidecar
+
+### 模式
+
+| 模式 | 用户参与 | 入口 | 产出 |
+|------|----------|------|------|
+| Copilot Explore | 高 | 用户配置搜索空间与约束后启动 | FactorCandidate、ExperimentDraft |
+| AutoResearch Review | 中 | 从 `/platform/agents` 深链进入 Run | Run Roadmap、Discovery List、Artifact |
+| Factor Lab | 高 | 用户选择候选因子做手动诊断 | FactorArtifact、BacktestArtifact |
+
+### 核心区块
+
+- Workspace Header：目标、universe、run 状态、预算、数据时间。
+- Search Space Config：universe、数据字段、算子族、排除项、探索策略。
+- Constraint Panel：min IC、max turnover、correlation cap、coverage、capacity、regime。
+- Exploration Stream：候选因子增量流，展示公式、IC、ICIR、换手、相关性、新颖度和发现原因。
+- Pareto Frontier：IC vs turnover、ICIR vs correlation、novelty vs stability 的可切换散点图。
+- Candidate Inspector：公式解释、样本外表现、分层收益、行业暴露、相似因子、过拟合警告。
+- Experiment Graph：假设 → 候选 → 变体 → 回测 → 采纳的 lineage。
+- Adoption Queue：待采纳、待补测、已拒绝、已入库。
+
+### 主 CTA
+
+- 启动探索
+- 深入候选
+- 生成变体
+- 发送到 Factor Analysis
+- 加入实验
+- 申请采纳
+
+### 主要跳转
+
+- 候选因子 → `/research/factors/[id]`（采纳后）
+- 实验节点 → `/research/experiments`
+- 回测产物 → `/research/backtest/[id]`
+- AutoResearch Run → `/platform/agents?run=$id`
+- 策略引用 → `/research/strategies/[id]/studio`
+
+### Wireframe
+
+```
+┌ Rail ┬───────────────────────────────────────────────────────────────┐
+│      │ Alpha Header: objective / universe / budget / run status      │
+│      ├───────────────┬───────────────────────────────┬──────────────┤
+│      │ Search Space  │ Exploration Stream            │ Candidate    │
+│      │ Config        │ factor cards / event stream   │ Inspector    │
+│      │ Constraints   │                               │ evidence     │
+│      ├───────────────┼───────────────────────────────┤ diagnostics  │
+│      │ Adoption      │ Pareto Frontier               │ actions      │
+│      │ Queue         │ Experiment Graph              │              │
+└──────┴───────────────┴───────────────────────────────┴──────────────┘
+```
+
+### Tab Content Sections
+
+#### 区域: Search Space Config
+- **子模块**: Universe 选择、数据字段选择、算子族、探索策略、排除已有因子。
+- **数据字段**: universeId（来源: Universe Store）、fieldIds（来源: Data Catalog）、operatorFamilies（来源: Factor Engine）、excludedFactorIds（来源: Factor Library）。
+- **交互说明**: 配置变更会刷新预算估算；高风险搜索空间需要显示 Guardrail Block；AutoResearch 深链进入时配置只读但可复制为新 Run。
+
+#### 区域: Constraint Panel
+- **子模块**: 质量阈值、相关性上限、换手上限、覆盖率、容量、regime 筛选。
+- **数据字段**: minIC、minICIR、maxTurnover、maxCorrelation、minCoverage、minCapacity、regimeFilter。
+- **交互说明**: 约束以滑块、输入框、segmented control 表达；用户调整后可以只影响后续探索，不回写历史候选。
+
+#### 区域: Exploration Stream
+- **子模块**: 候选因子卡片、运行阶段、工具调用摘要、部分指标占位。
+- **数据字段**: FactorCandidate、scoreVector、evidenceRefs、createdAt、stage、runId。
+- **交互说明**: running 状态增量插入候选；partial 状态允许先看公式与解释，灰态展示待计算指标；点击候选联动 Candidate Inspector 与 Pareto Frontier。
+
+#### 区域: Pareto Frontier
+- **子模块**: 散点图、坐标轴模式切换、已采纳/待审/拒绝状态图例、局部放大。
+- **数据字段**: IC、ICIR、turnover、correlation、novelty、stability、adoptionStatus。
+- **交互说明**: 点位 hover 展示指标摘要；框选候选后批量加入补测队列；阻断候选使用红色描边并在 Inspector 中解释。
+
+#### 区域: Candidate Inspector
+- **子模块**: 公式、自然语言解释、样本外、分层收益、行业暴露、相似因子、Evidence Chain、Approval Panel。
+- **数据字段**: expression、rationale、outOfSampleMetrics、quantileReturn、sectorExposure、similarFactors、approvalStatus。
+- **交互说明**: 采纳前必须展示样本外、相关性、换手、容量、行业暴露和过拟合警告；审批动作进入 Approval Confirm Modal。
+
+#### 区域: Experiment Graph
+- **子模块**: 假设节点、候选节点、变体节点、回测节点、采纳节点。
+- **数据字段**: nodeId、nodeKind、parentId、artifactIds、metricDelta、createdBy。
+- **交互说明**: 点击节点打开 Artifact Preview Drawer；同源变体用连线表示；失败节点保留错误原因，不能静默消失。
+
+#### 区域: Adoption Queue
+- **子模块**: 待采纳、待补测、已拒绝、已入库四组队列。
+- **数据字段**: candidateId、status、blockingReason、requestedBy、updatedAt。
+- **交互说明**: 待补测候选可批量提交回测；已拒绝候选保留原因并可复制为变体。
+
+### Overlay Registry
+
+| Overlay | 类型 | 触发 | 内容 |
+|---------|------|------|------|
+| Explore Run Create | Sheet | 启动探索 | 目标、搜索空间、约束、预算、触发方式 |
+| Candidate Deep Dive | Drawer | 点击深入候选 | 完整指标、Evidence、Tool Trace、相似因子 |
+| Adoption Confirm | Modal | 点击申请采纳 | 指标摘要、风险摘要、审批备注、确认动作 |
+| Artifact Preview | Drawer | 点击 artifact | 因子、回测、图表、数据集的结构化预览 |
+| Guardrail Detail | Drawer | blocked 状态 | policy、阻断原因、可恢复建议 |
+| Copilot Context | Sheet | 打开全局 Copilot | 当前候选与搜索空间上下文、结构化输出 Shelf |
+
+### Component × State Matrix
+
+| 组件 | default | loading | empty | failed | running | partial | blocked |
+|------|---------|---------|-------|--------|---------|---------|---------|
+| Search Space Config | 表单与模板正常展示 | 字段骨架 | 默认模板 | 因子库加载失败 + 重试 | disabled | — | 权限不足 |
+| Constraint Panel | 阈值控件正常展示 | skeleton | 使用默认约束 | 约束加载失败 | disabled | — | policy 标记不可编辑 |
+| Exploration Stream | 候选卡片列表 | 卡片骨架 | 配置后开始探索 | Agent 异常 + 重试 | 新卡片流入 | 部分指标灰态 | 预算不足 |
+| Pareto Frontier | 散点图 | 图表骨架 | 空坐标 | 渲染失败 | 实时点位 | 部分点位灰态 | — |
+| Candidate Inspector | 候选详情 | 面板骨架 | 未选中提示 | 加载失败 | 指标刷新 | 部分诊断可见 | 采纳被阻断 |
+| Experiment Graph | lineage 图 | 节点骨架 | 无实验 | 加载失败 | 节点增加 | artifact 待生成 | — |
+| Adoption Queue | 四组队列 | 列表骨架 | 暂无待处理 | 加载失败 | 队列更新 | 待补测灰态 | 审批策略阻断 |
+
+### Page Contract Mapping
+
+| 字段 | 值 |
+|------|-----|
+| route | `/research/alpha` |
+| shellFamily | `studio` |
+| pagePattern | `studio-builder` |
+
+**模块→Slot 映射**:
+
+| 模块 | Slot |
+|------|------|
+| alpha-header | header |
+| search-space-config | rail |
+| constraint-panel | rail |
+| exploration-stream | main |
+| pareto-frontier | main |
+| experiment-graph | main |
+| candidate-inspector | inspector |
+| adoption-queue | rail |
+
+---
+
 ## 7. Strategy Studio
 
 ### 页面目标
@@ -1393,8 +1575,11 @@ Inspector / AI Assistant / Logs
 
 ### 模式
 
-- Form Builder
-- Code Editor
+| 模式 | 定位 | 子视图 |
+|------|------|--------|
+| Manual | 专业用户手动配置策略，保留最高控制权 | Form Builder / Code Editor |
+| Guided | Copilot 分步骤收集目标、约束和偏好，用户逐步确认 | Guided Conversation / Strategy Inspector / Decisions |
+| Agent | 用户给出目标和预算，Agent 自主生成候选策略并提交可审批产物 | Goal Card / Activity Stream / Candidate Strategy Board |
 
 ### 核心区块
 
@@ -1405,6 +1590,30 @@ Inspector / AI Assistant / Logs
 - Inspector
 - Logs / Validate / Dry Run
 - **因子预处理管道**（Form Mode 下，因子选择后的预处理步骤）
+- **Guided Conversation**（Guided Mode 下，逐步确认目标、universe、因子偏好、风控约束）
+- **Agent Activity Stream**（Agent Mode 下，展示选基线、回测、评估、调整、再回测）
+- **Candidate Strategy Board**（Agent Mode 下，对比多个候选策略的 Config / Backtest / Decision Log / Risk）
+
+### Guided 模式
+
+Guided 是 Copilot 嵌入 Strategy Studio 的工作流，不打开独立聊天页面。它把用户意图拆成可确认的策略构建步骤。
+
+| 区域 | 内容 | 主动作 |
+|------|------|--------|
+| Guided Conversation | 目标、universe、因子偏好、风控约束、成本模型 | 确认 / 修改 / 跳过 |
+| Strategy Inspector | StrategySpecDraft、因子权重、IC 预测、风险检查 | 应用建议到当前策略 |
+| Decisions | 已确认步骤、待确认步骤、冲突项 | 回退步骤 / 进入 Manual 精调 |
+
+### Agent 模式
+
+Agent 是自主策略构建模式，必须带预算、约束和审批边界。它不能直接部署或绕过回测。
+
+| 区域 | 内容 | 主动作 |
+|------|------|--------|
+| Goal Card | 年化、MDD、换手、universe、实验预算、可用因子 | 启动 / 暂停 / 调整预算 |
+| Activity Stream | 选基线、回测、评估、调整、再回测事件流 | 查看 Trace / 取消 Run |
+| Candidate Strategy Board | 多候选策略并排比较 | 提交回测 / 进入 Manual / 拒绝 |
+| Approval Bar | 采纳、拒绝、提交回测、进入 Manual | 审批前展示风险摘要 |
 
 ### 因子预处理管道
 
@@ -1467,15 +1676,25 @@ Inspector / AI Assistant / Logs
 
 ### Tab Content Sections
 
-#### Tab: Form Builder（默认）
+#### Mode: Manual / Form Builder（默认）
 - **子模块**: 因子选择、因子预处理管道、标的选择（Universe）、权重配置、风控规则、组合优化器（v1.5）
 - **数据字段**: 策略名称（来源: 用户输入）、策略版本（来源: 系统自增）、因子列表（来源: Factor Library）、预处理配置（来源: 预设默认值 + 用户覆盖）、Universe 标的池（来源: Market Data）、权重分配（来源: 手动/优化器）、风控阈值（来源: Risk Rules）、回测参数区间（来源: 用户输入）
 - **交互说明**: 左侧 Snippets 面板拖拽因子到工作区；因子选中后自动展开预处理管道配置面板（去极值→标准化→中性化→正交化）；权重支持手动输入或启用优化器模式；Inspector 面板实时显示当前配置的 AI 建议和校验警告；底部 Logs 面板显示编译/校验/Dry Run 结果
 
-#### Tab: Code Editor
+#### Mode: Manual / Code Editor
 - **子模块**: Monaco 代码编辑器、代码片段库、语法校验、版本对比
 - **数据字段**: 策略代码（来源: 用户编辑 / 从 Form Mode 转换）、代码片段（来源: Snippets 库）、语法错误（来源: 校验引擎）、版本 diff（来源: Git-like 版本管理）
 - **交互说明**: 支持 Form → Code 和 Code → Form 双向切换；Monaco 编辑器支持语法高亮和自动补全；保存时自动触发语法校验；Inspector 显示 AI 代码建议
+
+#### Mode: Guided
+- **子模块**: Guided Conversation、Strategy Inspector、Decision Checklist、Workspace Actions。
+- **数据字段**: StrategySpecDraft、RiskRuleDraft、confirmedStepIds、openQuestionIds、workspaceActionTargets。
+- **交互说明**: 每一步确认后立即更新 Strategy Inspector；用户可随时对比 Manual 当前配置；结构化草稿可保存为 draft、提交回测或进入 Manual 精调。
+
+#### Mode: Agent
+- **子模块**: Goal Card、Activity Stream、Candidate Strategy Board、Strategy Output Card、Approval Bar。
+- **数据字段**: AgentRunView、StrategySpecDraft、BacktestDraft、RiskCheck、ToolInvocation、ArtifactRef。
+- **交互说明**: Agent 运行以事件流增量展示；候选策略必须并排比较；采纳前必须打开 Approval Panel 并展示回测、风险、成本和 Trace。
 
 ### Overlay Registry
 
@@ -1488,6 +1707,16 @@ Inspector / AI Assistant / Logs
 - **触发条件**: 用户点击 Header "提交回测" 按钮
 - **内容结构**: 回测区间（起始/结束日期）、初始资金、基准指数、交易成本配置（印花税/佣金/滑点/冲击成本）、调仓频率 + [取消] [提交回测]
 - **关闭行为**: 点击遮罩 / ESC / 提交后自动关闭
+
+#### Overlay: Agent Run Trace — Drawer
+- **触发条件**: 用户在 Agent Mode 点击 Activity Stream 中的事件或工具调用
+- **内容结构**: Run Summary + Tool Trace + Evidence Chain + Artifact 列表 + 失败恢复动作
+- **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
+
+#### Overlay: Strategy Candidate Approval — Modal
+- **触发条件**: 用户在 Guided / Agent 模式点击"采纳"或"提交回测"
+- **内容结构**: StrategySpec diff、风险检查、预算消耗、后续动作、确认 / 驳回 / 请求修改
+- **关闭行为**: 点击遮罩 / ESC / 确认后写入 draft 或提交 backtest draft
 
 #### Overlay: 因子预处理预览 — Drawer
 - **触发条件**: 用户在预处理管道配置中点击"预览处理后分布"
@@ -1513,6 +1742,9 @@ Inspector / AI Assistant / Logs
 | Universe 标的池 | 表格/网格展示标的列表 | skeleton 行 × 10 | "请配置 Universe，或从模板加载" + 模板选择 CTA | 错误提示 + [重试] | — | 选中标的高亮 | 批量添加/移除标的 |
 | 权重配置 | 权重滑块/输入框 | skeleton 行 × 5 | "请先选择 Universe 标的" | — | — | — | — |
 | Inspector 面板 | AI 建议 + 校验状态列表 | spinner + "分析中..." | "配置策略后，AI 将提供优化建议" | 错误提示 + [重试] | "AI 分析结果可能已过时，点击刷新" | — | — |
+| Guided Conversation | 分步骤问题与结构化建议 | skeleton | "输入目标开始引导" | Copilot 失败 + 重试 | 建议标注过期 | 当前步骤高亮 | — |
+| Agent Activity Stream | Run 事件、工具调用、artifact | 事件骨架 | "设定目标后启动 Agent" | Run 失败 + 恢复动作 | 数据时间戳提示 | 选中事件联动 Trace | — |
+| Candidate Strategy Board | 候选策略并排卡片 | 卡片骨架 | "暂无候选策略" | 候选生成失败 + 重试 | 回测结果标记 stale | 选中候选进入 Inspector | 多选候选对比 |
 
 | Logs 底部面板 | 空白待输出状态 | — | "暂无日志，执行校验或 Dry Run 后在此查看" | — | — | — | — |
 
@@ -1904,7 +2136,7 @@ Session → Equity → Risk → Positions → Signals → Orders / Recent Trades
 
 ### 页面目标
 
-统一信号复核层。
+统一信号复核层。AI 只能解释、预筛选和暴露风险，不能绕过人工审批或直接生成订单。
 
 ### 页面角色
 
@@ -1928,12 +2160,17 @@ Signal Detail / Actions
 - Scope Strip（含 **涨跌停校验状态**: 涨停买入信号标灰/跳过，跌停卖出信号标灰/跳过）
 - Signal Table（含 **信号来源标注**: 策略信号 / AI 信号 / 手动信号，source 可筛选）
 - Signal Detail（含 **溯源链接**: 查看来源回测 → /research/backtest/[id]，查看来源策略 → /research/strategies/[id]/studio）
+- AI Interpretation：信号来源、市场背景、因子贡献、冲突证据。
+- Risk Officer Decision：PASS / WARN / BLOCK，说明仓位、流动性、相关性、T+1、涨跌停。
+- Evidence Chain：策略、回测、行情、持仓、风控规则和 Agent Finding。
 
 ### 主 CTA
 
 - 确认
 - 生成订单复核
 - 交给 AI 解读
+- 查看 Risk Officer
+- 请求修改
 - 查看来源回测
 - 查看来源策略
 
@@ -1949,7 +2186,7 @@ Signal Detail / Actions
 │      │ time/object/source/type       │ explanation                   │
 │      │ side/weight/confidence/status │ risk checks                   │
 │      │                               │ portfolio impact              │
-│      │                               │ actions                       │
+│      │                               │ AI / evidence / actions       │
 └──────┴───────────────────────────────┴───────────────────────────────┘
 ```
 
@@ -2003,7 +2240,12 @@ Signal Detail / Actions
 - **子模块**: Scope Strip（待复核/已确认/已忽略/已转订单）、Signal Table（时间/标的/来源/方向/权重/置信度/状态）、Signal Detail（解释/风控检查/组合影响/操作）
 > Scope Strip 为 UI 层面的 Tab 分组视图，不等于系统级 Signal 状态枚举。完整 8 态定义见 [04 交互与状态规范 §15](./04_interaction_state_spec.md)。
 - **数据字段**: 信号 ID（来源: Signal Engine）、信号时间（来源: Signal Engine）、标的代码/名称（来源: Market Data）、信号来源（来源: Signal Engine：策略信号/AI 信号/手动信号）、方向/权重/置信度（来源: Signal Engine）、状态（来源: Signal Engine）、风控检查结果（来源: Risk Engine）、组合影响预估（来源: Portfolio Engine）
-- **交互说明**: 表格支持排序和筛选（按来源/状态/优先级/组合）；点击信号行展开 Signal Detail；涨跌停校验不通过的信号标灰（涨停买入/跌停卖出跳过）；支持批量确认/忽略；Signal Detail 中提供溯源链接（查看来源回测 → /research/backtest/[id]，查看来源策略 → /research/strategies/[id]/studio）
+- **交互说明**: 表格支持排序和筛选（按来源/状态/优先级/组合）；点击信号行展开 Signal Detail；涨跌停校验不通过的信号标灰（涨停买入/跌停卖出跳过）；支持批量确认/忽略；Signal Detail 中提供溯源链接（查看来源回测 → /research/backtest/[id]，查看来源策略 → /research/strategies/[id]/studio）；AI Interpretation 和 Risk Officer Decision 固定在 Detail 的上半区，BLOCK 时自动禁用生成订单动作。
+
+#### Detail Section: AI Review
+- **子模块**: AI Interpretation、Risk Officer Decision、Execution Preview、Evidence Chain、Approval Actions。
+- **数据字段**: SignalInterpretation、RiskOfficerDecision、ExecutionPreview、EvidenceRef、ApprovalRequest。
+- **交互说明**: PASS 可继续审批；WARN 要求用户确认风险；BLOCK 必须展示阻断原因并提供查看受影响对象或启动修复动作。
 
 #### Tab: 已确认
 - **子模块**: 已确认信号列表、确认时间、操作人、后续状态
@@ -2030,7 +2272,12 @@ Signal Detail / Actions
 
 #### Overlay: AI 解读信号 — Sheet（右侧）
 - **触发条件**: 用户点击 "交给 AI 解读" 按钮
-- **内容结构**: AI 生成的信号分析（市场背景/标的分析/风险评估/建议操作）+ 置信度评分 + [关闭] [采纳建议]
+- **内容结构**: AI 生成的信号分析（市场背景/因子贡献/冲突证据/建议操作）+ Risk Officer Decision + Evidence Chain + 置信度评分 + [关闭] [采纳建议]
+- **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
+
+#### Overlay: Risk Officer Detail — Drawer
+- **触发条件**: 用户点击 PASS / WARN / BLOCK 决策块
+- **内容结构**: 仓位、流动性、相关性、T+1、涨跌停、停牌、数据新鲜度、策略版本 stale 检查详情
 - **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
 
 #### Overlay: 批量确认 — Modal
@@ -2049,6 +2296,9 @@ Signal Detail / Actions
 |------|---------|---------|-------|--------|-------|----------|------|
 | Signal Table | 分页表格，信号行可点击展开 | skeleton 行 × 10 | "暂无信号，等待策略/AI 生成" + 查看策略 CTA | 错误提示 + [重试] | 黄色边框 "信号可能已更新，建议刷新" | 选中行高亮，右侧展开 Signal Detail | 勾选后出现批量操作栏：确认/忽略/AI 解读 |
 | Signal Detail | 信号解释 + 风控检查 + 组合影响 + 操作按钮 | skeleton 面板 | "选择左侧信号查看详情" | 错误提示 + [重试] | — | — | — |
+| AI Interpretation | 市场背景 + 因子贡献 + 冲突证据 | 解读骨架 | "暂无 AI 解读" + 触发按钮 | AI 解读失败 + 重试 | 标注生成时间 | 当前证据高亮 | — |
+| Risk Officer Decision | PASS / WARN / BLOCK 决策块 | 检查中 skeleton | "等待风控检查" | 风控检查失败 + 重试 | 风控数据 stale | 点击展开详情 | 批量信号汇总风险 |
+| Evidence Chain | 策略 / 回测 / 行情 / 持仓 / 风控规则 | 链路骨架 | "暂无证据链" | 证据加载失败 + 重试 | 数据版本过期 | 选中证据高亮 | — |
 | Scope Strip | 状态 tab + 各状态计数 badge | skeleton tab × 4 | — | — | — | — | — |
 | 订单确认面板 | 标的信息 + 状态检查 + 委托配置 + 费用预估 | spinner + "检查中..." | — | 检查失败标记 + [重试] | — | — | — |
 
@@ -2576,30 +2826,31 @@ Context / Evidence / Actions
 
 ### 页面目标
 
-管理 Plan、Run、Finding、Approval 的完整 agent 工作流。
+管理 Plan、Run、Finding、Approval、Trace、Artifact、AutoResearch 和 Quality 的完整 Agent 治理工作流。
 
 ### 页面角色
 
-Studio / Builder
+Platform Operations / Agent Governance Console
 
 ### 默认 tab
 
-Plans → Runs → Findings → Approvals
+Plans → Runs → Findings → Approvals → AutoResearch → Artifacts → Quality → Policies
 
 ### 主工作面
 
-Main Queue / Cards
+Timeline / Finding Table / AutoResearch Dashboard / Quality Dashboard
 
 ### 辅工作面
 
-Detail / Tool Trace
+Inspector / Tool Trace / Evidence / Artifact / Approval
 
 ### 核心区块
 
 - Agent Header
 - Tabs
-- Main Queue / Cards
-- Detail / Tool Trace
+- Plan / Run / Filter 列表
+- Timeline / Finding Table / AutoResearch Dashboard / Quality Dashboard
+- Inspector：Run Summary、Agent Pipeline、Activity Stream、Tool Trace、Evidence Chain、Artifact Viewer、Approval Panel、Guardrail Result、Cost & Budget
 
 ### 主 CTA
 
@@ -2607,6 +2858,9 @@ Detail / Tool Trace
 - 暂停
 - 重跑
 - 提交审批
+- 查看 Trace
+- 预览 Artifact
+- 启动评测
 - **审批通过后自动生成信号**（见 06 核心用户流程 BP-C1 修复）
 
 ### 审批通过后流程
@@ -2625,10 +2879,11 @@ Agent Finding 审批通过后，自动执行以下步骤：
 ┌ Rail ┬───────────────────────────────────────────────────────────────┐
 │      │ Agent Header: new plan / pause / rerun / approve             │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ Tabs: plans | runs | findings | approvals                    │
+│      │ Tabs: plans | runs | findings | approvals | auto | quality   │
 │      ├───────────────────────────────┬───────────────────────────────┤
-│      │ Main Queue / Cards            │ Detail / Tool Trace          │
-│      │ plans or runs or findings     │ output / approval / logs     │
+│      │ Plan/Run/Filter List          │ Inspector                    │
+│      │ Timeline / Finding Table      │ trace / evidence / artifact  │
+│      │ AutoResearch / Quality        │ approval / cost / guardrail  │
 └──────┴───────────────────────────────┴───────────────────────────────┘
 ```
 
@@ -2699,6 +2954,26 @@ Agent Finding 审批通过后，自动执行以下步骤：
 - **数据字段**: Finding 详情（来源: Agent Engine）、Confidence Score + Evidence（来源: AI Confidence 框架）、审批历史（来源: Approval Store）、关联 Signal 状态（来源: Signal Store）
 - **交互说明**: 审批通过后自动触发信号生成流程（见审批通过后流程）；高置信 Finding 默认建议通过；低置信 Finding 标记"高风险"警告
 
+#### Tab: AutoResearch
+- **子模块**: Run 总览、研究路线图、发现清单、性能演进图、Alpha Explorer 深链。
+- **数据字段**: runId、objective、experimentCount、candidateCount、acceptedCount、roadmapDecision、bestCandidateId、artifactIds。
+- **交互说明**: Console 只负责治理和总览；点击候选或路线图节点深链到 `/research/alpha?run=$id&candidate=$id` 进行研究审阅。
+
+#### Tab: Artifacts
+- **子模块**: 报告、因子、策略草稿、回测、数据集、图表、Trace artifact。
+- **数据字段**: artifactId、artifactKind、schemaVersion、createdByRunId、dataSnapshotId、downloadUrl、previewState。
+- **交互说明**: Artifact 可打开预览 Drawer、复制引用、发送到业务工作区；缺失 schemaVersion 的 artifact 标记为 blocked。
+
+#### Tab: Quality
+- **子模块**: Eval Task Set、Candidate Configs、Score Board、Regression History、Failure Gallery。
+- **数据字段**: evalRunId、taskSetId、agentConfigId、scoreVector、regressionDelta、cost、latency、failureReason。
+- **交互说明**: 支持对比 Agent 配置、prompt、工具集合和模型版本；失败案例必须保留 Evidence 与 Tool Trace。
+
+#### Tab: Policies
+- **子模块**: 当前计划使用的模型、工具权限、预算、审批策略和 guardrail 摘要。
+- **数据字段**: modelPolicyId、toolPolicyId、budgetPolicyId、approvalPolicyId、guardrailResultIds。
+- **交互说明**: Policies tab 只展示运行时摘要；编辑入口跳转 `/platform/settings` AI section。
+
 ### Overlay Registry
 
 #### Overlay: 审批确认 — Confirm Dialog
@@ -2721,6 +2996,21 @@ Agent Finding 审批通过后，自动执行以下步骤：
 - **内容结构**: 标题 + 工具调用链路（时间线形式）+ 每步输入/输出详情 + 数据快照
 - **关闭行为**: 点击遮罩关闭 / ESC 关闭
 
+#### Overlay: Artifact Preview — Drawer
+- **触发条件**: 用户点击 Finding、Run 或 Artifacts tab 中的产物
+- **内容结构**: Artifact 元数据、schemaVersion、结构化预览、Evidence Chain、发送工作区动作
+- **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
+
+#### Overlay: Guardrail Detail — Drawer
+- **触发条件**: 用户点击 blocked Run、blocked Finding 或 Guardrail Result
+- **内容结构**: policy、阻断动作、原因、可恢复建议、申请权限入口
+- **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
+
+#### Overlay: Quality Run Create — Sheet
+- **触发条件**: 用户在 Quality tab 点击"启动评测"
+- **内容结构**: 任务集、Agent 配置、模型/工具组合、预算、运行确认
+- **关闭行为**: 点击遮罩 / ESC / 创建后自动进入 Quality Run 详情
+
 ### Component × State Matrix
 
 | 组件 | default | loading | empty | failed | stale | selected | bulk |
@@ -2730,6 +3020,10 @@ Agent Finding 审批通过后，自动执行以下步骤：
 | Findings 列表 | Finding 卡片 + Confidence 色标 | 卡片骨架屏 | "暂无 Finding" | "Finding 数据异常" + 重试 | 不适用 | 高亮卡片 + Evidence 面板 | 批量操作栏（提交审批） |
 | Approvals 队列 | 待审 Finding + Confidence + Evidence | 卡片骨架屏 | "暂无待审批项" 绿色提示 | "审批服务异常" + 重试 | 不适用 | 高亮卡片 + 审批详情 | 批量审批操作栏 |
 | Detail 面板 | 右侧面板展示完整详情 | 面板骨架 | 不适用（由选中触发） | "详情加载失败" + 重试 | 不适用 | 不适用 | 不适用 |
+| AutoResearch Dashboard | Run 总览 + 路线图 + 发现清单 | dashboard skeleton | "暂无 AutoResearch Run" | Run 加载失败 + 重试 | 数据时间戳提示 | 选中 Run 联动 Inspector | — |
+| Artifact Viewer | 结构化预览 + 发送动作 | 预览骨架 | "暂无 Artifact" | artifact 加载失败 + 重试 | schemaVersion 过期提示 | 选中 artifact 高亮 | 批量复制引用 |
+| Quality Dashboard | Score Board + Regression + Failure Gallery | 图表骨架 | "暂无评测记录" | 评测加载失败 + 重试 | 基准集版本过期 | 选中 eval run 高亮 | 多配置对比 |
+| Approval Panel | 审批动作 + 备注 + 风险摘要 | skeleton | "暂无审批动作" | 审批服务异常 + 重试 | 审批已过期 | 当前审批高亮 | 批量审批 |
 
 | Pipeline 视图 | Agent 链路图 + 执行进度 | 流程图骨架 | 不适用 | "Pipeline 渲染失败" + 重试 | 节点灰色 + "等待更新" | 点击节点展开 Artifact | 不适用 |
 
@@ -3018,8 +3312,8 @@ Global Command Center（轻量变体）
 
 ### 主要跳转
 
-- Agent Quick View → `/ai/agent`
-- Copilot Quick View → `/ai/copilot`
+- Agent Quick View → `/platform/agents`
+- Copilot Quick View → 打开全局 Copilot Sidecar
 - 待审批 → `/trading/signals`（已审批通过并转化为信号的 Finding）
 
 ### Tab Content Sections
@@ -3033,12 +3327,12 @@ Global Command Center（轻量变体）
 
 #### Overlay: 新建会话确认 — Toast
 - **触发条件**: 用户点击"新建 Copilot 会话"按钮时
-- **内容结构**: Toast 提示 "已创建新会话" + 自动跳转到 `/ai/copilot`
+- **内容结构**: Toast 提示 "已创建新会话" + 打开全局 Copilot Sidecar
 - **关闭行为**: 3 秒自动消失
 
 #### Overlay: 新建 Plan 引导 — Toast
 - **触发条件**: 用户点击"新建 Agent Plan"按钮时
-- **内容结构**: Toast 提示 "已创建新 Plan" + 自动跳转到 `/ai/agent`
+- **内容结构**: Toast 提示 "已创建新 Plan" + 自动跳转到 `/platform/agents`
 - **关闭行为**: 3 秒自动消失
 
 ### Component × State Matrix
@@ -3050,10 +3344,10 @@ Global Command Center（轻量变体）
 
 | Copilot Quick View | 最近产出列表 + 会话链接 | 列表骨架屏 | "暂无 Copilot 活动" | "Copilot 服务异常" + 重试 | 不适用 |
 
-> **v2.0 注意**: AI 总览页面功能已嵌入 Home Command Center（Agent Findings 区块）和各功能域。此蓝图保留但标记为 deprecated。
+> **v2.1 注意**: AI 总览页面功能已嵌入 Home Command Center（Daily Brief / Priority Findings）和各功能域。此蓝图保留但标记为 deprecated。
 >
 > **v2.0 迁移**: 功能拆分至两处：
-> - Agent Findings 摘要 → Home Command Center 的 "Agent Findings" 区块
+> - AI 发现摘要 → Home Command Center 的 Daily Brief / Priority Findings
 > - Agent 配置与运行管理 → Platform/Agents (`/platform/agents`)
 > - AI 产出时间线 → Platform/Agents 的 Run History 面板
 > - 原页面不再作为独立路由存在。
@@ -3102,13 +3396,13 @@ KPI Strip / Meta Strip / Bottom Area
 
 ### 默认 tab
 
-概览 → 配置 → 回测历史 → 信号 → 版本
+概览 → 配置 → 因子 → 回测历史 → 信号 → 优化 → 版本
 
 ### 核心区块
 
 - Strategy Header（名称 / 类型 / 状态 / 版本号 / 操作按钮）
 - Meta Strip（创建时间 / 最后修改 / 因子数量 / Universe 规模 / 风控规则数）
-- Tabs（概览 / 配置 / 回测历史 / 信号 / 版本）
+- Tabs（概览 / 配置 / 因子 / 回测历史 / 信号 / 优化 / 版本）
 - Main Content（tab-specific）
 - Bottom Area（关联标的池 / 最近信号 / 风控事件）
 
@@ -3134,7 +3428,7 @@ KPI Strip / Meta Strip / Bottom Area
 │      ├───────────────────────────────────────────────────────────────┤
 │      │ Meta Strip: created / modified / factors / universe / rules  │
 │      ├───────────────────────────────────────────────────────────────┤
-│      │ Tabs: overview | config | backtests | signals | versions     │
+│      │ Tabs: overview | config | factors | backtests | optimize     │
 │      ├───────────────────────────────────────────────────────────────┤
 │      │ Main Content (tab-specific)                                   │
 │      ├───────────────────────────────────────────────────────────────┤
@@ -3164,6 +3458,11 @@ KPI Strip / Meta Strip / Bottom Area
 - **数据字段**: 信号列表（来源: Signal Engine，筛选 strategy_id=$id）、信号状态分布（来源: Signal Engine 聚合）
 - **交互说明**: 点击信号跳转 `/trading/signals` 并定位到该信号；按状态筛选；查看全部跳转 Signals Inbox
 
+#### Tab: 优化
+- **子模块**: Health Monitor、Factor Contribution Drift、Regime Fit、Optimization Proposal List、Simulation Drawer、Change Diff。
+- **数据字段**: realizedSharpe、expectedSharpe、drawdownDrift、turnoverDrift、factorContributionDelta、icDecay、correlationChange、regimeFitScore、OptimizationProposal、SimulationResult。
+- **交互说明**: pending 提案展示预测影响；simulating 提案展示进度和部分结果；simulated 提案展示模拟回测；采纳前必须打开 Change Diff 与 Approval Panel；approved 提案链接新策略版本；expired 提案不可操作但保留原因。
+
 #### Tab: 版本
 - **子模块**: 版本时间线（版本号/修改时间/修改人/变更摘要）、版本对比（选择两版本展示配置 diff: 因子变化/权重变化/规则变化）
 - **数据字段**: 版本历史（来源: Strategy Version Store）、配置 diff（来源: Version Diff Engine）
@@ -3191,6 +3490,16 @@ KPI Strip / Meta Strip / Bottom Area
 - **内容结构**: 回测区间（起始/结束日期）+ 初始资金 + 基准指数 + 交易成本配置（印花税/佣金/滑点/冲击成本）+ 调仓频率 + [取消] [提交回测]
 - **关闭行为**: 点击遮罩 / ESC / 提交后自动关闭 + Toast "回测已提交"
 
+#### Overlay: Optimization Simulation — Drawer
+- **触发条件**: 用户在优化 tab 点击"模拟回测"
+- **内容结构**: 提案摘要、模拟进度、回测结果、风险影响、成本变化、采纳 / 拒绝动作
+- **关闭行为**: 点击遮罩 / ESC / 模拟完成后可继续采纳或关闭
+
+#### Overlay: Optimization Approval — Modal
+- **触发条件**: 用户点击"采纳优化"
+- **内容结构**: StrategySpec diff、预测影响、模拟结果、风险摘要、审批备注、确认 / 驳回
+- **关闭行为**: 点击遮罩 / ESC / 确认后创建新策略版本
+
 #### Overlay: 版本回滚确认 — Modal（破坏性操作）
 - **触发条件**: 用户点击版本的"回滚"按钮
 - **内容结构**: "确认回滚到版本 v{N}？当前版本配置将被覆盖。" + 版本对比摘要 + [取消] [确认回滚]
@@ -3210,6 +3519,9 @@ KPI Strip / Meta Strip / Bottom Area
 | 回测 Tab: Compare | 净值叠加图 + 对比表 | 图表/表 skeleton | "勾选 2+ 回测展开对比" | "对比渲染失败" + 重试 | 黄色边框 |
 | 信号 Tab: 统计 | 四状态计数 badge | badge skeleton | "暂无信号产出" | 错误 + 重试 | — |
 | 信号 Tab: 列表 | 信号行 + 状态 | 行 skeleton × 10 | "暂无信号" + 查看全部 CTA | 错误 + 重试 | 黄色边框 |
+| 优化 Tab: Health Monitor | Sharpe / 回撤 / 换手漂移 | 指标 skeleton | "暂无维护数据" | 加载失败 + 重试 | 数据时间戳提示 |
+| 优化 Tab: Factor Drift | 因子贡献、IC 衰减、相关性变化 | 图表 skeleton | "暂无漂移记录" | 加载失败 + 重试 | 黄色边框 |
+| 优化 Tab: Proposal List | 调权 / 换因子 / 加风控 / 暂停策略提案 | 列表 skeleton | "暂无优化建议" | 加载失败 + 重试 | 提案过期提示 |
 | 版本 Tab: 时间线 | 版本行 + 变更摘要 | 行 skeleton × 5 | "暂无版本记录" | 错误 + 重试 | — |
 
 | 版本 Tab: Diff | 配置差异高亮 | diff skeleton | "选择两个版本查看差异" | 错误 + 重试 | — |
@@ -3692,7 +4004,7 @@ Filter Bar → Universe List
 
 ### 页面目标
 
-系统配置——数据源管理、券商连接、通用设置。
+系统配置——数据源管理、券商连接、通用设置，以及 AI Agent 的模型、工具、预算、审批和安全策略。
 
 ### 页面角色
 
@@ -3708,13 +4020,15 @@ Settings Nav → Settings Content
 
 ### 核心区块
 
-- Settings Nav（侧边导航：数据源配置 / 券商连接 / 通用设置）
+- Settings Nav（侧边导航：数据源配置 / 券商连接 / AI 治理 / 通用设置）
 - Settings Content（tab 对应的配置表单）
 
 ### 主 CTA
 
 - 保存配置
 - 测试连接
+- 保存 AI 策略
+- 运行 Guardrail 检查
 
 ### Tab Content Sections
 
@@ -3727,6 +4041,11 @@ Settings Nav → Settings Content
 - **子模块**: 券商列表（名称/状态/账户信息/最后连接时间）、新增连接按钮、连接配置表单
 - **数据字段**: 券商配置（来源: Settings Store）、连接状态（来源: Broker Health Service）
 - **交互说明**: 点击券商行展开配置编辑；支持测试连接；连接状态实时显示（Polling 60s）
+
+#### Tab: AI 治理
+- **子模块**: Model Policy、Tool Permission Matrix、Budget Policy、Approval Policy、Data Policy、Guardrails、Audit Retention。
+- **数据字段**: 默认模型、fallback、成本等级、禁用场景、工具白名单、只读/可写/可交易权限、单次 Run token/工具调用/时间/回测次数上限、审批规则、敏感字段与脱敏规则、trace/artifact/approval log 保存时长。
+- **交互说明**: 危险工具权限按只读 / 可写 / 可交易分级；交易动作、策略采纳、因子入库、优化采纳默认需要人工审批；保存前展示策略 diff；Guardrail 检查失败时阻止保存并给出修正入口。
 
 #### Tab: 通用设置
 - **子模块**: 基础设置表单（默认市场/时区/语言/通知偏好）、高级设置（回测默认参数/风控阈值）
@@ -3745,6 +4064,16 @@ Settings Nav → Settings Content
 - **内容结构**: 连接测试进度指示 + 测试结果（成功/失败 + 延迟 + 账户验证结果）
 - **关闭行为**: 点击遮罩 / ESC / 测试完成后可关闭
 
+#### Overlay: AI 策略保存确认 — Modal
+- **触发条件**: 用户保存 AI 治理配置且存在权限、预算或审批规则变更
+- **内容结构**: 配置 diff、受影响 Plan、风险摘要、确认 / 取消
+- **关闭行为**: 点击遮罩 / ESC / 取消按钮 / 确认后保存并记录审计日志
+
+#### Overlay: Tool Permission Detail — Drawer
+- **触发条件**: 用户点击 Tool Permission Matrix 中的工具
+- **内容结构**: 工具说明、可访问数据、允许动作、审批要求、最近调用记录、失败和阻断记录
+- **关闭行为**: 点击遮罩 / ESC / 点击关闭按钮
+
 #### Overlay: 重置配置 — Modal（破坏性操作）
 - **触发条件**: 用户点击「重置为默认值」
 - **内容结构**: "确认将所有配置重置为默认值？此操作不可撤销。" + [取消] [确认重置]
@@ -3757,6 +4086,9 @@ Settings Nav → Settings Content
 | Settings Nav | 导航菜单渲染 | — | — | — | — |
 | 数据源列表 | 数据源行渲染 | 行 skeleton（4 行） | 「暂无数据源」+ 新增 CTA | 「加载失败」+ 重试按钮 | 状态列黄色圆点 |
 | 券商列表 | 券商行渲染 | 行 skeleton（4 行） | 「暂无券商连接」+ 新增 CTA | 「加载失败」+ 重试按钮 | 状态列黄色圆点 |
+| AI 治理表单 | 模型 / 工具 / 预算 / 审批 / Guardrail 配置 | 表单 skeleton | 「尚未配置 AI 策略」+ 默认模板 CTA | 「AI 策略加载失败」+ 重试 | 策略版本黄色提示 |
+| Tool Permission Matrix | 工具权限矩阵 | 矩阵 skeleton | 「暂无工具注册」 | 「工具权限加载失败」+ 重试 | 工具状态 stale |
+| Budget Policy | token / 工具调用 / 时间 / 回测次数上限 | 输入控件 skeleton | 「使用平台默认预算」 | 「预算策略加载失败」+ 重试 | 当前运行可能不受新策略影响 |
 | Settings Form | 表单字段渲染 | 表单 skeleton | — | — | — |
 
 | Connection Status | 绿色圆点 + 已连接 | 灰色圆点 + 连接中... | — | 红色圆点 + 错误信息 + 重试 | 黄色圆点 + 上次同步时间异常 |
@@ -3800,7 +4132,7 @@ Settings Nav → Settings Content
 
 - Orders / Execution Ledger
 - Risk Center
-- AI Copilot Studio
+- Alpha Explorer
 - Agent Console
 
 ---
@@ -3817,18 +4149,31 @@ Settings Nav → Settings Content
 ### 与其他组件的关系
 
 - 作为全局 Overlay，不属于任何域
-- 输出可流入: Strategy Studio（策略草稿）、Signals Inbox（信号）、Research Workspace（笔记）
+- 输出可流入: Alpha Explorer（候选因子）、Strategy Studio（策略草稿）、Signals Inbox（信号解释）、Research Workspace（笔记）、Agent Console（Run/Trace 辅助）
 - 输入: 当前页面上下文（选中资产、当前策略、当前视图等）
 
-### 5 种模式
+### 7 种上下文模式
 
 | 模式 | 触发场景 | 输入上下文 | 输出 |
 |------|---------|-----------|------|
 | Market Analysis | Markets 域任意页面 | 当前市场视图 + 选中资产 | 市场分析结论 |
-| Stock Discovery | Instrument Hub | 当前标的详情 | 机会/风险提示 |
-| Strategy Draft | Research 域任意页面 | 当前因子/策略 | 策略草稿 → Strategy Studio |
-| Factor Discovery | Factor Analysis | 当前因子列表 | 因子建议 |
-| Strategy Interpretation | Backtest Result | 当前回测结果 | 诊断建议 |
+| Instrument Review | Instrument Hub | 当前标的详情 | InstrumentThesis、RiskNote、SignalDraft |
+| Factor Discovery | Factor Analysis / Alpha Explorer | 当前因子列表、搜索空间、候选因子 | FactorHypothesis、FactorCandidate |
+| Strategy Draft | Strategy Studio | 当前因子/策略/约束 | StrategySpecDraft、RiskRuleDraft |
+| Backtest Review | Backtest Result | 当前回测结果 | BacktestDiagnosis、OptimizationHint |
+| Signal Review | Signals Inbox | 当前信号、持仓、风控结果 | SignalInterpretation、RiskOfficerDecision |
+| Agent Run Assist | Agent Console | 当前 run、trace、approval | RunSummary、TraceExplanation、ApprovalAdvice |
+
+### 必备结构
+
+| 区块 | 内容 |
+|------|------|
+| Context Header | 当前页面对象、数据时间、来源状态、权限边界 |
+| Conversation Blocks | 用户输入、AI 解释、工具结果、结构化产物，避免纯气泡聊天心智 |
+| Structured Output Shelf | 因子、策略、信号、笔记、报告等可发送对象 |
+| Workspace Actions | 发送到 Factor Analysis / Strategy Studio / Backtest / Watchlist / Agent Console |
+| Evidence Drawer | 证据链、引用对象、数据版本、工具调用 |
+| Failure Recovery | 断流重连、消息重试、降级为只读解释 |
 
 ### Overlay Registry
 
@@ -3836,15 +4181,18 @@ Settings Nav → Settings Content
 |---------|------|---------|---------|
 | Copilot Panel | Sheet（右侧滑出） | Cmd+K 或侧边按钮 | Esc / 点击外部关闭 |
 | AI 输出确认 | Modal | AI 输出需人工审批时（如生成策略草稿、提交信号） | 取消关闭 / 确认流入下游 |
+| Evidence Drawer | Drawer | 点击结构化输出或工具结果的证据入口 | Esc / 点击外部关闭 |
 | "保存为 Research Note" | Toast | CTA 点击后 | 3s 自动消失 |
 
 ### Component × State Matrix
 
 | 组件 | default | loading | empty | failed | running | selected |
 |------|---------|---------|-------|--------|---------|----------|
-| Copilot Panel | 展示 5 种模式入口 + 最近对话 | 首次唤出时 Skeleton 占位 | 无历史对话时展示引导文案 + 模式入口 | AI 服务不可用时展示错误 + 重试 | AI 推理中展示 Thinking 动画 + 流式输出 | 当前模式高亮 |
-| AI Response | 完整回复 + 操作 CTA | — | — | 推理失败展示原因 + 重试 | 流式输出文本 | — |
-| CTA Bar | "复制" / "保存为笔记" / "生成策略草稿" / "提交信号" | — | — | — | — | — |
+| Context Header | 当前对象摘要 | skeleton | 无上下文提示 | 上下文读取失败 | 数据时间实时更新 | 当前模式高亮 |
+| Conversation Blocks | 历史块 | 消息骨架 | 引导输入 | 发送失败 + 重试 | 增量输出 | 当前块高亮 |
+| Structured Output Shelf | 产物列表 | 骨架 | 暂无产物 | 渲染失败 | 新产物插入 | 选中产物展示动作 |
+| Workspace Actions | 动作按钮 | disabled | disabled | disabled | 部分可用 | 当前目标高亮 |
+| Evidence Drawer | 证据链 | 证据 skeleton | 暂无证据 | 证据加载失败 | 工具结果增量插入 | 选中证据高亮 |
 
 ### Design Token Requirements
 
@@ -3853,6 +4201,17 @@ Settings Nav → Settings Content
 ---
 
 ## Changelog
+
+### 2026-05-02 — v2.3 AI Feature Page Design Execution
+
+- **[新增]** §6A Alpha Explorer 蓝图，新增路由 `/research/alpha`，覆盖 Copilot Explore、AutoResearch Review、Factor Lab。
+- **[升级]** §15 Agent Console 升级为 V2：Plans / Runs / Findings / Approvals / AutoResearch / Artifacts / Quality / Policies。
+- **[升级]** §7 Strategy Studio 从 Form / Code 双模式升级为 Manual / Guided / Agent 三模式。
+- **[升级]** §10 Signals Inbox 补齐 AI Interpretation、Risk Officer Decision、Evidence Chain 和 BLOCK 门控。
+- **[升级]** §19 Strategy Detail 新增优化 tab，覆盖策略健康、漂移、优化提案、模拟和采纳审批。
+- **[升级]** §26 Platform Settings 新增 AI 治理 section，覆盖模型、工具权限、预算、审批、Guardrail 和审计保留。
+- **[升级]** §27 AI Copilot Sidecar 补齐 7 种上下文模式、Structured Output Shelf、Workspace Actions 和 Evidence Drawer。
+- **[统计]** 页面模板总数 27 → 28。
 
 ### 2026-04-18 — v2.1 轻量蓝图补全（Catalog/List 型页面）
 

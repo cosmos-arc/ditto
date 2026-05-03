@@ -1,9 +1,9 @@
 {
   "id": "home",
-  "version": 1,
+  "version": 2,
   "status": "draft",
   "createdAt": "2026-04-16",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-05-02",
   "route": "/",
   "pagePattern": "global-command-center",
   "shellFamily": "command-center",
@@ -85,11 +85,44 @@
   ],
   "subSlots": [
     {
+      "name": "daily-brief",
+      "parentSlot": "main",
+      "infoLevel": "l2",
+      "prototypeSelector": ".decision-card",
+      "reactSelector": "[data-slot='daily-brief']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    },
+    {
       "name": "decision-banner",
       "parentSlot": "main",
       "infoLevel": "l2",
       "prototypeSelector": ".decision-banner",
       "reactSelector": "[data-slot='decision-banner']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    },
+    {
+      "name": "priority-findings",
+      "parentSlot": "main",
+      "infoLevel": "l2",
+      "prototypeSelector": ".panel-grow",
+      "reactSelector": "[data-slot='priority-findings']",
+      "threshold": {
+        "widthRatio": 0.05,
+        "heightRatio": 0.05
+      }
+    },
+    {
+      "name": "pending-approvals",
+      "parentSlot": "main",
+      "infoLevel": "l2",
+      "prototypeSelector": ".panel-grow",
+      "reactSelector": "[data-slot='pending-approvals']",
       "threshold": {
         "widthRatio": 0.05,
         "heightRatio": 0.05
@@ -127,7 +160,10 @@
     ],
     "pageSpecific": [
       "no-alerts",
-      "has-critical"
+      "has-critical",
+      "daily-brief-stale",
+      "pending-approvals",
+      "priority-findings"
     ]
   },
   "interactions": [

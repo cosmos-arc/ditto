@@ -119,10 +119,8 @@
     .header-action-btn:focus-visible,
     .panel-action:focus-visible,
     .header-avatar:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     :root {
@@ -818,7 +816,7 @@
 
     /* Resource bar fill entrance — eased width transition */
     .resource-bar-fill {
-      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     /* Data table row hover — subtle interactive hint */
@@ -1606,7 +1604,10 @@
     .api-mini-bar {
       width: 4px;
       border-radius: 1px;
-      transition: height 0.3s var(--motion-easing-emphasis);
+      transform-origin: bottom;
+      transition:
+        opacity var(--motion-duration-fast) var(--motion-easing-emphasis),
+        transform var(--motion-duration-fast) var(--motion-easing-emphasis);
     }
     .api-mini-bar.ok { background: var(--system-healthy-fg); opacity: 0.5; }
     .api-mini-bar.ok:last-child { opacity: 1; }

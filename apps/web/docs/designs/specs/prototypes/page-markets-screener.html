@@ -827,10 +827,8 @@
     .pagination-btn:focus-visible,
     .header-action-btn:focus-visible,
     .header-avatar:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-bg);
-      border-radius: var(--radius-4);
-      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ── Focus-visible: per-element interaction parity ── */

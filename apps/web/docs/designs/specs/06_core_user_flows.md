@@ -449,18 +449,21 @@ Shell 级通知条（页面顶部 banner）
 
 ### 概述
 
-这是 Ditto 的 AI 加速流程。AI 能力以嵌入式形式分布在各业务域中：Copilot 作为全局 Sidecar 随时唤出（参见 IA v2.0 §13.2），Agent Console 归入 Platform 域（`/platform/agents`），Agent Findings 摘要在 Home 底部展示。用户借助这些嵌入式 AI 进行市场发现、策略草案生成和自动化研究，经审批后进入执行。核心动词序列是 **discover → draft → approve → execute**。
+这是 Ditto 的 AI 加速流程。AI 能力以嵌入式形式分布在各业务域中：Copilot 作为全局 Sidecar 随时唤出，Alpha Explorer 作为 Research 域业务页承载因子发现（`/research/alpha`），Agent Console 归入 Platform 域（`/platform/agents`），Daily Brief / Priority Findings 在 Home 展示摘要与待审批事项。用户借助这些嵌入式 AI 进行市场发现、因子发现、策略草案生成和自动化研究，经审批后进入执行。核心动词序列是 **discover → research → draft → approve → execute**。
 
 ### 4.1 Happy Path
 
 ```
-/ (Home) — Agent Findings 区块
-  │ 查看最近 Agent Findings 和待审批事项
+/ (Home) — Daily Brief / Priority Findings / Pending Approvals
+  │ 查看最近 AI 发现、研究队列和待审批事项
   ▼
 AI Copilot Sidecar（全局，任意页面唤出）
   │ Market Analysis 模式 → AI 产出市场分析结论
   ▼
-用户采纳 AI 建议 → 发送到 Strategy Studio / Watchlist
+用户采纳 AI 建议 → 发送到 Alpha Explorer / Strategy Studio / Watchlist
+  ▼
+/research/alpha (Alpha Explorer)
+  │ 评估候选因子 → 样本外 / 相关性 / 换手 / 容量 / 行业暴露检查
   ▼
 /platform/agents (Agent Console)
   │ 新建 Plan → Agent 运行 → Finding 产出
@@ -477,11 +480,12 @@ Finding 需要 Approval → 用户审批
 
 | 步骤 | 页面 | 用户判断 | 主 CTA |
 |------|------|---------|--------|
-| 1 | Home（Agent Findings 区块） | 最近 AI 有什么发现？有没有待审批事项？ | 查看 Finding / 唤出 Copilot Sidecar |
+| 1 | Home（Daily Brief / Priority Findings） | 最近 AI 有什么发现？有没有待审批事项？ | 查看 Finding / 进入 Alpha Explorer / 唤出 Copilot Sidecar |
 | 2 | AI Copilot Sidecar | AI 分析是否可信？结论是否有价值？ | 保存结论 / 发送到目标工作区 |
-| 3 | Platform/Agents | Agent Plan 是否合理？运行结果如何？ | 提交审批 / 重跑 |
-| 4 | Agent Approval | Finding 是否值得执行？风险是否可控？ | 批准 / 拒绝 |
-| 5 | Signals Inbox | AI 生成的信号是否可信？ | 确认 → 生成订单复核 |
+| 3 | Alpha Explorer | 候选因子是否值得补测或入库？ | 深入候选 / 加入实验 / 申请采纳 |
+| 4 | Platform/Agents | Agent Plan 是否合理？运行结果如何？ | 提交审批 / 重跑 |
+| 5 | Agent Approval | Finding 是否值得执行？风险是否可控？ | 批准 / 拒绝 |
+| 6 | Signals Inbox | AI 生成的信号是否可信？ | AI Review / Risk Officer / 确认订单复核 |
 
 ### 4.2 关键分支
 
@@ -557,6 +561,27 @@ AI Copilot Sidecar — Strategy Draft 模式
 
 **说明**: 这是 AI 辅助研究的深度路径。AI 产出的策略草案进入 Strategy Studio 后，后续流程与 Flow B 完全一致。注意：Copilot Sidecar 可在任意页面唤出，此处为在 Strategy Studio 页面唤出 Copilot 的典型场景。
 
+#### 分支 C6: Alpha Explorer → Factor Adoption
+
+```
+/research/alpha (Alpha Explorer)
+  │ Exploration Stream 产出候选因子
+  ▼
+Candidate Inspector
+  │ 样本外 / 相关性 / 换手 / 容量 / 行业暴露 / 过拟合警告检查
+  ▼
+"申请采纳" CTA
+  ▼
+/platform/agents (Agent Console)
+  │ Approval Panel 审批
+  ▼
+审批通过 → FactorArtifact
+  ▼
+/research/factors/[id] (Factor Analysis)
+```
+
+**说明**: 因子发现不再只是 Copilot 的泛模式。Alpha Explorer 是研究工作台，负责候选评估和实验追踪；Agent Console 只负责长任务、Trace、Artifact 和审批治理。
+
 ### 4.3 断裂点（已知）
 
 #### BP-C1: AI Approval → Trading 的连接未定义 ✅ 已修复
@@ -576,15 +601,16 @@ AI Copilot Sidecar — Strategy Draft 模式
 
 **状态**: 已修复（v1.1）— 02 蓝图 + 本文档同步更新
 
-#### BP-C2: Home Agent Findings → 具体工作台的跳转不清晰
+#### BP-C2: Home Priority Findings → 具体工作台的跳转不清晰
 
-**位置**: Home（Agent Findings 区块） → `/platform/agents` 或 Copilot Sidecar
+**位置**: Home（Priority Findings / Pending Approvals） → `/platform/agents`、`/research/alpha`、业务页或 Copilot Sidecar
 
-**问题**: Home 底部的 Agent Findings 区块展示最近产出和待审批事项，但从摘要卡片跳转到 Agent Console 具体页面或唤出 Copilot 会话的路径不够直观。
+**问题**: Home 底部的 Priority Findings 和 Pending Approvals 展示最近产出、待审批事项和研究队列，但从摘要卡片跳转到 Agent Console、Alpha Explorer、Signals Inbox 或 Copilot 会话的路径不够直观。
 
-**建议修复**: Home Agent Findings 的每个摘要卡片增加明确的 drill-down 入口：
+**建议修复**: Home 的每个摘要卡片增加明确的 drill-down 入口：
 - Finding 卡片 → `/platform/agents`（定位到该 Finding）
 - 待审批卡片 → `/platform/agents`（定位到该 Approval）
+- Factor Candidate 卡片 → `/research/alpha`（定位到该 Candidate）
 - 最近 Copilot 会话 → 唤出 Copilot Sidecar（定位到该 Session）
 
 **修复优先级**: P2（有替代路径但体验欠佳）
@@ -602,9 +628,9 @@ AI Copilot Sidecar — Strategy Draft 模式
 | Flow A 起点 | Today Pulse / Decision Banner → Markets |
 | Flow A 分支 | Pending → Signals / Orders（绕过研究直接执行） |
 | Flow B 终点 | Recent Signals / Runs 显示回测产出 |
-| Flow C 终点 | Agent Findings 区块显示 AI 发现摘要（v2.0：原 `/ai` 总览内容归入此处） |
+| Flow C 终点 | Daily Brief / Priority Findings 显示 AI 发现摘要（v2.1：原 `/ai` 总览内容归入此处） |
 
-**设计要求**: Home 必须同时服务于"开始新工作"和"继续未完成工作"两种场景。Pending 区应按优先级排序（critical > warning > running > pending），跨域混合展示。Agent Findings 区块展示最近 Agent 产出摘要，点击可跳转 `/platform/agents`。
+**设计要求**: Home 必须同时服务于"开始新工作"和"继续未完成工作"两种场景。Pending 区应按优先级排序（critical > warning > running > pending），跨域混合展示。Priority Findings 展示最近 AI / Agent 产出摘要，点击可跳转 `/platform/agents`、`/research/alpha` 或对应业务页。
 
 ### 5.2 Research Workspace（/research）
 
@@ -613,8 +639,9 @@ AI Copilot Sidecar — Strategy Draft 模式
 | Flow A 终点 | Instrument Hub "发送到研究" 的目标 |
 | Flow B 起点 | 因子发现与策略构建的入口 |
 | Flow C 分支 | AI Research Note 的沉淀目标 |
+| Flow C 核心 | Alpha Explorer 的上游入口，承接因子发现工作台 |
 
-**设计要求**: Research Workspace 必须同时承接"从市场来的用户"（需要找标的关联因子）和"从 AI 来的用户"（需要查看沉淀的 Note）。Factor Monitor Table 的筛选应支持按 instrument 关联过滤。
+**设计要求**: Research Workspace 必须同时承接"从市场来的用户"（需要找标的关联因子）和"从 AI 来的用户"（需要查看沉淀的 Note 或进入 Alpha Explorer）。Factor Monitor Table 的筛选应支持按 instrument 关联过滤，Alpha 入口必须跳转 `/research/alpha` 而不是打开独立 AI 域。
 
 ### 5.3 Signals Inbox（/trading/signals）
 
@@ -666,10 +693,10 @@ Signal 完整生命周期（8 态，详见 [04 交互与状态规范 §15](./04_
 | 连接流程 | 角色 |
 |---------|------|
 | Flow B 核心 | 策略构建与编辑 |
-| Flow C 分支 | AI 策略草案的接收目标（通过 Copilot Sidecar 生成） |
+| Flow C 分支 | AI 策略草案的接收目标（通过 Copilot Sidecar 或 Agent 模式生成） |
 | Flow A 分支 | Screener 结果的批量导入目标 |
 
-**设计要求**: Strategy Studio 必须支持多种入口上下文——空白创建（Flow B）、AI 草案导入（Flow C，通过 Copilot Sidecar）、Screener 批量导入（Flow A 分支）。Inspector 面板应显示策略的来源信息。
+**设计要求**: Strategy Studio 必须支持多种入口上下文——空白创建（Flow B）、AI 草案导入（Flow C，通过 Copilot Sidecar）、Agent 自主候选（Flow C）、Screener 批量导入（Flow A 分支）。Manual / Guided / Agent 三模式必须共享同一 StrategySpec 预览和审批边界。
 
 ### 5.6 Risk Center（/trading/risk）
 
@@ -702,7 +729,7 @@ Ditto 的信息展示遵循"首屏给判断，滚动给细节，交互给深度"
 
 | 阶段 | 首屏 | 滚动 | 交互展开 |
 |------|------|------|---------|
-| Home | Today Pulse + Decision Banner + Pending | Agent Findings + My Workspace | 点击 Pending → 跳转 |
+| Home | Today Pulse + Decision Banner + Pending | Priority Findings + Research Queue + My Workspace | 点击 Pending → 跳转 |
 | Cross-Market | Market Cards + Context Bar + Scope Strip | Matrix + Macro Drivers + Bottom Tabs | Card 点击 → 单市场；Matrix 行 → drill-down |
 | A 股总览 | Market Structure Map + Context Bar | ETF Matrix + Movers | Map 节点 → Instrument Hub |
 | Instrument Hub | Object Header + Meta Strip + 默认 Tab 主视图 | Timeline / Linked Research | Tab 切换；Related 区点击 → 关联对象 |
@@ -721,7 +748,7 @@ Ditto 的信息展示遵循"首屏给判断，滚动给细节，交互给深度"
 
 | 阶段 | 首屏 | 滚动 | 交互展开 |
 |------|------|------|---------|
-| Home（Agent Findings 区块） | 最近产出 + 待审批摘要 | — | 卡片点击 → `/platform/agents` 定位 |
+| Home（Priority Findings / Pending Approvals） | 最近产出 + 待审批摘要 | Research Queue | 卡片点击 → `/platform/agents`、`/research/alpha` 或业务页定位 |
 | AI Copilot Sidecar | Conversation + Structured Output | — | Context/Evidence 展开；"发送到" → 目标选择 |
 | Platform/Agents | Main Queue / Cards | — | Detail / Tool Trace 展开；Approval 弹窗 |
 
@@ -777,7 +804,7 @@ Ditto 作为内部工具，引导策略聚焦于"新成员快速上手团队现�
 | ID | 断裂点 | 位置 | 修复方案 |
 |----|--------|------|---------|
 | BP-B2 | Research → Strategy Studio 入口不直接 | `/research` → `/research/strategies/[id]/studio` | Research Workspace 的 Header 增加"新建策略"一级 CTA |
-| BP-C2 | Home Agent Findings → 具体工作台跳转不直观 | Home（Agent Findings） → `/platform/agents` 或 Copilot Sidecar | 每个摘要卡片增加明确 drill-down 入口，定位到具体 Session/Run/Finding |
+| BP-C2 | Home Priority Findings → 具体工作台跳转不直观 | Home（Priority Findings / Pending Approvals） → `/platform/agents`、`/research/alpha` 或 Copilot Sidecar | 每个摘要卡片增加明确 drill-down 入口，定位到具体 Session/Run/Finding/Candidate |
 
 ### 修复依赖关系
 
@@ -822,6 +849,8 @@ URL 参数格式：
 | `ctx[strategy]` | 策略 ID | `strat-023` |
 | `ctx[backtest]` | 回测 ID | `bt-1042` |
 | `ctx[finding]` | Agent Finding ID | `find-089` |
+| `ctx[run]` | Agent Run ID | `run-8842` |
+| `ctx[candidate]` | Alpha 候选因子 ID | `fc-1042` |
 | `ctx[mode]` | Copilot Sidecar 模式 | `market-analysis`, `stock-discovery`, `strategy-draft`, `factor-discovery` |
 | `ctx[action]` | 目标页面应执行的动作 | `show-related-factors`, `load-draft`, `highlight-anomaly` |
 
@@ -831,6 +860,8 @@ URL 参数格式：
 |------|---------|---------|
 | Instrument Hub → Research | `ctx[instrument]=<id>&ctx[action]=show-related-factors` | Factor Monitor 筛选关联因子 |
 | Copilot Sidecar → Strategy Studio | `ctx[source]=copilot&ctx[mode]=strategy-draft&ctx[action]=load-draft` | Studio 加载 AI 策略草案 |
+| Agent Console → Alpha Explorer | `ctx[source]=agent&ctx[run]=<id>&ctx[candidate]=<id>&ctx[action]=review-alpha` | Alpha Explorer 定位 AutoResearch Run 和候选因子 |
+| Alpha Explorer → Factor Analysis | `ctx[source]=alpha-explorer&ctx[candidate]=<id>&ctx[action]=open-adopted-factor` | Factor Analysis 打开采纳后的 FactorArtifact |
 | Backtest → Copilot Sidecar | `ctx[source]=backtest&ctx[backtest]=<id>&ctx[action]=interpret` | Copilot Strategy Draft 模式加载回测上下文 |
 | Screener → Strategy Studio | `ctx[source]=screener&ctx[instrument]=<ids>&ctx[action]=batch-import` | Studio 批量导入标的 |
 | Risk Center → Strategy Studio | `ctx[source]=risk&ctx[strategy]=<id>&ctx[action]=adjust-risk` | Studio 定位到风控参数面板 |
@@ -846,6 +877,13 @@ URL 参数格式：
 ---
 
 ## Changelog
+
+### 2026-05-02 — v1.4
+
+- **[IA v2.1 同步]** Flow C 新增 `/research/alpha`，把因子发现从泛 Copilot 模式升级为 Alpha Explorer 工作台。
+- **[流程补齐]** 新增 Alpha Explorer → Factor Adoption → Factor Analysis 分支。
+- **[上下文协议]** 新增 `ctx[run]`、`ctx[candidate]`，补齐 Agent Console → Alpha Explorer 深链。
+- **[Strategy Studio]** 同步 Manual / Guided / Agent 三模式的入口语义。
 
 ### 2026-04-18 — v1.3
 

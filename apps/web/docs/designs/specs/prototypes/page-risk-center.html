@@ -99,10 +99,8 @@
     .panel-action:focus-visible,
     .header-action-btn:focus-visible,
     .filter-btn:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ── Risk Header: Frosted glass ── */
@@ -1088,7 +1086,10 @@
       width: 100%;
       max-width: 56px;
       border-radius: var(--radius-2) var(--radius-2) 0 0;
-      transition: height 0.5s var(--motion-easing-emphasis);
+      transform-origin: bottom;
+      transition:
+        opacity var(--motion-duration-normal) var(--motion-easing-emphasis),
+        transform var(--motion-duration-normal) var(--motion-easing-emphasis);
       position: relative;
     }
     .stress-bar.pass { background: color-mix(in oklch, var(--risk-low-fg) 35%, transparent); }
@@ -1380,7 +1381,7 @@
     }
     .breach-progress-fill {
       border-radius: 3px;
-      transition: width 0.6s var(--motion-easing-emphasis);
+      transition: width var(--motion-duration-normal) var(--motion-easing-emphasis);
     }
     .breach-progress-fill.ok {
       background: linear-gradient(90deg, var(--risk-low-fg), color-mix(in oklch, var(--risk-low-fg) 70%, transparent));

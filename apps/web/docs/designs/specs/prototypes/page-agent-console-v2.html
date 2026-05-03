@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!--
-  State Coverage Index: page-agent-console-v2
-  Edition: v2
-  Generated: 2026-05-02
+  状态覆盖索引: page-agent-console-v2
+  版本: v2
+  生成日期: 2026-05-02
 
-  Route:
+  路由:
   - /platform/agents
 
-  Tabs:
+  标签页:
   - plans [covered]
   - runs [covered]
   - findings [covered]
@@ -17,16 +17,16 @@
   - quality [covered]
   - policies [covered]
 
-  Overlays:
-  - overlay-plan-create (Sheet: 新建计划) [covered by CTA]
-  - overlay-run-rerun (Sheet: 重跑) [covered by run action]
-  - overlay-approval-confirm (Modal: 审批确认) [covered by approval panel]
-  - overlay-tool-trace-detail (Drawer: Tool Trace) [covered by inspector]
-  - overlay-artifact-preview (Drawer: Artifact Preview) [covered by artifact grid]
-  - overlay-guardrail-detail (Drawer: Guardrail Detail) [covered by blocked item]
-  - overlay-quality-run-create (Sheet: 新建评测) [covered by Quality tab]
+  浮层:
+  - overlay-plan-create (抽屉: 新建计划) [由主按钮覆盖]
+  - overlay-run-rerun (抽屉: 重跑) [由运行操作覆盖]
+  - overlay-approval-confirm (弹窗: 审批确认) [由审批面板覆盖]
+  - overlay-tool-trace-detail (抽屉: 工具追踪) [由检查器覆盖]
+  - overlay-artifact-preview (抽屉: 产物预览) [由产物网格覆盖]
+  - overlay-guardrail-detail (抽屉: 护栏详情) [由阻断项覆盖]
+  - overlay-quality-run-create (抽屉: 新建评测) [由质量标签覆盖]
 
-  State Variants:
+  状态变体:
   - run-list: default/loading/empty/failed/stale/selected
   - timeline: default/loading/empty/failed/running/partial/blocked
   - finding-table: default/loading/empty/failed/stale/selected/bulk
@@ -34,7 +34,7 @@
   - artifact-viewer: default/loading/empty/failed/stale/selected
   - quality-dashboard: default/loading/empty/failed/stale/selected
 
-  Coverage Score: 100%
+  覆盖分数: 100%
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="platform">
 <head>
@@ -74,13 +74,13 @@
         minmax(0, 1fr)
         1px
         minmax(320px, var(--agent-console-inspector-width));
-      grid-template-rows: var(--shell-header-height) 42px minmax(0, 1fr);
+      grid-template-rows: var(--shell-header-height) var(--tab-bar-height) minmax(0, 1fr);
       grid-template-areas:
         "rail header header header header header"
         "rail tabs tabs tabs tabs tabs"
         "rail list source-separator main inspector-separator inspector";
       width: 100vw;
-      height: calc(100dvh - var(--status-bar-height, 24px));
+      height: calc(100dvh - var(--status-bar-height));
       background:
         linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 4%, transparent), transparent 220px),
         var(--surface-app);
@@ -101,7 +101,7 @@
       inset: 0;
       background: var(--surface-app);
       filter: url(#noise-filter);
-      opacity: 0.028;
+      opacity: var(--surface-noise-opacity);
       pointer-events: none;
     }
 
@@ -177,7 +177,7 @@
       grid-area: header;
       display: flex;
       align-items: center;
-      gap: var(--space-14);
+      gap: var(--space-10);
       padding: 0 var(--space-16);
       border-bottom: 1px solid var(--border-subtle);
       background: var(--surface-frosted);
@@ -185,7 +185,8 @@
     }
 
     .title-stack {
-      min-width: 280px;
+      flex: 0 0 252px;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
@@ -193,49 +194,68 @@
 
     .page-title {
       margin: 0;
-      font-family: var(--font-family-heading);
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
       line-height: 1.2;
+      letter-spacing: 0;
+      background: linear-gradient(
+        to right,
+        var(--brand-accent) 0%,
+        var(--brand-accent) 40%,
+        transparent 100%
+      );
+      background-size: 100% 1px;
+      background-repeat: no-repeat;
+      background-position: 0 100%;
+      padding-bottom: 2px;
     }
 
     .page-subtitle {
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
       font-size: var(--font-size-11);
       color: var(--text-tertiary);
     }
 
     .summary-grid {
-      flex: 1;
+      flex: 1 1 auto;
       min-width: 0;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(96px, 1fr));
-      gap: var(--space-8);
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      overflow: hidden;
     }
 
     .summary-card {
+      flex: 0 0 auto;
+      height: var(--badge-md-height);
       min-width: 0;
-      padding: var(--space-6) var(--space-8);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-5);
+      padding: var(--space-2) var(--space-6);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-6);
+      border-radius: var(--radius-4);
       background: var(--surface-panel-base);
     }
 
     .summary-label {
       display: block;
-      font-size: var(--font-size-10);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-11);
       color: var(--text-tertiary);
-      text-transform: uppercase;
+      letter-spacing: 0;
+      white-space: nowrap;
     }
 
     .summary-value {
       display: block;
-      margin-top: var(--space-1);
-      font-family: var(--font-family-numeric);
-      font-size: var(--font-size-12);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
       color: var(--text-primary);
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
@@ -243,28 +263,60 @@
       display: flex;
       align-items: center;
       gap: var(--space-6);
+      flex: 0 0 auto;
     }
 
-    .btn {
-      height: 30px;
+    .btn-cta,
+    .btn-ghost {
+      height: var(--density-action-height);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: var(--space-5);
-      padding: 0 var(--space-10);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-5);
-      background: var(--surface-panel-elevated);
-      color: var(--text-secondary);
-      font-size: var(--font-size-12);
+      gap: var(--space-4);
+      padding: var(--btn-sm-padding-y) var(--btn-padding-x);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--btn-radius);
+      font-family: var(--font-family-ui);
+      font-size: var(--btn-font-size);
       font-weight: var(--font-weight-medium);
+      cursor: pointer;
       white-space: nowrap;
+      transition:
+        background var(--motion-duration-fast) var(--motion-easing-standard),
+        border-color var(--motion-duration-fast) var(--motion-easing-standard),
+        color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
-    .btn.primary {
+    .btn-cta svg,
+    .btn-ghost svg {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+    }
+
+    .btn-cta {
       border-color: var(--brand-accent);
       background: var(--brand-accent);
-      color: var(--text-inverse);
+      color: var(--text-primary);
+      font-family: var(--font-family-ui);
+      padding-left: var(--btn-cta-padding-x);
+      padding-right: var(--btn-cta-padding-x);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-family-ui);
+    }
+
+    .btn-cta:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .btn-ghost:hover {
+      background: var(--interaction-hover-subtle-bg);
+      border-color: var(--border-default);
+      color: var(--text-primary);
     }
 
     .agent-tabs {
@@ -306,11 +358,12 @@
       background: var(--surface-panel-elevated);
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
     }
 
     .panel-header {
-      height: 38px;
+      height: var(--panel-header-height);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -327,7 +380,8 @@
     .panel-kicker {
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
     }
 
     .list-panel {
@@ -354,7 +408,8 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-4);
       color: var(--text-tertiary);
-      font-size: var(--font-size-11);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-12);
     }
 
     .filter-chip.active {
@@ -408,7 +463,8 @@
       border-radius: var(--radius-full);
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
 
@@ -431,7 +487,7 @@
     }
 
     .progress {
-      height: 6px;
+      height: var(--progress-bar-height);
       border-radius: var(--radius-full);
       background: var(--surface-panel-elevated);
       overflow: hidden;
@@ -523,8 +579,8 @@
     .finding-row.header {
       min-height: 30px;
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
-      text-transform: uppercase;
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-11);
     }
 
     .bottom-main {
@@ -554,8 +610,8 @@
       display: block;
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
-      text-transform: uppercase;
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      letter-spacing: 0;
     }
 
     .node-title,
@@ -648,13 +704,14 @@
       border-radius: var(--radius-4);
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
     }
 
     .status-bar {
       position: relative;
       z-index: 3;
-      height: var(--status-bar-height, 24px);
+      height: var(--status-bar-height);
       display: flex;
       align-items: center;
       gap: var(--space-8);
@@ -672,8 +729,8 @@
     #default-view > .status-bar {
       position: relative;
       bottom: auto;
-      flex: 0 0 var(--status-bar-height, 24px) !important;
-      height: var(--status-bar-height, 24px) !important;
+      flex: 0 0 var(--status-bar-height) !important;
+      height: var(--status-bar-height) !important;
       overflow: hidden !important;
     }
 
@@ -764,14 +821,15 @@
     /* ── P0: Font family fixes ── */
     .card-value,
     .node-title {
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums;
     }
 
     /* ── P0: Three-state micro-interactions ── */
     .run-card {
-      transition: background 100ms cubic-bezier(0.4, 0, 0.2, 1),
-                  border-color 100ms cubic-bezier(0.4, 0, 0.2, 1),
-                  box-shadow 100ms cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
 
@@ -785,7 +843,9 @@
     }
 
     .tab {
-      transition: color 100ms, border-color 100ms, background 100ms;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
 
@@ -795,7 +855,9 @@
     }
 
     .filter-chip {
-      transition: border-color 100ms, color 100ms, background 100ms;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
 
@@ -805,7 +867,7 @@
     }
 
     .finding-row:not(.header) {
-      transition: background 100ms;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
       cursor: pointer;
     }
 
@@ -815,7 +877,7 @@
     }
 
     .trace-item {
-      transition: background 100ms;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
       border-radius: var(--radius-4);
       padding-left: var(--space-6);
       padding-right: var(--space-6);
@@ -829,29 +891,12 @@
       box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand-accent) 15%, transparent);
     }
 
-    .btn {
-      transition: background 100ms, border-color 100ms, color 100ms;
-    }
-
-    .btn:not(.primary):hover {
-      background: var(--interaction-hover-subtle-bg);
-      border-color: color-mix(in oklch, var(--brand-accent) 20%, var(--border-default));
-    }
-
-    .btn:not(.primary):active {
-      background: var(--interaction-active-bg);
-    }
-
-    .btn.primary:hover {
-      background: color-mix(in oklch, var(--brand-accent) 85%, white);
-    }
-
-    .btn.primary:active {
-      background: color-mix(in oklch, var(--brand-accent) 75%, white);
-    }
+    .btn-ghost:active { background: var(--interaction-active-bg); }
+    .btn-cta:active { background: color-mix(in oklch, var(--brand-accent) 80%, black); }
 
     /* ── P0: Focus-visible ring ── */
-    .btn:focus-visible,
+    .btn-cta:focus-visible,
+    .btn-ghost:focus-visible,
     .tab:focus-visible,
     .filter-chip:focus-visible,
     .run-card:focus-visible {
@@ -914,11 +959,11 @@
     }
 
     .status-pill.running {
-      animation: status-breathe 3s ease-in-out infinite;
+      animation: status-breathe 3s var(--motion-easing-standard) infinite;
     }
 
     .status-indicator {
-      animation: glow-pulse 2.5s ease-in-out infinite;
+      animation: glow-pulse 2.5s var(--motion-easing-standard) infinite;
     }
 
     .progress-fill {
@@ -966,6 +1011,30 @@
       color: transparent;
       font-size: 0;
     }
+
+    @media (max-width: 1440px) {
+      .summary-card:nth-child(5) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .title-stack {
+        flex-basis: 232px;
+      }
+
+      .agent-header .header-command-trigger {
+        width: var(--header-btn-size) !important;
+        min-width: var(--header-btn-size) !important;
+        justify-content: center !important;
+        padding: 0 !important;
+      }
+
+      .agent-header .header-command-trigger .command-query,
+      .agent-header .header-command-trigger .command-shortcut {
+        display: none;
+      }
+    }
   </style>
 </head>
 
@@ -1008,8 +1077,14 @@
         <div class="summary-card"><span class="summary-label">质量</span><span class="summary-value">回归 +4.2</span></div>
       </div>
       <div class="header-actions">
-        <label class="btn" for="overlay-quality-run-create" tabindex="0">质量评测</label>
-        <label class="btn primary" for="overlay-plan-create" tabindex="0" data-answer-action>新建计划</label>
+        <label class="btn-ghost" for="overlay-quality-run-create" role="button" tabindex="0" aria-label="启动质量评测">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 2l6 2.2v4.6c0 3.8-2.4 7.1-6 8.7-3.6-1.6-6-4.9-6-8.7V4.2L10 2z"/><path d="M7.2 10.2l1.8 1.8 3.8-4.2"/></svg>
+          质量评测
+        </label>
+        <label class="btn-cta" for="overlay-plan-create" role="button" tabindex="0" aria-label="新建计划" data-answer-action>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 4v12M4 10h12"/><path d="M5 5h10v10H5z"/></svg>
+          新建计划
+        </label>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" aria-haspopup="dialog" data-icon="command">
@@ -1039,7 +1114,7 @@
       </div>
     </header>
 
-    <nav class="agent-tabs" aria-label="Agent Console tabs">
+    <nav class="agent-tabs" aria-label="智能体控制台标签">
       <button class="tab active" type="button">计划 <span class="badge">8</span></button>
       <button class="tab" type="button">运行 <span class="badge">21</span></button>
       <button class="tab" type="button">发现 <span class="badge">34</span></button>
@@ -1110,7 +1185,7 @@
 
     <div class="resize-separator" data-resize-separator data-resize-var="--agent-console-source-width" data-resize-default="288" data-resize-min="240" data-resize-max="380" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整计划列表宽度" aria-orientation="vertical" aria-controls="main agent-source-panel" aria-valuemin="240" aria-valuemax="380" aria-valuenow="288" aria-valuetext="调整计划列表宽度 288 像素"></div>
 
-    <main id="main" class="main-panel" data-contract-slot="main" aria-label="Agent Console 工作区">
+    <main id="main" class="main-panel" data-contract-slot="main" aria-label="智能体控制台工作区">
       <section class="top-main">
         <div class="timeline">
           <div class="panel-header">
@@ -1258,8 +1333,14 @@
           <div class="section-title">审批面板</div>
           <p class="event-note">因子采纳需要显式审批。通过后会创建 FactorArtifact 并自动生成信号至待复核队列。</p>
           <div class="header-actions">
-            <button class="btn" type="button">驳回</button>
-            <button class="btn primary" type="button">通过</button>
+            <button class="btn-ghost" type="button" aria-label="驳回审批">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>
+              驳回
+            </button>
+            <button class="btn-cta" type="button" aria-label="通过审批">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 10l3.2 3.2L15 6"/></svg>
+              通过
+            </button>
           </div>
         </div>
       </section>
@@ -1279,7 +1360,7 @@
     </aside>
   </div>
 
-  <div class="status-bar" role="status" aria-label="智能体控制台状态" data-contract-slot="status">
+  <footer class="status-bar" role="status" aria-label="智能体控制台状态" data-contract-slot="status">
     <span class="status-indicator"></span>
     <span>智能体控制台</span>
     <span>治理正常</span>
@@ -1294,7 +1375,7 @@
     <span>命令</span>
     <span class="status-sep">|</span>
     <span>Platform · Agents</span>
-  </div>
+  </footer>
 
   </section>
 
@@ -1338,7 +1419,7 @@
           <div class="gallery-card"><div class="gallery-card__label">发现表格 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">发现数据异常</div><button class="state-error-retry" type="button">重试</button></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">发现表格 · 过期</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">证据已过期</div><p class="event-note">数据快照需要重新确认。</p></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">发现表格 · 选中</div><div class="gallery-card__preview"><div class="finding-row"><span>公告漂移</span><span>91</span><span>警告</span><span class="status-pill blocked">已选中</span></div></div></div>
-          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 批量</div><div class="gallery-card__preview"><div class="header-actions"><button class="btn" type="button">提交审批</button><button class="btn" type="button">忽略 3 项</button></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">发现表格 · 批量</div><div class="gallery-card__preview"><div class="header-actions"><button class="btn-ghost" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 10h9"/><path d="M10 6l4 4-4 4"/><path d="M5 4h10v12H5z"/></svg>提交审批</button><button class="btn-ghost" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>忽略 3 项</button></div></div></div>
         </div>
       </div>
 

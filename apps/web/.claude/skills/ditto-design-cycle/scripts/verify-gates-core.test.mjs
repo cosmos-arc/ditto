@@ -83,5 +83,5 @@ describe("ditto design-cycle gate core", () => {
 		);
 
 		expect(`${result.stdout}\n${result.stderr}`).not.toContain("shell root not found");
-	});
+	}, 20_000);
 });

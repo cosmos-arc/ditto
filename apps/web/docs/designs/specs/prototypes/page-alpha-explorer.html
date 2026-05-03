@@ -100,7 +100,7 @@
         "rail header header header header header"
         "rail config source-separator main inspector-separator inspector"
         "rail queue source-separator graph inspector-separator inspector";
-      height: calc(100dvh - var(--status-bar-height, 24px));
+      height: calc(100dvh - var(--status-bar-height));
       width: 100vw;
       color: var(--text-primary);
       background:
@@ -122,7 +122,7 @@
       inset: 0;
       background: var(--surface-app);
       filter: url(#noise-filter);
-      opacity: 0.018;
+      opacity: var(--surface-noise-opacity);
       pointer-events: none;
     }
 
@@ -225,11 +225,19 @@
       padding: 0 var(--space-10);
       border-radius: var(--radius-4);
       color: var(--text-tertiary);
+      font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
+      line-height: 1;
+      cursor: pointer;
+      transition:
+        color var(--motion-duration-fast) var(--motion-easing-standard),
+        background var(--motion-duration-fast) var(--motion-easing-standard),
+        border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
-    .mode-tab.active {
+    .mode-tab.active,
+    .mode-tab[aria-selected="true"] {
       color: var(--text-primary);
       background: var(--interaction-selected-bg);
       border: 1px solid var(--interaction-selected-border);
@@ -263,7 +271,7 @@
 
     .metric-value {
       font-size: var(--font-size-12);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
       font-variant-numeric: tabular-nums slashed-zero;
       color: var(--text-primary);
       overflow: hidden;
@@ -282,29 +290,7 @@
       gap: var(--space-6);
     }
 
-    .btn {
-      height: 30px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-5);
-      padding: 0 var(--space-10);
-      border-radius: var(--radius-5);
-      border: 1px solid var(--border-default);
-      background: var(--surface-panel-elevated);
-      color: var(--text-secondary);
-      font-size: var(--font-size-12);
-      font-weight: var(--font-weight-medium);
-      white-space: nowrap;
-    }
-
-    .btn.primary {
-      border-color: var(--brand-accent);
-      background: var(--brand-accent);
-      color: var(--text-inverse);
-    }
-
-    .panel {
+    .alpha-panel {
       position: relative;
       z-index: 1;
       min-width: 0;
@@ -316,7 +302,7 @@
     }
 
     .panel-header {
-      height: 38px;
+      height: var(--panel-header-height);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -334,7 +320,7 @@
     .panel-kicker {
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
       font-variant-numeric: tabular-nums slashed-zero;
     }
 
@@ -374,7 +360,8 @@
       background: var(--surface-panel-elevated);
       color: var(--text-secondary);
       font-size: var(--font-size-12);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     .chip-row {
@@ -408,10 +395,11 @@
       align-items: center;
       font-size: var(--font-size-11);
       color: var(--text-secondary);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     .track {
-      height: 6px;
+      height: var(--progress-bar-height);
       border-radius: var(--radius-full);
       background: var(--surface-panel-elevated);
       overflow: hidden;
@@ -432,7 +420,75 @@
     .stream-panel {
       grid-area: main;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) 260px;
+      grid-template-rows: auto auto minmax(0, 1fr) 260px;
+    }
+
+    .mode-context-panels {
+      padding: var(--space-8) var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 72%, transparent);
+    }
+
+    .mode-context-panel {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.1fr) repeat(3, minmax(104px, 0.8fr));
+      gap: var(--space-8);
+      align-items: stretch;
+    }
+
+    .mode-context-panel[aria-hidden="true"] {
+      display: none;
+    }
+
+    .mode-context-summary,
+    .mode-context-stat {
+      min-width: 0;
+      padding: var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-5);
+      background: var(--surface-panel-base);
+    }
+
+    .mode-context-summary {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .mode-context-title {
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.25;
+    }
+
+    .mode-context-copy {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      line-height: 1.45;
+    }
+
+    .mode-context-stat {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+
+    .mode-context-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      text-transform: uppercase;
+    }
+
+    .mode-context-value {
+      color: var(--text-secondary);
+      font-family: var(--font-family-numeric);
+      font-size: var(--font-size-12);
+      font-variant-numeric: tabular-nums slashed-zero;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .stream-list {
@@ -482,7 +538,8 @@
       border: 1px solid var(--border-subtle);
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums slashed-zero;
       white-space: nowrap;
     }
 
@@ -502,6 +559,26 @@
       color: var(--risk-critical-fg);
       border-color: color-mix(in oklch, var(--risk-critical-fg) 36%, transparent);
       background: color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);
+    }
+
+    .status-pill::before {
+      content: "○ ";
+      font-size: var(--font-size-10);
+    }
+
+    .status-pill.running::before {
+      content: "● ";
+      font-size: var(--font-size-10);
+    }
+
+    .status-pill.partial::before {
+      content: "◐ ";
+      font-size: var(--font-size-10);
+    }
+
+    .status-pill.blocked::before {
+      content: "✕ ";
+      font-size: var(--font-size-10);
     }
 
     .formula {
@@ -626,7 +703,8 @@
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
       text-transform: uppercase;
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     .node-title {
@@ -656,7 +734,8 @@
     .queue-meta {
       font-size: var(--font-size-10);
       color: var(--text-tertiary);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     .inspector {
@@ -687,6 +766,7 @@
       align-items: center;
       font-size: var(--font-size-11);
       color: var(--text-secondary);
+      font-variant-numeric: tabular-nums slashed-zero;
     }
 
     .evidence-item {
@@ -775,7 +855,7 @@
     .status-bar {
       position: relative;
       z-index: 3;
-      height: var(--status-bar-height, 24px);
+      height: var(--status-bar-height);
       display: flex;
       align-items: center;
       gap: var(--space-8);
@@ -786,7 +866,7 @@
       background: var(--surface-panel-base);
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
-      font-family: var(--font-family-numeric);
+      font-family: var(--font-family-ui);
       font-variant-numeric: tabular-nums slashed-zero;
       white-space: nowrap;
     }
@@ -794,8 +874,8 @@
     #default-view > .status-bar {
       position: relative;
       bottom: auto;
-      flex: 0 0 var(--status-bar-height, 24px) !important;
-      height: var(--status-bar-height, 24px) !important;
+      flex: 0 0 var(--status-bar-height) !important;
+      height: var(--status-bar-height) !important;
       overflow: hidden !important;
     }
 
@@ -1006,7 +1086,7 @@
       flex-direction: column;
       gap: var(--space-8);
       cursor: pointer;
-      transition: border-color 0.12s ease;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .candidate-card:hover {
@@ -1022,6 +1102,14 @@
       border-color: color-mix(in oklch, var(--brand-accent) 62%, transparent);
     }
 
+    .candidate-card:focus-visible,
+    .queue-item:focus-visible,
+    .node:focus-visible,
+    .point:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
     .queue-item {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -1032,7 +1120,7 @@
       border-radius: var(--radius-5);
       background: var(--surface-panel-base);
       cursor: pointer;
-      transition: border-color 0.12s ease;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .queue-item:hover {
@@ -1043,15 +1131,6 @@
     .select-box:hover,
     .input-box:hover {
       border-color: var(--border-default);
-    }
-
-    .btn:hover {
-      background: var(--surface-overlay);
-      border-color: var(--border-default);
-    }
-
-    .btn.primary:hover {
-      filter: brightness(1.12);
     }
 
     .node:hover {
@@ -1098,8 +1177,12 @@
         display: none;
       }
 
-      * {
-        transition-duration: 0.01ms !important;
+      .candidate-card,
+      .queue-item,
+      .node,
+      .point,
+      .mode-context-panel {
+        transition: none !important;
       }
     }
   </style>
@@ -1135,10 +1218,10 @@
         <h1 class="page-title header-title">Alpha 探索器</h1>
         <div class="page-subtitle header-subtitle">/research/alpha · run alpha-20260502-017</div>
       </div>
-      <div class="mode-tabs" aria-label="探索模式">
-        <button class="mode-tab active" type="button">Copilot 探索</button>
-        <button class="mode-tab" type="button">自动研究审阅</button>
-        <button class="mode-tab" type="button">因子实验室</button>
+      <div class="mode-tabs" data-tabs="alpha-mode-tabs" role="tablist" aria-label="探索模式">
+        <button class="mode-tab active" type="button" role="tab" id="tab-alpha-mode-copilot" data-tab-target="copilot" aria-selected="true" aria-controls="panel-alpha-mode-copilot" tabindex="0">Copilot 探索</button>
+        <button class="mode-tab" type="button" role="tab" id="tab-alpha-mode-autoresearch" data-tab-target="autoresearch" aria-selected="false" aria-controls="panel-alpha-mode-autoresearch" tabindex="-1">自动研究审阅</button>
+        <button class="mode-tab" type="button" role="tab" id="tab-alpha-mode-factor-lab" data-tab-target="factor-lab" aria-selected="false" aria-controls="panel-alpha-mode-factor-lab" tabindex="-1">因子实验室</button>
       </div>
       <div class="header-metrics">
         <div class="header-metric">
@@ -1160,7 +1243,7 @@
       </div>
       <div class="header-actions">
         <button class="btn" type="button">暂停</button>
-        <button class="btn primary" type="button">启动探索</button>
+        <button class="btn btn-primary" type="button">启动探索</button>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
@@ -1193,7 +1276,7 @@
     <div class="resize-separator" data-resize-separator data-resize-var="--alpha-source-width" data-resize-default="276" data-resize-min="240" data-resize-max="380" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整研究空间宽度" aria-orientation="vertical" aria-controls="main source-panel" aria-valuemin="240" aria-valuemax="380" aria-valuenow="276" aria-valuetext="调整研究空间宽度 276 像素"></div>
     <div class="resize-separator" data-resize-separator data-resize-var="--alpha-inspector-width" data-resize-default="360" data-resize-min="320" data-resize-max="520" role="separator" tabindex="0" aria-label="调整候选检查器宽度" aria-orientation="vertical" aria-controls="main inspector-panel" aria-valuemin="320" aria-valuemax="520" aria-valuenow="360" aria-valuetext="调整候选检查器宽度 360 像素"></div>
 
-    <aside id="source-panel" class="panel config-panel" aria-label="搜索空间与约束" data-contract-slot="source">
+    <aside id="source-panel" class="alpha-panel config-panel" aria-label="搜索空间与约束" data-contract-slot="source">
       <div class="panel-header">
         <div class="panel-title">研究空间</div>
         <div class="panel-kicker">可编辑</div>
@@ -1258,13 +1341,69 @@
       </div>
     </aside>
 
-    <main id="main" class="panel stream-panel" aria-label="影响范围：当前 Alpha Run 候选探索流与采纳判断" data-contract-slot="main" data-primary-answer data-primary-answer-equivalent>
+    <main id="main" class="alpha-panel stream-panel" aria-label="影响范围：当前 Alpha Run 候选探索流与采纳判断" data-contract-slot="main" data-primary-answer data-primary-answer-equivalent>
       <div class="panel-header">
         <div class="panel-title">探索流</div>
         <div class="panel-kicker">17 个候选 · 5 个运行中 · 2 个已阻断</div>
       </div>
+      <div class="mode-context-panels" aria-label="探索模式上下文">
+        <section class="mode-context-panel" id="panel-alpha-mode-copilot" data-tab-panel="copilot" role="tabpanel" aria-labelledby="tab-alpha-mode-copilot" aria-hidden="false">
+          <div class="mode-context-summary">
+            <div class="mode-context-title">Copilot 探索 · 低相关动量反转</div>
+            <p class="mode-context-copy">用户配置研究空间后启动，Copilot 持续解释候选、证据与下一步动作。</p>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">搜索预算</span>
+            <span class="mode-context-value">62% / 45min</span>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">候选</span>
+            <span class="mode-context-value">17 · 5 running</span>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">主动作</span>
+            <span class="mode-context-value">启动探索</span>
+          </div>
+        </section>
+        <section class="mode-context-panel" id="panel-alpha-mode-autoresearch" data-tab-panel="autoresearch" role="tabpanel" aria-labelledby="tab-alpha-mode-autoresearch" aria-hidden="true">
+          <div class="mode-context-summary">
+            <div class="mode-context-title">自动研究审阅 · 运行路线图</div>
+            <p class="mode-context-copy">来自 Agent 控制台的 run-8842，聚焦发现清单、产物与审批阻断。</p>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">入口</span>
+            <span class="mode-context-value">/platform/agents</span>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">路线图</span>
+            <span class="mode-context-value">5 / 7 步</span>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">产物</span>
+            <span class="mode-context-value">3 个产物</span>
+          </div>
+        </section>
+        <section class="mode-context-panel" id="panel-alpha-mode-factor-lab" data-tab-panel="factor-lab" role="tabpanel" aria-labelledby="tab-alpha-mode-factor-lab" aria-hidden="true">
+          <div class="mode-context-summary">
+            <div class="mode-context-title">因子实验室 · 手动诊断</div>
+            <p class="mode-context-copy">面向已选候选的手动诊断、变体生成与因子产物入库前检查。</p>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">诊断</span>
+            <span class="mode-context-value">样本外 / 容量</span>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">变体</span>
+            <span class="mode-context-value">4 个变体</span>
+          </div>
+          <div class="mode-context-stat">
+            <span class="mode-context-label">下一步</span>
+            <span class="mode-context-value">因子产物</span>
+          </div>
+        </section>
+      </div>
       <div class="stream-list">
-        <article class="candidate-card selected">
+        <article class="candidate-card selected" tabindex="0" role="option" aria-selected="true">
           <div class="candidate-head">
             <div>
               <div class="candidate-title" data-answer-judgment>流动性调整反转 12D 可进入采纳复核</div>
@@ -1272,7 +1411,7 @@
             </div>
             <div class="candidate-head-actions">
               <span class="status-pill running">运行中</span>
-              <button class="btn primary" type="button" data-answer-action>深入候选</button>
+              <button class="btn btn-primary" type="button" data-answer-action>深入候选</button>
             </div>
           </div>
           <div class="formula" data-answer-evidence>rank(-ts_delta(close, 12)) * rank(ts_mean(turnover, 20))</div>
@@ -1285,7 +1424,7 @@
           <p class="reason" data-answer-evidence>短周期反转在低流动性尾部过拟合明显，当前版本使用换手稳定区间做惩罚。</p>
         </article>
 
-        <article class="candidate-card">
+        <article class="candidate-card" tabindex="0" role="option" aria-selected="false">
           <div class="candidate-head">
             <div>
               <div class="candidate-title">量压衰减 5D</div>
@@ -1303,7 +1442,7 @@
           <p class="reason">量压衰减方向通过初筛，样本外和行业暴露仍在计算。</p>
         </article>
 
-        <article class="candidate-card">
+        <article class="candidate-card" tabindex="0" role="option" aria-selected="false">
           <div class="candidate-head">
             <div>
               <div class="candidate-title">流通市值中性动量缺口</div>
@@ -1321,7 +1460,7 @@
           <p class="reason">和现有动量簇相关性接近上限，建议补测行业中性后的稳定性。</p>
         </article>
 
-        <article class="candidate-card">
+        <article class="candidate-card" tabindex="0" role="option" aria-selected="false">
           <div class="candidate-head">
             <div>
               <div class="candidate-title">公告漂移残差</div>
@@ -1387,27 +1526,27 @@
       </section>
     </main>
 
-    <aside class="panel queue-panel" aria-label="采纳队列" data-contract-slot="adoption">
+    <aside class="alpha-panel queue-panel" aria-label="采纳队列" data-contract-slot="adoption">
       <div class="panel-header">
         <div class="panel-title">采纳队列</div>
         <div class="panel-kicker">8 项待处理</div>
       </div>
       <div class="queue-list">
-        <div class="queue-item">
+        <div class="queue-item" tabindex="0" role="button">
           <div>
             <div class="queue-name">fc-1042 · 申请采纳</div>
             <div class="queue-meta">等待审批 · 证据完整</div>
           </div>
           <span class="status-pill partial">待复核</span>
         </div>
-        <div class="queue-item">
+        <div class="queue-item" tabindex="0" role="button">
           <div>
             <div class="queue-name">fc-1040 · 需要回测</div>
             <div class="queue-meta">部分完成 · 样本外待处理</div>
           </div>
           <span class="status-pill">补测</span>
         </div>
-        <div class="queue-item">
+        <div class="queue-item" tabindex="0" role="button">
           <div>
             <div class="queue-name">fc-1036 · 策略阻断</div>
             <div class="queue-meta">敏感字段权限不足</div>
@@ -1417,7 +1556,7 @@
       </div>
     </aside>
 
-    <section class="panel graph-panel" aria-label="实验图" data-contract-slot="graph">
+    <section class="alpha-panel graph-panel" aria-label="实验图" data-contract-slot="graph">
       <div class="panel-header">
         <div class="panel-title">实验图</div>
         <div class="panel-kicker">假设 → 候选 → 产物</div>
@@ -1483,7 +1622,7 @@
           <p class="reason">采纳前请确认：样本外表现、容量评估、相关性扫描、行业暴露和过拟合警告均已通过。确认后将生成因子产物，并同步到因子分析模块。</p>
           <div class="header-actions">
             <button class="btn" type="button">驳回</button>
-            <button class="btn primary" type="button">确认采纳</button>
+            <button class="btn btn-primary" type="button">确认采纳</button>
           </div>
         </div>
       </section>
@@ -1500,12 +1639,12 @@
       <div class="output-card">结构化输出：FactorCandidate fc-1042 · 可进入采纳复核。</div>
       <div class="header-actions">
         <button class="btn" type="button">证据</button>
-        <button class="btn primary" type="button">发送</button>
+        <button class="btn btn-primary" type="button">发送</button>
       </div>
     </div>
   </aside>
 
-  <div class="status-bar" role="status" aria-label="Alpha 探索器状态" data-contract-slot="status">
+  <footer class="status-bar" role="status" aria-label="Alpha 探索器状态" data-contract-slot="status">
     <span class="status-indicator" aria-hidden="true"></span>
     <span class="status-live">实时</span>
     <span class="status-sep">|</span>
@@ -1518,7 +1657,7 @@
     <span class="status-spacer"></span>
     <span class="status-kbd">Ctrl K</span>
     <span>命令 / 搜索</span>
-  </div>
+  </footer>
 
   <div hidden aria-hidden="true">
     <div id="overlay-explore-run-create" data-overlay="overlay-explore-run-create"></div>
@@ -1535,6 +1674,7 @@
     </filter>
   </svg>
   <script src="shared/theme-switcher.js"></script>
+  <script src="shared/prototype-interactions.js"></script>
   </section>
 
   <section id="states-gallery" class="proto-section">
@@ -1577,7 +1717,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">运行中 · 候选流入</div>
             <div class="gallery-card__preview">
-              <article class="candidate-card selected">
+              <article class="candidate-card selected" tabindex="0" role="option" aria-selected="true">
                 <div class="candidate-head">
                   <div>
                     <div class="candidate-title">新增流动性残差</div>
@@ -1593,7 +1733,7 @@
           <div class="gallery-card">
             <div class="gallery-card__label">部分 · 指标未齐</div>
             <div class="gallery-card__preview">
-              <article class="candidate-card">
+              <article class="candidate-card" tabindex="0" role="option" aria-selected="false">
                 <div class="candidate-head">
                   <div>
                     <div class="candidate-title">量压衰减</div>
@@ -1651,7 +1791,7 @@
                 <p class="reason">OOS、容量、相关性、行业暴露和过拟合警告均已就绪，需要研究负责人确认。</p>
                 <div class="header-actions">
                   <button class="btn" type="button">驳回</button>
-                  <button class="btn primary" type="button">确认采纳</button>
+                  <button class="btn btn-primary" type="button">确认采纳</button>
                 </div>
               </div>
             </div>

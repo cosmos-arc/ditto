@@ -1,7 +1,7 @@
 # Ditto 统一术语表
 
-> **版本**: v2.5
-> **日期**: 2026-04-18
+> **版本**: v2.6
+> **日期**: 2026-05-02
 > **上游**: 全部 spec 文档 (00-15)
 > **下游**: UI 设计、AICoding、前端实现、内容审核
 
@@ -299,6 +299,8 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | Approval | 审批 | 人工对 Agent 操作的确认 | 13 |
 | Tool Invocation | 工具调用 | Agent 调用外部工具的操作 | 13 |
 | Tool Trace | 工具追踪 | Agent 工具调用的详细执行记录 | 13 |
+| Artifact | 产物 | AI 或 Agent 生成的结构化结果，如报告、因子、策略草稿、回测、数据集、图表或 Trace | 02 |
+| Guardrail | 护栏 | 对权限、工具、交易动作、数据访问和 prompt injection 的阻断规则 | 02 |
 | Agent Console | Agent 控制台 | `/platform/agents` 页面的正式名称，归属 Platform 域 | 01 |
 | AI Copilot Studio | AI 智能助手工作坊 | 全局 Sidecar（不属于任何域路由） | 01 |
 | Session | 会话 | Copilot 的一次对话会话 | 01 |
@@ -309,6 +311,12 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 | Market Analysis Mode | 市场分析模式 | Copilot 的工作模式之一 | 01 |
 | Stock Discovery Mode | 选股辅助模式 | Copilot 的工作模式之一 | 01 |
 | Strategy Draft Mode | 策略草案模式 | Copilot 的工作模式之一 | 01 |
+| Alpha Explorer | Alpha 探索器 | `/research/alpha` 页面的正式名称，承载因子发现、AutoResearch 审阅和 Factor Lab | 02 |
+| Factor Candidate | 候选因子 | Alpha Explorer 或 Agent 产出的待诊断、补测或采纳的因子候选 | 02 |
+| Pareto Frontier | 帕累托前沿 | 因子候选在 IC、换手、相关性、新颖度和稳定性之间的多目标比较视图 | 02 |
+| AutoResearch | 自主研究 | Agent 在预算、约束和审批边界内自主执行的研究运行 | 02 |
+| Risk Officer | 风控官 | Signals AI Review 中对信号给出 PASS / WARN / BLOCK 决策的风控角色 | 02 |
+| Evaluation Run | 评测运行 | 用固定任务集评估 Agent、prompt、工具组合和模型版本的一次运行 | 02 |
 | AI Notes | AI 笔记 | AI 产出的分析笔记 | 13 |
 | Conversation Block | 会话块 | AI 分析会话的结构化内容单元，非聊天气泡 | 13 |
 | Suggestion Block | 建议块 | AI 给出的可点选采纳的建议 | 13 |
@@ -516,6 +524,11 @@ Ditto 覆盖首页指挥台、市场观察、因子研究、策略构建、交�
 ---
 
 ## Changelog
+
+### 2026-05-02 — v2.6
+
+- **AI Feature IA v2.1 同步**：新增 Alpha Explorer、AutoResearch、Risk Officer、Evaluation Run 等 AI 功能页面术语
+- **Agent / Research 语义收敛**：补充 Artifact、Guardrail、Factor Candidate、Pareto Frontier，明确 Agent Console V2 与 Alpha Explorer 的共享概念边界
 
 ### 2026-04-18 — v2.5
 

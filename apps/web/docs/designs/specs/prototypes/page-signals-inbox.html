@@ -111,10 +111,8 @@
     .scope-tab:focus-visible,
     .detail-action:focus-visible,
     .risk-check:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ══════════════════════════════════
@@ -872,7 +870,7 @@
       background: var(--system-healthy-fg);
       margin-right: var(--space-6);
       flex-shrink: 0;
-      animation: dot-pulse 3s ease-in-out infinite;
+      animation: dot-pulse 3s var(--motion-easing-standard) infinite;
     }
 
     @keyframes dot-pulse {
@@ -986,6 +984,16 @@
       .status-indicator, .confidence-fill,
       .data-table tr, .rail-icon, .header-btn-badge {
         transition: none !important;
+        animation: none !important;
+      }
+
+      /* dot-pulse, row-enter, detail-slide-in, spin, scope-tab-enter */
+      .status-indicator,
+      .scope-status-dot.warn,
+      .data-table tbody tr.row,
+      .detail-panel,
+      .spinner,
+      .scope-tab {
         animation: none !important;
       }
     }
@@ -1408,7 +1416,7 @@
       }
     }
     .data-table tbody tr.row {
-      animation: row-enter 0.2s var(--motion-easing-standard) backwards;
+      animation: row-enter var(--motion-duration-normal) var(--motion-easing-standard) backwards;
     }
     .data-table tbody tr.row:nth-child(1) { animation-delay: 0.02s; }
     .data-table tbody tr.row:nth-child(2) { animation-delay: 0.04s; }
@@ -1425,7 +1433,7 @@
       to   { opacity: 1; transform: translateX(0); }
     }
     .detail-panel {
-      animation: detail-slide-in 0.25s var(--motion-easing-standard);
+      animation: detail-slide-in var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     /* Overlay spinner */
@@ -1708,7 +1716,7 @@
 
     /* ── 11. Scope Strip Warn Dot Pulse ── */
     .scope-status-dot.warn {
-      animation: dot-pulse 3s ease-in-out infinite;
+      animation: dot-pulse 3s var(--motion-easing-standard) infinite;
     }
 
     /* ── 13. Detail Confidence Bar Height Enhancement ── */
@@ -2934,7 +2942,7 @@
 
 
   <!-- Status Bar — terminal DNA -->
-  <div class="status-bar" role="status" aria-label="系统状态">
+  <footer class="status-bar" role="status" aria-label="系统状态">
     <span class="status-indicator" aria-hidden="true"></span>
     <span class="status-live">LIVE</span>
     <span class="status-sep">|</span>
@@ -2945,7 +2953,7 @@
     <span>14:32:15 CST</span>
     <span class="status-spacer"></span>
     <span class="status-kbd">Ctrl+K</span> 搜索
-  </div>
+  </footer>
 
   <!-- ══════════════════════════════════════════════════════════════
        State Variants (5 components × applicable states)

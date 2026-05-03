@@ -1,7 +1,7 @@
 # Ditto Page Pattern Library
 
-> **版本**：v1.3
-> **日期**：2026-04-18
+> **版本**：v1.5
+> **日期**：2026-05-02
 > **状态**：Final
 > **上游**：[10 Shell Family 规范](./10_ditto_shell_family_spec.md)、[01 产品信息架构](./01_product_information_architecture.md)
 > **下游**：[02 核心页面蓝图](./02_core_page_blueprints.md)
@@ -566,10 +566,10 @@ Object Hub 是围绕**单一对象**展开的综合工作台。
 
 - `/instruments/[id]`
 - `/research/factors/[id]`
+- `/research/strategies/[id]`
 - `/research/backtest/[id]`
 
 <!-- 已修正: `/research/factors/[id]/analysis` → `/research/factors/[id]` -->
-<!-- 已移除: `/research/strategies/[id]` — Studio 统一后路由不再独立 -->
 <!-- 已移除: `/research/experiments/[id]` — IA 无此路由 -->
 
 未来也可扩展到：
@@ -687,6 +687,7 @@ Studio / Builder 用于构建、编辑、配置、对话、编排和调试。
 
 ### 8.2 适用页面
 
+- `/research/alpha`
 - `/research/strategies/[id]/studio`
 - `/platform/agents`
 
@@ -748,9 +749,9 @@ Studio 页面要减少浏览感，强化"手正在工作"的感觉。
 
 适用：strategy editor、config-heavy ML workflow
 
-**C. AI Copilot Studio**
+**C. AI-Assisted Studio**
 
-适用：ai copilot、ai strategy assistant、ai market analysis
+适用：Alpha Explorer、Strategy Studio Guided / Agent mode、AI-assisted ML workflow。Copilot 本体是全局 Sidecar，不再作为独立页面模式。
 
 **D. Agent Console Studio**
 
@@ -1181,14 +1182,15 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 |------|---------|
 | `/research` | Analytical Overview Workspace |
 | `/research/universes` | Catalog / Screener Workspace **[v1.3 新增 — 从 Markets 域迁入]** |
+| `/research/alpha` | Studio / Builder **[v1.4 新增 — Alpha Explorer]** |
 | `/research/factors` | Catalog / Screener Workspace |
 | `/research/factors/[id]` | Object Hub |
 | ~~`/research/factors/[id]/analysis`~~ | _修正：简化为 `/research/factors/[id]`_ |
 | `/research/strategies` | Catalog / Screener Workspace |
+| `/research/strategies/[id]` | Object Hub |
 | `/research/strategies/[id]/studio` | Studio / Builder |
 | ~~`/research/strategies/new`~~ | _合并：统一为 `/strategies/[id]/studio`_ |
 | ~~`/research/strategies/[id]/editor`~~ | _合并：统一为 `/strategies/[id]/studio`_ |
-| ~~`/research/strategies/[id]`~~ | _移除：Studio 统一后原 Object Hub 路由不再独立存在_ |
 | `/research/backtest` | Catalog / Screener Workspace |
 | `/research/backtest/[id]` | Object Hub |
 | ~~`/research/backtest/new`~~ | _移除：IA Sitemap 无此独立路由_ |
@@ -1290,6 +1292,14 @@ Config / Integration Console 用于系统设置、账户、通道、数据提供
 ---
 
 ## 15. 变更日志
+
+### v1.5 — 2026-05-02（AI Feature IA v2.1 同步）
+
+| 变更 | 章节 | 说明 |
+|------|------|------|
+| 新增 `/research/alpha` | §8.2, §12.3 | Alpha Explorer 作为 Research 域 Studio / Builder 工作台承接 AI Alpha Discovery 与 AutoResearch Review |
+| 恢复 `/research/strategies/[id]` Object Hub 归属 | §7.2, §12.3 | Strategy Detail 保持 Object Hub，Strategy Studio 继续承担策略编辑 / 生成工作面 |
+| 同步 AI 域拆散后的页面模式 | §12.3, §12.6 | Agent Console 归 Platform Studio；AI 不再作为独立页面域，但通过 Home、Research、Trading、Platform 嵌入 |
 
 ### v1.3 — 2026-04-18（IA v2.0 同步）
 

@@ -123,7 +123,10 @@
     .backtest-meta { color: var(--text-tertiary); font-size: var(--font-size-10); line-height: 1.2; }
     .metric-delta { margin-right: var(--space-4); color: currentColor; font-size: var(--font-size-10); }
     .data-table tr.row { cursor: pointer; }
-    .data-table tr.row:focus-visible { outline: 1px solid var(--brand-accent); outline-offset: -1px; }
+    .data-table tr.row:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
     .col-backtest-name { width: 16%; }
     .col-backtest-strategy { width: 15%; }
     .col-backtest-range { width: 10%; }

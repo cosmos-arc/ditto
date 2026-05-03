@@ -1067,6 +1067,17 @@ density.compact.chart.padding
 | default | `var(--space-12)` | `var(--space-16)` | `2.25rem` | `2rem` | `var(--space-12)` |
 | comfortable | `var(--space-16)` | `var(--space-20)` | `2.625rem` | `2.25rem` | `var(--space-16)` |
 
+#### 29.7 Prototype Edition v1 structural dimension overrides
+
+`tokens-style.css` may define prototype-only structural dimensions when a repeated HTML prototype pattern has not yet graduated into `tokens-shell.css` or `tokens-component.css`:
+
+| Token | Value | 用途 |
+|---|---:|---|
+| `--panel-header-height` | `38px` | Studio/agent 原型内嵌 panel header 高度 |
+| `--tab-bar-height` | `42px` | Studio/agent 原型横向 tab bar 行高 |
+| `--progress-bar-height` | `6px` | 进度条、暴露条、数据填充条高度 |
+| `--surface-noise-opacity` | `0.018` | Graphite Studio 原型噪声纹理不透明度 |
+
 注意，Density 不应该直接重写颜色和语义，只应影响：
 
 - 尺寸

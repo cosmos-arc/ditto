@@ -1,13 +1,16 @@
 {
   "id": "signals-inbox",
-  "version": 1,
+  "version": 2,
   "status": "draft",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-05-02",
   "route": "/trading/signals",
   "pagePattern": "queue-ops-console",
   "shellFamily": "ops-console",
   "prototypeRef": "docs/designs/specs/prototypes/page-signals-inbox.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#10-signals-inbox"
+  ],
   "landing": {
     "reactRouteStatus": "implemented",
     "featureModule": "src/features/trading",
@@ -65,7 +68,12 @@
     ],
     "pageSpecific": [
       "selected-row",
-      "sheet-open"
+      "sheet-open",
+      "ai-review",
+      "risk-pass",
+      "risk-warn",
+      "risk-block",
+      "evidence-open"
     ]
   },
   "overlays": [
@@ -97,6 +105,23 @@
       },
       "prototypeSelector": "[data-overlay='overlay-ai-read']",
       "reactComponent": "SignalAiReadDialog",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "signals.risk-officer-detail",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "detail",
+        "action": "open-risk-officer"
+      },
+      "prototypeSelector": "[data-overlay='overlay-risk-officer-detail']",
+      "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
         "outside-click",

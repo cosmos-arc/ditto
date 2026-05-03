@@ -1,13 +1,16 @@
 {
   "id": "strategies-detail",
-  "version": 1,
+  "version": 2,
   "status": "draft",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-04-28",
+  "updatedAt": "2026-05-02",
   "route": "/research/strategies/$id",
   "pagePattern": "object-hub",
   "shellFamily": "object-hub",
   "prototypeRef": "docs/designs/specs/prototypes/page-strategies-detail.html",
+  "blueprintRefs": [
+    "02_core_page_blueprints.md#19-strategy-detail"
+  ],
   "landing": {
     "reactRouteStatus": "missing",
     "featureModule": "src/features/strategy",
@@ -74,7 +77,12 @@
       "stale"
     ],
     "pageSpecific": [
-      "not-found"
+      "not-found",
+      "optimization-pending",
+      "optimization-simulating",
+      "optimization-simulated",
+      "optimization-approved",
+      "optimization-expired"
     ]
   },
   "flags": {
@@ -176,6 +184,40 @@
         "action": "open-overlay"
       },
       "prototypeSelector": "[data-overlay='overlay-version-rollback']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategies-detail.optimization-simulation",
+      "kind": "drawer",
+      "blocking": false,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "simulate-optimization"
+      },
+      "prototypeSelector": "[data-overlay='overlay-optimization-simulation']",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
+      "id": "strategies-detail.optimization-approval",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "approve-optimization"
+      },
+      "prototypeSelector": "[data-overlay='overlay-optimization-approval']",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

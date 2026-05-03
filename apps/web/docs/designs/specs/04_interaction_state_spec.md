@@ -1,7 +1,7 @@
 # Ditto 交互与状态规范
 
-> **版本**：v1.0
-> **日期**：2026-03-28
+> **版本**：v1.1
+> **日期**：2026-05-02
 > **状态**：Final
 > **上游**：[02 核心页面蓝图](./02_core_page_blueprints.md)、[03 对象页统一规范](./03_object_hub_spec.md)
 > **下游**：[13 Component Spec](./13_ditto_component_spec.md)
@@ -425,7 +425,26 @@ Selected 是 Ditto 最重要的交互状态之一。
 
 ---
 
-### 13.5 映射规则总结
+### 13.5 研究探索型 — Alpha Explorer
+
+| 组件 | default | loading | empty | failed | stale | running | partial | blocked | waiting-approval |
+|------|---------|---------|-------|--------|-------|---------|---------|---------|-----------------|
+| Search Space Config | 搜索空间表单 | 字段 skeleton | 默认模板 | 因子库加载失败 | 数据字段版本过旧 | disabled | — | 权限不足 | — |
+| Exploration Stream | 候选因子卡片 | 卡片 skeleton | 配置后开始探索 | Agent 异常 + 重试 | 候选指标标记过时 | 新卡片流入 | 部分指标灰态 | 预算或权限阻断 | — |
+| Pareto Frontier | 散点图 | 图表 skeleton | 空坐标 | 渲染失败 | 数据版本提示 | 实时点位加入 | 部分点位灰态 | — | — |
+| Candidate Inspector | 候选详情 | 面板 skeleton | 未选中提示 | 加载失败 | 指标时间戳提示 | 指标刷新 | 部分诊断可见 | 采纳被阻断 | Approval Panel 展开 |
+| Experiment Graph | lineage 图 | 节点 skeleton | 无实验 | 加载失败 | artifact 版本提示 | 节点增加 | artifact 待生成 | — | — |
+| Adoption Queue | 待采纳 / 待补测 / 已拒绝 / 已入库 | 列表 skeleton | 暂无待处理 | 加载失败 | 队列状态过期 | 队列更新 | 待补测灰态 | 审批策略阻断 | 待审批置顶 |
+
+**关键映射说明**：
+- Alpha Explorer 是 `running` + `partial` + `waiting-approval` 同时出现的研究页，不能套用 Backtest 的单任务进度心智。
+- `partial` 代表候选可先审阅但指标未齐，必须明确哪些指标待计算。
+- `blocked` 多来自预算、工具权限、敏感字段或采纳审批策略，必须展示 Guardrail 详情入口。
+- 采纳因子必须进入 `waiting-approval`，不能只用 disabled 按钮表达。
+
+---
+
+### 13.6 映射规则总结
 
 | 通用状态 | 列表筛选型 | 对象详情型 | 结果展示型 | 长任务/审批型 |
 |---------|-----------|-----------|-----------|-------------|

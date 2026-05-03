@@ -18,6 +18,12 @@
   /* ── Brand Signature Glow (prototype-only) ── */
   --brand-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.60);
 
+  /* ── Prototype structural dimensions — approved Edition v1 surface ── */
+  --panel-header-height:    38px;
+  --tab-bar-height:         42px;
+  --progress-bar-height:    6px;
+  --surface-noise-opacity:  0.018;
+
   /* ── Instrument Hub — Domain-specific structural tokens ── */
   --sparkline-width:        48px;    /* metric-card inline sparkline */
   --sparkline-height:       20px;

@@ -104,10 +104,8 @@
     .btn:focus-visible,
     .panel-action:focus-visible,
     .header-action-btn:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ── Noise texture overlay ── */
@@ -1438,7 +1436,10 @@
     .signal-bars__bar {
       width: 4px;
       border-radius: 2px;
-      transition: height 0.3s ease;
+      transform-origin: bottom;
+      transition:
+        opacity var(--motion-duration-fast) var(--motion-easing-standard),
+        transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .signal-bars__bar--bull { background: var(--market-up-fg); }
     .signal-bars__bar--bear { background: var(--market-down-fg); }
@@ -1550,7 +1551,7 @@
     .fit-bar__fill {
       height: 100%;
       border-radius: 2px;
-      transition: width 0.6s ease;
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .fit-bar__fill--good { background: var(--risk-low-fg); }
     .fit-bar__fill--moderate { background: var(--risk-medium-fg); }
@@ -1748,7 +1749,9 @@
 
     /* ── Signal bars hover animation ── */
     .signal-bars__bar {
-      transition: height 0.3s ease, opacity 0.3s ease;
+      transition:
+        opacity var(--motion-duration-fast) var(--motion-easing-standard),
+        transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .switch-item:hover .signal-bars__bar {
       opacity: 1;
@@ -1771,7 +1774,7 @@
 
     /* ── Fit bar fill animate ── */
     .fit-bar__fill {
-      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     /* ── Regime time button enhanced hover ── */
@@ -1928,8 +1931,9 @@
 
     /* ── Signal strength bar hover ── */
     .signal-bars__bar {
-      transition: height var(--motion-duration-fast) var(--motion-easing-standard),
-                  opacity var(--motion-duration-fast) var(--motion-easing-standard);
+      transition:
+        opacity var(--motion-duration-fast) var(--motion-easing-standard),
+        transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* ── Switch transition tag enhanced ── */

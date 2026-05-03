@@ -7,6 +7,7 @@ import {
 	buildPassthroughGateArgs,
 	defaultViewportArgs,
 } from "./run-prototype-gates";
+import { findHardcodedColors } from "./prototype-color-audit";
 
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
@@ -17,11 +18,23 @@ const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
 const pagePatternLibrarySpec = join(root, "docs/designs/specs/11_ditto_page_pattern_library.md");
+const tokenNamingLayeringSpec = join(
+	root,
+	"docs/designs/specs/14_ditto_token_naming_layering_spec.md",
+);
 const tokenStabilizationSpec = join(
 	root,
 	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
 );
+const expectedActiveRoutePrototypeCount = 29;
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
+const auditedPrototypeFiles = ["page-alpha-explorer.html", "page-agent-console-v2.html"] as const;
+const prototypeStructuralDimensionTokens = {
+	"--panel-header-height": "38px",
+	"--tab-bar-height": "42px",
+	"--progress-bar-height": "6px",
+	"--surface-noise-opacity": "0.018",
+} as const;
 
 type ManifestPage = {
 	id: string;
@@ -40,8 +53,10 @@ type EditionManifest = {
 type PageContract = {
 	id: string;
 	prototypeRef: string;
+	nextPrototypeRef?: string;
 	shellFamily: string;
 	overlays?: Array<{ prototypeSelector: string }>;
+	nextOverlays?: Array<{ prototypeSelector: string }>;
 };
 
 type CssSource = {
@@ -164,6 +179,28 @@ function getMediaBlock(css: string, maxWidthPx: number): string | undefined {
 
 	const openBraceIndex = css.indexOf("{", mediaMatch.index);
 	return getBalancedCssBlock(css, openBraceIndex)?.body;
+}
+
+function getMediaBlocksMatching(css: string, pattern: RegExp): string[] {
+	const blocks: string[] = [];
+	let searchIndex = 0;
+
+	while (searchIndex < css.length) {
+		const mediaIndex = css.indexOf("@media", searchIndex);
+		if (mediaIndex === -1) break;
+
+		const openBraceIndex = css.indexOf("{", mediaIndex);
+		if (openBraceIndex === -1) break;
+
+		const query = css.slice(mediaIndex, openBraceIndex);
+		const block = getBalancedCssBlock(css, openBraceIndex);
+		if (!block) break;
+		if (pattern.test(query)) blocks.push(block.body);
+
+		searchIndex = block.end + 1;
+	}
+
+	return blocks;
 }
 
 function readTopLevelCssRules(css: string, offset = 0, mediaMaxWidth?: number): CssRule[] {
@@ -340,6 +377,28 @@ const highRiskActionPages = [
 	"universe-list",
 	"strategy-list",
 ];
+const approvedHeaderTitleTerms = ["Alpha"] as const;
+const homeTokenFocusSelectors = [
+	".header-utility-btn",
+	".decision-cta",
+	".panel-action",
+	".overlay-btn",
+	".state-empty-cta",
+	'.worklist-row[role="row"]',
+] as const;
+const motionRemediationPageIds = [
+	"alpha-explorer",
+	"signals-inbox",
+	"agent-console-v2",
+	"research",
+] as const;
+const signalsInboxReducedMotionFamilies = [
+	"dot-pulse",
+	"row-enter",
+	"detail-slide-in",
+	"spin",
+	"scope-tab-enter",
+] as const;
 const catalogSubtypeSummaryRequirements: Record<string, Array<{ label: string; pattern: RegExp }>> = {
 	"strategy-list": [
 		{ label: "可运行", pattern: /可运行/ },
@@ -615,11 +674,58 @@ function hasPrimaryAnswerScope(region: Element): boolean {
 	return hasReadableTextMatch(region, /(?:scope|范围|覆盖|影响|全局|当前|账户|组合|市场|标的|策略|实验|服务)/i);
 }
 
+function removeApprovedHeaderTitleTerms(text: string): string {
+	return approvedHeaderTitleTerms.reduce(
+		(current, term) => current.replace(new RegExp(`\\b${term}\\b`, "gi"), ""),
+		text,
+	);
+}
+
+function hasTokenFocusRule(css: string, selector: string): boolean {
+	return readTopLevelCssRules(stripCssComments(css)).some(
+		(rule) =>
+			hasFocusSelector(rule.selector) &&
+			rule.selector.includes(selector) &&
+			/--interaction-focus-ring/.test(rule.body),
+	);
+}
+
+function getMotionDeclarations(css: string): Array<{ line: number; property: string; value: string }> {
+	return [...css.matchAll(/\b(transition|animation)\s*:\s*([^;{}]+);/gi)].flatMap((match) => {
+		const value = match[2].trim();
+		if (match[1].toLowerCase() === "animation" && /^none(?:\s*!important)?$/i.test(value)) {
+			return [];
+		}
+
+		return [
+			{
+				line: getLineNumber(css, match.index ?? 0),
+				property: match[1].toLowerCase(),
+				value,
+			},
+		];
+	});
+}
+
+function getTransitionItems(value: string): string[] {
+	return value
+		.split(",")
+		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
 describe("prototype design consistency", () => {
-	it("keeps exactly 27 active route prototypes", () => {
+	it("keeps exactly 29 active route prototypes", () => {
 		const activePages = readManifest().pages.filter(isActiveRoutePrototype);
 
-		expect(activePages).toHaveLength(27);
+		expect(activePages).toHaveLength(expectedActiveRoutePrototypeCount);
+	});
+
+	it("keeps audited prototype pages active in the manifest", () => {
+		const manifestFiles = new Set(activePages().map((page) => page.file));
+		const inactive = auditedPrototypeFiles.filter((file) => !manifestFiles.has(file));
+
+		expect(inactive).toEqual([]);
 	});
 
 	it("keeps deprecated AI route specimens in the prototype archive", () => {
@@ -1066,6 +1172,90 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
+	it("keeps Home custom controls on explicit token focus rings", () => {
+		const home = activePageById("home");
+		const css = [
+			readFileSync(prototypeLayoutCss, "utf8"),
+			getStyleBlocks(readPrototypeHtml(home)),
+		].join("\n");
+		const missingSelectors = homeTokenFocusSelectors.filter(
+			(selector) => !hasTokenFocusRule(css, selector),
+		);
+
+		expect(missingSelectors).toEqual([]);
+	});
+
+	it("keeps task-scoped prototype animations covered by targeted reduced motion", () => {
+		const violations: string[] = [];
+		const alphaCss = getStyleBlocks(readPrototypeHtml(activePageById("alpha-explorer")));
+		const alphaReducedMotionCss = getMediaBlocksMatching(
+			alphaCss,
+			/prefers-reduced-motion\s*:\s*reduce/i,
+		).join("\n");
+		const signalsCss = getStyleBlocks(readPrototypeHtml(activePageById("signals-inbox")));
+		const signalsReducedMotionCss = getMediaBlocksMatching(
+			signalsCss,
+			/prefers-reduced-motion\s*:\s*reduce/i,
+		).join("\n");
+
+		if (/\*\s*\{[^}]*transition-duration/i.test(alphaReducedMotionCss)) {
+			violations.push("alpha-explorer:global-reduced-motion-wildcard");
+		}
+
+		for (const family of signalsInboxReducedMotionFamilies) {
+			if (!signalsReducedMotionCss.includes(family)) {
+				violations.push(`signals-inbox:reduced-motion:${family}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps task-scoped motion declarations on duration and easing tokens", () => {
+		const hardcodedDuration = /\b(?:100ms|150ms|180ms|200ms|300ms|600ms|0\.12s|0\.2s|0\.25s|0\.3s|0\.4s|0\.6s)\b/;
+		const rawEasing = /\b(?:ease|ease-in-out|ease-out)\b|cubic-bezier\(\s*0\.4\s*,\s*0\s*,\s*0\.2\s*,\s*1\s*\)/;
+		const violations = motionRemediationPageIds.flatMap((pageId) => {
+			const page = activePageById(pageId);
+			const css = getStyleBlocks(readPrototypeHtml(page));
+
+			return getMotionDeclarations(css).flatMap(({ line, property, value }) => {
+				const declarationViolations: string[] = [];
+				if (hardcodedDuration.test(value)) {
+					declarationViolations.push(`${page.id}:${line}:${property}:duration:${value}`);
+				}
+				if (rawEasing.test(value)) {
+					declarationViolations.push(`${page.id}:${line}:${property}:easing:${value}`);
+				}
+
+				return declarationViolations;
+			});
+		});
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps layout property transitions categorized and tokenized", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const css = getStyleBlocks(readPrototypeHtml(page));
+			for (const { line, value } of getMotionDeclarations(css).filter(
+				(declaration) => declaration.property === "transition",
+			)) {
+				for (const item of getTransitionItems(value)) {
+					if (/^(?:height|max-height)\b/i.test(item)) {
+						violations.push(`${page.id}:${line}:layout-height:${item}`);
+					}
+					if (/^width\b/i.test(item) && !/^width\s+var\(--motion-duration-[a-z-]+\)/i.test(item)) {
+						violations.push(`${page.id}:${line}:layout-width-duration:${item}`);
+					}
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("makes the global command entry discoverable without masquerading as local search", () => {
 		const violations: string[] = [];
 
@@ -1169,7 +1359,7 @@ describe("prototype design consistency", () => {
 
 			for (const title of document.querySelectorAll(".shell-header .header-title")) {
 				const text = title.textContent?.trim() ?? "";
-				if (/[A-Za-z]{2,}/.test(text)) {
+				if (/[A-Za-z]{2,}/.test(removeApprovedHeaderTitleTerms(text))) {
 					violations.push(`${page.id}:title:${text}`);
 				}
 			}
@@ -1237,6 +1427,13 @@ describe("prototype design consistency", () => {
 				contract.overlays?.map((overlay) => overlay.prototypeSelector) ?? [],
 			);
 			contractByPrototype.set(contract.prototypeRef, overlaySelectors);
+
+			if (contract.nextPrototypeRef) {
+				const nextOverlaySelectors = new Set(
+					(contract.nextOverlays ?? contract.overlays)?.map((overlay) => overlay.prototypeSelector) ?? [],
+				);
+				contractByPrototype.set(contract.nextPrototypeRef, nextOverlaySelectors);
+			}
 		}
 
 		const missing: string[] = [];
@@ -2103,6 +2300,67 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
+	it("documents and uses approved prototype structural dimension tokens", () => {
+		const tokenCss = readFileSync(prototypeTokensStyleCss, "utf8");
+		const tokenDeclarations = new Map(
+			[...tokenCss.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)].map((match) => [
+				match[1],
+				match[2].trim(),
+			]),
+		);
+		const tokenSpecs = [
+			readFileSync(tokenNamingLayeringSpec, "utf8"),
+			readFileSync(tokenStabilizationSpec, "utf8"),
+		];
+		const alphaCss = getStyleBlocks(readPrototypeHtml(activePageById("alpha-explorer")));
+		const consoleCss = getStyleBlocks(readPrototypeHtml(activePageById("agent-console-v2")));
+		const pageCssById = new Map([
+			["alpha-explorer", alphaCss],
+			["agent-console-v2", consoleCss],
+		]);
+		const violations: string[] = [];
+
+		for (const [token, expectedValue] of Object.entries(prototypeStructuralDimensionTokens)) {
+			if (tokenDeclarations.get(token) !== expectedValue) {
+				violations.push(`tokens-style.css:${token}:${tokenDeclarations.get(token) ?? "missing"}`);
+			}
+			tokenSpecs.forEach((spec, index) => {
+				if (!spec.includes(token)) {
+					violations.push(`spec-${index === 0 ? "14" : "15"}:${token}`);
+				}
+			});
+		}
+
+		for (const [pageId, css] of pageCssById) {
+			if (/var\(\s*--status-bar-height\s*,\s*24px\s*\)/.test(css)) {
+				violations.push(`${pageId}:status-bar-height-fallback`);
+			}
+			if (!hasDeclaration(getSelectorRuleBody(css, ".panel-header"), "height", /var\(\s*--panel-header-height\s*\)/)) {
+				violations.push(`${pageId}:panel-header-height`);
+			}
+			const noiseSelector = pageId === "alpha-explorer" ? ".alpha-shell::before" : ".agent-shell::before";
+			if (!hasDeclaration(getSelectorRuleBody(css, noiseSelector), "opacity", /var\(\s*--surface-noise-opacity\s*\)/)) {
+				violations.push(`${pageId}:surface-noise-opacity`);
+			}
+		}
+
+		if (!hasDeclaration(getSelectorRuleBody(alphaCss, ".track"), "height", /var\(\s*--progress-bar-height\s*\)/)) {
+			violations.push("alpha-explorer:progress-bar-height");
+		}
+		if (!hasDeclaration(getSelectorRuleBody(consoleCss, ".progress"), "height", /var\(\s*--progress-bar-height\s*\)/)) {
+			violations.push("agent-console-v2:progress-bar-height");
+		}
+		if (
+			!/grid-template-rows\s*:\s*var\(\s*--shell-header-height\s*\)\s+var\(\s*--tab-bar-height\s*\)\s+minmax\(0,\s*1fr\)/i.test(
+				getSelectorRuleBody(consoleCss, ".agent-shell") ?? "",
+			)
+		) {
+			violations.push("agent-console-v2:tab-bar-height");
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("defines one shared visual order for global header utilities", () => {
 		const css = readFileSync(prototypeLayoutCss, "utf8");
 		const expectedOrder = [
@@ -2241,19 +2499,19 @@ describe("prototype design consistency", () => {
 		for (const page of readManifest().pages) {
 			if (!isActiveRoutePrototype(page)) continue;
 
-			const lines = readPrototypeHtml(page).split("\n");
-			lines.forEach((line, index) => {
-				if (line.includes("rgba(")) hits.push(`${page.id}:${index + 1}:rgba`);
-				if (
-					line.includes("oklch(") &&
-					!line.includes("oklch(from var(") &&
-					!/--[a-z0-9-]+\s*:/i.test(line)
-				) {
-					hits.push(`${page.id}:${index + 1}:oklch`);
-				}
-			});
+			for (const color of findHardcodedColors(readPrototypeHtml(page))) {
+				hits.push(`${page.id}:${color}`);
+			}
 		}
 
 		expect(hits).toEqual([]);
+	});
+
+	it("keeps hardcoded color scanner scoped to real CSS color declarations", () => {
+		expect(findHardcodedColors('fill="url(#dd2-g)"')).toEqual([]);
+		expect(findHardcodedColors("content: '&#10005;'")).toEqual([]);
+		expect(findHardcodedColors('href="#fff" data-fragment="#123456"')).toEqual([]);
+		expect(findHardcodedColors("color: #fff")).toEqual(["#fff"]);
+		expect(findHardcodedColors("background: rgba(0,0,0,.2)")).toEqual(["rgba("]);
 	});
 });

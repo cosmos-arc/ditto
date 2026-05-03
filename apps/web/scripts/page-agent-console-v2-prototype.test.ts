@@ -18,6 +18,11 @@ describe("page-agent-console-v2 prototype", () => {
 		const document = loadDocument();
 		const defaultViewText =
 			document.querySelector("#default-view")?.textContent ?? "";
+		const defaultViewAriaLabels = Array.from(
+			document.querySelectorAll<HTMLElement>("#default-view [aria-label]"),
+		)
+			.map((element) => element.getAttribute("aria-label") ?? "")
+			.join(" ");
 		const requiredCopy = [
 			"智能体控制台",
 			"运行中",
@@ -55,7 +60,10 @@ describe("page-agent-console-v2 prototype", () => {
 		}
 		for (const copy of demoEnglishCopy) {
 			expect(defaultViewText).not.toContain(copy);
+			expect(defaultViewAriaLabels).not.toContain(copy);
 		}
+		expect(defaultViewAriaLabels).toContain("智能体控制台标签");
+		expect(defaultViewAriaLabels).toContain("智能体控制台工作区");
 	});
 
 	it("keeps the default product surface inside design-cycle's three-zone structure", () => {
@@ -70,7 +78,9 @@ describe("page-agent-console-v2 prototype", () => {
 		expect(defaultView).not.toBeNull();
 		expect(statesGallery).not.toBeNull();
 		expect(overlaysGallery).not.toBeNull();
-		expect(defaultView?.querySelector(":scope > .agent-shell.studio-shell")).not.toBeNull();
+		expect(
+			defaultView?.querySelector(":scope > .agent-shell.studio-shell"),
+		).not.toBeNull();
 	});
 
 	it("matches mature Ditto shell chrome details used by neighboring studio pages", () => {
@@ -78,7 +88,9 @@ describe("page-agent-console-v2 prototype", () => {
 		const defaultView = document.querySelector("#default-view");
 		const shell = defaultView?.querySelector(".agent-shell");
 		const railLinks = Array.from(
-			defaultView?.querySelectorAll<HTMLAnchorElement>(".shell-rail .rail-icon") ?? [],
+			defaultView?.querySelectorAll<HTMLAnchorElement>(
+				".shell-rail .rail-icon",
+			) ?? [],
 		);
 		const utilityButtons = Array.from(
 			defaultView?.querySelectorAll<HTMLElement>(
@@ -99,11 +111,12 @@ describe("page-agent-console-v2 prototype", () => {
 		expect(railLinks).toHaveLength(5);
 		expect(railLinks.map((link) => link.dataset.railDomain)).toEqual(railDomains);
 		expect(
-			railLinks.find((link) => link.classList.contains("active"))?.dataset.railDomain,
+			railLinks.find((link) => link.classList.contains("active"))?.dataset
+				.railDomain,
 		).toBe("platform");
-		expect(defaultView?.querySelectorAll(".shell-rail .rail-icon:not(a)")).toHaveLength(
-			0,
-		);
+		expect(
+			defaultView?.querySelectorAll(".shell-rail .rail-icon:not(a)"),
+		).toHaveLength(0);
 		expect(utilityButtons).toEqual([
 			"command",
 			"copilot",
@@ -120,6 +133,88 @@ describe("page-agent-console-v2 prototype", () => {
 				"[data-primary-answer-equivalent] [data-answer-judgment]",
 			),
 		).not.toBeNull();
+	});
+
+	it("uses the mature Agent button taxonomy and icon affordances", () => {
+		const document = loadDocument();
+		const defaultView = document.querySelector("#default-view");
+		const actionControls = Array.from(
+			defaultView?.querySelectorAll<HTMLElement>(
+				".agent-header .header-actions :is(label, button), .approval-box .header-actions button",
+			) ?? [],
+		);
+		const textCommandControls = Array.from(
+			document.querySelectorAll<HTMLElement>(
+				"button.btn-cta, button.btn-ghost, label.btn-cta, label.btn-ghost",
+			),
+		);
+
+		expect(defaultView?.querySelectorAll(".btn, .btn.primary")).toHaveLength(0);
+		expect(defaultView?.querySelectorAll(".btn-cta")).toHaveLength(2);
+		expect(defaultView?.querySelectorAll(".btn-ghost")).toHaveLength(2);
+		for (const control of actionControls) {
+			expect(control.querySelector("svg")).not.toBeNull();
+			expect(
+				control.classList.contains("btn-cta") ||
+					control.classList.contains("btn-ghost"),
+			).toBe(true);
+		}
+		for (const control of textCommandControls) {
+			expect(control.querySelector("svg")).not.toBeNull();
+		}
+	});
+
+	it("keeps header metrics in compact Studio-style chips", () => {
+		const document = loadDocument();
+		const styleText = document.querySelector("style")?.textContent ?? "";
+
+		expect(styleText).toMatch(/\.summary-grid\s*\{[^}]*display:\s*flex/s);
+		expect(styleText).not.toMatch(
+			/\.summary-grid\s*\{[^}]*grid-template-columns:\s*repeat\(5/s,
+		);
+		expect(styleText).toMatch(
+			/\.summary-card\s*\{[^}]*height:\s*var\(--badge-md-height\)/s,
+		);
+		expect(styleText).toMatch(/\.summary-card\s*\{[^}]*flex:\s*0 0 auto/s);
+		expect(styleText).toMatch(
+			/\.summary-card\s*\{[^}]*border-radius:\s*var\(--radius-4\)/s,
+		);
+		expect(styleText).toMatch(
+			/\.summary-card:nth-child\(5\)\s*\{[^}]*display:\s*none/s,
+		);
+	});
+
+	it("keeps Chinese UI labels on the UI font stack instead of numeric/code styling", () => {
+		const document = loadDocument();
+		const styleText = document.querySelector("style")?.textContent ?? "";
+
+		expect(styleText).toMatch(
+			/\.page-title\s*\{[^}]*font-family:\s*var\(--font-family-ui\)/s,
+		);
+		expect(styleText).toMatch(
+			/\.summary-label\s*\{[^}]*font-family:\s*var\(--font-family-ui\)/s,
+		);
+		expect(styleText).toMatch(
+			/\.summary-label\s*\{(?![^}]*text-transform:\s*uppercase)[^}]*\}/s,
+		);
+		expect(styleText).toMatch(
+			/\.status-pill\s*\{[^}]*font-family:\s*var\(--font-family-ui\)/s,
+		);
+		expect(styleText).toMatch(
+			/\.node-kind,\s*\n\s*\.card-label\s*\{[^}]*font-family:\s*var\(--font-family-ui\)/s,
+		);
+		expect(styleText).toMatch(
+			/\.btn-cta\s*\{[^}]*font-family:\s*var\(--font-family-ui\)/s,
+		);
+		expect(styleText).toMatch(
+			/\.btn-ghost\s*\{[^}]*font-family:\s*var\(--font-family-ui\)/s,
+		);
+		expect(styleText).not.toMatch(
+			/\.card-label\s*\{[^}]*font-family:\s*var\(--font-family-numeric\)/s,
+		);
+		expect(styleText).not.toMatch(
+			/\.node-kind,\s*\n\s*\.card-label\s*\{[^}]*text-transform:\s*uppercase/s,
+		);
 	});
 
 	it("exposes studio shell contract slots only in the default view", () => {

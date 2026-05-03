@@ -7,6 +7,7 @@
 
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join, basename } from "node:path";
+import { findHardcodedColors } from "./prototype-color-audit.ts";
 
 // ─── OKLCH → sRGB → Hex Conversion ───────────────────────────────────────────
 // Based on CSS Color Level 4 specification.
@@ -83,18 +84,12 @@ const OUTPUT_PATH = "docs/plans/audit-raw-data.json";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function extractHexValues(html) {
-  // Match hex colors in various contexts: CSS, inline styles, Tailwind arbitrary values
-  const patterns = [
-    /#([0-9a-fA-F]{3,8})\b/g, // #fff, #ffffff, #ffffff80
-    /rgba?\(\s*([0-9a-fA-F]{6})/gi, // rgba(#ffffff, 0.5) - rare but possible
-  ];
   const values = new Set();
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const hex = normalizeHex(match[0]);
-      if (hex) values.add(hex);
-    }
+  for (const color of findHardcodedColors(html)) {
+    if (!color.startsWith("#")) continue;
+
+    const hex = normalizeHex(color);
+    if (hex) values.add(hex);
   }
   return [...values].sort();
 }

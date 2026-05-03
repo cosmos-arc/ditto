@@ -6,13 +6,13 @@
   "near10Remediation": {
     "reviewedAt": "2026-05-02",
     "status": "verified",
-    "activeRoutePrototypeCount": 27,
+    "activeRoutePrototypeCount": 29,
     "scoreBefore": 8.2,
     "scoreAfter": 9.8,
     "checks": {
       "near10Contract": "PASS: 29 tests",
       "interactionUx": "PASS: 31 tests",
-      "prototypeGates": "PASS: 27 active route prototypes",
+      "prototypeGates": "PASS: 29 active route prototypes",
       "routeAudit": "PASS: 27 IA routes covered",
       "tokenContrast": "PASS: 0 failed gating pairs"
     }
@@ -203,6 +203,31 @@
       "shellFamily": "analytical",
       "landing": {
         "reactRouteStatus": "implemented",
+        "featureModule": "src/features/research",
+        "contractStatus": "draft",
+        "overlayStatus": "triggerable",
+        "visualAuditStatus": "missing"
+      }
+    },
+    {
+      "id": "alpha-explorer",
+      "file": "page-alpha-explorer.html",
+      "status": "reviewed",
+      "score": 9.4,
+      "styleAnchor": "strategy-studio",
+      "rounds": 1,
+      "createdAt": "2026-05-02",
+      "note": "2026-05-03: promoted from audited prototype candidate to active research studio route.",
+      "stateCoverage": {
+        "tabs": 3,
+        "overlays": 6,
+        "stateVariants": 12,
+        "coveragePercent": 100
+      },
+      "blueprintId": "6a",
+      "shellFamily": "studio",
+      "landing": {
+        "reactRouteStatus": "missing",
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -633,6 +658,31 @@
         "tabs": 4,
         "overlays": 4,
         "stateVariants": 6,
+        "coveragePercent": 100
+      },
+      "blueprintId": 15,
+      "shellFamily": "studio",
+      "landing": {
+        "reactRouteStatus": "missing",
+        "featureModule": "src/features/platform",
+        "contractStatus": "draft",
+        "overlayStatus": "triggerable",
+        "visualAuditStatus": "missing"
+      }
+    },
+    {
+      "id": "agent-console-v2",
+      "file": "page-agent-console-v2.html",
+      "status": "reviewed",
+      "score": 9.4,
+      "styleAnchor": "platform",
+      "rounds": 1,
+      "createdAt": "2026-05-02",
+      "note": "2026-05-03: promoted from nextPrototypeRef candidate to active platform studio route while legacy agent-console remains active.",
+      "stateCoverage": {
+        "tabs": 0,
+        "overlays": 7,
+        "stateVariants": 39,
         "coveragePercent": 100
       },
       "blueprintId": 15,
@@ -1145,7 +1195,7 @@
       "vpCompactContactSheet": "test-results/ditto-design-cycle-gates/edition-v1-2026-04-27/edition-v1-vp-compact-contact-sheet.png"
     },
     "date": "2026-04-28",
-    "activeRoutePrototypeCount": 27,
+    "activeRoutePrototypeCount": 29,
     "archivedSpecimens": [
       "ai-overview",
       "ai-copilot"

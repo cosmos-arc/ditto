@@ -421,7 +421,7 @@
 
     /* ── Validating status pulse ── */
     .status-dot.brand {
-      animation: validating-pulse 2s ease-in-out infinite;
+      animation: validating-pulse 2s var(--motion-easing-standard) infinite;
     }
 
     @keyframes validating-pulse {
@@ -822,7 +822,7 @@
     }
 
     .run-item-status.running {
-      animation: status-pulse 2s ease-in-out infinite;
+      animation: status-pulse 2s var(--motion-easing-standard) infinite;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -879,7 +879,7 @@
       border-radius: 1px;
       margin-top: var(--space-4);
       opacity: 0.5;
-      animation: progress-pulse 3s ease-in-out infinite;
+      animation: progress-pulse 3s var(--motion-easing-standard) infinite;
     }
 
     @keyframes progress-pulse {
@@ -955,9 +955,8 @@
     .run-item:focus-visible,
     .queue-review-item:focus-visible,
     .th-sortable:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--interaction-focus-border), 0 0 0 4px var(--interaction-selected-bg);
-      border-radius: var(--radius-4);
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
     .data-table tbody tr.row:focus-within {
       background: var(--interaction-hover-subtle-bg);
@@ -1312,7 +1311,10 @@
     .health-bar-segment {
       width: 3px;
       border-radius: 1px;
-      transition: height var(--motion-duration-fast) var(--motion-easing-standard);
+      transform-origin: bottom;
+      transition:
+        opacity var(--motion-duration-fast) var(--motion-easing-standard),
+        transform var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .health-bar-segment.ok   { background: var(--system-healthy-fg); }
     .health-bar-segment.warn { background: var(--system-degraded-fg); }
@@ -1471,7 +1473,7 @@
     .width-row-fill {
       height: 100%;
       border-radius: 3px;
-      transition: width 0.6s var(--motion-easing-standard);
+      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .width-row-fill.accent {
       background: var(--brand-accent);
@@ -1688,10 +1690,10 @@
 
     /* ── Analysis band section reveal ── */
     .analysis-metrics {
-      transition: opacity 0.3s var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .analysis-band-body[data-panel] .analysis-metrics {
-      animation: metrics-fade-in 0.4s var(--motion-easing-standard);
+      animation: metrics-fade-in var(--motion-duration-normal) var(--motion-easing-standard);
     }
     @keyframes metrics-fade-in {
       from { opacity: 0; transform: translateY(4px); }

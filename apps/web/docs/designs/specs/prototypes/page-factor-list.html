@@ -202,7 +202,10 @@
     .decay-watch { color: var(--risk-medium-fg); }
     .decay-risk { color: var(--system-down-fg); }
     .data-table tr.row { cursor: pointer; }
-    .data-table tr.row:focus-visible { outline: 1px solid var(--brand-accent); outline-offset: -1px; }
+    .data-table tr.row:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
     .col-factor-name { width: 22%; }
     .col-factor-family, .col-factor-health, .col-factor-ic, .col-factor-ir, .col-factor-decay { width: 10%; }
     .col-factor-strategies, .col-factor-action { width: 12%; }

@@ -84,6 +84,8 @@ Token Stabilization R1 是 Ditto Design Token 体系从"设计阶段"走向"工�
 | bar heights | 3 | `--shell-context-bar-height`, `--shell-scope-strip-height`, `--shell-status-bar-height` |
 | per-shell overrides | 10 | `--shell-screener-sidebar-width`, `--shell-signals-detail-width` 等 |
 
+`tokens-style.css` 保留少量 prototype-only 结构尺寸覆盖，直到这些值稳定并迁移到 Shell 或 Component 层：`--panel-header-height: 38px`、`--tab-bar-height: 42px`、`--progress-bar-height: 6px`、`--surface-noise-opacity: 0.018`。
+
 ### 2.4 Layer 4: Data Visualization — `tokens-data-viz.css` (R2 新增)
 
 量化平台专用数据可视化 token，对标 TradingView paneProperties / Bloomberg Terminal 图表体系。总计 38 个 token：
@@ -426,7 +428,7 @@ CN 和 Intl 模式仅交换红绿色的映射关系，语义方向不变。
 |------|---------|
 | `tokens-semantic.css` | surface (6) + text (7) + border (3) + brand-subtle + scrollbar (3) + code (3) = 23 token |
 | `tokens-interaction.css` | hover/active/dragging shadow 调整 = 3 token |
-| `tokens-style.css` | surface + text + border + brand + interaction + code + scrollbar = 20 token（Graphite Studio 特化） |
+| `tokens-style.css` | surface + text + border + brand + interaction + code + scrollbar + prototype structural dimensions (`--panel-header-height`, `--tab-bar-height`, `--progress-bar-height`, `--surface-noise-opacity`) |
 
 ### 6.5 待实现 Light mode 的文件
 
@@ -630,7 +632,7 @@ R1 审计范围：所有 CSS 文件中的 token 引用、hardcoded 色值、inli
 | `tokens-interaction.css` | L6 Interaction | ✅ |
 | `tokens-domain.css` | L7 Domain Semantic | ✅ |
 | `tokens-density.css` | L8 Density | ✅ |
-| `tokens-style.css` | Override (Graphite Studio) | ✅ |
+| `tokens-style.css` | Override (Graphite Studio + prototype structural dimensions: `--panel-header-height`, `--tab-bar-height`, `--progress-bar-height`, `--surface-noise-opacity`) | ✅ |
 | `layout-base.css` | Shared Layout | ✅ |
 | `tokens-component.css` | L5 Component | ✅ R2.5 新增 |
 | `tokens-module.css` | L9 Module Pattern | ❌ 待定义 |

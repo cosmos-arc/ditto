@@ -57,7 +57,10 @@
     .style-label { position: fixed; top: var(--space-6); right: var(--space-6); z-index: 50; font-family: var(--font-family-ui); font-size: var(--font-size-12); color: var(--brand-signature-fg); background: var(--surface-overlay); border: 1px solid var(--border-subtle); padding: var(--space-2) var(--space-6); border-radius: var(--radius-4); pointer-events: none; }
     .skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; padding: var(--space-4) var(--space-8); background: var(--surface-overlay); color: var(--text-primary); font-size: var(--font-size-12); border-radius: var(--radius-4); }
     .skip-link:focus { left: var(--space-16); }
-    .btn:focus-visible, .hub-tab:focus-visible, .header-action-btn:focus-visible, .meta-chip:focus-visible { outline: none; box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border); border-radius: var(--radius-4); }
+    .btn:focus-visible, .hub-tab:focus-visible, .header-action-btn:focus-visible, .meta-chip:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
 
     .object-header { display: flex; align-items: center; gap: var(--space-12); flex: 1; min-width: 0; }
     .object-identity { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }

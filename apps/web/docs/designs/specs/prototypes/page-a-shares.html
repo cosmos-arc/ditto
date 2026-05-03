@@ -1400,10 +1400,8 @@
     .index-card:focus-visible,
     .mover-item:focus-visible,
     .etf-table tbody tr:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px color-mix(in oklch, var(--brand-accent) 25%, transparent);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ══════════════════════════════════════════════

@@ -237,10 +237,8 @@
     .header-avatar:focus-visible,
     .btn-danger-sm:focus-visible,
     .decision-cta:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-border);
-      border-radius: var(--radius-4);
-      transition: box-shadow 150ms ease-out;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* Decision Banner visual anchor — left brand border */

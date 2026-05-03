@@ -124,7 +124,10 @@
     .col-strategy-type, .col-strategy-status, .col-strategy-sharpe, .col-strategy-mdd { width: 10%; }
     .col-strategy-return, .col-strategy-action { width: 12%; }
     .col-strategy-run { width: 14%; }
-    .data-table tr.row:focus-visible { outline: 1px solid var(--brand-accent); outline-offset: -1px; }
+    .data-table tr.row:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
     .row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-6); }
     .row-action {
       display: inline-flex; align-items: center; justify-content: center;

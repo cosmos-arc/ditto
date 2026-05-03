@@ -129,10 +129,8 @@
     .cal-day:focus-visible,
     .event-row:focus-visible,
     .timeline-item:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-bg);
-      border-radius: var(--radius-4);
-      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     /* ── Frosted glass header ── */
@@ -289,7 +287,11 @@
     }
 
     .view-switcher input:focus-visible + .view-switcher-btn {
-      box-shadow: 0 0 0 1.5px var(--brand-accent), 0 0 0 4px var(--interaction-selected-bg);
+
+      outline: 2px solid var(--interaction-focus-ring);
+
+      outline-offset: 2px;
+
     }
 
     .shell-catalog:has(#calendar-view-list:checked) .calendar-section {

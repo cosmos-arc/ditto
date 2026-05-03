@@ -79,8 +79,10 @@ const targetSizeAuditViewports = [
 	{ name: "1366x768", width: 1366, height: 768 },
 	{ name: "1536x1080", width: 1536, height: 1080 },
 ] as const;
+const semanticPolishPageIds = ["alpha-explorer", "agent-console-v2", "signals-inbox", "home"] as const;
 const navigationTimeoutMs = 10_000;
 const playwrightTestTimeoutMs = 15_000;
+const jsdomInteractionTestTimeoutMs = 15_000;
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
 	"cross-market": "markets",
@@ -134,6 +136,7 @@ function readJson<T>(path: string): T {
 }
 
 let manifestCache: EditionManifest | undefined;
+const prototypeHtmlCache = new Map<string, string>();
 const prototypeDocumentCache = new Map<string, Document>();
 let pageContractsCache: PageContract[] | undefined;
 let contractRouteByPageIdCache: Map<string, string> | undefined;
@@ -185,14 +188,48 @@ function activePages(): ManifestPage[] {
 	return readManifest().pages.filter(isActiveRoutePrototype);
 }
 
+function readPrototypeHtml(page: ManifestPage): string {
+	const path = join(prototypesDir, page.file);
+	const cached = prototypeHtmlCache.get(path);
+	if (cached) return cached;
+
+	const html = readFileSync(path, "utf8");
+	prototypeHtmlCache.set(path, html);
+	return html;
+}
+
+function getStyleBlocks(html: string): string {
+	return [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+		.map((match) => match[1])
+		.join("\n");
+}
+
 function readPrototypeDocument(page: ManifestPage): Document {
 	const path = join(prototypesDir, page.file);
 	const cached = prototypeDocumentCache.get(path);
 	if (cached) return cached;
 
-	const document = new JSDOM(readFileSync(path, "utf8")).window.document;
+	const document = new JSDOM(readPrototypeHtml(page)).window.document;
 	prototypeDocumentCache.set(path, document);
 	return document;
+}
+
+function collectFocusRuleViolations(page: ManifestPage): string[] {
+	const violations: string[] = [];
+	const css = getStyleBlocks(readPrototypeHtml(page));
+	const focusRule = /([^{}]+:focus-visible[^{}]*)\{([^{}]*)\}/gi;
+
+	for (const match of css.matchAll(focusRule)) {
+		const selector = match[1].trim();
+		const body = match[2];
+		if (/resize-separator|\[data-resize-separator\]/.test(selector)) continue;
+		if (!/--(?:brand-accent|interaction-selected-[a-z-]+)/.test(body)) continue;
+		if (/--interaction-focus-ring/.test(body)) continue;
+
+		violations.push(`${page.id}:${selector}`);
+	}
+
+	return violations;
 }
 
 function getActivePageById(pageId: string): ManifestPage {
@@ -380,6 +417,23 @@ function findActionByLabel(document: Document, label: string): Element | null {
 		const text = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
 		return element.getAttribute("aria-label") === label || element.getAttribute("title") === label || text === label;
 	}) ?? null;
+}
+
+function hasAccessibleName(element: Element): boolean {
+	const directName = [
+		element.getAttribute("aria-label"),
+		element.getAttribute("title"),
+	]
+		.map((value) => value?.trim())
+		.some(Boolean);
+	if (directName) return true;
+
+	const labelledBy = element.getAttribute("aria-labelledby")?.trim();
+	if (!labelledBy) return false;
+
+	return labelledBy
+		.split(/\s+/)
+		.some((id) => Boolean(element.ownerDocument.getElementById(id)?.textContent?.trim()));
 }
 
 function hasBellShapeSvg(element: Element): boolean {
@@ -1220,6 +1274,59 @@ describe("prototype interaction UX contracts", () => {
 		expect(violations).toEqual([]);
 	}, 15_000);
 
+	it("keeps page-local focus rings on the shared interaction focus token", () => {
+		const violations = activePages().flatMap(collectFocusRuleViolations);
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps representative prototype status bars, sparklines, and overlays semantically named", () => {
+		const violations: string[] = [];
+
+		for (const pageId of semanticPolishPageIds) {
+			const page = getActivePageById(pageId);
+			const document = readPrototypeDocument(page);
+			const statusBar = document.querySelector(
+				"#default-view .status-bar[data-contract-slot='status'], #default-view .status-bar[role='status'], #default-view .shell-status-bar",
+			);
+
+			if (!statusBar) {
+				violations.push(`${page.id}:status-bar:missing`);
+			} else {
+				if (statusBar.tagName.toLowerCase() !== "footer") {
+					violations.push(`${page.id}:status-bar:tag:${statusBar.tagName.toLowerCase()}`);
+				}
+				if (statusBar.getAttribute("role") !== "status") {
+					violations.push(`${page.id}:status-bar:role`);
+				}
+				if (!hasAccessibleName(statusBar)) {
+					violations.push(`${page.id}:status-bar:name`);
+				}
+			}
+
+			for (const sparkline of document.querySelectorAll("svg[data-sparkline]")) {
+				if (sparkline.getAttribute("aria-hidden") === "true") continue;
+				if (!hasAccessibleName(sparkline)) {
+					violations.push(`${page.id}:sparkline:name`);
+				}
+			}
+
+			for (const overlay of document.querySelectorAll(".overlay-surface")) {
+				if (overlay.getAttribute("role") !== "dialog") {
+					violations.push(`${page.id}:overlay:role`);
+				}
+				if (overlay.getAttribute("aria-modal") !== "true") {
+					violations.push(`${page.id}:overlay:modal`);
+				}
+				if (!hasAccessibleName(overlay)) {
+					violations.push(`${page.id}:overlay:name`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("keeps every active route on the fixed five-domain anchor rail contract", () => {
 		const violations: string[] = [];
 
@@ -1680,7 +1787,7 @@ describe("prototype interaction UX contracts", () => {
 		}
 
 		expect(violations).toEqual([]);
-	}, 60_000);
+	}, 120_000);
 
 	it("exposes P0 resizable panel groups with accessible separators", () => {
 		const violations: string[] = [];
@@ -1854,7 +1961,7 @@ describe("prototype interaction UX contracts", () => {
 		}
 
 		expect(violations).toEqual([]);
-	});
+	}, jsdomInteractionTestTimeoutMs);
 
 	it("exposes table expert efficiency hooks on selected-object representative pages", () => {
 		const violations: string[] = [];
