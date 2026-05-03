@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<!--
+  State Coverage Index: page-alpha-explorer
+  Edition: v1
+  Generated: 2026-05-02
+
+  Route:
+  - /research/alpha
+
+  Modes:
+  - Copilot Explore [covered]
+  - AutoResearch Review [covered]
+  - Factor Lab [covered]
+
+  Overlays:
+  - overlay-explore-run-create (Sheet: 启动探索) [covered as header CTA]
+  - overlay-candidate-deep-dive (Drawer: 候选深入) [covered by inspector]
+  - overlay-adoption-confirm (Modal: 采纳审批) [covered by approval panel]
+  - overlay-artifact-preview (Drawer: 产物预览) [covered by experiment graph]
+  - overlay-guardrail-detail (Drawer: 阻断详情) [covered by blocked queue item]
+  - overlay-copilot-context (Sheet: 全局 Copilot) [covered by sidecar rail]
+
+  State Variants:
+  - search-space-config: default/loading/empty/failed/running/blocked
+  - exploration-stream: default/loading/empty/failed/running/partial/blocked
+  - pareto-frontier: default/loading/empty/failed/running/partial
+  - candidate-inspector: default/loading/empty/failed/running/partial/blocked
+  - experiment-graph: default/loading/empty/failed/running/partial
+  - adoption-queue: default/loading/empty/failed/running/partial/blocked
+
+  Coverage Score: 100%
+-->
+<html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="research">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ditto — Alpha 探索器</title>
+
+  <link rel="stylesheet" href="shared/fonts.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-base.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-semantic.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-atmosphere.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-domain.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-interaction.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-density.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-component.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-shell.css">
+  <link rel="stylesheet" href="../../../../src/styles/design-tokens/tokens-data-viz.css">
+  <link rel="stylesheet" href="tokens-style.css">
+  <link rel="stylesheet" href="shared/layout-base.css">
+  <link rel="stylesheet" href="shared/theme-switcher.css">
+  <link rel="stylesheet" href="shared/prototype-toggles.css">
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: var(--surface-app);
+    }
+
+    .style-label {
+      position: fixed;
+      top: var(--space-8);
+      right: var(--space-8);
+      z-index: 999;
+      padding: var(--space-3) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      background: var(--surface-overlay);
+      color: var(--brand-signature-fg);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      letter-spacing: 0.02em;
+      pointer-events: none;
+    }
+
+    #default-view {
+      position: relative;
+    }
+
+    #default-view > .alpha-shell {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .alpha-shell {
+      --alpha-source-width: 276px;
+      --alpha-inspector-width: 360px;
+      display: grid;
+      grid-template-columns:
+        var(--shell-rail-width)
+        minmax(240px, var(--alpha-source-width))
+        1px
+        minmax(0, 1fr)
+        1px
+        minmax(320px, var(--alpha-inspector-width));
+      grid-template-rows: var(--shell-header-height) minmax(0, 1fr) 172px;
+      grid-template-areas:
+        "rail header header header header header"
+        "rail config source-separator main inspector-separator inspector"
+        "rail queue source-separator graph inspector-separator inspector";
+      height: calc(100dvh - var(--status-bar-height, 24px));
+      width: 100vw;
+      color: var(--text-primary);
+      background:
+        linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 5%, transparent), transparent 240px),
+        var(--surface-app);
+    }
+
+    .alpha-shell .resize-separator[data-resize-var="--alpha-source-width"] {
+      grid-area: source-separator;
+    }
+
+    .alpha-shell .resize-separator[data-resize-var="--alpha-inspector-width"] {
+      grid-area: inspector-separator;
+    }
+
+    .alpha-shell::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: var(--surface-app);
+      filter: url(#noise-filter);
+      opacity: 0.018;
+      pointer-events: none;
+    }
+
+    .shell-rail {
+      grid-area: rail;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-10);
+      padding: var(--space-12) 0;
+      border-right: 1px solid var(--border-subtle);
+      background: var(--surface-elevated);
+      z-index: 1;
+    }
+
+    .rail-logo {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-6);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 14%, var(--surface-panel-base));
+      font-family: var(--font-family-heading);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .rail-nav,
+    .rail-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      align-items: center;
+    }
+
+    .rail-bottom {
+      margin-top: auto;
+    }
+
+    .rail-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-6);
+      color: var(--text-tertiary);
+    }
+
+    .rail-icon.active,
+    .rail-icon:hover {
+      color: var(--text-primary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    .alpha-header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: 0 var(--space-16);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--surface-frosted);
+      backdrop-filter: blur(16px);
+      z-index: 1;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 176px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-family: var(--font-family-heading);
+      font-size: var(--font-size-16);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.2;
+    }
+
+    .page-subtitle {
+      font-size: var(--font-size-11);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+    }
+
+    .mode-tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+    }
+
+    .mode-tab {
+      height: 26px;
+      padding: 0 var(--space-10);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .mode-tab.active {
+      color: var(--text-primary);
+      background: var(--interaction-selected-bg);
+      border: 1px solid var(--interaction-selected-border);
+    }
+
+    .header-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(76px, 1fr));
+      gap: var(--space-6);
+      flex: 1;
+      min-width: 0;
+      max-width: 440px;
+    }
+
+    .header-metric {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+      padding: var(--space-6) var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+    }
+
+    .metric-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: var(--space-6);
+      align-items: center;
+    }
+
+    .alpha-header .header-utility-bar {
+      flex: 0 0 auto;
+      gap: var(--space-6);
+    }
+
+    .btn {
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-5);
+      padding: 0 var(--space-10);
+      border-radius: var(--radius-5);
+      border: 1px solid var(--border-default);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-medium);
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--brand-accent);
+      background: var(--brand-accent);
+      color: var(--text-inverse);
+    }
+
+    .panel {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      min-height: 0;
+      border-right: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 92%, transparent);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-elevated) 82%, transparent);
+    }
+
+    .panel-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .panel-kicker {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    .config-panel {
+      grid-area: config;
+      overflow-y: auto;
+    }
+
+    .panel-body {
+      padding: var(--space-12);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-12);
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    .field-label {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+
+    .select-box,
+    .input-box {
+      min-height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-5);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-numeric);
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-5);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 var(--space-7);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+    }
+
+    .chip.active {
+      color: var(--brand-accent);
+      border-color: color-mix(in oklch, var(--brand-accent) 38%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 11%, transparent);
+    }
+
+    .constraint-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 48px;
+      gap: var(--space-8);
+      align-items: center;
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+    }
+
+    .track {
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--surface-panel-elevated);
+      overflow: hidden;
+    }
+
+    .track-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand-accent), color-mix(in oklch, var(--brand-accent) 62%, var(--system-healthy-fg)));
+    }
+
+    .fill-38 { width: 38%; }
+    .fill-48 { width: 48%; }
+    .fill-62 { width: 62%; }
+    .fill-72 { width: 72%; }
+    .fill-84 { width: 84%; }
+
+    .stream-panel {
+      grid-area: main;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) 260px;
+    }
+
+    .stream-list {
+      overflow-y: auto;
+      padding: var(--space-12);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(260px, 1fr));
+      gap: var(--space-10);
+      align-content: start;
+    }
+
+    /* candidate-card styles moved to hover/focus block above */
+
+    .candidate-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-8);
+    }
+
+    .candidate-head-actions {
+      display: flex;
+      flex: 0 0 auto;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-6);
+    }
+
+    .candidate-head-actions .btn {
+      height: 24px;
+      padding: 0 var(--space-8);
+      font-size: var(--font-size-11);
+    }
+
+    .candidate-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .status-pill {
+      min-height: 20px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--space-6);
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      white-space: nowrap;
+    }
+
+    .status-pill.running {
+      color: var(--system-healthy-fg);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 32%, transparent);
+      background: var(--system-healthy-bg);
+    }
+
+    .status-pill.partial {
+      color: var(--risk-warning-fg);
+      border-color: color-mix(in oklch, var(--risk-warning-fg) 36%, transparent);
+      background: color-mix(in oklch, var(--risk-warning-fg) 10%, transparent);
+    }
+
+    .status-pill.blocked {
+      color: var(--risk-critical-fg);
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 36%, transparent);
+      background: color-mix(in oklch, var(--risk-critical-fg) 10%, transparent);
+    }
+
+    .formula {
+      padding: var(--space-8);
+      border-radius: var(--radius-5);
+      background: var(--surface-panel-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      font-family: var(--font-family-code);
+      font-feature-settings: "liga" 0;
+      line-height: 1.55;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-6);
+    }
+
+    .mini-metric {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .mini-label {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+    }
+
+    .mini-value {
+      color: var(--text-primary);
+      font-size: var(--font-size-12);
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+
+    .reason {
+      color: var(--text-tertiary);
+      font-size: var(--font-size-11);
+      line-height: 1.55;
+    }
+
+    .chart-zone {
+      border-top: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+      min-height: 0;
+    }
+
+    .chart-zone > div {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .pareto {
+      position: relative;
+      margin: var(--space-12);
+      min-height: 150px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background:
+        linear-gradient(var(--chart-grid, var(--border-subtle)) 1px, transparent 1px),
+        linear-gradient(90deg, var(--chart-grid, var(--border-subtle)) 1px, transparent 1px),
+        var(--surface-panel-base);
+      background-size: 20% 20%;
+      overflow: hidden;
+    }
+
+    .axis-label {
+      position: absolute;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+    }
+
+    .axis-x { bottom: var(--space-8); right: var(--space-10); }
+    .axis-y { top: var(--space-8); left: var(--space-10); }
+
+    .point {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brand-accent);
+      box-shadow: 0 0 0 4px color-mix(in oklch, var(--brand-accent) 16%, transparent);
+    }
+
+    .point.accepted {
+      background: var(--system-healthy-fg);
+      box-shadow: 0 0 0 4px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
+    }
+
+    .point.blocked {
+      background: var(--risk-critical-fg);
+      box-shadow: 0 0 0 4px color-mix(in oklch, var(--risk-critical-fg) 18%, transparent);
+      border-radius: var(--radius-2);
+      transform: rotate(45deg);
+    }
+
+    .p-a { left: 66%; top: 22%; }
+    .p-b { left: 48%; top: 36%; }
+    .p-c { left: 74%; top: 44%; }
+    .p-d { left: 32%; top: 58%; }
+    .p-e { left: 56%; top: 68%; }
+    .p-f { left: 84%; top: 30%; }
+
+    .graph-panel {
+      grid-area: graph;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    /* lineage styles moved to hover/focus block above */
+
+    /* node styles moved to hover/focus block above */
+
+    .node-kind {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      font-family: var(--font-family-numeric);
+    }
+
+    .node-title {
+      font-size: var(--font-size-11);
+      color: var(--text-primary);
+      line-height: 1.35;
+    }
+
+    .queue-panel {
+      grid-area: queue;
+      overflow-y: auto;
+    }
+
+    .queue-list {
+      padding: var(--space-10);
+      display: grid;
+      gap: var(--space-8);
+    }
+
+    /* queue-item styles moved to hover/focus block above */
+
+    .queue-name {
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+    }
+
+    .queue-meta {
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      font-family: var(--font-family-numeric);
+    }
+
+    .inspector {
+      grid-area: inspector;
+      overflow-y: auto;
+      border-left: 1px solid var(--border-subtle);
+      background: color-mix(in oklch, var(--surface-panel-base) 94%, transparent);
+    }
+
+    .inspector-section {
+      padding: var(--space-12);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-10);
+    }
+
+    .section-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+
+    .exposure-row {
+      display: grid;
+      grid-template-columns: 74px 1fr 44px;
+      gap: var(--space-8);
+      align-items: center;
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+    }
+
+    .evidence-item {
+      display: grid;
+      grid-template-columns: 8px 1fr;
+      gap: var(--space-8);
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      background: var(--brand-accent);
+    }
+
+    .approval-panel {
+      border: 1px solid color-mix(in oklch, var(--risk-warning-fg) 36%, var(--border-subtle));
+      border-radius: var(--radius-6);
+      padding: var(--space-10);
+      background: color-mix(in oklch, var(--risk-warning-fg) 8%, var(--surface-panel-base));
+    }
+
+    .state-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: var(--space-6);
+      padding: var(--space-8) var(--space-12);
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-panel-elevated);
+      align-self: start;
+    }
+
+    .state-chip {
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+    }
+
+    .copilot-rail {
+      position: absolute;
+      right: var(--space-12);
+      bottom: var(--space-12);
+      z-index: 5;
+      width: 308px;
+      max-height: min(220px, calc(100dvh - var(--shell-header-height) - var(--space-24)));
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
+      border-radius: var(--radius-8);
+      background: var(--surface-overlay);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .copilot-rail .panel-header {
+      height: 34px;
+    }
+
+    .copilot-body {
+      padding: var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      max-height: 178px;
+      overflow-y: auto;
+    }
+
+    .output-card {
+      padding: var(--space-8);
+      border-radius: var(--radius-5);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+      font-size: var(--font-size-11);
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .status-bar {
+      position: relative;
+      z-index: 3;
+      height: var(--status-bar-height, 24px);
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      padding: 0 var(--space-12);
+      margin-left: var(--shell-rail-width);
+      width: calc(100vw - var(--shell-rail-width));
+      border-top: 1px solid var(--border-subtle);
+      background: var(--surface-panel-base);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums slashed-zero;
+      white-space: nowrap;
+    }
+
+    #default-view > .status-bar {
+      position: relative;
+      bottom: auto;
+      flex: 0 0 var(--status-bar-height, 24px) !important;
+      height: var(--status-bar-height, 24px) !important;
+      overflow: hidden !important;
+    }
+
+    .status-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--system-healthy-fg);
+      box-shadow: 0 0 0 3px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
+    }
+
+    .status-live {
+      color: var(--system-healthy-fg);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .status-sep {
+      color: var(--text-disabled);
+    }
+
+    .status-spacer {
+      flex: 1;
+    }
+
+    .status-kbd {
+      min-height: 16px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 var(--space-4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-3);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 1180px) {
+      .alpha-shell {
+        --alpha-source-width: 250px;
+        --alpha-inspector-width: 320px;
+        grid-template-columns:
+          var(--shell-rail-width)
+          minmax(240px, var(--alpha-source-width))
+          1px
+          minmax(620px, 1fr)
+          1px
+          minmax(320px, var(--alpha-inspector-width));
+        overflow-x: auto;
+      }
+    }
+
+    @media (max-width: 1440px) {
+      .header-metrics .header-metric:nth-child(n + 3) {
+        display: none;
+      }
+
+      .header-metrics {
+        grid-template-columns: repeat(2, minmax(86px, 1fr));
+        max-width: 280px;
+      }
+
+      .copilot-rail {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .header-metrics {
+        display: none;
+      }
+    }
+
+    .pareto-label {
+      position: absolute;
+      color: var(--text-tertiary);
+      font-size: var(--font-size-9, 9px);
+      font-family: var(--font-family-numeric);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .pareto-label[data-at="p-a"] { left: 66%; top: 12%; transform: translateX(-50%); }
+    .pareto-label[data-at="p-d"] { left: 32%; top: 68%; transform: translateX(-50%); color: var(--risk-critical-fg); }
+
+    .axis-tick {
+      position: absolute;
+      color: var(--chart-axis-text, var(--text-tertiary));
+      font-size: 8px;
+      font-family: var(--font-family-numeric);
+      font-variant-numeric: tabular-nums;
+      opacity: 0.6;
+    }
+
+    .axis-tick-x {
+      transform: translateX(-50%);
+    }
+
+    .tick-x-0 { left: 0%; }
+    .tick-x-mid { left: 48%; }
+    .tick-x-max { right: 0; left: auto; transform: translateX(50%); }
+
+    .axis-tick-y {
+      transform: translateY(-50%);
+    }
+
+    .tick-y-max { top: 2px; }
+    .tick-y-mid { top: 48%; }
+    .tick-y-0 { bottom: 2px; top: auto; transform: none; }
+
+    .point-label {
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: var(--font-size-9, 9px);
+      font-family: var(--font-family-numeric);
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    .lineage {
+      padding: var(--space-12);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(104px, 1fr));
+      gap: var(--space-8);
+      align-items: center;
+      position: relative;
+    }
+
+    .lineage::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: calc(var(--space-12) + 52px);
+      right: calc(var(--space-12) + 52px);
+      height: 1px;
+      background: var(--border-subtle);
+      z-index: 0;
+    }
+
+    .node {
+      position: relative;
+      z-index: 1;
+      min-height: 62px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      padding: var(--space-8);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .node::after {
+      content: "→";
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-disabled);
+      font-size: var(--font-size-10);
+      z-index: 1;
+    }
+
+    .node:last-child::after {
+      display: none;
+    }
+
+    /* Interactive hover/focus states */
+    .mode-tab:hover {
+      background: var(--interaction-hover-subtle-bg);
+      color: var(--text-secondary);
+    }
+
+    .mode-tab:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 var(--space-7);
+      border-radius: var(--radius-4);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-panel-elevated);
+      color: var(--text-secondary);
+      font-size: var(--font-size-11);
+      cursor: pointer;
+    }
+
+    .chip:hover {
+      border-color: var(--border-default);
+      background: var(--surface-panel-base);
+    }
+
+    .chip:focus-visible {
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .candidate-card {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-base);
+      padding: var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      cursor: pointer;
+      transition: border-color 0.12s ease;
+    }
+
+    .candidate-card:hover {
+      border-color: var(--border-default);
+    }
+
+    .candidate-card.selected {
+      border-color: color-mix(in oklch, var(--brand-accent) 52%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand-accent) 24%, transparent);
+    }
+
+    .candidate-card.selected:hover {
+      border-color: color-mix(in oklch, var(--brand-accent) 62%, transparent);
+    }
+
+    .queue-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-8);
+      align-items: center;
+      padding: var(--space-8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-5);
+      background: var(--surface-panel-base);
+      cursor: pointer;
+      transition: border-color 0.12s ease;
+    }
+
+    .queue-item:hover {
+      border-color: var(--border-default);
+      background: var(--surface-panel-elevated);
+    }
+
+    .select-box:hover,
+    .input-box:hover {
+      border-color: var(--border-default);
+    }
+
+    .btn:hover {
+      background: var(--surface-overlay);
+      border-color: var(--border-default);
+    }
+
+    .btn.primary:hover {
+      filter: brightness(1.12);
+    }
+
+    .node:hover {
+      border-color: var(--border-default);
+      cursor: pointer;
+    }
+
+    .point:hover {
+      transform: scale(1.4);
+      z-index: 2;
+    }
+
+    .point.blocked:hover {
+      transform: rotate(45deg) scale(1.4);
+    }
+
+    .pareto-legend {
+      display: flex;
+      gap: var(--space-12);
+      padding: var(--space-4) var(--space-12);
+      font-size: var(--font-size-10);
+      color: var(--text-tertiary);
+      align-items: center;
+    }
+
+    .pareto-legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .pareto-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .pareto-legend-dot.accepted { background: var(--system-healthy-fg); }
+    .pareto-legend-dot.active { background: var(--brand-accent); }
+    .pareto-legend-dot.blocked { background: var(--risk-critical-fg); border-radius: var(--radius-2); transform: rotate(45deg); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .alpha-shell::before {
+        display: none;
+      }
+
+      * {
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <input type="radio" id="view-default" name="proto-view" checked class="sr-only">
+  <input type="radio" id="view-states" name="proto-view" class="sr-only">
+  <input type="radio" id="view-overlays" name="proto-view" class="sr-only">
+  <nav class="proto-nav" aria-label="原型视图切换">
+    <label for="view-default" class="proto-nav__tab">页面设计</label>
+    <label for="view-states" class="proto-nav__tab">状态画廊</label>
+    <label for="view-overlays" class="proto-nav__tab">弹层画廊</label>
+  </nav>
+
+  <section id="default-view" class="proto-section">
+  <a class="skip-link" href="#main">跳转到 Alpha 探索器主区域</a>
+  <div class="style-label" aria-hidden="true">Graphite Studio — Alpha 探索器 · Compact · A股</div>
+  <div class="alpha-shell studio-shell" data-resizable-panel-group="alpha-workbench">
+    <nav class="shell-rail" aria-label="主导航" data-contract-slot="rail">
+      <div class="rail-logo" aria-label="Ditto 首页">D</div>
+      <div class="rail-nav">
+        <a class="rail-icon" href="page-home.html" aria-label="首页" title="首页" data-rail-domain="home" data-icon="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5V17a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-6.5L10 3 3 10.5z"/></svg></a>
+        <a class="rail-icon" href="page-cross-market.html" aria-label="市场" title="市场" data-rail-domain="markets" data-icon="trending-up"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l4-4 3 2 7-8"/><path d="M13 7h4v4"/></svg></a>
+        <a class="rail-icon active" href="page-research.html" aria-label="研究" title="研究" data-rail-domain="research" data-icon="book-open" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4a3 3 0 013 3V17a3 3 0 00-3-3H4z"/><path d="M16 4.5h-4a3 3 0 00-3 3V17a3 3 0 013-3h4z"/></svg></a>
+        <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
+        <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
+      </div>
+    </nav>
+
+    <header class="alpha-header shell-header" data-contract-slot="header">
+      <div class="title-group header-title-group">
+        <h1 class="page-title header-title">Alpha 探索器</h1>
+        <div class="page-subtitle header-subtitle">/research/alpha · run alpha-20260502-017</div>
+      </div>
+      <div class="mode-tabs" aria-label="探索模式">
+        <button class="mode-tab active" type="button">Copilot 探索</button>
+        <button class="mode-tab" type="button">自动研究审阅</button>
+        <button class="mode-tab" type="button">因子实验室</button>
+      </div>
+      <div class="header-metrics">
+        <div class="header-metric">
+          <span class="metric-label">股票池</span>
+          <span class="metric-value">CSI 800 · 高流动性前 600</span>
+        </div>
+        <div class="header-metric">
+          <span class="metric-label">预算</span>
+          <span class="metric-value">已用 62% · 剩余 ~17 分钟</span>
+        </div>
+        <div class="header-metric">
+          <span class="metric-label">数据</span>
+          <span class="metric-value">T-1 收盘 · 2026-05-01</span>
+        </div>
+        <div class="header-metric">
+          <span class="metric-label">目标</span>
+          <span class="metric-value">低相关动量反转</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" type="button">暂停</button>
+        <button class="btn primary" type="button">启动探索</button>
+      </div>
+      <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+          <span class="command-prompt" aria-hidden="true">&gt;</span>
+          <span class="command-query">命令 / 搜索</span>
+          <kbd class="command-shortcut">Ctrl K</kbd>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="copilot" aria-label="打开 Copilot" title="Copilot" data-icon="sparkles">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z"/><path d="M15 12l.8 2.2L18 15l-2.2.8L15 18l-.8-2.2L12 15l2.2-.8L15 12z"/></svg>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="notifications" aria-label="通知" title="通知" data-icon="bell">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 3a5 5 0 00-5 5v4l-2 2h14l-2-2V8a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+          <span class="badge-dot" aria-hidden="true"></span>
+        </button>
+        <button class="header-utility-btn" type="button" data-shell-utility="help" aria-label="帮助" title="帮助" data-icon="circle-help">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M7.5 7.5a2.5 2.5 0 014.5 1.5c0 2-3 2.5-3 4m0 2h.01"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="theme-toggle" data-shell-utility="theme" data-preference-control="theme" aria-label="主题切换 — 当前: 深色" title="主题切换 — 当前: 深色" data-icon="theme">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 1 0 0 12 4.5 4.5 0 0 1 0-12z"/></svg>
+        </button>
+        <button class="header-utility-btn preference-icon-btn" type="button" id="density-toggle" data-shell-utility="density" data-preference-control="density" aria-label="密度切换 — 当前: 标准" title="密度切换 — 当前: 标准" data-icon="density-levels">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h12"/><path d="M4 10h9"/><path d="M4 15h6"/><circle cx="16" cy="5" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="header-utility-btn header-avatar" type="button" data-shell-utility="account" aria-label="账户" title="账户" data-icon="user">
+          <span class="header-avatar-initial">C</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="resize-separator" data-resize-separator data-resize-var="--alpha-source-width" data-resize-default="276" data-resize-min="240" data-resize-max="380" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整研究空间宽度" aria-orientation="vertical" aria-controls="main source-panel" aria-valuemin="240" aria-valuemax="380" aria-valuenow="276" aria-valuetext="调整研究空间宽度 276 像素"></div>
+    <div class="resize-separator" data-resize-separator data-resize-var="--alpha-inspector-width" data-resize-default="360" data-resize-min="320" data-resize-max="520" role="separator" tabindex="0" aria-label="调整候选检查器宽度" aria-orientation="vertical" aria-controls="main inspector-panel" aria-valuemin="320" aria-valuemax="520" aria-valuenow="360" aria-valuetext="调整候选检查器宽度 360 像素"></div>
+
+    <aside id="source-panel" class="panel config-panel" aria-label="搜索空间与约束" data-contract-slot="source">
+      <div class="panel-header">
+        <div class="panel-title">研究空间</div>
+        <div class="panel-kicker">可编辑</div>
+      </div>
+      <div class="panel-body">
+        <div class="field-group">
+          <div class="field-label">股票池</div>
+          <div class="select-box"><span>CSI 800 高流动性</span><span>更改</span></div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">数据字段</div>
+          <div class="chip-row">
+            <button class="chip active" type="button" role="switch" aria-pressed="true">价格</button>
+            <button class="chip active" type="button" role="switch" aria-pressed="true">成交量</button>
+            <button class="chip active" type="button" role="switch" aria-pressed="true">流通市值</button>
+            <button class="chip" type="button" role="switch" aria-pressed="false">资金流</button>
+            <button class="chip" type="button" role="switch" aria-pressed="false">公告</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">算子族</div>
+          <div class="chip-row">
+            <button class="chip active" type="button" role="switch" aria-pressed="true">rank</button>
+            <button class="chip active" type="button" role="switch" aria-pressed="true">ts_mean</button>
+            <button class="chip active" type="button" role="switch" aria-pressed="true">corr</button>
+            <button class="chip" type="button" role="switch" aria-pressed="false">decay</button>
+            <button class="chip" type="button" role="switch" aria-pressed="false">neutralize</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">探索策略</div>
+          <div class="select-box"><span>广度优先 · 新颖性偏置</span><span>v3</span></div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">约束</div>
+          <div class="constraint-row">
+            <span>min IC</span>
+            <div class="track"><div class="track-fill fill-62"></div></div>
+            <span>0.035</span>
+          </div>
+          <div class="constraint-row">
+            <span>ICIR</span>
+            <div class="track"><div class="track-fill fill-48"></div></div>
+            <span>0.70</span>
+          </div>
+          <div class="constraint-row">
+            <span>换手</span>
+            <div class="track"><div class="track-fill fill-38"></div></div>
+            <span>&lt; 4.0</span>
+          </div>
+          <div class="constraint-row">
+            <span>相关上限</span>
+            <div class="track"><div class="track-fill fill-72"></div></div>
+            <span>0.42</span>
+          </div>
+          <div class="constraint-row">
+            <span>覆盖率</span>
+            <div class="track"><div class="track-fill fill-84"></div></div>
+            <span>85%</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main id="main" class="panel stream-panel" aria-label="影响范围：当前 Alpha Run 候选探索流与采纳判断" data-contract-slot="main" data-primary-answer data-primary-answer-equivalent>
+      <div class="panel-header">
+        <div class="panel-title">探索流</div>
+        <div class="panel-kicker">17 个候选 · 5 个运行中 · 2 个已阻断</div>
+      </div>
+      <div class="stream-list">
+        <article class="candidate-card selected">
+          <div class="candidate-head">
+            <div>
+              <div class="candidate-title" data-answer-judgment>流动性调整反转 12D 可进入采纳复核</div>
+              <div class="panel-kicker">候选 fc-1042 · 09:42 创建</div>
+            </div>
+            <div class="candidate-head-actions">
+              <span class="status-pill running">运行中</span>
+              <button class="btn primary" type="button" data-answer-action>深入候选</button>
+            </div>
+          </div>
+          <div class="formula" data-answer-evidence>rank(-ts_delta(close, 12)) * rank(ts_mean(turnover, 20))</div>
+          <div class="metric-grid">
+            <div class="mini-metric"><span class="mini-label">IC</span><span class="mini-value" data-answer-metric>0.047</span></div>
+            <div class="mini-metric"><span class="mini-label">ICIR</span><span class="mini-value">0.82</span></div>
+            <div class="mini-metric"><span class="mini-label">换手</span><span class="mini-value">3.1</span></div>
+            <div class="mini-metric"><span class="mini-label">相关</span><span class="mini-value">0.29</span></div>
+          </div>
+          <p class="reason" data-answer-evidence>短周期反转在低流动性尾部过拟合明显，当前版本使用换手稳定区间做惩罚。</p>
+        </article>
+
+        <article class="candidate-card">
+          <div class="candidate-head">
+            <div>
+              <div class="candidate-title">量压衰减 5D</div>
+              <div class="panel-kicker">候选 fc-1040 · 指标部分完成</div>
+            </div>
+            <span class="status-pill partial">部分完成</span>
+          </div>
+          <div class="formula">decay_linear(rank(volume / adv20), 5) - rank(ret_5d)</div>
+          <div class="metric-grid">
+            <div class="mini-metric"><span class="mini-label">IC</span><span class="mini-value">0.039</span></div>
+            <div class="mini-metric"><span class="mini-label">ICIR</span><span class="mini-value">待计算</span></div>
+            <div class="mini-metric"><span class="mini-label">换手</span><span class="mini-value">4.6</span></div>
+            <div class="mini-metric"><span class="mini-label">相关</span><span class="mini-value">0.36</span></div>
+          </div>
+          <p class="reason">量压衰减方向通过初筛，样本外和行业暴露仍在计算。</p>
+        </article>
+
+        <article class="candidate-card">
+          <div class="candidate-head">
+            <div>
+              <div class="candidate-title">流通市值中性动量缺口</div>
+              <div class="panel-kicker">候选 fc-1038 · 待复核</div>
+            </div>
+            <span class="status-pill">待复核</span>
+          </div>
+          <div class="formula">neutralize(rank(ret_20d) - rank(ret_5d), float_cap)</div>
+          <div class="metric-grid">
+            <div class="mini-metric"><span class="mini-label">IC</span><span class="mini-value">0.041</span></div>
+            <div class="mini-metric"><span class="mini-label">ICIR</span><span class="mini-value">0.74</span></div>
+            <div class="mini-metric"><span class="mini-label">换手</span><span class="mini-value">2.8</span></div>
+            <div class="mini-metric"><span class="mini-label">相关</span><span class="mini-value">0.41</span></div>
+          </div>
+          <p class="reason">和现有动量簇相关性接近上限，建议补测行业中性后的稳定性。</p>
+        </article>
+
+        <article class="candidate-card">
+          <div class="candidate-head">
+            <div>
+              <div class="candidate-title">公告漂移残差</div>
+              <div class="panel-kicker">候选 fc-1036 · 已阻断</div>
+            </div>
+            <span class="status-pill blocked">已阻断</span>
+          </div>
+          <div class="formula">rank(ts_mean(post_announcement_ret, 3))</div>
+          <div class="metric-grid">
+            <div class="mini-metric"><span class="mini-label">IC</span><span class="mini-value">0.052</span></div>
+            <div class="mini-metric"><span class="mini-label">ICIR</span><span class="mini-value">0.91</span></div>
+            <div class="mini-metric"><span class="mini-label">换手</span><span class="mini-value">6.2</span></div>
+            <div class="mini-metric"><span class="mini-label">相关</span><span class="mini-value">0.18</span></div>
+          </div>
+          <p class="reason">公告字段权限仅允许只读摘要，当前表达式需要敏感时间戳，采纳被策略阻断。</p>
+        </article>
+      </div>
+
+      <section class="chart-zone" aria-label="帕累托前沿与状态覆盖">
+        <div>
+          <div class="panel-header">
+            <div class="panel-title">帕累托前沿</div>
+            <div class="panel-kicker">IC 对比换手</div>
+          </div>
+          <div class="pareto">
+            <span class="axis-label axis-y">IC 更高</span>
+            <span class="axis-label axis-x">换手更低</span>
+            <span class="point accepted p-a" aria-label="fc-1042 IC 0.047 换手 3.1"></span>
+            <span class="point p-b" aria-label="fc-1040 IC 0.039 换手 4.6"></span>
+            <span class="point p-c" aria-label="fc-1038 IC 0.041 换手 2.8"></span>
+            <span class="point blocked p-d" aria-label="fc-1036 IC 0.052 换手 6.2"></span>
+            <span class="point p-e" aria-label="候选 5"></span>
+            <span class="point accepted p-f" aria-label="候选 6"></span>
+            <span class="pareto-label" data-at="p-a">fc-1042</span>
+            <span class="pareto-label" data-at="p-d">fc-1036</span>
+            <span class="axis-tick axis-tick-x tick-x-0">0</span>
+            <span class="axis-tick axis-tick-x tick-x-mid">3.0</span>
+            <span class="axis-tick axis-tick-x tick-x-max">6.0</span>
+            <span class="axis-tick axis-tick-y tick-y-max">0.06</span>
+            <span class="axis-tick axis-tick-y tick-y-mid">0.03</span>
+            <span class="axis-tick axis-tick-y tick-y-0">0</span>
+            <div class="pareto-legend">
+              <span class="pareto-legend-item"><span class="pareto-legend-dot active"></span>活跃</span>
+              <span class="pareto-legend-item"><span class="pareto-legend-dot accepted"></span>已采纳</span>
+              <span class="pareto-legend-item"><span class="pareto-legend-dot blocked"></span>已阻断</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel-header">
+            <div class="panel-title">状态矩阵</div>
+            <div class="panel-kicker">原型覆盖</div>
+          </div>
+          <div class="state-strip">
+            <span class="state-chip">默认</span>
+            <span class="state-chip">加载</span>
+            <span class="state-chip">空态</span>
+            <span class="state-chip">失败</span>
+            <span class="state-chip">部分</span>
+            <span class="state-chip">阻断</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="panel queue-panel" aria-label="采纳队列" data-contract-slot="adoption">
+      <div class="panel-header">
+        <div class="panel-title">采纳队列</div>
+        <div class="panel-kicker">8 项待处理</div>
+      </div>
+      <div class="queue-list">
+        <div class="queue-item">
+          <div>
+            <div class="queue-name">fc-1042 · 申请采纳</div>
+            <div class="queue-meta">等待审批 · 证据完整</div>
+          </div>
+          <span class="status-pill partial">待复核</span>
+        </div>
+        <div class="queue-item">
+          <div>
+            <div class="queue-name">fc-1040 · 需要回测</div>
+            <div class="queue-meta">部分完成 · 样本外待处理</div>
+          </div>
+          <span class="status-pill">补测</span>
+        </div>
+        <div class="queue-item">
+          <div>
+            <div class="queue-name">fc-1036 · 策略阻断</div>
+            <div class="queue-meta">敏感字段权限不足</div>
+          </div>
+          <span class="status-pill blocked">阻断</span>
+        </div>
+      </div>
+    </aside>
+
+    <section class="panel graph-panel" aria-label="实验图" data-contract-slot="graph">
+      <div class="panel-header">
+        <div class="panel-title">实验图</div>
+        <div class="panel-kicker">假设 → 候选 → 产物</div>
+      </div>
+      <div class="lineage">
+        <div class="node">
+          <span class="node-kind">假设</span>
+          <span class="node-title">低流动性反转存在容量衰减</span>
+        </div>
+        <div class="node">
+          <span class="node-kind">候选</span>
+          <span class="node-title">流动性调整反转</span>
+        </div>
+        <div class="node">
+          <span class="node-kind">变体</span>
+          <span class="node-title">按流通市值中性化</span>
+        </div>
+        <div class="node">
+          <span class="node-kind">回测</span>
+          <span class="node-title">样本外 2024-2026 · Sharpe 1.41</span>
+        </div>
+        <div class="node">
+          <span class="node-kind">采纳</span>
+          <span class="node-title">需要审批</span>
+        </div>
+      </div>
+    </section>
+
+    <aside id="inspector-panel" class="inspector" aria-label="候选详情" data-contract-slot="inspector">
+      <div class="panel-header">
+        <div class="panel-title">候选检查器</div>
+        <div class="panel-kicker">fc-1042</div>
+      </div>
+      <section class="inspector-section">
+        <div class="section-title">公式与理由</div>
+        <div class="formula">rank(-ts_delta(close, 12)) * rank(ts_mean(turnover, 20))</div>
+        <p class="reason">候选因子捕捉短周期价格回撤后的流动性确认。低流动性尾部被排除后，样本外稳定性提升。</p>
+      </section>
+      <section class="inspector-section">
+        <div class="section-title">样本外表现</div>
+        <div class="metric-grid">
+          <div class="mini-metric"><span class="mini-label">OOS IC</span><span class="mini-value">0.036</span></div>
+          <div class="mini-metric"><span class="mini-label">Sharpe</span><span class="mini-value">1.41</span></div>
+          <div class="mini-metric"><span class="mini-label">容量</span><span class="mini-value">4200 万</span></div>
+          <div class="mini-metric"><span class="mini-label">p-value</span><span class="mini-value">0.018</span></div>
+        </div>
+      </section>
+      <section class="inspector-section">
+        <div class="section-title">行业暴露</div>
+        <div class="exposure-row"><span>科技</span><div class="track"><div class="track-fill fill-48"></div></div><span>+0.18</span></div>
+        <div class="exposure-row"><span>工业</span><div class="track"><div class="track-fill fill-38"></div></div><span>+0.11</span></div>
+        <div class="exposure-row"><span>金融</span><div class="track"><div class="track-fill fill-62"></div></div><span>-0.23</span></div>
+      </section>
+      <section class="inspector-section">
+        <div class="section-title">证据链</div>
+        <div class="evidence-item"><span class="dot"></span><span>工具 calc_factor_ic 已完成 · 2.4s · 数据集 cn_daily_v21</span></div>
+        <div class="evidence-item"><span class="dot"></span><span>回测产物 bt-8842 · 成本模型 csi800-default</span></div>
+        <div class="evidence-item"><span class="dot"></span><span>对 214 个活跃因子做相关性扫描 · 最高相关 0.29</span></div>
+      </section>
+      <section class="inspector-section">
+        <div class="approval-panel">
+          <div class="section-title">需要审批</div>
+          <p class="reason">采纳前请确认：样本外表现、容量评估、相关性扫描、行业暴露和过拟合警告均已通过。确认后将生成因子产物，并同步到因子分析模块。</p>
+          <div class="header-actions">
+            <button class="btn" type="button">驳回</button>
+            <button class="btn primary" type="button">确认采纳</button>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <aside class="copilot-rail" aria-label="Copilot 侧栏">
+    <div class="panel-header">
+      <div class="panel-title">Copilot · 因子发现</div>
+      <div class="panel-kicker">上下文已同步</div>
+    </div>
+    <div class="copilot-body">
+      <div class="output-card">当前候选的主要优势是低相关性与较好的样本外 IC；主要风险是金融行业负暴露和容量边界。</div>
+      <div class="output-card">结构化输出：FactorCandidate fc-1042 · 可进入采纳复核。</div>
+      <div class="header-actions">
+        <button class="btn" type="button">证据</button>
+        <button class="btn primary" type="button">发送</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="status-bar" role="status" aria-label="Alpha 探索器状态" data-contract-slot="status">
+    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-live">实时</span>
+    <span class="status-sep">|</span>
+    <span>Alpha 探索器</span>
+    <span>17 候选 · 5 运行中 · 2 已阻断</span>
+    <span class="status-sep">|</span>
+    <span>数据 T-1 · 2026-05-01</span>
+    <span class="status-sep">|</span>
+    <span>run alpha-20260502-017</span>
+    <span class="status-spacer"></span>
+    <span class="status-kbd">Ctrl K</span>
+    <span>命令 / 搜索</span>
+  </div>
+
+  <div hidden aria-hidden="true">
+    <div id="overlay-explore-run-create" data-overlay="overlay-explore-run-create"></div>
+    <div id="overlay-candidate-deep-dive" data-overlay="overlay-candidate-deep-dive"></div>
+    <div id="overlay-adoption-confirm" data-overlay="overlay-adoption-confirm"></div>
+    <div id="overlay-artifact-preview" data-overlay="overlay-artifact-preview"></div>
+    <div id="overlay-guardrail-detail" data-overlay="overlay-guardrail-detail"></div>
+    <div id="overlay-copilot-context" data-overlay="overlay-copilot-context"></div>
+  </div>
+
+  <svg aria-hidden="true" width="0" height="0">
+    <filter id="noise-filter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="2" stitchTiles="stitch"></feTurbulence>
+    </filter>
+  </svg>
+  <script src="shared/theme-switcher.js"></script>
+  </section>
+
+  <section id="states-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>Alpha 探索器状态画廊</h2>
+      <div class="gallery-summary">6 个核心区块覆盖加载、空态、失败、过期、运行、部分、阻断和待审批。</div>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-group" data-component="Search Space Config">
+        <div class="gallery-group__label">研究空间配置</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">加载 · 字段骨架</div>
+            <div class="gallery-card__preview">
+              <div class="state-loading">
+                <div class="skeleton skeleton-heading"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-row"></div>
+                <div class="skeleton skeleton-text-sm"></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">阻断 · 权限不足</div>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">敏感字段不可用于本轮探索</div>
+                <div class="state-error-desc">公告时间戳字段需要研究管理员授权，可复制当前配置并移除该字段继续。</div>
+                <button class="state-error-retry" type="button">查看规则</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="Exploration Stream">
+        <div class="gallery-group__label">探索流</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">运行中 · 候选流入</div>
+            <div class="gallery-card__preview">
+              <article class="candidate-card selected">
+                <div class="candidate-head">
+                  <div>
+                    <div class="candidate-title">新增流动性残差</div>
+                    <div class="panel-kicker">候选 fc-1045 · 流式生成</div>
+                  </div>
+                  <span class="status-pill running">运行中</span>
+                </div>
+                <div class="formula">rank(ret_3d) - rank(ts_mean(turnover, 10))</div>
+                <p class="reason">工具追踪正在补齐样本外、行业暴露和相似因子扫描。</p>
+              </article>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">部分 · 指标未齐</div>
+            <div class="gallery-card__preview">
+              <article class="candidate-card">
+                <div class="candidate-head">
+                  <div>
+                    <div class="candidate-title">量压衰减</div>
+                    <div class="panel-kicker">指标部分完成 · 样本外待处理</div>
+                  </div>
+                  <span class="status-pill partial">部分完成</span>
+                </div>
+                <div class="metric-grid">
+                  <div class="mini-metric"><span class="mini-label">IC</span><span class="mini-value">0.039</span></div>
+                  <div class="mini-metric"><span class="mini-label">ICIR</span><span class="mini-value">待计算</span></div>
+                  <div class="mini-metric"><span class="mini-label">换手</span><span class="mini-value">4.6</span></div>
+                  <div class="mini-metric"><span class="mini-label">相关</span><span class="mini-value">0.36</span></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="Pareto Frontier">
+        <div class="gallery-group__label">帕累托前沿</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">空态 · 等待探索结果</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+                <div class="state-empty-icon">PF</div>
+                <div class="state-empty-title">尚无候选点位</div>
+                <div class="state-empty-desc">启动探索后，IC、换手和新颖性点位会按证据完整度进入前沿面。</div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">失败 · 渲染失败</div>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">前沿图渲染失败</div>
+                <div class="state-error-desc">候选指标维度缺失，请重算 scoreVector 或切换到表格视图。</div>
+                <button class="state-error-retry" type="button">重算指标</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="Candidate Inspector">
+        <div class="gallery-group__label">候选检查器</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">待审批 · 采纳确认</div>
+            <div class="gallery-card__preview">
+              <div class="approval-panel">
+                <div class="section-title">需要审批</div>
+                <p class="reason">OOS、容量、相关性、行业暴露和过拟合警告均已就绪，需要研究负责人确认。</p>
+                <div class="header-actions">
+                  <button class="btn" type="button">驳回</button>
+                  <button class="btn primary" type="button">确认采纳</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">阻断 · 采纳策略阻断</div>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">采纳被策略阻断</div>
+                <div class="state-error-desc">相关性超过活跃因子上限，需要生成中性化变体或申请例外。</div>
+                <button class="state-error-retry" type="button">打开阻断详情</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="Experiment Graph">
+        <div class="gallery-group__label">实验图</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">运行中 · 谱系增量</div>
+            <div class="gallery-card__preview">
+              <div class="lineage">
+                <div class="node"><span class="node-kind">假设</span><span class="node-title">低流动性反转</span></div>
+                <div class="node"><span class="node-kind">变体</span><span class="node-title">已中性化</span></div>
+                <div class="node"><span class="node-kind">回测</span><span class="node-title">运行中</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">过期 · 产物版本提示</div>
+            <div class="gallery-card__preview">
+              <div class="state-stale">
+                <div class="state-stale-icon">T</div>
+                <div class="state-stale-title">实验图可能过期</div>
+                <div class="state-stale-desc">回测产物已生成新版本，当前谱系仍停留在 09:42 快照。</div>
+                <button class="state-error-retry" type="button">刷新谱系</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-group" data-component="Adoption Queue">
+        <div class="gallery-group__label">采纳队列</div>
+        <div class="gallery-cards">
+          <div class="gallery-card">
+            <div class="gallery-card__label">空态 · 暂无待处理</div>
+            <div class="gallery-card__preview">
+              <div class="state-empty">
+                <div class="state-empty-icon">AQ</div>
+                <div class="state-empty-title">暂无采纳队列</div>
+                <div class="state-empty-desc">通过候选检查器申请采纳后，会在这里形成待审批、待补测和已拒绝分组。</div>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-card">
+            <div class="gallery-card__label">失败 · 队列加载失败</div>
+            <div class="gallery-card__preview">
+              <div class="state-error">
+                <div class="state-error-icon">!</div>
+                <div class="state-error-title">采纳队列加载失败</div>
+                <div class="state-error-desc">审批 API 无响应，默认保留当前候选检查器操作但禁止批量提交。</div>
+                <button class="state-error-retry" type="button">重试队列</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="overlays-gallery" class="proto-section">
+    <div class="gallery-header">
+      <h2>Alpha 探索器弹层画廊</h2>
+      <div class="gallery-summary">6 个弹层覆盖探索启动、候选深挖、采纳确认、产物预览、阻断详情和 Copilot 上下文。</div>
+    </div>
+    <div class="gallery-grid gallery-grid--overlays">
+      <div class="gallery-group" data-component="overlays">
+        <div class="gallery-group__label">弹层登记</div>
+        <div class="gallery-cards">
+          <div class="gallery-card" data-overlay-ref="overlay-explore-run-create">
+            <div class="gallery-card__label">启动探索 · 侧滑面板</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="启动探索">
+                <div class="overlay-header"><span class="overlay-title">启动探索</span></div>
+                <div class="overlay-body">
+                  <div class="overlay-field"><span class="overlay-field-label">目标</span><span class="overlay-field-value">低相关反转</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">预算</span><span class="overlay-field-value">45 分钟 · 120 次评估</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">规则</span><span class="overlay-field-value">权限已检查</span></div>
+                  <div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary" type="button">取消</button><button class="overlay-btn overlay-btn-primary" type="button">启动探索</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card" data-overlay-ref="overlay-candidate-deep-dive">
+            <div class="gallery-card__label">候选深挖 · 抽屉</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="候选深入">
+                <div class="overlay-header"><span class="overlay-title">候选深入 · fc-1042</span></div>
+                <div class="overlay-body">
+                  <h4>指标摘要</h4>
+                  <div class="overlay-field"><span class="overlay-field-label">OOS IC</span><span class="overlay-field-value">0.036</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">最高相关</span><span class="overlay-field-value">0.29</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">容量</span><span class="overlay-field-value">4200 万</span></div>
+                  <p class="overlay-body-text tight">工具追踪、相似因子和过拟合警告在抽屉中按证据链排序。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card" data-overlay-ref="overlay-adoption-confirm">
+            <div class="gallery-card__label">采纳确认 · 弹窗</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="采纳确认">
+                <div class="overlay-header"><span class="overlay-title">确认采纳候选因子</span></div>
+                <div class="overlay-body">
+                  <div class="overlay-confirm-box">通过后将生成 FactorArtifact，并同步到因子分析。</div>
+                  <div class="overlay-field"><span class="overlay-field-label">候选</span><span class="overlay-field-value">fc-1042</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">风险</span><span class="overlay-field-value">行业暴露需关注</span></div>
+                  <div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary" type="button">返回</button><button class="overlay-btn overlay-btn-primary" type="button">确认采纳</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card" data-overlay-ref="overlay-artifact-preview">
+            <div class="gallery-card__label">产物预览 · 抽屉</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="产物预览">
+                <div class="overlay-header"><span class="overlay-title">回测产物 · bt-8842</span></div>
+                <div class="overlay-body">
+                  <div class="overlay-field"><span class="overlay-field-label">Sharpe</span><span class="overlay-field-value">1.41</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">成本模型</span><span class="overlay-field-value">csi800-default</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">窗口</span><span class="overlay-field-value">2024-2026 样本外</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card" data-overlay-ref="overlay-guardrail-detail">
+            <div class="gallery-card__label">规则详情 · 抽屉</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="阻断详情">
+                <div class="overlay-header"><span class="overlay-title">策略阻断 · 敏感字段</span></div>
+                <div class="overlay-body">
+                  <div class="overlay-field"><span class="overlay-field-label">原因</span><span class="overlay-field-value">时间戳权限不足</span></div>
+                  <div class="overlay-field"><span class="overlay-field-label">恢复方式</span><span class="overlay-field-value">移除字段或申请权限</span></div>
+                  <div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary" type="button">复制为变体</button><button class="overlay-btn overlay-btn-primary" type="button">申请授权</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-card" data-overlay-ref="overlay-copilot-context">
+            <div class="gallery-card__label">Copilot 上下文 · 侧滑面板</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="Copilot 上下文">
+                <div class="overlay-header"><span class="overlay-title">Copilot · 因子发现</span></div>
+                <div class="overlay-body">
+                  <p class="overlay-body-text tight">当前候选优势是低相关性与样本外稳定；主要风险是行业暴露和容量边界。</p>
+                  <div class="overlay-field"><span class="overlay-field-label">输出</span><span class="overlay-field-value">FactorCandidate</span></div>
+                  <div class="overlay-actions"><button class="overlay-btn overlay-btn-secondary" type="button">证据</button><button class="overlay-btn overlay-btn-primary" type="button">发送</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
