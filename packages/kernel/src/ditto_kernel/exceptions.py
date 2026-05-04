@@ -10,6 +10,8 @@ IdentifierError（标识符异常），供所有业务包使用。
 - 稳定性高，不随子域迭代变更
 """
 
+from collections.abc import Mapping
+
 __all__ = [
     "AmbiguousTickerError",
     "DataError",
@@ -31,13 +33,19 @@ class DittoError(Exception):
     所有业务域异常的统一祖先，供中间件统一捕获和映射。
     """
 
+    def __init__(
+        self,
+        message: str,
+        details: Mapping[str, object] | None = None,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(message)
+        self.details: dict[str, object] = dict(details or {})
+        self.details.update(kwargs)
+
 
 class DataError(DittoError):
     """数据域基础异常."""
-
-    def __init__(self, message: str, details: dict[str, object] | None = None) -> None:
-        super().__init__(message)
-        self.details = details or {}
 
 
 class IdentifierError(DataError):
@@ -91,7 +99,10 @@ class DerivedError(DittoError):
 
     def __init__(self, message: str, *, derived_id: str | None = None) -> None:
         self.derived_id = derived_id
-        super().__init__(message)
+        details: dict[str, object] | None = (
+            {"derived_id": derived_id} if derived_id is not None else None
+        )
+        super().__init__(message, details=details)
 
 
 class DerivedNotFoundError(DerivedError):

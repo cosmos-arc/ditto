@@ -32,9 +32,8 @@ class ConfigInitError(PlatformError):
 
         """
         self.failed_providers = failed_providers
-        self.details = details
         message = f"Startup initialization failed for: {', '.join(failed_providers)}"
-        super().__init__(message)
+        super().__init__(message, details=details)
 
 
 __all__ = ["ConfigInitError"]

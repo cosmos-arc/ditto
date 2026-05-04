@@ -20,17 +20,6 @@ class StrategyError(DittoError):
     所有策略域异常的统一祖先，供上层统一捕获和映射。
     """
 
-    def __init__(
-        self,
-        message: str,
-        details: dict[str, object] | None = None,
-        **kwargs: object,
-    ) -> None:
-        super().__init__(message)
-        self.details: dict[str, object] = dict(kwargs) if kwargs else {}
-        if details:
-            self.details.update(details)
-
 
 class StrategySpecError(StrategyError, ValueError):
     """策略规格验证失败（公共 API 契约违背）."""

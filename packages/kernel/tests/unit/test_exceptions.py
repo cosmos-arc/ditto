@@ -18,8 +18,20 @@ class TestDittoErrorRoot:
     def test_ditto_error_inherits_exception(self) -> None:
         assert issubclass(DittoError, Exception)
 
+    def test_ditto_error_carries_empty_details_by_default(self) -> None:
+        err = DittoError("test")
+        assert err.details == {}
+
+    def test_ditto_error_merges_details_and_kwargs(self) -> None:
+        err = DittoError("test", details={"source": "catalog"}, operation="read")
+        assert err.details == {"source": "catalog", "operation": "read"}
+
     def test_data_error_inherits_ditto_error(self) -> None:
         assert issubclass(DataError, DittoError)
+
+    def test_data_error_accepts_structured_details(self) -> None:
+        err = DataError("test", details={"dataset": "stock_daily"})
+        assert err.details == {"dataset": "stock_daily"}
 
     def test_catch_ditto_error_catches_data_error(self) -> None:
         with pytest.raises(DittoError):
