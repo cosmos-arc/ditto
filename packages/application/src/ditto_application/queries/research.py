@@ -24,12 +24,12 @@ from ditto_analysis.research.domain import (
     SpineSnapshot,
     SpineSpec,
 )
-from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_data.services.metadata_service import MetadataService
 from ditto_features.services.derived import (
     DerivedArtifactReader,
     VersionResolutionStrategy,
 )
+from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
 from ditto_kernel.market import CalendarId, GrainId
 from ditto_kernel.research import (
     ResearchDatasetSnapshotRecord,

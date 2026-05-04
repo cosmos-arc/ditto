@@ -5,19 +5,17 @@ Following design document at docs/design/02_data_design.md
 
 Note: DataError, DittoError, IdentifierError are defined in ditto_kernel.exceptions
 and imported here because Data-layer subclasses inherit from them.
+
+Derived* errors have been moved to their canonical owner (ditto_kernel.exceptions).
+Import them directly from ditto_kernel.exceptions instead of this module.
 """
 
 # ---------------------------------------------------------------------------
-# Derived* error hierarchy — re-exported from kernel (canonical definition).
-# Both Data and Features packages use these without cross-dependency.
+# Base error classes — imported from kernel for subclassing.
+# Data-layer errors inherit from DataError / IdentifierError.
 # ---------------------------------------------------------------------------
 from ditto_kernel.exceptions import (
     DataError,
-    DerivedError,
-    DerivedNotFoundError,
-    DerivedNotImplementedError,
-    DerivedValidationError,
-    DerivedVersionError,
     IdentifierError,
 )
 
@@ -590,11 +588,6 @@ __all__ = [
     "DataSourceError",
     "DataValidationError",
     "DatasetNotFoundError",
-    "DerivedError",
-    "DerivedNotFoundError",
-    "DerivedNotImplementedError",
-    "DerivedValidationError",
-    "DerivedVersionError",
     "IdentifierError",
     "IdentifierNotFoundError",
     "InstrumentIdNotFoundError",

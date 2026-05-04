@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_data.errors import (
+from ditto_kernel.exceptions import (
     DerivedError,
     DerivedNotFoundError,
     DerivedNotImplementedError,

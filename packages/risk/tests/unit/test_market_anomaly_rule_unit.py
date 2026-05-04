@@ -10,11 +10,8 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_risk.post_trade import (
-    MarketAnomalyRule,
-    RiskActionType,
-    RiskSeverity,
-)
+from ditto_risk.exposure.rules import MarketAnomalyRule
+from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 IID = InstrumentId(1)
 

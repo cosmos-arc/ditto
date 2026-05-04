@@ -6,7 +6,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
-from ditto_data.errors import DerivedVersionError
 from ditto_features.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
@@ -21,6 +20,7 @@ from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
+from ditto_kernel.exceptions import DerivedVersionError
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 

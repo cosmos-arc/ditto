@@ -9,7 +9,6 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.errors import DerivedNotFoundError
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import (
     DerivedSpecRecord,
@@ -35,6 +34,7 @@ from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
+from ditto_kernel.exceptions import DerivedNotFoundError
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 

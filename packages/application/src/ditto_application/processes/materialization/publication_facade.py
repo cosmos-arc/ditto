@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from ditto_data.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
 )
@@ -30,6 +29,7 @@ from ditto_features.publication_safety import (
 from ditto_features.services.derived import DerivedArtifactReader
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
 from ditto_kernel.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,

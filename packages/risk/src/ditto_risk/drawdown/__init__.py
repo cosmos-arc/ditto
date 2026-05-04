@@ -4,7 +4,10 @@ Risk drawdown — 回撤分析与控制。
 计算最大回撤、当前回撤、回撤持续时间等指标，
 支持按策略/组合/时间段维度聚合。
 为盘后风控审计和回撤熔断机制提供数据支持。
-
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
 """
+
+from __future__ import annotations
+
+from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
+
+__all__ = ["MaxDrawdownRule", "SingleLossLimitRule"]

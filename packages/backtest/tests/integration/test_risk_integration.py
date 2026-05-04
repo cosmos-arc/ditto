@@ -30,12 +30,9 @@ from ditto_execution.reality import BrokerageModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_risk.post_trade import (
-    CompositePostTradeGuard,
-    ConcentrationLimitRule,
-    MarketAnomalyRule,
-    SingleLossLimitRule,
-)
+from ditto_risk.drawdown.rules import SingleLossLimitRule
+from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
+from ditto_risk.post_trade import CompositePostTradeGuard
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,

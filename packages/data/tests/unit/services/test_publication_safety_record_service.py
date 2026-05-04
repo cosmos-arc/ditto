@@ -4,7 +4,7 @@ from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
-from ditto_data.models.publication_safety import (
+from ditto_kernel.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,

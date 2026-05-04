@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_data.models.publication_safety import (
+from ditto_kernel.publication_safety import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
 )
+
 from ditto_data.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,

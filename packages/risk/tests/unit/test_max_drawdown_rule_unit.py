@@ -9,11 +9,8 @@ import pytest
 from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
-from ditto_risk.post_trade import (
-    MaxDrawdownRule,
-    RiskActionType,
-    RiskSeverity,
-)
+from ditto_risk.drawdown.rules import MaxDrawdownRule
+from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 
 def _account_view(nav: float = 100_000.0) -> AccountView:

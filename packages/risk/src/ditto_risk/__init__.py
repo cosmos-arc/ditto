@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 from ditto_risk.contracts import RiskSlice
+from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
+from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
+from ditto_risk.models import DrawdownStats, ExposureData, RiskMetrics
 from ditto_risk.post_trade import (
     CompositePostTradeGuard,
-    ConcentrationLimitRule,
-    MarketAnomalyRule,
-    MaxDrawdownRule,
     PostTradeRiskGuard,
     RiskAction,
     RiskActionType,
     RiskSeverity,
-    SingleLossLimitRule,
 )
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
@@ -38,6 +37,8 @@ __all__ = [
     "ConcentrationPreCheck",
     "DailyTurnoverPreCheck",
     "Decision",
+    "DrawdownStats",
+    "ExposureData",
     "LotSizeCheck",
     "MarketAnomalyRule",
     "MaxDrawdownRule",
@@ -49,6 +50,7 @@ __all__ = [
     "PriceValidityCheck",
     "RiskAction",
     "RiskActionType",
+    "RiskMetrics",
     "RiskSeverity",
     "RiskSlice",
     "SingleLossLimitRule",

@@ -13,7 +13,7 @@ from ditto_data.models.ingestion import (
     IngestionStatus,
     ResultCounts,
 )
-from ditto_data.models.storage import WriteResult
+from ditto_platform.foundation.storage.types import WriteResult
 
 
 def count_results(

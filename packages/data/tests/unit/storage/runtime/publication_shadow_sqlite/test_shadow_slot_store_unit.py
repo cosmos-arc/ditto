@@ -1,10 +1,10 @@
 """Tests for SQLite-backed derived shadow slot stores."""
 
-from ditto_data.models.publication_safety import DerivedShadowSlotRecord
 from ditto_data.storage.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
     SQLiteDerivedShadowSlotWriter,
 )
+from ditto_kernel.publication_safety import DerivedShadowSlotRecord
 
 
 class TestSQLiteDerivedShadowSlotStore:

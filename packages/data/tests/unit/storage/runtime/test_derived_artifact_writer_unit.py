@@ -10,14 +10,14 @@ from unittest.mock import patch
 import orjson
 import polars as pl
 import pytest
-from ditto_data.models.publication_safety import (
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
-)
 from ditto_features.expression import Analysis, CompileIdentity
 from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
+)
+from ditto_kernel.publication_safety import (
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
 )
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 

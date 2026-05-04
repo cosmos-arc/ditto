@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_data.models import OnDuplicate
-from ditto_data.models.storage import WriteStoreResult
 from ditto_data.storage.base.dataset_writer import ParquetDatasetWriter
+from ditto_platform.foundation.storage.types import WriteStoreResult
 
 
 @pytest.fixture

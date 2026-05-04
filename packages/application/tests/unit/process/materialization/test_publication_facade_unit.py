@@ -15,10 +15,6 @@ from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
-from ditto_data.models.publication_safety import (
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
-)
 from ditto_data.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
@@ -52,6 +48,10 @@ from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlo
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
+)
+from ditto_kernel.publication_safety import (
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
 )
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_platform.foundation import SQLitePool

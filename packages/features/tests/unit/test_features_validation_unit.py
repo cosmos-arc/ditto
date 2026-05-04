@@ -1,8 +1,8 @@
 """Tests for analytics spec validation helpers."""
 
 import pytest
-from ditto_data.errors import DerivedNotImplementedError
 from ditto_features.validation import validate_derived_spec
+from ditto_kernel.exceptions import DerivedNotImplementedError
 from ditto_kernel.strategy import (
     DerivedRole,
     DerivedSpec,

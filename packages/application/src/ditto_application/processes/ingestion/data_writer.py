@@ -8,13 +8,13 @@ from typing import Literal, cast
 import polars as pl
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models import Dataset, OnDuplicate
-from ditto_data.models.storage import WriteResult
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_platform.foundation import logger
+from ditto_platform.foundation.storage.types import WriteResult
 from ditto_platform.foundation.util.checksum import ChecksumCompute
 
 

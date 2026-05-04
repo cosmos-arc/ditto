@@ -1,21 +1,15 @@
 """
 Storage models for Data.
 
-WriteResult / WriteStoreResult are re-exported from platform;
 FreezeManifest is data-specific and stays local.
+WriteResult / WriteStoreResult have been moved to their canonical owner
+(ditto_platform.foundation.storage.types).
 """
 
 from dataclasses import dataclass, field
 
-from ditto_platform.foundation.storage.types import (
-    WriteResult,
-    WriteStoreResult,
-)
-
 __all__ = [
     "FreezeManifest",
-    "WriteResult",
-    "WriteStoreResult",
 ]
 
 

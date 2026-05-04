@@ -11,9 +11,9 @@ from pathlib import Path
 
 import polars as pl
 from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation.storage.types import WriteStoreResult
 from ditto_platform.foundation.util.io import file_md5
 
-from ditto_data.models.storage import WriteStoreResult
 from ditto_data.storage.base.sqlite_store import SQLiteStore
 
 

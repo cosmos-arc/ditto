@@ -2,10 +2,11 @@
 
 from pathlib import Path
 
-from ditto_data.models.publication_safety import (
+from ditto_kernel.publication_safety import (
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
 )
+
 from ditto_data.storage.runtime.publication_safety._json_records import (
     list_json_files,
     read_json_file,

@@ -2,11 +2,11 @@
 
 from pathlib import Path
 
-from ditto_data.models.publication_safety import CompatibilityManifestRecord
 from ditto_data.storage.runtime.publication_safety import (
     ManifestReader,
     ManifestWriter,
 )
+from ditto_kernel.publication_safety import CompatibilityManifestRecord
 
 
 class TestManifestStore:

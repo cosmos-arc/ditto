@@ -3,8 +3,8 @@
 import dataclasses
 
 import pytest
-from ditto_data.models.storage import (
-    FreezeManifest,
+from ditto_data.models.storage import FreezeManifest
+from ditto_platform.foundation.storage.types import (
     WriteResult,
     WriteStoreResult,
 )
