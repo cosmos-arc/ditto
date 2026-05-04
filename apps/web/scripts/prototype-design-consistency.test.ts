@@ -2374,8 +2374,30 @@ describe("prototype design consistency", () => {
 		const dimensionDeclarationPattern =
 			/(?:^|;)\s*(?:width|height|border-radius|--(?:iv-)?sk-[a-z0-9-]+)\s*:/i;
 		const dimensionHelperSelectorPattern =
-			/^\.(?:iv-sk(?:eleton)?[-_a-z0-9]*|sk-\d|sk-(?:text|w)-|skel-(?:badge|text|heading|page-btn|error-icon|w-|h-|h\d))/i;
-		const contextualSkeletonDimensionPattern = /\s\.skeleton$/i;
+			/(?:^|[\s>+~,(])\.(?:skeleton(?:\b|[-_a-z0-9])|iv-sk(?:eleton)?[-_a-z0-9]*|sk-\d|sk-(?:text|w)-|skel-(?:badge|text|heading|page-btn|error-icon|w-|h-|h\d))/i;
+		const fixtureCss = stripCssComments(`
+			.scope .skeleton-bar { height: 32px; }
+			.gallery-card .skeleton-text { width: 80px; }
+			@media (prefers-reduced-motion: reduce) {
+				.skeleton, .task-item.running { animation: none !important; }
+			}
+		`);
+		const fixtureViolations: string[] = [];
+
+		for (const rule of readTopLevelCssRules(fixtureCss)) {
+			if (!dimensionDeclarationPattern.test(rule.body)) continue;
+			const hasPageLocalDimensionHelper = rule.selectors.some((selector) =>
+				dimensionHelperSelectorPattern.test(selector),
+			);
+			if (hasPageLocalDimensionHelper) {
+				fixtureViolations.push(`fixture:${rule.selector}`);
+			}
+		}
+
+		expect(fixtureViolations).toEqual([
+			"fixture:.scope .skeleton-bar",
+			"fixture:.gallery-card .skeleton-text",
+		]);
 
 		for (const page of activePages()) {
 			const style = getStyleBlocks(readPrototypeHtml(page));
@@ -2384,8 +2406,7 @@ describe("prototype design consistency", () => {
 			for (const rule of readTopLevelCssRules(css)) {
 				if (!dimensionDeclarationPattern.test(rule.body)) continue;
 				const hasPageLocalDimensionHelper = rule.selectors.some((selector) =>
-					dimensionHelperSelectorPattern.test(selector) ||
-					contextualSkeletonDimensionPattern.test(selector),
+					dimensionHelperSelectorPattern.test(selector),
 				);
 				if (hasPageLocalDimensionHelper) {
 					violations.push(`${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);
