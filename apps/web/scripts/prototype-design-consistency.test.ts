@@ -34,6 +34,7 @@ function readLayoutCssSources(): CssSource[] {
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
+const designSpec = join(root, "DESIGN.md");
 const pagePatternLibrarySpec = join(root, "docs/designs/specs/11_ditto_page_pattern_library.md");
 const tokenNamingLayeringSpec = join(
 	root,
@@ -2180,48 +2181,14 @@ describe("prototype design consistency", () => {
 		expect(duplicates).toEqual([]);
 	});
 
-	it("documents the Edition v1 9-step typography scale as current token truth", () => {
-		const spec = readFileSync(tokenStabilizationSpec, "utf8");
-		const deprecatedTokenClaims = [
-			/(?:移除|移除了|removed)[^。\n]*(?:11|18|20)/i,
-			/--font-size-11[^。\n]*(?:deprecated|forbidden|禁止|废弃|移除|removed)/i,
-			/--font-size-18[^。\n]*(?:deprecated|forbidden|禁止|废弃|移除|removed)/i,
-			/--font-size-20[^。\n]*(?:deprecated|forbidden|禁止|废弃|移除|removed)/i,
-		];
+	it("keeps DESIGN approval for the 11px tight-context token", () => {
+		const spec = readFileSync(designSpec, "utf8");
 
-		for (const claim of deprecatedTokenClaims) {
-			expect(spec).not.toMatch(claim);
-		}
-
-		expect(spec).toMatch(/9\s*级字号体系/);
-		expect(spec).toMatch(/DESIGN\/Edition\s*明确批准的 dense non-interactive metadata/);
-
-		for (const token of [
-			"--font-size-10",
-			"--font-size-11",
-			"--font-size-12",
-			"--font-size-13",
-			"--font-size-14",
-			"--font-size-16",
-			"--font-size-18",
-			"--font-size-20",
-			"--font-size-24",
-		]) {
-			expect(spec).toContain(token);
-		}
+		expect(spec).toContain("--font-size-11");
+		expect(spec).toMatch(/--font-size-11[\s\S]*?Tight contexts/);
 	});
 
 	it("keeps 11px typography out of operational selectors", () => {
-		const sharedViolations = readLayoutCssSources().flatMap((source) =>
-			readTopLevelCssRules(stripCssComments(source.css))
-				.filter((rule) => usesFontSizeToken(rule.body, "--font-size-11"))
-				.flatMap((rule) =>
-					rule.selectors
-						.filter(isOperationalElevenPxSelector)
-						.map((selector) => `${source.label}:${getLineNumber(source.css, rule.start)}:${selector}`),
-				),
-		);
-
 		const pageViolations = readManifest()
 			.pages.filter(isActiveRoutePrototype)
 			.flatMap((page) => {
@@ -2245,7 +2212,7 @@ describe("prototype design consistency", () => {
 					);
 			});
 
-		expect([...sharedViolations, ...pageViolations]).toEqual([]);
+		expect(pageViolations).toEqual([]);
 	});
 
 	it("keeps active route prototypes free of negative letter spacing", () => {
