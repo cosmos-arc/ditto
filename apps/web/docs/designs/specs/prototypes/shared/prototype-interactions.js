@@ -941,7 +941,9 @@
         var suffix   = el.getAttribute('data-ticker-suffix') || '';
 
         if (reducedMotion) {
-          el.textContent = prefix + target.toFixed(decimals) + suffix;
+          var formattedValue = prefix + target.toFixed(decimals) + suffix;
+          el.textContent = formattedValue;
+          NumberTicker._announce(formattedValue);
           return;
         }
 
@@ -965,8 +967,16 @@
         var eased = 1 - Math.pow(1 - p, 3);
         el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
         if (p < 1) requestAnimationFrame(tick);
+        else NumberTicker._announce(prefix + target.toFixed(decimals) + suffix);
       }
       requestAnimationFrame(tick);
+    },
+
+    _announce: function (text) {
+      var liveRegion = document.querySelector('[role="status"].live-region');
+      if (liveRegion) {
+        liveRegion.textContent = text;
+      }
     },
   };
 
@@ -1215,7 +1225,9 @@
 
       if (reducedMotion) {
         state.current = target;
-        el.textContent = prefix + AnimatedCounter.format(target, decimals) + suffix;
+        var formattedValue = prefix + AnimatedCounter.format(target, decimals) + suffix;
+        el.textContent = formattedValue;
+        AnimatedCounter._announce(formattedValue);
         return;
       }
 
@@ -1238,6 +1250,7 @@
         } else {
           state.current = target;
           state.raf = null;
+          AnimatedCounter._announce(state.prefix + AnimatedCounter.format(target, state.decimals) + state.suffix);
         }
       }
       state.raf = requestAnimationFrame(tick);
@@ -1248,6 +1261,13 @@
       var parts = num.toFixed(decimals).split('.');
       parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       return parts.join('.');
+    },
+
+    _announce: function (text) {
+      var liveRegion = document.querySelector('[role="status"].live-region');
+      if (liveRegion) {
+        liveRegion.textContent = text;
+      }
     },
   };
 

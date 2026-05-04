@@ -110,6 +110,19 @@ button {
   left: var(--space-16);
 }
 
+/* ── Live Region (screen-reader-only announcements) ── */
+.live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Layout Component Variables (density-sensitive) ── */
 :root {
   /* Shell grid */
@@ -2671,6 +2684,29 @@ details.context-section:not([open]) > .context-section-body {
   background: var(--interaction-hover-subtle-bg);
 }
 
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-strip);
+}
+
+/* ── Standard Data Table Interaction (panel-body fallback) ── */
+.panel-body table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.panel-body table tbody tr:hover {
+  background: var(--interaction-hover-subtle-bg);
+}
+
+.panel-body table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-panel-base);
+}
+
 .data-table .numeric {
   font-family: var(--font-family-numeric);
   text-align: right;
@@ -4340,6 +4376,43 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .color-risk-warn  { color: var(--risk-warning-fg); }
 .color-brand      { color: var(--brand-500); }
 .color-brand-accent { color: var(--brand-accent); }
+
+/* ── Market Direction Redundant Encoding (colorblind a11y) ── */
+.color-market-up::before {
+  content: '▲';
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
+
+.color-market-down::before {
+  content: '▼';
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
+
+.cell-change-up::before {
+  content: '▲';
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
+
+.cell-change-down::before {
+  content: '▼';
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
+
+.text-market-up::before {
+  content: '▲';
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
+
+.text-market-down::before {
+  content: '▼';
+  font-size: 0.75em;
+  margin-right: 0.25em;
+}
 
 /* ── Display ── */
 .hidden { display: none; }
