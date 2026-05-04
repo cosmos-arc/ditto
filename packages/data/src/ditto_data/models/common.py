@@ -30,7 +30,6 @@ __all__ = [
     "JsonDict",
     "JsonPrimitive",
     "JsonValue",
-    "OnDuplicate",
     "Source",
     "require_bool",
     "require_int",
@@ -272,12 +271,6 @@ class Source(StrEnum):
     TUSHARE = "tushare"
     AKSHARE = "akshare"  # 预留，未来支持
     FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
-
-
-# ============ Store 枚举 ============
-# Re-exported from platform — canonical definition lives in
-# ditto_platform.foundation.storage.types.OnDuplicate.
-from ditto_platform.foundation.storage.types import OnDuplicate  # noqa: E402
 
 
 class InstrumentIdRange(NamedTuple):

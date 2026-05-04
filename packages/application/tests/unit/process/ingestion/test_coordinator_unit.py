@@ -12,11 +12,11 @@ from ditto_application.processes.ingestion.coordinator import (
     SourceFetchers,
 )
 from ditto_data.errors import SourceFetchError
-from ditto_data.models import OnDuplicate
 from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability import init, reset_for_testing
 from ditto_platform.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 
 def mock_market_save_bars(file_path: str, checksum: str) -> int:

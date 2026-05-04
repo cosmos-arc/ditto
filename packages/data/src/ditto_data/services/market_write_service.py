@@ -10,9 +10,9 @@ from typing import Literal
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 from ditto_platform.foundation.concurrency import FileLockManager
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 from ditto_data.ingestion.late_arrival import check_late_arrival
-from ditto_data.models import OnDuplicate
 from ditto_data.models.ingestion import (
     DataLateArrivalPolicy,
     LateArrivalCheckResult,

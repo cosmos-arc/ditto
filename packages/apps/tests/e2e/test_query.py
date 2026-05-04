@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.models import OnDuplicate
 from ditto_data.quality import GoldenDatasetSpec
 from ditto_data.services.market_service import (
     AdjType,
@@ -27,6 +26,7 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 # ==============================================================================
 # Fixtures

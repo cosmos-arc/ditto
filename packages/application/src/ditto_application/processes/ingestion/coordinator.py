@@ -12,7 +12,7 @@ from ditto_data.errors import (
     NetworkError,
     SourceFetchError,
 )
-from ditto_data.models import Dataset, DateScheduleType, OnDuplicate
+from ditto_data.models import Dataset, DateScheduleType
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.fundamental_service import FundamentalService
@@ -22,7 +22,7 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import logger
-from ditto_platform.foundation.storage.types import WriteResult
+from ditto_platform.foundation.storage.types import OnDuplicate, WriteResult
 
 from ditto_application.contracts import CheckDataQualityCommand
 from ditto_application.processes.ingestion.auto_init import (

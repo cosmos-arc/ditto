@@ -436,6 +436,7 @@ source_modules =
     ditto_data.storage.**
 forbidden_modules =
     ditto_data.models.**
+    ditto_data.models
 # CQRS Writer/Reader 需要模型类型定义（Record 等）
 ignore_imports =
     ditto_data.storage.** -> ditto_data.models.metadata

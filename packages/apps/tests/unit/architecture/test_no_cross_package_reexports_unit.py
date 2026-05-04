@@ -10,6 +10,8 @@ FORBIDDEN_IMPORTS = (
     "from ditto_data.models.publication_safety import",
     "from ditto_data.models.storage import WriteResult",
     "from ditto_data.models.storage import WriteStoreResult",
+    "from ditto_data.models import OnDuplicate",
+    "from ditto_data.models.common import OnDuplicate",
     "from ditto_data.errors import Derived",
 )
 

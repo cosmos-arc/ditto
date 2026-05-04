@@ -19,7 +19,6 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_data.models import OnDuplicate
 from ditto_data.quality import DQSpec, GoldenDatasetSpec, QualityEngine
 from ditto_data.services.market_service import MarketBarsQuery, MarketService
 from ditto_data.sources.tushare.tushare_source import TushareSource
@@ -29,6 +28,7 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 
 def _make_instrument_id(df: pl.DataFrame) -> pl.DataFrame:
