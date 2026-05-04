@@ -447,7 +447,7 @@
     }
 
     /* ═══ Drawer Overlay ═══ */
-    .overlay-surface { display: none; position: fixed; inset: 0; z-index: 100; }
+    .overlay-surface { display: none; position: fixed; inset: 0; z-index: var(--overlay-z-index, 1100); }
     :root:has(#overlay-position-detail:checked) [data-overlay="overlay-position-detail"],
     :root:has(#overlay-trade-detail:checked) [data-overlay="overlay-trade-detail"] {
       display: block;
@@ -475,7 +475,7 @@
     .drawer-section-title { font-size: var(--font-size-12); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-top: var(--space-16); margin-bottom: var(--space-8); }
 
     /* ═══ Modal Overlay ═══ */
-    .overlay-backdrop { display: none; position: fixed; inset: 0; background: var(--surface-overlay); z-index: 100; align-items: center; justify-content: center; }
+    .overlay-backdrop { display: none; position: fixed; inset: 0; background: var(--surface-overlay); z-index: var(--overlay-z-index, 1100); align-items: center; justify-content: center; }
     :root:has(#overlay-confirm-close-all:checked) [data-overlay="overlay-confirm-close-all"] {
       display: flex;
     }

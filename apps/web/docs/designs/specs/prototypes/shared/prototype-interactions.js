@@ -509,6 +509,25 @@
       var count = state.hasValuationCondition ? 2 : 1;
       ScreenerWorkflow._setText(root, '[data-filter-status]', '草稿 ' + count + ' 条');
       ScreenerWorkflow._setText(root, '[data-filter-draft]', '股票池 = ' + state.universe + ' · PE < 20');
+
+      /* Announce filter state to screen readers */
+      ScreenerWorkflow._announceFilterChange(root, state);
+    },
+
+    _announceFilterChange: function (root, state) {
+      var liveRegion = root.querySelector('[role="status"][data-screener-live]');
+      if (!liveRegion) {
+        liveRegion = document.createElement('div');
+        liveRegion.setAttribute('role', 'status');
+        liveRegion.setAttribute('data-screener-live', '');
+        liveRegion.setAttribute('aria-live', 'polite');
+        liveRegion.className = 'sr-only';
+        liveRegion.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+        root.appendChild(liveRegion);
+      }
+      var conditionCount = state.hasValuationCondition ? 2 : 1;
+      var previewCount = state.hasValuationCondition ? 126 : 188;
+      liveRegion.textContent = '筛选已更新: ' + conditionCount + ' 个条件, 预计显示 ' + previewCount + ' 只股票';
     },
 
     _applyFilter: function (root, state) {
@@ -911,12 +930,10 @@
           rect.setAttribute('fill', palette[idx]);
           rect.setAttribute('class', 'heatgrid-cell');
 
-          /* tooltip */
+          /* tooltip — use data-tooltip instead of SVG <title> */
           var tip = cfg.labels && cfg.labels[r * cols + c];
           if (tip) {
-            var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            title.textContent = tip;
-            rect.appendChild(title);
+            rect.setAttribute('data-tooltip', tip);
           }
           svg.appendChild(rect);
         }
@@ -1214,7 +1231,7 @@
         bar.className = 'flow-segment';
         bar.style.flex = String(seg.value);
         bar.style.background = FlowBar.palette[i % FlowBar.palette.length];
-        if (seg.label) bar.title = seg.label + ': ' + seg.value + ' (' + pct + '%)';
+        if (seg.label) bar.setAttribute('data-tooltip', seg.label + ': ' + seg.value + ' (' + pct + '%)');
         el.appendChild(bar);
       });
     },
@@ -1577,9 +1594,13 @@
   /* ══════════════════════════════════════════════
    * 14. CommandPalette
    *     Prototype-only selected object command suggestions
+   *     Features: search/filter, keyboard nav, category grouping, recent items
    * ══════════════════════════════════════════════ */
   var CommandPalette = {
+    RECENT_KEY: 'ditto-recent-commands',
+    MAX_RECENT: 3,
     triggerEl: null,
+    activeIndex: -1,
     labels: {
       'add-to-compare': '加入对比',
       approve: '批准',
@@ -1606,13 +1627,38 @@
       'view-logs': '查看日志',
       'view-recent-runs': '查看近期运行',
     },
+    categories: {
+      'add-to-compare': '上下文操作',
+      approve: '工作流',
+      'clone-strategy': '策略',
+      'copy-params': '策略',
+      'create-incident': '工作流',
+      'explain-priority': '上下文操作',
+      'generate-report': '工作流',
+      'generate-signal': '工作流',
+      'mute-alert': '工作流',
+      'open-instrument-hub': '导航',
+      'open-orders': '导航',
+      'open-risk': '导航',
+      'pause-strategy': '策略',
+      reject: '工作流',
+      'remove-watch': '上下文操作',
+      retry: '工作流',
+      'review-signal': '工作流',
+      'run-backtest': '策略',
+      'send-to-order': '工作流',
+      'send-to-research': '工作流',
+      'view-curve': '导航',
+      'view-evidence': '上下文操作',
+      'view-logs': '导航',
+      'view-recent-runs': '导航',
+    },
 
     init: function () {
       var triggers = Array.from(document.querySelectorAll('[data-shell-utility="command"], .header-command-trigger'));
       if (!triggers.length) return;
 
       var palette = CommandPalette._ensurePalette();
-      CommandPalette._render(palette);
 
       triggers.forEach(function (trigger) {
         trigger.setAttribute('aria-haspopup', 'dialog');
@@ -1633,9 +1679,13 @@
         if ((event.ctrlKey || event.metaKey) && key === 'k') {
           event.preventDefault();
           CommandPalette._open(palette, triggers[0]);
-        } else if (key === 'escape' && !palette.hidden) {
-          CommandPalette._close(palette);
         }
+      });
+
+      /* Handle overlayclose from OverlayStack (Esc key stacking) */
+      palette.addEventListener('overlayclose', function (e) {
+        e.preventDefault();
+        CommandPalette._close(palette);
       });
     },
 
@@ -1648,40 +1698,72 @@
       palette.className = 'ditto-command-palette';
       palette.setAttribute('data-command-palette', '');
       palette.setAttribute('role', 'dialog');
-      palette.setAttribute('aria-label', '上下文命令');
+      palette.setAttribute('aria-label', '命令面板');
       palette.setAttribute('aria-hidden', 'true');
       palette.hidden = true;
 
-      var title = document.createElement('div');
-      title.className = 'ditto-command-title';
-      title.textContent = '上下文命令';
+      /* Search input */
+      var searchWrap = document.createElement('div');
+      searchWrap.className = 'ditto-command-search-wrap';
+      var searchIcon = document.createElement('span');
+      searchIcon.className = 'ditto-command-search-icon';
+      searchIcon.setAttribute('aria-hidden', 'true');
+      searchIcon.textContent = '\u{1F50D}';
+      var searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.className = 'ditto-command-search';
+      searchInput.setAttribute('data-command-search', '');
+      searchInput.setAttribute('placeholder', '搜索命令...');
+      searchInput.setAttribute('aria-label', '搜索命令');
+      searchInput.autocomplete = 'off';
+      searchWrap.appendChild(searchIcon);
+      searchWrap.appendChild(searchInput);
 
-      var context = document.createElement('div');
-      context.className = 'ditto-command-context';
-      context.setAttribute('data-command-context-label', '');
+      /* Scrollable results area */
+      var results = document.createElement('div');
+      results.className = 'ditto-command-results';
+      results.setAttribute('data-command-results', '');
+      results.setAttribute('role', 'listbox');
+      results.setAttribute('aria-label', '命令列表');
 
-      var list = document.createElement('div');
-      list.className = 'ditto-command-list';
-      list.setAttribute('data-command-suggestion-list', '');
-
-      palette.appendChild(title);
-      palette.appendChild(context);
-      palette.appendChild(list);
+      palette.appendChild(searchWrap);
+      palette.appendChild(results);
       document.body.appendChild(palette);
 
-      /* Focus trap: Tab/Shift+Tab wraps within dialog */
+      /* Search input: filter on type */
+      searchInput.addEventListener('input', function () {
+        CommandPalette._filterResults(palette, searchInput.value);
+      });
+
+      /* Keyboard navigation within palette */
       palette.addEventListener('keydown', function (e) {
-        if (e.key !== 'Tab') return;
-        var items = palette.querySelectorAll('[data-command-item], input, [data-command-suggestion]');
-        if (!items.length) return;
-        var first = items[0];
-        var last = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
+        var key = e.key;
+        if (key === 'ArrowDown' || key === 'ArrowUp') {
           e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
+          CommandPalette._navigateItems(palette, key === 'ArrowDown' ? 1 : -1);
+        } else if (key === 'Enter') {
           e.preventDefault();
-          first.focus();
+          CommandPalette._activateCurrent(palette);
+        } else if (key === 'Tab') {
+          /* Focus trap: Tab/Shift+Tab wraps within dialog */
+          var searchInput = palette.querySelector('[data-command-search]');
+          var items = palette.querySelectorAll('[data-command-item]');
+          if (!items.length) return;
+          var firstItem = items[0];
+          var lastItem = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === firstItem) {
+            e.preventDefault();
+            lastItem.focus();
+          } else if (!e.shiftKey && document.activeElement === lastItem) {
+            e.preventDefault();
+            firstItem.focus();
+          } else if (e.shiftKey && document.activeElement === searchInput) {
+            e.preventDefault();
+            lastItem.focus();
+          } else if (!e.shiftKey && document.activeElement === searchInput) {
+            e.preventDefault();
+            firstItem.focus();
+          }
         }
       });
 
@@ -1701,35 +1783,210 @@
       };
     },
 
+    /* Read data-command-category from action elements in the page */
+    _readCategories: function () {
+      var map = {};
+      document.querySelectorAll('[data-command-category]').forEach(function (el) {
+        var action = el.getAttribute('data-command-action') || el.getAttribute('data-command-suggestion');
+        var cat = el.getAttribute('data-command-category');
+        if (action && cat) map[action] = cat;
+      });
+      return map;
+    },
+
+    _getRecent: function () {
+      try {
+        var raw = window.localStorage.getItem(CommandPalette.RECENT_KEY);
+        if (!raw) return [];
+        var parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.slice(0, CommandPalette.MAX_RECENT);
+      } catch (_) {
+        return [];
+      }
+    },
+
+    _addRecent: function (action) {
+      var recent = CommandPalette._getRecent();
+      /* Remove if already present */
+      recent = recent.filter(function (r) { return r !== action; });
+      recent.unshift(action);
+      recent = recent.slice(0, CommandPalette.MAX_RECENT);
+      try {
+        window.localStorage.setItem(CommandPalette.RECENT_KEY, JSON.stringify(recent));
+      } catch (_) { /* storage full or disabled */ }
+    },
+
     _render: function (palette) {
       var context = CommandPalette._readContext();
-      var contextLabel = palette.querySelector('[data-command-context-label]');
-      var list = palette.querySelector('[data-command-suggestion-list]');
-      if (!list || !contextLabel) return;
+      var results = palette.querySelector('[data-command-results]');
+      var searchInput = palette.querySelector('[data-command-search]');
+      if (!results) return;
 
-      contextLabel.textContent = '对象: ' + context.object;
-      while (list.firstChild) {
-        list.removeChild(list.firstChild);
-      }
+      /* Clear search and results */
+      if (searchInput) searchInput.value = '';
+      CommandPalette.activeIndex = -1;
+      while (results.firstChild) results.removeChild(results.firstChild);
 
       if (!context.actions.length) {
         var empty = document.createElement('div');
         empty.className = 'ditto-command-empty';
         empty.textContent = '当前页面暂无对象上下文动作';
-        list.appendChild(empty);
+        results.appendChild(empty);
         return;
       }
 
-      context.actions.forEach(function (action) {
-        var item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'ditto-command-item';
-        item.setAttribute('data-command-suggestion', '');
-        item.setAttribute('data-command-action', action);
-        item.setAttribute('data-command-context-object', context.object);
-        item.textContent = (CommandPalette.labels[action] || action) + ' · ' + action;
-        list.appendChild(item);
+      /* Build full items list with labels and categories */
+      var pageCategories = CommandPalette._readCategories();
+      var recentActions = CommandPalette._getRecent();
+      var allItems = context.actions.map(function (action) {
+        return {
+          action: action,
+          label: CommandPalette.labels[action] || action,
+          category: pageCategories[action] || CommandPalette.categories[action] || '全局操作',
+          object: context.object,
+        };
       });
+
+      /* Render grouped */
+      CommandPalette._renderGrouped(results, allItems, recentActions);
+    },
+
+    _renderGrouped: function (container, items, recentActions) {
+      /* Separate recent vs non-recent */
+      var recentSet = {};
+      recentActions.forEach(function (r) { recentSet[r] = true; });
+
+      var recentItems = items.filter(function (item) { return recentSet[item.action]; });
+      var otherItems = items.filter(function (item) { return !recentSet[item.action]; });
+
+      /* Group other items by category */
+      var groups = {};
+      otherItems.forEach(function (item) {
+        if (!groups[item.category]) groups[item.category] = [];
+        groups[item.category].push(item);
+      });
+
+      /* Render recent section */
+      if (recentItems.length > 0) {
+        CommandPalette._renderSection(container, '最近使用', recentItems);
+      }
+
+      /* Render category sections in stable order */
+      var categoryOrder = ['上下文操作', '工作流', '策略', '导航', '全局操作'];
+      var seen = {};
+      categoryOrder.forEach(function (cat) {
+        if (groups[cat] && groups[cat].length) {
+          CommandPalette._renderSection(container, cat, groups[cat]);
+          seen[cat] = true;
+        }
+      });
+      Object.keys(groups).sort().forEach(function (cat) {
+        if (!seen[cat]) {
+          CommandPalette._renderSection(container, cat, groups[cat]);
+        }
+      });
+    },
+
+    _renderSection: function (container, title, items) {
+      var header = document.createElement('div');
+      header.className = 'ditto-command-category';
+      header.setAttribute('role', 'presentation');
+      header.textContent = title;
+      container.appendChild(header);
+
+      items.forEach(function (item) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ditto-command-item';
+        btn.setAttribute('data-command-suggestion', '');
+        btn.setAttribute('data-command-item', '');
+        btn.setAttribute('data-command-action', item.action);
+        btn.setAttribute('data-command-context-object', item.object);
+        btn.setAttribute('data-command-label', item.label);
+        btn.setAttribute('data-command-category-item', item.category);
+        btn.setAttribute('role', 'option');
+        btn.textContent = item.label;
+        container.appendChild(btn);
+      });
+    },
+
+    _filterResults: function (palette, query) {
+      var results = palette.querySelector('[data-command-results]');
+      if (!results) return;
+      var q = (query || '').toLowerCase().trim();
+      CommandPalette.activeIndex = -1;
+
+      var items = results.querySelectorAll('[data-command-item]');
+      var categories = results.querySelectorAll('.ditto-command-category');
+
+      if (!q) {
+        /* Show all */
+        items.forEach(function (item) { item.style.display = ''; });
+        categories.forEach(function (cat) { cat.style.display = ''; });
+        return;
+      }
+
+      /* Fuzzy match: check if all characters in q appear in order in the text */
+      function fuzzyMatch(text, query) {
+        var t = text.toLowerCase();
+        var qi = 0;
+        for (var ti = 0; ti < t.length && qi < query.length; ti++) {
+          if (t[ti] === query[qi]) qi++;
+        }
+        return qi === query.length;
+      }
+
+      /* Track which categories have visible items */
+      var visibleCategories = {};
+
+      items.forEach(function (item) {
+        var label = (item.getAttribute('data-command-label') || item.textContent).toLowerCase();
+        var action = (item.getAttribute('data-command-action') || '').toLowerCase();
+        var match = fuzzyMatch(label, q) || fuzzyMatch(action, q);
+        item.style.display = match ? '' : 'none';
+        if (match) {
+          var cat = item.getAttribute('data-command-category-item');
+          if (cat) visibleCategories[cat] = true;
+        }
+      });
+
+      categories.forEach(function (cat) {
+        cat.style.display = visibleCategories[cat.textContent] ? '' : 'none';
+      });
+    },
+
+    _navigateItems: function (palette, direction) {
+      var items = palette.querySelectorAll('[data-command-item]:not([style*="display: none"])');
+      if (!items.length) return;
+
+      /* Clear previous highlight */
+      if (CommandPalette.activeIndex >= 0 && CommandPalette.activeIndex < items.length) {
+        items[CommandPalette.activeIndex].classList.remove('command-item-active');
+      }
+
+      /* Calculate new index */
+      CommandPalette.activeIndex += direction;
+      if (CommandPalette.activeIndex < 0) CommandPalette.activeIndex = items.length - 1;
+      if (CommandPalette.activeIndex >= items.length) CommandPalette.activeIndex = 0;
+
+      var target = items[CommandPalette.activeIndex];
+      target.classList.add('command-item-active');
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'nearest' });
+    },
+
+    _activateCurrent: function (palette) {
+      /* If search input is focused and no item active, activate first visible */
+      var items = palette.querySelectorAll('[data-command-item]:not([style*="display: none"])');
+      var idx = CommandPalette.activeIndex;
+      if (idx < 0 || idx >= items.length) idx = 0;
+      if (!items.length) return;
+
+      var item = items[idx];
+      var action = item.getAttribute('data-command-action');
+      if (action) CommandPalette._addRecent(action);
+      item.click();
     },
 
     _open: function (palette, trigger) {
@@ -1739,10 +1996,18 @@
       document.body.setAttribute('data-command-palette-open', 'true');
       if (trigger) trigger.setAttribute('aria-expanded', 'true');
       CommandPalette.triggerEl = document.activeElement;
+      CommandPalette.activeIndex = -1;
 
-      var firstItem = palette.querySelector('[data-command-suggestion]');
-      if (firstItem && firstItem.focus) {
-        firstItem.focus();
+      /* Register with OverlayStack for z-index and Esc stacking */
+      OverlayStack.push(palette);
+
+      /* Focus the search input */
+      var searchInput = palette.querySelector('[data-command-search]');
+      if (searchInput) {
+        searchInput.focus();
+      } else {
+        var firstItem = palette.querySelector('[data-command-suggestion]');
+        if (firstItem && firstItem.focus) firstItem.focus();
       }
     },
 
@@ -1753,6 +2018,14 @@
       document.querySelectorAll('[data-shell-utility="command"], .header-command-trigger').forEach(function (trigger) {
         trigger.setAttribute('aria-expanded', 'false');
       });
+      /* Clear active highlight */
+      palette.querySelectorAll('.command-item-active').forEach(function (item) {
+        item.classList.remove('command-item-active');
+      });
+
+      /* Unregister from OverlayStack */
+      OverlayStack.remove(palette);
+      CommandPalette.activeIndex = -1;
       if (CommandPalette.triggerEl) {
         CommandPalette.triggerEl.focus();
         CommandPalette.triggerEl = null;
@@ -1837,8 +2110,208 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 16a. KeyboardShortcuts
-   *     Global keyboard shortcuts: / search, Escape close overlay
+   * 16a. OverlayStack
+   *     Manages z-index stacking and Esc dismissal for overlays.
+   *     Tracks open order so Esc only closes the topmost layer.
+   *
+   *     Registration: elements with [data-overlay] are auto-discovered.
+   *     Triggers: [data-overlay-trigger="overlay-id"] or checkbox :has() CSS.
+   *     Close buttons: [data-close], .close-btn, .overlay-close within overlay.
+   *     Backdrop dismiss: .overlay-dismiss within overlay.
+   * ══════════════════════════════════════════════ */
+  var OverlayStack = {
+    /* Stack of open overlay DOM elements, bottom-first */
+    _stack: [],
+
+    /* Base z-index for the first overlay layer */
+    _baseZ: 1100,
+
+    /* Step between successive overlay layers */
+    _step: 10,
+
+    /* CSS variable name set on each overlay element */
+    _varName: '--overlay-z-index',
+
+    init: function () {
+      OverlayStack._bindTriggers();
+      OverlayStack._bindEsc();
+      OverlayStack._observeCheckboxes();
+    },
+
+    /* ── Public API ── */
+
+    /**
+     * Push an overlay element onto the stack.
+     * Sets data-overlay-active, assigns z-index, adds to stack.
+     * @param {HTMLElement} el  The overlay container ([data-overlay])
+     */
+    push: function (el) {
+      if (!el || OverlayStack._stack.indexOf(el) !== -1) return;
+      el.setAttribute('data-overlay-active', '');
+      var z = OverlayStack._baseZ + OverlayStack._stack.length * OverlayStack._step;
+      el.style.setProperty(OverlayStack._varName, z);
+      el.classList.add('overlay-active');
+      OverlayStack._stack.push(el);
+    },
+
+    /**
+     * Remove an overlay from the stack (any position).
+     * Re-indexes z-index values for remaining items.
+     * @param {HTMLElement} el
+     */
+    remove: function (el) {
+      var idx = OverlayStack._stack.indexOf(el);
+      if (idx === -1) return;
+      OverlayStack._stack.splice(idx, 1);
+      el.removeAttribute('data-overlay-active');
+      el.classList.remove('overlay-active');
+      el.style.removeProperty(OverlayStack._varName);
+      OverlayStack._reindex();
+    },
+
+    /**
+     * Close the topmost overlay on the stack.
+     * Dispatches a 'overlayclose' CustomEvent on the element.
+     * If not prevented, falls back to close button click or checkbox uncheck.
+     */
+    closeTop: function () {
+      if (!OverlayStack._stack.length) return false;
+      var top = OverlayStack._stack[OverlayStack._stack.length - 1];
+
+      /* Allow custom close handlers via event */
+      var evt = new CustomEvent('overlayclose', { cancelable: true, bubbles: false });
+      if (!top.dispatchEvent(evt)) return true; /* handler called preventDefault */
+
+      /* Try clicking a close button first */
+      var closeBtn = top.querySelector('[data-close], .close-btn, .overlay-close, .drawer-close');
+      if (closeBtn) {
+        closeBtn.click();
+      } else {
+        /* Fallback: uncheck the associated checkbox toggle */
+        OverlayStack._uncheckToggle(top);
+        OverlayStack.remove(top);
+      }
+      return true;
+    },
+
+    /**
+     * Return the current stack depth.
+     */
+    depth: function () {
+      return OverlayStack._stack.length;
+    },
+
+    /* ── Internal ── */
+
+    /** Bind click on [data-overlay-trigger] buttons, close buttons, and backdrop dismiss */
+    _bindTriggers: function () {
+      document.addEventListener('click', function (e) {
+        /* 1. Open trigger */
+        var trigger = e.target.closest('[data-overlay-trigger]');
+        if (trigger) {
+          var targetId = trigger.getAttribute('data-overlay-trigger');
+          var overlay = document.querySelector('[data-overlay="' + targetId + '"]');
+          if (!overlay) return;
+          /* Check the associated hidden checkbox (CSS :has() activation) */
+          var checkbox = document.getElementById(targetId);
+          if (checkbox && checkbox.type === 'checkbox') {
+            checkbox.checked = true;
+          }
+          OverlayStack.push(overlay);
+          return;
+        }
+
+        /* 2. Close button inside an overlay */
+        var closeBtn = e.target.closest('[data-overlay] [data-close], [data-overlay] .close-btn, [data-overlay] .overlay-close, [data-overlay] .drawer-close');
+        if (closeBtn) {
+          e.preventDefault();
+          var overlayEl = closeBtn.closest('[data-overlay]');
+          if (overlayEl) {
+            OverlayStack._uncheckToggle(overlayEl);
+            OverlayStack.remove(overlayEl);
+          }
+          return;
+        }
+
+        /* 3. Backdrop dismiss (click on overlay-dismiss area) */
+        var dismiss = e.target.closest('[data-overlay] .overlay-dismiss');
+        if (dismiss) {
+          e.preventDefault();
+          var backdropOverlay = dismiss.closest('[data-overlay]');
+          if (backdropOverlay) {
+            OverlayStack._uncheckToggle(backdropOverlay);
+            OverlayStack.remove(backdropOverlay);
+          }
+          return;
+        }
+      });
+    },
+
+    /** Global Esc handler — closes topmost overlay only */
+    _bindEsc: function () {
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (!OverlayStack._stack.length) return;
+        e.preventDefault();
+        e.stopPropagation();
+        OverlayStack.closeTop();
+      }, true);
+    },
+
+    /** Watch hidden checkbox toggles that activate overlays via :has() */
+    _observeCheckboxes: function () {
+      /* MutationObserver on checkbox state changes */
+      var checkboxes = document.querySelectorAll('input[type="checkbox"][id^="overlay-"]');
+      if (!checkboxes.length) return;
+
+      checkboxes.forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          var overlayId = cb.id;
+          var overlay = document.querySelector('[data-overlay="' + overlayId + '"]');
+          if (!overlay) return;
+          if (cb.checked) {
+            OverlayStack.push(overlay);
+          } else {
+            OverlayStack.remove(overlay);
+          }
+        });
+      });
+
+      /* Also catch overlays that are already visible on page load */
+      requestAnimationFrame(function () {
+        checkboxes.forEach(function (cb) {
+          if (cb.checked) {
+            var overlay = document.querySelector('[data-overlay="' + cb.id + '"]');
+            if (overlay) OverlayStack.push(overlay);
+          }
+        });
+      });
+    },
+
+    /** Uncheck the hidden checkbox associated with an overlay */
+    _uncheckToggle: function (overlay) {
+      var overlayId = overlay.getAttribute('data-overlay');
+      if (!overlayId) return;
+      var checkbox = document.getElementById(overlayId);
+      if (checkbox && checkbox.type === 'checkbox') {
+        checkbox.checked = false;
+      }
+    },
+
+    /** Re-assign z-index values after stack mutation */
+    _reindex: function () {
+      for (var i = 0; i < OverlayStack._stack.length; i++) {
+        var el = OverlayStack._stack[i];
+        var z = OverlayStack._baseZ + i * OverlayStack._step;
+        el.style.setProperty(OverlayStack._varName, z);
+      }
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 16b. KeyboardShortcuts
+   *     Global keyboard shortcuts: / search, ? help
+   *     Escape is handled by OverlayStack._bindEsc()
    * ══════════════════════════════════════════════ */
   var KeyboardShortcuts = {
     init: function () {
@@ -1855,14 +2328,6 @@
           case '?':
             /* Future: shortcut help panel */
             break;
-          case 'Escape':
-            /* Close topmost overlay */
-            var topOverlay = document.querySelector('[data-overlay].overlay-active, [aria-modal="true"]:not([aria-hidden="true"])');
-            if (topOverlay) {
-              var closeBtn = topOverlay.querySelector('[data-close], .close-btn');
-              if (closeBtn) closeBtn.click();
-            }
-            break;
         }
       });
     },
@@ -1874,13 +2339,33 @@
    * ══════════════════════════════════════════════ */
   var CollapseToggle = {
     init: function () {
+      /* Decorate existing toggle buttons with ARIA attributes */
+      document.querySelectorAll('[data-collapse-toggle]').forEach(function (toggle) {
+        var targetId = toggle.getAttribute('data-collapse-toggle');
+        var target = document.getElementById(targetId);
+        if (!target) return;
+
+        var isCollapsed = target.getAttribute('data-collapsed') === 'true';
+        toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+        toggle.setAttribute('aria-controls', targetId);
+        if (!target.hasAttribute('role')) {
+          target.setAttribute('role', 'region');
+        }
+        if (!target.hasAttribute('aria-label') && !target.hasAttribute('aria-labelledby')) {
+          var toggleLabel = toggle.getAttribute('aria-label') || toggle.textContent.trim();
+          target.setAttribute('aria-label', toggleLabel + ' 区域');
+        }
+      });
+
       document.addEventListener('click', function (e) {
         var toggle = e.target.closest('[data-collapse-toggle]');
         if (!toggle) return;
-        var target = document.getElementById(toggle.getAttribute('data-collapse-toggle'));
+        var targetId = toggle.getAttribute('data-collapse-toggle');
+        var target = document.getElementById(targetId);
         if (!target) return;
         var isCollapsed = target.getAttribute('data-collapsed') === 'true';
         target.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+        toggle.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
       });
     },
   };
@@ -2168,6 +2653,7 @@
     TooltipSystem.init();
     CollapsibleContextSections.init();
     SidebarToggle.init();
+    OverlayStack.init();
     KeyboardShortcuts.init();
     CollapseToggle.init();
     CommandPalette.init();

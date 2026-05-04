@@ -348,7 +348,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: var(--overlay-z-index, 1100);
   background: color-mix(in oklch, var(--surface-app) 72%, transparent);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
