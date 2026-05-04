@@ -161,6 +161,9 @@ button {
   --prototype-studio-inspector-width: 300px;
   --prototype-agent-detail-width: var(--shell-agent-detail-width);
 
+  /* Status bar — alias for tokens-shell.css --shell-status-bar-height */
+  --status-bar-height: var(--shell-status-bar-height, 1.5rem);
+
   /* Operations Console */
   --shell-ops-detail-width:     340px;
 
@@ -170,6 +173,19 @@ button {
   --surface-secondary: var(--surface-panel-elevated);
   --radius-full: 9999px;
   --space-1: 0.0625rem;
+
+  /* Icon sizes (replaces hardcoded pixel values) */
+  --icon-size-sm: 14px;
+  --icon-size-md: 16px;
+  --icon-size-lg: 18px;
+
+  /* Bar heights (confidence, progress, risk, limit) */
+  --bar-height-sm: 3px;
+  --bar-height-md: 4px;
+  --bar-height-lg: 6px;
+
+  /* Compact vertical padding (tags, badges) */
+  --compact-padding-y: 2px;
 }
 
 /* ── Scrollbar ── */
@@ -245,6 +261,12 @@ button {
   padding-bottom: var(--shell-hub-padding-bottom, 1.5rem);
 }
 
+/* Decoration layer budget: 1 pseudo-element per shell type.
+ * Noise texture is consolidated into ::before with a subtle
+ * brand-accent gradient line at top. The old separate ::after
+ * (ambient-top) is removed — pages that need an additional ambient
+ * glow should use a single .ambient div, not both pseudo-elements.
+ */
 .shell-hub::before,
 .shell-agent::before {
   content: '';
@@ -252,30 +274,24 @@ button {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: var(--surface-app);
+  background:
+    /* Subtle brand-accent gradient line at top edge */
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
+      transparent 1.5px
+    ),
+    var(--surface-app);
   filter: url(#noise-filter);
   opacity: var(--shell-noise-opacity, 0.018);
 }
 
-.shell-hub::after,
-.shell-agent::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 2;
-  height: 1.5px;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-    color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-    color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-    transparent 100%
-  );
-}
+/* Ambient top line removed from ::after — consolidated into ::before above.
+ * Pages needing a stronger ambient effect can add a single .ambient div
+ * inside the shell container. Keep decoration budget to max 2 layers:
+ * 1. ::before (noise + top accent line)
+ * 2. Optional page-specific .ambient div
+ */
 
 .shell-hub > *,
 .shell-agent > * {
@@ -410,9 +426,10 @@ button {
 }
 
 /* ── Minimum viewport protection ──
- * Prevents layout collapse below 1024px.
- * Applies to all shell variants defined in layout-base.css
- * and page-local shells (shell-studio, shell-ledger, shell-regime).
+ * Desktop-first strategy: this is a financial tool (like Bloomberg Terminal)
+ * designed for 1024px+ viewports. The min-width below prevents layout collapse
+ * on desktop. Tablet (768-1023px) gets graceful degradation via the
+ * responsive breakpoints below. Below 768px, layouts scroll horizontally.
  */
 .shell,
 .shell-v2,
@@ -432,6 +449,114 @@ button {
 
 body {
   overflow-x: auto;
+}
+
+/* ── Responsive: Tablet (768-1023px) ──
+ * Graceful degradation: hide sidebars, collapse to 2-column rail+main.
+ * This is intentionally minimal — full mobile support is not expected.
+ */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  /* Allow horizontal scroll below desktop minimum */
+  .shell,
+  .shell-v2,
+  .shell-hub,
+  .shell-agent,
+  .shell-signals,
+  .shell-analytical,
+  .shell-catalog,
+  .shell-ops,
+  .shell-radar,
+  .shell-intel,
+  .shell-studio,
+  .shell-ledger,
+  .shell-regime {
+    min-width: 768px;
+  }
+
+  /* Reset sidebar/detail widths to 0 — content hidden */
+  :root {
+    --shell-sidebar-width: 0;
+    --shell-detail-width: 0;
+  }
+
+  /* 3-column shells collapse to 2-column: rail + main */
+  .shell {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail pulse"
+      "rail main";
+  }
+
+  .shell-v2 {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail status"
+      "rail main";
+  }
+
+  .shell-signals {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail toolbar"
+      "rail queue";
+  }
+
+  .shell-analytical {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail strip"
+      "rail main"
+      "rail analysis";
+  }
+
+  .shell-catalog {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail toolbar"
+      "rail table";
+  }
+
+  .shell-ops {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail health"
+      "rail main";
+  }
+
+  /* Hide detail panels and sidebars */
+  .shell-sidebar,
+  .shell-sidebar-collapsed,
+  .signal-detail,
+  .shell-catalog .catalog-detail,
+  .shell-ops .ops-detail,
+  .shell-agent .agent-detail {
+    display: none;
+  }
+}
+
+/* ── Responsive: Small tablet / large phone (below 768px) ──
+ * Rail stays icon-only (it already is). Body allows scrolling.
+ * Shells keep their min-width and scroll horizontally — not ideal
+ * but functional for quick checks on smaller devices.
+ */
+@media (max-width: 768px) {
+  body {
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .shell-catalog,
+  .shell-studio,
+  .shell-agent,
+  .shell-radar {
+    overflow-x: auto;
+  }
 }
 
 /* ── Rail (icon nav) ── */
@@ -560,6 +685,7 @@ body {
   z-index: 120;
 }
 
+/* Override any page-level header ::after decoration */
 .shell-header.shell-header::after {
   display: none;
 }
@@ -581,10 +707,6 @@ h1.header-title {
   margin: 0;
   font: inherit;
   color: inherit;
-}
-
-.header-title,
-h1.header-title {
   font-size: var(--font-size-16);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
@@ -785,72 +907,120 @@ h1.header-title {
   top: 72px;
   right: 24px;
   z-index: 80;
-  width: min(360px, calc(100vw - 32px));
-  padding: var(--space-10);
+  width: min(380px, calc(100vw - 32px));
+  padding: 0;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-8);
   background: var(--surface-panel-elevated);
   box-shadow: 0 16px 40px color-mix(in oklch, var(--text-primary) 18%, transparent);
+  overflow: hidden;
 }
 
-.ditto-command-palette[hidden] {
-  display: none !important;
+.ditto-command-palette.ditto-command-palette[hidden] {
+  display: none;
 }
 
-.ditto-command-title {
-  color: var(--text-primary);
-  font-size: var(--font-size-12);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.3;
-}
-
-.ditto-command-context {
-  margin-top: var(--space-2);
-  color: var(--text-tertiary);
-  font-family: var(--font-family-code);
-  font-size: var(--font-size-10);
-  line-height: 1.3;
-}
-
-.ditto-command-list {
-  display: grid;
+/* Search input area */
+.ditto-command-search-wrap {
+  display: flex;
+  align-items: center;
   gap: var(--space-6);
-  margin-top: var(--space-8);
+  padding: var(--space-8) var(--space-10);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ditto-command-search-icon {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-14);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ditto-command-search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-13);
+  line-height: 1.4;
+  width: 100%;
+}
+
+.ditto-command-search:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--interaction-focus-ring);
+}
+
+.ditto-command-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Scrollable results */
+.ditto-command-results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-10) var(--space-8);
+}
+
+/* Category header */
+.ditto-command-category {
+  padding: var(--space-6) 0 var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-10);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.ditto-command-category:first-child {
+  padding-top: var(--space-2);
 }
 
 .ditto-command-item {
-  min-height: 28px;
+  width: 100%;
+  min-height: 30px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-8);
-  border: 1px solid var(--border-subtle);
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid transparent;
   border-radius: var(--radius-6);
-  background: var(--surface-panel-base);
+  background: transparent;
   color: var(--text-secondary);
   font-family: var(--font-family-ui);
   font-size: var(--font-size-12);
-  line-height: 1.2;
+  line-height: 1.3;
   text-align: left;
   cursor: pointer;
+  transition: background 80ms ease, color 80ms ease;
 }
 
 .ditto-command-item:hover {
-  border-color: var(--brand-accent);
+  background: var(--surface-panel-base);
   color: var(--text-primary);
 }
 
 .ditto-command-item:focus-visible {
   border-color: var(--brand-accent);
+  background: var(--surface-panel-base);
   color: var(--text-primary);
   outline: none;
   box-shadow: 0 0 0 2px var(--interaction-focus-ring);
+}
+
+/* Keyboard navigation highlight */
+.ditto-command-item.command-item-active {
+  background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+  color: var(--text-primary);
+  border-color: color-mix(in oklch, var(--brand-accent) 30%, transparent);
 }
 
 .ditto-command-empty {
   color: var(--text-tertiary);
   font-size: var(--font-size-12);
   line-height: 1.4;
+  padding: var(--space-8) 0;
 }
 
 .shell-header .header-avatar.header-avatar {
@@ -935,7 +1105,12 @@ h1.header-title {
   cursor: pointer;
 }
 
-@media (max-width: 720px) {
+/* ── Header compact mode (768-1023px) ──
+ * Consolidated from the old @media (max-width: 720px) query.
+ * Applied within the tablet breakpoint range to hide non-essential
+ * header elements and collapse the command trigger.
+ */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
   .shell-header {
     min-width: 0;
     width: calc(100vw - var(--shell-rail-width));
@@ -1170,8 +1345,8 @@ h1.header-title {
 }
 
 .sidebar-collapsed-icon svg {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
 }
 
 /* ── Disclosure summaries (progressive disclosure) ── */
@@ -1642,18 +1817,24 @@ h1.header-title {
   color: var(--text-secondary);
 }
 
-/* P2/P3 queue items: collapse reason row, reveal on hover */
+/* P2/P3 queue items: collapse reason row, reveal on hover.
+ * Uses grid-template-rows for smooth height animation.
+ */
 .queue-item:has(.queue-item-bar.p2) .queue-item-detail,
 .queue-item:has(.queue-item-bar.p3) .queue-item-detail {
-  max-height: 0;
-  overflow: hidden;
+  display: grid;
+  grid-template-rows: 0fr;
   opacity: 0;
-  transition: max-height var(--motion-duration-fast) var(--motion-easing-standard),
+  transition: grid-template-rows var(--motion-duration-fast) var(--motion-easing-standard),
               opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+.queue-item:has(.queue-item-bar.p2) .queue-item-detail > .queue-item-detail-inner,
+.queue-item:has(.queue-item-bar.p3) .queue-item-detail > .queue-item-detail-inner {
+  overflow: hidden;
 }
 .queue-item:has(.queue-item-bar.p2):hover .queue-item-detail,
 .queue-item:has(.queue-item-bar.p3):hover .queue-item-detail {
-  max-height: 40px;
+  grid-template-rows: 1fr;
   opacity: 1;
 }
 
@@ -1680,7 +1861,7 @@ h1.header-title {
 
 .queue-item-btn {
   font-size: var(--font-size-10);
-  padding: 2px var(--space-6);
+  padding: var(--compact-padding-y) var(--space-6);
   border-radius: var(--radius-2);
   cursor: pointer;
   color: var(--text-tertiary);
@@ -1879,20 +2060,36 @@ details.context-section[open] .collapse-summary {
   max-inline-size: 12rem;
 }
 
+/* Context section body: uses grid-template-rows for smooth collapse.
+ * Inner content should be wrapped in .context-section-body-inner:
+ *   <details class="context-section">
+ *     <summary>...</summary>
+ *     <div class="context-section-body">
+ *       <div class="context-section-body-inner">...</div>
+ *     </div>
+ *   </details>
+ */
 details.context-section > .context-section-body {
-  max-height: 42rem;
+  display: grid;
+  grid-template-rows: 1fr;
   opacity: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
   padding-bottom: var(--space-8);
   transition:
-    max-height 150ms var(--motion-easing-standard),
+    grid-template-rows 150ms var(--motion-easing-standard),
     opacity 150ms var(--motion-easing-standard);
 }
 
+details.context-section > .context-section-body > .context-section-body-inner {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 details.context-section:not([open]) > .context-section-body {
-  max-height: 0;
+  grid-template-rows: 0fr;
   opacity: 0;
+}
+
+details.context-section:not([open]) > .context-section-body > .context-section-body-inner {
   overflow: hidden;
 }
 
@@ -1993,7 +2190,7 @@ details.context-section:not([open]) > .context-section-body {
 .action-badge {
   font-size: var(--font-size-10);
   font-weight: var(--font-weight-medium);
-  padding: 2px var(--space-6);
+  padding: var(--compact-padding-y) var(--space-6);
   border-radius: var(--radius-4);
   white-space: nowrap;
 }
@@ -2151,8 +2348,8 @@ details.context-section:not([open]) > .context-section-body {
 .finding-item:last-child { border-bottom: none; }
 
 .finding-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2236,8 +2433,8 @@ details.context-section:not([open]) > .context-section-body {
 }
 
 .findings-feed .finding-icon svg {
-  width: 14px;
-  height: 14px;
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
 }
 
 .findings-feed-expand {
@@ -2333,8 +2530,8 @@ details.context-section:not([open]) > .context-section-body {
 .research-item:last-child { border-bottom: none; }
 
 .research-item-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2360,8 +2557,8 @@ details.context-section:not([open]) > .context-section-body {
 }
 
 .research-item.highlighted .research-item-icon {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
   margin-top: 0;
 }
 
@@ -2528,7 +2725,7 @@ details.context-section:not([open]) > .context-section-body {
 
 .filter-divider {
   width: 1px;
-  height: 16px;
+  height: var(--icon-size-md);
   background: var(--border-subtle);
   flex-shrink: 0;
 }
@@ -2577,13 +2774,10 @@ details.context-section:not([open]) > .context-section-body {
   table-layout: fixed;
 }
 
-.data-table thead {
+.data-table th {
   position: sticky;
   top: 0;
   z-index: 2;
-}
-
-.data-table th {
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-medium);
   color: var(--text-tertiary);
@@ -2673,23 +2867,13 @@ details.context-section:not([open]) > .context-section-body {
   transition: background var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
-.data-table tr.row:hover {
+.data-table tr.row:hover,
+.data-table tbody tr:hover {
   background: var(--interaction-hover-subtle-bg);
 }
 
 .data-table tr.row.selected {
   background: var(--interaction-selected-bg);
-}
-
-.data-table tbody tr:hover {
-  background: var(--interaction-hover-subtle-bg);
-}
-
-.data-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--surface-strip);
 }
 
 /* ── Standard Data Table Interaction (panel-body fallback) ── */
@@ -2995,7 +3179,7 @@ details.context-section:not([open]) > .context-section-body {
 
 .btn-sm {
   min-height: 25px;
-  padding: 2px var(--space-6);
+  padding: var(--compact-padding-y) var(--space-6);
   font-size: var(--font-size-10);
 }
 
@@ -3130,7 +3314,7 @@ details.context-section:not([open]) > .context-section-body {
 /* ── Confidence Bar ── */
 .confidence-bar {
   width: 48px;
-  height: 4px;
+  height: var(--bar-height-md);
   background: var(--neutral-200);
   border-radius: 2px;
   overflow: hidden;
@@ -3268,14 +3452,26 @@ details.context-section:not([open]) > .context-section-body {
 .tab-bar .tab-item:nth-child(4) { animation-delay: 90ms; }
 .tab-bar .tab-item:nth-child(5) { animation-delay: 120ms; }
 
-/* ── Collapsible content ─────────────────────── */
+/* ── Collapsible content ───────────────────────
+ * Uses grid-template-rows for smooth height animation.
+ * Requires inner content wrapped in a .collapsible-inner div:
+ *   <div class="collapsible-content">
+ *     <div class="collapsible-inner">...</div>
+ *   </div>
+ */
 .collapsible-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms var(--motion-easing-standard),
+              opacity 150ms var(--motion-easing-standard);
+}
+
+.collapsible-content > .collapsible-inner {
   overflow: hidden;
-  transition: max-height 0.2s ease, opacity 0.15s ease;
 }
 
 .collapsible-content[data-collapsed="true"] {
-  max-height: 0 !important;
+  grid-template-rows: 0fr;
   opacity: 0;
 }
 
@@ -3546,7 +3742,7 @@ details.context-section:not([open]) > .context-section-body {
 .risk-metric-card .rm-value.critical { color: var(--system-down-fg); }
 
 .risk-metric-card .rm-bar {
-  height: 3px;
+  height: var(--bar-height-sm);
   background: var(--neutral-200);
   border-radius: 2px;
   overflow: hidden;
@@ -3644,7 +3840,7 @@ details.context-section:not([open]) > .context-section-body {
 
 .limit-bar-track {
   flex: 1;
-  height: 6px;
+  height: var(--bar-height-lg);
   background: var(--neutral-200);
   border-radius: 3px;
   overflow: hidden;
@@ -3688,7 +3884,7 @@ details.context-section:not([open]) > .context-section-body {
 .pill {
   font-size: var(--font-size-10);
   font-weight: var(--font-weight-medium);
-  padding: 2px var(--space-8);
+  padding: var(--compact-padding-y) var(--space-8);
   border-radius: var(--radius-12);
   white-space: nowrap;
 }
@@ -3871,18 +4067,10 @@ details.context-section:not([open]) > .context-section-body {
   }
 }
 
+/* Tablet: clamp utility bar width */
 @media (max-width: 1024px) {
   .shell-header [data-header-utility-bar] {
     max-width: 44vw;
-  }
-}
-
-@media (max-width: 768px) {
-  .shell-catalog,
-  .shell-studio,
-  .shell-agent,
-  .shell-radar {
-    overflow-x: auto;
   }
 }
 
@@ -4021,10 +4209,12 @@ html[data-resizing-panel="true"] body {
   user-select: none;
 }
 
+/* Suppress transitions/animations during panel resize to prevent jitter.
+ * Uses html attribute selector for maximum specificity without !important. */
 html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-"], .catalog-shell, .object-shell),
 html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-"], .catalog-shell, .object-shell) * {
-  transition: none !important;
-  animation: none !important;
+  transition: none;
+  animation: none;
 }
 
 
@@ -4168,7 +4358,7 @@ html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-
 
 /* ── Progress Bar (compact) ── */
 .progress-bar {
-  height: 4px;
+  height: var(--bar-height-md);
   background: var(--neutral-200);
   border-radius: 2px;
   overflow: hidden;
@@ -4336,7 +4526,7 @@ html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-
 .col-auto    { flex: 1; min-width: 0; }
 
 /* ── Progress bar ── */
-.bar-track   { height: 3px; border-radius: var(--radius-full); background: var(--surface-secondary); overflow: hidden; }
+.bar-track   { height: var(--bar-height-sm); border-radius: var(--radius-full); background: var(--surface-secondary); overflow: hidden; }
 .bar-fill    { height: 100%; border-radius: var(--radius-full); }
 
 /* ── Timeline ── */
@@ -4446,6 +4636,17 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   margin-right: 0.25em;
 }
 
+/* ── Direction symbol utilities (CVD a11y: WCAG 1.4.1) ── */
+.dir-up::before {
+  content: '▲ ';
+  font-size: 0.7em;
+}
+
+.dir-down::before {
+  content: '▼ ';
+  font-size: 0.7em;
+}
+
 /* ── Display ── */
 .hidden { display: none; }
 
@@ -4467,9 +4668,9 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .text-12-secondary { font-size: var(--font-size-12); color: var(--text-secondary); }
 
 /* ── Icon sizes ── */
-.icon-sm  { width: 14px; height: 14px; }
-.icon-md  { width: 18px; height: 18px; }
-.icon-lg  { width: 24px; height: 24px; }
+.icon-sm  { width: var(--icon-size-sm); height: var(--icon-size-sm); }
+.icon-md  { width: var(--icon-size-lg); height: var(--icon-size-lg); }
+.icon-lg  { width: var(--font-size-24); height: var(--font-size-24); }
 
 /* ── Divider ── */
 .divider-v { width: 1px; background: var(--border-subtle); }
@@ -4573,14 +4774,14 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .text-12-tertiary-mb-4 { font-size: var(--font-size-12); color: var(--text-tertiary); margin-bottom: var(--space-4); }
 
 /* ── Review Remediation Shared Contracts ── */
+/* Bottom tray: outer container uses max-height for overall sizing.
+ * Inner [data-bottom-tray-content] uses max-height transitions for animated collapse.
+ */
 [data-bottom-tray] {
   --bottom-tray-peek-content-max-height: calc(var(--font-size-12) * 1.7 + var(--space-16));
   --bottom-tray-expanded-content-max-height: min(32vh, 22rem);
   overflow: hidden;
-  transition:
-    max-height var(--motion-duration-normal) var(--motion-easing-standard),
-    height var(--motion-duration-normal) var(--motion-easing-standard),
-    padding var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: max-height var(--motion-duration-normal) var(--motion-easing-standard), height var(--motion-duration-normal) var(--motion-easing-standard), padding var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 [data-bottom-tray].bottom-tray {
@@ -4598,15 +4799,14 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   flex: 0 0 auto;
 }
 
+/* Bottom tray content: max-height transitions for animated collapse. */
 [data-bottom-tray-content],
 .bottom-tray-content {
   min-height: 0;
   max-height: var(--bottom-tray-expanded-content-max-height);
   overflow: auto;
   opacity: 1;
-  transition:
-    max-height var(--motion-duration-normal) var(--motion-easing-standard),
-    opacity var(--motion-duration-fast) var(--motion-easing-standard);
+  transition: max-height var(--motion-duration-normal) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .bottom-tray [data-bottom-tray-content][aria-hidden="true"] {
@@ -4677,33 +4877,34 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   max-height: 1.5rem;
 }
 
-.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
+/* Higher specificity via doubled attribute selector avoids !important */
+.status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
   align-items: flex-start;
   flex-wrap: wrap;
-  flex: 0 0 auto !important;
-  flex-basis: auto !important;
-  height: auto !important;
+  flex: 0 0 auto;
+  flex-basis: auto;
+  height: auto;
   min-height: 1.5rem;
   max-height: min(28vh, 14rem);
-  overflow: visible !important;
+  overflow: visible;
   padding-block: var(--space-4);
 }
 
-.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+.status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
   flex-wrap: wrap;
   max-height: calc(min(28vh, 14rem) - var(--space-8));
   overflow: visible;
   white-space: normal;
 }
 
-#default-view > .status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
+#default-view > .status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
   flex: 0 0 auto !important;
   flex-basis: auto !important;
   height: auto !important;
   overflow: visible !important;
 }
 
-#default-view > .status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+#default-view > .status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
   overflow: visible !important;
 }
 

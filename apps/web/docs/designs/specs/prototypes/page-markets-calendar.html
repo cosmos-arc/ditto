@@ -1084,6 +1084,16 @@
     .iv-textarea-resize { resize: vertical; }
     .iv-flex-wrap-gap6-mb8 { display: flex; gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-8); }
 
+    /* ── Animations ── */
+    @keyframes tab-reveal {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
   </style>
 </head>
 <body>
@@ -1496,7 +1506,7 @@
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-up">2.80万亿</div>
+                  <div class="timeline-data-value text-up dir-up">2.80万亿</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1522,7 +1532,7 @@
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-down">5.2%</div>
+                  <div class="timeline-data-value text-down dir-down">5.2%</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1543,12 +1553,12 @@
               <div class="timeline-data">
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">前值</div>
-                  <div class="timeline-data-value text-down">-0.1%</div>
+                  <div class="timeline-data-value text-down dir-down">-0.1%</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-up">+0.3%</div>
+                  <div class="timeline-data-value text-up dir-up">+0.3%</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1569,12 +1579,12 @@
               <div class="timeline-data">
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">前值</div>
-                  <div class="timeline-data-value text-up">+3.8%</div>
+                  <div class="timeline-data-value text-up dir-up">+3.8%</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-up">+4.2%</div>
+                  <div class="timeline-data-value text-up dir-up">+4.2%</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1600,7 +1610,7 @@
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
                   <div class="timeline-data-label">预期</div>
-                  <div class="timeline-data-value text-down">2.6%</div>
+                  <div class="timeline-data-value text-down dir-down">2.6%</div>
                 </div>
                 <span class="timeline-data-sep">/</span>
                 <div class="timeline-data-cell">
@@ -1644,7 +1654,7 @@
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">事件类型</span>
-            <span class="overlay-field-value iv-text-down">限售解禁</span>
+            <span class="overlay-field-value iv-text-down dir-down dir-down">限售解禁</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">重要性</span>
@@ -2000,7 +2010,7 @@
                   </div>
                   <div class="overlay-field">
                     <span class="overlay-field-label">事件类型</span>
-                    <span class="overlay-field-value iv-text-down">限售解禁</span>
+                    <span class="overlay-field-value iv-text-down dir-down dir-down">限售解禁</span>
                   </div>
                   <div class="overlay-field">
                     <span class="overlay-field-label">重要性</span>

@@ -57,6 +57,7 @@
       border-radius: var(--radius-4);
     }
     .skip-link:focus { left: var(--space-16); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0.01em; }
     .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
     .header-title-group { display: flex; align-items: baseline; }
@@ -600,7 +601,7 @@
           <span class="scope-sep"></span>
           <span class="scope-item">市值: <strong>2,847,320.50</strong></span>
           <span class="scope-sep"></span>
-          <span class="scope-item text-up">当日 PnL: <strong>+12,450.80 (+0.44%)</strong></span>
+          <span class="scope-item text-up dir-up">当日 PnL: <strong>+12,450.80 (+0.44%)</strong></span>
           <span class="scope-sep"></span>
           <span class="scope-item">持仓: <strong>8 只</strong></span>
           <span class="scope-sep"></span>
@@ -615,7 +616,7 @@
             <div class="summary-card" data-answer-evidence>
               <div class="summary-label" data-answer-judgment>收益为正，但最大回撤由科技集中度贡献</div>
               <div class="summary-value" data-answer-metric>2,847,320.50</div>
-              <div class="summary-change up">+12,450.80 (+0.44%)</div>
+              <div class="summary-change up dir-up">+12,450.80 (+0.44%)</div>
             </div>
             <div class="summary-card" data-answer-evidence>
               <div class="summary-label">总市值</div>
@@ -624,12 +625,12 @@
             </div>
             <div class="summary-card" data-answer-evidence>
               <div class="summary-label">累计 PnL</div>
-              <div class="summary-value up">+191,090.50</div>
-              <div class="summary-change up">+7.18% 收益率</div>
+              <div class="summary-value up dir-up">+191,090.50</div>
+              <div class="summary-change up dir-up">+7.18% 收益率</div>
             </div>
             <label for="tab-attribution" class="summary-card" data-answer-action role="button" tabindex="0" aria-controls="panel-attribution" aria-label="查看回撤归因并评估再平衡影响">
               <div class="summary-label">查看回撤归因</div>
-              <div class="summary-value down">-3.24%</div>
+              <div class="summary-value down dir-down">-3.24%</div>
               <div class="summary-change">再平衡后科技权重 -2.4pp</div>
             </label>
           </div>
@@ -677,9 +678,9 @@
                     <td>1,680.00</td>
                     <td>1,756.80</td>
                     <td>351,360.00</td>
-                    <td class="text-up">+15,360.00</td>
-                    <td class="text-up">+4.57%</td>
-                    <td class="text-up">+2,400.00</td>
+                    <td class="text-up dir-up">+15,360.00</td>
+                    <td class="text-up dir-up">+4.57%</td>
+                    <td class="text-up dir-up">+2,400.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">宁德时代</td>
@@ -690,9 +691,9 @@
                     <td>198.50</td>
                     <td>210.30</td>
                     <td>105,150.00</td>
-                    <td class="text-up">+5,900.00</td>
-                    <td class="text-up">+5.95%</td>
-                    <td class="text-up">+1,500.00</td>
+                    <td class="text-up dir-up">+5,900.00</td>
+                    <td class="text-up dir-up">+5.95%</td>
+                    <td class="text-up dir-up">+1,500.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">比亚迪</td>
@@ -703,9 +704,9 @@
                     <td>265.00</td>
                     <td>258.40</td>
                     <td>77,520.00</td>
-                    <td class="text-down">-1,980.00</td>
-                    <td class="text-down">-2.49%</td>
-                    <td class="text-down">-780.00</td>
+                    <td class="text-down dir-down">-1,980.00</td>
+                    <td class="text-down dir-down">-2.49%</td>
+                    <td class="text-down dir-down">-780.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">招商银行</td>
@@ -716,9 +717,9 @@
                     <td>35.20</td>
                     <td>36.85</td>
                     <td>36,850.00</td>
-                    <td class="text-up">+1,650.00</td>
-                    <td class="text-up">+4.69%</td>
-                    <td class="text-up">+450.00</td>
+                    <td class="text-up dir-up">+1,650.00</td>
+                    <td class="text-up dir-up">+4.69%</td>
+                    <td class="text-up dir-up">+450.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">中国平安</td>
@@ -729,9 +730,9 @@
                     <td>48.90</td>
                     <td>50.12</td>
                     <td>40,096.00</td>
-                    <td class="text-up">+976.00</td>
-                    <td class="text-up">+2.49%</td>
-                    <td class="text-up">+320.00</td>
+                    <td class="text-up dir-up">+976.00</td>
+                    <td class="text-up dir-up">+2.49%</td>
+                    <td class="text-up dir-up">+320.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">腾讯控股</td>
@@ -742,9 +743,9 @@
                     <td>368.00</td>
                     <td>385.40</td>
                     <td>77,080.00</td>
-                    <td class="text-up">+3,480.00</td>
-                    <td class="text-up">+4.73%</td>
-                    <td class="text-up">+1,200.00</td>
+                    <td class="text-up dir-up">+3,480.00</td>
+                    <td class="text-up dir-up">+4.73%</td>
+                    <td class="text-up dir-up">+1,200.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">中芯国际</td>
@@ -755,9 +756,9 @@
                     <td>82.50</td>
                     <td>78.90</td>
                     <td>47,340.00</td>
-                    <td class="text-down">-2,160.00</td>
-                    <td class="text-down">-4.36%</td>
-                    <td class="text-down">-540.00</td>
+                    <td class="text-down dir-down">-2,160.00</td>
+                    <td class="text-down dir-down">-4.36%</td>
+                    <td class="text-down dir-down">-540.00</td>
                   </tr>
                   <tr>
                     <td class="name-cell">药明康德</td>
@@ -768,9 +769,9 @@
                     <td>65.00</td>
                     <td>62.30</td>
                     <td>24,920.00</td>
-                    <td class="text-down">-1,080.00</td>
-                    <td class="text-down">-4.15%</td>
-                    <td class="text-down">-260.00</td>
+                    <td class="text-down dir-down">-1,080.00</td>
+                    <td class="text-down dir-down">-4.15%</td>
+                    <td class="text-down dir-down">-260.00</td>
                   </tr>
                 </tbody>
               </table>
@@ -816,7 +817,7 @@
                   <tr>
                     <td>14:52:30</td>
                     <td class="name-cell"><label for="overlay-trade-detail" class="row-trigger">贵州茅台</label></td>
-                    <td class="text-up">买入</td>
+                    <td class="text-up dir-up">买入</td>
                     <td>100</td>
                     <td>1,756.80</td>
                     <td>175,680.00</td>
@@ -827,7 +828,7 @@
                   <tr>
                     <td>14:35:12</td>
                     <td class="name-cell">比亚迪</td>
-                    <td class="text-down">卖出</td>
+                    <td class="text-down dir-down">卖出</td>
                     <td>200</td>
                     <td>258.40</td>
                     <td>51,680.00</td>
@@ -838,7 +839,7 @@
                   <tr>
                     <td>13:20:45</td>
                     <td class="name-cell">宁德时代</td>
-                    <td class="text-up">买入</td>
+                    <td class="text-up dir-up">买入</td>
                     <td>300</td>
                     <td>210.30</td>
                     <td>63,090.00</td>
@@ -849,7 +850,7 @@
                   <tr>
                     <td>11:05:18</td>
                     <td class="name-cell">招商银行</td>
-                    <td class="text-up">买入</td>
+                    <td class="text-up dir-up">买入</td>
                     <td>500</td>
                     <td>36.85</td>
                     <td>18,425.00</td>
@@ -860,7 +861,7 @@
                   <tr>
                     <td>10:42:30</td>
                     <td class="name-cell">中芯国际</td>
-                    <td class="text-down">卖出</td>
+                    <td class="text-down dir-down">卖出</td>
                     <td>200</td>
                     <td>78.90</td>
                     <td>15,780.00</td>
@@ -871,7 +872,7 @@
                   <tr>
                     <td>09:45:00</td>
                     <td class="name-cell">腾讯控股</td>
-                    <td class="text-up">买入</td>
+                    <td class="text-up dir-up">买入</td>
                     <td>200</td>
                     <td>385.40</td>
                     <td>77,080.00</td>
@@ -919,27 +920,27 @@
                     <div class="bar-row">
                       <span class="bar-label">贵州茅台</span>
                       <div class="bar-track"><div class="bar-fill up bar-w-80"></div></div>
-                      <span class="bar-value text-up">+0.54%</span>
+                      <span class="bar-value text-up dir-up">+0.54%</span>
                     </div>
                     <div class="bar-row">
                       <span class="bar-label">宁德时代</span>
                       <div class="bar-track"><div class="bar-fill up bar-w-50"></div></div>
-                      <span class="bar-value text-up">+0.21%</span>
+                      <span class="bar-value text-up dir-up">+0.21%</span>
                     </div>
                     <div class="bar-row">
                       <span class="bar-label">腾讯控股</span>
                       <div class="bar-track"><div class="bar-fill up bar-w-28"></div></div>
-                      <span class="bar-value text-up">+0.12%</span>
+                      <span class="bar-value text-up dir-up">+0.12%</span>
                     </div>
                     <div class="bar-row">
                       <span class="bar-label">中芯国际</span>
                       <div class="bar-track"><div class="bar-fill down bar-w-18"></div></div>
-                      <span class="bar-value text-down">-0.08%</span>
+                      <span class="bar-value text-down dir-down">-0.08%</span>
                     </div>
                     <div class="bar-row">
                       <span class="bar-label">比亚迪</span>
                       <div class="bar-track"><div class="bar-fill down bar-w-13"></div></div>
-                      <span class="bar-value text-down">-0.03%</span>
+                      <span class="bar-value text-down dir-down">-0.03%</span>
                     </div>
                   </div>
                 </div>
@@ -960,39 +961,39 @@
                   <tbody>
                     <tr>
                       <td class="factor-name-cell">动量因子</td>
-                      <td class="text-up">+0.32%</td>
+                      <td class="text-up dir-up">+0.32%</td>
                       <td>0.65</td>
-                      <td class="text-up">+0.21%</td>
+                      <td class="text-up dir-up">+0.21%</td>
                     </tr>
                     <tr>
                       <td class="factor-name-cell">估值因子</td>
-                      <td class="text-up">+0.18%</td>
+                      <td class="text-up dir-up">+0.18%</td>
                       <td>-0.42</td>
-                      <td class="text-down">-0.08%</td>
+                      <td class="text-down dir-down">-0.08%</td>
                     </tr>
                     <tr>
                       <td class="factor-name-cell">资金流因子</td>
-                      <td class="text-up">+0.25%</td>
+                      <td class="text-up dir-up">+0.25%</td>
                       <td>0.38</td>
-                      <td class="text-up">+0.10%</td>
+                      <td class="text-up dir-up">+0.10%</td>
                     </tr>
                     <tr>
                       <td class="factor-name-cell">波动率因子</td>
-                      <td class="text-down">-0.12%</td>
+                      <td class="text-down dir-down">-0.12%</td>
                       <td>0.28</td>
-                      <td class="text-down">-0.03%</td>
+                      <td class="text-down dir-down">-0.03%</td>
                     </tr>
                     <tr>
                       <td class="factor-name-cell">行业因子</td>
-                      <td class="text-up">+0.15%</td>
+                      <td class="text-up dir-up">+0.15%</td>
                       <td>0.52</td>
-                      <td class="text-up">+0.08%</td>
+                      <td class="text-up dir-up">+0.08%</td>
                     </tr>
                     <tr>
                       <td class="factor-name-cell">残差收益</td>
                       <td>—</td>
                       <td>—</td>
-                      <td class="text-up">+0.16%</td>
+                      <td class="text-up dir-up">+0.16%</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1030,15 +1031,15 @@
             <div class="pnl-stats">
               <div class="pnl-stat">
                 <div class="pnl-stat-label">累计</div>
-                <div class="pnl-stat-value text-up">+7.18%</div>
+                <div class="pnl-stat-value text-up dir-up">+7.18%</div>
               </div>
               <div class="pnl-stat">
                 <div class="pnl-stat-label">超额</div>
-                <div class="pnl-stat-value text-up">+1.42%</div>
+                <div class="pnl-stat-value text-up dir-up">+1.42%</div>
               </div>
               <div class="pnl-stat">
                 <div class="pnl-stat-label">回撤</div>
-                <div class="pnl-stat-value text-down">-3.24%</div>
+                <div class="pnl-stat-value text-down dir-down">-3.24%</div>
               </div>
             </div>
           </div>
@@ -1134,11 +1135,11 @@
         <div class="drawer-field"><span class="drawer-field-label">成本均价</span><span class="drawer-field-value">1,680.00</span></div>
         <div class="drawer-field"><span class="drawer-field-label">最新价</span><span class="drawer-field-value">1,756.80</span></div>
         <div class="drawer-field"><span class="drawer-field-label">持仓市值</span><span class="drawer-field-value">351,360.00</span></div>
-        <div class="drawer-field"><span class="drawer-field-label">累计 PnL</span><span class="drawer-field-value text-up">+15,360.00 (+4.57%)</span></div>
-        <div class="drawer-field"><span class="drawer-field-label">当日盈亏</span><span class="drawer-field-value text-up">+2,400.00</span></div>
+        <div class="drawer-field"><span class="drawer-field-label">累计 PnL</span><span class="drawer-field-value text-up dir-up">+15,360.00 (+4.57%)</span></div>
+        <div class="drawer-field"><span class="drawer-field-label">当日盈亏</span><span class="drawer-field-value text-up dir-up">+2,400.00</span></div>
         <div class="drawer-section-title">关联信号</div>
         <div class="drawer-field"><span class="drawer-field-label">最近信号</span><span class="drawer-field-value">动量突破 · 2026-04-20</span></div>
-        <div class="drawer-field"><span class="drawer-field-label">信号强度</span><span class="drawer-field-value text-up">0.82</span></div>
+        <div class="drawer-field"><span class="drawer-field-label">信号强度</span><span class="drawer-field-value text-up dir-up">0.82</span></div>
         <div class="drawer-section-title">关联策略</div>
         <div class="drawer-field"><span class="drawer-field-label">执行策略</span><span class="drawer-field-value">消费龙头动量策略 v2</span></div>
         <div class="drawer-field"><span class="drawer-field-label">策略状态</span><span class="drawer-field-value"><span class="status-dot connected">运行中</span></span></div>
@@ -1155,7 +1156,7 @@
         </div>
         <div class="drawer-field"><span class="drawer-field-label">成交时间</span><span class="drawer-field-value">2026-04-21 14:52:30</span></div>
         <div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台 (600519.SH)</span></div>
-        <div class="drawer-field"><span class="drawer-field-label">方向</span><span class="drawer-field-value text-up">买入</span></div>
+        <div class="drawer-field"><span class="drawer-field-label">方向</span><span class="drawer-field-value text-up dir-up">买入</span></div>
         <div class="drawer-field"><span class="drawer-field-label">成交数量</span><span class="drawer-field-value">100 股</span></div>
         <div class="drawer-field"><span class="drawer-field-label">成交价格</span><span class="drawer-field-value">1,756.80</span></div>
         <div class="drawer-field"><span class="drawer-field-label">成交金额</span><span class="drawer-field-value">175,680.00</span></div>
@@ -1205,7 +1206,7 @@
       <div class="gallery-group" data-component="portfolio-summary">
         <div class="gallery-group__label">Portfolio Summary</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="portfolio-summary"><div class="summary-card"><div class="summary-label">总资产</div><div class="summary-value">2,847,320.50</div><div class="summary-change up">+0.44%</div></div><div class="summary-card"><div class="summary-label">总市值</div><div class="summary-value">2,691,090.50</div></div><div class="summary-card"><div class="summary-label">累计 PnL</div><div class="summary-value up">+191,090.50</div></div><div class="summary-card"><div class="summary-label">最大回撤</div><div class="summary-value down">-3.24%</div></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="portfolio-summary"><div class="summary-card"><div class="summary-label">总资产</div><div class="summary-value">2,847,320.50</div><div class="summary-change up dir-up">+0.44%</div></div><div class="summary-card"><div class="summary-label">总市值</div><div class="summary-value">2,691,090.50</div></div><div class="summary-card"><div class="summary-label">累计 PnL</div><div class="summary-value up dir-up">+191,090.50</div></div><div class="summary-card"><div class="summary-label">最大回撤</div><div class="summary-value down dir-down">-3.24%</div></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">📊</div><div class="state-empty-title">暂无持仓</div><div class="state-empty-desc">开始交易以查看组合概览</div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">数据加载失败</div><div class="state-error-desc">无法获取组合数据</div><button class="state-error-retry">重试</button></div></div></div>
@@ -1220,7 +1221,7 @@
           <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">📋</div><div class="state-empty-title">当前无持仓</div><div class="state-empty-desc">在交易页面下单开始投资</div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">持仓数据异常</div><div class="state-error-desc">无法获取持仓信息</div><button class="state-error-retry">重试</button></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Stale State</div><div class="gallery-card__preview"><div class="stale-banner"><span class="stale-dot-indicator"></span><span>行情延迟 15s，价格灰化</span></div></div></div>
-          <div class="gallery-card"><div class="gallery-card__label">Selected State</div><div class="gallery-card__preview"><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">PnL</span><span class="drawer-field-value text-up">+15,360.00</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Selected State</div><div class="gallery-card__preview"><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">PnL</span><span class="drawer-field-value text-up dir-up">+15,360.00</span></div></div></div>
         </div>
       </div>
       <div class="gallery-group" data-component="trades-table">
@@ -1251,8 +1252,8 @@
       <div class="gallery-group">
         <div class="gallery-group__label">Overlays</div>
         <div class="gallery-cards">
-          <div class="gallery-card" data-overlay-ref="overlay-position-detail"><div class="gallery-card__label">持仓详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击持仓行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer"><div class="drawer-header"><span class="drawer-title">持仓详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">PnL</span><span class="drawer-field-value text-up">+15,360.00</span></div><div class="drawer-field"><span class="drawer-field-label">策略</span><span class="drawer-field-value">消费龙头动量 v2</span></div></div></div></div>
-          <div class="gallery-card" data-overlay-ref="overlay-trade-detail"><div class="gallery-card__label">成交详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击成交行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer"><div class="drawer-header"><span class="drawer-title">成交详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">方向</span><span class="drawer-field-value text-up">买入</span></div><div class="drawer-field"><span class="drawer-field-label">金额</span><span class="drawer-field-value">175,680.00</span></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-position-detail"><div class="gallery-card__label">持仓详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击持仓行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer"><div class="drawer-header"><span class="drawer-title">持仓详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">PnL</span><span class="drawer-field-value text-up dir-up">+15,360.00</span></div><div class="drawer-field"><span class="drawer-field-label">策略</span><span class="drawer-field-value">消费龙头动量 v2</span></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-trade-detail"><div class="gallery-card__label">成交详情 (Drawer)</div><div class="gallery-card__trigger">触发：点击成交行</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer"><div class="drawer-header"><span class="drawer-title">成交详情</span><span class="drawer-close">✕</span></div><div class="drawer-field"><span class="drawer-field-label">标的</span><span class="drawer-field-value">贵州茅台</span></div><div class="drawer-field"><span class="drawer-field-label">方向</span><span class="drawer-field-value text-up dir-up">买入</span></div><div class="drawer-field"><span class="drawer-field-label">金额</span><span class="drawer-field-value">175,680.00</span></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-confirm-close-all"><div class="gallery-card__label">确认全部平仓 (Modal)</div><div class="gallery-card__trigger">触发：点击「全部平仓」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--modal"><div class="overlay-header"><span class="overlay-title">确认全部平仓</span><span class="overlay-close">✕</span></div><div class="overlay-body"><p class="risk-semantic">确认平仓所有持仓？</p><div class="drawer-field"><span class="drawer-field-label">持仓总市值</span><span class="drawer-field-value highlight-value">2,691,090.50</span></div><div class="overlay-actions"><div class="overlay-btn overlay-btn-secondary">取消</div><div class="overlay-btn overlay-btn-danger">确认平仓</div></div></div></div></div></div>
         </div>
       </div>
