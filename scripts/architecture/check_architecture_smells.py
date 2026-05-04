@@ -119,8 +119,13 @@ STALE_ACTIVE_PACKAGE_REFERENCES = (
     "packages/analytics",
     "packages/engine",
     "packages/infra",
+    "interfaces/",
     "interfaces/tests",
     "interfaces/src",
+    "apps → analytics",
+    "analytics →",
+    "→ analytics",
+    "Analytics",
 )
 
 

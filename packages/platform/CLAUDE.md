@@ -63,19 +63,19 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 ```
 ┌─────────────────────────────────────┐
 │  所有层都可以访问 Platform（foundation）│
-│  interfaces → platform ✅             │
-│  app → platform ✅                    │
-│  engine → platform ❌                 │
-│  analytics → platform ✅              │
+│  apps → platform ✅                   │
+│  application → platform ✅            │
+│  strategy/backtest → platform ❌      │
+│  analysis → platform ✅               │
 │  data → platform ✅                   │
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
 │  Platform 禁止依赖其他层               │
-│  platform → interfaces ❌             │
-│  platform → app ❌                    │
-│  platform → engine ❌                 │
-│  platform → analytics ❌              │
+│  platform → apps ❌                   │
+│  platform → application ❌            │
+│  platform → strategy/backtest ❌      │
+│  platform → analysis ❌               │
 │  platform → data ❌                   │
 └─────────────────────────────────────┘
 ```
@@ -84,11 +84,11 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 
 | 层 | 允许范围 | 说明 |
 |----|---------|------|
-| interfaces | `foundation` + `services` | 完整访问（Composition Root） |
-| app | `foundation` + `services` | 禁止 `config`（配置加载走 interfaces） |
+| apps | `foundation` + `services` | 完整访问（Composition Root） |
+| application | `foundation` + `services` | 禁止 `config`（配置加载走 apps） |
 | data | 仅 `foundation` | 存储通过 foundation.db / foundation.util |
-| analytics | 仅 `foundation` | 配置、日志等基础能力 |
-| engine | 禁止 | 不依赖 platform |
+| analysis | 仅 `foundation` | 配置、日志等基础能力 |
+| strategy/backtest | 禁止 | 不依赖 platform |
 
 ## 配置规范
 

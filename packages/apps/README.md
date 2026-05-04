@@ -9,7 +9,7 @@
 ## 目录结构
 
 ```
-interfaces/
+packages/apps/
 ├── src/ditto_apps/
 │   ├── api/                # FastAPI 路由
 │   │   ├── errors.py       # API 层错误处理
@@ -43,7 +43,7 @@ interfaces/
 ```
 apps → application ✅     （query / process / command / builders）
 apps → data ✅            （services / sources，通过 DI 注入）
-apps → analytics ✅
+apps → analysis ✅        （research / reporting 编排）
 apps → platform ✅
 ```
 
@@ -100,7 +100,7 @@ ditto query market         # 数据查询
 ## 变更记录
 
 ### v0.6.0 (2026-04-04)
-- 包名从 `ditto-interfaces` 重命名为 `ditto-apps`
+- 旧入口包重命名为 `ditto-apps`
 - 业务逻辑迁移至 `ditto_application` 包，Apps 层变为纯编排层
 - 目录结构扁平化，移除 services/ 子目录
 - DI 容器简化为 container.py + init_providers.py

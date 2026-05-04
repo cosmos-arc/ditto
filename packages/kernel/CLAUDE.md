@@ -83,22 +83,22 @@ instrument / order / market / identity: 无子域间依赖
 
 | 类型 | 模块 | 格式 | 消费者 |
 |------|------|------|--------|
-| `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Interfaces |
+| `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Apps |
 | `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
 | `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
-| `CalendarId` | market.py | `Literal["cn_stock"]` | Analytics |
-| `GrainId` | market.py | `Literal["1d", "1m"]` | Analytics |
-| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Strategy |
-| `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, App, Interfaces |
-| `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App, Interfaces |
+| `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
+| `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
+| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
+| `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
+| `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
 | `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Strategy |
-| `DerivedSpec` | strategy.py | frozen dataclass | Analytics, Strategy |
-| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Strategy |
-| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Strategy |
+| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analysis, Strategy |
+| `DerivedSpec` | strategy.py | frozen dataclass | Analysis, Strategy |
+| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analysis, Strategy |
+| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution, App |
-| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Interfaces, App |
+| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
 | `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, App |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
@@ -106,10 +106,10 @@ instrument / order / market / identity: 无子域间依赖
 | `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
-| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, App, Interfaces |
-| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
-| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
-| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
+| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, Apps, Application |
+| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, Apps, Application |
+| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
+| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
 | `CompatibilityManifestRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
 | `DerivedMinimalDQSummaryRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
 | `ShadowDiffReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
@@ -117,7 +117,7 @@ instrument / order / market / identity: 无子域间依赖
 | `CertificationReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
 | `DerivedShadowSlotRecord` | publication_safety.py | frozen dataclass | Data, Features, Application |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
-| `DataError` | exceptions.py | `DittoError`（数据域根） | Data, App, Interfaces |
+| `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
 | `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
@@ -159,23 +159,23 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 ```
 ┌─────────────────────────────────────────────┐
 │  所有业务包都可以依赖 Kernel                  │
-│  interfaces → kernel ✅                     │
-│  app → kernel ✅                            │
+│  apps → kernel ✅                           │
+│  application → kernel ✅                    │
 │  strategy/portfolio/risk/execution/backtest → kernel ✅ │
-│  analytics → kernel ✅                      │
+│  analysis → kernel ✅                       │
 │  data → kernel ✅                           │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │  Kernel 禁止依赖其他层                       │
-│  kernel → interfaces ❌                     │
-│  kernel → app ❌                            │
+│  kernel → apps ❌                           │
+│  kernel → application ❌                    │
 │  kernel → strategy ❌                       │
 │  kernel → portfolio ❌                      │
 │  kernel → risk ❌                           │
 │  kernel → execution ❌                      │
 │  kernel → backtest ❌                       │
-│  kernel → analytics ❌                      │
+│  kernel → analysis ❌                       │
 │  kernel → data ❌                           │
 │  kernel → platform ❌                        │
 └─────────────────────────────────────────────┘

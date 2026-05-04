@@ -43,8 +43,13 @@ def test_stale_active_package_references_covers_legacy_names() -> None:
     assert "packages/analytics" in STALE_PKG_REFS
     assert "packages/engine" in STALE_PKG_REFS
     assert "packages/infra" in STALE_PKG_REFS
+    assert "interfaces/" in STALE_PKG_REFS
     assert "interfaces/tests" in STALE_PKG_REFS
     assert "interfaces/src" in STALE_PKG_REFS
+    assert "apps → analytics" in STALE_PKG_REFS
+    assert "analytics →" in STALE_PKG_REFS
+    assert "→ analytics" in STALE_PKG_REFS
+    assert "Analytics" in STALE_PKG_REFS
 
 
 def test_importlinter_has_no_unmatched_bare_barrel_ignore() -> None:
