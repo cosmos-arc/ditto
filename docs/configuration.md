@@ -54,6 +54,7 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 | 系统配置 | `ditto_platform.foundation.config.settings` | SystemSettings, ObservabilitySettings |
 | 存储配置 | `ditto_data.config.data_store` | DataStoreSettings |
 | 数据源配置 | `ditto_data.config.data_source` | DataSourceSettings |
+| 特征产物配置 | `ditto_features.config.artifact_store` | FeatureArtifactStoreSettings |
 | 通知配置 | `ditto_platform.services.notification.config` | NotificationSettings |
 | 质量配置 | `ditto_data.quality.config` | DQSettings |
 
@@ -245,14 +246,21 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 | `fundamental_forecast_path` | `{DATA_ROOT}/fundamental/forecast` | 业绩预告 |
 | `fundamental_holding_path` | `{DATA_ROOT}/fundamental/holding` | 持股数据 |
 | `macro_indicators_path` | `{DATA_ROOT}/macro/indicators` | 宏观指标 |
+| `logs_path` | `{DATA_ROOT}/logs` | 日志存储 |
+| `backups_path` | `{DATA_ROOT}/backups` | 备份存储 |
+| `temp_path` | `{DATA_ROOT}/temp` | 临时文件 |
+
+Feature/Factor 产物路径由 Features 层 `FeatureArtifactStoreSettings` 管理，保持相同的磁盘布局：
+
+| 派生路径 | 计算规则 | 说明 |
+|----------|----------|------|
 | `features_technical_price_path` | `{DATA_ROOT}/features/technical/price` | 技术特征（价格） |
 | `features_technical_indicators_narrow_path` | `{DATA_ROOT}/features/technical/indicators_narrow` | 技术指标窄表 |
 | `features_technical_indicators_wide_path` | `{DATA_ROOT}/features/technical/indicators_wide` | 技术指标宽表 |
 | `factors_narrow_style_path` | `{DATA_ROOT}/factors/narrow/style` | 窄风格因子 |
 | `factors_wide_style_path` | `{DATA_ROOT}/factors/wide/style` | 宽风格因子 |
-| `logs_path` | `{DATA_ROOT}/logs` | 日志存储 |
-| `backups_path` | `{DATA_ROOT}/backups` | 备份存储 |
-| `temp_path` | `{DATA_ROOT}/temp` | 临时文件 |
+| `factors_narrow_path` | `{DATA_ROOT}/factors/factors_narrow` | 因子窄表 |
+| `factors_wide_path` | `{DATA_ROOT}/factors/factors_wide` | 因子宽表 |
 
 ### 3. data_source.env - 数据源配置
 
@@ -580,6 +588,7 @@ c.close()
 | `ObservabilitySettings` | `ditto_platform/foundation/config/settings.py` | `observability.env` |
 | `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
 | `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
+| `FeatureArtifactStoreSettings` | `ditto_features/config/artifact_store.py` | 派生自 `DATA_ROOT` |
 | `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
 | `DQSettings` | `ditto_data/quality/config/` | `dq.env` |
 | `NotificationSettings` | `ditto_platform/services/notification/config.py` | `notification.env` |
