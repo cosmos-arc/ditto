@@ -122,7 +122,7 @@
 
     /* ── Header avatar brass ring ── */
     .shell-home .header-avatar {
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-signature-fg) 15%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 24%, var(--border-subtle));
     }
 
     /* ══════════════════════════════════════════════
@@ -131,13 +131,14 @@
 
     /* ── Rail logo brass presence ── */
     .shell-home .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-signature-fg) 20%, transparent);
+      color: var(--brand-signature-fg);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ── Header search refined hover ── */
     .shell-home .header-search:hover {
-      border-color: color-mix(in oklch, var(--brand-signature-fg) 10%, var(--border-default));
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-signature-fg) 6%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-default));
+      background: var(--surface-panel-elevated);
     }
 
     /* ── Frosted glass header ── */
@@ -189,10 +190,9 @@
       pointer-events: none;
     }
 
-    /* ── Rail active: enhanced brass glow ── */
+    /* ── Rail active: domain-tinted selection ── */
     .shell-home .rail-icon.active {
-      box-shadow: 0 0 8px color-mix(in oklch, var(--brand-signature-fg) 15%, transparent),
-                  0 0 16px color-mix(in oklch, var(--brand-signature-fg) 6%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 24%, var(--border-subtle));
     }
 
     /* ── Decision Card visual anchor — left brand border ── */
@@ -202,25 +202,19 @@
       gap: var(--space-12);
       align-items: stretch;
       padding: var(--space-10) var(--space-14);
-      border-left: 2px solid color-mix(in oklch, var(--brand-signature-fg) 75%, transparent);
-      box-shadow: inset 0 1px 0 0 color-mix(in oklch, var(--brand-signature-fg) 5%, transparent),
-                  inset 0 -1px 0 0 color-mix(in oklch, var(--brand-signature-fg) 3%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 22%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
     }
 
-    /* ── Decision card left border glow halo ── */
+    /* ── Decision card left edge emphasis ── */
     .shell-home .decision-card::before {
       content: '';
       position: absolute;
       left: -1px;
       top: 0;
       bottom: 0;
-      width: 6px;
-      background: linear-gradient(
-        to bottom,
-        color-mix(in oklch, var(--brand-signature-fg) 10%, transparent) 0%,
-        color-mix(in oklch, var(--brand-signature-fg) 4%, transparent) 50%,
-        transparent 100%
-      );
+      width: 2px;
+      background: color-mix(in oklch, var(--brand-signature-fg) 62%, transparent);
       pointer-events: none;
     }
 
@@ -271,43 +265,6 @@
       opacity: 0.042;
       pointer-events: none;
       z-index: 0;
-    }
-
-    /* ── Ambient light bars ── */
-    .ambient-top {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 35%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .ambient-rail {
-      position: absolute;
-      top: 0;
-      right: -1px;
-      bottom: 0;
-      width: 1px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 5;
     }
 
     /* ── Decision routing label — inherits layout-base.css base, no override needed ── */
@@ -667,10 +624,9 @@
       font-weight: var(--font-weight-semibold);
       letter-spacing: 0;
     }
-    /* Signature moment: PnL brass glow (dark mode only) */
+    /* Signature moment: PnL value uses color without extra decoration */
     [data-theme="dark"] .decision-primary .metric-value.positive {
-      text-shadow: 0 0 20px color-mix(in oklch, var(--market-up-fg) 15%, transparent),
-                   0 0 40px color-mix(in oklch, var(--market-up-fg) 5%, transparent);
+      color: var(--market-up-fg);
     }
 
     /* ── R2 POLISH: Activate value-flash on PnL (one-shot on load) ── */
@@ -726,10 +682,6 @@
     /* ══════════════════════════════════════════════
      * Light mode fixes
      * ══════════════════════════════════════════════ */
-    [data-theme="light"] .ambient-top,
-    [data-theme="light"] .ambient-rail {
-      opacity: 0.4;
-    }
     [data-theme="light"] .shell-home .context-section + .context-section::before {
       background: var(--border-subtle);
     }
@@ -928,7 +880,7 @@
       border-color: color-mix(in oklch, var(--risk-high-fg) 20%, transparent);
     }
 
-    /* ── Queue item P1 urgency ambient ── */
+    /* ── Queue item P1 urgency backdrop ── */
     .shell-home .queue-item:has(.queue-item-bar.p1) {
       position: relative;
     }
@@ -950,19 +902,19 @@
     /* Queue item hover elevation */
     .queue-item {
       transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .queue-item:hover {
       background: var(--interaction-hover-subtle-bg);
-      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand-signature-fg) 4%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 12%, var(--border-subtle));
     }
 
-    /* ── Queue item priority bar micro-glow ── */
+    /* ── Queue item priority bar contrast ── */
     .queue-item:hover .queue-item-bar.p1 {
-      box-shadow: 0 0 6px 1px color-mix(in oklch, var(--risk-high-fg) 20%, transparent);
+      background: var(--risk-high-fg);
     }
     .queue-item:hover .queue-item-bar.p2 {
-      box-shadow: 0 0 6px 1px color-mix(in oklch, var(--system-degraded-fg) 20%, transparent);
+      background: var(--system-degraded-fg);
     }
     .worklist-summary {
       display: grid;
@@ -1106,10 +1058,10 @@
     }
 
     /* ══════════════════════════════════════════════
-     * R4: Ambient brand glow — premium depth
+     * R4: Brand-tinted surface depth
      * ══════════════════════════════════════════════ */
 
-    /* Main content area subtle brand glow */
+    /* Main content area subtle brand tint */
     .shell-home .main-primary::before {
       content: '';
       position: absolute;
@@ -1148,9 +1100,8 @@
       z-index: 0;
     }
     .shell-home .panel:hover {
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-signature-fg) 8%, transparent),
-                  0 2px 8px -2px color-mix(in oklch, var(--brand-signature-fg) 6%, transparent),
-                  0 1px 3px color-mix(in oklch, var(--brand-signature-fg) 4%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-subtle));
+      background: var(--surface-panel-elevated);
     }
 
     /* ── Context section title brass accent line (brand signature) ── */
@@ -1445,12 +1396,13 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
-    /* ── Regime tag hover subtle glow ── */
+    /* ── Regime tag hover contrast ── */
     .regime-tag {
-      transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+      border: 1px solid transparent;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .regime-tag:hover {
-      box-shadow: 0 0 0 1px color-mix(in oklch, var(--text-secondary) 12%, transparent);
+      border-color: color-mix(in oklch, var(--text-secondary) 18%, var(--border-subtle));
     }
 
     /* ── Alert dot critical pulse speed variation ── */
@@ -1461,7 +1413,7 @@
       animation-duration: 2.2s;
     }
 
-    /* ── Decision card ambient brass glow ── */
+    /* ── Decision card brass surface tint ── */
     .shell-home .panel[data-contract-slot="decision-card"] {
       position: relative;
     }
@@ -1494,7 +1446,7 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
-    /* ── Sidebar ambient brass wash ── */
+    /* ── Sidebar brass edge tint ── */
     .shell-home .shell-sidebar {
       position: relative;
     }
@@ -1519,7 +1471,7 @@
       z-index: 1;
     }
 
-    /* ── Light mode ambient glow tuning ── */
+    /* ── Light mode surface tuning ── */
     [data-theme="light"] .shell-home .main-primary::before {
       opacity: 0.3;
     }
@@ -1662,9 +1614,6 @@
   <div class="shell-v2 shell-home" data-sidebar-shell data-sidebar-state="expanded">
     <!-- R1: Noise texture overlay -->
     <div class="noise-layer" aria-hidden="true"></div>
-    <!-- R1: Top-edge ambient light -->
-    <div class="ambient-top" aria-hidden="true"></div>
-
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
@@ -1675,9 +1624,6 @@
         <a class="rail-icon" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
         <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
       </div>
-
-      <!-- R1: Rail right edge ambient light -->
-      <div class="ambient-rail" aria-hidden="true"></div>
     </nav>
 
     <!-- ═══ Header ═══ -->
@@ -1795,7 +1741,7 @@
       <div class="main-primary">
         <!-- Decision Card: primary decision + risk evidence + next action -->
         <div class="panel" data-contract-slot="decision-card" data-primary-answer data-command-decision-card aria-label="影响范围：全局账户、市场和优先事项">
-          <section class="decision-card" data-mouse-glow="true" data-reveal="fade-up">
+          <section class="decision-card" data-reveal="fade-up">
             <!-- Left: today's primary decision -->
             <div class="decision-primary">
               <span class="metric-label">今日主决策</span>
@@ -1840,7 +1786,7 @@
 
 
         <!-- Today's Priority Items — Main Work Surface -->
-        <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-mouse-glow="true" data-mouse-glow-size="160px" data-reveal="fade-up">
+        <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-reveal="fade-up">
           <div class="panel-header">
             <span class="panel-title">今日优先事项 <span class="panel-subtitle">多来源待办</span></span>
             <span class="panel-count">6</span>
@@ -2076,7 +2022,7 @@
             <span class="sidebar-collapsed-badge">2</span>
           </span>
         </div>
-        <!-- Market Pulse (context-first — lightest ambient data) -->
+        <!-- Market Pulse (context-first, lightest background data) -->
         <details class="context-section" data-collapse-priority="l2" data-contract-slot="market-pulse" data-reveal="fade-right" data-reveal-delay="100" open>
           <summary class="context-section-header">
             <span class="context-section-title">市场脉搏</span>

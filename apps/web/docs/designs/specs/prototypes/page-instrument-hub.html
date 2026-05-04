@@ -448,7 +448,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 1px;
+      height: var(--space-1);
       background: var(--overlay-2);
       pointer-events: none;
     }
@@ -550,26 +550,7 @@
       border-color: var(--border-default);
       background: var(--surface-panel-elevated);
       transform: translateY(-1px);
-      box-shadow: 0 2px 8px color-mix(in oklch, var(--surface-app) 60%, transparent),
-                  0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
-
-    /* Metric card subtle brand glow on hover */
-    .metric-card::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      opacity: 0;
-      background: radial-gradient(
-        ellipse at top right,
-        color-mix(in oklch, var(--brand-accent) 4%, transparent) 0%,
-        transparent 60%
-      );
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
-      pointer-events: none;
-    }
-    .metric-card:hover::after { opacity: 1; }
 
     /* ── Metric Sparkline (positioned top-right) ── */
     .metric-sparkline {
@@ -802,22 +783,15 @@
       position: relative;
     }
 
-    /* Brand anchor: sidebar top glow bar */
+    /* Brand anchor: sidebar top rule */
     .hub-sidebar::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: var(--sidebar-glow-height);
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
-        transparent 100%
-      );
+      height: var(--space-1);
+      background: color-mix(in oklch, var(--brand-accent) 42%, var(--border-subtle));
     }
 
     /* ── Context Section ── */
@@ -2326,7 +2300,7 @@
       <div class="tab-panel" data-panel="hub-overview" data-tab-panel="hub-overview" id="panel-hub-overview" role="tabpanel" aria-labelledby="tab-hub-overview" aria-hidden="false">
       <div class="hub-object-view">
         <!-- Key Metrics -->
-        <div class="metrics-grid" role="region" aria-label="关键指标" data-mouse-glow="true" data-mouse-glow-size="180px" data-mouse-glow-color="accent">
+        <div class="metrics-grid" role="region" aria-label="关键指标">
           <div class="metric-card" data-reveal="fade-up" data-reveal-delay="0">
             <svg class="metric-sparkline" aria-hidden="true" data-sparkline='{"data":[31.2,30.5,29.8,28.4,29.1,28.9,28.6],"series":"down","fill":true,"width":48,"height":20}'></svg>
             <span class="metric-label" data-tooltip="滚动市盈率，基于过去12个月每股收益" data-tooltip-pos="top">PE (TTM)</span>
@@ -2365,7 +2339,7 @@
 
 
         <!-- Industry Rank (overview section) -->
-        <div class="panel panel-shrink industry-rank-panel" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent">
+        <div class="panel panel-shrink industry-rank-panel" data-reveal="fade-up" data-reveal-delay="0">
           <div class="panel-header"><span class="panel-title">行业排名</span><span class="panel-subtitle">白酒 · 市值排名</span></div>
           <div class="pad-panel-x">
             <div class="rank-row"><span class="rank-num top3">1</span><span class="rank-name">贵州茅台</span><span class="rank-value">2.33万亿</span><div class="rank-bar-track"><div class="rank-bar-fill rank-bar-w-100"></div></div></div>
@@ -2405,7 +2379,7 @@
             <span class="panel-title">资金流向</span>
             <span class="panel-subtitle">截至 2026-03-31</span>
           </div>
-          <div class="flow-summary" data-mouse-glow="true" data-mouse-glow-size="200px" data-mouse-glow-color="up">
+          <div class="flow-summary">
             <div class="flow-item" data-reveal="fade-up" data-reveal-delay="0">
               <span class="flow-label" data-tooltip="单笔成交额 > 100万" data-tooltip-pos="top">主力净流入</span>
               <span class="flow-value inflow"><span data-counter-duration="1" data-counter="8.73" data-counter-prefix="+" data-counter-suffix="亿" data-counter-decimals="2">+8.73亿</span></span>
@@ -2870,7 +2844,7 @@
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" data-contract-slot="sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
-        <details class="context-section pos-relative" data-collapse-priority="l2" aria-label="相关信号" data-mouse-glow="true" data-mouse-glow-size="160px" data-mouse-glow-color="accent" data-reveal="fade-up" data-reveal-delay="120" open>
+        <details class="context-section pos-relative" data-collapse-priority="l2" aria-label="相关信号" data-reveal="fade-up" data-reveal-delay="120" open>
           <summary class="context-section-header context-header">
             <span class="context-section-title context-title">相关信号</span>
             <span class="context-count">3</span>

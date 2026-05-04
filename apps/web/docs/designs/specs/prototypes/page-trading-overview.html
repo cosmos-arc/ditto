@@ -152,11 +152,10 @@
       margin-left: var(--space-4);
     }
 
-    /* Scope strip brand glow */
+    /* Scope strip domain border */
     .shell-analytical.trading-variant .scope-strip {
       position: relative;
       border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 8%, var(--border-subtle));
-      box-shadow: 0 1px 4px -1px color-mix(in oklch, var(--brand-accent) 6%, transparent);
     }
 
     /* Noise texture overlay */
@@ -171,46 +170,8 @@
     }
 
     /* Ensure material layers stay absolute (override > * rule) */
-    .shell-analytical.trading-variant > .noise-layer,
-    .shell-analytical.trading-variant > .ambient-top {
+    .shell-analytical.trading-variant > .noise-layer {
       position: absolute;
-    }
-
-    /* Ambient light bars */
-    .ambient-top {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .ambient-rail {
-      position: absolute;
-      top: 0;
-      right: -1px;
-      bottom: 0;
-      width: 1px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 5;
     }
 
     /* Shell children elevation above noise layer */
@@ -367,7 +328,7 @@
       align-items: center;
       gap: var(--space-3);
       flex-shrink: 0;
-      box-shadow: 0 0 6px -1px color-mix(in oklch, var(--system-healthy-fg) 12%, transparent);
+      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 24%, var(--border-subtle));
     }
     .scope-phase .phase-dot {
       width: 6px;
@@ -1096,10 +1057,6 @@
     /* ══════════════════════════════════════════════
      * Light mode fixes
      * ══════════════════════════════════════════════ */
-    [data-theme="light"] .ambient-top,
-    [data-theme="light"] .ambient-rail {
-      opacity: 0.4;
-    }
     [data-theme="light"] .shell-analytical.trading-variant .context-section + .context-section::before {
       background: var(--border-subtle);
     }
@@ -1618,7 +1575,6 @@
     .signal-queue-bar.p1 {
       width: 3px;
       background: linear-gradient(180deg, var(--risk-critical-fg), color-mix(in oklch, var(--risk-critical-fg) 50%, transparent));
-      box-shadow: 0 0 4px color-mix(in oklch, var(--risk-critical-fg) 25%, transparent);
     }
     .signal-queue-bar.p2 {
       width: 2.5px;
@@ -1881,9 +1837,10 @@
      * Round 3 polish — cross-page consistency
      * ══════════════════════════════════════════════ */
 
-    /* ── A1. Rail logo brand glow (Brand DNA #2) ── */
+    /* ── A1. Rail logo domain tint (Brand DNA #2) ── */
     .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ── A2. Overlay accent border (Brand DNA #3) ── */
@@ -1892,10 +1849,9 @@
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
-    /* ── A3. Session strip brand-tinted bottom border (30% accent + shadow) ── */
+    /* ── A3. Session strip brand-tinted bottom border ── */
     .shell-analytical.trading-variant .scope-strip {
       border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
-      box-shadow: 0 1px 6px -2px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
 
     /* ── A4. Status bar top accent (brand gradient ::before) ── */
@@ -2096,9 +2052,6 @@
   <div class="shell-analytical trading-variant">
     <!-- R1: Noise texture overlay -->
     <div class="noise-layer" aria-hidden="true"></div>
-    <!-- R1: Top-edge ambient light -->
-    <div class="ambient-top" aria-hidden="true"></div>
-
     <!-- ═══ Rail ═══ -->
     <nav class="shell-rail" aria-label="主导航">
       <div class="rail-logo" aria-label="Ditto 首页">D</div>
@@ -2109,9 +2062,6 @@
         <a class="rail-icon active" href="page-trading-overview.html" aria-label="交易" title="交易" data-tooltip="交易" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="trading" data-icon="candlestick-chart" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v12"/><path d="M5 7h4v6H5"/><path d="M14 3v14"/><path d="M11 6h6v7h-6"/></svg></a>
         <a class="rail-icon" href="page-platform.html" aria-label="平台" title="平台" data-tooltip="平台" data-tooltip-pos="right" data-tooltip-delay="150" data-rail-domain="platform" data-icon="server-cog"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="12" height="5" rx="1"/><rect x="4" y="12" width="12" height="5" rx="1"/><path d="M7 5.5h.01M7 14.5h.01"/><circle cx="14" cy="10" r="2"/><path d="M14 7.2v.9M14 11.9v.9M11.6 8.6l.7.5M15.7 10.9l.7.5M11.6 11.4l.7-.5M15.7 9.1l.7-.5"/></svg></a>
       </div>
-
-      <!-- R1: Rail right edge ambient light -->
-      <div class="ambient-rail" aria-hidden="true"></div>
     </nav>
 
     <!-- ═══ Header (68px) ═══ -->
@@ -2278,7 +2228,7 @@
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
       <div class="panel" data-contract-slot="decision-banner" data-primary-answer-equivalent aria-label="影响范围：主策略账户交易会话">
-        <div class="decision-banner" data-mouse-glow="true" data-mouse-glow-size="180px" aria-live="polite">
+        <div class="decision-banner" aria-live="polite">
           <!-- Left: Primary status (~42%) -->
           <div class="decision-primary">
             <span class="metric-label">今日盈亏</span>
@@ -2363,13 +2313,6 @@
                   <stop offset="60%" stop-color="var(--market-up-subtle)" stop-opacity="0.08"/>
                   <stop offset="100%" stop-color="var(--market-up-subtle)" stop-opacity="0"/>
                 </linearGradient>
-                <filter id="eq-glow">
-                  <feGaussianBlur stdDeviation="2" result="blur"/>
-                  <feMerge>
-                    <feMergeNode in="blur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
               </defs>
               <!-- Reference grid — horizontal dashed lines -->
               <line x1="60" y1="40" x2="780" y2="40" stroke="var(--chart-grid)" stroke-width="0.5" stroke-dasharray="3 6" opacity="0.35"/>
@@ -2396,7 +2339,7 @@
               <!-- Gradient fill area -->
               <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40 L800,200 L0,200 Z" fill="url(#eq-gradient)"/>
               <!-- Main equity curve line -->
-              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40" fill="none" stroke="var(--chart-series-up)" stroke-width="1.5" opacity="0.9" stroke-linecap="round" stroke-linejoin="round" filter="url(#eq-glow)"/>
+              <path d="M0,160 C6.7,159.2 26.7,157 40,155 C53.3,153 66.7,148.5 80,148 C93.3,147.5 106.7,153.3 120,152 C133.3,150.7 146.7,142.8 160,140 C173.3,137.2 186.7,136.7 200,135 C213.3,133.3 226.7,131.7 240,130 C253.3,128.3 266.7,127 280,125 C293.3,123 306.7,119.7 320,118 C333.3,116.3 346.7,116.7 360,115 C373.3,113.3 386.7,110.5 400,108 C413.3,105.5 426.7,102.2 440,100 C453.3,97.8 466.7,96.7 480,95 C493.3,93.3 506.7,91.7 520,90 C533.3,88.3 546.7,87 560,85 C573.3,83 586.7,80.2 600,78 C613.3,75.8 626.7,74.2 640,72 C653.3,69.8 666.7,67.8 680,65 C693.3,62.2 706.7,57.8 720,55 C733.3,52.2 746.7,50.5 760,48 C773.3,45.5 793.3,41.3 800,40" fill="none" stroke="var(--chart-series-up)" stroke-width="1.5" opacity="0.9" stroke-linecap="round" stroke-linejoin="round"/>
               <!-- Current value indicator dot -->
               <circle cx="800" cy="40" r="3" fill="var(--chart-series-up)" opacity="0.9"/>
               <circle cx="800" cy="40" r="5" fill="var(--chart-series-up)" opacity="0.2"/>

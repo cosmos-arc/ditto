@@ -168,7 +168,7 @@ button {
   --shell-ops-detail-width:     340px;
 
   /* Prototype-local compatibility aliases */
-  --brand-signature-glow: color-mix(in oklch, var(--brand-signature-fg) 60%, transparent);
+  --brand-signature-indicator-shadow: color-mix(in oklch, var(--brand-signature-fg) 60%, transparent);
   --risk-warning-fg: var(--risk-medium-fg);
   --surface-secondary: var(--surface-panel-elevated);
   --radius-full: 9999px;
@@ -263,9 +263,8 @@ button {
 
 /* Decoration layer budget: 1 pseudo-element per shell type.
  * Noise texture is consolidated into ::before with a subtle
- * brand-accent gradient line at top. The old separate ::after
- * (ambient-top) is removed — pages that need an additional ambient
- * glow should use a single .ambient div, not both pseudo-elements.
+ * brand-accent gradient line at top. Pages that need emphasis should
+ * rely on surface elevation, border contrast, or the approved rail indicator.
  */
 .shell-hub::before,
 .shell-agent::before {
@@ -659,7 +658,7 @@ body {
   height: 20px;
   background: var(--brand-accent);
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 6px var(--brand-signature-glow);
+  box-shadow: 0 0 6px var(--brand-signature-indicator-shadow);
 }
 
 .rail-icon svg {
@@ -922,10 +921,9 @@ h1.header-title {
   z-index: 80;
   width: min(380px, calc(100vw - 32px));
   padding: 0;
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-8);
-  background: var(--surface-panel-elevated);
-  box-shadow: 0 16px 40px color-mix(in oklch, var(--text-primary) 18%, transparent);
+  background: var(--surface-overlay);
   overflow: hidden;
 }
 

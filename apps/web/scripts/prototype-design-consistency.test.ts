@@ -448,6 +448,12 @@ const motionRemediationPageIds = [
 	"agent-console-v2",
 	"research",
 ] as const;
+const glowBudgetPageIds = [
+	"home",
+	"instrument-hub",
+	"strategy-studio",
+	"trading-overview",
+] as const;
 const signalsInboxReducedMotionFamilies = [
 	"dot-pulse",
 	"row-enter",
@@ -943,6 +949,77 @@ function getTransitionItems(value: string): string[] {
 		.split(",")
 		.map((item) => item.trim())
 		.filter(Boolean);
+}
+
+function readGlowBudgetCssSources(): CssSource[] {
+	return [
+		{ label: "shared/layout-shell.css", css: readFileSync(prototypeLayoutCss, "utf8") },
+		{ label: "shared/layout-components.css", css: readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8") },
+		...glowBudgetPageIds.map((id) => {
+			const page = activePageById(id);
+			return {
+				label: page.file,
+				css: getStyleBlocks(readPrototypeHtml(page)),
+			};
+		}),
+	];
+}
+
+function readGlowBudgetHtmlSources(): Array<{ label: string; html: string }> {
+	return glowBudgetPageIds.map((id) => {
+		const page = activePageById(id);
+		return {
+			label: page.file,
+			html: readPrototypeHtml(page),
+		};
+	});
+}
+
+function isGlowBudgetAllowedBoxShadow(selector: string, value: string): boolean {
+	const normalizedSelector = selector.replace(/\s+/g, " ").trim();
+	const normalizedValue = value.replace(/\s+/g, " ").trim();
+
+	if (/^none(?:\s*!important)?$/i.test(normalizedValue)) return true;
+	if (/var\(\s*--interaction-dragging-shadow\s*\)/i.test(normalizedValue)) return true;
+	if (/var\(\s*--shadow-[a-z0-9-]+\s*\)/i.test(normalizedValue)) return true;
+	if (hasFocusSelector(normalizedSelector) && hasFocusRingBoxShadow(`box-shadow: ${normalizedValue};`)) {
+		return true;
+	}
+	if (/\.rail-icon\.active::before\b/.test(normalizedSelector)) return true;
+	if (/(?:status|live|session)-dot|\.dot(?:\.online|\.live|\.healthy)?\b/i.test(normalizedSelector)) {
+		return true;
+	}
+	if (
+		/(?:\.decision-cta\.primary|\.btn-primary|\.primary-cta)/i.test(normalizedSelector) &&
+		/:(?:hover|active)\b/i.test(normalizedSelector)
+	) {
+		return true;
+	}
+	if (/^inset\s+(?:[-\d.]+px\s+){2,4}var\(\s*--(?:border|text|surface|heat|overlay|brand|market)-/i.test(normalizedValue)) {
+		return true;
+	}
+	if (/^0\s+0\s+0\s+(?:1(?:\.5)?|2|3|4)px\s+var\(\s*--(?:interaction|surface|border|brand)-/i.test(normalizedValue)) {
+		return true;
+	}
+
+	return false;
+}
+
+function isExcessiveGlowBoxShadow(selector: string, value: string): boolean {
+	if (isGlowBudgetAllowedBoxShadow(selector, value)) return false;
+
+	const normalizedValue = value.replace(/\s+/g, " ").trim();
+	const hasGlowColor =
+		/color-mix\(in oklch,\s*(?:var\(\s*--(?:brand|market|risk|system|agent|execution|text)-|currentColor)/i.test(
+			normalizedValue,
+		) || /var\(\s*--brand-signature-glow\s*\)/i.test(normalizedValue);
+	const hasRadialGlow = /\b0\s+0\s+(?:[4-9]|\d{2,})px\b/i.test(normalizedValue);
+	const shadowLayers = normalizedValue.split(",").length;
+	const hasLargeSoftShadow = /\b0\s+(?:[8-9]|\d{2,})px\s+(?:[2-9]\d|\d{3,})px\b/i.test(
+		normalizedValue,
+	);
+
+	return (hasGlowColor && (hasRadialGlow || shadowLayers > 1)) || hasLargeSoftShadow;
 }
 
 describe("prototype design consistency", () => {
@@ -3020,6 +3097,42 @@ describe("prototype design consistency", () => {
 				if (!hasReplacementFocusCue) {
 					violations.push(`${source.label}:${getLineNumber(css, rule.index)}:outline-none:${selector}`);
 				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps glow budgeted active prototypes free of decorative glow", () => {
+		const violations: string[] = [];
+
+		for (const source of readGlowBudgetCssSources()) {
+			const css = stripCssComments(source.css);
+
+			for (const match of css.matchAll(/\btext-shadow\s*:\s*([^;}]+)/gi)) {
+				const value = match[1].trim();
+				if (!/^none(?:\s*!important)?$/i.test(value)) {
+					violations.push(`${source.label}:${getLineNumber(css, match.index)}:text-shadow`);
+				}
+			}
+
+			for (const match of css.matchAll(/\bambient-[a-z0-9-]+/gi)) {
+				violations.push(`${source.label}:${getLineNumber(css, match.index)}:${match[0]}`);
+			}
+
+			for (const rule of readTopLevelCssRules(css)) {
+				for (const match of rule.body.matchAll(/box-shadow\s*:\s*([^;]+)/gi)) {
+					const value = match[1].trim();
+					if (isExcessiveGlowBoxShadow(rule.selector, value)) {
+						violations.push(`${source.label}:${getLineNumber(css, rule.start)}:box-shadow:${rule.selector}`);
+					}
+				}
+			}
+		}
+
+		for (const source of readGlowBudgetHtmlSources()) {
+			for (const match of source.html.matchAll(/\b(?:ambient-[a-z0-9-]+|data-mouse-glow(?:-[a-z0-9-]+)?)\b/gi)) {
+				violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:${match[0]}`);
 			}
 		}
 

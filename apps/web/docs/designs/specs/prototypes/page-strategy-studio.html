@@ -192,22 +192,15 @@
       pointer-events: none;
       z-index: 0;
     }
-    /* ── Top-edge ambient light ── */
+    /* ── Top-edge domain rule ── */
     .shell-studio::after {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
+      height: var(--space-1);
+      background: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       pointer-events: none;
       z-index: 2;
     }
@@ -216,7 +209,7 @@
       z-index: 1;
     }
 
-    /* ── Rail ambient light edge ── */
+    /* ── Rail domain edge ── */
     .shell-studio .shell-rail {
       position: relative;
     }
@@ -227,21 +220,15 @@
       right: -1px;
       bottom: 0;
       width: 1px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 12%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 12%, transparent) 80%,
-        transparent 100%
-      );
+      background: color-mix(in oklch, var(--brand-signature-line) 18%, var(--border-subtle));
       pointer-events: none;
       z-index: 5;
     }
 
-    /* Rail logo subtle brand glow */
+    /* Rail logo domain tint */
     .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* Rail active indicator */
@@ -270,7 +257,7 @@
       z-index: 5;
       position: relative;
     }
-    /* Header floating glow line */
+    /* Header domain rule */
     .studio-header::after {
       content: '';
       position: absolute;
@@ -1275,9 +1262,8 @@
     /* Toast variant — narrow, top-right positioned */
     .overlay-backdrop .overlay-toast {
       background: var(--surface-panel-elevated);
-      border: 1px solid var(--border-subtle);
+      border: 1px solid var(--border-default);
       border-radius: var(--radius-6);
-      box-shadow: 0 8px 32px color-mix(in oklch, var(--text-primary) 40%, transparent);
       padding: var(--space-12) var(--space-16);
       width: 360px;
       position: absolute;
@@ -2603,7 +2589,7 @@
           <span class="strategy-status-dot" data-icon="status-validated"></span>
           已校验
         </div>
-        <div class="ai-assistant" data-mouse-glow="true">
+        <div class="ai-assistant">
           <div class="ai-message">
             <strong>建议：</strong>当前动量因子权重较高（45%），在震荡市中可能增加回撤。建议考虑加入低波动因子作为防御补充。
           </div>
@@ -2817,42 +2803,42 @@
           <div class="inspector-section" data-reveal="fade-up" data-reveal-delay="80">
             <div class="inspector-section-title">绩效指标</div>
             <div class="perf-metrics-grid">
-              <div class="perf-metric-card" data-tooltip="年化收益率 18.4%，策略历史最高 22.1%" data-mouse-glow="true">
+              <div class="perf-metric-card" data-tooltip="年化收益率 18.4%，策略历史最高 22.1%">
                 <span class="perf-metric-label">年化收益</span>
                 <span class="perf-metric-value positive tabular-nums"><span>+18.4%</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--market-up-fg)" stroke-width="1" points="0,14 5,12 10,10 15,11 20,8 25,7 30,5 35,6 40,3"/>
                 </svg>
               </div>
-              <div class="perf-metric-card" data-tooltip="夏普比率 1.42，优于基准 1.18" data-mouse-glow="true">
+              <div class="perf-metric-card" data-tooltip="夏普比率 1.42，优于基准 1.18">
                 <span class="perf-metric-label">夏普比率</span>
                 <span class="perf-metric-value tabular-nums"><span>1.42</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,12 5,10 10,11 15,8 20,9 25,6 30,7 35,5 40,4"/>
                 </svg>
               </div>
-              <div class="perf-metric-card" data-tooltip="最大回撤 -12.8%，发生于 2022-10" data-mouse-glow="true">
+              <div class="perf-metric-card" data-tooltip="最大回撤 -12.8%，发生于 2022-10">
                 <span class="perf-metric-label">最大回撤</span>
                 <span class="perf-metric-value negative tabular-nums"><span>-12.8%</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--market-down-fg)" stroke-width="1" points="0,4 5,5 10,8 15,12 20,10 25,7 30,9 35,6 40,5"/>
                 </svg>
               </div>
-              <div class="perf-metric-card" data-tooltip="信息比率 0.86，超额收益稳定" data-mouse-glow="true">
+              <div class="perf-metric-card" data-tooltip="信息比率 0.86，超额收益稳定">
                 <span class="perf-metric-label">信息比率</span>
                 <span class="perf-metric-value tabular-nums"><span>0.86</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,13 5,10 10,12 15,8 20,10 25,6 30,8 35,5 40,4"/>
                 </svg>
               </div>
-              <div class="perf-metric-card" data-tooltip="Calmar 比率 1.44，回撤修复快" data-mouse-glow="true">
+              <div class="perf-metric-card" data-tooltip="Calmar 比率 1.44，回撤修复快">
                 <span class="perf-metric-label">Calmar</span>
                 <span class="perf-metric-value tabular-nums"><span>1.44</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
                   <polyline fill="none" stroke="var(--brand-accent)" stroke-width="1" points="0,14 5,11 10,9 15,10 20,7 25,8 30,5 35,6 40,3"/>
                 </svg>
               </div>
-              <div class="perf-metric-card" data-tooltip="月度胜率 56.2%，共 60 个调仓周期" data-mouse-glow="true">
+              <div class="perf-metric-card" data-tooltip="月度胜率 56.2%，共 60 个调仓周期">
                 <span class="perf-metric-label">胜率</span>
                 <span class="perf-metric-value tabular-nums"><span>56.2%</span></span>
                 <svg class="perf-metric-sparkline" viewBox="0 0 40 16" preserveAspectRatio="none" aria-hidden="true">
