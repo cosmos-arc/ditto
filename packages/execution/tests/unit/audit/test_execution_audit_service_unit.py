@@ -14,8 +14,8 @@ from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 from ditto_execution.audit.models import (
     PreTradeDecisionPayload,
     RiskScanPayload,
-    RiskScope,
 )
+from ditto_kernel.strategy import RiskScope
 from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------

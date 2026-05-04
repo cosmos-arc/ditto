@@ -11,7 +11,8 @@ from datetime import datetime
 from enum import StrEnum
 
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.order import OrderSide as _OrderSide
+from ditto_kernel.order import OrderType as _OrderType
 
 from ditto_portfolio.errors import StateTransitionError
 
@@ -20,10 +21,8 @@ __all__ = [
     "OrderBook",
     "OrderBookReadOnly",
     "OrderEvent",
-    "OrderSide",
     "OrderStatus",
     "OrderTicket",
-    "OrderType",
     "StateTransitionError",
 ]
 
@@ -70,8 +69,8 @@ class Order:
 
     order_id: str
     instrument_id: InstrumentId
-    order_type: OrderType
-    direction: OrderSide
+    order_type: _OrderType
+    direction: _OrderSide
     quantity: int
     price: float | None = None
     stop_price: float | None = None

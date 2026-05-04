@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
+from ditto_kernel.strategy import RiskScope
 from ditto_risk.events import RiskGuardTriggered
 from ditto_risk.post_trade import (
     PostTradeRiskGuard,
     RiskActionType,
-    RiskScope,
 )
 from ditto_strategy.alpha.context import StrategyContext
 

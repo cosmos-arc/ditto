@@ -11,6 +11,7 @@ from ditto_execution.planner import (
     SimpleExecutionPlanner,
 )
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
@@ -23,10 +24,8 @@ from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderSide,
     OrderStatus,
     OrderTicket,
-    OrderType,
 )
 from ditto_portfolio.accounting.position import Position
 from ditto_strategy.alpha.models import TargetPortfolio

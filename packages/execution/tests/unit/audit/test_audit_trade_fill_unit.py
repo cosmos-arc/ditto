@@ -211,8 +211,8 @@ class TestQueryTradeFill:
         from ditto_execution.audit.models import (
             PreTradeDecisionPayload,
             RiskScanPayload,
-            RiskScope,
         )
+        from ditto_kernel.strategy import RiskScope
 
         risk = RiskScanPayload(
             trade_date="2026-03-20",

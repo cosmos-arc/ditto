@@ -4,6 +4,7 @@ from types import MappingProxyType
 
 import pytest
 from ditto_execution.reality import SimpleFeeModel
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
@@ -17,10 +18,8 @@ from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderSide,
     OrderStatus,
     OrderTicket,
-    OrderType,
 )
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,

@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ditto_kernel.strategy import RiskScope
+from ditto_kernel.strategy import RiskScope as _RiskScope
 
 
 class AuditRecordType(StrEnum):
@@ -43,7 +43,7 @@ class RiskScanPayload:
     trade_date: str
     rule_id: str
     instrument_id: int | None
-    scope: RiskScope
+    scope: _RiskScope
     severity: str
     action_taken: str
     detail: str
@@ -113,6 +113,5 @@ __all__ = [
     "AuditRecordType",
     "PreTradeDecisionPayload",
     "RiskScanPayload",
-    "RiskScope",
     "TradeFillPayload",
 ]

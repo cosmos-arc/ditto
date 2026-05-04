@@ -1,5 +1,6 @@
 """Cross-package re-export detector behavior."""
 
+from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -50,9 +51,10 @@ def test_detector_ignores_private_annotation_imports(tmp_path: Path) -> None:
     src = tmp_path / "packages" / "risk" / "src" / "ditto_risk" / "model.py"
     src.parent.mkdir(parents=True)
     src.write_text(
-        "from ditto_kernel.strategy import RiskScope\n"
+        "from ditto_kernel.strategy import RiskScope as _RiskScope\n"
         "__all__ = ['RiskResult']\n"
-        "class RiskResult: ...\n",
+        "class RiskResult:\n"
+        "    scope: _RiskScope\n",
         encoding="utf-8",
     )
 
@@ -71,3 +73,28 @@ def test_detector_ignores_function_local_imports(tmp_path: Path) -> None:
     )
 
     assert find_cross_package_exports(tmp_path) == []
+
+
+def test_removed_runtime_reexport_attrs_are_absent() -> None:
+    old_reexports = {
+        "ditto_features.models.derived": ["JsonDict", "JsonValue"],
+        "ditto_features.publication_safety": [
+            "DerivedRole",
+            "MaterializationProfile",
+        ],
+        "ditto_execution.audit.models": ["RiskScope"],
+        "ditto_portfolio.accounting": ["OrderSide", "OrderType"],
+        "ditto_portfolio.accounting.order_book": ["OrderSide", "OrderType"],
+        "ditto_risk.constraints.context": ["InstrumentId"],
+        "ditto_risk.post_trade": ["RiskScope"],
+        "ditto_risk.pre_trade": ["InstrumentId"],
+    }
+
+    leaked: dict[str, list[str]] = {}
+    for module_name, names in old_reexports.items():
+        module = import_module(module_name)
+        module_leaks = [name for name in names if hasattr(module, name)]
+        if module_leaks:
+            leaked[module_name] = module_leaks
+
+    assert leaked == {}

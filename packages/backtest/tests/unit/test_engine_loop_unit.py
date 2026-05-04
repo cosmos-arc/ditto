@@ -13,14 +13,13 @@ import pytest
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineOptions
 from ditto_kernel.clock import Clock
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderSide,
-    OrderType,
 )
 from ditto_risk.pre_trade import (
     Decision,

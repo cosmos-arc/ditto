@@ -19,6 +19,7 @@ from ditto_execution.reality import (
     SimpleFeeModel,
 )
 from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
@@ -34,10 +35,8 @@ from ditto_portfolio.accounting.order_book import (
     OrderBook,
     OrderBookReadOnly,
     OrderEvent,
-    OrderSide,
     OrderStatus,
     OrderTicket,
-    OrderType,
     StateTransitionError,
 )
 from ditto_risk.pre_trade import (

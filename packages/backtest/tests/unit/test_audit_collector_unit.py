@@ -20,12 +20,12 @@ from ditto_backtest.statistics import (
     compute_trade_statistics,
 )
 from ditto_execution.trade_builder import TradeRecord
+from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.order_book import (
     OrderBookReadOnly,
-    OrderSide,
 )
 from ditto_portfolio.accounting.position import Position
 from ditto_risk.post_trade import RiskActionType, RiskSeverity

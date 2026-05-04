@@ -16,6 +16,8 @@ from ditto_execution.events import (
 from ditto_kernel import SimpleEventBus
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import DomainEvent
+from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.strategy import RiskScope
 from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
@@ -23,14 +25,11 @@ from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBookReadOnly,
-    OrderSide,
-    OrderType,
 )
 from ditto_risk.events import RiskGuardTriggered
 from ditto_risk.post_trade import (
     RiskAction,
     RiskActionType,
-    RiskScope,
     RiskSeverity,
 )
 from ditto_risk.pre_trade import Decision, OrderCheckResult

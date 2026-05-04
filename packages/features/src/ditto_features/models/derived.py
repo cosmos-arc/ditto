@@ -7,8 +7,12 @@ from dataclasses import dataclass
 from typing import cast
 
 from ditto_kernel.json_types import (
-    JsonDict,
-    JsonValue,
+    JsonDict as _JsonDict,
+)
+from ditto_kernel.json_types import (
+    JsonValue as _JsonValue,
+)
+from ditto_kernel.json_types import (
     require_bool,
     require_int,
     require_payload,
@@ -26,13 +30,11 @@ __all__ = [
     "DerivedSpecRecord",
     "DerivedStateRecord",
     "DerivedVersionRecord",
-    "JsonDict",
-    "JsonValue",
     "PartitionInfo",
 ]
 
 
-def _optional_str(data: Mapping[str, JsonValue], key: str) -> str | None:
+def _optional_str(data: Mapping[str, _JsonValue], key: str) -> str | None:
     """Extract an optional string field from JSON payload."""
     value = data.get(key)
     if value is None:
@@ -42,7 +44,7 @@ def _optional_str(data: Mapping[str, JsonValue], key: str) -> str | None:
     return value
 
 
-def _require_str_tuple(data: Mapping[str, JsonValue], key: str) -> tuple[str, ...]:
+def _require_str_tuple(data: Mapping[str, _JsonValue], key: str) -> tuple[str, ...]:
     """Extract a required list of strings from payload."""
     value = data[key]
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
@@ -59,10 +61,10 @@ class DerivedSpecRecord:
     role: str
     materialization_profile: str
     spec_hash: str
-    spec_json: JsonDict
+    spec_json: _JsonDict
     created_at: str
 
-    def to_json_dict(self) -> JsonDict:
+    def to_json_dict(self) -> _JsonDict:
         """Convert record to JSON dictionary."""
         return {
             "derived_id": self.derived_id,
@@ -75,7 +77,7 @@ class DerivedSpecRecord:
         }
 
     @classmethod
-    def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedSpecRecord:
+    def from_json_dict(cls, data: Mapping[str, _JsonValue]) -> DerivedSpecRecord:
         """Create record from JSON dictionary."""
         return cls(
             derived_id=require_str(data, "derived_id"),
@@ -101,7 +103,7 @@ class DerivedVersionRecord:
     created_at: str
     updated_at: str | None
 
-    def to_json_dict(self) -> JsonDict:
+    def to_json_dict(self) -> _JsonDict:
         """Convert record to JSON dictionary."""
         return {
             "derived_id": self.derived_id,
@@ -115,7 +117,7 @@ class DerivedVersionRecord:
         }
 
     @classmethod
-    def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedVersionRecord:
+    def from_json_dict(cls, data: Mapping[str, _JsonValue]) -> DerivedVersionRecord:
         """Create record from JSON dictionary."""
         return cls(
             derived_id=require_str(data, "derived_id"),
@@ -151,7 +153,7 @@ class DerivedRunRecord:
     started_at: str | None
     finished_at: str | None
 
-    def to_json_dict(self) -> JsonDict:
+    def to_json_dict(self) -> _JsonDict:
         """Convert record to JSON dictionary."""
         return {
             "run_id": self.run_id,
@@ -174,7 +176,7 @@ class DerivedRunRecord:
         }
 
     @classmethod
-    def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedRunRecord:
+    def from_json_dict(cls, data: Mapping[str, _JsonValue]) -> DerivedRunRecord:
         """Create record from JSON dictionary."""
         return cls(
             run_id=require_str(data, "run_id"),
@@ -210,7 +212,7 @@ class DerivedPartitionRecord:
     checksum: str | None
     written_at: str
 
-    def to_json_dict(self) -> JsonDict:
+    def to_json_dict(self) -> _JsonDict:
         """Convert record to JSON dictionary."""
         return {
             "run_id": self.run_id,
@@ -224,7 +226,7 @@ class DerivedPartitionRecord:
         }
 
     @classmethod
-    def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedPartitionRecord:
+    def from_json_dict(cls, data: Mapping[str, _JsonValue]) -> DerivedPartitionRecord:
         """Create record from JSON dictionary."""
         return cls(
             run_id=require_str(data, "run_id"),
@@ -252,7 +254,7 @@ class DerivedStateRecord:
     total_rows: int
     updated_at: str
 
-    def to_json_dict(self) -> JsonDict:
+    def to_json_dict(self) -> _JsonDict:
         """Convert record to JSON dictionary."""
         return {
             "derived_id": self.derived_id,
@@ -267,7 +269,7 @@ class DerivedStateRecord:
         }
 
     @classmethod
-    def from_json_dict(cls, data: Mapping[str, JsonValue]) -> DerivedStateRecord:
+    def from_json_dict(cls, data: Mapping[str, _JsonValue]) -> DerivedStateRecord:
         """Create record from JSON dictionary."""
         active_version = data.get("active_version")
         if active_version is not None and (
@@ -350,8 +352,8 @@ class CompiledExpressionCacheRecord:
     version: int
     compiler_fingerprint: str
     compile_input_hash: str
-    analysis_json: JsonDict
-    compile_identity_json: JsonDict
+    analysis_json: _JsonDict
+    compile_identity_json: _JsonDict
     expression_repr: str
     created_at: str
 

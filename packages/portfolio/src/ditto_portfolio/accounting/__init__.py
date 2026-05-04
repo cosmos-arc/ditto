@@ -18,7 +18,6 @@ from ditto_portfolio.accounting.order_book import (
     OrderEvent,
     OrderStatus,
     OrderTicket,
-    OrderType,
     StateTransitionError,
 )
 from ditto_portfolio.accounting.position import Position
@@ -36,7 +35,6 @@ __all__ = [
     "OrderEvent",
     "OrderStatus",
     "OrderTicket",
-    "OrderType",
     "Position",
     "StateTransitionError",
 ]

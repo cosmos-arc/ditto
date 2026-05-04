@@ -6,11 +6,10 @@ from ditto_features.publication_safety import (
     CertificationReport,
     CertificationStage,
     CompatibilityManifest,
-    DerivedRole,
-    MaterializationProfile,
     PublicationSafetySeverity,
     ShadowDiffReport,
 )
+from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 
 class TestCompatibilityManifest:

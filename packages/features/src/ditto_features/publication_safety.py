@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ditto_kernel.strategy import DerivedRole, MaterializationProfile
+from ditto_kernel.strategy import (
+    DerivedRole as _DerivedRole,
+)
+from ditto_kernel.strategy import (
+    MaterializationProfile as _MaterializationProfile,
+)
 
 type CompileFlagValue = str | int | float | bool
 type JsonPrimitive = None | bool | int | float | str
@@ -19,8 +24,6 @@ __all__ = [
     "CompatibilityManifest",
     "CompileFlagValue",
     "DerivedMinimalDQSummary",
-    "DerivedRole",
-    "MaterializationProfile",
     "PublicationSafetySeverity",
     "ShadowDiffReport",
     "ShadowTraceRecord",
@@ -200,8 +203,8 @@ class CertificationPack:
     """Pack definition for a certification gate."""
 
     pack_id: str
-    role: DerivedRole
-    materialization_profile: MaterializationProfile
+    role: _DerivedRole
+    materialization_profile: _MaterializationProfile
     stage: CertificationStage
     check_names: tuple[str, ...]
 

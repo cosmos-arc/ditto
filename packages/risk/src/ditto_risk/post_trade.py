@@ -18,7 +18,7 @@ from enum import StrEnum
 from typing import Any, Protocol
 
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.strategy import RiskScope
+from ditto_kernel.strategy import RiskScope as _RiskScope
 from ditto_portfolio.accounting.account import AccountView
 
 __all__ = [
@@ -26,7 +26,6 @@ __all__ = [
     "PostTradeRiskGuard",
     "RiskAction",
     "RiskActionType",
-    "RiskScope",
     "RiskSeverity",
 ]
 
@@ -78,7 +77,7 @@ class RiskAction:
 
     action_type: RiskActionType
     instrument_id: InstrumentId | None
-    scope: RiskScope
+    scope: _RiskScope
     severity: RiskSeverity
     rule_id: str
     detail: str

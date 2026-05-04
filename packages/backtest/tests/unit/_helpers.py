@@ -15,6 +15,7 @@ from ditto_execution.planner import ExecutionPlan
 from ditto_kernel.clock import Clock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.strategy import RiskScope
 from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
@@ -23,7 +24,6 @@ from ditto_portfolio.accounting.order_book import Order, OrderBookReadOnly
 from ditto_risk.post_trade import (
     RiskAction,
     RiskActionType,
-    RiskScope,
     RiskSeverity,
 )
 

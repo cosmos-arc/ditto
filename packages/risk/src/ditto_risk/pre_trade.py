@@ -28,12 +28,8 @@ from ditto_risk.constraints.checks import (
     PreTradeRiskCheck,
     PriceValidityCheck,
 )
-
-# Re-export InstrumentId for backward compatibility (used by consumers
-# via `from ditto_risk.pre_trade import InstrumentId`)
 from ditto_risk.constraints.context import (
     Decision,
-    InstrumentId,
     OrderCheckResult,
     PreTradeContext,
 )
@@ -45,7 +41,6 @@ __all__ = [
     "ConcentrationPreCheck",
     "DailyTurnoverPreCheck",
     "Decision",
-    "InstrumentId",
     "LotSizeCheck",
     "NoShortSellCheck",
     "OrderCheckResult",

@@ -6,14 +6,13 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import datetime
 
 import pytest
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting.order_book import (
     Order,
     OrderBook,
     OrderEvent,
-    OrderSide,
     OrderStatus,
     OrderTicket,
-    OrderType,
     StateTransitionError,
 )
 

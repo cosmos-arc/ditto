@@ -23,10 +23,6 @@ from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import Order, OrderTicket
 
-# Re-export: runtime usage prevents linter removal
-# under `from __future__ import annotations`
-InstrumentId = _InstrumentId
-
 __all__ = [
     "Decision",
     "OrderCheckResult",
@@ -71,34 +67,34 @@ class PreTradeContext:
     """
 
     account_view: AccountView
-    rules: dict[InstrumentId, InstrumentRules]
-    market_snapshots: dict[InstrumentId, MarketSnapshot]
+    rules: dict[_InstrumentId, InstrumentRules]
+    market_snapshots: dict[_InstrumentId, MarketSnapshot]
     buying_power_model: BuyingPowerModel
     fee_model: FeeModel | None = None
     pending_tickets: tuple[OrderTicket, ...] = ()
 
     # -- 辅助方法 ---------------------------------------------------------
 
-    def price_for(self, iid: InstrumentId) -> float | None:
+    def price_for(self, iid: _InstrumentId) -> float | None:
         """从 market_snapshots 获取 close price。"""
         snapshot = self.market_snapshots.get(iid)
         if snapshot is None:
             return None
         return snapshot.close
 
-    def lot_size_for(self, iid: InstrumentId) -> int:
+    def lot_size_for(self, iid: _InstrumentId) -> int:
         """从 rules[iid][0].lot_size 获取，默认 DEFAULT_LOT_SIZE。"""
         instrument_rules = self.rules.get(iid)
         if instrument_rules is None:
             return DEFAULT_LOT_SIZE
         return instrument_rules[0].lot_size
 
-    def fee_schedule_for(self, iid: InstrumentId) -> FeeSchedule:
+    def fee_schedule_for(self, iid: _InstrumentId) -> FeeSchedule:
         """从 rules[iid][2] 获取。"""
         instrument_rules = self.rules.get(iid)
         if instrument_rules is None:
             return FeeSchedule(
-                instrument_id=InstrumentId(0),
+                instrument_id=_InstrumentId(0),
                 as_of_date="",
                 commission_rate=DEFAULT_COMMISSION_RATE,
                 min_commission=DEFAULT_MIN_COMMISSION,

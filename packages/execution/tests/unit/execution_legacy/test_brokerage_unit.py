@@ -10,6 +10,7 @@ from ditto_execution.reality.settlement import (
     SimpleSettlementModel,
 )
 from ditto_execution.reality.slippage import FixedBpsSlippage
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
@@ -20,9 +21,7 @@ from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import (
     Order,
-    OrderSide,
     OrderStatus,
-    OrderType,
 )
 
 # ---------------------------------------------------------------------------

@@ -332,9 +332,9 @@ class TestAuditPersistence:
     ) -> None:
         """Portfolio-wide 风控记录在持久化时 instrument_id=None, scope='portfolio'。"""
         from ditto_backtest.audit import RiskScanRecord
+        from ditto_kernel.strategy import RiskScope
         from ditto_risk.post_trade import (
             RiskActionType,
-            RiskScope,
             RiskSeverity,
         )
 
