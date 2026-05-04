@@ -60,6 +60,21 @@
   display: none;
 }
 
+/* ── 1a. Zone Switch Fade Transition ──────────
+ *
+ * When a zone becomes active, play a sub-200ms fade-in.
+ * Uses CSS animation (not transition) because zones switch
+ * via display: none → display: block/flex, which prevents
+ * normal opacity transitions.
+ *
+ * Duration: 150ms ease-out (sub-200ms per spec).
+ * Respects prefers-reduced-motion (see § 7 below).
+ */
+@keyframes proto-section-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Proto-nav is always visible for zone switching */
 
 /* Hide style-label when default-view is active */
@@ -78,6 +93,7 @@
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+  animation: proto-section-enter 150ms ease-out both;
 }
 
 /* Gallery views: auto height, scrollable */
@@ -85,6 +101,7 @@
 :root:has(#view-overlays:checked) #overlays-gallery {
   display: block;
   overflow-y: auto;
+  animation: proto-section-enter 150ms ease-out both;
 }
 
 /* Override layout-base.css body { height:100%; overflow:hidden } for gallery scroll */
@@ -793,4 +810,24 @@
 
 .state-stale-retry:hover {
   background: var(--surface-overlay);
+}
+
+/* ── 7. Reduced Motion ──────────────────────────
+ *
+ * Skip zone-switch fade animation when the user prefers
+ * reduced motion. Covers both the media query and the
+ * data-reduced-motion attribute set by prototype-interactions.js.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root:has(#view-default:checked)  #default-view,
+  :root:has(#view-states:checked)   #states-gallery,
+  :root:has(#view-overlays:checked) #overlays-gallery {
+    animation: none;
+  }
+}
+
+:root[data-reduced-motion]:has(#view-default:checked)  #default-view,
+:root[data-reduced-motion]:has(#view-states:checked)   #states-gallery,
+:root[data-reduced-motion]:has(#view-overlays:checked) #overlays-gallery {
+  animation: none;
 }
