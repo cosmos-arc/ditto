@@ -11,6 +11,7 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 6. Kernel must not import ditto_platform
 7. Packages must not re-export symbols imported from other Ditto packages
 8. Execution sqlite legacy storage must not grow permanent modules
+9. Apps non-registry modules must not import capability package internals
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -84,6 +85,31 @@ EXECUTION_SIMULATION_OWNERSHIP_TERMS = (
 EXECUTION_SQLITE_LEGACY_STORAGE_PREFIX = (
     "packages/execution/src/ditto_execution/storage/sqlite/legacy/"
 )
+
+APPS_REGISTRY_SOURCE_PREFIX = "packages/apps/src/ditto_apps/registry/"
+
+APPS_CAPABILITY_IMPORT_ROOTS = frozenset(
+    {
+        "ditto_analysis",
+        "ditto_backtest",
+        "ditto_data",
+        "ditto_execution",
+        "ditto_features",
+        "ditto_strategy",
+    }
+)
+
+# Prefect host code owns task-level container lookup. Keep this exception narrow:
+# it may request the DQ engine from the container, but ordinary jobs/routes should
+# use application facades or registry composition.
+APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
+    "packages/apps/src/ditto_apps/jobs/context.py": frozenset(
+        {
+            "ditto_data.quality",
+            "ditto_data.quality.protocols",
+        }
+    )
+}
 
 # DI wiring / service re-export paths that legitimately cross analysis boundary.
 # Keep in sync with .importlinter data-boundary + analysis-no-production-dependency.
@@ -287,6 +313,41 @@ def check_execution_sqlite_legacy_not_extension_point(rel_path: str) -> list[str
     ]
 
 
+def _imported_modules_from_source(source: str) -> set[str]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module is not None:
+            modules.add(node.module)
+    return modules
+
+
+def check_apps_non_registry_capability_imports(source: str, rel_path: str) -> list[str]:
+    """Check apps non-registry source does not import capability internals."""
+    if not _is_package_source(rel_path, "ditto_apps"):
+        return []
+    if rel_path.startswith(APPS_REGISTRY_SOURCE_PREFIX):
+        return []
+
+    allowed_modules = APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST.get(rel_path, frozenset())
+    errors: list[str] = []
+    for module in sorted(_imported_modules_from_source(source)):
+        root = module.split(".")[0]
+        if root not in APPS_CAPABILITY_IMPORT_ROOTS or module in allowed_modules:
+            continue
+        errors.append(
+            f"{rel_path}: apps non-registry module imports capability package "
+            f"{module!r}; use application facades or registry composition"
+        )
+    return errors
+
+
 def _check_per_file(verbose: bool) -> list[str]:
     """Run per-file checks (f-string logging, oversized files, boundary checks)."""
     errors: list[str] = []
@@ -320,6 +381,7 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_kernel_no_platform(source, rel_path))
         errors.extend(check_execution_no_simulation_ownership(source, rel_path))
         errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
+        errors.extend(check_apps_non_registry_capability_imports(source, rel_path))
 
     if verbose:
         if fstring_count == 0:

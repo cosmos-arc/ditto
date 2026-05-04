@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import polars as pl
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
@@ -9,6 +10,8 @@ from ditto_data.sources.fred.fred_source import FredSource
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
 __all__ = ["SourceQueryFacade"]
+
+SUPPORTED_SOURCE_DATASETS: frozenset[str] = frozenset({"stock_daily"})
 
 
 class SourceQueryFacade:
@@ -96,3 +99,33 @@ class SourceQueryFacade:
     def tushare(self) -> TushareSource:
         """获取 Tushare 数据源."""
         return self._source.tushare
+
+    def fetch_source_data(
+        self,
+        *,
+        source: str,
+        dataset: str,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """
+        Fetch route-visible source data through the application facade.
+
+        Apps routes should not import source protocols or concrete data sources.
+        This method keeps the route boundary on application-facing primitives.
+        """
+        if source != "tushare":
+            raise ValueError(f"不支持的数据源: {source}")
+
+        if dataset == "stock_daily":
+            return self.tushare.fetch_stock_daily(
+                source_ticker=source_ticker,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+        supported = ", ".join(sorted(SUPPORTED_SOURCE_DATASETS))
+        raise ValueError(
+            f"数据集 {dataset} 暂不支持 Source API 查询, 支持: {supported}"
+        )

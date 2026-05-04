@@ -10,7 +10,6 @@ import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.queries.source import SourceQueryFacade
-from ditto_data.sources.protocols import MarketFetcher
 from ditto_platform.foundation import logger
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
@@ -180,17 +179,12 @@ async def get_source_data(
     # 解析标识符为 source_ticker
     resolved_source_ticker = _resolve_source_ticker(facade, params, asset_class, source)
 
-    # 获取数据源
-    try:
-        data_source = _get_data_source(facade, source)
-    except ValueError as exc:
-        raise BadRequestError(str(exc)) from exc
-
-    # 调用 Source 获取数据
+    # 通过 application facade 调用 Source 获取数据
     try:
         df = await asyncio.to_thread(
             _fetch_source_data,
-            data_source,
+            facade,
+            source,
             dataset,
             resolved_source_ticker,
             params.start_date,
@@ -216,32 +210,19 @@ async def get_source_data(
     )
 
 
-def _get_data_source(facade: SourceQueryFacade, source: str) -> MarketFetcher:
-    """获取指定数据源."""
-    if source == "tushare":
-        return facade.tushare
-    # 后续扩展其他数据源
-    raise ValueError(f"不支持的数据源: {source}")
-
-
-# 支持按标的查询的 Source 数据集
-SUPPORTED_SOURCE_DATASETS: set[str] = {"stock_daily"}
-
-
 def _fetch_source_data(
-    source: MarketFetcher,
+    facade: SourceQueryFacade,
+    source: str,
     dataset: str,
     source_ticker: str,
     start_date: str,
     end_date: str,
 ) -> pl.DataFrame:
     """同步获取 Source 数据."""
-    if dataset == "stock_daily":
-        return source.fetch_stock_daily(
-            source_ticker=source_ticker,
-            start_date=start_date,
-            end_date=end_date,
-        )
-    # 未实现的数据集抛出异常, 避免静默返回空数据
-    supported = ", ".join(sorted(SUPPORTED_SOURCE_DATASETS))
-    raise ValueError(f"数据集 {dataset} 暂不支持 Source API 查询, 支持: {supported}")
+    return facade.fetch_source_data(
+        source=source,
+        dataset=dataset,
+        source_ticker=source_ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )

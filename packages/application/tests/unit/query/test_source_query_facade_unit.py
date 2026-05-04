@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import polars as pl
 import pytest
 from ditto_application.queries.source import SourceQueryFacade
 
@@ -106,3 +107,64 @@ class TestSourceQueryFacadeGetSource:
         )
 
         assert facade.tushare is mock_source
+
+
+class TestSourceQueryFacadeFetchSourceData:
+    """SourceQueryFacade.fetch_source_data — route-facing source fetch facade."""
+
+    def test_fetches_tushare_stock_daily(self) -> None:
+        expected = pl.DataFrame({"trade_date": ["2026-01-05"], "close": [10.0]})
+        mock_source = MagicMock()
+        mock_source.fetch_stock_daily.return_value = expected
+        source_service = MagicMock()
+        source_service.tushare = mock_source
+        metadata_service = MagicMock()
+        facade = SourceQueryFacade(
+            source_service=source_service,
+            metadata_service=metadata_service,
+        )
+
+        result = facade.fetch_source_data(
+            source="tushare",
+            dataset="stock_daily",
+            source_ticker="000001.SZ",
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+        )
+
+        assert result is expected
+        mock_source.fetch_stock_daily.assert_called_once_with(
+            source_ticker="000001.SZ",
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+        )
+
+    def test_unsupported_source_raises_value_error(self) -> None:
+        facade = SourceQueryFacade(
+            source_service=MagicMock(),
+            metadata_service=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match="不支持的数据源"):
+            facade.fetch_source_data(
+                source="fred",
+                dataset="stock_daily",
+                source_ticker="000001.SZ",
+                start_date="2026-01-01",
+                end_date="2026-01-31",
+            )
+
+    def test_unsupported_dataset_raises_value_error(self) -> None:
+        facade = SourceQueryFacade(
+            source_service=MagicMock(),
+            metadata_service=MagicMock(),
+        )
+
+        with pytest.raises(ValueError, match="暂不支持 Source API 查询"):
+            facade.fetch_source_data(
+                source="tushare",
+                dataset="index_daily",
+                source_ticker="000001.SH",
+                start_date="2026-01-01",
+                end_date="2026-01-31",
+            )
