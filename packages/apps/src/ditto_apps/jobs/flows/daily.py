@@ -20,7 +20,6 @@ from itertools import chain
 from typing import Any, cast
 
 from ditto_application.config import (
-    Dataset,
     TaskTier,
     get_datasets_by_tier,
     get_parallel_datasets,
@@ -58,6 +57,11 @@ def _collect_results(
         dataset_name = cast(str, result.get("dataset", "unknown"))
         results[dataset_name] = result
     return results
+
+
+def _dataset_value(dataset: object) -> str:
+    value = getattr(dataset, "value", None)
+    return value if isinstance(value, str) else ""
 
 
 @task(name="check_trading_day")
@@ -161,7 +165,7 @@ def daily_ingestion_flow(
         current_level_futures: list[PrefectFuture[dict[str, object]]] = []
         for dataset in level:
             # 根据数据集类型选择对应的 task 创建函数
-            if dataset in [Dataset.ADJ_FACTOR, Dataset.FUND_ADJ]:
+            if _dataset_value(dataset) in {"adj_factor", "fund_adj"}:
                 task = create_ingest_task_t1_adj(dataset)
             else:
                 task = create_ingest_task_t1_bars(dataset)

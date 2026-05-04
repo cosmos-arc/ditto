@@ -28,11 +28,9 @@ from .infra import (
     NotificationProvider,
     ObservabilityProvider,
 )
-from .infra.config import DataStoreSettings
 
 __all__ = [
     "ConfigProvider",
-    "DataStoreSettings",
     "IngestionBundle",
     "MaterializationBundle",
     "NotificationProvider",

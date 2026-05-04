@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import typer
-from ditto_application.config import Dataset
+from ditto_application.config import get_all_datasets
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 
@@ -15,17 +15,14 @@ from ditto_apps.registry.container import Container, make_app_container
 app = typer.Typer(help="运维命令")
 
 # 从 Dataset StrEnum 派生，保证单一事实来源（自动包含 index_weight）
-_KNOWN_DATASETS = Dataset.all_datasets()
+_KNOWN_DATASETS = [dataset.value for dataset in get_all_datasets()]
 
 # 核心数据集 (dq 默认检查范围)，从 Dataset 枚举派生避免硬编码
+_CORE_DATASET_NAMES = {"etf_daily", "stock_daily", "index_daily", "adj_factor"}
 _CORE_DATASETS = [
-    d.value
-    for d in (
-        Dataset.ETF_DAILY,
-        Dataset.STOCK_DAILY,
-        Dataset.INDEX_DAILY,
-        Dataset.ADJ_FACTOR,
-    )
+    dataset.value
+    for dataset in get_all_datasets()
+    if dataset.value in _CORE_DATASET_NAMES
 ]
 
 # 表格列宽

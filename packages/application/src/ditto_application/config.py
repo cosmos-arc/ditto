@@ -19,16 +19,24 @@ from __future__ import annotations
 from collections.abc import Iterator
 from datetime import UTC, datetime, time
 from enum import StrEnum
-from typing import Annotated, overload
+from typing import Annotated, Protocol, overload
 
-from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.errors import DatasetNotFoundError
-from ditto_data.models import Dataset
+from ditto_data.models import Dataset as _Dataset
 from pydantic import BaseModel, Field
 
-__all__ = ["DEFAULT_INITIAL_CASH", "DataStoreSettings", "Dataset", "now_iso"]
+__all__ = ["DEFAULT_INITIAL_CASH", "now_iso"]
 
 DEFAULT_INITIAL_CASH: float = 1_000_000.0
+
+
+class DatasetRef(Protocol):
+    """Application-facing dataset reference."""
+
+    @property
+    def value(self) -> str:
+        """Dataset identifier value."""
+        ...
 
 
 def now_iso() -> str:
@@ -78,7 +86,7 @@ class DatasetSpec(BaseModel):
     """
 
     # Spec-required fields
-    dataset: Dataset = Field(..., description="Dataset identifier")
+    dataset: _Dataset = Field(..., description="Dataset identifier")
     tier: TaskTier = Field(..., description="Task tier for scheduling")
     description: str = Field(..., description="Human-readable description")
     update_frequency: str = Field(
@@ -93,7 +101,7 @@ class DatasetSpec(BaseModel):
         ...,
         description="Execution priority (lower = higher priority)",
     )
-    depends_on: list[Dataset] = Field(
+    depends_on: list[_Dataset] = Field(
         default_factory=lambda: [],
         description="Datasets that must complete before this one",
     )
@@ -138,14 +146,14 @@ class T1ConfigSpec(BaseModel):
 
     """
 
-    dataset: Dataset = Field(..., description="数据集标识符")
+    dataset: _Dataset = Field(..., description="数据集标识符")
     description: str = Field(..., description="人类可读的描述")
     typical_available_time: time = Field(
         ...,
         description="数据典型可用时间",
     )
     depends_on: Annotated[
-        list[Dataset],
+        list[_Dataset],
         Field(default_factory=list, description="依赖的数据集列表"),
     ]
     critical_fields: Annotated[
@@ -164,7 +172,7 @@ class T1ConfigSpec(BaseModel):
 
 
 def create_t0_config(
-    dataset: Dataset,
+    dataset: _Dataset,
     description: str,
     typical_available_time: time,
     critical_fields: list[str],
@@ -219,10 +227,10 @@ def create_t1_config(params: T1ConfigSpec) -> DatasetSpec: ...
 @overload
 def create_t1_config(
     *,
-    dataset: Dataset,
+    dataset: _Dataset,
     description: str,
     typical_available_time: time,
-    depends_on: list[Dataset],
+    depends_on: list[_Dataset],
     critical_fields: list[str],
     task_name: str,
     priority: int = 20,
@@ -296,43 +304,43 @@ def create_t1_config(
 
 # ============ Ingestion Specs ============
 
-INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
+INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
     # T0: Meta datasets
-    Dataset.CALENDAR: create_t0_config(
-        dataset=Dataset.CALENDAR,
+    _Dataset.CALENDAR: create_t0_config(
+        dataset=_Dataset.CALENDAR,
         description="交易日历",
         typical_available_time=time(8, 0),
         critical_fields=["cal_date", "is_trade"],
         task_name="ingest_calendar",
         timeout_seconds=60,
     ),
-    Dataset.STOCK_BASIC: create_t0_config(
-        dataset=Dataset.STOCK_BASIC,
+    _Dataset.STOCK_BASIC: create_t0_config(
+        dataset=_Dataset.STOCK_BASIC,
         description="股票基础信息",
         typical_available_time=time(8, 30),
         critical_fields=["ts_code", "symbol", "name", "market", "list_date"],
         task_name="ingest_stock_basic",
     ),
-    Dataset.ETF_BASIC: create_t0_config(
-        dataset=Dataset.ETF_BASIC,
+    _Dataset.ETF_BASIC: create_t0_config(
+        dataset=_Dataset.ETF_BASIC,
         description="ETF基础信息",
         typical_available_time=time(8, 30),
         critical_fields=["ts_code", "symbol", "name", "list_date"],
         task_name="ingest_etf_basic",
     ),
-    Dataset.INDEX_BASIC: create_t0_config(
-        dataset=Dataset.INDEX_BASIC,
+    _Dataset.INDEX_BASIC: create_t0_config(
+        dataset=_Dataset.INDEX_BASIC,
         description="指数基础信息",
         typical_available_time=time(8, 30),
         critical_fields=["ts_code", "name", "market"],
         task_name="ingest_index_basic",
     ),
     # T1: Incremental datasets
-    Dataset.ETF_DAILY: create_t1_config(
-        dataset=Dataset.ETF_DAILY,
+    _Dataset.ETF_DAILY: create_t1_config(
+        dataset=_Dataset.ETF_DAILY,
         description="ETF日行情数据",
         typical_available_time=time(18, 0),
-        depends_on=[Dataset.ETF_BASIC],
+        depends_on=[_Dataset.ETF_BASIC],
         critical_fields=[
             "trade_date",
             "ts_code",
@@ -344,11 +352,11 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         ],
         task_name="ingest_etf_bars",
     ),
-    Dataset.INDEX_DAILY: create_t1_config(
-        dataset=Dataset.INDEX_DAILY,
+    _Dataset.INDEX_DAILY: create_t1_config(
+        dataset=_Dataset.INDEX_DAILY,
         description="指数日行情数据",
         typical_available_time=time(18, 0),
-        depends_on=[Dataset.INDEX_BASIC],
+        depends_on=[_Dataset.INDEX_BASIC],
         critical_fields=[
             "trade_date",
             "ts_code",
@@ -361,11 +369,11 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         task_name="ingest_index_daily",
         priority=15,
     ),
-    Dataset.STOCK_DAILY: create_t1_config(
-        dataset=Dataset.STOCK_DAILY,
+    _Dataset.STOCK_DAILY: create_t1_config(
+        dataset=_Dataset.STOCK_DAILY,
         description="股票日行情数据",
         typical_available_time=time(17, 0),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=[
             "trade_date",
             "ts_code",
@@ -378,11 +386,11 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         task_name="ingest_stock_daily",
         timeout_seconds=600,
     ),
-    Dataset.STOCK_STATUS: create_t1_config(
-        dataset=Dataset.STOCK_STATUS,
+    _Dataset.STOCK_STATUS: create_t1_config(
+        dataset=_Dataset.STOCK_STATUS,
         description="股票状态数据",
         typical_available_time=time(17, 30),
-        depends_on=[Dataset.STOCK_DAILY],
+        depends_on=[_Dataset.STOCK_DAILY],
         critical_fields=[
             "trade_date",
             "source_ticker",
@@ -393,131 +401,131 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
         task_name="ingest_stock_status",
         priority=25,
     ),
-    Dataset.ADJ_FACTOR: create_t1_config(
-        dataset=Dataset.ADJ_FACTOR,
+    _Dataset.ADJ_FACTOR: create_t1_config(
+        dataset=_Dataset.ADJ_FACTOR,
         description="复权因子",
         typical_available_time=time(19, 0),
-        depends_on=[Dataset.STOCK_DAILY],
+        depends_on=[_Dataset.STOCK_DAILY],
         critical_fields=["trade_date", "ts_code", "adj_factor"],
         task_name="ingest_adj_factor",
         priority=30,
     ),
-    Dataset.FUND_ADJ: create_t1_config(
-        dataset=Dataset.FUND_ADJ,
+    _Dataset.FUND_ADJ: create_t1_config(
+        dataset=_Dataset.FUND_ADJ,
         description="ETF/基金复权因子",
         typical_available_time=time(19, 0),
-        depends_on=[Dataset.ETF_DAILY],
+        depends_on=[_Dataset.ETF_DAILY],
         critical_fields=["trade_date", "ts_code", "adj_factor"],
         task_name="ingest_fund_adj",
         priority=30,
     ),
-    Dataset.BALANCE_SHEET: create_t1_config(
-        dataset=Dataset.BALANCE_SHEET,
+    _Dataset.BALANCE_SHEET: create_t1_config(
+        dataset=_Dataset.BALANCE_SHEET,
         description="资产负债表",
         typical_available_time=time(20, 30),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=["instrument_id", "report_date", "knowledge_date"],
         task_name="ingest_balance_sheet",
         priority=35,
         timeout_seconds=900,
     ),
-    Dataset.INCOME_STATEMENT: create_t1_config(
-        dataset=Dataset.INCOME_STATEMENT,
+    _Dataset.INCOME_STATEMENT: create_t1_config(
+        dataset=_Dataset.INCOME_STATEMENT,
         description="利润表",
         typical_available_time=time(20, 30),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=["instrument_id", "report_date", "knowledge_date"],
         task_name="ingest_income_statement",
         priority=35,
         timeout_seconds=900,
     ),
-    Dataset.CASH_FLOW: create_t1_config(
-        dataset=Dataset.CASH_FLOW,
+    _Dataset.CASH_FLOW: create_t1_config(
+        dataset=_Dataset.CASH_FLOW,
         description="现金流量表",
         typical_available_time=time(20, 30),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=["instrument_id", "report_date", "knowledge_date"],
         task_name="ingest_cash_flow",
         priority=35,
         timeout_seconds=900,
     ),
-    Dataset.DIVIDEND: create_t1_config(
-        dataset=Dataset.DIVIDEND,
+    _Dataset.DIVIDEND: create_t1_config(
+        dataset=_Dataset.DIVIDEND,
         description="分红送配数据",
         typical_available_time=time(20, 0),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=["instrument_id", "ex_dividend_date", "knowledge_date"],
         task_name="ingest_dividend",
         priority=40,
     ),
-    Dataset.VALUATION_METRICS: create_t1_config(
-        dataset=Dataset.VALUATION_METRICS,
+    _Dataset.VALUATION_METRICS: create_t1_config(
+        dataset=_Dataset.VALUATION_METRICS,
         description="估值指标",
         typical_available_time=time(19, 30),
-        depends_on=[Dataset.STOCK_DAILY],
+        depends_on=[_Dataset.STOCK_DAILY],
         critical_fields=["instrument_id", "trade_date", "knowledge_date"],
         task_name="ingest_valuation_metrics",
         priority=45,
     ),
-    Dataset.MARGIN_TRADING: create_t1_config(
-        dataset=Dataset.MARGIN_TRADING,
+    _Dataset.MARGIN_TRADING: create_t1_config(
+        dataset=_Dataset.MARGIN_TRADING,
         description="融资融券",
         typical_available_time=time(19, 30),
-        depends_on=[Dataset.STOCK_DAILY],
+        depends_on=[_Dataset.STOCK_DAILY],
         critical_fields=["instrument_id", "trade_date", "knowledge_date"],
         task_name="ingest_margin_trading",
         priority=45,
     ),
-    Dataset.PLEDGE_RATIO: create_t1_config(
-        dataset=Dataset.PLEDGE_RATIO,
+    _Dataset.PLEDGE_RATIO: create_t1_config(
+        dataset=_Dataset.PLEDGE_RATIO,
         description="股权质押",
         typical_available_time=time(21, 0),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=["instrument_id", "report_date", "knowledge_date"],
         task_name="ingest_pledge_ratio",
         priority=50,
     ),
-    Dataset.MACRO_INDICATORS: create_t1_config(
-        dataset=Dataset.MACRO_INDICATORS,
+    _Dataset.MACRO_INDICATORS: create_t1_config(
+        dataset=_Dataset.MACRO_INDICATORS,
         description="宏观指标",
         typical_available_time=time(21, 30),
-        depends_on=[Dataset.CALENDAR],
+        depends_on=[_Dataset.CALENDAR],
         critical_fields=["indicator_code", "date", "value"],
         task_name="ingest_macro_indicators",
         priority=55,
     ),
-    Dataset.FX_DAILY: create_t1_config(
-        dataset=Dataset.FX_DAILY,
+    _Dataset.FX_DAILY: create_t1_config(
+        dataset=_Dataset.FX_DAILY,
         description="汇率日线数据",
         typical_available_time=time(21, 30),
-        depends_on=[Dataset.CALENDAR],
+        depends_on=[_Dataset.CALENDAR],
         critical_fields=["instrument_id", "trade_date", "close"],
         task_name="ingest_fx_daily",
         priority=56,
     ),
-    Dataset.COMMODITY_DAILY: create_t1_config(
-        dataset=Dataset.COMMODITY_DAILY,
+    _Dataset.COMMODITY_DAILY: create_t1_config(
+        dataset=_Dataset.COMMODITY_DAILY,
         description="商品价格数据",
         typical_available_time=time(21, 30),
-        depends_on=[Dataset.CALENDAR],
+        depends_on=[_Dataset.CALENDAR],
         critical_fields=["instrument_id", "trade_date", "close"],
         task_name="ingest_commodity_daily",
         priority=57,
     ),
-    Dataset.CORPORATE_ACTIONS: create_t1_config(
-        dataset=Dataset.CORPORATE_ACTIONS,
+    _Dataset.CORPORATE_ACTIONS: create_t1_config(
+        dataset=_Dataset.CORPORATE_ACTIONS,
         description="公司行为",
         typical_available_time=time(20, 0),
-        depends_on=[Dataset.STOCK_BASIC],
+        depends_on=[_Dataset.STOCK_BASIC],
         critical_fields=["instrument_id", "action_type", "action_date"],
         task_name="ingest_corporate_actions",
         priority=65,
     ),
-    Dataset.INDEX_WEIGHT: create_t1_config(
-        dataset=Dataset.INDEX_WEIGHT,
+    _Dataset.INDEX_WEIGHT: create_t1_config(
+        dataset=_Dataset.INDEX_WEIGHT,
         description="指数成分股权重",
         typical_available_time=time(19, 0),
-        depends_on=[Dataset.INDEX_BASIC],
+        depends_on=[_Dataset.INDEX_BASIC],
         critical_fields=["index_code", "con_code", "weight", "trade_date"],
         task_name="ingest_index_weight",
         priority=50,
@@ -528,14 +536,14 @@ INGESTION_SPECS: dict[Dataset, DatasetSpec] = {
 # ============ Helper Functions ============
 
 
-def get_datasets_by_tier(tier: TaskTier) -> list[Dataset]:
+def get_datasets_by_tier(tier: TaskTier) -> list[_Dataset]:
     """Get all datasets belonging to a specific tier."""
     return [
         dataset for dataset, config in INGESTION_SPECS.items() if config.tier == tier
     ]
 
 
-def get_dataset_config(dataset: Dataset) -> DatasetSpec:
+def get_dataset_config(dataset: _Dataset) -> DatasetSpec:
     """
     Get configuration for a specific dataset.
 
@@ -548,18 +556,29 @@ def get_dataset_config(dataset: Dataset) -> DatasetSpec:
     return INGESTION_SPECS[dataset]
 
 
-def iter_tier_datasets(tier: TaskTier) -> Iterator[tuple[Dataset, DatasetSpec]]:
+def get_dataset_config_by_value(dataset: DatasetRef | str) -> DatasetSpec:
+    """Get configuration for a dataset reference by its value."""
+    dataset_value = dataset if isinstance(dataset, str) else dataset.value
+
+    for registered_dataset, config in INGESTION_SPECS.items():
+        if registered_dataset.value == dataset_value:
+            return config
+
+    raise DatasetNotFoundError(dataset=dataset_value)
+
+
+def iter_tier_datasets(tier: TaskTier) -> Iterator[tuple[_Dataset, DatasetSpec]]:
     """Iterate over all datasets in a tier with their configs."""
     for dataset in get_datasets_by_tier(tier):
         yield dataset, INGESTION_SPECS[dataset]
 
 
-def get_all_datasets() -> list[Dataset]:
+def get_all_datasets() -> list[_Dataset]:
     """Get all registered datasets."""
     return list(INGESTION_SPECS.keys())
 
 
-def get_parallel_datasets(tier: TaskTier) -> list[list[Dataset]]:
+def get_parallel_datasets(tier: TaskTier) -> list[list[_Dataset]]:
     """
     Get datasets grouped by dependency level for parallel execution.
 
@@ -572,11 +591,11 @@ def get_parallel_datasets(tier: TaskTier) -> list[list[Dataset]]:
 
     tier_datasets = set(datasets)
 
-    levels: list[list[Dataset]] = []
+    levels: list[list[_Dataset]] = []
     remaining = set(datasets)
 
     while remaining:
-        level_datasets: list[Dataset] = []
+        level_datasets: list[_Dataset] = []
         for dataset in list(remaining):
             config = get_dataset_config(dataset)
             deps = [d for d in config.depends_on if d in tier_datasets]

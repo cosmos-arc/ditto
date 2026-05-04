@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from ditto_application.config import Dataset
+from ditto_application.config import get_all_datasets
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
@@ -33,6 +33,25 @@ _DEFAULT_DATASETS = [
     "fx_daily",
     "commodity_daily",
 ]
+
+type _AssetClass = Literal["stock", "etf", "index"]
+
+
+def _asset_class_or_none(dataset: str) -> _AssetClass | None:
+    for registered_dataset in get_all_datasets():
+        if registered_dataset.value != dataset:
+            continue
+
+        asset_class = registered_dataset.get_asset_class(dataset)
+        if asset_class == "other":
+            return None
+        return asset_class
+    return None
+
+
+_ASSET_CLASS_BY_DATASET: dict[str, _AssetClass | None] = {
+    dataset.value: _asset_class_or_none(dataset.value) for dataset in get_all_datasets()
+}
 
 
 @task(
@@ -166,8 +185,8 @@ def _execute_single_check(
 
     """
     try:
-        asset_class = Dataset.get_asset_class(dataset)
-        if asset_class == "other":
+        asset_class = _ASSET_CLASS_BY_DATASET.get(dataset)
+        if asset_class is None:
             raise ValueError(f"Unknown dataset: {dataset}")
 
         result = l3_service.check_dataset(

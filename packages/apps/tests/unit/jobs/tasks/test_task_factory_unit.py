@@ -13,6 +13,7 @@ from ditto_apps.jobs.tasks import (
     t0_meta,
 )
 from ditto_apps.jobs.tasks.t0_meta import create_ingest_task
+from ditto_data.errors import DatasetNotFoundError
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import (
     IngestionResult,
@@ -145,6 +146,15 @@ class TestCreateIngestTask:
             )
 
         # Verify context manager handles cleanup
+
+    def test_unknown_dataset_ref_raises_domain_error(self):
+        """Unknown dataset-like values should not leak StopIteration."""
+
+        class UnknownDataset:
+            value = "not_registered"
+
+        with pytest.raises(DatasetNotFoundError):
+            create_ingest_task(UnknownDataset())
 
 
 @pytest.mark.unit

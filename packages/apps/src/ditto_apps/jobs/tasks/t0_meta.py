@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ditto_application.config import INGESTION_SPECS, Dataset
+from ditto_application.config import DatasetRef, get_dataset_config_by_value
 from prefect import task
 
 from ditto_apps.registry import create_ingestion_bundle
@@ -20,7 +20,7 @@ from ditto_apps.registry import create_ingestion_bundle
 type _PrefectTask = Any
 
 
-def create_ingest_task(dataset: Dataset) -> _PrefectTask:
+def create_ingest_task(dataset: DatasetRef) -> _PrefectTask:
     """
     创建摄取任务的工厂函数。
 
@@ -46,14 +46,15 @@ def create_ingest_task(dataset: Dataset) -> _PrefectTask:
         ... )
 
     """
-    config = INGESTION_SPECS[dataset]
+    config = get_dataset_config_by_value(dataset)
+    dataset_value = dataset.value
 
     @task(
-        name=f"ingest_{dataset.value}",
+        name=f"ingest_{dataset_value}",
         description=config.description,
         retries=config.retry_limit,
         timeout_seconds=config.timeout_seconds,
-        tags=[dataset.value, "ingestion"],
+        tags=[dataset_value, "ingestion"],
     )
     def ingest_task(
         trade_date: str,
@@ -84,7 +85,7 @@ def create_ingest_task(dataset: Dataset) -> _PrefectTask:
         """
         with create_ingestion_bundle(source=source) as bundle:
             result = bundle.coordinator.ingest_date(
-                dataset=dataset.value,
+                dataset=dataset_value,
                 trade_date=trade_date,
                 force=force,
             )

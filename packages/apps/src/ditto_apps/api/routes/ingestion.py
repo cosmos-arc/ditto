@@ -7,7 +7,7 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
-from ditto_application.config import Dataset
+from ditto_application.config import get_all_datasets
 from ditto_application.queries.ingestion_status import (
     IngestionStatusQueryFacade,
 )
@@ -24,7 +24,7 @@ from ditto_apps.models.ingestion import (
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
 
 # 从 Dataset StrEnum 派生，保证单一事实来源
-_KNOWN_DATASETS = Dataset.all_datasets()
+_KNOWN_DATASETS = [dataset.value for dataset in get_all_datasets()]
 
 
 @router.get("/status", response_model=APIResponse[IngestionStatusResponse])

@@ -5,27 +5,18 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from ditto_application.config import DataStoreSettings
-from ditto_platform.foundation.config import (
-    ConfigInitCoordinator,
-    ConfigLoader,
-    get_environment,
-)
+from ditto_platform.foundation.config import ConfigInitCoordinator
 from ditto_platform.foundation.config.initializer import InitScope
 from ditto_platform.foundation.config.providers import DataRootInitProvider
 
-from ditto_apps.config import load_env_file
+from ditto_apps.registry.infra.config import load_data_store_settings
 from ditto_apps.registry.init_providers import MetadataDbInitProvider
 
 app = typer.Typer(help="配置初始化命令")
 
 
 def _load_data_root() -> Path:
-    environment = get_environment()
-    loader = ConfigLoader(environment)
-    values = load_env_file(loader, "data_store")
-    settings = DataStoreSettings.model_validate(values)
-    return settings.data_root
+    return load_data_store_settings().data_root
 
 
 def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
@@ -37,17 +28,10 @@ def _resolve_data_root(ctx: typer.Context, data_root: str | None) -> Path:
 def _make_coordinator() -> ConfigInitCoordinator:
     """创建并注册所有初始化提供者的协调器。"""
     coordinator = ConfigInitCoordinator()
-    settings = _load_data_store_settings()
+    settings = load_data_store_settings()
     coordinator.register(DataRootInitProvider(settings.all_directories()))
     coordinator.register(MetadataDbInitProvider())
     return coordinator
-
-
-def _load_data_store_settings() -> DataStoreSettings:
-    environment = get_environment()
-    loader = ConfigLoader(environment)
-    values = load_env_file(loader, "data_store")
-    return DataStoreSettings.model_validate(values)
 
 
 @app.command()

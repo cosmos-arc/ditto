@@ -59,8 +59,8 @@ from ditto_apps.middleware import (
     http_exception_handler,
     validation_exception_handler,
 )
-from ditto_apps.registry import DataStoreSettings
 from ditto_apps.registry.container import make_async_app_container
+from ditto_apps.registry.infra.config import data_store_settings_type
 
 # Initialize project root
 project_root = Path(__file__).parent.parent.parent.parent
@@ -130,12 +130,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         coordinator: ConfigInitCoordinator = await typed_container.get(
             ConfigInitCoordinator
         )
-        settings: DataStoreSettings = await typed_container.get(DataStoreSettings)
+        data_store_settings = await typed_container.get(data_store_settings_type())
         # Providers 已经在容器中注册，无需手动注册
         try:
             coordinator.initialize(
                 scope=InitScope.STARTUP,
-                data_root=settings.data_root,
+                data_root=data_store_settings.data_root,
             )
         except ConfigInitError as e:
             logger.error(
@@ -148,7 +148,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info(
             "Configuration initialized",
             event="config_init_complete",
-            data_root=str(settings.data_root),
+            data_root=str(data_store_settings.data_root),
         )
 
         app.state.settings = await typed_container.get(Settings)

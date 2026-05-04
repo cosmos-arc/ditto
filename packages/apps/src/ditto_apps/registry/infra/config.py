@@ -11,7 +11,7 @@ from dishka import Provider, Scope, provide
 from ditto_application.settings import TradingSettings
 from ditto_data.config import DataSourceSettings, FileStorageSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
-from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.config.data_store import DataStoreSettings as _DataStoreSettings
 from ditto_data.quality.config import DQSettings
 from ditto_platform.foundation import logger
 from ditto_platform.foundation.cache import DataCache
@@ -32,7 +32,39 @@ from ditto_platform.services.notification import NotificationSettings
 from ditto_apps.config import load_env_file
 from ditto_apps.registry.init_providers import MetadataDbInitProvider
 
-__all__ = ["ConfigProvider", "DataStoreSettings", "RuntimeFlags"]
+__all__ = [
+    "ConfigProvider",
+    "RuntimeFlags",
+    "data_store_settings_type",
+    "load_data_store_settings",
+]
+
+
+def data_store_settings_type() -> type[_DataStoreSettings]:
+    """Return the DI key for data store settings without re-exporting it."""
+    return _DataStoreSettings
+
+
+def load_data_store_settings(
+    config_loader: ConfigLoader | None = None,
+) -> _DataStoreSettings:
+    """加载数据存储配置。"""
+    loader = (
+        config_loader if config_loader is not None else ConfigLoader(get_environment())
+    )
+    values: dict[str, Any] = load_env_file(loader, "data_store")
+
+    # 支持 CLI/API 透传的环境变量覆盖
+    if override := os.getenv("DITTO_DATA_ROOT"):
+        values["data_root"] = override
+    if override := os.getenv("SQLITE_PATH"):
+        values["sqlite_path"] = override
+    if override := os.getenv("DUCKDB_PATH"):
+        values["duckdb_path"] = override
+    if override := os.getenv("LOG_DIR"):
+        values["logs_path_override"] = override
+
+    return _DataStoreSettings.model_validate(values)
 
 
 def _load_keyring_secret(service: str, key: str) -> str | None:
@@ -108,7 +140,7 @@ class ConfigProvider(Provider):
 
     @provide
     def init_coordinator(
-        self, data_store_settings: DataStoreSettings
+        self, data_store_settings: _DataStoreSettings
     ) -> ConfigInitCoordinator:
         """配置初始化协调器（注册所有 providers）."""
         coordinator = ConfigInitCoordinator()
@@ -136,25 +168,12 @@ class ConfigProvider(Provider):
         return Settings(system=system, observability=observability)
 
     @provide
-    def data_store_settings(self, config_loader: ConfigLoader) -> DataStoreSettings:
+    def data_store_settings(self, config_loader: ConfigLoader) -> _DataStoreSettings:
         """加载数据存储配置。"""
-        values: dict[str, Any] = load_env_file(config_loader, "data_store")
-
-        # 支持 CLI 透传的环境变量覆盖
-        if override := os.getenv("DITTO_DATA_ROOT"):
-            values["data_root"] = override
-        if override := os.getenv("SQLITE_PATH"):
-            values["sqlite_path"] = override
-        if override := os.getenv("DUCKDB_PATH"):
-            values["duckdb_path"] = override
-        # 支持 LOG_DIR 环境变量（Docker 部署用）
-        if override := os.getenv("LOG_DIR"):
-            values["logs_path_override"] = override
-
-        return DataStoreSettings.model_validate(values)
+        return load_data_store_settings(config_loader)
 
     @provide
-    def data_root(self, settings: DataStoreSettings) -> Path:
+    def data_root(self, settings: _DataStoreSettings) -> Path:
         """提供数据根目录路径。"""
         return settings.data_root
 
@@ -185,7 +204,7 @@ class ConfigProvider(Provider):
     @provide
     def file_storage_settings(
         self,
-        settings: DataStoreSettings,
+        settings: _DataStoreSettings,
     ) -> FileStorageSettings:
         """派生文件存储路径配置。"""
         return FileStorageSettings(

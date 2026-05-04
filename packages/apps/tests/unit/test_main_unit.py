@@ -1,5 +1,8 @@
 """Tests for FastAPI main application async endpoints."""
 
+from types import SimpleNamespace
+
+import ditto_apps.main as main_module
 import pytest
 from ditto_apps.api.routes.debug import generate_test_logs
 from ditto_apps.main import (
@@ -8,8 +11,10 @@ from ditto_apps.main import (
     health_check,
     root,
 )
+from ditto_data.config.data_store import DataStoreSettings
 from ditto_kernel import __version__ as ditto_version
 from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.config.initializer import ConfigInitCoordinator
 from ditto_platform.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
@@ -74,3 +79,62 @@ class TestTestLogsEndpoint:
         # 环境检查已移到路由注册阶段，函数本身不再检查环境
         response = await generate_test_logs()
         assert response == {"message": "Test logs generated"}
+
+
+@pytest.mark.unit
+class TestLifespan:
+    """Tests for application lifespan dependency resolution."""
+
+    @pytest.mark.asyncio
+    async def test_uses_container_data_store_settings(self, tmp_path, monkeypatch):
+        """Lifespan should initialize with container-owned settings."""
+
+        class FakeCoordinator:
+            def __init__(self) -> None:
+                self.data_root = None
+
+            def initialize(self, **kwargs):
+                self.data_root = kwargs["data_root"]
+                return {}
+
+        class FakeContainer:
+            def __init__(self) -> None:
+                self.coordinator = FakeCoordinator()
+                self.data_store_settings = DataStoreSettings(
+                    data_root=tmp_path / "container-root"
+                )
+                self.settings = Settings(
+                    system=SystemSettings(environment=Environment.TESTING),
+                    observability=ObservabilitySettings(),
+                )
+                self.closed = False
+
+            async def get(self, dependency_type):
+                if dependency_type is ConfigInitCoordinator:
+                    return self.coordinator
+                if dependency_type is DataStoreSettings:
+                    return self.data_store_settings
+                if dependency_type is Settings:
+                    return self.settings
+                raise AssertionError(f"Unexpected dependency: {dependency_type!r}")
+
+            async def close(self) -> None:
+                self.closed = True
+
+        loader_settings = DataStoreSettings(data_root=tmp_path / "loader-root")
+        monkeypatch.setattr(
+            main_module,
+            "load_data_store_settings",
+            lambda: loader_settings,
+            raising=False,
+        )
+
+        container = FakeContainer()
+        test_app = SimpleNamespace(state=SimpleNamespace(dishka_container=container))
+
+        async with main_module.lifespan(test_app):
+            pass
+
+        assert container.coordinator.data_root == tmp_path / "container-root"
+        assert test_app.state.settings is container.settings
+        assert container.closed is True
