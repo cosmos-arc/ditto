@@ -20,7 +20,6 @@ Execution 是**交易执行平面**，负责：
 ```
 ditto_execution → ditto_kernel ✅
 ditto_execution → ditto_portfolio ✅
-ditto_execution → ditto_risk ✅
 ditto_execution → ditto_platform ✅
 ```
 

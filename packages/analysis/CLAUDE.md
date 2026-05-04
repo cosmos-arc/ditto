@@ -19,8 +19,7 @@ Analysis 是**纯研究分析平面**，负责：
 
 ```
 ditto_analysis → ditto_kernel ✅
-ditto_analysis → ditto_data ✅
-ditto_analysis → ditto_features ✅
+ditto_analysis → ditto_platform ✅
 ```
 
 外部依赖：polars, numpy, orjson

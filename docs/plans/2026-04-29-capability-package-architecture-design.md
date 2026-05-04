@@ -4,6 +4,15 @@
 > 状态：Accepted for planning
 > 目标：以最终合理性为准，将 Ditto 从抽象技术平面拆分为面向量化运行职责的多 package 架构。
 
+> **2026-05-04 Amendment:** 后续实现将 `features` 与 `analysis` 进一步收窄：
+> - `features` 不直接依赖 `data`，市场输入由 `application`/`backtest` 注入
+> - `strategy` 不直接依赖 `data`/`features`，信号存储通过 Protocol 注入
+> - `analysis` 不直接依赖生产包，研究通过 `application` query/read-model 边界读取结果
+> - `execution` 不依赖 `risk`，使用自有 audit DTO
+> - 禁止跨包 re-export，消费者必须直接引用源头包
+>
+> 这是比原 Accepted plan 更严格的最终约束，源码和 import-linter 以此为准。
+
 ## 1. 核心决策
 
 Ditto 采用多 package monorepo，不收敛为单包结构。包边界由 `pyproject.toml` 依赖声明、import-linter 和自定义架构检查共同约束。

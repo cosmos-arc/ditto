@@ -13,12 +13,12 @@ Strategy 层是 **策略定义与信号生成** 能力包，负责 alpha pipelin
 
 ```
 ditto_strategy → ditto_kernel ✅
-ditto_strategy → ditto_data ✅ (DataProvider Protocol)
-ditto_strategy → ditto_features ✅
 ditto_strategy → ditto_platform ✅ (storage/sqlite: SQLitePool, logger, traced)
 ```
 
 外部依赖：polars, orjson
+
+**注意**：strategy 不直接依赖 data 或 features。市场数据由 application/backtest 通过 StrategyInputBundle 注入，信号存储通过 SignalStore Protocol 抽象。
 
 **技术债务**：strategy 模板当前直接引用 portfolio 的 allocation/constraints 类型（仅 runtime_builder 和集成测试）。长期演进方向：策略只产信号，分配方案由 application 层独立配置。参见 LEAN 架构的 AlphaModel → PortfolioConstructionModel 解耦模式。
 

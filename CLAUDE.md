@@ -68,10 +68,25 @@
   ditto_apps → ditto_platform
   platform 是横向技术基础设施
 
+实际依赖图（源码为准）:
+  kernel → 无依赖
+  platform → kernel
+  data → kernel, platform
+  features → kernel, platform（不直接依赖 data；市场输入由 application/backtest 注入）
+  strategy → kernel, platform（不依赖 data/features；信号存储通过 Protocol 注入）
+  portfolio → kernel
+  risk → kernel, portfolio
+  execution → kernel, platform, portfolio（不依赖 risk；使用自有 audit DTO）
+  backtest → kernel, data, strategy, portfolio, risk, execution
+  analysis → kernel, platform（不直接依赖生产包；研究通过 application query 边界读取）
+  application → 所有能力包 + data + platform
+  apps → application + platform + composition root wiring
+
 允许的跨层依赖:
   - apps 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
   - apps 可以直接依赖 platform.foundation
   - apps 禁止直接依赖 data.storage/runtime（仅 registry 例外）
+  - apps 禁止直接依赖 data.models（通过 application.config 路由）
   - apps.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
 
 硬性约束:
@@ -79,6 +94,7 @@
   - ditto_strategy 禁止依赖 ditto_execution
   - ditto_execution 禁止依赖 ditto_backtest
   - ditto_backtest 禁止导入真实券商网关
+  - 禁止跨包 re-export（消费者必须直接引用源头包）
 
 详细约束见 .importlinter 配置
 ```
