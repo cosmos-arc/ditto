@@ -11,10 +11,6 @@ import pytest
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
-from ditto_data.storage.runtime.publication_shadow_sqlite import (
-    SQLiteDerivedShadowSlotReader,
-    SQLiteDerivedShadowSlotWriter,
-)
 from ditto_features.materialization.models import (
     DerivedRunMode,
     DerivedRunStatus,
@@ -43,6 +39,10 @@ from ditto_features.storage.runtime.publication_safety import (
     MinimalDQWriter,
     ShadowReportReader,
     ShadowReportWriter,
+)
+from ditto_features.storage.runtime.publication_shadow_sqlite import (
+    SQLiteDerivedShadowSlotReader,
+    SQLiteDerivedShadowSlotWriter,
 )
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,

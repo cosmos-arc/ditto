@@ -71,7 +71,6 @@ ditto_data/
 │   ├── metadata_service.py / fundamental_service.py
 │   ├── macro_service.py / capital_service.py
 │   ├── source_service.py / derived_catalog_service.py
-│   ├── derived_shadow_slot_service.py
 │   ├── research_catalog_service.py / research_artifact_service.py
 │   ├── trade/           # TradeService 门面 + 3 Writer
 │   ├── audit/           # ExecutionAuditService
@@ -94,7 +93,7 @@ ditto_data/
 │   ├── macro/           # 宏观指标
 │   ├── market/          # ETF/股票/指数/商品/外汇
 │   ├── metadata/        # 日历/工具/行业/Universe
-│   ├── runtime/         # 摄入游标/日志/质量/发布影子 SQLite（待迁移）
+│   ├── runtime/         # 摄入游标/日志/质量
 │   └── schemas/
 └── utils/               # 工具函数（时区等）
 ```

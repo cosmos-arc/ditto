@@ -29,10 +29,6 @@ from ditto_data.storage.runtime.ingestion import (
     IngestionLogReader,
     IngestionLogWriter,
 )
-from ditto_data.storage.runtime.publication_shadow_sqlite import (
-    SQLiteDerivedShadowSlotReader,
-    SQLiteDerivedShadowSlotWriter,
-)
 from ditto_data.storage.runtime.quality import (
     ComparisonReader,
     ComparisonWriter,
@@ -127,22 +123,6 @@ class RuntimeProvider(Provider):
     def quarantine_writer(self, sqlite_client: SQLiteClient) -> QuarantineWriter:
         """隔离区数据写入器."""
         return QuarantineWriter(sqlite_client)
-
-    @provide
-    def derived_shadow_slot_reader(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> SQLiteDerivedShadowSlotReader:
-        """Shadow slot 控制面读取器."""
-        return SQLiteDerivedShadowSlotReader(sqlite_client)
-
-    @provide
-    def derived_shadow_slot_writer(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> SQLiteDerivedShadowSlotWriter:
-        """Shadow slot 控制面写入器."""
-        return SQLiteDerivedShadowSlotWriter(sqlite_client)
 
     # ========================================================================
     # Runtime Services

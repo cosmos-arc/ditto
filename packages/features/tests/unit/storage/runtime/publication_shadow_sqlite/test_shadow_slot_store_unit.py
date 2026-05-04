@@ -1,10 +1,36 @@
 """Tests for SQLite-backed derived shadow slot stores."""
 
-from ditto_data.storage.runtime.publication_shadow_sqlite import (
+from pathlib import Path
+
+import pytest
+from ditto_features.storage.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
     SQLiteDerivedShadowSlotWriter,
 )
 from ditto_kernel.publication_safety import DerivedShadowSlotRecord
+from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+
+
+@pytest.fixture
+def sqlite_client(tmp_path: Path):
+    """Provide a SQLite client with the minimal shadow slot schema."""
+    pool = SQLitePool(str(tmp_path / "test.sqlite"))
+    client = SQLiteClient(pool)
+    client.execute(
+        """
+        CREATE TABLE derived_shadow_slot (
+            derived_id TEXT PRIMARY KEY,
+            candidate_version INTEGER NOT NULL,
+            baseline_version INTEGER,
+            activated_at TEXT NOT NULL,
+            disabled_at TEXT
+        )
+        """
+    )
+    client.commit()
+    yield client
+    pool.close()
 
 
 class TestSQLiteDerivedShadowSlotStore:

@@ -1,4 +1,4 @@
-"""Tests for RuntimeProvider derived catalog wiring."""
+"""Tests for capability storage provider derived wiring."""
 
 from unittest.mock import MagicMock
 
@@ -14,7 +14,6 @@ from ditto_features.di import FeaturesStorageProvider
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
 from ditto_kernel.strategy import RiskScope
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_strategy.di import StrategyStorageProvider
 from ditto_strategy.models import (
     ArtifactKind,
@@ -56,15 +55,15 @@ def _make_container() -> Container:
     )
 
 
-class TestRuntimeProviderDerivedCatalog:
-    """Tests for RuntimeProvider derived catalog service wiring."""
+class TestCapabilityStorageProviderDerivedWiring:
+    """Tests for capability storage provider derived service wiring."""
 
-    def test_runtime_provider_provides_derived_catalog_service(
+    def test_features_provider_provides_derived_catalog_service(
         self,
         monkeypatch,
         tmp_path,
     ) -> None:
-        """RuntimeProvider should build DerivedCatalogService."""
+        """FeaturesStorageProvider should build DerivedCatalogService."""
         monkeypatch.setenv("ENVIRONMENT", "testing")
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = _make_container()
@@ -74,7 +73,7 @@ class TestRuntimeProviderDerivedCatalog:
         assert isinstance(service, DerivedCatalogService)
         container.close()
 
-    def test_runtime_provider_reuses_derived_catalog_service_singleton(
+    def test_features_provider_reuses_derived_catalog_service_singleton(
         self,
         monkeypatch,
         tmp_path,
@@ -90,13 +89,13 @@ class TestRuntimeProviderDerivedCatalog:
         assert service_1 is service_2
         container.close()
 
-    def test_shadow_slot_service_assembled_from_data_and_features(
+    def test_features_provider_provides_shadow_slot_service(
         self,
         monkeypatch,
         tmp_path,
     ) -> None:
-        """DerivedShadowSlotService assembles from data reader/writer + features."""
-        from ditto_data.storage.runtime.publication_shadow_sqlite import (
+        """DerivedShadowSlotService is owned by features storage wiring."""
+        from ditto_features.storage.runtime.publication_shadow_sqlite import (
             SQLiteDerivedShadowSlotReader,
             SQLiteDerivedShadowSlotWriter,
         )
@@ -105,16 +104,12 @@ class TestRuntimeProviderDerivedCatalog:
         monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
         container = _make_container()
 
-        # Verify the data layer provides the reader/writer
-        sqlite_client = container.get(SQLiteClient)
-        reader = SQLiteDerivedShadowSlotReader(sqlite_client)
-        writer = SQLiteDerivedShadowSlotWriter(sqlite_client)
+        reader = container.get(SQLiteDerivedShadowSlotReader)
+        writer = container.get(SQLiteDerivedShadowSlotWriter)
+        service = container.get(DerivedShadowSlotService)
 
-        # Verify features service can be assembled from data components
-        service = DerivedShadowSlotService(
-            slot_reader=reader,
-            slot_writer=writer,
-        )
+        assert isinstance(reader, SQLiteDerivedShadowSlotReader)
+        assert isinstance(writer, SQLiteDerivedShadowSlotWriter)
         assert isinstance(service, DerivedShadowSlotService)
         container.close()
 

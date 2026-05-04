@@ -23,10 +23,6 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
-from ditto_data.storage.runtime.publication_shadow_sqlite import (
-    SQLiteDerivedShadowSlotReader,
-    SQLiteDerivedShadowSlotWriter,
-)
 from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.storage.sqlite.trade import TradeService
@@ -322,17 +318,6 @@ class AppProcessProvider(Provider):
     """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
 
     scope = Scope.APP
-
-    @provide
-    def derived_shadow_slot_service(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> DerivedShadowSlotService:
-        """Shadow slot 控制面服务 — 组装 data 层 reader/writer 与 features 层服务."""
-        return DerivedShadowSlotService(
-            slot_reader=SQLiteDerivedShadowSlotReader(sqlite_client),
-            slot_writer=SQLiteDerivedShadowSlotWriter(sqlite_client),
-        )
 
     @provide
     def compile_cache_service(

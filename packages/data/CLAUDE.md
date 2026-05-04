@@ -124,10 +124,9 @@ ditto_data/
 │   │   ├── _pit_base.py # PIT 存储基类
 │   │   ├── fee_schedule_reader/writer.py  # 费率表
 │   │   └── trading_rule_reader/writer.py  # 交易规则
-│   ├── runtime/         # 运行时存储（摄入游标/日志/质量；发布影子 SQLite 待迁移至 features）
+│   ├── runtime/         # 运行时存储（摄入游标/日志/质量）
 │   │   ├── ingestion/   # 摄入游标/日志
 │   │   ├── quality/     # 质量（比较/隔离）
-│   │   ├── publication_shadow_sqlite/  # 发布影子 SQLite 存储（临时保留，Task 3 迁移）
 │   │   └── unit_of_work.py      # 工作单元
 │   └── schemas/         # 存储层 Schema（market/metadata/store）
 └── utils/               # 工具函数（时区等）

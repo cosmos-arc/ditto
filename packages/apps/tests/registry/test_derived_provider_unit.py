@@ -94,6 +94,8 @@ def _make_full_container():
         *get_app_providers(),
     )
 
+
+class TestStorageProviderWiring:
     """Tests for FeaturesStorageProvider and AnalysisStorageProvider."""
 
     def test_provider_builds_query_service(
@@ -147,6 +149,9 @@ def _make_full_container():
             "derived_catalog_reader",
             "derived_catalog_writer",
             "derived_catalog_service",
+            "derived_shadow_slot_reader",
+            "derived_shadow_slot_writer",
+            "derived_shadow_slot_service",
             "derived_query_service",
         }
         assert expected == provide_methods

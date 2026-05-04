@@ -98,8 +98,9 @@ ditto_features/
 ├── storage/              # Feature-owned 存储适配
 │   ├── derived_artifact_writer.py
 │   ├── parquet/          # 因子/特征 Parquet 存储
-│   ├── runtime/          # 发布安全运行时记录存储
-│   │   └── publication_safety/
+│   ├── runtime/          # 发布运行时记录存储
+│   │   ├── publication_safety/
+│   │   └── publication_shadow_sqlite/
 │   └── sqlite/           # 衍生 artifact SQLite 存储
 ├── errors.py             # 错误定义
 ├── validation.py         # 校验工具
