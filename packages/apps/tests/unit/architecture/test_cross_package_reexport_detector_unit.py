@@ -61,6 +61,62 @@ def test_detector_ignores_private_annotation_imports(tmp_path: Path) -> None:
     assert find_cross_package_exports(tmp_path) == []
 
 
+def test_detector_finds_public_cross_import_in_strict_leaf_scope(
+    tmp_path: Path,
+) -> None:
+    src = (
+        tmp_path
+        / "packages"
+        / "execution"
+        / "src"
+        / "ditto_execution"
+        / "reality"
+        / "fee.py"
+    )
+    src.parent.mkdir(parents=True)
+    src.write_text(
+        "from ditto_kernel.trading import FeeSchedule\n"
+        "__all__ = ['LocalFeeModel']\n"
+        "class LocalFeeModel:\n"
+        "    schedule: FeeSchedule\n",
+        encoding="utf-8",
+    )
+
+    assert find_cross_package_exports(tmp_path) == [
+        CrossPackageExport(
+            path=src.relative_to(tmp_path).as_posix(),
+            exported_name="FeeSchedule",
+            imported_from="ditto_kernel.trading",
+            owner_package="execution",
+            source_package="kernel",
+        )
+    ]
+
+
+def test_detector_ignores_private_cross_import_in_strict_leaf_scope(
+    tmp_path: Path,
+) -> None:
+    src = (
+        tmp_path
+        / "packages"
+        / "execution"
+        / "src"
+        / "ditto_execution"
+        / "reality"
+        / "fee.py"
+    )
+    src.parent.mkdir(parents=True)
+    src.write_text(
+        "from ditto_kernel.trading import FeeSchedule as _FeeSchedule\n"
+        "__all__ = ['LocalFeeModel']\n"
+        "class LocalFeeModel:\n"
+        "    schedule: _FeeSchedule\n",
+        encoding="utf-8",
+    )
+
+    assert find_cross_package_exports(tmp_path) == []
+
+
 def test_detector_ignores_function_local_imports(tmp_path: Path) -> None:
     src = tmp_path / "packages" / "execution" / "src" / "ditto_execution" / "model.py"
     src.parent.mkdir(parents=True)
@@ -77,12 +133,48 @@ def test_detector_ignores_function_local_imports(tmp_path: Path) -> None:
 
 def test_removed_runtime_reexport_attrs_are_absent() -> None:
     old_reexports = {
-        "ditto_features.models.derived": ["JsonDict", "JsonValue"],
+        "ditto_features.models.derived": [
+            "JsonDict",
+            "JsonValue",
+            "require_bool",
+            "require_int",
+            "require_payload",
+            "require_str",
+        ],
         "ditto_features.publication_safety": [
             "DerivedRole",
             "MaterializationProfile",
         ],
         "ditto_execution.audit.models": ["RiskScope"],
+        "ditto_execution.reality.brokerage": ["FeeModel"],
+        "ditto_execution.reality.fee": [
+            "DEFAULT_COMMISSION_RATE",
+            "DEFAULT_MIN_COMMISSION",
+            "FeeSchedule",
+            "Order",
+            "OrderSide",
+        ],
+        "ditto_execution.reality.fill": [
+            "FillEvent",
+            "InstrumentDefinition",
+            "MarketSnapshot",
+            "Order",
+            "OrderSide",
+            "OrderType",
+            "TradingRuleSet",
+        ],
+        "ditto_execution.reality.settlement": [
+            "InstrumentId",
+            "OrderSide",
+            "Position",
+            "TradingRuleSet",
+        ],
+        "ditto_execution.reality.slippage": [
+            "InstrumentDefinition",
+            "MarketSnapshot",
+            "Order",
+            "OrderSide",
+        ],
         "ditto_portfolio.accounting": ["OrderSide", "OrderType"],
         "ditto_portfolio.accounting.order_book": ["OrderSide", "OrderType"],
         "ditto_risk.constraints.context": ["InstrumentId"],

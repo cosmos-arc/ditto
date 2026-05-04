@@ -10,10 +10,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ditto_kernel.order import OrderSide, OrderType
-from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot, TradingRuleSet
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import Order
+from ditto_kernel.order import OrderSide as _OrderSide
+from ditto_kernel.order import OrderType as _OrderType
+from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
+from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
+from ditto_kernel.trading import TradingRuleSet as _TradingRuleSet
+from ditto_portfolio.accounting.fills import FillEvent as _FillEvent
+from ditto_portfolio.accounting.order_book import Order as _Order
 
 from ditto_execution.fills import Filled, FillOutcome, NoFill
 
@@ -30,10 +33,10 @@ class FillModel(Protocol):
 
     def try_fill(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
-        trading_rule: TradingRuleSet,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
+        trading_rule: _TradingRuleSet,
     ) -> FillOutcome:
         """尝试成交。"""
         ...
@@ -59,13 +62,13 @@ class SimpleFillModel:
 
     def try_fill(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
-        trading_rule: TradingRuleSet,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
+        trading_rule: _TradingRuleSet,
     ) -> FillOutcome:
         """尝试成交。"""
-        if order.order_type in (OrderType.MARKET, OrderType.LIMIT):
+        if order.order_type in (_OrderType.MARKET, _OrderType.LIMIT):
             return _fill_market_or_limit(order, market)
         return NoFill(reason="unsupported_order_type", can_retry=False)
 
@@ -88,10 +91,10 @@ class ClosingAuctionFillModel:
 
     def try_fill(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
-        trading_rule: TradingRuleSet,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
+        trading_rule: _TradingRuleSet,
     ) -> FillOutcome:
         """尝试收盘集合竞价成交。"""
         avg_vol = market.avg_volume_20d
@@ -143,10 +146,10 @@ class AShareFillModel:
 
     def try_fill(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
-        trading_rule: TradingRuleSet,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
+        trading_rule: _TradingRuleSet,
     ) -> FillOutcome:
         """A 股规则矩阵成交。"""
         outcome = self._evaluate(order, market, definition, trading_rule)
@@ -156,10 +159,10 @@ class AShareFillModel:
 
     def _evaluate(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
-        trading_rule: TradingRuleSet,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
+        trading_rule: _TradingRuleSet,
     ) -> FillOutcome | None:
         """A 股规则矩阵 — 返回 None 表示未匹配任何规则。"""
         # 停牌
@@ -167,7 +170,7 @@ class AShareFillModel:
             return NoFill(reason="suspended", can_retry=True)
 
         # MARKET_ON_CLOSE 委托竞价模型
-        if order.order_type == OrderType.MARKET_ON_CLOSE:
+        if order.order_type == _OrderType.MARKET_ON_CLOSE:
             return self._auction.try_fill(order, market, definition, trading_rule)
 
         # 涨跌停判断
@@ -177,14 +180,14 @@ class AShareFillModel:
         )
 
         # 涨停 + 买入 或 跌停 + 卖出 → 无法成交
-        if (at_limit_up and order.direction == OrderSide.BUY) or (
-            at_limit_down and order.direction == OrderSide.SELL
+        if (at_limit_up and order.direction == _OrderSide.BUY) or (
+            at_limit_down and order.direction == _OrderSide.SELL
         ):
             reason = "limit_up_no_buy" if at_limit_up else "limit_down_no_sell"
             return NoFill(reason=reason, can_retry=True)
 
         # MARKET / LIMIT 单 — 使用共享函数
-        if order.order_type in (OrderType.MARKET, OrderType.LIMIT):
+        if order.order_type in (_OrderType.MARKET, _OrderType.LIMIT):
             return _fill_market_or_limit(order, market)
 
         return None
@@ -195,14 +198,14 @@ class AShareFillModel:
 # ---------------------------------------------------------------------------
 
 
-def _fill_market_or_limit(order: Order, market: MarketSnapshot) -> FillOutcome:
+def _fill_market_or_limit(order: _Order, market: _MarketSnapshot) -> FillOutcome:
     """
     MARKET / LIMIT 通用成交逻辑。
 
     - MARKET 单: 以 close 成交
     - LIMIT 单: 限价在 [low, high] 内以限价成交; 否则 NoFill
     """
-    if order.order_type == OrderType.MARKET:
+    if order.order_type == _OrderType.MARKET:
         return _make_filled(order, market.close)
 
     # LIMIT 单
@@ -213,13 +216,13 @@ def _fill_market_or_limit(order: Order, market: MarketSnapshot) -> FillOutcome:
 
 
 def _make_filled(
-    order: Order,
+    order: _Order,
     fill_price: float,
     filled_qty: int | None = None,
 ) -> Filled:
     """构造 Filled 占位 -- FillEvent 字段由 Brokerage 补全。"""
     qty = filled_qty if filled_qty is not None else order.quantity
-    fill_event = FillEvent(
+    fill_event = _FillEvent(
         fill_id="",
         order_id=order.order_id,
         instrument_id=order.instrument_id,

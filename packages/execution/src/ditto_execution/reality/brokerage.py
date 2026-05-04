@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ditto_kernel.trading import FeeModel
+from ditto_kernel.trading import FeeModel as _FeeModel
 
 from ditto_execution.reality.fee import AShareFeeModel
 from ditto_execution.reality.fill import FillModel, SimpleFillModel
@@ -27,5 +27,5 @@ class BrokerageModel:
 
     fill_model: FillModel = field(default_factory=SimpleFillModel)
     slippage_model: SlippageModel = field(default_factory=FixedBpsSlippage)
-    fee_model: FeeModel = field(default_factory=AShareFeeModel)
+    fee_model: _FeeModel = field(default_factory=AShareFeeModel)
     settlement_model: SettlementModel = field(default_factory=SimpleSettlementModel)

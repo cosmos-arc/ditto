@@ -10,9 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ditto_kernel.order import OrderSide
-from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot
-from ditto_portfolio.accounting.order_book import Order
+from ditto_kernel.order import OrderSide as _OrderSide
+from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
+from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
+from ditto_portfolio.accounting.order_book import Order as _Order
 
 __all__ = ["FixedBpsSlippage", "SlippageModel", "VolumeShareSlippage"]
 
@@ -22,9 +23,9 @@ class SlippageModel(Protocol):
 
     def estimate(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
     ) -> float:
         """估算滑点金额（含符号）。BUY 为正，SELL 为负。"""
         ...
@@ -45,13 +46,13 @@ class FixedBpsSlippage:
 
     def estimate(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
     ) -> float:
         """估算滑点金额（含符号）。"""
         amount = market.close * self.bps / 10_000
-        if order.direction == OrderSide.BUY:
+        if order.direction == _OrderSide.BUY:
             return amount
         return -amount
 
@@ -80,9 +81,9 @@ class VolumeShareSlippage:
 
     def estimate(
         self,
-        order: Order,
-        market: MarketSnapshot,
-        definition: InstrumentDefinition,
+        order: _Order,
+        market: _MarketSnapshot,
+        definition: _InstrumentDefinition,
     ) -> float:
         """估算滑点金额（含符号）。"""
         trade_amount = abs(market.close * order.quantity)
@@ -98,6 +99,6 @@ class VolumeShareSlippage:
             bps = self.base_bps
 
         amount = market.close * bps / 10_000
-        if order.direction == OrderSide.BUY:
+        if order.direction == _OrderSide.BUY:
             return amount
         return -amount

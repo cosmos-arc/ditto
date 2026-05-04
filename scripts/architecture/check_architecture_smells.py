@@ -357,6 +357,14 @@ _PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
 ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {}
 _MIN_PACKAGE_SOURCE_PARTS = 4
 
+# Leaf public surfaces that have been hardened to expose only local symbols.
+# Cross-package dependencies in these files must be imported as private
+# implementation aliases, even when they are not listed in __all__.
+STRICT_PRIVATE_CROSS_IMPORT_PREFIXES = (
+    "packages/execution/src/ditto_execution/reality/",
+    "packages/features/src/ditto_features/models/",
+)
+
 
 def _owner_package_for_source(path: Path, root: Path) -> str | None:
     try:
@@ -461,17 +469,22 @@ def _find_cross_package_exports_in_file(
     except (OSError, SyntaxError, UnicodeDecodeError):
         return []
 
+    rel_path = path.relative_to(root).as_posix()
     exported_names = _collect_literal_all_names(tree)
     cross_imports = _cross_package_imports(tree, owner_package)
     if not cross_imports:
         return []
     if not exported_names and _is_pure_import_export_shim(tree):
         exported_names = {name for name, _, _ in cross_imports}
+    strict_private_imports = rel_path.startswith(STRICT_PRIVATE_CROSS_IMPORT_PREFIXES)
 
     exports: list[CrossPackageExport] = []
-    rel_path = path.relative_to(root).as_posix()
     for exported_name, imported_from, source_package in cross_imports:
-        if exported_name not in exported_names:
+        is_explicit_export = exported_name in exported_names
+        is_public_strict_import = (
+            strict_private_imports and not exported_name.startswith("_")
+        )
+        if not is_explicit_export and not is_public_strict_import:
             continue
         allow_key = (rel_path, exported_name, imported_from)
         if allow_key in ALLOWED_CROSS_PACKAGE_EXPORTS:

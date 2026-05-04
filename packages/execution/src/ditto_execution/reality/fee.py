@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide as _OrderSide
 from ditto_kernel.trading import (
-    DEFAULT_COMMISSION_RATE,
-    DEFAULT_MIN_COMMISSION,
-    FeeSchedule,
+    DEFAULT_COMMISSION_RATE as _DEFAULT_COMMISSION_RATE,
 )
-from ditto_portfolio.accounting.order_book import Order
+from ditto_kernel.trading import (
+    DEFAULT_MIN_COMMISSION as _DEFAULT_MIN_COMMISSION,
+)
+from ditto_kernel.trading import (
+    FeeSchedule as _FeeSchedule,
+)
+from ditto_portfolio.accounting.order_book import Order as _Order
 
 __all__ = ["AShareFeeModel", "SimpleFeeModel"]
 
@@ -24,24 +28,24 @@ class SimpleFeeModel:
 
     def calculate(
         self,
-        order: Order,
+        order: _Order,
         fill_price: float,
         fill_quantity: int,
-        fee_schedule: FeeSchedule,
+        fee_schedule: _FeeSchedule,
     ) -> float:
         """计算实际成交手续费。"""
         amount = abs(fill_price * fill_quantity)
-        return max(DEFAULT_MIN_COMMISSION, amount * DEFAULT_COMMISSION_RATE)
+        return max(_DEFAULT_MIN_COMMISSION, amount * _DEFAULT_COMMISSION_RATE)
 
     def estimate(
         self,
-        order: Order,
+        order: _Order,
         estimated_price: float,
-        fee_schedule: FeeSchedule,
+        fee_schedule: _FeeSchedule,
     ) -> float:
         """估算手续费（预交易）。"""
         amount = abs(estimated_price * order.quantity)
-        return max(DEFAULT_MIN_COMMISSION, amount * DEFAULT_COMMISSION_RATE)
+        return max(_DEFAULT_MIN_COMMISSION, amount * _DEFAULT_COMMISSION_RATE)
 
 
 class AShareFeeModel:
@@ -56,10 +60,10 @@ class AShareFeeModel:
 
     def calculate(
         self,
-        order: Order,
+        order: _Order,
         fill_price: float,
         fill_quantity: int,
-        fee_schedule: FeeSchedule,
+        fee_schedule: _FeeSchedule,
     ) -> float:
         """根据实际成交计算费用。"""
         return self._compute_fee(
@@ -71,9 +75,9 @@ class AShareFeeModel:
 
     def estimate(
         self,
-        order: Order,
+        order: _Order,
         estimated_price: float,
-        fee_schedule: FeeSchedule,
+        fee_schedule: _FeeSchedule,
     ) -> float:
         """根据预估价格估算费用。"""
         return self._compute_fee(
@@ -87,8 +91,8 @@ class AShareFeeModel:
     def _compute_fee(
         price: float,
         quantity: int,
-        direction: OrderSide,
-        fee_schedule: FeeSchedule,
+        direction: _OrderSide,
+        fee_schedule: _FeeSchedule,
     ) -> float:
         """核心费用计算 — 佣金 + 印花税(仅卖出) + 过户费。"""
         amount = price * quantity
@@ -99,7 +103,7 @@ class AShareFeeModel:
         transfer = amount * fee_schedule.transfer_fee_rate
 
         stamp = 0.0
-        if direction == OrderSide.SELL:
+        if direction == _OrderSide.SELL:
             stamp = amount * fee_schedule.stamp_duty_rate
 
         return commission + stamp + transfer

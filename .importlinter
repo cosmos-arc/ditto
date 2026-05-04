@@ -447,7 +447,6 @@ ignore_imports =
     ditto_data.storage.** -> ditto_data.models.metadata
     ditto_data.storage.** -> ditto_data.models.macro
     ditto_data.storage.** -> ditto_data.models.ingestion
-    ditto_data.storage.** -> ditto_data.models.common
 unmatched_ignore_imports_alerting = warn
 
 [importlinter:contract:data-sources-no-storage-import]

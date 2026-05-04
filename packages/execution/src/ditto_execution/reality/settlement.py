@@ -12,10 +12,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol
 
-from ditto_kernel.identity import InstrumentId
-from ditto_kernel.order import OrderSide
-from ditto_kernel.trading import TradingRuleSet
-from ditto_portfolio.accounting.position import Position
+from ditto_kernel.identity import InstrumentId as _InstrumentId
+from ditto_kernel.order import OrderSide as _OrderSide
+from ditto_kernel.trading import TradingRuleSet as _TradingRuleSet
+from ditto_portfolio.accounting.position import Position as _Position
 
 __all__ = ["AShareSettlementModel", "SettlementModel", "SimpleSettlementModel"]
 
@@ -25,11 +25,11 @@ class SettlementModel(Protocol):
 
     def is_tradable(
         self,
-        instrument_id: InstrumentId,
+        instrument_id: _InstrumentId,
         trade_date: str,
-        direction: OrderSide,
-        position: Position | None,
-        trading_rule: TradingRuleSet,
+        direction: _OrderSide,
+        position: _Position | None,
+        trading_rule: _TradingRuleSet,
     ) -> bool:
         """检查标的在指定日期是否可交易。"""
         ...
@@ -37,7 +37,7 @@ class SettlementModel(Protocol):
     def settle_date(
         self,
         trade_date: str,
-        trading_rule: TradingRuleSet,
+        trading_rule: _TradingRuleSet,
     ) -> str:
         """计算交收日期。"""
         ...
@@ -48,11 +48,11 @@ class SimpleSettlementModel:
 
     def is_tradable(
         self,
-        instrument_id: InstrumentId,
+        instrument_id: _InstrumentId,
         trade_date: str,
-        direction: OrderSide,
-        position: Position | None,
-        trading_rule: TradingRuleSet,
+        direction: _OrderSide,
+        position: _Position | None,
+        trading_rule: _TradingRuleSet,
     ) -> bool:
         """始终返回 True。仅满足 SettlementModel Protocol 接口契约。"""
         return True
@@ -60,7 +60,7 @@ class SimpleSettlementModel:
     def settle_date(
         self,
         trade_date: str,
-        trading_rule: TradingRuleSet,
+        trading_rule: _TradingRuleSet,
     ) -> str:
         """T+0 交收 — 当日即交收。"""
         return trade_date
@@ -90,11 +90,11 @@ class AShareSettlementModel:
 
     def is_tradable(
         self,
-        instrument_id: InstrumentId,
+        instrument_id: _InstrumentId,
         trade_date: str,
-        direction: OrderSide,
-        position: Position | None,
-        trading_rule: TradingRuleSet,
+        direction: _OrderSide,
+        position: _Position | None,
+        trading_rule: _TradingRuleSet,
     ) -> bool:
         """
         A 股场景始终返回 True。
@@ -108,7 +108,7 @@ class AShareSettlementModel:
     def settle_date(
         self,
         trade_date: str,
-        trading_rule: TradingRuleSet,
+        trading_rule: _TradingRuleSet,
     ) -> str:
         """计算 T+N 交收日期 — 从交易日历中跳过非交易日。"""
         cycle = trading_rule.settlement_cycle
