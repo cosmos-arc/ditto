@@ -1,6 +1,6 @@
-"""test_ticker_utils_unit.py - Ticker 工具函数单元测试."""
+"""test_ticker_utils_unit.py - Ticker 工具函数单元测试。"""
 
-from ditto_platform.foundation.util.ticker_utils import get_standard_ticker
+from ditto_data.utils.ticker_utils import get_standard_ticker
 
 
 class TestGetStandardTicker:
