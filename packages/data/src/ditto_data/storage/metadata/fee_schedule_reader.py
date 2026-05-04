@@ -10,8 +10,6 @@ from ditto_platform.foundation import SQLitePool
 
 from ditto_data.storage.metadata._pit_base import PITRecordReader
 
-InstrumentId = _InstrumentId
-
 __all__ = ["FeeScheduleReader", "FeeScheduleRecord", "SQLiteFeeScheduleReader"]
 
 # ---------------------------------------------------------------------------
@@ -53,7 +51,7 @@ class FeeScheduleRecord:
 
     """
 
-    instrument_id: InstrumentId
+    instrument_id: _InstrumentId
     as_of_date: str
     commission_rate: float
     min_commission: float
@@ -75,7 +73,7 @@ class SQLiteFeeScheduleReader(PITRecordReader[FeeScheduleRecord]):
 
     def get(
         self,
-        instrument_id: InstrumentId,
+        instrument_id: _InstrumentId,
         as_of_date: str,
     ) -> FeeScheduleRecord | None:
         """
@@ -104,7 +102,7 @@ class SQLiteFeeScheduleReader(PITRecordReader[FeeScheduleRecord]):
     def _row_to_record(self, row: sqlite3.Row) -> FeeScheduleRecord:
         """将数据库行转换为 FeeScheduleRecord."""
         return FeeScheduleRecord(
-            instrument_id=InstrumentId(row["instrument_id"]),
+            instrument_id=_InstrumentId(row["instrument_id"]),
             as_of_date=row["as_of_date"],
             commission_rate=row["commission_rate"],
             min_commission=row["min_commission"],

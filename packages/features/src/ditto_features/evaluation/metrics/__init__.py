@@ -5,9 +5,7 @@ All functions are stateless, side-effect free, and depend only on ``polars``
 and the standard library.  They accept / return ``pl.DataFrame`` or simple
 Python containers.
 
-This package re-exports every public symbol so that existing import paths
-such as ``from ditto_features.evaluation.metrics import X`` continue to
-work without modification.
+This package is the public facade for evaluation metric functions.
 """
 
 from ._math import EvaluationColumns

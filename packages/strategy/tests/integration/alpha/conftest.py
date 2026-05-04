@@ -25,11 +25,11 @@ from ditto_execution.brokerage import BacktestBrokerage
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import (
     BrokerageModel,
-    FeeModel,
     SimpleFeeModel,
 )
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import FeeModel
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_risk.pre_trade import (

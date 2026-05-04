@@ -118,7 +118,7 @@ class LateArrivalCheckResult:
 
 # ============ Result Models (from ditto_data consolidation) ============
 
-# InstrumentIngestParams is now in ditto_kernel.types (re-exported above)
+# Instrument ingestion parameters live in ditto_kernel.instrument.
 
 
 @dataclass(frozen=True)

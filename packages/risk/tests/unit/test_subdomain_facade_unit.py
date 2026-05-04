@@ -1,4 +1,4 @@
-"""Facade compatibility tests — verify re-export paths work correctly."""
+"""Pre-trade facade tests — verify public API aggregation."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def test_pre_trade_facade_exports_protocol() -> None:
 
 
 def test_package_init_exports_all_types() -> None:
-    """Verify __init__.py re-exports all public symbols."""
+    """Verify package public API exposes core risk symbols."""
     import ditto_risk
 
     assert hasattr(ditto_risk, "RiskMetrics")
@@ -55,7 +55,7 @@ def test_package_init_exports_all_types() -> None:
 
 
 def test_subdomain_packages_export_rules() -> None:
-    """Verify subdomain __init__.py export their public symbols."""
+    """Verify subdomain packages expose their public API."""
     from ditto_risk.constraints import Decision, NoShortSellCheck
     from ditto_risk.drawdown import MaxDrawdownRule, SingleLossLimitRule
     from ditto_risk.exposure import (
@@ -64,7 +64,7 @@ def test_subdomain_packages_export_rules() -> None:
         MarketAnomalyRule,
     )
 
-    # All symbols are importable
+    # Public symbols are importable.
     assert NoShortSellCheck is not None
     assert Decision is not None
     assert MaxDrawdownRule is not None

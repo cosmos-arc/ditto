@@ -1,8 +1,7 @@
 """
 PreTradeRiskCheck — 订单提交前逐单校验 (V3).
 
-Facade module: 所有类型已迁移到 constraints/ 和 exposure/ 子模块，
-此处仅做 re-export 以保持现有导入路径兼容。
+Public facade module: 聚合 constraints/ 和 exposure/ 子域中的逐单校验 API。
 
 V3 完整版包含六条规则：
   - NoShortSellCheck: 卖空校验

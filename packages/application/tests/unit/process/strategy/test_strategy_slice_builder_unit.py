@@ -12,12 +12,9 @@ from ditto_application.builders import (
 )
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
-from ditto_kernel.identity import InstrumentId as _InstrumentId
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec
 from ditto_strategy.models import StrategySpecRecord
-
-InstrumentId = _InstrumentId
 
 
 def _make_strategy_spec() -> StrategySpec:

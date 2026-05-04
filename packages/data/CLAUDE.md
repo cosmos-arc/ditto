@@ -168,7 +168,7 @@ ditto_data/
 - 查询类：`*_reader.py`（如 `instrument_reader.py`）
 - 写入类：`*_writer.py`（如 `instrument_writer.py`）
 - 服务类：`*_service.py`（如 `metadata_service.py`）
-- 存储基类：`storage/base/`（re-export from `platform.foundation.storage`；SQLiteStore 留在 data）
+- 存储基础设施：`storage/base/` 保留 data-specific SQLiteStore / DatasetWriter；共享写入结果类型位于 `platform.foundation.storage.types`
 
 ## 层级访问规则（2026-02-10 更新）
 

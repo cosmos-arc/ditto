@@ -1,7 +1,5 @@
 """
-Backward-compatible shim — re-exports from the split leaf modules.
-
-Consumers should import from the specific leaf modules directly:
+Public facade for materialization helper functions split across leaf modules.
 
 - ``minimal_dq``       → ``build_minimal_dq_record``
 - ``manifest_builder`` → ``build_manifest_record``, ``resolve_shadow_baseline``

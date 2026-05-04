@@ -38,9 +38,6 @@ from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.protocols import DecisionStage
 
-# Runtime re-export to prevent linter removal under `from __future__ import annotations`
-InstrumentId = _InstrumentId
-
 __all__ = ["StrategyInputBundle", "StrategyPipeline"]
 
 
@@ -148,15 +145,15 @@ class StrategyPipeline:
 
         if "weight" in frame.columns:
             rows = frame.select("instrument_id", "weight").rows()
-            positions: dict[InstrumentId, float] = {
-                InstrumentId(row[0]): float(row[1]) for row in rows
+            positions: dict[_InstrumentId, float] = {
+                _InstrumentId(row[0]): float(row[1]) for row in rows
             }
         else:
             # Equal weight fallback
             equal_weight = 1.0 / n_rows
             ids = frame.get_column("instrument_id").to_list()
             positions = {
-                InstrumentId(instrument_id): equal_weight for instrument_id in ids
+                _InstrumentId(instrument_id): equal_weight for instrument_id in ids
             }
 
         return TargetPortfolio(

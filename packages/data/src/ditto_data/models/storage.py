@@ -1,9 +1,8 @@
 """
 Storage models for Data.
 
-FreezeManifest is data-specific and stays local.
-WriteResult / WriteStoreResult have been moved to their canonical owner
-(ditto_platform.foundation.storage.types).
+FreezeManifest is data-specific and stays local. Shared write result DTOs
+belong to ditto_platform.foundation.storage.types.
 """
 
 from dataclasses import dataclass, field

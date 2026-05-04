@@ -11,8 +11,6 @@ from ditto_platform.foundation import SQLitePool
 
 from ditto_data.storage.metadata._pit_base import PITRecordReader
 
-InstrumentId = _InstrumentId
-
 __all__ = ["SQLiteTradingRuleReader", "TradingRuleReader", "TradingRuleRecord"]
 
 # ---------------------------------------------------------------------------
@@ -57,7 +55,7 @@ class TradingRuleRecord:
 
     """
 
-    instrument_id: InstrumentId
+    instrument_id: _InstrumentId
     as_of_date: str
     settlement_cycle: int
     fund_settlement_cycle: int
@@ -80,7 +78,7 @@ class SQLiteTradingRuleReader(PITRecordReader[TradingRuleRecord]):
 
     def get(
         self,
-        instrument_id: InstrumentId,
+        instrument_id: _InstrumentId,
         as_of_date: str,
     ) -> TradingRuleRecord | None:
         """
@@ -109,7 +107,7 @@ class SQLiteTradingRuleReader(PITRecordReader[TradingRuleRecord]):
     def _row_to_record(self, row: sqlite3.Row) -> TradingRuleRecord:
         """将数据库行转换为 TradingRuleRecord."""
         return TradingRuleRecord(
-            instrument_id=InstrumentId(row["instrument_id"]),
+            instrument_id=_InstrumentId(row["instrument_id"]),
             as_of_date=row["as_of_date"],
             settlement_cycle=row["settlement_cycle"],
             fund_settlement_cycle=row["fund_settlement_cycle"],

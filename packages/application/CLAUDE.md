@@ -115,7 +115,7 @@ ditto_application/
 │   │   ├── signal_snapshot.py       # 信号快照 + 交易意图推导
 │   │   └── ports.py                 # 人工执行闭环 Port 定义
 │   └── quality/        # 质量巡检流程
-│       ├── __init__.py              # re-export shim
+│       ├── __init__.py              # public API facade
 │       └── patrol.py                # QualityPatrolService（原 L3BatchService）
 ├── builders/           # 运行时装配（DI 构造）
 │   ├── runtime_builder.py   # 运行时构建器

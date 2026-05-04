@@ -1,8 +1,8 @@
 """
-数据源异常 re-export.
+数据源异常公共 facade.
 
 DataSource ABC 已被 5 个域级 Fetcher Protocol 替代（ISP 合规）。
-本模块仅保留异常类的便捷 re-export，权威定义见 ``ditto_data.errors``。
+本模块聚合 sources 子包常用的数据源异常，定义位于 ``ditto_data.errors``。
 """
 
 from ditto_data.errors import (

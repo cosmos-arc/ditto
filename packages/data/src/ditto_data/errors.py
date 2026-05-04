@@ -3,11 +3,8 @@ Data layer exception classes.
 
 Following design document at docs/design/02_data_design.md
 
-Note: DataError, DittoError, IdentifierError are defined in ditto_kernel.exceptions
-and imported here because Data-layer subclasses inherit from them.
-
-Derived* errors have been moved to their canonical owner (ditto_kernel.exceptions).
-Import them directly from ditto_kernel.exceptions instead of this module.
+Note: DataError and IdentifierError are defined in ditto_kernel.exceptions
+and imported privately here because Data-layer subclasses inherit from them.
 """
 
 # ---------------------------------------------------------------------------
@@ -89,8 +86,8 @@ class IdentifierNotFoundError(_IdentifierError):
         super().__init__(message, details)
 
 
-# NoIdentifierProvidedError and AmbiguousTickerError are now in ditto_kernel.exceptions
-# and re-exported via the top-level import.
+# Identifier selection errors live in ditto_kernel.exceptions; metadata services
+# raise those kernel errors directly.
 
 
 class TradingDateNotFoundError(CalendarError):

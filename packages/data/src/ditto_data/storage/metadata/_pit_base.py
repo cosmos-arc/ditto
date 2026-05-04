@@ -11,8 +11,6 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 
-InstrumentId = _InstrumentId
-
 __all__ = ["PITRecord", "PITRecordReader", "PITRecordWriter"]
 
 
@@ -27,7 +25,7 @@ class PITRecord(Protocol):
     """
 
     @property
-    def instrument_id(self) -> InstrumentId: ...
+    def instrument_id(self) -> _InstrumentId: ...
 
     @property
     def effective_from(self) -> str: ...
@@ -47,7 +45,7 @@ class PITRecordReader[RecordT: PITRecord]:
         """底层存储引用（用于配套 Writer 共享同一存储）."""
         return self._store
 
-    def get(self, instrument_id: InstrumentId, as_of_date: str) -> RecordT | None:
+    def get(self, instrument_id: _InstrumentId, as_of_date: str) -> RecordT | None:
         """
         PIT 查询: 获取指定标的在 as_of_date 时有效的记录.
 

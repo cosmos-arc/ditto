@@ -617,7 +617,7 @@ def _compute_ic_decay_safe(
     When *close_df* is provided, forward returns are derived from actual
     close prices (correct IC decay).  When omitted, factor values are
     used as pseudo-close (computes factor autocorrelation, not true IC
-    decay) — kept for backward compatibility but semantically wrong.
+    decay) to preserve the legacy no-close-data behavior.
     """
     try:
         if close_df is not None:
