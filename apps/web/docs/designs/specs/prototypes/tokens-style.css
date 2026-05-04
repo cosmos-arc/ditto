@@ -49,6 +49,36 @@
   --timeline-line-top:       18px;
 }
 
+/* ─────────────────────────────────────────────
+ * Light Mode Atmosphere
+ * Shared adjustments for all prototype pages when
+ * theme-switcher toggles to [data-theme="light"].
+ * Page-specific overrides (e.g. .map-container
+ * tokens in page-a-shares) remain in-page.
+ * ───────────────────────────────────────────── */
+
+[data-theme="light"] .ambient-top,
+[data-theme="light"] .ambient-rail {
+  opacity: 0.3;
+}
+
+[data-theme="light"] .noise-layer {
+  opacity: 0.005;
+}
+
+[data-theme="light"] .shell-header {
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+}
+
+[data-theme="light"] .shell-header::after {
+  opacity: 0.4;
+}
+
+[data-theme="light"] .rail-logo {
+  text-shadow: none;
+}
+
 /* ── Prototype Density Semantics
  * Product tokens still provide the raw density scale. Prototypes expose the
  * reviewed semantic scale: compact / default / comfortable.
