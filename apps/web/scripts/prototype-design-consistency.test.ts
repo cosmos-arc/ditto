@@ -2292,17 +2292,17 @@ describe("prototype design consistency", () => {
 
 	it("flags 11px descendants inside header-like class ancestors", () => {
 		const document = new JSDOM(`
-			<div class="activity-header"><span class="subtitle">最近运行</span></div>
+			<div class="activity-header"><span class="caption-copy">最近运行</span></div>
 		`).window.document;
 		const rule: CssRule = {
-			selector: ".subtitle",
-			selectors: [".subtitle"],
+			selector: ".caption-copy",
+			selectors: [".caption-copy"],
 			body: "font-size: var(--font-size-11);",
 			start: 0,
 			end: 0,
 		};
 
-		expect(hasOperationalElevenPxUsage(document, rule, ".subtitle", [])).toBe(true);
+		expect(hasOperationalElevenPxUsage(document, rule, ".caption-copy", [])).toBe(true);
 	});
 
 	it("flags 11px descendants of pointer selectors even without DOM matches", () => {
