@@ -13,8 +13,6 @@ from ditto_features.materialization import (
 )
 from ditto_features.validation import validate_derived_spec
 
-__version__ = "0.1.0"
-
 __all__ = [
     "CompiledDerivedExpression",
     "DerivedExecutionPlan",

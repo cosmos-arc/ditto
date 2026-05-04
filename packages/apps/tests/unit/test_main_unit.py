@@ -1,5 +1,6 @@
 """Tests for FastAPI main application async endpoints."""
 
+import importlib.metadata
 from types import SimpleNamespace
 
 import ditto_apps.main as main_module
@@ -12,7 +13,6 @@ from ditto_apps.main import (
     root,
 )
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_kernel import __version__ as ditto_version
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.config.initializer import ConfigInitCoordinator
 from ditto_platform.foundation.config.settings import (
@@ -21,6 +21,8 @@ from ditto_platform.foundation.config.settings import (
     SystemSettings,
 )
 from starlette.requests import Request
+
+ditto_version = importlib.metadata.version("ditto-apps")
 
 
 def _make_request() -> Request:

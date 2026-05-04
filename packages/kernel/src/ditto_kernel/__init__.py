@@ -5,7 +5,6 @@ Ditto 共享内核 — 跨层领域原语 + Protocol 抽象 + 薄实现.
 零业务行为、零外部依赖、零 I/O。
 """
 
-from ditto_kernel._version import __version__ as __version__
 from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
 from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
 from ditto_kernel.exceptions import (
@@ -92,6 +91,5 @@ __all__ = [
     "SimpleEventBus",
     "SimulatedClock",
     "TimeSpec",
-    "__version__",
     "traced",
 ]

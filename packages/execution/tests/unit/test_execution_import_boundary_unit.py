@@ -4,7 +4,7 @@ import sys
 def test_execution_imports_successfully() -> None:
     import ditto_execution
 
-    assert ditto_execution.__version__ == "0.1.0"
+    assert ditto_execution.__name__ == "ditto_execution"
 
 
 def test_execution_does_not_import_forbidden_packages() -> None:

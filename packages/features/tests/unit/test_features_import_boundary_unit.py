@@ -4,7 +4,7 @@ import sys
 def test_features_imports_successfully() -> None:
     import ditto_features
 
-    assert ditto_features.__version__ == "0.1.0"
+    assert ditto_features.__name__ == "ditto_features"
 
 
 def test_features_does_not_import_forbidden_packages() -> None:

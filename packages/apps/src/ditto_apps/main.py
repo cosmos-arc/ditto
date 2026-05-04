@@ -7,6 +7,7 @@ Ditto FastAPI 主应用.
 from __future__ import annotations
 
 # Standard library imports
+import importlib.metadata
 import os
 import time
 import uuid
@@ -21,7 +22,6 @@ import orjson
 
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
-from ditto_kernel import __version__ as ditto_version
 from ditto_kernel.exceptions import DataError, DittoError
 from ditto_platform.foundation.config import ConfigInitError
 from ditto_platform.foundation.config.environment import get_environment
@@ -66,6 +66,17 @@ from ditto_apps.registry.infra.config import data_store_settings_type
 project_root = Path(__file__).parent.parent.parent.parent
 
 T = TypeVar("T")
+
+
+def _load_app_version() -> str:
+    """Return the installed API package version, with a local-dev fallback."""
+    try:
+        return importlib.metadata.version("ditto-apps")
+    except importlib.metadata.PackageNotFoundError:
+        return "0+unknown"
+
+
+ditto_version = _load_app_version()
 
 
 class AsyncContainerProtocol(Protocol):

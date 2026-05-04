@@ -4,7 +4,7 @@ import sys
 def test_strategy_imports_successfully() -> None:
     import ditto_strategy
 
-    assert ditto_strategy.__version__ == "0.1.0"
+    assert ditto_strategy.__name__ == "ditto_strategy"
 
 
 def test_strategy_does_not_import_forbidden_packages() -> None:
@@ -13,6 +13,10 @@ def test_strategy_does_not_import_forbidden_packages() -> None:
 
     new_modules = set(sys.modules) - before
     forbidden_prefixes = (
+        "ditto_data",
+        "ditto_features",
+        "ditto_portfolio",
+        "ditto_risk",
         "ditto_application",
         "ditto_apps",
         "ditto_backtest",

@@ -372,6 +372,7 @@ application 编排能力包，apps 暴露 application。
 - `_internal`、`_runtime`、`_adapters`、下划线模块不允许跨包导入。
 - 跨包导入应优先导入叶模块，不依赖深层 re-export 链。
 - `__init__.py` 不应混合内联定义与大量 re-export。
+- 包根不暴露运行时版本常量；版本展示使用 package metadata 或应用构建信息，不在各包 `__init__.py` 复制字符串。
 
 ## 7. 新代码放置决策树
 

@@ -4,7 +4,7 @@ import sys
 def test_analysis_imports_successfully() -> None:
     import ditto_analysis
 
-    assert ditto_analysis.__version__ == "0.1.0"
+    assert ditto_analysis.__name__ == "ditto_analysis"
 
 
 def test_analysis_does_not_import_forbidden_packages() -> None:

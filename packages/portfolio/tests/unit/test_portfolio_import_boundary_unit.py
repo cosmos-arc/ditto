@@ -4,7 +4,7 @@ import sys
 def test_portfolio_imports_successfully() -> None:
     import ditto_portfolio
 
-    assert ditto_portfolio.__version__ == "0.1.0"
+    assert ditto_portfolio.__name__ == "ditto_portfolio"
 
 
 def test_portfolio_does_not_import_forbidden_packages() -> None:

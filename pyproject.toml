@@ -375,19 +375,5 @@ directory = "htmlcov"
 name = "cz_conventional_commits"
 version = "0.1.0"
 tag_format = "v$version"
-version_files = [
-    "packages/kernel/src/ditto_kernel/__init__.py:__version__",
-    "packages/platform/src/ditto_platform/__init__.py:__version__",
-    "packages/data/src/ditto_data/__init__.py:__version__",
-    "packages/features/src/ditto_features/__init__.py:__version__",
-    "packages/strategy/src/ditto_strategy/__init__.py:__version__",
-    "packages/portfolio/src/ditto_portfolio/__init__.py:__version__",
-    "packages/risk/src/ditto_risk/__init__.py:__version__",
-    "packages/execution/src/ditto_execution/__init__.py:__version__",
-    "packages/backtest/src/ditto_backtest/__init__.py:__version__",
-    "packages/analysis/src/ditto_analysis/__init__.py:__version__",
-    "packages/application/src/ditto_application/__init__.py:__version__",
-    "packages/apps/src/ditto_apps/__init__.py:__version__",
-]
 update_changelog_on_bump = true
 changelog_incremental = true

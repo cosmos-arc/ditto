@@ -4,7 +4,7 @@ import sys
 def test_kernel_imports_successfully() -> None:
     import ditto_kernel
 
-    assert ditto_kernel.__version__ == "0.1.0"
+    assert ditto_kernel.__name__ == "ditto_kernel"
 
 
 def test_kernel_does_not_import_other_ditto_packages() -> None:

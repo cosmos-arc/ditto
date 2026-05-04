@@ -12,6 +12,7 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 7. Packages must not re-export symbols imported from other Ditto packages
 8. Execution sqlite legacy storage must not grow permanent modules
 9. Apps non-registry modules must not import capability package internals
+10. Runtime package __version__ constants must not be reintroduced
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -453,6 +454,7 @@ _IMPORT_TO_PKG: dict[str, str] = {
 }
 
 _PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
+_PKG_TO_IMPORT = {v: k for k, v in _IMPORT_TO_PKG.items()}
 
 # Exact cross-package export exceptions only. Every entry must include a
 # design-boundary reason in the value before it is added here.
@@ -672,7 +674,8 @@ def _check_version_mismatch(
     """Check _version.py matches pyproject.toml version."""
     if not pyproject_version:
         return []
-    version_file = src_dir / pkg_dir_name.replace("-", "_") / "_version.py"
+    import_pkg = _PKG_TO_IMPORT.get(pkg_dir_name, pkg_dir_name.replace("-", "_"))
+    version_file = src_dir / import_pkg / "_version.py"
     if not version_file.exists():
         return []
     for line in version_file.read_text(encoding="utf-8").splitlines():
@@ -687,6 +690,51 @@ def _check_version_mismatch(
                 return [msg]
             break
     return []
+
+
+def check_runtime_package_versions_removed(root: Path) -> list[str]:
+    """Check package roots do not duplicate package metadata as __version__."""
+    errors: list[str] = []
+    for pkg_dir in sorted((root / "packages").iterdir()):
+        if not pkg_dir.is_dir():
+            continue
+        src_dir = pkg_dir / "src"
+        import_pkg = _PKG_TO_IMPORT.get(pkg_dir.name, pkg_dir.name.replace("-", "_"))
+        pkg_root = src_dir / import_pkg
+        if not pkg_root.is_dir():
+            continue
+        version_file = pkg_root / "_version.py"
+        if version_file.exists():
+            errors.append(
+                f"{version_file.relative_to(root)}: remove runtime _version.py; "
+                "use package metadata instead"
+            )
+        init_file = pkg_root / "__init__.py"
+        if init_file.exists() and "__version__" in init_file.read_text(
+            encoding="utf-8"
+        ):
+            errors.append(
+                f"{init_file.relative_to(root)}: remove runtime __version__; "
+                "use package metadata instead"
+            )
+
+    pyproject = root / "pyproject.toml"
+    if pyproject.exists():
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        version_files = (
+            data.get("tool", {}).get("commitizen", {}).get("version_files", [])
+        )
+        bad_entries = [
+            str(entry)
+            for entry in version_files
+            if "__version__" in str(entry) or "_version.py" in str(entry)
+        ]
+        if bad_entries:
+            errors.append(
+                "pyproject.toml: commitizen version_files must not manage "
+                f"runtime package versions {bad_entries}"
+            )
+    return errors
 
 
 def check_package_metadata(root: Path) -> list[str]:
@@ -773,6 +821,14 @@ def main() -> int:
         errors,
         check_cross_package_exports(ROOT),
         "[OK] No cross-package re-exports found",
+        args.verbose,
+    )
+
+    # Check: Runtime package __version__ removed
+    _collect(
+        errors,
+        check_runtime_package_versions_removed(ROOT),
+        "[OK] Runtime package __version__ constants are absent",
         args.verbose,
     )
 

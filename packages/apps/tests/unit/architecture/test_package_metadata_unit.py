@@ -25,3 +25,10 @@ _mod = _load_checker()
 def test_package_metadata_matches_internal_imports() -> None:
     result: list[str] = _mod.check_package_metadata(Path.cwd())  # type: ignore[attr-defined]
     assert result == [], "\n".join(result)
+
+
+def test_runtime_package_versions_removed() -> None:
+    result: list[str] = _mod.check_runtime_package_versions_removed(  # type: ignore[attr-defined]
+        Path.cwd()
+    )
+    assert result == [], "\n".join(result)

@@ -4,7 +4,7 @@ import sys
 def test_backtest_imports_successfully() -> None:
     import ditto_backtest
 
-    assert ditto_backtest.__version__ == "0.1.0"
+    assert ditto_backtest.__name__ == "ditto_backtest"
 
 
 def test_backtest_does_not_import_forbidden_packages() -> None:

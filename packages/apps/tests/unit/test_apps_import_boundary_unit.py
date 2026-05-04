@@ -4,7 +4,7 @@ import sys
 def test_apps_imports_successfully() -> None:
     import ditto_apps
 
-    assert ditto_apps.__version__ == "0.1.0"
+    assert ditto_apps.__name__ == "ditto_apps"
 
 
 def test_apps_does_not_import_capability_packages_directly() -> None:

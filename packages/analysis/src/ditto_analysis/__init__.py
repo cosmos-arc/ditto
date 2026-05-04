@@ -3,8 +3,6 @@
 from ditto_analysis.errors import AnalysisError, ResearchDatasetError
 from ditto_analysis.research import ResearchDatasetSpec
 
-__version__ = "0.1.0"
-
 __all__ = [
     "AnalysisError",
     "ResearchDatasetError",
