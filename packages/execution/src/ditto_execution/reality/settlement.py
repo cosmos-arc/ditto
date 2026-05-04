@@ -14,9 +14,8 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
+from ditto_kernel.trading import TradingRuleSet
 from ditto_portfolio.accounting.position import Position
-
-from ditto_execution.rules import TradingRuleSet
 
 __all__ = ["AShareSettlementModel", "SettlementModel", "SimpleSettlementModel"]
 

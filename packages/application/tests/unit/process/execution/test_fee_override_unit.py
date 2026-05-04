@@ -22,10 +22,10 @@ from ditto_application.processes.execution.fee_override import (
     build_slippage_model,
 )
 from ditto_execution.reality.fee import AShareFeeModel
-from ditto_execution.rules import FeeSchedule
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.strategy import ImpactModel
+from ditto_kernel.trading import FeeSchedule
 from ditto_portfolio.accounting.order_book import Order
 
 # ---------------------------------------------------------------------------

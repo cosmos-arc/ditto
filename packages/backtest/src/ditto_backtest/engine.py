@@ -21,7 +21,6 @@ from datetime import datetime
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
-from ditto_execution.rules import InstrumentRuleProvider
 from ditto_execution.targets import TargetPortfolioLike
 from ditto_execution.trade_builder import (
     FifoTradeBuilder,
@@ -32,7 +31,7 @@ from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.trading import FeeModel
+from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.order_book import Order

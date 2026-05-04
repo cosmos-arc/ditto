@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import polars as pl
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import MarketSnapshot
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
-
-from ditto_backtest.data_feed import MarketSnapshot
 
 __all__ = ["build_input_bundle"]
 

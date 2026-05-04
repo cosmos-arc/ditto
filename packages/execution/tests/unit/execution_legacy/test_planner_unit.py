@@ -10,14 +10,14 @@ from ditto_execution.planner import (
     ExecutionPlanner,
     SimpleExecutionPlanner,
 )
-from ditto_execution.reality.market import MarketSnapshot
-from ditto_execution.rules import (
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
+    MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import (

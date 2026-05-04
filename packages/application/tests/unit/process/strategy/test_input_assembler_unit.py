@@ -6,7 +6,8 @@ from datetime import datetime
 
 import pytest
 from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
-from ditto_backtest.data_feed import MarketSnapshot, Slice
+from ditto_backtest.data_feed import Slice
+from ditto_kernel.trading import MarketSnapshot
 
 # ---------------------------------------------------------------------------
 # Helpers

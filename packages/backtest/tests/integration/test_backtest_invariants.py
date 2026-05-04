@@ -18,14 +18,14 @@ from ditto_execution.reality import (
     BrokerageModel,
     SimpleFeeModel,
 )
-from ditto_execution.reality.market import MarketSnapshot
-from ditto_execution.rules import (
+from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
+    MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_kernel.clock import SimulatedClock
 from ditto_portfolio.accounting.account import Account, AccountView
 from ditto_portfolio.accounting.buying_power import CashAccountBuyingPower
 from ditto_portfolio.accounting.cash import CashBook

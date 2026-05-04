@@ -41,14 +41,14 @@ from ditto_execution.reality import (
     BrokerageModel,
     SimpleFeeModel,
 )
-from ditto_execution.rules import (
+from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_kernel.clock import SimulatedClock
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent

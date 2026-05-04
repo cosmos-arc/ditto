@@ -10,10 +10,10 @@ import pytest
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineLoop, EngineOptions
-from ditto_execution.reality.market import MarketSnapshot
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
+from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import OrderBook

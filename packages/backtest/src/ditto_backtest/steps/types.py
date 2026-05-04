@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from ditto_execution.planner import ExecutionPlan
-from ditto_execution.rules import InstrumentRules
 from ditto_execution.targets import TargetPortfolioLike
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import InstrumentRules
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.fills import FillEvent
 from ditto_portfolio.accounting.order_book import Order

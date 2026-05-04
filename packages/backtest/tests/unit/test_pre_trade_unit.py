@@ -4,11 +4,11 @@ from types import MappingProxyType
 
 import pytest
 from ditto_execution.reality import SimpleFeeModel
-from ditto_execution.reality.market import MarketSnapshot
-from ditto_execution.rules import (
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,
+    MarketSnapshot,
     TradingRuleSet,
 )
 from ditto_portfolio.accounting.account import AccountView

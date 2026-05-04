@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pytest
 from ditto_execution.reality.fee import AShareFeeModel, SimpleFeeModel
-from ditto_execution.rules import FeeSchedule
 from ditto_kernel.order import OrderSide
+from ditto_kernel.trading import FeeSchedule
 from ditto_portfolio.accounting.order_book import Order
 
 # ---------------------------------------------------------------------------

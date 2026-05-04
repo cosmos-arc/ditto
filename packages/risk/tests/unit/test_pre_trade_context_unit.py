@@ -5,19 +5,17 @@ from __future__ import annotations
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
-from ditto_execution.reality.market import MarketSnapshot
-from ditto_execution.rules import (
-    FeeSchedule,
-    InstrumentDefinition,
-    InstrumentRules,
-    TradingRuleSet,
-)
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_LOT_SIZE,
     DEFAULT_MIN_COMMISSION,
+    FeeSchedule,
+    InstrumentDefinition,
+    InstrumentRules,
+    MarketSnapshot,
+    TradingRuleSet,
 )
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel

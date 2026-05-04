@@ -10,11 +10,12 @@ from datetime import UTC, datetime
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
-from ditto_backtest.data_feed import MarketSnapshot, Slice
+from ditto_backtest.data_feed import Slice
 from ditto_execution.planner import ExecutionPlan
 from ditto_kernel.clock import Clock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent

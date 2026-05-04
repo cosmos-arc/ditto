@@ -19,7 +19,7 @@ from ditto_backtest.manifest import (
     hash_spec,
     serialize_manifest,
 )
-from ditto_execution.rules import (
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
     InstrumentRules,

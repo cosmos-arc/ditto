@@ -1,33 +1,22 @@
-"""
-InstrumentDefinition / TradingRuleSet / FeeSchedule — 三层规则数据对象 (R6).
-
-值对象和 Protocol 已迁移至 ditto_kernel.trading，本模块 re-export 并保留
-InMemoryRuleProvider（测试工具，超出 kernel 薄实现 30 行限制）。
-"""
+"""Execution-owned in-memory trading rule provider."""
 
 from __future__ import annotations
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import (
-    FeeSchedule,
-    InstrumentDefinition,
-    InstrumentRuleProvider,
-    InstrumentRules,
-    RulesGetter,
-    TradingRuleSet,
-    default_price_limit_pct,
+    FeeSchedule as _FeeSchedule,
+)
+from ditto_kernel.trading import (
+    InstrumentDefinition as _InstrumentDefinition,
+)
+from ditto_kernel.trading import (
+    InstrumentRules as _InstrumentRules,
+)
+from ditto_kernel.trading import (
+    TradingRuleSet as _TradingRuleSet,
 )
 
-__all__ = [
-    "FeeSchedule",
-    "InMemoryRuleProvider",
-    "InstrumentDefinition",
-    "InstrumentRuleProvider",
-    "InstrumentRules",
-    "RulesGetter",
-    "TradingRuleSet",
-    "default_price_limit_pct",
-]
+__all__ = ["InMemoryRuleProvider"]
 
 
 # ---------------------------------------------------------------------------
@@ -45,9 +34,9 @@ class InMemoryRuleProvider:
 
     def __init__(
         self,
-        definitions: dict[InstrumentId, InstrumentDefinition] | None = None,
-        trading_rules: dict[InstrumentId, list[TradingRuleSet]] | None = None,
-        fee_schedules: dict[InstrumentId, list[FeeSchedule]] | None = None,
+        definitions: dict[InstrumentId, _InstrumentDefinition] | None = None,
+        trading_rules: dict[InstrumentId, list[_TradingRuleSet]] | None = None,
+        fee_schedules: dict[InstrumentId, list[_FeeSchedule]] | None = None,
     ) -> None:
         self._definitions = definitions or {}
         self._trading_rules = trading_rules or {}
@@ -58,7 +47,7 @@ class InMemoryRuleProvider:
     def get_definition(
         self,
         instrument_id: InstrumentId,
-    ) -> InstrumentDefinition | None:
+    ) -> _InstrumentDefinition | None:
         """获取标的静态定义，不存在返回 None。"""
         return self._definitions.get(instrument_id)
 
@@ -66,7 +55,7 @@ class InMemoryRuleProvider:
         self,
         instrument_id: InstrumentId,
         as_of_date: str,
-    ) -> TradingRuleSet | None:
+    ) -> _TradingRuleSet | None:
         """PIT 查询交易规则，不存在返回 None。"""
         return self._find_pit(self._trading_rules, instrument_id, as_of_date)
 
@@ -74,7 +63,7 @@ class InMemoryRuleProvider:
         self,
         instrument_id: InstrumentId,
         as_of_date: str,
-    ) -> FeeSchedule | None:
+    ) -> _FeeSchedule | None:
         """PIT 查询费率，不存在返回 None。"""
         return self._find_pit(self._fee_schedules, instrument_id, as_of_date)
 
@@ -82,9 +71,9 @@ class InMemoryRuleProvider:
         self,
         as_of_date: str,
         instrument_ids: list[InstrumentId],
-    ) -> dict[InstrumentId, InstrumentRules]:
+    ) -> dict[InstrumentId, _InstrumentRules]:
         """批量获取三层规则。缺失规则返回空 dict（不 raise）。"""
-        result: dict[InstrumentId, InstrumentRules] = {}
+        result: dict[InstrumentId, _InstrumentRules] = {}
         for iid in instrument_ids:
             defn = self.get_definition(iid)
             rule = self.get_trading_rule(iid, as_of_date)

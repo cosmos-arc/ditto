@@ -44,6 +44,7 @@ from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     LotSizeCheck,
 )
+from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
@@ -408,7 +409,7 @@ def three_day_engine_config() -> EngineConfig:
 def etf_rotation_pipeline() -> Any:
     """etf_rotation 策略 Pipeline — top_k=3, equal_weight。"""
     config = ETFRotationConfig(top_k=3, cash_target=0.0)
-    return build_etf_rotation_pipeline(config)
+    return StrategyPipeline(build_etf_rotation_pipeline(config))
 
 
 @pytest.fixture
@@ -420,7 +421,7 @@ def etf_trend_swing_pipeline() -> Any:
         trailing_stop_pct=0.08,
         signal_column="signal_value",
     )
-    return build_etf_trend_swing_pipeline(config)
+    return StrategyPipeline(build_etf_trend_swing_pipeline(config))
 
 
 @pytest.fixture

@@ -5,9 +5,9 @@ from __future__ import annotations
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
-from ditto_execution.reality.market import MarketSnapshot
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.buying_power import BuyingPowerModel
 from ditto_portfolio.accounting.cash import CashBook

@@ -15,7 +15,7 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunServiceConfig,
 )
 from ditto_backtest.data_feed import Slice
-from ditto_execution.reality.market import MarketSnapshot
+from ditto_kernel.trading import MarketSnapshot
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyPipeline

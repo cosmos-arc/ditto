@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ditto_execution.reality.fee import AShareFeeModel, FeeModel
+from ditto_kernel.trading import FeeModel
+
+from ditto_execution.reality.fee import AShareFeeModel
 from ditto_execution.reality.fill import FillModel, SimpleFillModel
 from ditto_execution.reality.settlement import (
     SettlementModel,

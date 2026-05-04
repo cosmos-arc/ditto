@@ -1,22 +1,16 @@
-"""
-FeeModel — 手续费具体实现（SimpleFeeModel + AShareFeeModel）.
-
-FeeModel Protocol 定义在 ditto_kernel.trading；此处提供具体实现。
-"""
+"""手续费具体实现（SimpleFeeModel + AShareFeeModel）."""
 
 from __future__ import annotations
 
 from ditto_kernel.order import OrderSide
-from ditto_kernel.trading import FeeModel
-from ditto_portfolio.accounting.order_book import Order
-
-from ditto_execution.reality.constants import (
+from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_MIN_COMMISSION,
+    FeeSchedule,
 )
-from ditto_execution.rules import FeeSchedule
+from ditto_portfolio.accounting.order_book import Order
 
-__all__ = ["AShareFeeModel", "FeeModel", "SimpleFeeModel"]
+__all__ = ["AShareFeeModel", "SimpleFeeModel"]
 
 
 class SimpleFeeModel:

@@ -11,17 +11,17 @@ from unittest.mock import MagicMock
 from ditto_execution.brokerage import BacktestBrokerage, _is_order_executable
 from ditto_execution.fills import Filled, NoFill
 from ditto_execution.reality.brokerage import BrokerageModel
-from ditto_execution.reality.market import MarketSnapshot
 from ditto_execution.reality.settlement import (
     SettlementModel,
     SimpleSettlementModel,
 )
-from ditto_execution.rules import (
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
+    MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_kernel.identity import InstrumentId
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent

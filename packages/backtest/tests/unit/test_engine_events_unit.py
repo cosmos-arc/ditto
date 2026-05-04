@@ -7,7 +7,7 @@ from types import MappingProxyType
 from unittest.mock import MagicMock, Mock
 
 from ditto_backtest.config import EngineConfig
-from ditto_backtest.data_feed import MarketSnapshot, Slice
+from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineLoop, EngineOptions
 from ditto_execution.events import (
     OrderFilled,
@@ -16,6 +16,7 @@ from ditto_execution.events import (
 from ditto_kernel import SimpleEventBus
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import DomainEvent
+from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent

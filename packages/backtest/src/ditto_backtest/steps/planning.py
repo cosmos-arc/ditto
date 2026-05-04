@@ -11,8 +11,8 @@ PlanningStep -- 获取规则 + 调用 planner.plan().
 from __future__ import annotations
 
 from ditto_execution.planner import ExecutionPlanner
-from ditto_execution.rules import InstrumentRuleProvider, InstrumentRules
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import InstrumentRuleProvider, InstrumentRules
 from ditto_strategy.alpha.context import StrategyContext
 
 from ditto_backtest.manifest import RuleRefCollector

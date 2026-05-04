@@ -15,8 +15,7 @@ from ditto_execution.reality.slippage import (
     FixedBpsSlippage,
     VolumeShareSlippage,
 )
-from ditto_execution.rules import FeeSchedule
-from ditto_kernel.trading import FeeModel
+from ditto_kernel.trading import FeeModel, FeeSchedule
 from ditto_portfolio.accounting.order_book import Order
 
 from ditto_application.contracts import CostConfig

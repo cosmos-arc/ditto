@@ -1,7 +1,7 @@
 """
 DataFeed — 市场数据切片协议 + 数据容器.
 
-MarketSnapshot 从 execution/reality/market.py 导入.
+MarketSnapshot 是 kernel trading 类型，仅用于数据容器字段。
 Slice 是某日所有标的的聚合视图, 由 DataFeed 提供.
 ProviderBackedDataFeed 通过 DataProvider Protocol 获取数据.
 """
@@ -14,12 +14,11 @@ from typing import Any, Protocol
 
 import polars as pl
 from ditto_data.provider import BarQuery, DataProvider
-from ditto_execution.reality.market import MarketSnapshot
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 
 __all__ = [
     "DataFeed",
-    "MarketSnapshot",
     "ProviderBackedDataFeed",
     "Slice",
 ]
@@ -45,7 +44,7 @@ class Slice:
 
     trade_date: str
     step_time: datetime
-    bars: dict[InstrumentId, MarketSnapshot]
+    bars: dict[InstrumentId, _MarketSnapshot]
     benchmark_close: float | None = None
 
 
@@ -89,13 +88,13 @@ def _row_to_snapshot(
     date: str,
     iid: InstrumentId,
     row: dict[str, Any],
-) -> MarketSnapshot:
+) -> _MarketSnapshot:
     """Convert a polars row dict (from ``to_dicts()``) to a MarketSnapshot."""
     close = float(row["close"])
     volume = float(row.get("volume", 0))
     raw_amount = row.get("amount")
     amount = float(raw_amount) if raw_amount is not None else close * volume
-    return MarketSnapshot(
+    return _MarketSnapshot(
         trade_date=date,
         instrument_id=iid,
         open=float(row.get("open", close)),
@@ -215,7 +214,7 @@ class ProviderBackedDataFeed:
 
         day_df = df.filter(pl.col("trade_date") == date)
 
-        bars: dict[InstrumentId, MarketSnapshot] = {}
+        bars: dict[InstrumentId, _MarketSnapshot] = {}
         benchmark_close: float | None = None
 
         for row in day_df.to_dicts():

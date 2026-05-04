@@ -7,15 +7,15 @@ Part 08: default_price_limit_pct lifecycle mapping.
 from dataclasses import FrozenInstanceError, dataclass
 
 import pytest
-from ditto_execution.rules import (
+from ditto_execution.rules import InMemoryRuleProvider
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import (
     FeeSchedule,
-    InMemoryRuleProvider,
     InstrumentDefinition,
     InstrumentRuleProvider,
     TradingRuleSet,
     default_price_limit_pct,
 )
-from ditto_kernel.identity import InstrumentId
 
 # ---------------------------------------------------------------------------
 # Shared fixture data — avoids repeating identical construction 3x each.

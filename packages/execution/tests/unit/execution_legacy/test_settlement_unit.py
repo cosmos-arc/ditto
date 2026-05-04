@@ -5,8 +5,8 @@ from ditto_execution.reality.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
-from ditto_execution.rules import TradingRuleSet
 from ditto_kernel.order import OrderSide
+from ditto_kernel.trading import TradingRuleSet
 from ditto_portfolio.accounting.position import Position
 
 # ---------------------------------------------------------------------------

@@ -5,15 +5,15 @@ from datetime import datetime
 import pytest
 from ditto_execution.brokerage import BacktestBrokerage, ProcessInput
 from ditto_execution.reality import BrokerageModel
-from ditto_execution.reality.market import MarketSnapshot
 from ditto_execution.reality.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
 from ditto_execution.reality.slippage import FixedBpsSlippage
-from ditto_execution.rules import (
+from ditto_kernel.trading import (
     FeeSchedule,
     InstrumentDefinition,
+    MarketSnapshot,
     TradingRuleSet,
 )
 from ditto_portfolio.accounting.account import Account

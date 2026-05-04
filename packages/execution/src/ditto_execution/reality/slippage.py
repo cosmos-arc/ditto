@@ -11,10 +11,8 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from ditto_kernel.order import OrderSide
+from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot
 from ditto_portfolio.accounting.order_book import Order
-
-from ditto_execution.reality.market import MarketSnapshot
-from ditto_execution.rules import InstrumentDefinition
 
 __all__ = ["FixedBpsSlippage", "SlippageModel", "VolumeShareSlippage"]
 

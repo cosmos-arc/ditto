@@ -37,11 +37,10 @@ from ditto_execution.audit.models import (
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
 from ditto_execution.reality import SlippageModel
-from ditto_execution.rules import InstrumentRuleProvider
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.trading import FeeModel
+from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline

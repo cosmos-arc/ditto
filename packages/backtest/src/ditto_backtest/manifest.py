@@ -18,11 +18,11 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 import orjson
-from ditto_execution.rules import (
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.trading import (
     InstrumentDefinition,
     InstrumentRules,
 )
-from ditto_kernel.identity import InstrumentId
 from loguru import logger
 
 from ditto_backtest.config import EngineConfig

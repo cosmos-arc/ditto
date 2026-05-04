@@ -54,9 +54,7 @@ ditto_execution/
 │   ├── fee.py            # 费用计算
 │   ├── slippage.py       # 滑点模型
 │   ├── fill.py           # 成交模拟
-│   ├── settlement.py     # 交收规则（T+1）
-│   ├── market.py         # 市场规则（涨跌停等）
-│   └── constants.py      # A 股交易常量
+│   └── settlement.py     # 交收规则（T+1）
 ├── audit/                # 交易审计
 │   ├── models.py         # 审计模型
 │   └── execution_audit_service.py  # 审计服务
@@ -71,7 +69,7 @@ ditto_execution/
 ├── planner.py            # 执行计划器
 ├── trade_builder.py      # 交易构建器
 ├── targets.py            # 目标持仓计算
-├── rules.py              # 执行规则
+├── rules.py              # execution-owned 规则提供器；交易规则类型来自 ditto_kernel.trading
 ├── models.py             # 交易模型
 ├── contracts.py          # 执行契约
 ├── errors.py             # 错误定义
