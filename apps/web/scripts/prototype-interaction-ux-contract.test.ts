@@ -142,6 +142,7 @@ let pageContractsCache: PageContract[] | undefined;
 let contractRouteByPageIdCache: Map<string, string> | undefined;
 let contractRouteByPrototypeFileCache: Map<string, string> | undefined;
 let sharedInteractionsScriptCache: string | undefined;
+let screenerWorkflowScriptCache: string | undefined;
 
 function readManifest(): EditionManifest {
 	manifestCache ??= readJson<EditionManifest>(join(prototypesDir, ".edition-manifest.json"));
@@ -246,6 +247,40 @@ function getPrototypeUrl(page: ManifestPage): string {
 function readSharedInteractionsScript(): string {
 	sharedInteractionsScriptCache ??= readFileSync(join(prototypesDir, "shared/prototype-interactions.js"), "utf8");
 	return sharedInteractionsScriptCache;
+}
+
+function readScreenerWorkflowScript(): string {
+	screenerWorkflowScriptCache ??= readFileSync(join(prototypesDir, "shared/screener-workflow.js"), "utf8");
+	return screenerWorkflowScriptCache;
+}
+
+function evaluateScreenerWorkflowScript(window: JSDOM["window"]): void {
+	const runScreenerWorkflow = new Function(
+		"window",
+		"document",
+		"getComputedStyle",
+		"CustomEvent",
+		"IntersectionObserver",
+		"MutationObserver",
+		"requestAnimationFrame",
+		"cancelAnimationFrame",
+		"setTimeout",
+		"clearTimeout",
+		readScreenerWorkflowScript(),
+	);
+
+	runScreenerWorkflow(
+		window,
+		window.document,
+		window.getComputedStyle.bind(window),
+		window.CustomEvent,
+		window.IntersectionObserver,
+		window.MutationObserver,
+		window.requestAnimationFrame.bind(window),
+		window.cancelAnimationFrame.bind(window),
+		window.setTimeout.bind(window),
+		window.clearTimeout.bind(window),
+	);
 }
 
 function installInteractiveWindowStubs(window: JSDOM["window"]): void {
@@ -1021,6 +1056,7 @@ describe("prototype interaction UX contracts", () => {
 
 		installInteractiveWindowStubs(dom.window);
 		evaluateSharedInteractionsScript(dom.window);
+		evaluateScreenerWorkflowScript(dom.window);
 		if (document.readyState === "loading") {
 			document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
 		}
