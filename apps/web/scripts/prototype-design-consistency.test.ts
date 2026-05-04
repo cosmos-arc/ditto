@@ -573,6 +573,17 @@ function querySelectorAllSafe(document: Document, selector: string): Element[] {
 	}
 }
 
+function elementClosestSafe(element: Element, selector: string): Element | null {
+	const domSelector = stripSelectorForDom(selector);
+	if (!domSelector) return null;
+
+	try {
+		return element.closest(domSelector);
+	} catch {
+		return null;
+	}
+}
+
 function isInteractivePrototypeElement(element: Element): boolean {
 	return element.matches(
 		"button, a, label, input, select, textarea, summary, [role='button'], [role='switch'], [role='tab']",
@@ -604,7 +615,7 @@ function isInsideOperationalTableLikeContainer(element: Element): boolean {
 
 function isOperationalElevenPxSelector(selector: string): boolean {
 	const normalized = selector.toLowerCase();
-	return /(?:button|btn|tab|header|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
+	return /(?:button|btn|tab|header|strip|title|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
 		normalized,
 	);
 }
@@ -622,7 +633,7 @@ function hasOperationalElevenPxUsage(
 		(element) =>
 			isInteractivePrototypeElement(element) ||
 			isInsideOperationalTableLikeContainer(element) ||
-			pointerSelectors.some((pointerSelector) => element.matches(stripSelectorForDom(pointerSelector))),
+			pointerSelectors.some((pointerSelector) => elementClosestSafe(element, pointerSelector)),
 	);
 }
 
@@ -2187,7 +2198,17 @@ describe("prototype design consistency", () => {
 	});
 
 	it("keeps 11px typography out of operational selectors", () => {
-		const violations = readManifest()
+		const sharedViolations = readLayoutCssSources().flatMap((source) =>
+			readTopLevelCssRules(stripCssComments(source.css))
+				.filter((rule) => usesFontSizeToken(rule.body, "--font-size-11"))
+				.flatMap((rule) =>
+					rule.selectors
+						.filter(isOperationalElevenPxSelector)
+						.map((selector) => `${source.label}:${getLineNumber(source.css, rule.start)}:${selector}`),
+				),
+		);
+
+		const pageViolations = readManifest()
 			.pages.filter(isActiveRoutePrototype)
 			.flatMap((page) => {
 				const document = readPrototypeDocument(page);
@@ -2210,7 +2231,7 @@ describe("prototype design consistency", () => {
 					);
 			});
 
-		expect(violations).toEqual([]);
+		expect([...sharedViolations, ...pageViolations]).toEqual([]);
 	});
 
 	it("keeps active route prototypes free of negative letter spacing", () => {
