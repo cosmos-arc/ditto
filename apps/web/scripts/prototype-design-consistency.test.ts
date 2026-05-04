@@ -619,6 +619,9 @@ function isInsideOperationalAnswerContainer(element: Element): boolean {
 		element.closest(
 			[
 				"header",
+				".compare-header",
+				".panel-header",
+				".overlay-header",
 				"[data-contract-slot='header']",
 				"[data-primary-answer]",
 				"[data-primary-answer-equivalent]",
