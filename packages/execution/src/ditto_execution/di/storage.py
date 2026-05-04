@@ -7,18 +7,18 @@ from ditto_platform.foundation import SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
-from ditto_execution.storage.sqlite.legacy import (
+from ditto_execution.storage.sqlite.trade import (
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
     FillReader,
     FillWriter,
+    IntentReader,
+    IntentWriter,
     PositionReader,
     PositionWriter,
-    SignalReader,
-    SignalWriter,
+    TradeService,
 )
-from ditto_execution.storage.sqlite.trade import TradeService
 from ditto_execution.storage.sqlite_client import SQLiteClient
 
 __all__ = ["ExecutionStorageProvider"]
@@ -48,7 +48,7 @@ class ExecutionStorageProvider(Provider):
     def execution_readers(self, sqlite_client: SQLiteClient) -> ExecutionReaders:
         """Execution 域读取依赖聚合."""
         return ExecutionReaders(
-            signal=SignalReader(sqlite_client),
+            intent=IntentReader(sqlite_client),
             fill=FillReader(sqlite_client),
             position=PositionReader(sqlite_client),
         )
@@ -57,7 +57,7 @@ class ExecutionStorageProvider(Provider):
     def execution_writers(self, sqlite_client: SQLiteClient) -> ExecutionWriters:
         """Execution 域写入依赖聚合."""
         return ExecutionWriters(
-            signal=SignalWriter(sqlite_client),
+            intent=IntentWriter(sqlite_client),
             fill=FillWriter(sqlite_client),
             position=PositionWriter(sqlite_client),
         )

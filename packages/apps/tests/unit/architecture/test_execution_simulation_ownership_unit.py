@@ -43,3 +43,18 @@ def test_execution_simulation_guard_reports_backtest_owned_terms() -> None:
         "packages/execution/src/ditto_execution/brokerage.py: "
         "execution owns backtest simulation term 'BacktestBrokerage'",
     ]
+
+
+def test_execution_legacy_sqlite_storage_guard_reports_modules() -> None:
+    check = _MODULE.check_execution_sqlite_legacy_not_extension_point  # type: ignore[attr-defined]
+    rel_path = (
+        "packages/execution/src/ditto_execution/storage/sqlite/legacy/signal_writer.py"
+    )
+
+    errors = check(rel_path)
+
+    assert errors == [
+        f"{rel_path}: "
+        "execution sqlite legacy storage is not a permanent extension point; "
+        "use ditto_execution.storage.sqlite.trade",
+    ]

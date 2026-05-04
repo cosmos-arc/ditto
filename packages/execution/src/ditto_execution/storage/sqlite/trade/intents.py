@@ -1,13 +1,17 @@
-"""SignalWriter — trade_intents 表的 DDL 与写入."""
+"""SQLite readers and writers for execution trade intents."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from ditto_execution.models import SignalRecord
+from ditto_execution.storage.sqlite.trade._sql import build_where_clause
 from ditto_execution.storage.sqlite_client import SQLiteClient
 
 __all__ = [
     "INTENTS_DDL",
-    "SignalWriter",
+    "IntentReader",
+    "IntentWriter",
 ]
 
 _CREATE_INTENTS_TABLE = """
@@ -42,6 +46,10 @@ INSERT INTO trade_intents
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
+_SELECT_INTENT_BY_ID = "SELECT * FROM trade_intents WHERE intent_id = ?"
+
+_LIST_INTENTS_BASE = "SELECT * FROM trade_intents WHERE strategy_id = ?"
+
 _UPDATE_INTENT_STATUS_TRANSITION = (
     "UPDATE trade_intents SET status = ? "
     "WHERE intent_id = ? AND status IN ({placeholders})"
@@ -54,14 +62,46 @@ INTENTS_DDL = (
 )
 
 
-class SignalWriter:
-    """trade_intents 表的写入与状态更新."""
+class IntentReader:
+    """Read trade intent records from the ``trade_intents`` table."""
+
+    def __init__(self, client: SQLiteClient) -> None:
+        self._client = client
+
+    def get(self, intent_id: str) -> SignalRecord | None:
+        """Return one trade intent by ID."""
+        row = self._client.fetchone(_SELECT_INTENT_BY_ID, (intent_id,))
+        return self._row_to_signal(row) if row else None
+
+    def list(
+        self,
+        strategy_id: str,
+        signal_date: str | None = None,
+        status: str | None = None,
+    ) -> list[SignalRecord]:
+        """Return trade intents matching the requested filters."""
+        sql, params = build_where_clause(
+            _LIST_INTENTS_BASE,
+            strategy_id,
+            {"signal_date": signal_date, "status": status},
+            "signal_date ASC",
+        )
+        rows = self._client.fetchall(sql, params)
+        return [self._row_to_signal(row) for row in rows]
+
+    @staticmethod
+    def _row_to_signal(row: dict[str, Any]) -> SignalRecord:
+        return SignalRecord(**row)
+
+
+class IntentWriter:
+    """Write trade intent records to the ``trade_intents`` table."""
 
     def __init__(self, client: SQLiteClient) -> None:
         self._client = client
 
     def save(self, record: SignalRecord) -> None:
-        """保存交易信号记录."""
+        """Persist a trade intent record."""
         self._client.execute(
             _INSERT_INTENT,
             (
@@ -87,19 +127,7 @@ class SignalWriter:
         *,
         expected_current: tuple[str, ...],
     ) -> bool:
-        """
-        更新交易信号状态（乐观并发控制）.
-
-        Args:
-            intent_id: 交易意图 ID.
-            status: 目标状态.
-            expected_current: 期望的当前状态集合，SQL 仅当数据库中的实际状态
-                落在该集合内时才执行更新，防止 TOCTOU lost-update。
-
-        Returns:
-            True 表示更新成功，False 表示因状态前置条件不满足而跳过。
-
-        """
+        """Update an intent status with optimistic concurrency protection."""
         placeholders = ", ".join("?" for _ in expected_current)
         sql = _UPDATE_INTENT_STATUS_TRANSITION.format(placeholders=placeholders)
         params = [status, intent_id, *expected_current]

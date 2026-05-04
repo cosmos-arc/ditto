@@ -37,16 +37,16 @@ class TradeService:
         self._writers = writers
 
     # ------------------------------------------------------------------
-    # Signal CRUD
+    # Intent CRUD
     # ------------------------------------------------------------------
 
     def save_intent(self, record: SignalRecord) -> None:
         """保存交易信号记录."""
-        self._writers.signal.save(record)
+        self._writers.intent.save(record)
 
     def get_intent(self, intent_id: str) -> SignalRecord | None:
         """按 intent_id 查询单条交易信号."""
-        return self._readers.signal.get(intent_id)
+        return self._readers.intent.get(intent_id)
 
     def list_intents(
         self,
@@ -55,7 +55,7 @@ class TradeService:
         status: str | None = None,
     ) -> list[SignalRecord]:
         """按条件查询交易信号列表."""
-        return self._readers.signal.list(
+        return self._readers.intent.list(
             strategy_id, signal_date=signal_date, status=status
         )
 
@@ -67,7 +67,7 @@ class TradeService:
         expected_current: tuple[str, ...],
     ) -> bool:
         """更新交易信号状态（expected_current 用于 TOCTOU 防护）。"""
-        return self._writers.signal.update_status(
+        return self._writers.intent.update_status(
             intent_id, status, expected_current=expected_current
         )
 

@@ -13,16 +13,16 @@ from ditto_execution.models import (
     SignalRecord,
 )
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
-from ditto_execution.storage.sqlite.legacy import (
+from ditto_execution.storage.sqlite.trade import (
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
     FillReader,
     FillWriter,
+    IntentReader,
+    IntentWriter,
     PositionReader,
     PositionWriter,
-    SignalReader,
-    SignalWriter,
 )
 from ditto_execution.storage.sqlite.trade.service import (
     TradeService,
@@ -40,12 +40,12 @@ def _make_service(client: SQLiteClient) -> TradeService:
     """Create TradeService with real Reader/Writer instances."""
     _init_db(client)
     readers = ExecutionReaders(
-        signal=SignalReader(client),
+        intent=IntentReader(client),
         fill=FillReader(client),
         position=PositionReader(client),
     )
     writers = ExecutionWriters(
-        signal=SignalWriter(client),
+        intent=IntentWriter(client),
         fill=FillWriter(client),
         position=PositionWriter(client),
     )
@@ -742,7 +742,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_signal_date_asc(self) -> None:
         """合法 order_by 'signal_date ASC' 应正常构建 SQL."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -757,7 +757,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_signal_date_desc(self) -> None:
         """合法 order_by 'signal_date DESC' 应正常构建 SQL."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -771,7 +771,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_snapshot_date_asc(self) -> None:
         """合法 order_by 'snapshot_date ASC' 应正常构建 SQL."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -785,7 +785,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_order_by_snapshot_date_desc(self) -> None:
         """合法 order_by 'snapshot_date DESC' 应正常构建 SQL."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -799,7 +799,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_valid_filter_columns(self) -> None:
         """合法过滤列 'signal_date', 'status', 'snapshot_date' 应正常构建 SQL."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -832,7 +832,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_none_filter_values_skipped(self) -> None:
         """None 值过滤条件应被跳过，不触发白名单校验."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -847,7 +847,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_order_by_rejects(self) -> None:
         """非法 order_by（含 SQL 注入）应抛出 ValueError."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -861,7 +861,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_order_by_rejects_subtle_injection(self) -> None:
         """含子查询的 order_by 应被拒绝."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -875,7 +875,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_filter_column_rejects(self) -> None:
         """非法过滤列名应抛出 ValueError."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -889,7 +889,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_invalid_filter_column_rejects_subtle(self) -> None:
         """非法列名（含 SQL 片段）应被拒绝."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -903,7 +903,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_empty_order_by_rejects(self) -> None:
         """空字符串 order_by 应被拒绝."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
 
@@ -917,7 +917,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_allowed_order_by_constants_cover_current_usage(self) -> None:
         """_ALLOWED_ORDER_BY 应覆盖当前所有调用点的 order_by 值."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             ALLOWED_ORDER_BY as _ALLOWED_ORDER_BY,
         )
 
@@ -926,7 +926,7 @@ class TestBuildWhereClauseWhitelist:
 
     def test_allowed_columns_constants_cover_current_usage(self) -> None:
         """_ALLOWED_COLUMNS 应覆盖当前所有调用点的过滤列名."""
-        from ditto_execution.storage.sqlite.legacy._sql import (
+        from ditto_execution.storage.sqlite.trade._sql import (
             ALLOWED_COLUMNS as _ALLOWED_COLUMNS,
         )
 

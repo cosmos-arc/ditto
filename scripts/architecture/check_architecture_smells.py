@@ -10,6 +10,7 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 5. Production packages must not import ditto_analysis
 6. Kernel must not import ditto_platform
 7. Packages must not re-export symbols imported from other Ditto packages
+8. Execution sqlite legacy storage must not grow permanent modules
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -78,6 +79,10 @@ EXECUTION_SIMULATION_OWNERSHIP_TERMS = (
     "SimpleSettlementModel",
     "FixedBpsSlippage",
     "VolumeShareSlippage",
+)
+
+EXECUTION_SQLITE_LEGACY_STORAGE_PREFIX = (
+    "packages/execution/src/ditto_execution/storage/sqlite/legacy/"
 )
 
 # DI wiring / service re-export paths that legitimately cross analysis boundary.
@@ -272,6 +277,16 @@ def check_execution_no_simulation_ownership(source: str, rel_path: str) -> list[
     ]
 
 
+def check_execution_sqlite_legacy_not_extension_point(rel_path: str) -> list[str]:
+    """Check execution sqlite legacy storage does not grow permanent modules."""
+    if not rel_path.startswith(EXECUTION_SQLITE_LEGACY_STORAGE_PREFIX):
+        return []
+    return [
+        f"{rel_path}: execution sqlite legacy storage is not a permanent "
+        "extension point; use ditto_execution.storage.sqlite.trade"
+    ]
+
+
 def _check_per_file(verbose: bool) -> list[str]:
     """Run per-file checks (f-string logging, oversized files, boundary checks)."""
     errors: list[str] = []
@@ -304,6 +319,7 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_production_no_analysis(source, rel_path))
         errors.extend(check_kernel_no_platform(source, rel_path))
         errors.extend(check_execution_no_simulation_ownership(source, rel_path))
+        errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
 
     if verbose:
         if fstring_count == 0:

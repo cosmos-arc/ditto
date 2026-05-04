@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_execution.storage.sqlite.legacy import (
+from ditto_execution.storage.sqlite.trade import (
     FillReader,
     FillWriter,
+    IntentReader,
+    IntentWriter,
     PositionReader,
     PositionWriter,
-    SignalReader,
-    SignalWriter,
 )
 
 
@@ -18,7 +18,7 @@ from ditto_execution.storage.sqlite.legacy import (
 class ExecutionReaders:
     """Execution domain read dependencies."""
 
-    signal: SignalReader
+    intent: IntentReader
     fill: FillReader
     position: PositionReader
 
@@ -27,7 +27,7 @@ class ExecutionReaders:
 class ExecutionWriters:
     """Execution domain write dependencies."""
 
-    signal: SignalWriter
+    intent: IntentWriter
     fill: FillWriter
     position: PositionWriter
 

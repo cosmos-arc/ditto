@@ -1,25 +1,9 @@
 """
-共享 SQL 常量、白名单与 WHERE 子句构建器.
+Shared SQL allowlists and WHERE clause builder for execution trade storage.
 
-SignalWriter / FillWriter / PositionWriter 共用的
-SQL 注入防护与查询构建工具。
-
-范围查询用法::
-
-    # 等值查询（向后兼容）
-    filters = {"status": "pending"}
-
-    # 闭区间范围查询
-    filters = {"trade_date": ("2026-04-10", "2026-04-15")}
-    # → trade_date >= ? AND trade_date <= ?
-
-    # 半开区间（仅有上界）
-    filters = {"trade_date": ("", "2026-04-15")}
-    # → trade_date <= ?
-
-    # 半开区间（仅有下界）
-    filters = {"trade_date": ("2026-04-10", "")}
-    # → trade_date >= ?
+The helpers in this module are query/input validation utilities. The
+``ValueError`` exceptions here intentionally remain plain validation errors,
+not execution-domain order or fill failures.
 """
 
 from __future__ import annotations
@@ -63,26 +47,12 @@ def build_where_clause(
     order_by: str,
 ) -> tuple[str, list[Any]]:
     """
-    构建带 WHERE 子句和排序的完整 SQL.
+    Build a SELECT statement with whitelisted filters and ordering.
 
-    支持三种过滤值类型：
-
-    - ``str`` → 等值查询 ``column = ?``
-    - ``tuple[str, str]`` → 范围查询，空字符串元素表示无界
-    - ``None`` → 跳过该过滤条件
-
-    Args:
-        base_sql: 基础 SELECT 语句（含 WHERE strategy_id = ?）.
-        strategy_id: 策略 ID（第一个参数）.
-        filters: 额外过滤条件 {列名: 值}, None 值自动跳过.
-        order_by: ORDER BY 子句（含排序方向）.
-
-    Returns:
-        (完整 SQL, 参数列表) 元组.
-
-    Raises:
-        ValueError: order_by 不在白名单内或 filters 包含非法列名.
-
+    Supported filter values:
+    - ``str``: equality query, ``column = ?``
+    - ``tuple[str, str]``: inclusive range query; empty bound means open-ended
+    - ``None``: omitted filter
     """
     if order_by not in ALLOWED_ORDER_BY:
         raise ValueError(
