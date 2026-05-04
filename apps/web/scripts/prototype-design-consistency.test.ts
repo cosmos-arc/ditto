@@ -2313,6 +2313,7 @@ describe("prototype design consistency", () => {
 
 	it("keeps skeleton primitives and modifiers in shared layout CSS only", () => {
 		const layoutCss = readAllLayoutCss();
+		const togglesCss = readFileSync(prototypeTogglesCss, "utf8");
 		const requiredSharedSelectors = [
 			".skeleton",
 			".skeleton-row",
@@ -2335,6 +2336,21 @@ describe("prototype design consistency", () => {
 		const violations = requiredSharedSelectors
 			.filter((selector) => !getSelectorRuleBody(layoutCss, selector))
 			.map((selector) => `shared-layout-missing:${selector}`);
+		const canonicalPrimitiveSelectors = [
+			".skeleton",
+			".skeleton-row",
+			".skeleton-text",
+			".skeleton-text-sm",
+			".skeleton-heading",
+			".skeleton-badge",
+			".skeleton-chart",
+			".skeleton-bar",
+		];
+		for (const selector of canonicalPrimitiveSelectors) {
+			if (getSelectorRuleBody(togglesCss, selector)) {
+				violations.push(`prototype-toggles-duplicates:${selector}`);
+			}
+		}
 
 		for (const page of activePages()) {
 			const style = getStyleBlocks(readPrototypeHtml(page));
@@ -2345,6 +2361,31 @@ describe("prototype design consistency", () => {
 					/^\.skeleton(?:\b|[-_a-z0-9])/i.test(selector),
 				);
 				if (hasPageLocalSkeletonDefinition) {
+					violations.push(`${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps page-local skeleton dimension helpers in shared CSS", () => {
+		const violations: string[] = [];
+		const dimensionDeclarationPattern =
+			/(?:^|;)\s*(?:width|height|border-radius|--(?:iv-)?sk-[a-z0-9-]+)\s*:/i;
+		const dimensionHelperSelectorPattern =
+			/^\.(?:iv-sk(?:eleton)?[-_a-z0-9]*|sk-\d|sk-(?:text|w)-|skel-(?:badge|text|heading|page-btn|w-|h-|h\d))/i;
+
+		for (const page of activePages()) {
+			const style = getStyleBlocks(readPrototypeHtml(page));
+			const css = stripCssComments(style);
+
+			for (const rule of readTopLevelCssRules(css)) {
+				if (!dimensionDeclarationPattern.test(rule.body)) continue;
+				const hasPageLocalDimensionHelper = rule.selectors.some((selector) =>
+					dimensionHelperSelectorPattern.test(selector),
+				);
+				if (hasPageLocalDimensionHelper) {
 					violations.push(`${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);
 				}
 			}

@@ -499,9 +499,6 @@
     /* ═══ Inline-style-free utilities ═══ */
     .ml-auto { margin-left: auto; }
     .mt-12 { margin-top: var(--space-12); }
-    .sk-w-80 { width: 80%; margin-bottom: var(--space-4); }
-    .sk-w-60 { width: 60%; margin-bottom: var(--space-4); }
-    .sk-w-50 { width: 50%; margin-bottom: var(--space-4); }
     .factor-name-cell { color: var(--text-primary); font-family: var(--font-family-ui); }
     .ov-label-btn { min-height: 24px; }
     .donut-chart-pie { background: conic-gradient(var(--market-up-fg) 0% 28%, var(--brand-accent) 28% 48%, color-mix(in oklch, var(--market-up-fg) 70%, transparent) 48% 62%, color-mix(in oklch, var(--brand-accent) 60%, transparent) 62% 78%, var(--market-down-fg) 78% 88%, color-mix(in oklch, var(--text-tertiary) 30%, transparent) 88% 100%); }
@@ -1220,7 +1217,7 @@
       <div class="gallery-group" data-component="positions-table">
         <div class="gallery-group__label">Positions Table</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="skeleton skeleton-text sk-w-80"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="skeleton skeleton-text sk-w-80 mb-4"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">📋</div><div class="state-empty-title">当前无持仓</div><div class="state-empty-desc">在交易页面下单开始投资</div><button class="state-empty-cta">去交易</button></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">持仓数据异常</div><div class="state-error-desc">无法获取持仓信息</div><button class="state-error-retry">重试</button></div></div></div>
@@ -1231,7 +1228,7 @@
       <div class="gallery-group" data-component="trades-table">
         <div class="gallery-group__label">Trades Table</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="skeleton skeleton-text sk-w-60"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="skeleton skeleton-text sk-w-60 mb-4"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">📭</div><div class="state-empty-title">今日无成交</div><div class="state-empty-desc">当日暂无成交记录</div><button class="state-empty-cta">查看历史成交</button></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">成交数据异常</div><div class="state-error-desc">无法获取成交记录</div><button class="state-error-retry">重试</button></div></div></div>
@@ -1241,7 +1238,7 @@
       <div class="gallery-group" data-component="attribution-panel">
         <div class="gallery-group__label">Attribution Panel</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="skeleton skeleton-text sk-w-50"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="skeleton skeleton-text sk-w-50 mb-4"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Empty State</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-icon">📈</div><div class="state-empty-title">无归因数据</div><div class="state-empty-desc">选择时间范围查看归因分析</div><button class="state-empty-cta">选择时间范围</button></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Error State</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-icon">!</div><div class="state-error-title">归因计算失败</div><div class="state-error-desc">无法完成归因分析</div><button class="state-error-retry">重试</button></div></div></div>
