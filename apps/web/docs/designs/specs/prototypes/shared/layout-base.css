@@ -481,7 +481,8 @@ body {
   cursor: pointer;
   text-decoration: none;
   transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-              color var(--motion-duration-fast) var(--motion-easing-standard);
+              color var(--motion-duration-fast) var(--motion-easing-standard),
+              box-shadow 0.2s ease;
   position: relative;
 }
 
@@ -3249,6 +3250,37 @@ details.context-section:not([open]) > .context-section-body {
   height: var(--tab-count-height);
   display: flex;
   align-items: center;
+}
+
+/* ── Tab enter animation ─────────────────────── */
+@keyframes ditto-tab-enter {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tab-bar .tab-item {
+  animation: ditto-tab-enter 0.15s ease both;
+}
+
+.tab-bar .tab-item:nth-child(1) { animation-delay: 0ms; }
+.tab-bar .tab-item:nth-child(2) { animation-delay: 30ms; }
+.tab-bar .tab-item:nth-child(3) { animation-delay: 60ms; }
+.tab-bar .tab-item:nth-child(4) { animation-delay: 90ms; }
+.tab-bar .tab-item:nth-child(5) { animation-delay: 120ms; }
+
+/* ── Collapsible content ─────────────────────── */
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.15s ease;
+}
+
+.collapsible-content[data-collapsed="true"] {
+  max-height: 0 !important;
+  opacity: 0;
+}
+
+[data-reduced-motion] .collapsible-content {
+  transition: none;
 }
 
 .tab-spacer {

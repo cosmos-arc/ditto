@@ -1836,6 +1836,55 @@
   };
 
   /* ══════════════════════════════════════════════
+   * 16a. KeyboardShortcuts
+   *     Global keyboard shortcuts: / search, Escape close overlay
+   * ══════════════════════════════════════════════ */
+  var KeyboardShortcuts = {
+    init: function () {
+      document.addEventListener('keydown', function (e) {
+        /* Ignore when typing in inputs */
+        if (e.target && typeof e.target.matches === 'function' && e.target.matches('input, textarea, select, [contenteditable]')) return;
+
+        switch (e.key) {
+          case '/':
+            e.preventDefault();
+            var searchInput = document.querySelector('.header-search input, [data-command-trigger]');
+            if (searchInput) searchInput.focus();
+            break;
+          case '?':
+            /* Future: shortcut help panel */
+            break;
+          case 'Escape':
+            /* Close topmost overlay */
+            var topOverlay = document.querySelector('[data-overlay].overlay-active, [aria-modal="true"]:not([aria-hidden="true"])');
+            if (topOverlay) {
+              var closeBtn = topOverlay.querySelector('[data-close], .close-btn');
+              if (closeBtn) closeBtn.click();
+            }
+            break;
+        }
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 16b. CollapseToggle
+   *     [data-collapse-toggle] buttons toggle [data-collapsed] on target
+   * ══════════════════════════════════════════════ */
+  var CollapseToggle = {
+    init: function () {
+      document.addEventListener('click', function (e) {
+        var toggle = e.target.closest('[data-collapse-toggle]');
+        if (!toggle) return;
+        var target = document.getElementById(toggle.getAttribute('data-collapse-toggle'));
+        if (!target) return;
+        var isCollapsed = target.getAttribute('data-collapsed') === 'true';
+        target.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
    * 16. ResizablePanels
    *     Prototype-only panel resize contract
    * ══════════════════════════════════════════════ */
@@ -2061,6 +2110,8 @@
     TooltipSystem.init();
     CollapsibleContextSections.init();
     SidebarToggle.init();
+    KeyboardShortcuts.init();
+    CollapseToggle.init();
     CommandPalette.init();
     BottomTray.init();
     ResizablePanels.init();
