@@ -3880,6 +3880,40 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .status-dot.degraded { background: var(--system-degraded-fg); }
 .status-dot.down     { background: var(--system-down-fg); }
 
+/* ── Data Freshness Indicators ── */
+/* Three-level visual hierarchy for data recency:
+ *   realtime = pulsing green dot (live market data)
+ *   delayed  = static gray dot (snapshots, fundamentals, estimates)
+ *   eod      = no indicator (end-of-day / historical)
+ *
+ * Token colors defined in tokens-domain.css:
+ *   --freshness-realtime-color → --system-healthy-fg (green)
+ *   --freshness-delayed-color  → --text-disabled (neutral gray)
+ *
+ * Usage: Apply to data label or value containers.
+ * The ::after dot auto-positions to the right of the element.
+ */
+.freshness-realtime::after,
+.freshness-delayed::after {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin-left: var(--space-4);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.freshness-realtime::after {
+  background: var(--system-healthy-fg);
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+.freshness-delayed::after {
+  background: var(--text-disabled);
+}
+
 /* ── Pill / Tag ── */
 .pill {
   font-size: var(--font-size-10);
@@ -4935,6 +4969,12 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 
 .linked-region-pulse {
   animation: linked-region-pulse var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+}
+
+/* ── Dot pulse — live indicator breathing (shared by freshness-realtime, status-dot.live, etc.) ── */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes semantic-value-flash {

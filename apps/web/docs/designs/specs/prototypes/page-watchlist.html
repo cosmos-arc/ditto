@@ -271,11 +271,11 @@
       position: absolute;
       left: 2px;
       top: 50%;
-      width: 5px;
-      height: 5px;
+      width: 4px;
+      height: 4px;
       transform: translateY(-50%);
       border-radius: 50%;
-      background: var(--system-degraded-fg);
+      background: var(--text-disabled);
     }
 
     .data-table tr.row td:first-child {
@@ -331,7 +331,7 @@
     .signal-pill.sell { background: var(--market-down-bg); color: var(--market-down-fg); }
     .signal-pill.hold { background: transparent; color: var(--text-tertiary); }
 
-    /* ── Stale signal ── */
+    /* ── Stale signal (unified with freshness-delayed) ── */
     .signal-pill.stale {
       opacity: 0.6;
       filter: saturate(0.4);
@@ -339,10 +339,10 @@
 
     .signal-pill.stale::after {
       content: '';
-      width: var(--status-dot-size);
-      height: var(--status-dot-size);
+      width: 4px;
+      height: 4px;
       border-radius: 50%;
-      background: var(--system-stale-fg);
+      background: var(--text-disabled);
       margin-left: var(--space-4);
       flex-shrink: 0;
     }
@@ -585,10 +585,10 @@
     }
 
     .stale-dot-indicator {
-      width: 6px;
-      height: 6px;
+      width: 4px;
+      height: 4px;
       border-radius: 50%;
-      background: var(--system-degraded-fg);
+      background: var(--text-disabled);
       display: inline-block;
       flex-shrink: 0;
     }
@@ -784,8 +784,8 @@
                   <th scope="col" class="col-select"><span class="sr-only">选择</span></th>
                   <th scope="col" class="col-code">代码 <span class="sort-icon"></span></th>
                   <th scope="col" class="col-name">名称</th>
-                  <th scope="col" class="right col-price">最新价 <span class="sort-icon"></span></th>
-                  <th scope="col" class="right col-change">涨跌幅 <span class="sort-icon"></span></th>
+                  <th scope="col" class="right col-price"><span class="freshness-realtime">最新价</span> <span class="sort-icon"></span></th>
+                  <th scope="col" class="right col-change"><span class="freshness-realtime">涨跌幅</span> <span class="sort-icon"></span></th>
                   <th scope="col" class="col-signal">信号状态</th>
                   <th scope="col" class="col-note">备注</th>
                   <th scope="col" class="right col-action">操作</th>

@@ -171,12 +171,17 @@
       color: var(--market-up-fg);
       letter-spacing: 0;
       line-height: 1.2;
-      animation: price-breathe 3s ease-in-out infinite;
+      /* No continuous animation — flash triggered on data update */
     }
 
-    @keyframes price-breathe {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.92; }
+    .object-price.data-updated {
+      animation: value-flash 0.3s ease-out;
+    }
+
+    @keyframes value-flash {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
     }
 
     .object-change {
@@ -2179,8 +2184,8 @@
             -->
           </div>
           <div class="object-price-row">
-            <span class="object-price" data-answer-metric aria-label="当前价格 ¥1,856.00">¥1,856.00</span>
-            <span class="object-change" aria-label="涨跌幅 +2.35%" data-answer-evidence>
+            <span class="object-price freshness-realtime" data-answer-metric aria-label="当前价格 ¥1,856.00">¥1,856.00</span>
+            <span class="object-change freshness-realtime" aria-label="涨跌幅 +2.35%" data-answer-evidence>
               <span class="object-change-arrow">&#9650;</span>
               <span class="object-change-value">+2.35%</span>
               <span class="object-change-amount">+42.60</span>
@@ -2302,13 +2307,13 @@
     <div class="tab-group" data-tab-group="hub">
       <div class="hub-tabs" role="tablist" aria-label="标的详情导航" data-tabs="hub-tabs">
         <input type="radio" name="hub" id="hub-overview" checked class="tab-radio sr-only">
-        <label for="hub-overview" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-overview" id="tab-hub-overview" aria-selected="true" aria-controls="panel-hub-overview">概览</label>
+        <label for="hub-overview" class="hub-tab freshness-delayed" role="tab" tabindex="0" data-tab-target="hub-overview" id="tab-hub-overview" aria-selected="true" aria-controls="panel-hub-overview">概览</label>
         <input type="radio" name="hub" id="hub-chart" class="tab-radio sr-only">
-        <label for="hub-chart" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-chart" id="tab-hub-chart" aria-selected="false" aria-controls="panel-hub-chart">行情</label>
+        <label for="hub-chart" class="hub-tab freshness-realtime" role="tab" tabindex="0" data-tab-target="hub-chart" id="tab-hub-chart" aria-selected="false" aria-controls="panel-hub-chart">行情</label>
         <input type="radio" name="hub" id="hub-flow" class="tab-radio sr-only">
         <label for="hub-flow" class="hub-tab" role="tab" tabindex="0" data-tab-target="hub-flow" id="tab-hub-flow" aria-selected="false" aria-controls="panel-hub-flow">态势</label>
         <input type="radio" name="hub" id="hub-fundamentals" class="tab-radio sr-only">
-        <label for="hub-fundamentals" class="hub-tab" role="tab" tabindex="0" data-tooltip="财务三表、杜邦分析、同行对比" data-tooltip-pos="bottom" id="tab-hub-fundamentals" aria-selected="false" aria-controls="panel-hub-fundamentals">基本面</label>
+        <label for="hub-fundamentals" class="hub-tab freshness-delayed" role="tab" tabindex="0" data-tooltip="财务三表、杜邦分析、同行对比" data-tooltip-pos="bottom" id="tab-hub-fundamentals" aria-selected="false" aria-controls="panel-hub-fundamentals">基本面</label>
         <input type="radio" name="hub" id="hub-corporate" class="tab-radio sr-only">
         <label for="hub-corporate" class="hub-tab" role="tab" tabindex="0" data-tooltip="分红、解禁、高管变更" data-tooltip-pos="bottom" id="tab-hub-corporate" aria-selected="false" aria-controls="panel-hub-corporate">公司行动</label>
         <input type="radio" name="hub" id="hub-news" class="tab-radio sr-only">

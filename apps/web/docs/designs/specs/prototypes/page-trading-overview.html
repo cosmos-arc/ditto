@@ -2171,33 +2171,33 @@
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="账户可用资金（含未冻结保证金）">
-        <span class="scope-metric-label">可用资金</span>
+        <span class="scope-metric-label freshness-realtime">可用资金</span>
         <span class="scope-metric-value"><span data-ticker="8432180.50" data-decimals="2" data-ticker-prefix="¥" data-ticker-suffix="">8,432,180.50</span></span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="当前保证金占用金额">
-        <span class="scope-metric-label">保证金占用</span>
+        <span class="scope-metric-label freshness-realtime">保证金占用</span>
         <span class="scope-metric-value">¥3,218,400</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="风险预算使用率，阈值 70% 预警、85% 熔断">
-        <span class="scope-metric-label">风险预算</span>
+        <span class="scope-metric-label freshness-realtime">风险预算</span>
         <span class="scope-metric-value warning"><span data-ticker="68.2" data-decimals="1" data-ticker-prefix="" data-ticker-suffix="%">68.2</span>%</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="华泰证券极速通道，延迟 < 20ms 为优">
         <span class="scope-status-dot green"></span>
-        <span class="scope-metric-label">券商连接</span>
+        <span class="scope-metric-label freshness-realtime">券商连接</span>
         <span class="scope-metric-value ok">已连接</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="订单通道往返延迟">
-        <span class="scope-metric-label">通道延迟</span>
+        <span class="scope-metric-label freshness-realtime">通道延迟</span>
         <span class="scope-metric-value">12ms</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="今日已成交订单总数">
-        <span class="scope-metric-label">今日成交</span>
+        <span class="scope-metric-label freshness-delayed">今日成交</span>
         <span class="scope-metric-value"><span data-ticker="47" data-decimals="0" data-ticker-prefix="" data-ticker-suffix=" 笔">47</span> 笔</span>
       </div>
     </div>
@@ -2205,17 +2205,17 @@
     <!-- ═══ Session Strip: 两融数据行 ═══ -->
     <div class="scope-strip margin-strip" role="status" aria-label="两融数据" data-contract-slot="margin-strip">
       <div class="scope-metric" data-tooltip="融资买入余额">
-        <span class="scope-metric-label">融资余额</span>
+        <span class="scope-metric-label freshness-delayed">融资余额</span>
         <span class="scope-metric-value up">+¥1.2亿</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="融券卖出余额">
-        <span class="scope-metric-label">融券余额</span>
+        <span class="scope-metric-label freshness-delayed">融券余额</span>
         <span class="scope-metric-value down">¥860万</span>
       </div>
       <div class="scope-separator"></div>
       <div class="scope-metric" data-tooltip="维持担保比例，预警线 150%、平仓线 130%">
-        <span class="scope-metric-label">担保比例</span>
+        <span class="scope-metric-label freshness-realtime">担保比例</span>
         <span class="scope-metric-value ok">286%</span>
       </div>
     </div>
@@ -2389,7 +2389,7 @@
         <!-- Panel 2: 持仓汇总 (~38%) -->
         <div class="panel panel-positions" role="region" aria-label="持仓汇总" data-contract-slot="positions-summary" data-reveal="fade-up" data-reveal-delay="1">
           <div class="panel-header">
-            <span class="panel-title">持仓</span>
+            <span class="panel-title freshness-realtime">持仓</span>
             <span class="panel-count" data-tooltip="持有 9 只标的，含 2 只亏损，1 只 T+1 锁定">9</span>
             <div class="panel-actions">
               <button class="panel-action">查看全部 →</button>
