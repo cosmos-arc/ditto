@@ -20,6 +20,7 @@ from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import ParamConstraint, StrategySpec
+from ditto_strategy.errors import StrategySpecError
 from ditto_strategy.models import StrategyArtifactRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
@@ -474,24 +475,28 @@ class TestParamValidation:
     """spec 参数校验测试。"""
 
     def test_invalid_param_type_raises(self) -> None:
-        """param 类型不匹配时抛出 ValueError，消息包含"类型错误"。"""
+        """param 类型不匹配时抛出 StrategySpecError。"""
         spec = _make_spec_with_invalid_type()
         config = StrategyRunServiceConfig(spec=spec)
         service = _make_service(config=config)
         slice_ = _make_fake_slice()
 
-        with pytest.raises(ValueError, match="类型错误"):
+        with pytest.raises(StrategySpecError, match="类型错误") as exc_info:
             service.run(TRADE_DATE, slice_)
+        assert exc_info.value.details["reason"] == "wrong_type"
+        assert exc_info.value.details["param_name"] == "lookback"
 
     def test_param_out_of_range_raises(self) -> None:
-        """param 超出范围时抛出 ValueError。"""
+        """param 超出范围时抛出 StrategySpecError。"""
         spec = _make_spec_with_out_of_range()
         config = StrategyRunServiceConfig(spec=spec)
         service = _make_service(config=config)
         slice_ = _make_fake_slice()
 
-        with pytest.raises(ValueError, match="最大值"):
+        with pytest.raises(StrategySpecError, match="最大值") as exc_info:
             service.run(TRADE_DATE, slice_)
+        assert exc_info.value.details["reason"] == "above_max"
+        assert exc_info.value.details["param_name"] == "lookback"
 
     def test_valid_params_passes(self) -> None:
         """合法参数时正常执行 run()。"""
