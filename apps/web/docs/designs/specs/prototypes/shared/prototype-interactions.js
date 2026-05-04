@@ -113,6 +113,39 @@
         var activeTarget = group.querySelector('[data-tab-target].active, [data-tab-target][aria-selected="true"]') || buttons[0];
         activate(activeTarget, false);
 
+        /* Ensure tablist role */
+        if (!group.hasAttribute('role')) {
+          group.setAttribute('role', 'tablist');
+        }
+
+        /* Ensure buttons have role="tab" and aria-controls */
+        var tabButtons = group.querySelectorAll('[data-tab-target]');
+        tabButtons.forEach(function (btn) {
+          if (!btn.hasAttribute('role')) {
+            btn.setAttribute('role', 'tab');
+          }
+          var target = btn.getAttribute('data-tab-target');
+          if (target && !btn.hasAttribute('aria-controls')) {
+            btn.setAttribute('aria-controls', target);
+          }
+        });
+
+        /* Ensure panels have role="tabpanel" and aria-labelledby */
+        panels.forEach(function (panel) {
+          if (!panel.hasAttribute('role')) {
+            panel.setAttribute('role', 'tabpanel');
+          }
+          var targetPanel = panel.getAttribute('data-tab-panel');
+          if (targetPanel && !panel.hasAttribute('aria-labelledby')) {
+            var controllingBtn = Array.from(tabButtons).find(function (b) {
+              return b.getAttribute('data-tab-target') === targetPanel;
+            });
+            if (controllingBtn && controllingBtn.id) {
+              panel.setAttribute('aria-labelledby', controllingBtn.id);
+            }
+          }
+        });
+
         /* delegated click */
         group.addEventListener('click', function (e) {
           var btn = e.target.closest('[data-tab-target]');
@@ -123,9 +156,41 @@
         group.addEventListener('keydown', function (e) {
           var btn = e.target.closest('[data-tab-target]');
           if (!btn || !group.contains(btn)) return;
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          e.preventDefault();
-          activate(btn, true);
+
+          var allButtons = Array.from(group.querySelectorAll('[data-tab-target]'));
+          var idx = allButtons.indexOf(btn);
+
+          switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowDown':
+              e.preventDefault();
+              var next = allButtons[(idx + 1) % allButtons.length];
+              next.focus();
+              activate(next, true);
+              break;
+            case 'ArrowLeft':
+            case 'ArrowUp':
+              e.preventDefault();
+              var prev = allButtons[(idx - 1 + allButtons.length) % allButtons.length];
+              prev.focus();
+              activate(prev, true);
+              break;
+            case 'Home':
+              e.preventDefault();
+              allButtons[0].focus();
+              activate(allButtons[0], true);
+              break;
+            case 'End':
+              e.preventDefault();
+              allButtons[allButtons.length - 1].focus();
+              activate(allButtons[allButtons.length - 1], true);
+              break;
+            case 'Enter':
+            case ' ':
+              e.preventDefault();
+              activate(btn, true);
+              break;
+          }
         });
       });
     },
@@ -221,20 +286,35 @@
         group.addEventListener('click', function (e) {
           var chip = e.target.closest('.filter-chip');
           if (!chip || !group.contains(chip)) return;
+          FilterChips._toggle(chip, group, true);
+        });
 
-          chips.forEach(function (item) {
-            item.classList.remove('active');
-            item.setAttribute('aria-pressed', 'false');
-          });
-          chip.classList.add('active');
-          chip.setAttribute('aria-pressed', 'true');
-
-          group.dispatchEvent(new CustomEvent('ditto:filter-chip-change', {
-            detail: { value: chip.textContent.trim() },
-            bubbles: true,
-          }));
+        group.addEventListener('keydown', function (e) {
+          var chip = e.target.closest('.filter-chip');
+          if (!chip || !group.contains(chip)) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            FilterChips._toggle(chip, group, true);
+          }
         });
       });
+    },
+
+    _toggle: function (chip, group, shouldDispatch) {
+      var chips = Array.from(group.querySelectorAll('.filter-chip'));
+      chips.forEach(function (item) {
+        item.classList.remove('active');
+        item.setAttribute('aria-pressed', 'false');
+      });
+      chip.classList.add('active');
+      chip.setAttribute('aria-pressed', 'true');
+
+      if (shouldDispatch) {
+        group.dispatchEvent(new CustomEvent('ditto:filter-chip-change', {
+          detail: { value: chip.textContent.trim() },
+          bubbles: true,
+        }));
+      }
     },
   };
 
@@ -540,6 +620,17 @@
         detailRemove.setAttribute('role', 'button');
         detailRemove.setAttribute('tabindex', '0');
         detailRemove.setAttribute('aria-label', '移除' + name);
+        detailRemove.addEventListener('click', function () {
+          var item = detailRemove.closest('.compare-item');
+          if (item) item.remove();
+        });
+        detailRemove.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            var item = detailRemove.closest('.compare-item');
+            if (item) item.remove();
+          }
+        });
 
         detailTextGroup.appendChild(detailName);
         detailTextGroup.appendChild(detailCode);
@@ -1163,6 +1254,7 @@
   var TooltipSystem = {
     el: null,
     timer: null,
+    currentTrigger: null,
 
     init: function () {
       if (!document.querySelector('[data-tooltip]')) return;
@@ -1221,6 +1313,13 @@
       var pos = anchor.getAttribute('data-tooltip-pos') || 'bottom';
       el.textContent = text;
       el.setAttribute('aria-hidden', 'false');
+
+      /* Link trigger to tooltip via aria-describedby */
+      TooltipSystem._clearDescribedBy();
+      var tooltipId = 'ditto-tooltip-' + Date.now();
+      el.id = tooltipId;
+      anchor.setAttribute('aria-describedby', tooltipId);
+      TooltipSystem.currentTrigger = anchor;
       el.style.visibility = 'hidden';
       el.style.display = 'block';
 
@@ -1271,6 +1370,7 @@
 
     hide: function () {
       if (!TooltipSystem.el) return;
+      TooltipSystem._clearDescribedBy();
       TooltipSystem.el.classList.remove('ditto-tooltip--visible');
       TooltipSystem.el.setAttribute('aria-hidden', 'true');
       /* Delay display:none to allow fade-out */
@@ -1279,6 +1379,16 @@
           TooltipSystem.el.style.display = 'none';
         }
       }, 150);
+    },
+
+    _clearDescribedBy: function () {
+      if (TooltipSystem.currentTrigger) {
+        var describedby = TooltipSystem.currentTrigger.getAttribute('aria-describedby');
+        if (describedby && describedby.startsWith('ditto-tooltip-')) {
+          TooltipSystem.currentTrigger.removeAttribute('aria-describedby');
+        }
+        TooltipSystem.currentTrigger = null;
+      }
     },
   };
 
@@ -1371,6 +1481,7 @@
    *     Prototype-only selected object command suggestions
    * ══════════════════════════════════════════════ */
   var CommandPalette = {
+    triggerEl: null,
     labels: {
       'add-to-compare': '加入对比',
       approve: '批准',
@@ -1460,6 +1571,22 @@
       palette.appendChild(list);
       document.body.appendChild(palette);
 
+      /* Focus trap: Tab/Shift+Tab wraps within dialog */
+      palette.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab') return;
+        var items = palette.querySelectorAll('[data-command-item], input, [data-command-suggestion]');
+        if (!items.length) return;
+        var first = items[0];
+        var last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      });
+
       return palette;
     },
 
@@ -1513,6 +1640,7 @@
       palette.setAttribute('aria-hidden', 'false');
       document.body.setAttribute('data-command-palette-open', 'true');
       if (trigger) trigger.setAttribute('aria-expanded', 'true');
+      CommandPalette.triggerEl = document.activeElement;
 
       var firstItem = palette.querySelector('[data-command-suggestion]');
       if (firstItem && firstItem.focus) {
@@ -1527,6 +1655,10 @@
       document.querySelectorAll('[data-shell-utility="command"], .header-command-trigger').forEach(function (trigger) {
         trigger.setAttribute('aria-expanded', 'false');
       });
+      if (CommandPalette.triggerEl) {
+        CommandPalette.triggerEl.focus();
+        CommandPalette.triggerEl = null;
+      }
     },
   };
 
