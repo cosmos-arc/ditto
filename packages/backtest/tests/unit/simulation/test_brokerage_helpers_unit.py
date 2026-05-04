@@ -8,13 +8,13 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from ditto_execution.brokerage import BacktestBrokerage, _is_order_executable
-from ditto_execution.fills import Filled, NoFill
-from ditto_execution.reality.brokerage import BrokerageModel
-from ditto_execution.reality.settlement import (
+from ditto_backtest.brokerage import BacktestBrokerage, _is_order_executable
+from ditto_backtest.simulation.brokerage import BrokerageModel
+from ditto_backtest.simulation.settlement import (
     SettlementModel,
     SimpleSettlementModel,
 )
+from ditto_execution.fills import Filled, NoFill
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (

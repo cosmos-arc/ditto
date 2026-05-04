@@ -24,16 +24,17 @@ from pathlib import Path
 import polars as pl
 import pytest
 from ditto_backtest.audit import ExecutionAuditCollector
+from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
 )
+from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import BacktestReport, build_report
-from ditto_execution.brokerage import BacktestBrokerage
 from ditto_execution.planner import SimpleExecutionPlanner
-from ditto_execution.reality import BrokerageModel, SimpleFeeModel
+from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook

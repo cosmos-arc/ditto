@@ -15,9 +15,9 @@ from ditto_application.processes.execution.backtest_process import (
     BacktestServiceOptions,
 )
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
+from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import DataFeed
 from ditto_execution.audit import ExecutionAuditService
-from ditto_execution.brokerage import BacktestBrokerage
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
@@ -168,7 +168,7 @@ class TestStrategyServiceFactory:
 
     def test_build_backtest_options_preserves_slippage_model(self) -> None:
         """_build_backtest_options 保留调用方传入的 slippage_model (R6)."""
-        from ditto_execution.reality.slippage import FixedBpsSlippage
+        from ditto_backtest.simulation.slippage import FixedBpsSlippage
 
         factory = StrategyServiceFactory(
             audit_service=MagicMock(spec=ExecutionAuditService),
@@ -237,7 +237,7 @@ class TestBuildPublishedRuntimeCostModels:
 
     def test_build_published_runtime_accepts_slippage_model(self) -> None:
         """build_published_runtime 接受 slippage_model 参数。"""
-        from ditto_execution.reality.slippage import FixedBpsSlippage
+        from ditto_backtest.simulation.slippage import FixedBpsSlippage
 
         runtime = _make_runtime()
         runtime_builder = MagicMock(spec=BacktestRuntimeBuilder)

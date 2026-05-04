@@ -68,6 +68,18 @@ PRODUCTION_PACKAGES = (
     "ditto_application",
 )
 
+EXECUTION_SIMULATION_OWNERSHIP_TERMS = (
+    "BacktestBrokerage",
+    "BrokerageModel",
+    "AShareFillModel",
+    "SimpleFillModel",
+    "ClosingAuctionFillModel",
+    "AShareSettlementModel",
+    "SimpleSettlementModel",
+    "FixedBpsSlippage",
+    "VolumeShareSlippage",
+)
+
 # DI wiring / service re-export paths that legitimately cross analysis boundary.
 # Keep in sync with .importlinter data-boundary + analysis-no-production-dependency.
 PRODUCTION_ANALYSIS_WIRING_ALLOWLIST = (
@@ -249,6 +261,17 @@ def check_kernel_no_platform(source: str, rel_path: str) -> list[str]:
     return []
 
 
+def check_execution_no_simulation_ownership(source: str, rel_path: str) -> list[str]:
+    """Check execution source does not own backtest simulation names."""
+    if not _is_package_source(rel_path, "ditto_execution"):
+        return []
+    return [
+        f"{rel_path}: execution owns backtest simulation term {term!r}"
+        for term in EXECUTION_SIMULATION_OWNERSHIP_TERMS
+        if term in source
+    ]
+
+
 def _check_per_file(verbose: bool) -> list[str]:
     """Run per-file checks (f-string logging, oversized files, boundary checks)."""
     errors: list[str] = []
@@ -280,6 +303,7 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_platform_business_tables(source, rel_path))
         errors.extend(check_production_no_analysis(source, rel_path))
         errors.extend(check_kernel_no_platform(source, rel_path))
+        errors.extend(check_execution_no_simulation_ownership(source, rel_path))
 
     if verbose:
         if fstring_count == 0:

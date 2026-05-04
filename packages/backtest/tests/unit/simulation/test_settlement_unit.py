@@ -1,7 +1,7 @@
 """SettlementModel unit tests — SimpleSettlementModel + AShareSettlementModel."""
 
 import pytest
-from ditto_execution.reality.settlement import (
+from ditto_backtest.simulation.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )

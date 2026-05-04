@@ -3,13 +3,14 @@
 from datetime import datetime
 
 import pytest
-from ditto_execution.brokerage import BacktestBrokerage, ProcessInput
-from ditto_execution.reality import BrokerageModel
-from ditto_execution.reality.settlement import (
+from ditto_backtest.brokerage import BacktestBrokerage
+from ditto_backtest.simulation import BrokerageModel
+from ditto_backtest.simulation.settlement import (
     AShareSettlementModel,
     SimpleSettlementModel,
 )
-from ditto_execution.reality.slippage import FixedBpsSlippage
+from ditto_backtest.simulation.slippage import FixedBpsSlippage
+from ditto_execution.brokerage import ProcessInput
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,

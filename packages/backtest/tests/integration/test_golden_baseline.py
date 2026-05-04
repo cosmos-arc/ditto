@@ -18,16 +18,16 @@ from pathlib import Path
 
 import pytest
 from ditto_backtest.audit import ExecutionAuditCollector
+from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.engine import (
     EngineConfig,
     EngineLoop,
     EngineMode,
     EngineOptions,
 )
+from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import build_report
-from ditto_execution.brokerage import BacktestBrokerage
 from ditto_execution.planner import SimpleExecutionPlanner
-from ditto_execution.reality import BrokerageModel
 from ditto_kernel.clock import SimulatedClock
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook

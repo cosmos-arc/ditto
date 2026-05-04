@@ -16,6 +16,7 @@ from typing import Any
 import orjson
 import polars as pl
 import pytest
+from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.engine import (
     EngineConfig,
     EngineLoop,
@@ -29,18 +30,16 @@ from ditto_backtest.manifest import (
     RunMode,
     serialize_manifest,
 )
+from ditto_backtest.simulation import (
+    BrokerageModel,
+)
 from ditto_backtest.statistics import (
     ExecutionAuditCollector,
     PreTradeDecisionRecord,
     build_report,
 )
-from ditto_execution.brokerage import BacktestBrokerage
 from ditto_execution.planner import SimpleExecutionPlanner
-from ditto_execution.reality import (
-    AShareFeeModel,
-    BrokerageModel,
-    SimpleFeeModel,
-)
+from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.trading import (
     FeeSchedule,

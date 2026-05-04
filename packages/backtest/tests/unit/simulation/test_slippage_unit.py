@@ -3,7 +3,7 @@
 from datetime import datetime
 
 import pytest
-from ditto_execution.reality.slippage import (
+from ditto_backtest.simulation.slippage import (
     FixedBpsSlippage,
     VolumeShareSlippage,
 )

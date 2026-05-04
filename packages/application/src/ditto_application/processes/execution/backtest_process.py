@@ -24,6 +24,7 @@ from ditto_backtest.engine import (
     EngineResult,
 )
 from ditto_backtest.manifest import RunManifest
+from ditto_backtest.simulation import SlippageModel
 from ditto_backtest.statistics import (
     BacktestReport,
     build_report,
@@ -36,7 +37,6 @@ from ditto_execution.audit.models import (
 )
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
-from ditto_execution.reality import SlippageModel
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId

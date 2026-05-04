@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from ditto_execution.fills import Filled, FillOutcome, NoFill
 from ditto_kernel.order import OrderSide as _OrderSide
 from ditto_kernel.order import OrderType as _OrderType
 from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
@@ -17,8 +18,6 @@ from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 from ditto_kernel.trading import TradingRuleSet as _TradingRuleSet
 from ditto_portfolio.accounting.fills import FillEvent as _FillEvent
 from ditto_portfolio.accounting.order_book import Order as _Order
-
-from ditto_execution.fills import Filled, FillOutcome, NoFill
 
 __all__ = [
     "AShareFillModel",

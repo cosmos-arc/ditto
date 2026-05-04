@@ -417,7 +417,7 @@ class TestRunBacktestFlowCostConfig:
         mock_facade: Mock,
     ) -> None:
         """无 cost_config 时 options.slippage_model 为 FixedBpsSlippage 默认实例."""
-        from ditto_execution.reality.slippage import FixedBpsSlippage
+        from ditto_backtest.simulation.slippage import FixedBpsSlippage
 
         RUNNER(
             run_id="run-012",

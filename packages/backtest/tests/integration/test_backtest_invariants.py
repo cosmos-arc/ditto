@@ -11,13 +11,14 @@ from pathlib import Path
 from types import MappingProxyType
 
 import pytest
-from ditto_backtest.statistics import ExecutionAuditCollector
-from ditto_execution.brokerage import BacktestBrokerage, ProcessInput
-from ditto_execution.planner import SimpleExecutionPlanner
-from ditto_execution.reality import (
+from ditto_backtest.brokerage import BacktestBrokerage
+from ditto_backtest.simulation import (
     BrokerageModel,
-    SimpleFeeModel,
 )
+from ditto_backtest.statistics import ExecutionAuditCollector
+from ditto_execution.brokerage import ProcessInput
+from ditto_execution.planner import SimpleExecutionPlanner
+from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -849,7 +850,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_up_blocks_buy(self) -> None:
         """涨停买入不成交 — close >= limit_up。"""
-        from ditto_execution.reality import AShareFillModel
+        from ditto_backtest.simulation import AShareFillModel
 
         model = BrokerageModel(fill_model=AShareFillModel())
         account = Account(
@@ -885,7 +886,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_down_blocks_sell(self) -> None:
         """跌停卖出不成交 — close <= limit_down。"""
-        from ditto_execution.reality import AShareFillModel
+        from ditto_backtest.simulation import AShareFillModel
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(
@@ -933,7 +934,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_up_allows_sell(self) -> None:
         """涨停可以卖出 — close >= limit_up + SELL → 正常成交。"""
-        from ditto_execution.reality import AShareFillModel
+        from ditto_backtest.simulation import AShareFillModel
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(
@@ -981,7 +982,7 @@ class TestPriceLimitInvariants:
 
     def test_limit_down_allows_buy(self) -> None:
         """跌停可以买入 — close <= limit_down + BUY → 正常成交。"""
-        from ditto_execution.reality import AShareFillModel
+        from ditto_backtest.simulation import AShareFillModel
 
         model = BrokerageModel(fill_model=AShareFillModel())
         account = Account(
@@ -1017,7 +1018,7 @@ class TestPriceLimitInvariants:
 
     def test_no_limit_allows_both_directions(self) -> None:
         """无涨跌停限制 — 买卖均可成交。"""
-        from ditto_execution.reality import AShareFillModel
+        from ditto_backtest.simulation import AShareFillModel
         from ditto_portfolio.accounting.position import Position
 
         pos = Position(

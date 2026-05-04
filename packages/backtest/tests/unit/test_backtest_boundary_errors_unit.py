@@ -1,4 +1,4 @@
-"""Execution public-boundary error tests."""
+"""Backtest simulation boundary error tests."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from ditto_execution.errors import FillProcessingError
 
 def test_brokerage_uses_fill_processing_error_for_fill_contract_violation() -> None:
     """Backtest brokerage fill-contract violations use the fill domain error."""
-    text = Path("packages/execution/src/ditto_execution/brokerage.py").read_text(
+    text = Path("packages/backtest/src/ditto_backtest/brokerage.py").read_text(
         encoding="utf-8"
     )
 

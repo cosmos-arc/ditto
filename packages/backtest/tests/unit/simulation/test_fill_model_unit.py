@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
-from ditto_execution.fills import Filled, FillOutcome, NoFill
-from ditto_execution.reality.fill import (
+from ditto_backtest.simulation.fill import (
     AShareFillModel,
     ClosingAuctionFillModel,
     SimpleFillModel,
 )
+from ditto_execution.fills import Filled, FillOutcome, NoFill
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot, TradingRuleSet
 from ditto_portfolio.accounting.order_book import Order

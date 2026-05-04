@@ -10,10 +10,10 @@ from ditto_application.builders import (
     PublishedStrategyRuntime,
 )
 from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import ProviderBackedDataFeed
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
-from ditto_execution.brokerage import BacktestBrokerage
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_risk.pre_trade import CompositePreTradeCheck

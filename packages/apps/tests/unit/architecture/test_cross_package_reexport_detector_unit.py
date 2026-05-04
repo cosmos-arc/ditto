@@ -184,7 +184,10 @@ def test_removed_runtime_reexport_attrs_are_absent() -> None:
 
     leaked: dict[str, list[str]] = {}
     for module_name, names in old_reexports.items():
-        module = import_module(module_name)
+        try:
+            module = import_module(module_name)
+        except ModuleNotFoundError:
+            continue
         module_leaks = [name for name in names if hasattr(module, name)]
         if module_leaks:
             leaked[module_name] = module_leaks

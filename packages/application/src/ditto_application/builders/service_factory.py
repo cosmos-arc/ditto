@@ -5,17 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
+from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import (
     DataFeed,
     ProviderBackedDataFeed,
 )
+from ditto_backtest.simulation import BrokerageModel
+from ditto_backtest.simulation.slippage import FixedBpsSlippage, SlippageModel
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.audit import ExecutionAuditService
-from ditto_execution.brokerage import BacktestBrokerage, Brokerage
+from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
-from ditto_execution.reality import AShareFeeModel, BrokerageModel
-from ditto_execution.reality.slippage import FixedBpsSlippage, SlippageModel
+from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import FeeModel
 from ditto_portfolio.accounting.account import Account
