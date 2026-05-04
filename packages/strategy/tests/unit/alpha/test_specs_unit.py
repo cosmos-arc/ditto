@@ -3,6 +3,7 @@
 from dataclasses import FrozenInstanceError
 
 import pytest
+from ditto_strategy.errors import StrategySpecError
 
 
 class TestParamConstraint:
@@ -204,7 +205,7 @@ class TestStrategySpecValidation:
     def test_required_field_non_empty(self, field_name: str, value: str) -> None:
         from ditto_strategy.alpha.specs import StrategySpec
 
-        with pytest.raises(ValueError, match="must be non-empty"):
+        with pytest.raises(StrategySpecError, match="must be non-empty"):
             StrategySpec(
                 strategy_id=value if field_name == "strategy_id" else "id",
                 name=value if field_name == "name" else "Name",
@@ -237,7 +238,7 @@ class TestStrategySpecValidation:
     def test_template_invalid_raises(self) -> None:
         from ditto_strategy.alpha.specs import StrategySpec
 
-        with pytest.raises(ValueError, match="template"):
+        with pytest.raises(StrategySpecError, match="template"):
             StrategySpec(
                 strategy_id="id",
                 name="N",
@@ -299,7 +300,7 @@ class TestStrategySpecValidation:
     def test_benchmark_unknown_index_raises(self, code: str) -> None:
         from ditto_strategy.alpha.specs import StrategySpec
 
-        with pytest.raises(ValueError, match="benchmark"):
+        with pytest.raises(StrategySpecError, match="benchmark"):
             StrategySpec(
                 strategy_id="id",
                 name="N",
@@ -313,7 +314,7 @@ class TestStrategySpecValidation:
         from ditto_strategy.alpha.specs import StrategySpec
 
         for bad in ("INVALID", "000300", "000300.SH.SZ", "SH000300"):
-            with pytest.raises(ValueError, match="benchmark"):
+            with pytest.raises(StrategySpecError, match="benchmark"):
                 StrategySpec(
                     strategy_id="id",
                     name="N",
@@ -342,7 +343,7 @@ class TestStrategySpecValidation:
     def test_execution_frequency_invalid_raises(self) -> None:
         from ditto_strategy.alpha.specs import ExecutionSpec, StrategySpec
 
-        with pytest.raises(ValueError, match="frequency"):
+        with pytest.raises(StrategySpecError, match="frequency"):
             StrategySpec(
                 strategy_id="id",
                 name="N",
@@ -361,7 +362,7 @@ class TestStrategySpecValidation:
             StrategySpec,
         )
 
-        with pytest.raises(ValueError, match="commission_rate"):
+        with pytest.raises(StrategySpecError, match="commission_rate"):
             StrategySpec(
                 strategy_id="id",
                 name="N",
@@ -380,7 +381,7 @@ class TestStrategySpecValidation:
             StrategySpec,
         )
 
-        with pytest.raises(ValueError, match="commission_rate"):
+        with pytest.raises(StrategySpecError, match="commission_rate"):
             StrategySpec(
                 strategy_id="id",
                 name="N",
@@ -417,7 +418,7 @@ class TestStrategySpecValidation:
             StrategySpec,
         )
 
-        with pytest.raises(ValueError, match="slippage_bps"):
+        with pytest.raises(StrategySpecError, match="slippage_bps"):
             StrategySpec(
                 strategy_id="id",
                 name="N",
@@ -451,7 +452,7 @@ class TestStrategySpecValidation:
     def test_signal_weights_mismatch_raises(self) -> None:
         from ditto_strategy.alpha.specs import StrategySpec
 
-        with pytest.raises(ValueError, match="signal_weights"):
+        with pytest.raises(StrategySpecError, match="signal_weights"):
             StrategySpec(
                 strategy_id="id",
                 name="N",

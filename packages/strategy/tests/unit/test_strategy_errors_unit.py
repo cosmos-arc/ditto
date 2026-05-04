@@ -17,6 +17,11 @@ def test_strategy_error_hierarchy() -> None:
     assert issubclass(TemplateNotFoundError, StrategyError)
 
 
+def test_strategy_spec_error_is_not_value_error() -> None:
+    """StrategySpecError is a domain error, not a builtin value error."""
+    assert not issubclass(StrategySpecError, ValueError)
+
+
 def test_strategy_error_is_ditto_error() -> None:
     """StrategyError inherits from DittoError (kernel root)."""
     from ditto_kernel.exceptions import DittoError

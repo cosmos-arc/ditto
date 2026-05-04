@@ -1,6 +1,6 @@
 """Tests for strategy/validation.py — validate_spec_params.
 
-校验函数对非法参数抛出 ValueError，对合法参数静默通过。
+校验函数对非法参数抛出 StrategySpecError，对合法参数静默通过。
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from ditto_strategy.alpha.specs import (
     StrategySpec,
 )
 from ditto_strategy.alpha.validation import validate_spec_params
+from ditto_strategy.errors import StrategySpecError
 
 
 def _make_spec(
@@ -93,7 +94,7 @@ class TestValidateSpecParamsMissingRequired:
         """缺少必填参数。"""
         constraints = (ParamConstraint(name="lookback", dtype="int"),)
         spec = _make_spec(params={}, constraints=constraints)
-        with pytest.raises(ValueError, match=r"缺少必填参数.*lookback"):
+        with pytest.raises(StrategySpecError, match=r"缺少必填参数.*lookback"):
             validate_spec_params(spec)
 
     def test_missing_multiple_params_reports_first(self) -> None:
@@ -103,7 +104,7 @@ class TestValidateSpecParamsMissingRequired:
             ParamConstraint(name="b", dtype="str"),
         )
         spec = _make_spec(params={}, constraints=constraints)
-        with pytest.raises(ValueError, match="缺少必填参数"):
+        with pytest.raises(StrategySpecError, match="缺少必填参数"):
             validate_spec_params(spec)
 
 
@@ -114,28 +115,28 @@ class TestValidateSpecParamsWrongType:
         """int 参数传入字符串。"""
         constraints = (ParamConstraint(name="lookback", dtype="int"),)
         spec = _make_spec(params={"lookback": "abc"}, constraints=constraints)
-        with pytest.raises(ValueError, match=r"lookback.*类型错误"):
+        with pytest.raises(StrategySpecError, match=r"lookback.*类型错误"):
             validate_spec_params(spec)
 
     def test_wrong_type_float(self) -> None:
         """float 参数传入字符串。"""
         constraints = (ParamConstraint(name="threshold", dtype="float"),)
         spec = _make_spec(params={"threshold": "x"}, constraints=constraints)
-        with pytest.raises(ValueError, match=r"threshold.*类型错误"):
+        with pytest.raises(StrategySpecError, match=r"threshold.*类型错误"):
             validate_spec_params(spec)
 
     def test_wrong_type_str(self) -> None:
         """str 参数传入整数。"""
         constraints = (ParamConstraint(name="method", dtype="str"),)
         spec = _make_spec(params={"method": 123}, constraints=constraints)
-        with pytest.raises(ValueError, match=r"method.*类型错误"):
+        with pytest.raises(StrategySpecError, match=r"method.*类型错误"):
             validate_spec_params(spec)
 
     def test_bool_not_accepted_as_int(self) -> None:
         """bool 不被接受为 int（Python 中 bool 是 int 子类）。"""
         constraints = (ParamConstraint(name="flag", dtype="int"),)
         spec = _make_spec(params={"flag": True}, constraints=constraints)
-        with pytest.raises(ValueError, match="类型错误"):
+        with pytest.raises(StrategySpecError, match="类型错误"):
             validate_spec_params(spec)
 
 
@@ -146,14 +147,14 @@ class TestValidateSpecParamsOutOfRange:
         """数值低于最小值。"""
         constraints = (ParamConstraint(name="lookback", dtype="int", min_value=10),)
         spec = _make_spec(params={"lookback": 5}, constraints=constraints)
-        with pytest.raises(ValueError, match="小于最小值"):
+        with pytest.raises(StrategySpecError, match="小于最小值"):
             validate_spec_params(spec)
 
     def test_numeric_above_max(self) -> None:
         """数值高于最大值。"""
         constraints = (ParamConstraint(name="lookback", dtype="int", max_value=100),)
         spec = _make_spec(params={"lookback": 200}, constraints=constraints)
-        with pytest.raises(ValueError, match="大于最大值"):
+        with pytest.raises(StrategySpecError, match="大于最大值"):
             validate_spec_params(spec)
 
 
@@ -166,7 +167,7 @@ class TestValidateSpecParamsInvalidEnum:
             ParamConstraint(name="method", dtype="str", allowed_values=("a", "b")),
         )
         spec = _make_spec(params={"method": "c"}, constraints=constraints)
-        with pytest.raises(ValueError, match="值无效"):
+        with pytest.raises(StrategySpecError, match="值无效"):
             validate_spec_params(spec)
 
 
@@ -178,7 +179,7 @@ class TestValidateSpecParamsEarlyExit:
         constraints = (ParamConstraint(name="lookback", dtype="int", min_value=10),)
         spec = _make_spec(params={"lookback": "bad"}, constraints=constraints)
         # 应只报类型错误，不应包含范围错误
-        with pytest.raises(ValueError, match="类型错误") as exc_info:
+        with pytest.raises(StrategySpecError, match="类型错误") as exc_info:
             validate_spec_params(spec)
         msg = str(exc_info.value)
         assert "小于最小值" not in msg

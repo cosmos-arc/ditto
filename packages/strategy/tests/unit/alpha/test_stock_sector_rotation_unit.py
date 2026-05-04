@@ -28,6 +28,7 @@ from ditto_strategy.alpha.templates.stock_sector_rotation import (
     get_param_constraints,
     validate_config,
 )
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -167,49 +168,49 @@ class TestValidateConfig:
     def test_invalid_top_sectors_raises(self) -> None:
         """top_sectors < 1 时抛异常。"""
         config = StockSectorRotationConfig(top_sectors=0)
-        with pytest.raises(ValueError, match="top_sectors"):
+        with pytest.raises(StrategySpecError, match="top_sectors"):
             validate_config(config)
 
     def test_invalid_stocks_per_sector_raises(self) -> None:
         """stocks_per_sector < 1 时抛异常。"""
         config = StockSectorRotationConfig(stocks_per_sector=0)
-        with pytest.raises(ValueError, match="stocks_per_sector"):
+        with pytest.raises(StrategySpecError, match="stocks_per_sector"):
             validate_config(config)
 
     def test_invalid_max_weight_zero_raises(self) -> None:
         """max_weight <= 0 时抛异常。"""
         config = StockSectorRotationConfig(max_weight=0.0)
-        with pytest.raises(ValueError, match="max_weight"):
+        with pytest.raises(StrategySpecError, match="max_weight"):
             validate_config(config)
 
     def test_invalid_max_weight_over_one_raises(self) -> None:
         """max_weight > 1 时抛异常。"""
         config = StockSectorRotationConfig(max_weight=1.5)
-        with pytest.raises(ValueError, match="max_weight"):
+        with pytest.raises(StrategySpecError, match="max_weight"):
             validate_config(config)
 
     def test_invalid_cash_target_raises(self) -> None:
         """cash_target >= 1 时抛异常。"""
         config = StockSectorRotationConfig(cash_target=1.0)
-        with pytest.raises(ValueError, match="cash_target"):
+        with pytest.raises(StrategySpecError, match="cash_target"):
             validate_config(config)
 
     def test_invalid_sector_weight_method_raises(self) -> None:
         """非法 sector_weight_method 抛异常。"""
         config = StockSectorRotationConfig(sector_weight_method="inverse_vol")
-        with pytest.raises(ValueError, match="sector_weight_method"):
+        with pytest.raises(StrategySpecError, match="sector_weight_method"):
             validate_config(config)
 
     def test_invalid_stock_weight_method_raises(self) -> None:
         """非法 stock_weight_method 抛异常。"""
         config = StockSectorRotationConfig(stock_weight_method="score_weight")
-        with pytest.raises(ValueError, match="stock_weight_method"):
+        with pytest.raises(StrategySpecError, match="stock_weight_method"):
             validate_config(config)
 
     def test_invalid_rebalance_freq_raises(self) -> None:
         """非法 rebalance_freq 抛异常。"""
         config = StockSectorRotationConfig(rebalance_freq="quarterly")
-        with pytest.raises(ValueError, match="rebalance_freq"):
+        with pytest.raises(StrategySpecError, match="rebalance_freq"):
             validate_config(config)
 
 

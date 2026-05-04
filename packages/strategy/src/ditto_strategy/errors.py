@@ -21,7 +21,7 @@ class StrategyError(DittoError):
     """
 
 
-class StrategySpecError(StrategyError, ValueError):
+class StrategySpecError(StrategyError):
     """策略规格验证失败（公共 API 契约违背）."""
 
     @property

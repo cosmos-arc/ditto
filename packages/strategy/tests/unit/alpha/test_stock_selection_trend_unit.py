@@ -27,6 +27,7 @@ from ditto_strategy.alpha.templates.stock_selection_trend import (
     get_param_constraints,
     validate_config,
 )
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -113,37 +114,37 @@ class TestValidateConfig:
             signal_factors=("momentum", "volatility"),
             signal_weights=(1.0,),
         )
-        with pytest.raises(ValueError, match="same length"):
+        with pytest.raises(StrategySpecError, match="same length"):
             validate_config(config)
 
     def test_invalid_top_k_raises(self) -> None:
         """top_k < 1 时抛异常。"""
         config = StockSelectionTrendConfig(top_k=0)
-        with pytest.raises(ValueError, match="top_k"):
+        with pytest.raises(StrategySpecError, match="top_k"):
             validate_config(config)
 
     def test_invalid_max_weight_zero_raises(self) -> None:
         """max_weight <= 0 时抛异常。"""
         config = StockSelectionTrendConfig(max_weight=0.0)
-        with pytest.raises(ValueError, match="max_weight"):
+        with pytest.raises(StrategySpecError, match="max_weight"):
             validate_config(config)
 
     def test_invalid_max_weight_over_one_raises(self) -> None:
         """max_weight > 1 时抛异常。"""
         config = StockSelectionTrendConfig(max_weight=1.5)
-        with pytest.raises(ValueError, match="max_weight"):
+        with pytest.raises(StrategySpecError, match="max_weight"):
             validate_config(config)
 
     def test_invalid_allocation_method_raises(self) -> None:
         """非法 allocation_method 抛异常。"""
         config = StockSelectionTrendConfig(allocation_method="invalid")
-        with pytest.raises(ValueError, match="allocation_method"):
+        with pytest.raises(StrategySpecError, match="allocation_method"):
             validate_config(config)
 
     def test_invalid_rebalance_freq_raises(self) -> None:
         """非法 rebalance_freq 抛异常。"""
         config = StockSelectionTrendConfig(rebalance_freq="quarterly")
-        with pytest.raises(ValueError, match="rebalance_freq"):
+        with pytest.raises(StrategySpecError, match="rebalance_freq"):
             validate_config(config)
 
 

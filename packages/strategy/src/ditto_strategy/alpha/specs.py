@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import NoReturn
 
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
+
+from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
     "ConstraintSpec",
@@ -23,6 +26,22 @@ __all__ = [
     "SelectorSpec",
     "StrategySpec",
 ]
+
+
+def _raise_spec_error(
+    message: str,
+    *,
+    field_name: str,
+    reason: str,
+    **details: object,
+) -> NoReturn:
+    """Raise StrategySpecError with a consistent details payload."""
+    payload: dict[str, object] = {
+        "field_name": field_name,
+        "reason": reason,
+    }
+    payload.update(details)
+    raise StrategySpecError(message, details=payload)
 
 
 @dataclass(frozen=True)
@@ -196,20 +215,33 @@ class StrategySpec:
         for field_name in required:
             value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"StrategySpec.{field_name} must be non-empty")
+                _raise_spec_error(
+                    f"StrategySpec.{field_name} must be non-empty",
+                    field_name=field_name,
+                    reason="empty_required_field",
+                    actual_value=value,
+                )
 
         # template 枚举
         if self.template not in self._VALID_TEMPLATES:
             valid = sorted(self._VALID_TEMPLATES)
-            raise ValueError(
-                f"StrategySpec.template must be one of {valid}, got '{self.template}'"
+            _raise_spec_error(
+                f"StrategySpec.template must be one of {valid}, got '{self.template}'",
+                field_name="template",
+                reason="invalid_template",
+                allowed_values=valid,
+                actual_value=self.template,
             )
 
         # benchmark 格式
         if self.benchmark is not None and not self._BENCHMARK_RE.match(self.benchmark):
-            raise ValueError(
+            _raise_spec_error(
                 "StrategySpec.benchmark must match 'NNNNNN.SH|SZ', "
-                + f" got '{self.benchmark}'"
+                + f" got '{self.benchmark}'",
+                field_name="benchmark",
+                reason="invalid_format",
+                pattern=self._BENCHMARK_RE.pattern,
+                actual_value=self.benchmark,
             )
 
         # benchmark 白名单
@@ -219,26 +251,45 @@ class StrategySpec:
                 f"StrategySpec.benchmark '{self.benchmark}' "
                 f"is not a known index; known: {known}"
             )
-            raise ValueError(msg)
+            _raise_spec_error(
+                msg,
+                field_name="benchmark",
+                reason="unknown_benchmark",
+                known_values=known,
+                actual_value=self.benchmark,
+            )
 
         # execution.frequency 枚举
         if self.execution.frequency not in self._VALID_FREQUENCIES:
             valid_freq = sorted(self._VALID_FREQUENCIES)
-            raise ValueError(
+            _raise_spec_error(
                 "StrategySpec.execution.frequency must be one of "
-                + f"{valid_freq}, got '{self.execution.frequency}'"
+                + f"{valid_freq}, got '{self.execution.frequency}'",
+                field_name="execution.frequency",
+                reason="invalid_frequency",
+                allowed_values=valid_freq,
+                actual_value=self.execution.frequency,
             )
 
         # cost_model 边界
         cm = self.execution.cost_model
         if not (0.0 <= cm.commission_rate <= 1.0):
-            raise ValueError(
+            _raise_spec_error(
                 "StrategySpec.commission_rate must be in [0, 1], "
-                + f"got {cm.commission_rate}"
+                + f"got {cm.commission_rate}",
+                field_name="execution.cost_model.commission_rate",
+                reason="out_of_range",
+                min_value=0.0,
+                max_value=1.0,
+                actual_value=cm.commission_rate,
             )
         if cm.slippage_bps < 0:
-            raise ValueError(
-                "StrategySpec.slippage_bps must be >= 0, " + f"got {cm.slippage_bps}"
+            _raise_spec_error(
+                "StrategySpec.slippage_bps must be >= 0, " + f"got {cm.slippage_bps}",
+                field_name="execution.cost_model.slippage_bps",
+                reason="below_min",
+                min_value=0.0,
+                actual_value=cm.slippage_bps,
             )
 
         # signal_expressions / signal_weights 长度一致性
@@ -247,8 +298,12 @@ class StrategySpec:
             and self.signal_weights
             and len(self.signal_expressions) != len(self.signal_weights)
         ):
-            raise ValueError(
+            _raise_spec_error(
                 f"StrategySpec.signal_weights length ({len(self.signal_weights)}) "
                 + "must match signal_expressions length "
-                + f"({len(self.signal_expressions)})"
+                + f"({len(self.signal_expressions)})",
+                field_name="signal_weights",
+                reason="length_mismatch",
+                signal_expression_count=len(self.signal_expressions),
+                signal_weight_count=len(self.signal_weights),
             )

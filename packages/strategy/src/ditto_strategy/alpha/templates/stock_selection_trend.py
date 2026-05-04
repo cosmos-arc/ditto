@@ -16,6 +16,7 @@ stock_selection_trend 策略模板 -- 多因子选股趋势追踪的 alpha stage
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import NoReturn
 
 import polars as pl
 
@@ -30,6 +31,7 @@ from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.specs import ParamConstraint
+from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
     "MultiFactorSignalStage",
@@ -38,6 +40,25 @@ __all__ = [
     "get_param_constraints",
     "validate_config",
 ]
+
+
+def _raise_config_error(
+    message: str,
+    *,
+    field_name: str,
+    reason: str,
+    actual_value: object,
+    **details: object,
+) -> NoReturn:
+    """Raise a template config error with consistent metadata."""
+    payload: dict[str, object] = {
+        "template": "stock_selection_trend",
+        "field_name": field_name,
+        "reason": reason,
+        "actual_value": actual_value,
+    }
+    payload.update(details)
+    raise StrategySpecError(message, details=payload)
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +107,7 @@ def validate_config(config: StockSelectionTrendConfig) -> None:
     校验 StockSelectionTrendConfig 合法性.
 
     Raises:
-        ValueError: 配置不合法时抛出描述性异常。
+        StrategySpecError: 配置不合法时抛出描述性异常。
 
     """
     if len(config.signal_factors) != len(config.signal_weights):
@@ -95,15 +116,35 @@ def validate_config(config: StockSelectionTrendConfig) -> None:
             f"signal_weights (len={len(config.signal_weights)}) "
             f"must have the same length"
         )
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="signal_weights",
+            reason="length_mismatch",
+            actual_value=config.signal_weights,
+            signal_factor_count=len(config.signal_factors),
+            signal_weight_count=len(config.signal_weights),
+        )
 
     if config.top_k < 1:
         msg = f"top_k must be >= 1, got {config.top_k}"
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="top_k",
+            reason="below_min",
+            actual_value=config.top_k,
+            min_value=1,
+        )
 
     if config.max_weight <= 0 or config.max_weight > 1:
         msg = f"max_weight must be > 0 and <= 1, got {config.max_weight}"
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="max_weight",
+            reason="out_of_range",
+            actual_value=config.max_weight,
+            min_value=0,
+            max_value=1,
+        )
 
     valid_methods = ("equal_weight", "inverse_vol")
     if config.allocation_method not in valid_methods:
@@ -111,7 +152,13 @@ def validate_config(config: StockSelectionTrendConfig) -> None:
             f"allocation_method must be one of {valid_methods}, "
             f"got '{config.allocation_method}'"
         )
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="allocation_method",
+            reason="invalid_enum",
+            actual_value=config.allocation_method,
+            allowed_values=valid_methods,
+        )
 
     valid_freqs = ("daily", "weekly", "monthly")
     if config.rebalance_freq not in valid_freqs:
@@ -119,7 +166,13 @@ def validate_config(config: StockSelectionTrendConfig) -> None:
             f"rebalance_freq must be one of {valid_freqs}, "
             f"got '{config.rebalance_freq}'"
         )
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="rebalance_freq",
+            reason="invalid_enum",
+            actual_value=config.rebalance_freq,
+            allowed_values=valid_freqs,
+        )
 
 
 # ---------------------------------------------------------------------------

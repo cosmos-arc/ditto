@@ -24,6 +24,7 @@ DecisionFrame 额外约定列:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import NoReturn
 
 import polars as pl
 
@@ -36,6 +37,7 @@ from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.protocols import DecisionStage
 from ditto_strategy.alpha.specs import ParamConstraint
+from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
     "FinalStockFilterStage",
@@ -48,6 +50,25 @@ __all__ = [
     "get_param_constraints",
     "validate_config",
 ]
+
+
+def _raise_config_error(
+    message: str,
+    *,
+    field_name: str,
+    reason: str,
+    actual_value: object,
+    **details: object,
+) -> NoReturn:
+    """Raise a template config error with consistent metadata."""
+    payload: dict[str, object] = {
+        "template": "stock_sector_rotation",
+        "field_name": field_name,
+        "reason": reason,
+        "actual_value": actual_value,
+    }
+    payload.update(details)
+    raise StrategySpecError(message, details=payload)
 
 
 # ---------------------------------------------------------------------------
@@ -96,24 +117,50 @@ def validate_config(config: StockSectorRotationConfig) -> None:
     校验 StockSectorRotationConfig 合法性.
 
     Raises:
-        ValueError: 配置不合法时抛出描述性异常。
+        StrategySpecError: 配置不合法时抛出描述性异常。
 
     """
     if config.top_sectors < 1:
         msg = f"top_sectors must be >= 1, got {config.top_sectors}"
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="top_sectors",
+            reason="below_min",
+            actual_value=config.top_sectors,
+            min_value=1,
+        )
 
     if config.stocks_per_sector < 1:
         msg = f"stocks_per_sector must be >= 1, got {config.stocks_per_sector}"
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="stocks_per_sector",
+            reason="below_min",
+            actual_value=config.stocks_per_sector,
+            min_value=1,
+        )
 
     if config.max_weight <= 0 or config.max_weight > 1:
         msg = f"max_weight must be > 0 and <= 1, got {config.max_weight}"
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="max_weight",
+            reason="out_of_range",
+            actual_value=config.max_weight,
+            min_value=0,
+            max_value=1,
+        )
 
     if config.cash_target < 0 or config.cash_target >= 1:
         msg = f"cash_target must be >= 0 and < 1, got {config.cash_target}"
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="cash_target",
+            reason="out_of_range",
+            actual_value=config.cash_target,
+            min_value=0,
+            max_value=1,
+        )
 
     valid_weight_methods = ("equal_weight",)
     if config.sector_weight_method not in valid_weight_methods:
@@ -121,14 +168,26 @@ def validate_config(config: StockSectorRotationConfig) -> None:
             f"sector_weight_method must be one of {valid_weight_methods}, "
             f"got '{config.sector_weight_method}'"
         )
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="sector_weight_method",
+            reason="invalid_enum",
+            actual_value=config.sector_weight_method,
+            allowed_values=valid_weight_methods,
+        )
 
     if config.stock_weight_method not in valid_weight_methods:
         msg = (
             f"stock_weight_method must be one of {valid_weight_methods}, "
             f"got '{config.stock_weight_method}'"
         )
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="stock_weight_method",
+            reason="invalid_enum",
+            actual_value=config.stock_weight_method,
+            allowed_values=valid_weight_methods,
+        )
 
     valid_freqs = ("daily", "weekly", "monthly")
     if config.rebalance_freq not in valid_freqs:
@@ -136,7 +195,13 @@ def validate_config(config: StockSectorRotationConfig) -> None:
             f"rebalance_freq must be one of {valid_freqs}, "
             f"got '{config.rebalance_freq}'"
         )
-        raise ValueError(msg)
+        _raise_config_error(
+            msg,
+            field_name="rebalance_freq",
+            reason="invalid_enum",
+            actual_value=config.rebalance_freq,
+            allowed_values=valid_freqs,
+        )
 
 
 # ---------------------------------------------------------------------------
