@@ -326,6 +326,7 @@ source_modules =
 forbidden_modules =
     ditto_data.services.**
     ditto_data.models.**
+    ditto_data.models
     ditto_data.errors.**
     ditto_data.quality.**
     ditto_data.config.**
@@ -336,9 +337,6 @@ ignore_imports =
     ditto_apps.registry.** -> ditto_data.config.**
     ditto_apps.jobs.context -> ditto_data.quality
     ditto_apps.jobs.context -> ditto_data.quality.protocols
-    # Dataset StrEnum 是系统级枚举，API/CLI 需要列出已知数据集
-    ditto_apps.api.routes.ingestion -> ditto_data.models.common
-    ditto_apps.cli.commands.ops -> ditto_data.models.common
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 
@@ -438,10 +436,9 @@ source_modules =
     ditto_data.storage.**
 forbidden_modules =
     ditto_data.models.**
+# Temporary compatibility debts scheduled for Task 8.
 # CQRS Writer/Reader 需要模型类型定义（OnDuplicate, WriteStoreResult, Record 等）
-# 这是 storage 层与 model 层的自然耦合，全部均为合法的类型注解
 ignore_imports =
-    ditto_data.storage.** -> ditto_data.models
     ditto_data.storage.** -> ditto_data.models.storage
     ditto_data.storage.** -> ditto_data.models.metadata
     ditto_data.storage.** -> ditto_data.models.macro

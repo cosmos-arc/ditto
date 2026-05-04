@@ -7,10 +7,10 @@ from typing import Annotated
 
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.config import Dataset
 from ditto_application.queries.ingestion_status import (
     IngestionStatusQueryFacade,
 )
-from ditto_data.models.common import Dataset
 from fastapi import APIRouter, Query
 
 from ditto_apps.models.common import APIResponse

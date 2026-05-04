@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 import typer
+from ditto_application.config import Dataset
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
-from ditto_data.models.common import Dataset
 
 from ditto_apps.cli.utils.output import output_json_dicts
 from ditto_apps.registry.container import Container, make_app_container

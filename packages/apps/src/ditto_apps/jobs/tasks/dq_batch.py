@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ditto_application.config import Dataset
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_data.models import Dataset
 from ditto_kernel.quality import DQIssue
 from ditto_platform.foundation import Metrics, logger
 from ditto_platform.services.notification import AlertManager, alert_dq_failure
