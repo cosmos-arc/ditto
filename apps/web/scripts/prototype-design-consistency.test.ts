@@ -637,18 +637,27 @@ function isInsideOperationalTableLikeContainer(element: Element): boolean {
 }
 
 function isInsideOperationalAnswerContainer(element: Element): boolean {
+	const hasHeaderLikeClass = (candidate: Element) =>
+		[...candidate.classList].some((className) => /\bheader\b|(?:^|-)header(?:-|$)/i.test(className));
+	const headerLikeAncestor = element.closest("*");
+
 	return Boolean(
 		element.closest(
 			[
 				"header",
-				".compare-header",
-				".panel-header",
-				".overlay-header",
 				"[data-contract-slot='header']",
 				"[data-primary-answer]",
 				"[data-primary-answer-equivalent]",
 			].join(", "),
-		),
+		) ??
+			(() => {
+				let current: Element | null = headerLikeAncestor;
+				while (current) {
+					if (hasHeaderLikeClass(current)) return current;
+					current = current.parentElement;
+				}
+				return null;
+			})(),
 	);
 }
 
@@ -2227,6 +2236,33 @@ describe("prototype design consistency", () => {
 		expect(duplicates).toEqual([]);
 	});
 
+	it("documents the Edition v1 9-step typography scale as current token truth", () => {
+		const spec = readFileSync(tokenStabilizationSpec, "utf8");
+		const deprecatedTokenClaims = [
+			/--font-size-11[^。\n]*(?:deprecated|forbidden|禁止|废弃)/i,
+			/--font-size-18[^。\n]*(?:deprecated|forbidden|禁止|废弃)/i,
+			/--font-size-20[^。\n]*(?:deprecated|forbidden|禁止|废弃)/i,
+		];
+
+		for (const claim of deprecatedTokenClaims) {
+			expect(spec).not.toMatch(claim);
+		}
+
+		for (const token of [
+			"--font-size-10",
+			"--font-size-11",
+			"--font-size-12",
+			"--font-size-13",
+			"--font-size-14",
+			"--font-size-16",
+			"--font-size-18",
+			"--font-size-20",
+			"--font-size-24",
+		]) {
+			expect(spec).toContain(token);
+		}
+	});
+
 	it("keeps DESIGN approval for the 11px tight-context token", () => {
 		const spec = readFileSync(designSpec, "utf8");
 
@@ -2252,6 +2288,21 @@ describe("prototype design consistency", () => {
 		);
 
 		expect(violations).toEqual([".dense-caption", ".sort-caption"]);
+	});
+
+	it("flags 11px descendants inside header-like class ancestors", () => {
+		const document = new JSDOM(`
+			<div class="activity-header"><span class="subtitle">最近运行</span></div>
+		`).window.document;
+		const rule: CssRule = {
+			selector: ".subtitle",
+			selectors: [".subtitle"],
+			body: "font-size: var(--font-size-11);",
+			start: 0,
+			end: 0,
+		};
+
+		expect(hasOperationalElevenPxUsage(document, rule, ".subtitle", [])).toBe(true);
 	});
 
 	it("flags 11px descendants of pointer selectors even without DOM matches", () => {
