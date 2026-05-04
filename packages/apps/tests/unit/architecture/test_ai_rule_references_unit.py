@@ -34,7 +34,7 @@ def test_stale_ai_rule_reference_list_covers_legacy_packages() -> None:
 
 
 def test_stale_active_package_references_covers_legacy_names() -> None:
-    assert "ditto_app" in STALE_PKG_REFS
+    assert "ditto_app." in STALE_PKG_REFS
     assert "ditto_analytics" in STALE_PKG_REFS
     assert "ditto_engine" in STALE_PKG_REFS
     assert "ditto_interfaces" in STALE_PKG_REFS
