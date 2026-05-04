@@ -18,14 +18,15 @@ ditto_strategy → ditto_platform ✅ (storage/sqlite: SQLitePool, logger, trace
 
 外部依赖：polars, orjson
 
-**注意**：strategy 不直接依赖 data 或 features。市场数据由 application/backtest 通过 StrategyInputBundle 注入，信号存储通过 SignalStore Protocol 抽象。
-
-**技术债务**：strategy 模板当前直接引用 portfolio 的 allocation/constraints 类型（仅 runtime_builder 和集成测试）。长期演进方向：策略只产信号，分配方案由 application 层独立配置。参见 LEAN 架构的 AlphaModel → PortfolioConstructionModel 解耦模式。
+**注意**：strategy 不直接依赖 data、features、portfolio、risk、execution 或 backtest。市场数据由 application/backtest 通过 StrategyInputBundle 注入，信号存储通过 SignalStore Protocol 抽象。策略只产出信号和策略规格，组合构建、风控、执行由 application/backtest 编排。
 
 ## 禁止依赖
 
 ```
-ditto_strategy → ditto_portfolio ❌ (技术债务豁免：runtime_builder / 集成测试)
+ditto_strategy → ditto_data ❌
+ditto_strategy → ditto_features ❌
+ditto_strategy → ditto_portfolio ❌
+ditto_strategy → ditto_risk ❌
 ditto_strategy → ditto_execution ❌
 ditto_strategy → ditto_backtest ❌
 ditto_strategy → ditto_analysis ❌

@@ -248,7 +248,7 @@ class ArchitectureAuditor:
         """代码分析"""
         print("🔎 运行代码分析...")
 
-        # 检查层级穿透（interfaces 层依赖 infra 细节）
+        # 检查层级穿透（apps 非 registry 代码依赖 platform/data 实现细节）
         self._check_layer_violation()
 
         # 检查 Protocol 是否被使用
@@ -434,7 +434,7 @@ class ArchitectureAuditor:
 
     def _check_business_technical_mixing(self) -> None:
         """检测业务层混用技术术语"""
-        # 检测 Interfaces 层是否混用 SQL、Parquet 等技术术语
+        # 检测 Apps 层是否混用 SQL、Parquet 等技术术语
         technical_terms = ["SQL", "Parquet", "SQLite", "Database", "Table"]
         patterns = [rf"class.*{term}.*(?:Loader|Writer|Reader|Manager)" for term in technical_terms]
 

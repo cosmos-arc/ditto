@@ -49,13 +49,12 @@ pixi run -e dev test --integration
   ```
 - 从 app 层出发，检查是否存在**真正的层级穿透**：
 
-**层级穿透定义**（注意：Foundation 是横切层，可跨层访问）：
-- ❌ interfaces → data storage/runtime（应通过 Service）
-- ❌ engine → data（beyond errors/provider）
-- ❌ engine → infra
-- ✅ interfaces → data services/sources（允许）
-- ✅ interfaces → infra foundation（允许，横切层）
-- ✅ app → data → infra（正常依赖链）
+**层级穿透定义**（注意：Platform 是横切层，但仍受包契约约束）：
+- ❌ apps 非 registry 代码 → data storage/runtime（应通过 application facade）
+- ❌ capability package → apps/application
+- ❌ risk → execution 或 execution → risk
+- ✅ apps.registry → capability/data providers（Composition Root）
+- ✅ apps → application → data/platform（正常依赖链）
 
 **工程实践检查**：
 - 使用 `symbols` 识别类规模（>300行）、方法数量（>15个）

@@ -75,15 +75,15 @@ packages/risk/tests/
 
 ```python
 # 风控检查
-from ditto_risk.pre_trade import PreTradeChecker
-from ditto_risk.post_trade import post_trade_audit
+from ditto_risk.pre_trade import CompositePreTradeCheck, BuyingPowerCheck, LotSizeCheck
+from ditto_risk.post_trade import CompositePostTradeGuard, RiskAction
 
 # 契约与模型
-from ditto_risk.contracts import RiskConstraint
-from ditto_risk.models import RiskReport
+from ditto_risk.contracts import PostTradeGuard, RiskSlice
+from ditto_risk.models import DrawdownStats, ExposureData, RiskMetrics
 
 # 事件
-from ditto_risk.events import RiskEvent
+from ditto_risk.events import RiskGuardTriggered
 ```
 
 ## 常用验证命令

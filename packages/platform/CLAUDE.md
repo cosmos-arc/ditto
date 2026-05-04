@@ -2,7 +2,7 @@
 
 ## 定位
 
-Platform 层（原 Foundation）是**横切层**，提供跨所有层的基础设施服务，可被任何层访问。
+Platform 层是**横切层**，提供跨包可复用的基础设施服务。它只表达通用技术能力；是否可被某个包访问，以该包的 `pyproject.toml` 和 import-linter 契约为准。
 
 **核心原则**：
 - 零业务逻辑
@@ -62,12 +62,13 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 
 ```
 ┌─────────────────────────────────────┐
-│  所有层都可以访问 Platform（foundation）│
+│  允许包按契约访问 Platform             │
 │  apps → platform ✅                   │
 │  application → platform ✅            │
-│  strategy/backtest → platform ❌      │
-│  analysis → platform ✅               │
-│  data → platform ✅                   │
+│  data/features/analysis → platform ✅ │
+│  strategy → platform ✅               │
+│  execution → platform ✅              │
+│  portfolio/risk/backtest → platform ❌│
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
@@ -87,8 +88,11 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 | apps | `foundation` + `services` | 完整访问（Composition Root） |
 | application | `foundation` + `services` | 禁止 `config`（配置加载走 apps） |
 | data | 仅 `foundation` | 存储通过 foundation.db / foundation.util |
+| features | 仅 `foundation` | 存储、日志、追踪等通用能力 |
 | analysis | 仅 `foundation` | 配置、日志等基础能力 |
-| strategy/backtest | 禁止 | 不依赖 platform |
+| strategy | 仅 `foundation` | storage/sqlite 可用 SQLitePool、logger、traced |
+| execution | 仅 `foundation` | 执行侧持久化、日志、追踪等通用能力 |
+| portfolio/risk/backtest | 禁止 | 当前不声明 platform 依赖；需要时先更新包契约和边界说明 |
 
 ## 配置规范
 
@@ -108,7 +112,7 @@ env = os.getenv("ENVIRONMENT")  # 绕过统一入口
 
 ### 配置加载位置
 
-配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。详见 [config.md](/.claude/rules/config.md)。
+配置仅在 **Apps 层 / Composition Root** 加载，其他层通过 DI 获取。详见 [config.md](/.claude/rules/config.md)。
 
 ## 测试规范
 

@@ -174,11 +174,15 @@ forbidden_modules =
 # Strategy 层边界：禁止依赖 application/apps，storage 禁止依赖 execution
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:strategy-boundary]
-name = Strategy must not depend on application/apps/backtest/analysis/execution
+name = Strategy must not depend on data/features/portfolio/risk/execution/backtest/analysis/application/apps
 type = forbidden
 source_modules =
     ditto_strategy.**
 forbidden_modules =
+    ditto_data.**
+    ditto_features.**
+    ditto_portfolio.**
+    ditto_risk.**
     ditto_apps.**
     ditto_application.**
     ditto_backtest.**
@@ -199,11 +203,15 @@ unmatched_ignore_imports_alerting = warn
 # Portfolio 层隔离：禁止依赖下游能力包
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:portfolio-boundary]
-name = Portfolio must not depend on execution/risk/backtest/application/apps
+name = Portfolio must not depend on data/features/strategy/risk/execution/backtest/analysis/application/apps
 type = forbidden
 source_modules =
     ditto_portfolio.**
 forbidden_modules =
+    ditto_data.**
+    ditto_features.**
+    ditto_strategy.**
+    ditto_analysis.**
     ditto_apps.**
     ditto_application.**
     ditto_risk.**
@@ -215,11 +223,14 @@ unmatched_ignore_imports_alerting = warn
 # Risk 层隔离：禁止依赖 execution/backtest/application/apps
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:risk-boundary]
-name = Risk must not depend on execution/backtest/application/apps
+name = Risk must not depend on data/features/strategy/execution/backtest/analysis/application/apps
 type = forbidden
 source_modules =
     ditto_risk.**
 forbidden_modules =
+    ditto_data.**
+    ditto_features.**
+    ditto_strategy.**
     ditto_apps.**
     ditto_application.**
     ditto_backtest.**
@@ -231,7 +242,7 @@ unmatched_ignore_imports_alerting = warn
 # Execution 层隔离：禁止依赖 backtest/analysis/application/apps
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:execution-boundary]
-name = Execution must not depend on backtest/analysis/application/apps
+name = Execution must not depend on data/features/strategy/risk/backtest/analysis/application/apps
 type = forbidden
 source_modules =
     ditto_execution.**
@@ -241,6 +252,8 @@ forbidden_modules =
     ditto_backtest.**
     ditto_analysis.**
     ditto_strategy.**
+    ditto_features.**
+    ditto_risk.**
     ditto_data.**
 unmatched_ignore_imports_alerting = warn
 

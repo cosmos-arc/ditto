@@ -54,11 +54,9 @@ ditto_apps/
 
 ```
 apps → application ✅
-apps → strategy/portfolio/risk/execution/backtest ✅
-apps → data ✅
-apps → features ✅
-apps → analysis ✅
 apps → platform ✅
+apps.registry → data/features/strategy/portfolio/risk/execution/backtest/analysis ✅
+apps.jobs.context → ditto_data.quality ✅ (narrow DQ engine lookup)
 ```
 
 ## 禁止依赖
@@ -77,14 +75,14 @@ features → apps ❌
 | **Application 层服务** | `from ditto_application.processes.*` | - |
 | **Application 层查询** | `from ditto_application.queries.*` | - |
 | **Application 层配置** | `from ditto_application.config` | - |
-| **Data Service** | `from ditto_data.services.*` | - |
-| **Data Sources** | `from ditto_data.sources.*` | - |
-| **Data Stores** | registry 内仅限 DI 注册 | 非 registry 代码 |
+| **Capability 实现** | registry 内仅限 DI 注册 | 非 registry 代码直接导入 |
+| **Data Service / Sources** | registry 内 DI 注册；普通入口走 application facade | 非 registry 代码直接访问 |
+| **Data Stores / Runtime** | registry 内仅限 DI 注册 | 非 registry 代码 |
 
 ### Registry 豁免边界
 
-`registry/**` 是 Composition Root，允许直接导入 Data 层 services/quality/config 以完成 DI 装配。
-**这是永久豁免**，不再为"形式上 100% 纯净"增加无价值包装层。
+`registry/**` 是 Composition Root，允许直接导入 Data 层 services/quality/config 和各能力包实现以完成 DI 装配。
+**这是明确的 host composition 边界**，不把 route、CLI、job 入口也变成业务对象装配点。
 
 豁免范围（importlinter `port-service-isolation` 合约已显式配置）：
 
@@ -96,6 +94,8 @@ features → apps ❌
 | `registry/infra/config.py` | `ditto_data.config`, `quality.config` | 环境配置加载 |
 
 **非 registry 代码禁止直接访问 Data services/models**。
+
+此外，非 registry 代码也禁止直接导入 strategy/portfolio/risk/execution/backtest/features/analysis/data 等能力包实现；普通入口应通过 `ditto_application` 的 commands、queries、processes 或显式 facade 访问。当前仅 `jobs/context.py` 保留 Data Quality 引擎查找的窄豁免，架构 smell guard 会检查这条规则。
 
 ### 业务逻辑去向
 

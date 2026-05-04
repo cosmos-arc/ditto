@@ -1,6 +1,6 @@
 # Ditto 分层、模块化、命名与抽象层级规范
 
-> 日期：2026-04-24
+> 日期：2026-05-04
 > 状态：Accepted
 > 适用对象：后续 agent、个人开发者、架构审查者
 > 关联材料：`CLAUDE.md`、各包 `CLAUDE.md`、`.importlinter`、`docs/reviews/audit/2026-04-24-current-full-project-audit.md`
@@ -25,8 +25,8 @@ Ditto 当前的大分层已经成立，质量门禁也较强。主要不足不�
 
 | 歧义 | 典型表现 | 风险 |
 |---|---|---|
-| 架构平面与调用层级混在一起 | `data`、`analytics`、`engine` 容易被理解成简单上下层 | 后续代码可能把并列领域平面写成隐式上下游 |
-| App 身份双重 | `app` 同时像 use case 层、composition root、provider 聚合层 | 业务逻辑、装配逻辑、流程编排容易混在一起 |
+| 架构平面与调用层级混在一起 | `data`、`features`、`analysis`、能力包容易被理解成简单上下层 | 后续代码可能把并列领域平面写成隐式上下游 |
+| Apps 身份双重 | `apps` 同时像传输入口、composition root、provider 聚合层 | 业务逻辑、装配逻辑、流程编排容易混在一起 |
 | 后缀词没有强定义 | `Service`、`Manager`、`Coordinator`、`Provider`、`Registry` 混用 | agent 会按附近名字仿写，长期导致概念漂移 |
 | Port 归属不稳定 | 由实现方定义上游依赖接口 | 上游领域会被实现层语言污染 |
 | Data 内部子域过大 | dataset、storage、quality、ingestion、runtime 语义散落 | 新数据集和新数据源扩展路径不唯一 |
@@ -41,14 +41,16 @@ Ditto 当前的大分层已经成立，质量门禁也较强。主要不足不�
                     apps
                      |
               application
-    ┌────┬────┬────┼────┬────┬────┐
-    |    |    |    |    |    |    |
-   data feat strat port risk exec back
-    |              |              |
-    └──────┬───────┴──────┬───────┘
-           kernel         analysis
-platform 是横向基础设施，不表达业务领域。
-（analysis 仅限研究用途，生产包禁止依赖）
+                     |
+   ┌──────────────── capability planes ────────────────┐
+   | data  features  strategy  portfolio  risk          |
+   | execution  backtest  analysis                      |
+   └───────────────────────┬───────────────────────────┘
+                           |
+                         kernel
+
+platform 是横向技术基础设施，只在包契约允许的范围内被导入。
+analysis 仅限研究用途，生产包禁止依赖。
 ```
 
 ### 3.1 各平面定位
@@ -111,7 +113,7 @@ platform 是横向基础设施，不表达业务领域。
 
 ### 4.2 Platform
 
-`platform`（原 infra）是通用技术能力，不表达 Ditto 领域知识。
+`platform` 是通用技术能力，不表达 Ditto 领域知识。
 
 允许：
 
@@ -155,7 +157,7 @@ Data 禁止：
 
 ### 4.4 Features
 
-`features`（原 analytics 表达式/因子部分）是因子计算平面，应该保持无外部 I/O。
+`features` 是因子计算平面，应该保持无外部 I/O。
 
 目标内部层级：
 
@@ -176,7 +178,7 @@ contracts/models
 
 ### 4.4b Analysis
 
-`analysis`（原 analytics 研究部分）是纯研究平面。
+`analysis` 是纯研究平面。
 
 - `research` 负责研究数据集语义，不成为 Data catalog 的替代品。
 - 生产包禁止依赖 analysis，只有 apps 的研究入口可以调用。
@@ -184,29 +186,36 @@ contracts/models
 
 ### 4.5 Capability Packages（Strategy/Portfolio/Risk/Execution/Backtest）
 
-Engine 已拆分为独立能力包。各包应该可以在没有 API、没有真实数据源、没有物理存储的情况下独立测试。
+原 Engine 已拆分为独立能力包。各包应该可以在没有 API、没有真实数据源、没有物理存储的情况下独立测试。
 
-依赖方向：
+不要把能力包理解成一条 `strategy → portfolio → risk → execution` 的调用链。当前设计是并列能力包加显式编排：
 
 ```text
-strategy → portfolio → risk → execution
-backtest 可依赖以上所有包
+strategy   -> kernel, platform(storage/logging/tracing)
+portfolio  -> kernel
+risk       -> kernel, portfolio
+execution  -> kernel, portfolio, platform
+backtest   -> data, strategy, portfolio, risk, execution, kernel
+
+application 编排能力包，apps 暴露 application。
 ```
 
 硬性约束：
 
-- `strategy` 不依赖 `execution`、`backtest`。
-- `execution` 不依赖 `backtest`。
+- `strategy` 不依赖 `portfolio`、`risk`、`execution`、`backtest`、`data`、`features`。
+- `portfolio` 不依赖 `risk`、`execution`、`backtest`、`data`、`features`。
+- `risk` 不依赖 `execution`、`backtest`、`data`、`features`、`strategy`。
+- `execution` 不依赖 `risk`、`strategy`、`backtest`、`data`、`features`。
 - `backtest` 不导入真实券商网关。
 - 生产包不依赖 `analysis`。
 
 各能力包规则：
 
-- `strategy`：策略 pipeline、alpha 模板、信号生成。时间必须来自显式输入。
+- `strategy`：策略 pipeline、alpha 模板、信号生成。时间必须来自显式输入；存储适配可使用 platform 的 SQLitePool、logger、tracing。
 - `portfolio`：持仓、会计、调仓。纯领域模型，不依赖 data 或 execution。
-- `risk`：盘前/盘后风控、约束。依赖 portfolio 和 execution 的模型。
-- `execution`：订单、成交、券商网关、费用、审计。不依赖 backtest。
-- `backtest`：回测 runtime、step chain、绩效统计。是模拟层，可依赖所有能力包。
+- `risk`：盘前/盘后风控、约束、暴露度、回撤。依赖 portfolio 的账户/订单视图，不依赖 execution。
+- `execution`：订单、成交结果、真实券商端口、费用、审计。不依赖 risk 或 backtest。
+- `backtest`：回测 runtime、step chain、绩效统计和模拟执行语义。`BacktestBrokerage`、fill/slippage/settlement 等模拟模型归 backtest；真实费用模型仍归 execution。
 
 ### 4.6 Application
 
@@ -231,7 +240,7 @@ backtest 可依赖以上所有包
 
 ### 4.7 Apps
 
-`apps`（原 interfaces）是传输适配和 DI composition root，不是业务层。
+`apps` 是传输适配和 DI composition root，不是业务层。
 
 允许：
 
@@ -249,7 +258,12 @@ backtest 可依赖以上所有包
 - 用 `type(exc).__name__` 字符串匹配业务错误。
 - 通过 `TYPE_CHECKING` 绕开边界。
 
-组合根规则：`apps.registry` 目前有必要豁免，但长期目标是让 `application.bootstrap` 或 `application.composition` 承担业务对象装配；`apps.registry` 只绑定传输入口和 application facade。
+组合根规则：
+
+- `apps.registry/**` 是 DI composition root，允许直接导入具体能力包实现来完成 provider 装配。
+- 普通 `api/`、`cli/`、`jobs/flows/`、`jobs/tasks/` 应调用 `application` facade、command 或 process，不直接导入能力包实现。
+- `jobs/context.py` 只保留 Data Quality 引擎查找所需的窄豁免；新增豁免必须同步更新架构 smell guard 和测试。
+- 非 registry 的能力包直连由 `check_apps_non_registry_capability_imports` 机器门禁守住。
 
 ## 5. 命名词典
 
@@ -455,7 +469,8 @@ backtest 可依赖以上所有包
 
 应放：
 
-- 成交/费用/滑点/交收：`execution.reality`。
+- 真实费用模型和执行侧费用估算：`execution.reality`。
+- 回测模拟成交、滑点、交收、模拟券商：`backtest.simulation` / `backtest.BacktestBrokerage`。
 - 订单、成交、账户状态：`portfolio.accounting`。
 - 回测 runtime 接入：`backtest`。
 - 策略运行装配：`application.builders` / `application.processes.execution`。
