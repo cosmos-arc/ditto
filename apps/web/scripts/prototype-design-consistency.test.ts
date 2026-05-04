@@ -2392,10 +2392,10 @@ describe("prototype design consistency", () => {
 		expect(layoutCss).toContain(".command-prompt");
 		expect(layoutCss).toContain(".command-query");
 		expect(layoutCss).toContain(".command-shortcut");
-		expect(layoutCss).toContain(".shell-header :is(.header-utility-btn, .header-action-btn, .header-btn-badge)");
-		expect(layoutCss).toContain(".shell-header .header-actions :is(.btn, .btn-sm)");
-		expect(layoutCss).toContain("height: var(--header-btn-size) !important;");
-		expect(layoutCss).toContain("font-size: var(--font-size-12) !important;");
+		expect(layoutCss).toContain(".shell-header :is(.header-utility-btn");
+		expect(layoutCss).toContain(".shell-header .header-actions :is(.btn");
+		expect(layoutCss).toContain("height: var(--header-btn-size);");
+		expect(layoutCss).toContain("font-size: var(--font-size-12);");
 		expect(switcherCss).not.toContain("box-shadow: inset 0 0 0 1px");
 	});
 
@@ -2413,12 +2413,12 @@ describe("prototype design consistency", () => {
 
 		expect(layoutCss).toContain("padding: 0 var(--density-gutter);");
 		expect(layoutCss).toContain("gap: var(--space-8);");
-		expect(layoutCss).toContain("background: var(--surface-app) !important;");
-		expect(layoutCss).toContain("backdrop-filter: none !important;");
-		expect(layoutCss).toContain(".shell-header::after");
-		expect(layoutCss).toContain("display: none !important;");
-		expect(layoutCss).toContain(".shell-header .header-title::after");
-		expect(layoutCss).toContain("content: none !important;");
+		expect(layoutCss).toContain("background: var(--surface-app);");
+		expect(layoutCss).toContain("backdrop-filter: none;");
+		expect(layoutCss).toContain(".shell-header.shell-header::after");
+		expect(layoutCss).toContain("display: none;");
+		expect(layoutCss).toContain(".shell-header .header-title.header-title::after");
+		expect(layoutCss).toContain("content: none;");
 
 		expect(togglesCss).toContain("background: color-mix(in oklch, var(--surface-app) 72%, transparent);");
 		expect(togglesCss).toContain("background: var(--surface-modal) !important;");

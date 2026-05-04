@@ -77,10 +77,10 @@ describe("page-markets-calendar prototype", () => {
 		const html = loadHtml();
 
 		expect(html).toMatch(
-			/\.timeline-header\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-20\)\s+var\(--space-10\)\s+var\(--space-12\)/s,
+			/\.timeline-header\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-20\)\s+var\(--space-10\)\s+var\(--density-panel-padding\)/s,
 		);
 		expect(html).toMatch(
-			/\.timeline-body\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-20\)\s+var\(--space-10\)\s+var\(--space-12\)/s,
+			/\.timeline-body\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-20\)\s+var\(--space-10\)\s+var\(--density-panel-padding\)/s,
 		);
 		expect(html).toMatch(/\.timeline-item\s*\{[^}]*padding:\s*var\(--space-8\)\s+var\(--space-24\)/s);
 		expect(html).toMatch(/\.timeline-item:hover\s*\{[^}]*margin:\s*0;/s);
