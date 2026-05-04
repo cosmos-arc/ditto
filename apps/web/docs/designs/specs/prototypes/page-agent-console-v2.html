@@ -1012,6 +1012,18 @@
       font-size: 0;
     }
 
+    /* ── Console log syntax highlighting ── */
+    .log-line .kw,
+    .trace-item .kw { color: var(--brand-accent); }
+    .log-line .fn,
+    .trace-item .fn { color: var(--system-healthy-fg, #22c55e); }
+    .log-line .str,
+    .trace-item .str { color: var(--market-up-fg, #22c55e); }
+    .log-line .num,
+    .trace-item .num { color: var(--market-down-fg, #ef4444); font-family: var(--font-family-numeric, monospace); }
+    .log-line .cmt,
+    .trace-item .cmt { color: var(--text-tertiary); font-style: italic; }
+
     @media (max-width: 1440px) {
       .summary-card:nth-child(5) {
         display: none;
@@ -1200,7 +1212,7 @@
             </div>
             <div class="event">
               <span class="event-time">09:41:52</span>
-              <div><div class="event-title">工具完成 · calc_factor_ic</div><div class="event-note">数据集 cn_daily_v21 · 2.4s · IC 0.047</div></div>
+              <div><div class="event-title">工具完成 · <span class="fn">calc_factor_ic</span></div><div class="event-note">数据集 <span class="str">cn_daily_v21</span> · <span class="num">2.4</span>s · IC <span class="num">0.047</span></div></div>
               <span class="status-pill">追踪中</span>
             </div>
             <div class="event">
@@ -1304,9 +1316,9 @@
 
       <section class="inspector-section">
         <div class="section-title">工具追踪</div>
-        <div class="trace-item"><span class="dot"></span><span>calc_factor_ic · 输入 schema v2 · 输出产物 af-4421</span><span>2.4s</span></div>
-        <div class="trace-item"><span class="dot"></span><span>scan_correlation · 最高相关 0.29 · 数据快照 ds-119</span><span>1.8s</span></div>
-        <div class="trace-item"><span class="dot"></span><span>guardrail_check · 公告时间戳权限被阻断</span><span class="status-pill blocked">已阻断</span></div>
+        <div class="trace-item"><span class="dot"></span><span><span class="fn">calc_factor_ic</span> · 输入 schema v2 · 输出产物 <span class="str">af-4421</span></span><span><span class="num">2.4</span>s</span></div>
+        <div class="trace-item"><span class="dot"></span><span><span class="fn">scan_correlation</span> · 最高相关 <span class="num">0.29</span> · 数据快照 <span class="str">ds-119</span></span><span><span class="num">1.8</span>s</span></div>
+        <div class="trace-item"><span class="dot"></span><span><span class="fn">guardrail_check</span> · 公告时间戳权限被阻断</span><span class="status-pill blocked">已阻断</span></div>
       </section>
 
       <section class="inspector-section">
@@ -1400,7 +1412,7 @@
       <div class="gallery-group" data-component="timeline">
         <div class="gallery-group__label">时间线</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">时间线 · 默认</div><div class="gallery-card__preview"><div class="event"><span class="event-time">09:42</span><div><div class="event-title">工具已完成</div><div class="event-note">calc_factor_ic · IC 0.047</div></div><span class="status-pill">追踪</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">时间线 · 默认</div><div class="gallery-card__preview"><div class="event"><span class="event-time">09:42</span><div><div class="event-title">工具已完成</div><div class="event-note"><span class="fn">calc_factor_ic</span> · IC <span class="num">0.047</span></div></div><span class="status-pill">追踪</span></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">时间线 · 加载</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">时间线 · 空态</div><div class="gallery-card__preview"><div class="state-empty"><div class="state-empty-title">暂无事件</div><div class="state-empty-desc">运行启动后会流式显示智能体活动。</div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">时间线 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">事件流断开</div><button class="state-error-retry" type="button">重新连接</button></div></div></div>
@@ -1432,7 +1444,7 @@
           <div class="gallery-card"><div class="gallery-card__label">检查器 · 失败</div><div class="gallery-card__preview"><div class="state-error"><div class="state-error-title">详情加载失败</div><button class="state-error-retry" type="button">重试</button></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">检查器 · 运行中</div><div class="gallery-card__preview"><div class="trace-item"><span class="dot"></span><span>研究员 · 候选持续生成</span><span class="status-pill running">运行</span></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">检查器 · 待审批</div><div class="gallery-card__preview"><div class="approval-box"><div class="section-title">等待审批</div><p class="event-note">通过后将自动生成信号。</p></div></div></div>
-          <div class="gallery-card"><div class="gallery-card__label">检查器 · 阻断</div><div class="gallery-card__preview"><div class="trace-item"><span class="dot"></span><span>guardrail_check · 权限被阻断</span><span class="status-pill blocked">已阻断</span></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">检查器 · 阻断</div><div class="gallery-card__preview"><div class="trace-item"><span class="dot"></span><span><span class="fn">guardrail_check</span> · 权限被阻断</span><span class="status-pill blocked">已阻断</span></div></div></div>
         </div>
       </div>
 
@@ -1474,7 +1486,7 @@
           <div class="gallery-card" data-overlay-ref="overlay-plan-create"><div class="gallery-card__label">新建计划 · 侧滑面板</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建计划"><div class="overlay-header"><span class="overlay-title">新建智能体计划</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">模板</span><span class="overlay-field-value">全链路研究流水线</span></div><div class="overlay-field"><span class="overlay-field-label">目标</span><span class="overlay-field-value">低相关反转因子探索</span></div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-run-rerun"><div class="gallery-card__label">运行重跑 · 确认</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="重跑运行"><div class="overlay-header"><span class="overlay-title">确认重跑 run-8842？</span></div><div class="overlay-body"><p class="event-note">当前流式任务会被中断，已生成产物保留。</p></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-approval-confirm"><div class="gallery-card__label">审批确认 · 弹窗</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="审批确认"><div class="overlay-header"><span class="overlay-title">确认采纳此发现？</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">置信度</span><span class="overlay-field-value">86 · 高</span></div><p class="event-note">通过后自动生成信号至待复核队列。</p></div></div></div></div>
-          <div class="gallery-card" data-overlay-ref="overlay-tool-trace-detail"><div class="gallery-card__label">工具追踪 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="工具追踪"><div class="overlay-header"><span class="overlay-title">工具追踪详情</span></div><div class="overlay-body"><div class="trace-item"><span class="dot"></span><span>calc_factor_ic · schema v2 · 输出 af-4421</span><span>2.4s</span></div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-tool-trace-detail"><div class="gallery-card__label">工具追踪 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="工具追踪"><div class="overlay-header"><span class="overlay-title">工具追踪详情</span></div><div class="overlay-body"><div class="trace-item"><span class="dot"></span><span><span class="fn">calc_factor_ic</span> · schema v2 · 输出 <span class="str">af-4421</span></span><span><span class="num">2.4</span>s</span></div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-artifact-preview"><div class="gallery-card__label">产物预览 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="产物预览"><div class="overlay-header"><span class="overlay-title">产物 af-4421</span></div><div class="overlay-body"><div class="artifact-grid"><div class="artifact-card"><span class="card-label">schema</span><span class="card-value">factor.v2</span></div><div class="artifact-card"><span class="card-label">快照</span><span class="card-value">ds-119</span></div></div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-guardrail-detail"><div class="gallery-card__label">规则详情 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="规则详情"><div class="overlay-header"><span class="overlay-title">规则阻断</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">策略</span><span class="overlay-field-value">公告时间戳权限</span></div><p class="event-note">申请更高数据权限后可恢复。</p></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-quality-run-create"><div class="gallery-card__label">质量评测 · 侧滑面板</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建评测"><div class="overlay-header"><span class="overlay-title">启动质量评测</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">任务集</span><span class="overlay-field-value">aq-v5 回归</span></div><div class="overlay-field"><span class="overlay-field-label">预算</span><span class="overlay-field-value">18 分钟 · 120 次工具调用</span></div></div></div></div></div>

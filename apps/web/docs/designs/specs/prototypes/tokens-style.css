@@ -66,6 +66,23 @@
   opacity: 0.005;
 }
 
+/* ── Atmosphere Intensity Levels ── */
+[data-atmosphere-intensity="elevated"] .ambient-top {
+  opacity: 0.45;
+}
+
+[data-atmosphere-intensity="elevated"] .noise-layer {
+  opacity: calc(var(--surface-noise-opacity, 0.018) * 2);
+}
+
+[data-atmosphere-intensity="intense"] .ambient-top {
+  opacity: 0.75;
+}
+
+[data-atmosphere-intensity="intense"] .noise-layer {
+  opacity: calc(var(--surface-noise-opacity, 0.018) * 4);
+}
+
 [data-theme="light"] .shell-header {
   backdrop-filter: blur(12px) saturate(1.4);
   -webkit-backdrop-filter: blur(12px) saturate(1.4);

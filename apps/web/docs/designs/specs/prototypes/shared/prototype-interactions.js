@@ -2176,6 +2176,26 @@
     BulletGraph.init();
   }
 
+  /* ══════════════════════════════════════════════
+   * 18. Atmosphere — data-atmosphere-intensity
+   *     API for manual/future perceptible chromatic mode.
+   *     Not part of the init chain.
+   * ══════════════════════════════════════════════ */
+  var Atmosphere = {
+    setIntensity: function (level) {
+      if (level === 'default') {
+        document.documentElement.removeAttribute('data-atmosphere-intensity');
+      } else {
+        document.documentElement.setAttribute('data-atmosphere-intensity', level);
+      }
+    },
+  };
+
+  /* Expose Atmosphere API on window for external use */
+  if (typeof window !== 'undefined') {
+    window.DittoAtmosphere = Atmosphere;
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
