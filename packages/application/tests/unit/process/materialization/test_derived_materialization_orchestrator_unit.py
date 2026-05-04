@@ -16,10 +16,6 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.types import (
     InMemoryDerivedInputProvider,
 )
-from ditto_data.ingestion.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-    PublicationSafetyRuntimeStores,
-)
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.materialization import DerivedMaterializationRequest
 from ditto_features.materialization.models import (
@@ -38,6 +34,10 @@ from ditto_features.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
+)
 from ditto_features.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,

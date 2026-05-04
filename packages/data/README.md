@@ -46,18 +46,15 @@ ditto_data/
 ├── helpers/             # 辅助工具（复权调整 / PIT 策略）
 │   ├── adjustment.py    # 复权调整辅助
 │   └── pit/             # PIT（Point-in-Time）辅助
-├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录/发布安全）
+├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录）
 │   ├── freeze_service.py
 │   ├── ingestion_cursor_service.py
 │   ├── ingestion_log_service.py
 │   ├── late_arrival.py
-│   ├── publication_safety_record_service.py
 │   └── quality_record_service.py
-├── models/              # 数据模型（14 文件）
+├── models/              # 数据模型（8 文件）
 │   ├── common.py / market.py / metadata.py / macro.py
-│   ├── derived.py / ingestion.py / storage.py
-│   ├── strategy.py / strategy_run.py / strategy_audit.py / trade.py
-│   ├── source_codes.py / publication_safety.py
+│   ├── ingestion.py / storage.py / source_codes.py
 ├── provider.py          # DataProvider Protocol 定义
 ├── providers/           # ServiceBackedDataProvider 实现
 ├── quality/             # 数据质量引擎（L1-L4 检查器）
@@ -68,7 +65,7 @@ ditto_data/
 │   ├── freeze_manager.py
 │   ├── instrument_id_allocator.py
 │   └── sql_engine.py
-├── services/            # 域服务（13 Facade + 5 子目录）
+├── services/            # 域服务（market/metadata/fundamental/macro/capital/source）
 │   ├── deps.py          # 服务依赖聚合
 │   ├── market_service.py / market_write_service.py
 │   ├── metadata_service.py / fundamental_service.py
@@ -93,13 +90,11 @@ ditto_data/
 │   ├── sqlite_client.py
 │   ├── base/            # ParquetStore / SQLiteStore / PartitionStrategy
 │   ├── capital/         # 估值/融资融券/质押/指数成分
-│   ├── factors/         # 因子存储
-│   ├── features/        # 技术指标
 │   ├── fundamental/     # 财报/预测/公司行为
 │   ├── macro/           # 宏观指标
 │   ├── market/          # ETF/股票/指数/商品/外汇
-│   ├── metadata/        # 日历/工具/行业/Universe/策略
-│   ├── runtime/         # 摄入游标/日志/质量/衍生/研究/发布安全
+│   ├── metadata/        # 日历/工具/行业/Universe
+│   ├── runtime/         # 摄入游标/日志/质量/发布影子 SQLite（待迁移）
 │   └── schemas/
 └── utils/               # 工具函数（时区等）
 ```
@@ -144,12 +139,6 @@ Data 采用域驱动设计（DDD），按业务域组织：
 | Capital | valuation / margin / pledge / index_composition | SQLite | 是 |
 | Fundamental | financial / forecast / corporate | SQLite | 部分 |
 | Macro | indicator | SQLite | 是 |
-| Features | technical | Parquet + SQLite | 否 |
-| Factors | factor + metadata | Parquet + SQLite | 是 |
-| Strategy | spec / run / artifact / audit | SQLite | - |
-| Trade | intents / fills / positions | SQLite | - |
-| Derived | artifact / query / GC | SQLite + Parquet | - |
-| Research | catalog / artifact | SQLite | - |
 
 ## 数据质量
 

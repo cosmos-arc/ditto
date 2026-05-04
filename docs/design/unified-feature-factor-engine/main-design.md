@@ -142,11 +142,12 @@
   - `packages/analytics/src/ditto_analytics/expression/*`
   - `packages/analytics/src/ditto_analytics/materialization/*`
   - `packages/analytics/src/ditto_analytics/research/domain.py`
-  - `packages/analytics/src/ditto_analytics/publication_safety.py`
+  - `packages/features/src/ditto_features/publication_safety.py`
 
 #### DataHub
 
-- 负责 artifact 持久化、catalog、runtime metadata、research artifact、publication safety record。
+- 负责 data-owned artifact 持久化、catalog、runtime metadata、research artifact。
+- 发布安全记录与运行时存储属于 feature capability，由 `ditto_features` 服务和存储适配管理。
 - 封装文件 I/O、SQLite runtime、后续热层适配。
 - 当前关键入口：
   - `packages/data/src/ditto_data/services/derived_catalog_service.py`
@@ -178,7 +179,7 @@ source domains
   -> materialization orchestrator
      -> artifact truth layer
      -> catalog/runtime metadata
-     -> publication safety records
+     -> feature-owned publication safety records
 
 artifact truth layer
   -> offline series query
@@ -396,7 +397,7 @@ derived/artifacts/{profile}/{derived_id}/v{version}/...
 - state
 - dependency
 - checkpoint
-- publication safety records
+- feature-owned publication safety records
 - research snapshot records
 
 ### 9.4 热层与状态命名空间

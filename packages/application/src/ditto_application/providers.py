@@ -16,10 +16,6 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_data.ingestion.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-    PublicationSafetyRuntimeStores,
-)
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
@@ -47,6 +43,10 @@ from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
+)
+from ditto_features.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
 )
 from ditto_features.storage.runtime.publication_safety import (
     CertificationReader,

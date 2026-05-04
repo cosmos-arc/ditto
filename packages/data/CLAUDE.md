@@ -27,22 +27,20 @@ ditto_data/
 ├── helpers/             # 辅助工具（复权调整/PIT 策略与 DataFrame）
 │   ├── adjustment.py    # 复权调整辅助
 │   └── pit/             # PIT（Point-in-Time）辅助
-├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录/发布安全）
+├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录）
 │   ├── freeze_service.py                  # 冻结服务
 │   ├── ingestion_cursor_service.py        # 摄入游标服务
 │   ├── ingestion_log_service.py           # 摄入日志服务
 │   ├── late_arrival.py                    # 晚到数据处理
-│   ├── publication_safety_record_service.py  # 发布安全记录服务
 │   └── quality_record_service.py          # 质量记录服务
-├── models/              # 数据模型（市场/元数据/宏观/摄入/存储等；策略/交易/衍生模型已迁移至各能力包）
+├── models/              # 数据模型（市场/元数据/宏观/摄入/存储等；策略/交易/衍生/发布安全模型已迁移至各能力包或 kernel）
 │   ├── common.py               # 公共模型
 │   ├── market.py               # 行情模型
 │   ├── metadata.py             # 元数据模型
 │   ├── macro.py                # 宏观模型
 │   ├── ingestion.py            # 摄入结果模型
 │   ├── storage.py              # 存储相关模型
-│   ├── source_codes.py         # 数据源代码
-│   └── publication_safety.py   # 发布安全模型
+│   └── source_codes.py         # 数据源代码
 ├── provider.py          # DataProvider Protocol 定义
 ├── providers/           # DataProvider 实现
 │   └── provider.py      # ServiceBackedDataProvider 实现
@@ -126,11 +124,10 @@ ditto_data/
 │   │   ├── _pit_base.py # PIT 存储基类
 │   │   ├── fee_schedule_reader/writer.py  # 费率表
 │   │   └── trading_rule_reader/writer.py  # 交易规则
-│   ├── runtime/         # 运行时存储（摄入游标/日志/质量/发布安全）
+│   ├── runtime/         # 运行时存储（摄入游标/日志/质量；发布影子 SQLite 待迁移至 features）
 │   │   ├── ingestion/   # 摄入游标/日志
 │   │   ├── quality/     # 质量（比较/隔离）
-│   │   ├── publication_safety/  # 发布安全（认证/清单/影子报告/最小DQ）
-│   │   ├── publication_shadow_sqlite/  # 发布影子 SQLite 存储
+│   │   ├── publication_shadow_sqlite/  # 发布影子 SQLite 存储（临时保留，Task 3 迁移）
 │   │   └── unit_of_work.py      # 工作单元
 │   └── schemas/         # 存储层 Schema（market/metadata/store）
 └── utils/               # 工具函数（时区等）
@@ -147,7 +144,7 @@ ditto_data/
 | ingestion | 数据摄入编排 | 绕过质量检查 | 游标管理 |
 | quality | 数据质量引擎（含 protocols.py） | 包含业务逻辑 | L1-L4 检查 |
 | runtime | 运行时基础设施（SQL 引擎/冻结管理/ID 分配） | 包含业务逻辑 | SQL/PIT/Freeze |
-| models | 数据模型定义（市场/元数据/宏观/摄入/存储/发布安全等；策略/交易/衍生模型已迁移至各能力包） | 包含行为方法 | 纯数据类 |
+| models | 数据模型定义（市场/元数据/宏观/摄入/存储等；策略/交易/衍生/发布安全模型已迁移至各能力包或 kernel） | 包含行为方法 | 纯数据类 |
 | di | DI 注册 | 包含业务逻辑 | Provider 注册 |
 
 ## CQRS 模式（Command Query Responsibility Segregation）

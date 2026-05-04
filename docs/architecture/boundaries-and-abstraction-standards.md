@@ -141,7 +141,7 @@ analysis 仅限研究用途，生产包禁止依赖。
 | `sources` | 外部数据源 adapter、client、字段标准化 |
 | `storage` | 物理读写、分区、SQLite/Parquet/DuckDB 细节 |
 | `quality` | DQ 规则、执行、结果、隔离、报告 |
-| `ingestion` | 摄取日志、游标、冻结、晚到数据、发布安全记录 |
+| `ingestion` | 摄取日志、游标、冻结、晚到数据、质量记录 |
 | `query` | 面向上层的统一数据读取 facade |
 | `runtime` | 运行期元数据和本地运行基础能力 |
 | `di` | Data 内部对象注册 |
@@ -157,7 +157,7 @@ Data 禁止：
 
 ### 4.4 Features
 
-`features` 是因子计算平面，应该保持无外部 I/O。
+`features` 是因子、衍生数据和发布安全语义的能力平面。表达式、因子和物化计划等计算核心应该保持无外部 I/O；feature-owned 的持久化适配器位于 `storage/`，并由 DI 在应用边界组合。
 
 目标内部层级：
 
@@ -167,6 +167,7 @@ contracts/models
   -> factors
   -> materialization
   -> evaluation
+  -> services/storage adapters
 ```
 
 规则：
@@ -175,6 +176,7 @@ contracts/models
 - `factors` 应依赖表达式和因子 spec，而不是依赖 application process。
 - `materialization` 负责计划和产物语义，不直接读写物理存储。
 - `evaluation` 负责评价指标，不启动数据摄取或回测流程。
+- 发布安全记录服务和发布安全运行时存储属于 `features`，不属于 `data.ingestion` 或 `data.storage.runtime`。
 
 ### 4.4b Analysis
 

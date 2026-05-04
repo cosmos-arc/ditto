@@ -130,6 +130,11 @@ ditto/
 │   │       ├── expression/      # Expression DSL（lexer/parser/ast/codegen/compiler）
 │   │       ├── factors/         # 因子库（15 类因子）
 │   │       ├── materialization/ # 物化编排
+│   │       ├── services/        # 衍生数据与发布安全服务
+│   │       ├── storage/         # 因子/特征/衍生/发布安全存储适配
+│   │       ├── models/          # Feature/Factor/Derived 模型
+│   │       ├── di/              # Features Provider 注册
+│   │       ├── publication_safety.py # 发布安全门禁模型
 │   │       └── compile_cache.py
 │   ├── analysis/                # 纯研究分析
 │   │   └── src/ditto_analysis/
@@ -137,14 +142,14 @@ ditto/
 │   │       └── research/        # 研究
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
-│   │       ├── services/        # 域服务（13 Facade + audit/derived/metadata/strategy）
+│   │       ├── services/        # 域服务（market/metadata/fundamental/macro/capital/source）
 │   │       ├── sources/         # 数据源（Tushare/FRED/TDX）
-│   │       ├── models/          # 数据模型（13 模块）
+│   │       ├── models/          # 数据模型（市场/元数据/宏观/摄入/存储）
 │   │       ├── storage/         # 存储引擎（Reader/Writer CQRS）
 │   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
 │   │       ├── quality/         # 数据质量（L1-L4 检查器）
 │   │       ├── helpers/         # 辅助工具（PIT/复权调整）
-│   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/发布安全）
+│   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/质量记录）
 │   │       ├── providers/       # DataProvider 实现
 │   │       ├── config/          # 数据层配置
 │   │       └── di/              # DI 注册

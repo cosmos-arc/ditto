@@ -1,6 +1,6 @@
 """Tests for PublicationSafetyRecordService."""
 
-from ditto_data.ingestion.publication_safety_record_service import (
+from ditto_features.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
