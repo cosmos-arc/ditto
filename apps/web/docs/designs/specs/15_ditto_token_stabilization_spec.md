@@ -27,7 +27,7 @@ Token Stabilization R1 是 Ditto Design Token 体系从"设计阶段"走向"工�
 
 | # | 层名 | 职责 | 对应 CSS 文件 | Token 数量 | 依赖 | R1 状态 |
 |---|------|------|--------------|-----------|------|--------|
-| 1 | **Foundation** | 物理原语：中性色、品牌色、功能色、字号、字重、字体、间距、圆角、动画、色觉辅助符号 | `tokens-base.css` | 49 | 无 | ✅ 已稳定 |
+| 1 | **Foundation** | 物理原语：中性色、品牌色、功能色、字号、字重、字体、间距、圆角、动画、色觉辅助符号 | `tokens-base.css` | 52 | 无 | ✅ 已稳定 |
 | 2 | **Semantic Surface** | 界面表面语义：背景层级、文本层级（含 data-stale）、边框、品牌强调、图标、滚动条、代码/等宽、分隔线、Overlay（白色透明度）、Frosted Glass、Domain 签名色 | `tokens-semantic.css` | 42 + 24 (domain) | L1 | ✅ 已稳定 |
 | 2b | **Atmosphere** | 亚感知级背景氛围：色温渐变、面板呼吸动画（运行时由 JS hook 注入） | `tokens-atmosphere.css` | 5 | L2 | ✅ Living Graphite |
 | 3 | **Shell** | 页面壳层布局：rail/header/sidebar/detail/context-bar/status-bar 尺寸 + per-shell overrides | `tokens-shell.css` | 18 | L1, L2 | ✅ 已稳定 |
@@ -230,10 +230,11 @@ Edition v1 当前采用 9 级字号体系。`--font-size-11` 保留为 tight con
 ### 11px Usage Policy
 
 `--font-size-11` 是当前 9-step scale 的有效 token，但用途受限：
+仅在 DESIGN/Edition 明确批准的 dense non-interactive metadata 中允许使用。
 
 | 场景 | 规则 |
 |------|------|
-| Dense 非交互元数据 | 可使用 `--font-size-11` |
+| DESIGN/Edition 明确批准的 dense non-interactive metadata | 可使用 `--font-size-11` |
 | 交互元素（button/link/label/role button/switch/tab） | 使用 `--font-size-12` 或更大 |
 | 表格、header、tab、button、primary answer selector | 使用 `--font-size-12` 或更大 |
 | `cursor: pointer` 的 operational chip / row / target | 使用 `--font-size-12` 或更大 |

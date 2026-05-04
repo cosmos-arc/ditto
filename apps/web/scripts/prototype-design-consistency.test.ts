@@ -579,6 +579,29 @@ function isInteractivePrototypeElement(element: Element): boolean {
 	);
 }
 
+function isInsideOperationalTableLikeContainer(element: Element): boolean {
+	return Boolean(
+		element.closest(
+			[
+				"table",
+				"[role='grid']",
+				"[role='table']",
+				"[role='row']",
+				".data-table",
+				".catalog-table",
+				".compare-table",
+				".ledger-table",
+				".matrix-table",
+				".orders-table",
+				".risk-table",
+				".signals-table",
+				".worklist",
+				".worklist-row",
+			].join(", "),
+		),
+	);
+}
+
 function isOperationalElevenPxSelector(selector: string): boolean {
 	const normalized = selector.toLowerCase();
 	return /(?:button|btn|tab|header|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
@@ -598,6 +621,7 @@ function hasOperationalElevenPxUsage(
 	return elements.some(
 		(element) =>
 			isInteractivePrototypeElement(element) ||
+			isInsideOperationalTableLikeContainer(element) ||
 			pointerSelectors.some((pointerSelector) => element.matches(stripSelectorForDom(pointerSelector))),
 	);
 }
@@ -2145,6 +2169,7 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(spec).toMatch(/9\s*级字号体系/);
+		expect(spec).toMatch(/DESIGN\/Edition\s*明确批准的 dense non-interactive metadata/);
 
 		for (const token of [
 			"--font-size-10",
