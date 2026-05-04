@@ -23,6 +23,10 @@ from ditto_platform.foundation.storage import (
 
 from ditto_features.errors import FeatureStorageError
 
+FACTOR_KEY_COLUMNS = ("instrument_id", "trade_date", "factor_id", "effective_from")
+FACTOR_DATE_COLUMN = "trade_date"
+FACTOR_INSTRUMENT_COLUMN = "instrument_id"
+
 
 class _FactorParquetWriter(ParquetStore):
     """
@@ -31,22 +35,15 @@ class _FactorParquetWriter(ParquetStore):
     Overrides hook methods to handle PIT-specific logic.
     """
 
-    def _get_key_columns(self) -> list[str]:
-        """
-        Return key column names for deduplication.
-
-        For PIT data, the key includes effective_from to allow
-        multiple versions of the same factor value.
-        """
-        return ["instrument_id", "trade_date", "factor_id", "effective_from"]
-
-    def _get_sort_columns(self) -> list[str]:
-        """Return sort columns."""
-        return ["instrument_id", "trade_date", "factor_id", "effective_from"]
-
-    def _get_date_column(self) -> str:
-        """Return the date column name (default trade_date)."""
-        return "trade_date"
+    def __init__(self, data_root: Path) -> None:
+        """Initialize the factor writer store with factor-owned columns."""
+        super().__init__(
+            data_root,
+            YearlyPartition(),
+            key_columns=FACTOR_KEY_COLUMNS,
+            date_column=FACTOR_DATE_COLUMN,
+            instrument_column=FACTOR_INSTRUMENT_COLUMN,
+        )
 
     def _prepare_for_write(self, df: pl.DataFrame) -> pl.DataFrame:
         """
@@ -208,7 +205,7 @@ class FactorWriter:
             data_root: Root directory for data storage.
 
         """
-        self._store = _FactorParquetWriter(Path(data_root), YearlyPartition())
+        self._store = _FactorParquetWriter(Path(data_root))
         self._dataset = "factors/factors_narrow"
 
     @traced("data.factor_write")

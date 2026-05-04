@@ -27,8 +27,9 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_platform.foundation.storage import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate
+
+from tests.e2e.parquet_helpers import market_parquet_store
 
 
 def _make_instrument_id(df: pl.DataFrame) -> pl.DataFrame:
@@ -62,28 +63,28 @@ def pipeline_root(tmp_path: Path) -> Path:
 def stock_bars_reader(pipeline_root: Path) -> StockBarsReader:
     """创建 Stock 日线数据 Reader."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockBarsReader(ParquetStore(pipeline_root))
+    return StockBarsReader(market_parquet_store(pipeline_root))
 
 
 @pytest.fixture
 def stock_bars_writer(pipeline_root: Path) -> StockBarsWriter:
     """创建 Stock 日线数据 Writer."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockBarsWriter(ParquetStore(pipeline_root))
+    return StockBarsWriter(market_parquet_store(pipeline_root))
 
 
 @pytest.fixture
 def stock_adj_reader(pipeline_root: Path) -> StockAdjFactorReader:
     """创建 Stock 复权因子 Reader."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockAdjFactorReader(ParquetStore(pipeline_root))
+    return StockAdjFactorReader(market_parquet_store(pipeline_root))
 
 
 @pytest.fixture
 def stock_adj_writer(pipeline_root: Path) -> StockAdjFactorWriter:
     """创建 Stock 复权因子 Writer."""
     pipeline_root.mkdir(parents=True, exist_ok=True)
-    return StockAdjFactorWriter(ParquetStore(pipeline_root))
+    return StockAdjFactorWriter(market_parquet_store(pipeline_root))
 
 
 @pytest.fixture

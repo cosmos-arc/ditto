@@ -22,6 +22,10 @@ from ditto_platform.foundation.storage import (
 
 from ditto_features.errors import FeatureStorageError
 
+INDICATOR_KEY_COLUMNS = ("instrument_id", "trade_date", "indicator_id")
+INDICATOR_DATE_COLUMN = "trade_date"
+INDICATOR_INSTRUMENT_COLUMN = "instrument_id"
+
 
 class _TechnicalIndicatorParquetWriter(ParquetStore):
     """
@@ -30,13 +34,15 @@ class _TechnicalIndicatorParquetWriter(ParquetStore):
     Overrides hook methods to handle indicator-specific logic.
     """
 
-    def _get_key_columns(self) -> list[str]:
-        """Return key column names for deduplication."""
-        return ["instrument_id", "trade_date", "indicator_id"]
-
-    def _get_sort_columns(self) -> list[str]:
-        """Return sort columns."""
-        return ["instrument_id", "trade_date", "indicator_id"]
+    def __init__(self, data_root: Path) -> None:
+        """Initialize the indicator writer store with indicator-owned columns."""
+        super().__init__(
+            data_root,
+            YearlyPartition(),
+            key_columns=INDICATOR_KEY_COLUMNS,
+            date_column=INDICATOR_DATE_COLUMN,
+            instrument_column=INDICATOR_INSTRUMENT_COLUMN,
+        )
 
 
 class TechnicalIndicatorWriter:
@@ -76,7 +82,6 @@ class TechnicalIndicatorWriter:
         """
         self._store = _TechnicalIndicatorParquetWriter(
             Path(data_root),
-            YearlyPartition(),
         )
         self._dataset = "features/technical/indicators_narrow"
 

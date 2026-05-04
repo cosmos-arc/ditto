@@ -46,12 +46,12 @@ class TestParquetDatasetReaderRead:
             instrument_ids=[1], start_date="2024-01-01", end_date="2024-12-31"
         )
 
-        mock_store.read.assert_called_once_with(
-            "market/stock/bars",
-            instrument_ids=[1],
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-        )
+        mock_store.read.assert_called_once()
+        args, kwargs = mock_store.read.call_args
+        assert args == ("market/stock/bars",)
+        assert kwargs["start_date"] == "2024-01-01"
+        assert kwargs["end_date"] == "2024-12-31"
+        assert len(kwargs["filters"]) == 1
         assert result.equals(expected)
 
     def test_read_with_no_filters(
@@ -63,9 +63,9 @@ class TestParquetDatasetReaderRead:
 
         mock_store.read.assert_called_once_with(
             "market/stock/bars",
-            instrument_ids=None,
             start_date=None,
             end_date=None,
+            filters=[],
         )
 
 
@@ -77,12 +77,12 @@ class TestParquetDatasetReaderCount:
 
         result = reader.count(instrument_ids=[1])
 
-        mock_store.count.assert_called_once_with(
-            "market/stock/bars",
-            instrument_ids=[1],
-            start_date=None,
-            end_date=None,
-        )
+        mock_store.count.assert_called_once()
+        args, kwargs = mock_store.count.call_args
+        assert args == ("market/stock/bars",)
+        assert kwargs["start_date"] is None
+        assert kwargs["end_date"] is None
+        assert len(kwargs["filters"]) == 1
         assert result == 42
 
 
@@ -120,11 +120,14 @@ class TestParquetDatasetReaderMetadata:
     def test_list_instrument_ids_delegates(
         self, reader: ParquetDatasetReader, mock_store: MagicMock
     ) -> None:
-        mock_store.list_instrument_ids.return_value = [1, 2, 3]
+        mock_store.list_unique_values.return_value = [1, 2, 3]
 
         result = reader.list_instrument_ids()
 
-        mock_store.list_instrument_ids.assert_called_once_with("market/stock/bars")
+        mock_store.list_unique_values.assert_called_once_with(
+            "market/stock/bars",
+            "instrument_id",
+        )
         assert result == [1, 2, 3]
 
 

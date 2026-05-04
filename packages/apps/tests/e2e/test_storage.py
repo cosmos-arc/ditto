@@ -14,9 +14,10 @@ from pathlib import Path
 import polars as pl
 import pytest
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_platform.foundation.storage import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate
 from pytest_mock import MockerFixture
+
+from tests.e2e.parquet_helpers import market_parquet_store
 
 
 @pytest.mark.e2e
@@ -237,8 +238,8 @@ class TestStorage:
         )
 
         # 重新创建 Writer/Reader 以使用新的 tmp_path
-        writer = StockBarsWriter(ParquetStore(tmp_path))
-        reader = StockBarsReader(ParquetStore(tmp_path))
+        writer = StockBarsWriter(market_parquet_store(tmp_path))
+        reader = StockBarsReader(market_parquet_store(tmp_path))
 
         # Act: 写入数据
         writer.write(df=df_2023, year=2023, on_duplicate=OnDuplicate.ERROR)

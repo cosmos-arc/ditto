@@ -79,12 +79,12 @@ class TestParquetDatasetWriterDelete:
 
         result = writer.delete(instrument_ids=[1], start_date="2024-01-01")
 
-        mock_store.delete.assert_called_once_with(
-            "market/stock/bars",
-            instrument_ids=[1],
-            start_date="2024-01-01",
-            end_date=None,
-        )
+        mock_store.delete.assert_called_once()
+        args, kwargs = mock_store.delete.call_args
+        assert args == ("market/stock/bars",)
+        assert kwargs["start_date"] == "2024-01-01"
+        assert kwargs["end_date"] is None
+        assert len(kwargs["filters"]) == 1
         assert result == 5
 
     def test_delete_partition_delegates(
