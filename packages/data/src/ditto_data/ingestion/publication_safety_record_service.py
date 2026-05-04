@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from ditto_kernel.publication_safety import (
     CertificationReportRecord,
@@ -12,30 +13,140 @@ from ditto_kernel.publication_safety import (
     ShadowTraceRecordRecord,
 )
 
-from ditto_data.storage.runtime.publication_safety import (
-    CertificationReader,
-    CertificationWriter,
-    ManifestReader,
-    ManifestWriter,
-    MinimalDQReader,
-    MinimalDQWriter,
-    ShadowReportReader,
-    ShadowReportWriter,
-)
+
+class ManifestReaderProtocol(Protocol):
+    """Reader port for compatibility manifests."""
+
+    def read_manifest(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> CompatibilityManifestRecord | None:
+        """Read a compatibility manifest."""
+        ...
+
+
+class ManifestWriterProtocol(Protocol):
+    """Writer port for compatibility manifests."""
+
+    def write_manifest(self, record: CompatibilityManifestRecord) -> None:
+        """Write a compatibility manifest."""
+        ...
+
+
+class MinimalDQReaderProtocol(Protocol):
+    """Reader port for minimal DQ summaries."""
+
+    def read_summary(
+        self,
+        derived_id: str,
+        version: int,
+        run_id: str,
+    ) -> DerivedMinimalDQSummaryRecord | None:
+        """Read a minimal DQ summary."""
+        ...
+
+    def get_latest_summary(
+        self,
+        derived_id: str,
+        version: int,
+    ) -> DerivedMinimalDQSummaryRecord | None:
+        """Read the latest minimal DQ summary."""
+        ...
+
+
+class MinimalDQWriterProtocol(Protocol):
+    """Writer port for minimal DQ summaries."""
+
+    def write_summary(self, record: DerivedMinimalDQSummaryRecord) -> None:
+        """Write a minimal DQ summary."""
+        ...
+
+
+class ShadowReportReaderProtocol(Protocol):
+    """Reader port for shadow diff and trace records."""
+
+    def read_report(
+        self,
+        derived_id: str,
+        report_id: str,
+    ) -> ShadowDiffReportRecord | None:
+        """Read a shadow diff report."""
+        ...
+
+    def list_trace_records(
+        self,
+        derived_id: str,
+        report_id: str,
+    ) -> list[ShadowTraceRecordRecord]:
+        """List trace records for a shadow diff report."""
+        ...
+
+    def get_latest_report(
+        self,
+        derived_id: str,
+        candidate_version: int,
+        baseline_version: int,
+    ) -> ShadowDiffReportRecord | None:
+        """Read the latest shadow diff report."""
+        ...
+
+
+class ShadowReportWriterProtocol(Protocol):
+    """Writer port for shadow diff and trace records."""
+
+    def write_report(
+        self,
+        report: ShadowDiffReportRecord,
+        traces: tuple[ShadowTraceRecordRecord, ...],
+    ) -> None:
+        """Write a shadow diff report and its traces."""
+        ...
+
+
+class CertificationReaderProtocol(Protocol):
+    """Reader port for certification reports."""
+
+    def read_report(
+        self,
+        derived_id: str,
+        version: int,
+        stage: str,
+        report_id: str,
+    ) -> CertificationReportRecord | None:
+        """Read a certification report."""
+        ...
+
+    def get_latest_report(
+        self,
+        derived_id: str,
+        version: int,
+        stage: str,
+    ) -> CertificationReportRecord | None:
+        """Read the latest certification report."""
+        ...
+
+
+class CertificationWriterProtocol(Protocol):
+    """Writer port for certification reports."""
+
+    def write_report(self, record: CertificationReportRecord) -> None:
+        """Write a certification report."""
+        ...
 
 
 @dataclass(frozen=True)
 class PublicationSafetyRuntimeStores:
     """Reader/writer bundle for publication safety runtime records."""
 
-    manifest_reader: ManifestReader
-    manifest_writer: ManifestWriter
-    minimal_dq_reader: MinimalDQReader
-    minimal_dq_writer: MinimalDQWriter
-    shadow_report_reader: ShadowReportReader
-    shadow_report_writer: ShadowReportWriter
-    certification_reader: CertificationReader
-    certification_writer: CertificationWriter
+    manifest_reader: ManifestReaderProtocol
+    manifest_writer: ManifestWriterProtocol
+    minimal_dq_reader: MinimalDQReaderProtocol
+    minimal_dq_writer: MinimalDQWriterProtocol
+    shadow_report_reader: ShadowReportReaderProtocol
+    shadow_report_writer: ShadowReportWriterProtocol
+    certification_reader: CertificationReaderProtocol
+    certification_writer: CertificationWriterProtocol
 
 
 class PublicationSafetyRecordService:

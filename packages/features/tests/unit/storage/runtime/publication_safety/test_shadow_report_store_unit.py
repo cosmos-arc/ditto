@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ditto_data.storage.runtime.publication_safety import (
+from ditto_features.storage.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )

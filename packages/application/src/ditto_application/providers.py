@@ -18,6 +18,7 @@ from dishka import Provider, Scope, provide
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
 )
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.quality import QualityEngine
@@ -46,6 +47,16 @@ from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
+)
+from ditto_features.storage.runtime.publication_safety import (
+    CertificationReader,
+    CertificationWriter,
+    ManifestReader,
+    ManifestWriter,
+    MinimalDQReader,
+    MinimalDQWriter,
+    ShadowReportReader,
+    ShadowReportWriter,
 )
 from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_platform.services.notification import AlertManager
@@ -344,6 +355,25 @@ class AppProcessProvider(Provider):
             market_service=market_service,
             artifact_root=Path(settings.data_root),
         )
+
+    @provide
+    def publication_safety_record_service(
+        self,
+        settings: DataStoreSettings,
+    ) -> PublicationSafetyRecordService:
+        """Feature-owned publication safety stores wired for app orchestration."""
+        data_root = settings.data_root
+        stores = PublicationSafetyRuntimeStores(
+            manifest_reader=ManifestReader(base_path=data_root),
+            manifest_writer=ManifestWriter(base_path=data_root),
+            minimal_dq_reader=MinimalDQReader(base_path=data_root),
+            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
+            shadow_report_reader=ShadowReportReader(base_path=data_root),
+            shadow_report_writer=ShadowReportWriter(base_path=data_root),
+            certification_reader=CertificationReader(base_path=data_root),
+            certification_writer=CertificationWriter(base_path=data_root),
+        )
+        return PublicationSafetyRecordService(stores)
 
     @provide
     def derived_materialization_orchestrator(

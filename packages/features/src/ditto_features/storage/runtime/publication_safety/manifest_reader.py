@@ -4,7 +4,9 @@ from pathlib import Path
 
 from ditto_kernel.publication_safety import CompatibilityManifestRecord
 
-from ditto_data.storage.runtime.publication_safety._json_records import read_json_file
+from ditto_features.storage.runtime.publication_safety._json_records import (
+    read_json_file,
+)
 
 
 class ManifestReader:

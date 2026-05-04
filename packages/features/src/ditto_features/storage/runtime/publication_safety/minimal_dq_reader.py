@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ditto_kernel.publication_safety import DerivedMinimalDQSummaryRecord
 
-from ditto_data.storage.runtime.publication_safety._json_records import (
+from ditto_features.storage.runtime.publication_safety._json_records import (
     list_json_files,
     read_json_file,
 )

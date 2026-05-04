@@ -17,10 +17,6 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_service import FreezeService
 from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
 from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-from ditto_data.ingestion.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-    PublicationSafetyRuntimeStores,
-)
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.runtime.freeze_manager import FreezeManager
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
@@ -32,16 +28,6 @@ from ditto_data.storage.runtime.ingestion import (
     IngestionCursorWriter,
     IngestionLogReader,
     IngestionLogWriter,
-)
-from ditto_data.storage.runtime.publication_safety import (
-    CertificationReader,
-    CertificationWriter,
-    ManifestReader,
-    ManifestWriter,
-    MinimalDQReader,
-    MinimalDQWriter,
-    ShadowReportReader,
-    ShadowReportWriter,
 )
 from ditto_data.storage.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
@@ -143,46 +129,6 @@ class RuntimeProvider(Provider):
         return QuarantineWriter(sqlite_client)
 
     @provide
-    def manifest_reader(self, settings: DataStoreSettings) -> ManifestReader:
-        """发布兼容 manifest 读取器."""
-        return ManifestReader(base_path=settings.data_root)
-
-    @provide
-    def manifest_writer(self, settings: DataStoreSettings) -> ManifestWriter:
-        """发布兼容 manifest 写入器."""
-        return ManifestWriter(base_path=settings.data_root)
-
-    @provide
-    def minimal_dq_reader(self, settings: DataStoreSettings) -> MinimalDQReader:
-        """Minimal DQ 摘要读取器."""
-        return MinimalDQReader(base_path=settings.data_root)
-
-    @provide
-    def minimal_dq_writer(self, settings: DataStoreSettings) -> MinimalDQWriter:
-        """Minimal DQ 摘要写入器."""
-        return MinimalDQWriter(base_path=settings.data_root)
-
-    @provide
-    def shadow_report_reader(self, settings: DataStoreSettings) -> ShadowReportReader:
-        """Shadow diff / trace 读取器."""
-        return ShadowReportReader(base_path=settings.data_root)
-
-    @provide
-    def shadow_report_writer(self, settings: DataStoreSettings) -> ShadowReportWriter:
-        """Shadow diff / trace 写入器."""
-        return ShadowReportWriter(base_path=settings.data_root)
-
-    @provide
-    def certification_reader(self, settings: DataStoreSettings) -> CertificationReader:
-        """认证报告读取器."""
-        return CertificationReader(base_path=settings.data_root)
-
-    @provide
-    def certification_writer(self, settings: DataStoreSettings) -> CertificationWriter:
-        """认证报告写入器."""
-        return CertificationWriter(base_path=settings.data_root)
-
-    @provide
     def derived_shadow_slot_reader(
         self,
         sqlite_client: SQLiteClient,
@@ -248,32 +194,6 @@ class RuntimeProvider(Provider):
             comparison_writer,
             quarantine_reader,
             quarantine_writer,
-        )
-
-    @provide
-    def publication_safety_record_service(
-        self,
-        publication_safety_runtime_stores: PublicationSafetyRuntimeStores,
-    ) -> PublicationSafetyRecordService:
-        """发布安全记录服务."""
-        return PublicationSafetyRecordService(publication_safety_runtime_stores)
-
-    @provide
-    def publication_safety_runtime_stores(
-        self,
-        settings: DataStoreSettings,
-    ) -> PublicationSafetyRuntimeStores:
-        """发布安全运行时 stores 组合包."""
-        data_root = settings.data_root
-        return PublicationSafetyRuntimeStores(
-            manifest_reader=ManifestReader(base_path=data_root),
-            manifest_writer=ManifestWriter(base_path=data_root),
-            minimal_dq_reader=MinimalDQReader(base_path=data_root),
-            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
-            shadow_report_reader=ShadowReportReader(base_path=data_root),
-            shadow_report_writer=ShadowReportWriter(base_path=data_root),
-            certification_reader=CertificationReader(base_path=data_root),
-            certification_writer=CertificationWriter(base_path=data_root),
         )
 
     @provide
