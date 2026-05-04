@@ -2660,10 +2660,97 @@
     BottomTray.init();
     ResizablePanels.init();
     BulletGraph.init();
+    StripCollapse.init();
   }
 
   /* ══════════════════════════════════════════════
-   * 18. Atmosphere — data-atmosphere-intensity
+   * 18. StripCollapse
+   *     [data-collapsible-strip] strips with toggle header
+   *     Supports both standalone strip wrappers and rail-section elements.
+   *     Collapsed state: only header row visible (36px).
+   *     Expanded state: full content with smooth animation.
+   * ══════════════════════════════════════════════ */
+  var StripCollapse = {
+    init: function () {
+      /* 1. Standalone collapsible-strip wrappers */
+      document.querySelectorAll('[data-collapsible-strip].collapsible-strip').forEach(function (strip) {
+        var toggle = strip.querySelector('[data-strip-toggle]');
+        var content = strip.querySelector('.collapsible-content');
+        if (!toggle || !content) return;
+
+        var startCollapsed = strip.getAttribute('data-default-collapsed') === 'true';
+        StripCollapse._sync(strip, toggle, content, startCollapsed);
+
+        if (strip.getAttribute('data-strip-collapse-ready') === 'true') return;
+        strip.setAttribute('data-strip-collapse-ready', 'true');
+
+        toggle.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var isCollapsed = strip.getAttribute('data-collapsed-state') === 'true';
+          StripCollapse._sync(strip, toggle, content, !isCollapsed);
+        });
+
+        /* Also allow clicking the title to toggle */
+        var title = strip.querySelector('.collapsible-strip-title');
+        if (title) {
+          title.addEventListener('click', function () {
+            var isCollapsed = strip.getAttribute('data-collapsed-state') === 'true';
+            StripCollapse._sync(strip, toggle, content, !isCollapsed);
+          });
+          title.style.cursor = 'pointer';
+        }
+      });
+
+      /* 2. Rail-section collapsible elements */
+      document.querySelectorAll('.rail-section[data-collapsible-strip]').forEach(function (section) {
+        var header = section.querySelector('.rail-section-header');
+        var body = section.querySelector('.rail-section-body');
+        if (!header || !body) return;
+
+        var startCollapsed = section.getAttribute('data-default-collapsed') === 'true';
+        StripCollapse._syncRailSection(section, header, body, startCollapsed);
+
+        if (section.getAttribute('data-strip-collapse-ready') === 'true') return;
+        section.setAttribute('data-strip-collapse-ready', 'true');
+
+        header.addEventListener('click', function () {
+          var isCollapsed = section.getAttribute('data-collapsed-state') === 'true';
+          StripCollapse._syncRailSection(section, header, body, !isCollapsed);
+        });
+
+        /* Keyboard support */
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('role', 'button');
+        header.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            var isCollapsed = section.getAttribute('data-collapsed-state') === 'true';
+            StripCollapse._syncRailSection(section, header, body, !isCollapsed);
+          }
+        });
+      });
+    },
+
+    _sync: function (strip, toggle, content, collapsed) {
+      strip.setAttribute('data-collapsed-state', collapsed ? 'true' : 'false');
+      content.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      var label = toggle.getAttribute('data-strip-toggle') || '';
+      toggle.setAttribute('aria-label', (collapsed ? '展开' : '折叠') + (label ? ' ' + label : ''));
+    },
+
+    _syncRailSection: function (section, header, body, collapsed) {
+      section.setAttribute('data-collapsed-state', collapsed ? 'true' : 'false');
+      body.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
+      header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      var titleText = header.querySelector('.rail-section-title');
+      var title = titleText ? titleText.textContent.trim() : '';
+      header.setAttribute('aria-label', (collapsed ? '展开' : '折叠') + (title ? ' ' + title : ''));
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 19. Atmosphere — data-atmosphere-intensity
    *     API for manual/future perceptible chromatic mode.
    *     Not part of the init chain.
    * ══════════════════════════════════════════════ */

@@ -231,6 +231,25 @@
     /* ── Panel grow utility (replaces inline flex:1) ── */
     .panel-grow { flex: 1; }
 
+    /* ── Collapsible strip wrapper for Global Pulse ── */
+    .collapsible-strip[data-contract-slot="global-pulse-wrapper"] {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      overflow: hidden;
+      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
+    }
+    .collapsible-strip[data-contract-slot="global-pulse-wrapper"] .global-pulse {
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .collapsible-strip[data-contract-slot="global-pulse-wrapper"] .collapsible-strip-header {
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .collapsible-strip[data-collapsed-state="true"][data-contract-slot="global-pulse-wrapper"] .collapsible-strip-header {
+      border-bottom: none;
+    }
+
     /* ── Panel subtitle & Alert timestamp — upgraded to 12px in layout-base.css ── */
 
     /* ── Shell children elevation above noise layer ── */
@@ -1707,7 +1726,17 @@
 
     <!-- ═══ Main Content (Decision Card + Execution Queue + Signals/Findings) ═══ -->
     <div class="shell-main" id="main-content">
-      <!-- ═══ Global Pulse (L3 — compact operational status) ═══ -->
+      <!-- ═══ Global Pulse (L3 — compact operational status, collapsible) ═══ -->
+    <div class="collapsible-strip" data-collapsible-strip data-contract-slot="global-pulse-wrapper" aria-label="全局操作总览">
+      <div class="collapsible-strip-header">
+        <span class="collapsible-strip-title">全局脉搏</span>
+        <span class="collapsible-strip-count">8 指标</span>
+        <button class="collapsible-strip-toggle" data-strip-toggle="全局脉搏" aria-expanded="true" aria-label="折叠 全局脉搏" type="button">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+      </div>
+      <div class="collapsible-content" id="home-global-pulse-content">
+        <div class="collapsible-inner">
     <div class="global-pulse" data-contract-slot="global-pulse" data-operating-summary aria-label="今日全局操作总览" data-reveal="fade-up">
       <span class="global-pulse-item" data-operating-metric data-operating-category="account" data-tooltip="账户总权益 ¥25,432,180">
         <span class="global-pulse-label freshness-realtime">总权益</span>
@@ -1749,6 +1778,9 @@
         <span class="global-pulse-value warning">2 降级</span>
         <span class="global-pulse-note">5/7 正常</span>
       </span>
+    </div>
+        </div>
+      </div>
     </div>
 
       <!-- Primary: Decision Card + Execution Queue -->

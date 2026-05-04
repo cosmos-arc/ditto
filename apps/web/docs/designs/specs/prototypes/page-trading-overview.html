@@ -305,7 +305,7 @@
     }
 
     .shell-analytical.trading-variant .session-strip { grid-area: session; }
-    .shell-analytical.trading-variant .margin-strip { grid-area: margin; }
+    .shell-analytical.trading-variant .collapsible-strip[data-contract-slot="margin-strip-wrapper"] { grid-area: margin; }
     .shell-analytical.trading-variant .pipeline-strip { grid-area: pipeline; }
 
     /* Banner grid area */
@@ -332,6 +332,23 @@
       height: var(--density-strip-height, 36px);
       min-height: var(--density-strip-height, 36px);
       max-height: calc(var(--density-strip-height, 36px) + var(--space-1));
+    }
+
+    /* ── Collapsible Margin Strip ── */
+    .collapsible-strip[data-contract-slot="margin-strip-wrapper"] {
+      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow: hidden;
+    }
+    .collapsible-strip[data-contract-slot="margin-strip-wrapper"] .scope-strip {
+      padding: 0 var(--density-gutter, var(--space-12));
+      border-bottom: none;
+    }
+    .collapsible-strip[data-contract-slot="margin-strip-wrapper"] .collapsible-strip-header {
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .collapsible-strip[data-collapsed-state="true"][data-contract-slot="margin-strip-wrapper"] .collapsible-strip-header {
+      border-bottom: none;
     }
 
     /* Trading phase pill */
@@ -2202,7 +2219,17 @@
       </div>
     </div>
 
-    <!-- ═══ Session Strip: 两融数据行 ═══ -->
+    <!-- ═══ Session Strip: 两融数据行 (collapsible, default collapsed) ═══ -->
+    <div class="collapsible-strip" data-collapsible-strip data-default-collapsed="true" data-contract-slot="margin-strip-wrapper" aria-label="两融数据">
+      <div class="collapsible-strip-header">
+        <span class="collapsible-strip-title">两融数据</span>
+        <span class="collapsible-strip-count">担保 286%</span>
+        <button class="collapsible-strip-toggle" data-strip-toggle="两融数据" aria-expanded="false" aria-label="展开 两融数据" type="button">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+      </div>
+      <div class="collapsible-content" id="trading-margin-strip-content">
+        <div class="collapsible-inner">
     <div class="scope-strip margin-strip" role="status" aria-label="两融数据" data-contract-slot="margin-strip">
       <div class="scope-metric" data-tooltip="融资买入余额">
         <span class="scope-metric-label freshness-delayed">融资余额</span>
@@ -2217,6 +2244,9 @@
       <div class="scope-metric" data-tooltip="维持担保比例，预警线 150%、平仓线 130%">
         <span class="scope-metric-label freshness-realtime">担保比例</span>
         <span class="scope-metric-value ok">286%</span>
+      </div>
+    </div>
+        </div>
       </div>
     </div>
 

@@ -971,6 +971,17 @@
       padding: var(--space-10);
     }
 
+    /* ── Collapsible Tab Band ── */
+    .tab-band.collapsible-strip .tab-band-header {
+      padding-right: var(--space-4);
+    }
+    .tab-band[data-collapsed-state="true"] {
+      padding-bottom: 0;
+    }
+    .tab-band[data-collapsed-state="true"] .tab-band-header {
+      border-bottom: none;
+    }
+
     @keyframes tab-reveal {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
@@ -2073,7 +2084,7 @@
           </div>
 
           <!-- 2. Risk: 3 items, high+medium only -->
-          <div class="rail-section rail-section--risk">
+          <div class="rail-section rail-section--risk" data-collapsible-strip data-default-collapsed="true">
             <div class="rail-section-header">
               <span class="rail-section-title rail-section-title--alert">风险与预警</span>
             </div>
@@ -2094,7 +2105,7 @@
           </div>
 
           <!-- 3. Events: high-importance only, 2 items -->
-          <div class="rail-section">
+          <div class="rail-section" data-collapsible-strip data-default-collapsed="true">
             <div class="rail-section-header">
               <span class="rail-section-title">关键事件</span>
             </div>
@@ -2117,7 +2128,7 @@
           </div>
 
           <!-- 4. Drilldown Recommendations -->
-          <div class="rail-section">
+          <div class="rail-section" data-collapsible-strip data-default-collapsed="true">
             <div class="rail-section-header">
               <span class="rail-section-title">推荐下钻</span>
             </div>
@@ -2163,7 +2174,7 @@
       <!-- /shell-workspace -->
 
       <!-- Tab Band (summary-only, detail → drawer/sub-page) — radio tab system -->
-      <div class="tab-band tab-group" data-contract-slot="bottom-tab-band" data-tab-group="cross-market">
+      <div class="tab-band tab-group collapsible-strip" data-contract-slot="bottom-tab-band" data-tab-group="cross-market" data-collapsible-strip data-default-collapsed="true">
         <!-- Radio inputs (hidden, CSS-driven activation) -->
         <input type="radio" name="cross-market" id="tab-rotation" checked class="tab-radio sr-only">
         <input type="radio" name="cross-market" id="tab-calendar" class="tab-radio sr-only">
@@ -2173,8 +2184,14 @@
           <label for="tab-rotation" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-rotation" aria-selected="true" id="tab-control-rotation">资金轮动</label>
           <label for="tab-calendar" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-calendar" aria-selected="false" id="tab-control-calendar">事件日历</label>
           <label for="tab-ai" class="tab-band-tab" role="tab" tabindex="0" aria-controls="panel-ai" aria-selected="false" id="tab-control-ai">AI 解读</label>
+          <span class="tab-spacer"></span>
+          <button class="collapsible-strip-toggle" data-strip-toggle="辅助视角" aria-expanded="true" aria-label="折叠 辅助视角" type="button">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+          </button>
         </div>
 
+        <div class="collapsible-content" id="cross-market-tab-content">
+          <div class="collapsible-inner">
         <!-- Tab 1: Capital Rotation — summary only -->
         <div class="tab-panel tab-band-body" id="panel-rotation" data-panel="tab-rotation" role="tabpanel" aria-labelledby="tab-control-rotation" aria-hidden="false">
           <div class="rotation-summary-row">
@@ -2266,6 +2283,8 @@
           <div class="view-detail-link" tabindex="0" role="link">AI 解读详情 →</div>
         </div>
 
+          </div>
+        </div>
       </div>
       <!-- /tab-band -->
 

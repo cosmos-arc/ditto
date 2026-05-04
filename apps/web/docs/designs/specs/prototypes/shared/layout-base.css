@@ -3479,6 +3479,161 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
   transition: none;
 }
 
+/* ── Collapsible Strip ──────────────────────────
+ * Horizontal strip with a collapsible header row.
+ * Wraps a title + toggle button + collapsible content.
+ *
+ * Usage:
+ *   <div class="collapsible-strip" data-collapsible-strip>
+ *     <div class="collapsible-strip-header">
+ *       <span class="collapsible-strip-title">Title</span>
+ *       <button class="collapsible-strip-toggle"
+ *               data-collapse-toggle="strip-content-id"
+ *               aria-expanded="true"
+ *               aria-label="折叠">
+ *         <svg>chevron</svg>
+ *       </button>
+ *     </div>
+ *     <div class="collapsible-content" id="strip-content-id">
+ *       <div class="collapsible-inner">...</div>
+ *     </div>
+ *   </div>
+ */
+.collapsible-strip-header {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-12);
+  height: var(--density-strip-height, 36px);
+  min-height: var(--density-strip-height, 36px);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-8);
+}
+
+.collapsible-strip-title {
+  font-size: var(--font-size-11);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  font-family: var(--font-family-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: 1;
+}
+
+.collapsible-strip-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-4);
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 150ms var(--motion-easing-standard),
+              background 150ms var(--motion-easing-standard);
+}
+
+.collapsible-strip-toggle:hover {
+  color: var(--text-secondary);
+  background: var(--overlay-6);
+}
+
+.collapsible-strip-toggle:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 1px;
+}
+
+.collapsible-strip-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 200ms var(--motion-easing-standard);
+}
+
+.collapsible-strip-toggle[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+[data-reduced-motion] .collapsible-strip-toggle svg {
+  transition: none;
+}
+
+/* Collapse count badge in strip header */
+.collapsible-strip-count {
+  font-family: var(--font-family-numeric);
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 150ms var(--motion-easing-standard),
+              opacity 150ms var(--motion-easing-standard);
+}
+
+.collapsible-strip[data-collapsed-state="true"] .collapsible-strip-count {
+  max-width: 6rem;
+  opacity: 1;
+}
+
+/* Rail section collapsible support */
+.rail-section[data-collapsible-strip] {
+  overflow: hidden;
+}
+
+.rail-section[data-collapsible-strip] .rail-section-header {
+  cursor: pointer;
+  position: relative;
+}
+
+.rail-section[data-collapsible-strip] .rail-section-header::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) rotate(0deg);
+  width: 0;
+  height: 0;
+  border-left: 4px solid var(--text-tertiary);
+  border-right: 4px solid transparent;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 200ms var(--motion-easing-standard);
+  opacity: 0.5;
+}
+
+.rail-section[data-collapsible-strip] .rail-section-header:hover::after {
+  opacity: 0.8;
+}
+
+.rail-section[data-collapsed-state="true"] .rail-section-header::after {
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+.rail-section[data-collapsible-strip] .rail-section-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 200ms var(--motion-easing-standard),
+              opacity 150ms var(--motion-easing-standard);
+}
+
+.rail-section[data-collapsible-strip] > .rail-section-body > * {
+  overflow: hidden;
+}
+
+.rail-section[data-collapsed-state="true"] .rail-section-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+[data-reduced-motion] .rail-section[data-collapsible-strip] .rail-section-body,
+[data-reduced-motion] .rail-section[data-collapsible-strip] .rail-section-header::after {
+  transition: none;
+}
+
 .tab-spacer {
   flex: 1;
 }
