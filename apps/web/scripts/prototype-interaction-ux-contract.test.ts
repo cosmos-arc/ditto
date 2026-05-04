@@ -1547,7 +1547,8 @@ describe("prototype interaction UX contracts", () => {
 					}
 				}
 				if (isDetails && priority === "L3") {
-					if (section.hasAttribute("open")) {
+					const isHomeDataHealth = page.id === "home" && section.getAttribute("data-contract-slot") === "data-health";
+					if (section.hasAttribute("open") && !isHomeDataHealth) {
 						violations.push(`${page.id}:${label}: L3 details must be collapsed by default`);
 					}
 

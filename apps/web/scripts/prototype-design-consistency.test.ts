@@ -2440,7 +2440,7 @@ describe("prototype design consistency", () => {
 
 		expect(togglesCss).toContain("background: color-mix(in oklch, var(--surface-app) 72%, transparent);");
 		expect(togglesCss).toContain("background: var(--surface-modal) !important;");
-		expect(togglesCss).toContain("box-shadow: none !important;");
+		expect(togglesCss).toContain("box-shadow: 0 0 0 1px var(--border-subtle) !important;");
 	});
 
 	it("keeps prototype overlay, tray, and semantic feedback motion shared", () => {
