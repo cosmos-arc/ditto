@@ -246,7 +246,7 @@
         var input = event.target;
         if (!input.matches('input[type="radio"]')) return;
 
-        document.querySelectorAll('[role="tab"][for="' + input.id + '"]').forEach(function (tab) {
+        document.querySelectorAll('[role="tab"][for="' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(input.id) : input.id) + '"]').forEach(function (tab) {
           var tablist = tab.closest('[role="tablist"]');
           if (tablist) RadioTabLabels._syncTablist(tablist);
         });
@@ -742,8 +742,8 @@
       svg.style.width  = w + 'px';
       svg.style.height = h + 'px';
 
-      var min = Math.min.apply(null, data);
-      var max = Math.max.apply(null, data);
+      var min = data.reduce(function (m, v) { return v < m ? v : m; }, Infinity);
+      var max = data.reduce(function (m, v) { return v > m ? v : m; }, -Infinity);
       var range = max - min || 1;
       var pad = sw;
 
@@ -952,6 +952,7 @@
             if (entry.isIntersecting) {
               NumberTicker.animate(el, target, decimals, prefix, suffix);
               observer.unobserve(el);
+              observer.disconnect();
             }
           });
         }, { threshold: 0.1 });
@@ -1005,6 +1006,7 @@
         el.style.transition = 'opacity 0.5s cubic-bezier(0.4,0,0.2,1), transform 0.5s cubic-bezier(0.4,0,0.2,1)';
       });
 
+      var observedCount = items.length;
       var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
@@ -1014,6 +1016,10 @@
             el.style.opacity = '1';
             el.style.transform = '';
             observer.unobserve(el);
+            observedCount -= 1;
+            if (observedCount === 0) {
+              observer.disconnect();
+            }
           }, delay);
         });
       }, { threshold: 0.1 });
@@ -1026,57 +1032,104 @@
    * 7. MouseGlow — data-mouse-glow="true"
    * ══════════════════════════════════════════════ */
   var MouseGlow = {
+    currentEl: null,
+    frame: 0,
+    lastEvent: null,
+
     init: function () {
       if (reducedMotion) return;
+
+      /* Apply initial glow tokens to all glow elements */
       document.querySelectorAll('[data-mouse-glow]').forEach(function (el) {
-        var frame = 0;
-        var lastEvent = null;
-        var background =
-          'radial-gradient(circle var(--_glow-size) at var(--_glow-x, 50%) var(--_glow-y, 50%), var(--_glow-color), transparent)';
+        MouseGlow._applyTokens(el);
+      });
 
-        function applyGlowTokens() {
-          var color = el.getAttribute('data-mouse-glow-color') || cssVar('--brand-accent-subtle', 'oklch(from var(--brand-500) l c h / 0.06)');
-          var size = el.getAttribute('data-mouse-glow-size') || '200px';
-
-          el.style.setProperty('--_glow-size', size);
-          el.style.setProperty('--_glow-color', color);
+      /* Event delegation: single mousemove on document */
+      document.addEventListener('mousemove', function (e) {
+        var el = e.target.closest('[data-mouse-glow]');
+        if (!el) {
+          if (MouseGlow.currentEl) MouseGlow._clear(MouseGlow.currentEl);
+          MouseGlow.currentEl = null;
+          return;
         }
+        if (el !== MouseGlow.currentEl) {
+          if (MouseGlow.currentEl) MouseGlow._clear(MouseGlow.currentEl);
+          MouseGlow.currentEl = el;
+        }
+        MouseGlow._update(el, e);
+      });
 
-        applyGlowTokens();
+      /* Clear glow when mouse leaves a glow element (delegated via mouseout) */
+      document.addEventListener('mouseout', function (e) {
+        if (!MouseGlow.currentEl) return;
+        var el = e.target.closest('[data-mouse-glow]');
+        if (!el || el !== MouseGlow.currentEl) return;
+        var related = e.relatedTarget;
+        if (related && el.contains(related)) return;
+        MouseGlow._clear(el);
+        MouseGlow.currentEl = null;
+      });
 
-        el.addEventListener('mousemove', function (event) {
-          lastEvent = event;
-          if (!el.style.backgroundImage || !el.style.getPropertyValue('--_glow-size') || !el.style.getPropertyValue('--_glow-color')) {
-            applyGlowTokens();
-            el.style.backgroundImage = background;
-          }
-          if (frame) return;
+      /* Clear glow when mouse leaves the document entirely */
+      document.addEventListener('mouseleave', function () {
+        if (MouseGlow.currentEl) {
+          MouseGlow._clear(MouseGlow.currentEl);
+          MouseGlow.currentEl = null;
+        }
+      });
 
-          frame = requestAnimationFrame(function () {
-            frame = 0;
-            if (!lastEvent) return;
-
-            var rect = el.getBoundingClientRect();
-            var x = lastEvent.clientX - rect.left;
-            var y = lastEvent.clientY - rect.top;
-            el.style.setProperty('--_glow-x', x + 'px');
-            el.style.setProperty('--_glow-y', y + 'px');
-          });
-        });
-
+      /* Also listen for mouseleave on each glow element directly (non-bubbling) */
+      document.querySelectorAll('[data-mouse-glow]').forEach(function (el) {
         el.addEventListener('mouseleave', function () {
-          if (frame) {
-            cancelAnimationFrame(frame);
+          MouseGlow._clear(el);
+          if (MouseGlow.currentEl === el) {
+            MouseGlow.currentEl = null;
           }
-          frame = 0;
-          lastEvent = null;
-          el.style.backgroundImage = '';
-          el.style.removeProperty('--_glow-x');
-          el.style.removeProperty('--_glow-y');
-          el.style.removeProperty('--_glow-size');
-          el.style.removeProperty('--_glow-color');
         });
       });
+    },
+
+    _applyTokens: function (el) {
+      var color = el.getAttribute('data-mouse-glow-color') || cssVar('--brand-accent-subtle', 'oklch(from var(--brand-500) l c h / 0.06)');
+      var size = el.getAttribute('data-mouse-glow-size') || '200px';
+      el.style.setProperty('--_glow-size', size);
+      el.style.setProperty('--_glow-color', color);
+    },
+
+    _update: function (el, event) {
+      MouseGlow.lastEvent = event;
+      var background =
+        'radial-gradient(circle var(--_glow-size) at var(--_glow-x, 50%) var(--_glow-y, 50%), var(--_glow-color), transparent)';
+
+      if (!el.style.backgroundImage || !el.style.getPropertyValue('--_glow-size') || !el.style.getPropertyValue('--_glow-color')) {
+        MouseGlow._applyTokens(el);
+        el.style.backgroundImage = background;
+      }
+      if (MouseGlow.frame) return;
+
+      MouseGlow.frame = requestAnimationFrame(function () {
+        MouseGlow.frame = 0;
+        if (!MouseGlow.lastEvent) return;
+
+        var rect = el.getBoundingClientRect();
+        var x = MouseGlow.lastEvent.clientX - rect.left;
+        var y = MouseGlow.lastEvent.clientY - rect.top;
+        el.style.setProperty('--_glow-x', x + 'px');
+        el.style.setProperty('--_glow-y', y + 'px');
+      });
+    },
+
+    _clear: function (el) {
+      if (MouseGlow.frame) {
+        cancelAnimationFrame(MouseGlow.frame);
+      }
+      MouseGlow.frame = 0;
+      MouseGlow.lastEvent = null;
+      el.style.backgroundImage = '';
+      el.style.removeProperty('--_glow-x');
+      el.style.removeProperty('--_glow-y');
+      el.style.removeProperty('--_glow-size');
+      el.style.removeProperty('--_glow-color');
     },
   };
 
@@ -1298,6 +1351,25 @@
       document.addEventListener('mouseout', TooltipSystem._onOut, true);
       document.addEventListener('focusin', TooltipSystem._onOver, true);
       document.addEventListener('focusout', TooltipSystem._onOut, true);
+
+      /* Touch device support: long-press (500ms) to show tooltip */
+      var touchTimer = null;
+      document.addEventListener('touchstart', function (e) {
+        var trigger = e.target.closest('[data-tooltip]');
+        if (!trigger) return;
+        touchTimer = setTimeout(function () {
+          var text = trigger.getAttribute('data-tooltip');
+          if (text) TooltipSystem.show(trigger, text);
+        }, 500);
+      }, { passive: true });
+
+      document.addEventListener('touchend', function () {
+        if (touchTimer) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+        }
+        TooltipSystem.hide();
+      }, { passive: true });
     },
 
     _onOver: function (e) {
