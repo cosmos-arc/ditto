@@ -8,9 +8,9 @@ Following design document at docs/plans/2026-02-09-data-cqrs-refactor.md
 from __future__ import annotations
 
 from ditto_platform.foundation import logger, traced
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_data.models.macro import IndicatorMetadataSpec
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class IndicatorMetadataWriter:

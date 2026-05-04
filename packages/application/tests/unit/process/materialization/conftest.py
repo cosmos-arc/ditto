@@ -4,8 +4,8 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 @pytest.fixture

@@ -6,6 +6,7 @@ from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation.cache import DataCache
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.services.metadata_service import MetadataService
@@ -30,7 +31,6 @@ from ditto_data.storage.metadata.universe import (
     UniverseReader,
     UniverseWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["MetadataProvider"]
 

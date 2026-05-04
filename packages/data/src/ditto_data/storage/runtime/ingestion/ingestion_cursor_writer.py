@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import Any
 
 from ditto_platform.foundation import logger
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_data.models.ingestion import IngestionCursor
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class IngestionCursorWriter:

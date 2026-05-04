@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from ditto_kernel.publication_safety import DerivedShadowSlotRecord
-
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 __all__ = ["SQLiteDerivedShadowSlotWriter"]
 

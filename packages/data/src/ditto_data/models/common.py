@@ -6,15 +6,6 @@ from enum import Enum, StrEnum
 from typing import Literal, NamedTuple
 
 from ditto_kernel.instrument import AssetClass
-from ditto_kernel.json_types import (
-    JsonDict,
-    JsonPrimitive,
-    JsonValue,
-    require_bool,
-    require_int,
-    require_payload,
-    require_str,
-)
 
 # 资产类别类型别名
 type AssetClassType = Literal[
@@ -27,14 +18,7 @@ __all__ = [
     "DateScheduleType",
     "Domain",
     "InstrumentIdRange",
-    "JsonDict",
-    "JsonPrimitive",
-    "JsonValue",
     "Source",
-    "require_bool",
-    "require_int",
-    "require_payload",
-    "require_str",
 ]
 
 

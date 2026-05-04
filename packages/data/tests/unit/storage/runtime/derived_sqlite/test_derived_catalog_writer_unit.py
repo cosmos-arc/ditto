@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_features.models.derived import (
     DerivedRunRecord,
     DerivedVersionRecord,
@@ -13,6 +12,7 @@ from ditto_features.models.derived import (
 from ditto_features.storage.sqlite.derived.writer import (
     SQLiteDerivedCatalogWriter,
 )
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 def _make_writer() -> SQLiteDerivedCatalogWriter:

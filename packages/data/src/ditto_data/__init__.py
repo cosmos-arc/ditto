@@ -7,14 +7,10 @@
 from ditto_data.events import DataIngested, QualityCheckCompleted
 from ditto_data.provider import BarQuery, DataProvider, InstrumentQuery
 
-# 导出运行时基础设施（供 App 层 DI 使用）
-from ditto_data.storage.sqlite_client import SQLiteClient
-
 __all__ = [
     "BarQuery",
     "DataIngested",
     "DataProvider",
     "InstrumentQuery",
     "QualityCheckCompleted",
-    "SQLiteClient",
 ]

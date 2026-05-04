@@ -15,8 +15,10 @@ Import them directly from ditto_kernel.exceptions instead of this module.
 # Data-layer errors inherit from DataError / IdentifierError.
 # ---------------------------------------------------------------------------
 from ditto_kernel.exceptions import (
-    DataError,
-    IdentifierError,
+    DataError as _DataError,
+)
+from ditto_kernel.exceptions import (
+    IdentifierError as _IdentifierError,
 )
 
 # ---------------------------------------------------------------------------
@@ -24,11 +26,11 @@ from ditto_kernel.exceptions import (
 # ---------------------------------------------------------------------------
 
 
-class CalendarError(DataError):
+class CalendarError(_DataError):
     """Calendar-related error base class."""
 
 
-class InstrumentIdNotFoundError(IdentifierError):
+class InstrumentIdNotFoundError(_IdentifierError):
     """证券标识符（Instrument ID）未找到。"""
 
     def __init__(
@@ -54,7 +56,7 @@ class InstrumentIdNotFoundError(IdentifierError):
         super().__init__(message, details if details else None)
 
 
-class IdentifierNotFoundError(IdentifierError):
+class IdentifierNotFoundError(_IdentifierError):
     """
     标识符未找到异常.
 
@@ -125,7 +127,7 @@ class NotTradingDayError(CalendarError):
         super().__init__(f"{trade_date} is not a trading day")
 
 
-class DataChangedError(DataError):
+class DataChangedError(_DataError):
     """数据已变更异常（checksum 变更，force=False 时抛出）。"""
 
     def __init__(
@@ -143,7 +145,7 @@ class DataChangedError(DataError):
         )
 
 
-class LateArrivalRejectedError(DataError):
+class LateArrivalRejectedError(_DataError):
     """延迟到达数据被拒绝异常。"""
 
     def __init__(
@@ -164,13 +166,13 @@ class LateArrivalRejectedError(DataError):
         )
 
 
-class ValidationError(DataError):
+class ValidationError(_DataError):
     """DataFrame schema validation failed."""
 
     pass
 
 
-class DatasetNotFoundError(DataError):
+class DatasetNotFoundError(_DataError):
     """Dataset directory or files do not exist."""
 
     def __init__(
@@ -192,7 +194,7 @@ class DatasetNotFoundError(DataError):
         super().__init__(message, details if details else None)
 
 
-class PartitionNotFoundError(DataError):
+class PartitionNotFoundError(_DataError):
     """Year partition file does not exist."""
 
     def __init__(
@@ -229,7 +231,7 @@ class SchemaValidationError(ValidationError):
 # ---------------------------------------------------------------------------
 
 
-class DataSourceError(DataError):
+class DataSourceError(_DataError):
     """
     数据源错误基类。
 
@@ -466,7 +468,7 @@ class SourceTransformationError(DataSourceError):
         super().__init__(message, source or "unknown", details if details else None)
 
 
-class PersistenceError(DataError):
+class PersistenceError(_DataError):
     """
     持久化错误基类。
 
@@ -584,11 +586,9 @@ __all__ = [
     "AuthError",
     "CalendarError",
     "DataChangedError",
-    "DataError",
     "DataSourceError",
     "DataValidationError",
     "DatasetNotFoundError",
-    "IdentifierError",
     "IdentifierNotFoundError",
     "InstrumentIdNotFoundError",
     "LateArrivalRejectedError",

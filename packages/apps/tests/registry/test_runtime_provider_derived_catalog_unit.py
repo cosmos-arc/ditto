@@ -7,13 +7,13 @@ from ditto_analysis.di import AnalysisStorageProvider
 from ditto_apps.registry.infra import ConfigProvider
 from ditto_data.di import RuntimeProvider
 from ditto_data.sources.source import DataSources
-from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.audit.models import RiskScanPayload, RiskScope
 from ditto_execution.di import ExecutionStorageProvider
 from ditto_features.di import FeaturesStorageProvider
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_strategy.di import StrategyStorageProvider
 from ditto_strategy.models import (
     ArtifactKind,

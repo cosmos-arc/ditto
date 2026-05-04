@@ -8,8 +8,8 @@ from ditto_data.storage.metadata.instrument import (
     InstrumentWriter,
     SecurityQuery,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_platform.foundation.cache import DataCache
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from pytest_mock import MockerFixture
 
 

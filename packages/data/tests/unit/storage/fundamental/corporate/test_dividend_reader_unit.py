@@ -11,8 +11,8 @@ from ditto_data.storage.fundamental.corporate.dividend_reader import (
     DividendReader,
 )
 from ditto_data.storage.fundamental.specs import DIVIDEND_SPEC
-from ditto_data.storage.sqlite_client import SQLiteClient
 from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 SPEC = DIVIDEND_SPEC
 

@@ -2,14 +2,13 @@
 
 from ditto_data.errors import (
     CalendarError,
-    DataError,
     DatasetNotFoundError,
-    IdentifierError,
     InstrumentIdNotFoundError,
     PartitionNotFoundError,
     TradingDateNotFoundError,
     ValidationError,
 )
+from ditto_kernel.exceptions import DataError, IdentifierError
 
 
 class TestValidationError:

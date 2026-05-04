@@ -6,8 +6,9 @@ Provides read-only access to ingestion cursor data.
 
 from typing import Any
 
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+
 from ditto_data.models.ingestion import IngestionCursor
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class IngestionCursorReader:

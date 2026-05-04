@@ -15,7 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_data import SQLiteClient
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.publication_safety_record_service import (
     PublicationSafetyRecordService,
@@ -48,6 +47,7 @@ from ditto_features.services.derived_catalog_service import DerivedCatalogServic
 from ditto_features.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
 )
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_platform.services.notification import AlertManager
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,

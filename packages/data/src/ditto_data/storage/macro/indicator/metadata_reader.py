@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import polars as pl
 from ditto_platform.foundation import logger, traced
-
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 class IndicatorMetadataReader:

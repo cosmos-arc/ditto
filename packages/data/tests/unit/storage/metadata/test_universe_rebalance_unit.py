@@ -11,7 +11,7 @@ from ditto_data.storage.metadata.universe.rebalance_reader import (
 from ditto_data.storage.metadata.universe.rebalance_writer import (
     RebalanceWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 def _mock_cache() -> MagicMock:

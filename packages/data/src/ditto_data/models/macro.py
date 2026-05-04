@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_kernel.market import MacroCategory, MacroFrequency
+from ditto_kernel.market import (
+    MacroCategory as _MacroCategory,
+)
+from ditto_kernel.market import (
+    MacroFrequency as _MacroFrequency,
+)
 
 
 @dataclass(frozen=True)
@@ -13,12 +18,12 @@ class IndicatorMetadataSpec:
 
     code: str
     name: str
-    category: MacroCategory
-    frequency: MacroFrequency
+    category: _MacroCategory
+    frequency: _MacroFrequency
     need_pit: bool
     source: str | None = None
     unit: str | None = None
     description: str | None = None
 
 
-__all__ = ["IndicatorMetadataSpec", "MacroCategory", "MacroFrequency"]
+__all__ = ["IndicatorMetadataSpec"]

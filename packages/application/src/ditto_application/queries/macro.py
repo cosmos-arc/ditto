@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_data.models.macro import MacroCategory, MacroFrequency
 from ditto_data.services.macro_service import MacroQuery, MacroService
+from ditto_kernel.market import MacroCategory, MacroFrequency
 
 __all__ = ["MacroQueryFacade"]
 
