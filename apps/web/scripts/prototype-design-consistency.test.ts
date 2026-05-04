@@ -415,14 +415,23 @@ const homeTokenFocusSelectors = [
 const sharedCanonicalFocusSelectors = [
 	".rail-icon",
 	".btn",
+	".header-utility-btn",
 	".header-action-btn",
 	".header-avatar",
+	".header-btn-badge",
+	".decision-cta",
 	".panel-action",
+	".overlay-btn",
+	".state-empty-cta",
 	".filter-btn",
 	".filter-chip",
+	".tab",
+	".mode-tab",
 	".hub-tab",
 	".meta-chip",
 	".data-table tr.row",
+	'.worklist-row[role="row"]',
+	".collapsible-strip-toggle",
 ] as const;
 const motionRemediationPageIds = [
 	"alpha-explorer",
