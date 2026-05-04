@@ -68,3 +68,14 @@
   --status-pulse-easing:         ease-in-out;
 
 }
+
+/* ── Light Mode Data Viz Adjustments ──
+ * Chart grid lines, crosshairs, and zero lines use white in dark mode.
+ * In light mode, switch to black-at-opacity for visibility on white surfaces.
+ */
+[data-theme="light"] {
+  --chart-grid:                  oklch(0 0 0 / 0.06);
+  --chart-grid-major:            oklch(0 0 0 / 0.10);
+  --chart-crosshair:             oklch(0 0 0 / 0.20);
+  --chart-zero-line:             oklch(0 0 0 / 0.15);
+}

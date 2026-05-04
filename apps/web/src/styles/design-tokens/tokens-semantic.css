@@ -142,16 +142,19 @@
  * Mirrors dark mode where higher elevation → higher lightness.
  */
 [data-theme="light"] {
-  /* Surface Elevation — white → gray steps */
+  /* Surface Elevation — white → gray steps
+   * Hierarchy: app (brightest) → panel-base → strip (subtle separator) → panel-elevated → overlay → modal
+   * Strip sits between panel-base and panel-elevated as a subtle divider,
+   * matching dark mode's pattern where strip is distinct from panel-base. */
   --surface-app:               var(--surface-app-atmosphere, var(--neutral-0));
   --surface-panel-base:        var(--neutral-25);
   --surface-panel-elevated:    var(--neutral-75);
-  --surface-strip:             var(--neutral-25);
+  --surface-strip:             var(--neutral-50);
   --surface-overlay:           oklch(0.995 0.000 0);
   --surface-modal:             oklch(0.998 0.000 0);
 
   /* Surface Semantic Aliases */
-  --surface-muted:             var(--neutral-25);
+  --surface-muted:             var(--neutral-50);
   --surface-elevated:          var(--neutral-75);
 
   /* Text Hierarchy — dark on light */
@@ -160,7 +163,7 @@
   --text-tertiary:             oklch(0.490 0.010 253);
   --text-quaternary:           oklch(0.620 0.008 253);
   --text-disabled:             oklch(0.750 0.006 253);
-  --text-inverse:              var(--neutral-0);
+  --text-inverse:              oklch(0.99 0.002 253);
   --text-data-stale:           oklch(0.500 0.018 55);
 
   /* Border — subtle gray steps */
@@ -168,14 +171,29 @@
   --border-default:            oklch(0.780 0.010 253);
   --border-strong:             oklch(0.650 0.008 253);
 
-  /* Brand accent subtle — low opacity on white */
+  /* Brand accent — light mode adjustments */
   --brand-accent-subtle:       oklch(from var(--brand-500) l c h / 0.08);
+  --brand-accent-fg:           oklch(0.99 0.002 253);
 
   /* Signature Brass - light */
   --brand-signature-fg:        oklch(0.520 0.060 72);
   --brand-signature-muted:     oklch(0.470 0.050 72);
   --brand-signature-line:      oklch(0.440 0.045 72);
   --brand-signature-subtle:    oklch(0.520 0.060 72 / 0.10);
+
+  /* Overlay — black-at-opacity for light surfaces */
+  --overlay-2:   oklch(0 0 0 / 0.02);
+  --overlay-3:   oklch(0 0 0 / 0.03);
+  --overlay-4:   oklch(0 0 0 / 0.04);
+  --overlay-6:   oklch(0 0 0 / 0.06);
+  --overlay-8:   oklch(0 0 0 / 0.08);
+  --danger-subtle-bg: oklch(from var(--red-500) l c h / 0.08);
+  --overlay-10:  oklch(0 0 0 / 0.10);
+  --overlay-12:  oklch(0 0 0 / 0.12);
+
+  /* Frosted Glass — slightly higher opacity for light backgrounds */
+  --surface-frosted:           oklch(from var(--surface-app) l c h / 0.90);
+  --surface-frosted-subtle:    oklch(from var(--surface-app) l c h / 0.85);
 
   /* Scrollbar */
   --scrollbar-track:           var(--neutral-100);
