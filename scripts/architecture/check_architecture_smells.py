@@ -87,6 +87,11 @@ AI_RULE_ROOTS = [
     ROOT / ".factory" / "commands",
 ]
 
+# Active package docs (CLAUDE.md, README.md under packages/) roots.
+PACKAGE_DOC_ROOTS = [
+    ROOT / "packages",
+]
+
 # Stale package references that should not appear in active AI rules.
 STALE_AI_RULE_REFERENCES = (
     "ditto_infra",
@@ -100,6 +105,22 @@ STALE_AI_RULE_REFERENCES = (
     "packages/engine",
     "interfaces/src",
     "interfaces/tests",
+)
+
+# Stale package references that should not appear in active package docs
+# (CLAUDE.md, README.md under packages/).
+STALE_ACTIVE_PACKAGE_REFERENCES = (
+    "ditto_app",
+    "ditto_analytics",
+    "ditto_engine",
+    "ditto_interfaces",
+    "ditto_infra",
+    "packages/app/",
+    "packages/analytics",
+    "packages/engine",
+    "packages/infra",
+    "interfaces/tests",
+    "interfaces/src",
 )
 
 
@@ -277,6 +298,27 @@ def check_ai_rule_stale_references() -> list[str]:
     return errors
 
 
+def check_package_doc_stale_references() -> list[str]:
+    """Check active package docs (CLAUDE.md, README.md) for stale references."""
+    errors: list[str] = []
+    for root in PACKAGE_DOC_ROOTS:
+        if not root.is_dir():
+            continue
+        files_to_check: list[Path] = []
+        for name in ("CLAUDE.md", "README.md"):
+            files_to_check.extend(sorted(root.rglob(name)))
+        for path in files_to_check:
+            try:
+                content = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            rel = str(path.relative_to(ROOT))
+            for stale in STALE_ACTIVE_PACKAGE_REFERENCES:
+                if stale in content:
+                    errors.append(f"{rel}: contains stale package reference {stale!r}")
+    return errors
+
+
 _IMPORT_TO_PKG: dict[str, str] = {
     "ditto_kernel": "kernel",
     "ditto_platform": "platform",
@@ -378,6 +420,13 @@ def check_package_metadata(root: Path) -> list[str]:
     return errors
 
 
+def _collect(errors: list[str], new: list[str], ok_msg: str, verbose: bool) -> None:
+    if new:
+        errors.extend(new)
+    elif verbose:
+        print(ok_msg)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Architecture smell checks for Ditto")
     parser.add_argument(
@@ -391,28 +440,39 @@ def main() -> int:
     errors: list[str] = []
 
     # Check 1: Missing __init__.py
-    init_errors = check_missing_init_py()
-    if init_errors:
-        errors.extend(init_errors)
-    elif args.verbose:
-        print("[OK] All package directories have __init__.py")
+    _collect(
+        errors,
+        check_missing_init_py(),
+        "[OK] All package directories have __init__.py",
+        args.verbose,
+    )
 
     # Check 2: Per-file checks
     errors.extend(_check_per_file(args.verbose))
 
     # Check: AI rule stale references
-    ai_rule_errors = check_ai_rule_stale_references()
-    if ai_rule_errors:
-        errors.extend(ai_rule_errors)
-    elif args.verbose:
-        print("[OK] No stale AI rule references found")
+    _collect(
+        errors,
+        check_ai_rule_stale_references(),
+        "[OK] No stale AI rule references found",
+        args.verbose,
+    )
+
+    # Check: Package doc stale references
+    _collect(
+        errors,
+        check_package_doc_stale_references(),
+        "[OK] No stale package doc references found",
+        args.verbose,
+    )
 
     # Check: Package metadata matches source imports
-    metadata_errors = check_package_metadata(ROOT)
-    if metadata_errors:
-        errors.extend(metadata_errors)
-    elif args.verbose:
-        print("[OK] Package metadata matches source imports")
+    _collect(
+        errors,
+        check_package_metadata(ROOT),
+        "[OK] Package metadata matches source imports",
+        args.verbose,
+    )
 
     if errors:
         print("\nArchitecture smell check failed:\n")
