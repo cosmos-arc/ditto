@@ -146,8 +146,8 @@
   align-items: center;
   gap: var(--space-2, 2px);
   padding: var(--space-4, 6px) var(--space-8, 12px);
-  background: var(--surface-secondary, #141414);
-  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  background: var(--surface-secondary);
+  border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -157,7 +157,7 @@
   padding: var(--space-4, 6px) var(--space-12, 16px);
   font-size: var(--font-size-12, 12px);
   font-weight: var(--font-weight-medium, 500);
-  color: var(--text-tertiary, #666);
+  color: var(--text-tertiary);
   border-radius: var(--radius-6, 6px);
   cursor: pointer;
   user-select: none;
@@ -165,16 +165,16 @@
 }
 
 .proto-nav__tab:hover {
-  color: var(--text-secondary, #aaa);
-  background: var(--surface-tertiary, #1a1a1a);
+  color: var(--text-secondary);
+  background: var(--surface-strip);
 }
 
 /* Active tab states */
 :root:has(#view-default:checked)  [for="view-default"],
 :root:has(#view-states:checked)   [for="view-states"],
 :root:has(#view-overlays:checked) [for="view-overlays"] {
-  color: var(--text-primary, #e5e5e5);
-  background: var(--surface-app, #0a0a0a);
+  color: var(--text-primary);
+  background: var(--surface-app);
 }
 
 /* ── 3. Gallery Grid System ────────────────────
@@ -189,19 +189,19 @@
 
 .gallery-header {
   padding: var(--space-10, 16px) var(--space-16, 24px);
-  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .gallery-header h2 {
   font-size: var(--font-size-16, 16px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--text-primary, #e5e5e5);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .gallery-summary {
   font-size: var(--font-size-12, 12px);
-  color: var(--text-tertiary, #666);
+  color: var(--text-tertiary);
   margin-top: var(--space-2, 2px);
 }
 
@@ -214,7 +214,7 @@
 
 /* Component grouping */
 .gallery-group {
-  border: 1px solid var(--border-default, #2a2a2a);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-8, 8px);
   overflow: hidden;
 }
@@ -223,9 +223,9 @@
   padding: var(--space-6, 8px) var(--space-10, 16px);
   font-size: var(--font-size-12, 12px);
   font-weight: var(--font-weight-semibold, 600);
-  color: var(--text-primary, #e5e5e5);
-  border-bottom: 1px solid var(--border-default, #2a2a2a);
-  background: var(--surface-elevated, #1a1a1a);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-elevated);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -240,10 +240,10 @@
 
 /* Individual card */
 .gallery-card {
-  border: 1px solid var(--border-subtle, #1e1e1e);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-6, 6px);
   overflow: hidden;
-  background: var(--surface-secondary, #141414);
+  background: var(--surface-secondary);
 }
 
 .gallery-card__label {
@@ -253,15 +253,15 @@
   font-weight: var(--font-weight-semibold, 600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary, #aaa);
-  border-bottom: 1px solid var(--border-default, #2a2a2a);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-default);
   background: var(--surface-muted);
 }
 
 .gallery-card__preview {
   padding: var(--space-6, 8px);
   min-height: 120px;
-  background: var(--surface-app, #0a0a0a);
+  background: var(--surface-app);
 }
 
 /* Overlay-specific card variants */
@@ -269,15 +269,15 @@
   display: block;
   padding: var(--space-1, 1px) var(--space-6, 8px);
   font-size: var(--font-size-10, 10px);
-  color: var(--text-quaternary, #444);
+  color: var(--text-quaternary);
   font-style: italic;
-  border-bottom: 1px solid var(--border-subtle, #1e1e1e);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .gallery-card__preview--overlay {
   min-height: 200px;
   position: relative;
-  background: var(--surface-overlay, #0e0e0e);
+  background: var(--surface-overlay);
 }
 
 /* Overlay gallery — wider cards */
@@ -591,7 +591,7 @@
   justify-content: center;
   gap: var(--space-8, 12px);
   padding: var(--space-16, 24px) var(--space-12, 16px);
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -600,7 +600,7 @@
   height: 40px;
   border-radius: 50%;
   background: var(--surface-muted);
-  border: 1px solid var(--brand-signature-muted, #8a7a50);
+  border: 1px solid var(--brand-signature-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -610,12 +610,12 @@
 .state-empty-title {
   font-size: var(--font-size-13, 13px);
   font-weight: var(--font-weight-medium, 500);
-  color: var(--text-secondary, #aaa);
+  color: var(--text-secondary);
 }
 
 .state-empty-desc {
   font-size: var(--font-size-12, 12px);
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary);
   max-width: 280px;
   line-height: 1.5;
 }
@@ -625,9 +625,9 @@
   padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
   font-size: var(--font-size-12, 12px);
   border-radius: var(--btn-radius, 4px);
-  background: var(--accent-bg, #1a1a2e);
-  color: var(--accent-fg, #a0a0ff);
-  border: 1px solid var(--accent-border, #2a2a4e);
+  background: var(--brand-accent-subtle);
+  color: var(--brand-accent);
+  border: 1px solid var(--brand-accent);
   cursor: pointer;
 }
 
@@ -643,7 +643,7 @@
   background: linear-gradient(
     90deg,
     var(--surface-muted) 25%,
-    var(--surface-overlay, #1a1a1a) 50%,
+    var(--surface-overlay) 50%,
     var(--surface-muted) 75%
   );
   background-size: 200% 100%;
@@ -704,8 +704,8 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--danger-subtle-bg);
+  color: var(--risk-critical-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -715,12 +715,12 @@
 .state-error-title {
   font-size: var(--font-size-13, 13px);
   font-weight: var(--font-weight-medium, 500);
-  color: var(--text-secondary, #aaa);
+  color: var(--text-secondary);
 }
 
 .state-error-desc {
   font-size: var(--font-size-12, 12px);
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary);
   max-width: 280px;
   line-height: 1.5;
 }
@@ -730,9 +730,9 @@
   padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
   font-size: var(--font-size-12, 12px);
   border-radius: var(--btn-radius, 4px);
-  background: var(--surface-elevated, #1e1e1e);
-  color: var(--text-secondary, #aaa);
-  border: 1px solid var(--border-default, #333);
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
   cursor: pointer;
 }
 
@@ -762,12 +762,12 @@
 .state-stale-title {
   font-size: var(--font-size-13, 13px);
   font-weight: var(--font-weight-medium, 500);
-  color: var(--text-secondary, #aaa);
+  color: var(--text-secondary);
 }
 
 .state-stale-desc {
   font-size: var(--font-size-12, 12px);
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary);
   max-width: 280px;
   line-height: 1.5;
 }
@@ -777,12 +777,12 @@
   padding: var(--btn-sm-padding-y, 2px) var(--btn-cta-padding-x, 16px);
   font-size: var(--font-size-12, 12px);
   border-radius: var(--btn-radius, 4px);
-  background: var(--surface-elevated, #1e1e1e);
-  color: var(--text-secondary, #aaa);
-  border: 1px solid var(--border-default, #333);
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
   cursor: pointer;
 }
 
 .state-stale-retry:hover {
-  background: var(--surface-overlay, #1a1a1a);
+  background: var(--surface-overlay);
 }
