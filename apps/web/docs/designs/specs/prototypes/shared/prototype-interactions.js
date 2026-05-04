@@ -616,50 +616,164 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 5. NumberTicker — data-ticker="12345.67"
+   * 5. DataCounter — unified animated number display
+   *
+   *    Trigger modes:
+   *      trigger: 'visible'  → IntersectionObserver (animate on viewport entry)
+   *      trigger: 'mutation' → MutationObserver (animate on value change)
+   *
+   *    Backward-compatible aliases:
+   *      data-ticker="1234.56"          → trigger: 'visible'
+   *      data-counter="1234.56"         → trigger: 'mutation'
+   *
+   *    Shared config attributes (either prefix):
+   *      data-ticker-decimals / data-counter-decimals  (default: 2)
+   *      data-ticker-prefix  / data-counter-prefix     (default: '')
+   *      data-ticker-suffix  / data-counter-suffix     (default: '')
+   *      data-counter-duration                          (default: 1200)
+   *
+   *    Respects prefers-reduced-motion (shows final value immediately).
    * ══════════════════════════════════════════════ */
-  var NumberTicker = {
+  var dataCounterStates = new WeakMap();
+
+  var DataCounter = {
     init: function () {
+      /* ── 'visible' trigger: data-ticker (backward compat) ── */
       document.querySelectorAll('[data-ticker]').forEach(function (el) {
         var target = parseFloat(el.getAttribute('data-ticker'));
         if (isNaN(target)) return;
-        var decimals = parseInt(el.getAttribute('data-decimals') || '2', 10);
-        var prefix   = el.getAttribute('data-ticker-prefix') || '';
-        var suffix   = el.getAttribute('data-ticker-suffix') || '';
+        DataCounter._initElement(el, target, {
+          trigger: 'visible',
+          decimals: parseInt(el.getAttribute('data-decimals') || '2', 10),
+          prefix: el.getAttribute('data-ticker-prefix') || '',
+          suffix: el.getAttribute('data-ticker-suffix') || '',
+          duration: 1200,
+        });
+      });
 
-        if (reducedMotion) {
-          var formattedValue = prefix + target.toFixed(decimals) + suffix;
-          el.textContent = formattedValue;
-          NumberTicker._announce(formattedValue);
-          return;
-        }
-
-        var observer = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              NumberTicker.animate(el, target, decimals, prefix, suffix);
-              observer.unobserve(el);
-              observer.disconnect();
-            }
-          });
-        }, { threshold: 0.1 });
-        observer.observe(el);
+      /* ── 'mutation' trigger: data-counter (backward compat) ── */
+      document.querySelectorAll('[data-counter]').forEach(function (el) {
+        var target = parseFloat(el.getAttribute('data-counter'));
+        if (isNaN(target)) return;
+        DataCounter._initElement(el, target, {
+          trigger: 'mutation',
+          decimals: parseInt(el.getAttribute('data-counter-decimals') || '2', 10),
+          prefix: el.getAttribute('data-counter-prefix') || '',
+          suffix: el.getAttribute('data-counter-suffix') || '',
+          duration: parseInt(el.getAttribute('data-counter-duration') || '1200', 10),
+        });
       });
     },
 
-    animate: function (el, target, decimals, prefix, suffix) {
-      var duration = 1200;
-      var start = performance.now();
-      function tick(now) {
-        var p = Math.min((now - start) / duration, 1);
-        var eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
-        if (p < 1) requestAnimationFrame(tick);
-        else NumberTicker._announce(prefix + target.toFixed(decimals) + suffix);
+    /**
+     * Initialize a single element with its trigger mode.
+     * @param {HTMLElement} el
+     * @param {number}      target  - initial numeric target
+     * @param {Object}      cfg     - { trigger, decimals, prefix, suffix, duration }
+     */
+    _initElement: function (el, target, cfg) {
+      var state = {
+        from: 0,
+        current: 0,
+        decimals: cfg.decimals,
+        prefix: cfg.prefix,
+        suffix: cfg.suffix,
+        duration: cfg.duration,
+        raf: null,
+        trigger: cfg.trigger,
+      };
+      dataCounterStates.set(el, state);
+
+      /* reduced-motion: show final value immediately */
+      if (reducedMotion) {
+        state.current = target;
+        var text = state.prefix + DataCounter.format(target, state.decimals) + state.suffix;
+        el.textContent = text;
+        DataCounter._announce(text);
+        return;
       }
-      requestAnimationFrame(tick);
+
+      if (cfg.trigger === 'visible') {
+        DataCounter._observeVisible(el, state, target);
+      } else {
+        /* trigger: 'mutation' — animate immediately, then watch for changes */
+        DataCounter._animate(el, state, target);
+        DataCounter._observeMutation(el, state);
+      }
     },
 
+    /**
+     * IntersectionObserver: animate once when the element enters the viewport.
+     */
+    _observeVisible: function (el, state, target) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            DataCounter._animate(el, state, target);
+            observer.unobserve(el);
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.1 });
+      observer.observe(el);
+    },
+
+    /**
+     * MutationObserver: re-animate when data-counter attribute changes.
+     */
+    _observeMutation: function (el, state) {
+      if (typeof MutationObserver === 'undefined') return;
+      var mo = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          if (m.type === 'attributes' && m.attributeName === 'data-counter') {
+            var newTarget = parseFloat(el.getAttribute('data-counter'));
+            if (isNaN(newTarget)) return;
+            state.from = state.current;
+            DataCounter._animate(el, state, newTarget);
+          }
+        });
+      });
+      mo.observe(el, { attributes: true, attributeFilter: ['data-counter'] });
+    },
+
+    /**
+     * Shared easing animation: ease-out cubic.
+     * Animates from state.from to target over state.duration ms.
+     */
+    _animate: function (el, state, target) {
+      if (state.raf) cancelAnimationFrame(state.raf);
+      var startTime = performance.now();
+
+      function tick(now) {
+        var p = Math.min((now - startTime) / state.duration, 1);
+        /* ease-out cubic */
+        var eased = 1 - Math.pow(1 - p, 3);
+        var val = state.from + (target - state.from) * eased;
+        state.current = val;
+        el.textContent = state.prefix + DataCounter.format(val, state.decimals) + state.suffix;
+        if (p < 1) {
+          state.raf = requestAnimationFrame(tick);
+        } else {
+          state.current = target;
+          state.raf = null;
+          DataCounter._announce(state.prefix + DataCounter.format(target, state.decimals) + state.suffix);
+        }
+      }
+      state.raf = requestAnimationFrame(tick);
+    },
+
+    /**
+     * Thousand-separator formatting (e.g. 8432180.50 → "8,432,180.50").
+     */
+    format: function (num, decimals) {
+      var parts = num.toFixed(decimals).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return parts.join('.');
+    },
+
+    /**
+     * Accessibility: announce the final value via live region.
+     */
     _announce: function (text) {
       var liveRegion = document.querySelector('[role="status"].live-region');
       if (liveRegion) {
@@ -904,111 +1018,6 @@
         if (seg.label) bar.setAttribute('data-tooltip', seg.label + ': ' + seg.value + ' (' + pct + '%)');
         el.appendChild(bar);
       });
-    },
-  };
-
-    /* ══════════════════════════════════════════════
-   * 10. AnimatedCounter — data-counter="1234.56"
-   *     Smoothly transitions between numeric values
-   *     MutationObserver watches data-counter for changes
-   * ══════════════════════════════════════════════ */
-  var counterStates = new WeakMap();
-  var AnimatedCounter = {
-    init: function () {
-      var els = document.querySelectorAll('[data-counter]');
-      if (!els.length) return;
-
-      els.forEach(function (el) {
-        var target = parseFloat(el.getAttribute('data-counter'));
-        if (isNaN(target)) return;
-        AnimatedCounter._setup(el, target);
-      });
-
-      /* Observe data-counter attribute changes for live updates */
-      if (typeof MutationObserver === 'undefined') return;
-      var mo = new MutationObserver(function (mutations) {
-        mutations.forEach(function (m) {
-          var el = m.target;
-          if (m.type === 'attributes' && m.attributeName === 'data-counter') {
-            var newTarget = parseFloat(el.getAttribute('data-counter'));
-            if (isNaN(newTarget)) return;
-            var state = counterStates.get(el);
-            if (state) {
-              state.from = state.current;
-              AnimatedCounter._animate(el, state, newTarget);
-            }
-          }
-        });
-      });
-
-      els.forEach(function (el) {
-        mo.observe(el, { attributes: true, attributeFilter: ['data-counter'] });
-      });
-    },
-
-    _setup: function (el, target) {
-      var decimals = parseInt(el.getAttribute('data-counter-decimals') || '2', 10);
-      var prefix   = el.getAttribute('data-counter-prefix') || '';
-      var suffix   = el.getAttribute('data-counter-suffix') || '';
-      var duration = parseInt(el.getAttribute('data-counter-duration') || '800', 10);
-
-      var state = {
-        from: 0,
-        current: 0,
-        decimals: decimals,
-        prefix: prefix,
-        suffix: suffix,
-        duration: duration,
-        raf: null,
-      };
-
-      counterStates.set(el, state);
-
-      if (reducedMotion) {
-        state.current = target;
-        var formattedValue = prefix + AnimatedCounter.format(target, decimals) + suffix;
-        el.textContent = formattedValue;
-        AnimatedCounter._announce(formattedValue);
-        return;
-      }
-
-      AnimatedCounter._animate(el, state, target);
-    },
-
-    _animate: function (el, state, target) {
-      if (state.raf) cancelAnimationFrame(state.raf);
-      var startTime = performance.now();
-
-      function tick(now) {
-        var p = Math.min((now - startTime) / state.duration, 1);
-        /* ease-out cubic */
-        var eased = 1 - Math.pow(1 - p, 3);
-        var val = state.from + (target - state.from) * eased;
-        state.current = val;
-        el.textContent = state.prefix + AnimatedCounter.format(val, state.decimals) + state.suffix;
-        if (p < 1) {
-          state.raf = requestAnimationFrame(tick);
-        } else {
-          state.current = target;
-          state.raf = null;
-          AnimatedCounter._announce(state.prefix + AnimatedCounter.format(target, state.decimals) + state.suffix);
-        }
-      }
-      state.raf = requestAnimationFrame(tick);
-    },
-
-    /* Thousand-separator formatting */
-    format: function (num, decimals) {
-      var parts = num.toFixed(decimals).split('.');
-      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      return parts.join('.');
-    },
-
-    _announce: function (text) {
-      var liveRegion = document.querySelector('[role="status"].live-region');
-      if (liveRegion) {
-        liveRegion.textContent = text;
-      }
     },
   };
 
@@ -2285,12 +2294,11 @@
     Sparkline.init();
     DonutGauge.init();
     HeatGrid.init();
-    NumberTicker.init();
+    DataCounter.init();
     ScrollReveal.init();
     MouseGlow.init();
     ConfidenceBar.init();
     FlowBar.init();
-    AnimatedCounter.init();
     TooltipSystem.init();
     CollapsibleContextSections.init();
     SidebarToggle.init();
