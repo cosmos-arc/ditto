@@ -613,6 +613,19 @@ function isInsideOperationalTableLikeContainer(element: Element): boolean {
 	);
 }
 
+function isInsideOperationalAnswerContainer(element: Element): boolean {
+	return Boolean(
+		element.closest(
+			[
+				"header",
+				"[data-contract-slot='header']",
+				"[data-primary-answer]",
+				"[data-primary-answer-equivalent]",
+			].join(", "),
+		),
+	);
+}
+
 function isOperationalElevenPxSelector(selector: string): boolean {
 	const normalized = selector.toLowerCase();
 	return /(?:button|btn|tab|header|strip|title|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
@@ -633,6 +646,7 @@ function hasOperationalElevenPxUsage(
 		(element) =>
 			isInteractivePrototypeElement(element) ||
 			isInsideOperationalTableLikeContainer(element) ||
+			isInsideOperationalAnswerContainer(element) ||
 			pointerSelectors.some((pointerSelector) => elementClosestSafe(element, pointerSelector)),
 	);
 }
