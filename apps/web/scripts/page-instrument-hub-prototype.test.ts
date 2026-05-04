@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { chromium } from "playwright";
-import { describe, expect, it } from "vitest";
+import { chromium, type Browser, type Page } from "playwright";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const prototypePath = resolve(
 	import.meta.dirname,
@@ -14,8 +14,35 @@ const layoutCssPath = resolve(
 );
 const prototypeUrl = `file://${prototypePath}`;
 const navigationTimeoutMs = 10_000;
+let browser: Browser | undefined;
+
+beforeAll(async () => {
+	browser = await chromium.launch({ channel: "chromium" });
+}, 30_000);
+
+afterAll(async () => {
+	await browser?.close();
+	browser = undefined;
+});
+
 function loadPage() {
 	return new JSDOM(readFileSync(prototypePath, "utf-8")).window.document;
+}
+
+async function withPrototypePage(viewport: { width: number; height: number }, run: (page: Page) => Promise<void>) {
+	if (!browser) {
+		throw new Error("Chromium browser was not initialized");
+	}
+
+	const page = await browser.newPage({ viewport });
+	page.setDefaultTimeout(2_000);
+
+	try {
+		await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
+		await run(page);
+	} finally {
+		await page.close();
+	}
 }
 
 describe("page-instrument-hub prototype", () => {
@@ -27,12 +54,7 @@ describe("page-instrument-hub prototype", () => {
 	});
 
 	it("keeps the bottom timeline as a compact horizontal digest in constrained viewports", async () => {
-		const browser = await chromium.launch({ channel: "chromium" });
-		const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-
-		try {
-			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+		await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 			const timeline = await page.evaluate(() => {
 				const content = document.querySelector<HTMLElement>(".hub-bottom [data-panel='bottom-events']");
 				const list = content?.querySelector<HTMLElement>(".timeline-list");
@@ -59,18 +81,11 @@ describe("page-instrument-hub prototype", () => {
 				sameRow: true,
 			});
 			expect(timeline?.contentHeight).toBeLessThanOrEqual(104);
-		} finally {
-			await browser.close();
-		}
+		});
 	}, 15_000);
 
 	it("keeps the instrument identity fully inside the relaxed header frame", async () => {
-		const browser = await chromium.launch({ channel: "chromium" });
-		const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
-
-		try {
-			await page.goto(prototypeUrl, { waitUntil: "load", timeout: navigationTimeoutMs });
-
+		await withPrototypePage({ width: 1366, height: 768 }, async (page) => {
 			const header = await page.evaluate(() => {
 				const shellHeader = document.querySelector<HTMLElement>(".shell-header");
 				const objectHeader = document.querySelector<HTMLElement>(".object-header");
@@ -97,9 +112,7 @@ describe("page-instrument-hub prototype", () => {
 			expect(header.objectBottom).toBeLessThanOrEqual(header.shellBottom + 1);
 			expect(header.objectHeight).toBeLessThanOrEqual(header.shellHeight);
 			expect(header.headerScrollHeight).toBeLessThanOrEqual(header.headerClientHeight + 1);
-		} finally {
-			await browser.close();
-		}
+		});
 	}, 15_000);
 
 	it("lets the right sidebar own the bottom-right height instead of wasting it on the timeline bar", () => {
