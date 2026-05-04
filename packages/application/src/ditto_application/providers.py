@@ -25,7 +25,7 @@ from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_execution.audit import ExecutionAuditService
-from ditto_execution.storage.sqlite.trade import TradeService
+from ditto_execution.storage.sqlite.trade.service import TradeService
 
 # ---------------------------------------------------------------------------
 # Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）

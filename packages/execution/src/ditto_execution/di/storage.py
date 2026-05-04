@@ -17,8 +17,8 @@ from ditto_execution.storage.sqlite.trade import (
     IntentWriter,
     PositionReader,
     PositionWriter,
-    TradeService,
 )
+from ditto_execution.storage.sqlite.trade.service import TradeService
 from ditto_execution.storage.sqlite_client import SQLiteClient
 
 __all__ = ["ExecutionStorageProvider"]

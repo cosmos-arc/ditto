@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from ditto_execution.models import SignalRecord
-from ditto_execution.storage.sqlite.trade import TradeService
+from ditto_execution.storage.sqlite.trade.service import TradeService
 
 from ditto_application.execution_dto import (
     ManualExecutionFill,

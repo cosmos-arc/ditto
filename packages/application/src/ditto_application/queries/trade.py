@@ -7,7 +7,7 @@ TradeQueryFacade — 交易意图查询门面.
 
 from __future__ import annotations
 
-from ditto_execution.storage.sqlite.trade import TradeService
+from ditto_execution.storage.sqlite.trade.service import TradeService
 
 from ditto_application.execution_dto import TradeIntent, record_to_intent
 
