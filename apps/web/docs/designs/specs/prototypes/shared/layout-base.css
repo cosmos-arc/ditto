@@ -546,10 +546,10 @@ body {
 .shell-header {
   grid-area: header;
   height: var(--shell-header-height);
-  background: var(--surface-app) !important;
-  border-bottom: 1px solid var(--border-subtle) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: var(--surface-app);
+  border-bottom: 1px solid var(--border-subtle);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
   align-items: center;
   padding: 0 var(--density-gutter);
@@ -559,20 +559,20 @@ body {
   z-index: 120;
 }
 
-.shell-header::after {
-  display: none !important;
+.shell-header.shell-header::after {
+  display: none;
 }
 
-.shell-header .header-title {
-  background: none !important;
-  background-clip: initial !important;
-  -webkit-background-clip: initial !important;
-  -webkit-text-fill-color: currentColor !important;
+.shell-header .header-title.header-title {
+  background: none;
+  background-clip: initial;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: currentColor;
 }
 
-.shell-header .header-title::after {
-  content: none !important;
-  display: none !important;
+.shell-header .header-title.header-title::after {
+  content: none;
+  display: none;
 }
 
 .header-title,
@@ -683,72 +683,72 @@ h1.header-title {
   order: 7;
 }
 
-.shell-header :is(.header-utility-btn, .header-action-btn, .header-btn-badge) {
-  width: var(--header-btn-size) !important;
-  min-width: var(--header-btn-size) !important;
-  height: var(--header-btn-size) !important;
-  min-height: var(--header-btn-size) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 !important;
-  border: 1px solid var(--header-control-border) !important;
-  border-radius: var(--radius-6) !important;
-  background: var(--header-control-bg) !important;
-  color: var(--header-control-fg) !important;
-  font-family: var(--font-family-ui) !important;
-  font-size: var(--font-size-12) !important;
-  font-weight: var(--font-weight-medium) !important;
-  line-height: 1 !important;
+.shell-header :is(.header-utility-btn.header-utility-btn, .header-action-btn.header-action-btn, .header-btn-badge.header-btn-badge) {
+  width: var(--header-btn-size);
+  min-width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  min-height: var(--header-btn-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--header-control-border);
+  border-radius: var(--radius-6);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
 }
 
-.shell-header :is(.header-utility-btn, .header-action-btn, .header-btn-badge):hover {
-  border-color: var(--header-control-hover-border) !important;
-  background: var(--header-control-hover-bg) !important;
-  color: var(--header-control-hover-fg) !important;
+.shell-header :is(.header-utility-btn.header-utility-btn, .header-action-btn.header-action-btn, .header-btn-badge.header-btn-badge):hover {
+  border-color: var(--header-control-hover-border);
+  background: var(--header-control-hover-bg);
+  color: var(--header-control-hover-fg);
 }
 
-.shell-header .header-actions :is(.btn, .btn-sm) {
-  min-height: var(--header-btn-size) !important;
-  height: var(--header-btn-size) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: var(--space-6) !important;
-  padding: 0 var(--space-10) !important;
-  border: 1px solid var(--header-control-border) !important;
-  border-radius: var(--radius-6) !important;
-  background: var(--header-control-bg) !important;
-  color: var(--header-control-fg) !important;
-  font-family: var(--font-family-ui) !important;
-  font-size: var(--font-size-12) !important;
-  font-weight: var(--font-weight-medium) !important;
-  line-height: 1 !important;
+.shell-header .header-actions :is(.btn.btn, .btn-sm.btn-sm) {
+  min-height: var(--header-btn-size);
+  height: var(--header-btn-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: 0 var(--space-10);
+  border: 1px solid var(--header-control-border);
+  border-radius: var(--radius-6);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
 }
 
-.shell-header .header-actions :is(.btn, .btn-sm):hover {
-  border-color: var(--header-control-hover-border) !important;
-  background: var(--header-control-hover-bg) !important;
-  color: var(--header-control-hover-fg) !important;
+.shell-header .header-actions :is(.btn.btn, .btn-sm.btn-sm):hover {
+  border-color: var(--header-control-hover-border);
+  background: var(--header-control-hover-bg);
+  color: var(--header-control-hover-fg);
 }
 
-.shell-header .header-command-trigger {
-  width: var(--header-command-width) !important;
-  min-width: var(--header-command-width) !important;
-  justify-content: flex-start !important;
-  gap: var(--space-6) !important;
-  padding: 0 var(--space-8) !important;
-  border-color: var(--header-control-border) !important;
-  background: var(--header-control-bg) !important;
-  color: var(--header-control-fg) !important;
+.shell-header .header-command-trigger.header-command-trigger {
+  width: var(--header-command-width);
+  min-width: var(--header-command-width);
+  justify-content: flex-start;
+  gap: var(--space-6);
+  padding: 0 var(--space-8);
+  border-color: var(--header-control-border);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
   font-family: var(--font-family-code);
-  font-size: var(--font-size-12) !important;
+  font-size: var(--font-size-12);
 }
 
-.shell-header .header-command-trigger:hover {
-  border-color: var(--header-control-hover-border) !important;
-  background: var(--header-control-hover-bg) !important;
-  color: var(--header-control-hover-fg) !important;
+.shell-header .header-command-trigger.header-command-trigger:hover {
+  border-color: var(--header-control-hover-border);
+  background: var(--header-control-hover-bg);
+  color: var(--header-control-hover-fg);
 }
 
 .command-prompt {
@@ -852,17 +852,17 @@ h1.header-title {
   line-height: 1.4;
 }
 
-.shell-header .header-avatar {
-  width: var(--header-btn-size) !important;
-  min-width: var(--header-btn-size) !important;
-  height: var(--header-btn-size) !important;
-  border-radius: var(--radius-6) !important;
-  border: 1px solid var(--header-control-border) !important;
-  background: var(--header-control-bg) !important;
-  color: var(--header-control-fg) !important;
-  font-family: var(--font-family-ui) !important;
-  font-size: var(--font-size-12) !important;
-  font-weight: var(--font-weight-medium) !important;
+.shell-header .header-avatar.header-avatar {
+  width: var(--header-btn-size);
+  min-width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  border-radius: var(--radius-6);
+  border: 1px solid var(--header-control-border);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
 }
 
 .header-action-btn {
@@ -944,8 +944,8 @@ h1.header-title {
     padding-inline: var(--space-10);
   }
 
-  .shell-header > :not(.header-title):not(.header-title-group):not(.header-spacer):not([data-header-utility-bar]) {
-    display: none !important;
+  .shell-header.shell-header > :not(.header-title):not(.header-title-group):not(.header-spacer):not([data-header-utility-bar]) {
+    display: none;
   }
 
   .shell-header .header-title-group,
@@ -973,11 +973,11 @@ h1.header-title {
     gap: var(--space-4);
   }
 
-  .shell-header .header-command-trigger {
-    width: var(--header-btn-size) !important;
-    min-width: var(--header-btn-size) !important;
-    justify-content: center !important;
-    padding: 0 !important;
+  .shell-header .header-command-trigger.header-command-trigger {
+    width: var(--header-btn-size);
+    min-width: var(--header-btn-size);
+    justify-content: center;
+    padding: 0;
   }
 
   .shell-header .header-command-trigger .command-query,
