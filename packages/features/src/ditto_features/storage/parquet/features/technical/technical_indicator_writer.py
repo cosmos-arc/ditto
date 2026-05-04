@@ -20,6 +20,8 @@ from ditto_platform.foundation.storage import (
     WriteStoreResult as WriteResult,
 )
 
+from ditto_features.errors import FeatureStorageError
+
 
 class _TechnicalIndicatorParquetWriter(ParquetStore):
     """
@@ -103,7 +105,7 @@ class TechnicalIndicatorWriter:
             Write result with statistics.
 
         Raises:
-            ValueError: If required columns are missing.
+            FeatureStorageError: If required columns are missing.
 
         """
         logger.info(
@@ -123,7 +125,11 @@ class TechnicalIndicatorWriter:
         missing = [col for col in required if col not in df.columns]
         if missing:
             msg = f"Missing required columns: {missing}"
-            raise ValueError(msg)
+            raise FeatureStorageError(
+                msg,
+                path=str(self.data_root / self._dataset),
+                missing_columns=missing,
+            )
 
         # Use ParquetStore write implementation
         result = self._store.write(self._dataset, df, on_duplicate.value, year=year)

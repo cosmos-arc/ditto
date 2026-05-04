@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import cast
+from typing import NoReturn, cast
+
+from ditto_features.errors import FactorValidationError
 
 __all__ = [
     "DerivedCompareQuery",
@@ -28,9 +30,17 @@ def _coerce_str_tuple(values: Sequence[str], field_name: str) -> tuple[str, ...]
     """Convert a string sequence to an immutable tuple with validation."""
     normalized = tuple(values)
     if not normalized:
-        raise ValueError(f"{field_name} must not be empty")
+        _raise_query_error(
+            f"{field_name} must not be empty",
+            field_name=field_name,
+            reason="empty",
+        )
     if any(not item for item in normalized):
-        raise ValueError(f"{field_name} must not contain empty values")
+        _raise_query_error(
+            f"{field_name} must not contain empty values",
+            field_name=field_name,
+            reason="contains_empty",
+        )
     return normalized
 
 
@@ -38,38 +48,83 @@ def _coerce_int_tuple(values: Sequence[int], field_name: str) -> tuple[int, ...]
     """Convert an int sequence to an immutable tuple with validation."""
     normalized = tuple(values)
     if not normalized:
-        raise ValueError(f"{field_name} must not be empty")
+        _raise_query_error(
+            f"{field_name} must not be empty",
+            field_name=field_name,
+            reason="empty",
+        )
     return normalized
 
 
 def _validate_version(version: int | None) -> None:
     """Validate an optional positive version."""
     if version is not None and version <= 0:
-        raise ValueError("version must be greater than 0")
+        _raise_query_error(
+            "version must be greater than 0",
+            field_name="version",
+            reason="not_positive",
+            value=version,
+        )
 
 
 def _validate_limit(limit: int | None) -> None:
     """Validate an optional positive limit."""
     if limit is not None and limit <= 0:
-        raise ValueError("limit must be greater than 0")
+        _raise_query_error(
+            "limit must be greater than 0",
+            field_name="limit",
+            reason="not_positive",
+            value=limit,
+        )
 
 
-def _coerce_source_scope(value: DerivedSourceScope | str) -> DerivedSourceScope:
+def _coerce_source_scope(
+    value: DerivedSourceScope | str,
+    field_name: str = "source_scope",
+) -> DerivedSourceScope:
     """Normalize a single source scope value."""
     if isinstance(value, DerivedSourceScope):
         return value
     try:
         return DerivedSourceScope(value)
     except ValueError as exc:
-        raise ValueError(f"unsupported source_scope: {value}") from exc
+        _raise_query_error(
+            f"unsupported source_scope: {value}",
+            field_name=field_name,
+            reason="unsupported_scope",
+            value=value,
+            cause=exc,
+        )
 
 
 def _coerce_compare_sources(
     values: Sequence[DerivedSourceScope | str],
 ) -> tuple[DerivedSourceScope, DerivedSourceScope]:
     """Normalize compare sources to a strict pair."""
-    normalized = tuple(_coerce_source_scope(value) for value in values)
+    normalized = tuple(
+        _coerce_source_scope(value, field_name="compare_sources") for value in values
+    )
     return cast(tuple[DerivedSourceScope, DerivedSourceScope], normalized)
+
+
+def _raise_query_error(
+    message: str,
+    *,
+    field_name: str,
+    reason: str,
+    value: object | None = None,
+    cause: BaseException | None = None,
+) -> NoReturn:
+    """Build a FactorValidationError with consistent query details."""
+    details: dict[str, object] = {
+        "field_name": field_name,
+        "reason": reason,
+    }
+    if value is not None:
+        details["value"] = value
+    if cause is not None:
+        raise FactorValidationError(message, details=details) from cause
+    raise FactorValidationError(message, details=details)
 
 
 @dataclass(frozen=True)
@@ -170,6 +225,15 @@ class DerivedCompareQuery:
         )
         _validate_version(self.version)
         if len(self.compare_sources) != EXPECTED_COMPARE_SOURCE_COUNT:
-            raise ValueError("compare_sources must contain exactly two entries")
+            _raise_query_error(
+                "compare_sources must contain exactly two entries",
+                field_name="compare_sources",
+                reason="invalid_count",
+                value=len(self.compare_sources),
+            )
         if len(set(self.compare_sources)) != EXPECTED_COMPARE_SOURCE_COUNT:
-            raise ValueError("compare_sources must contain two distinct scopes")
+            _raise_query_error(
+                "compare_sources must contain two distinct scopes",
+                field_name="compare_sources",
+                reason="duplicate_scope",
+            )

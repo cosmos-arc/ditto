@@ -21,6 +21,8 @@ from ditto_platform.foundation.storage import (
     WriteStoreResult as WriteResult,
 )
 
+from ditto_features.errors import FeatureStorageError
+
 
 class _FactorParquetWriter(ParquetStore):
     """
@@ -94,7 +96,7 @@ class _FactorParquetWriter(ParquetStore):
             MergeResult 包含合并后的 DataFrame 和统计信息。
 
         Raises:
-            ValueError: 如果 on_duplicate=ERROR 且存在重复数据。
+            FeatureStorageError: 如果 on_duplicate=ERROR 且存在重复数据。
 
         """
         key_columns = self._get_key_columns()
@@ -127,7 +129,12 @@ class _FactorParquetWriter(ParquetStore):
                     "Use OnDuplicate.KEEP_FIRST to preserve, or "
                     "OnDuplicate.KEEP_LAST to overwrite."
                 )
-                raise ValueError(msg)
+                raise FeatureStorageError(
+                    msg,
+                    path=str(self.data_root),
+                    on_duplicate=on_duplicate.value,
+                    overlap_count=overlap_count,
+                )
             elif on_duplicate == OnDuplicate.KEEP_FIRST:
                 # 保留现有数据，过滤掉新数据中的重复部分
                 non_overlapping = new_keys.join(
@@ -148,7 +155,11 @@ class _FactorParquetWriter(ParquetStore):
                 updated = overlap_count
             else:
                 msg = f"Unknown OnDuplicate strategy: {on_duplicate}"
-                raise ValueError(msg)
+                raise FeatureStorageError(
+                    msg,
+                    path=str(self.data_root),
+                    on_duplicate=str(on_duplicate),
+                )
         else:
             # 无重复，直接合并
             combined = pl.concat([existing, df_for_join])
@@ -228,7 +239,7 @@ class FactorWriter:
             Write result with statistics.
 
         Raises:
-            ValueError: If required columns are missing.
+            FeatureStorageError: If required columns are missing.
 
         """
         logger.info(
@@ -250,7 +261,11 @@ class FactorWriter:
         missing = [col for col in required if col not in df.columns]
         if missing:
             msg = f"Missing required columns: {missing}"
-            raise ValueError(msg)
+            raise FeatureStorageError(
+                msg,
+                path=str(self.data_root / self._dataset),
+                missing_columns=missing,
+            )
 
         # Use custom ParquetStore write implementation
         result = self._store.write(self._dataset, df, on_duplicate.value, year=year)

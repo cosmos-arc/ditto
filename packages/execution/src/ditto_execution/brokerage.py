@@ -24,7 +24,7 @@ from ditto_portfolio.accounting.order_book import (
 )
 from ditto_portfolio.accounting.position import Position
 
-from ditto_execution.errors import ExecutionError
+from ditto_execution.errors import FillProcessingError
 from ditto_execution.fills import Filled, NoFill
 from ditto_execution.reality import BrokerageModel
 from ditto_execution.reality.constants import (
@@ -358,10 +358,13 @@ class BacktestBrokerage:
         # 如 V2 引入部分成交模型，需重构 fill model contract。
         model_qty = filled.fill_event.filled_quantity
         if model_qty != fill_qty:
-            raise ExecutionError(
+            raise FillProcessingError(
                 f"Fill model returned qty {model_qty} != leaves qty {fill_qty} "
                 + f"for order {order.order_id}. V1 fill model is all-or-nothing; "
-                + "partial fills require fill model contract refactoring."
+                + "partial fills require fill model contract refactoring.",
+                order_id=order.order_id,
+                model_quantity=model_qty,
+                leaves_quantity=fill_qty,
             )
         cumulative = ticket.filled_quantity + fill_qty
         leaves = order.quantity - cumulative

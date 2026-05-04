@@ -3,6 +3,7 @@
 import orjson
 from ditto_platform.foundation.storage import SQLiteClient
 
+from ditto_features.errors import FeatureStorageError
 from ditto_features.models.derived import (
     DerivedCheckpointRecord,
     DerivedDependencyRecord,
@@ -42,6 +43,22 @@ _VALID_INVALIDATION_STATUSES: frozenset[str] = frozenset(
         "dead_letter",
     }
 )
+
+
+def _invalid_status_error(
+    message: str,
+    *,
+    table: str,
+    status: str,
+    allowed_statuses: frozenset[str],
+) -> FeatureStorageError:
+    """Build a FeatureStorageError for derived catalog status validation."""
+    return FeatureStorageError(
+        message,
+        table=table,
+        status=status,
+        allowed_statuses=tuple(sorted(allowed_statuses)),
+    )
 
 
 class SQLiteDerivedCatalogWriter:
@@ -96,7 +113,12 @@ class SQLiteDerivedCatalogWriter:
                 f"invalid version status: {record.status!r}, "
                 f"expected one of {sorted(_VALID_VERSION_STATUSES)}"
             )
-            raise ValueError(msg)
+            raise _invalid_status_error(
+                msg,
+                table="derived_version",
+                status=record.status,
+                allowed_statuses=_VALID_VERSION_STATUSES,
+            )
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO derived_version (
@@ -123,7 +145,12 @@ class SQLiteDerivedCatalogWriter:
                 f"invalid run status: {record.status!r}, "
                 f"expected one of {sorted(_VALID_RUN_STATUSES)}"
             )
-            raise ValueError(msg)
+            raise _invalid_status_error(
+                msg,
+                table="derived_run",
+                status=record.status,
+                allowed_statuses=_VALID_RUN_STATUSES,
+            )
         self._sqlite_client.execute(
             """
             INSERT OR REPLACE INTO derived_run (
@@ -316,7 +343,12 @@ class SQLiteDerivedCatalogWriter:
                 f"invalid invalidation status: {status!r}, "
                 f"expected one of {sorted(_VALID_INVALIDATION_STATUSES)}"
             )
-            raise ValueError(msg)
+            raise _invalid_status_error(
+                msg,
+                table="derived_invalidation",
+                status=status,
+                allowed_statuses=_VALID_INVALIDATION_STATUSES,
+            )
         self._sqlite_client.execute(
             """
             UPDATE derived_invalidation

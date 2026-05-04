@@ -32,7 +32,7 @@ class StrategyError(DittoError):
             self.details.update(details)
 
 
-class StrategySpecError(StrategyError):
+class StrategySpecError(StrategyError, ValueError):
     """策略规格验证失败（公共 API 契约违背）."""
 
     @property
