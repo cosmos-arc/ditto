@@ -396,6 +396,31 @@ button {
   grid-area: separator;
 }
 
+/* ── Minimum viewport protection ──
+ * Prevents layout collapse below 1024px.
+ * Applies to all shell variants defined in layout-base.css
+ * and page-local shells (shell-studio, shell-ledger, shell-regime).
+ */
+.shell,
+.shell-v2,
+.shell-hub,
+.shell-agent,
+.shell-signals,
+.shell-analytical,
+.shell-catalog,
+.shell-ops,
+.shell-radar,
+.shell-intel,
+.shell-studio,
+.shell-ledger,
+.shell-regime {
+  min-width: 1024px;
+}
+
+body {
+  overflow-x: auto;
+}
+
 /* ── Rail (icon nav) ── */
 .shell-rail {
   grid-area: rail;
