@@ -591,6 +591,28 @@ function isInteractivePrototypeElement(element: Element): boolean {
 	);
 }
 
+function isInsideInteractivePrototypeTarget(element: Element): boolean {
+	return Boolean(
+		element.closest(
+			[
+				"button",
+				"a",
+				"label",
+				"input",
+				"select",
+				"textarea",
+				"summary",
+				"[role='button']",
+				"[role='switch']",
+				"[role='tab']",
+				".tab",
+				".tabs",
+				".segmented-control",
+			].join(", "),
+		),
+	);
+}
+
 function isInsideOperationalTableLikeContainer(element: Element): boolean {
 	return Boolean(
 		element.closest(
@@ -630,6 +652,25 @@ function isInsideOperationalAnswerContainer(element: Element): boolean {
 	);
 }
 
+function selectorDescendsFromSelector(selector: string, ancestorSelector: string): boolean {
+	const normalizeSelector = (value: string) =>
+		stripSelectorForDom(value)
+			.replace(/\s*([>+~])\s*/g, " $1 ")
+			.replace(/\s+/g, " ")
+			.trim();
+	const normalizedSelector = normalizeSelector(selector);
+	const normalizedAncestor = normalizeSelector(ancestorSelector);
+	if (!normalizedSelector || !normalizedAncestor) return false;
+
+	return normalizedSelector.startsWith(`${normalizedAncestor} `);
+}
+
+function hasPointerAncestorSelector(selector: string, pointerSelectors: string[]): boolean {
+	return pointerSelectors.some((pointerSelector) =>
+		selectorDescendsFromSelector(selector, pointerSelector),
+	);
+}
+
 function isOperationalElevenPxSelector(selector: string): boolean {
 	const normalized = selector.toLowerCase();
 	return /(?:button|btn|tab|header|strip|title|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
@@ -644,11 +685,13 @@ function hasOperationalElevenPxUsage(
 	pointerSelectors: string[],
 ): boolean {
 	if (isOperationalElevenPxSelector(selector) || hasCursorPointer(rule.body)) return true;
+	if (hasPointerAncestorSelector(selector, pointerSelectors)) return true;
 
 	const elements = querySelectorAllSafe(document, selector);
 	return elements.some(
 		(element) =>
 			isInteractivePrototypeElement(element) ||
+			isInsideInteractivePrototypeTarget(element) ||
 			isInsideOperationalTableLikeContainer(element) ||
 			isInsideOperationalAnswerContainer(element) ||
 			pointerSelectors.some((pointerSelector) => elementClosestSafe(element, pointerSelector)),
@@ -2189,6 +2232,43 @@ describe("prototype design consistency", () => {
 
 		expect(spec).toContain("--font-size-11");
 		expect(spec).toMatch(/--font-size-11[\s\S]*?Tight contexts/);
+	});
+
+	it("flags 11px descendants inside interactive target ancestors", () => {
+		const document = new JSDOM(`
+			<button type="button"><span class="dense-caption">执行</span></button>
+			<div role="tab"><span class="sort-caption">排序</span></div>
+		`).window.document;
+		const rule: CssRule = {
+			selector: ".dense-caption, .sort-caption",
+			selectors: [".dense-caption", ".sort-caption"],
+			body: "font-size: var(--font-size-11);",
+			start: 0,
+			end: 0,
+		};
+
+		const violations = rule.selectors.filter((selector) =>
+			hasOperationalElevenPxUsage(document, rule, selector, []),
+		);
+
+		expect(violations).toEqual([".dense-caption", ".sort-caption"]);
+	});
+
+	it("flags 11px descendants of pointer selectors even without DOM matches", () => {
+		const document = new JSDOM("").window.document;
+		const rule: CssRule = {
+			selector: ".pointer-summary .summary-count",
+			selectors: [".pointer-summary .summary-count"],
+			body: "font-size: var(--font-size-11);",
+			start: 0,
+			end: 0,
+		};
+
+		expect(
+			hasOperationalElevenPxUsage(document, rule, ".pointer-summary .summary-count", [
+				".pointer-summary",
+			]),
+		).toBe(true);
 	});
 
 	it("keeps 11px typography out of operational selectors", () => {
