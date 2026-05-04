@@ -134,7 +134,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-market-depth']",
+      "prototypeSelector": "#overlay-market-depth",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -151,7 +151,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-index-components']",
+      "prototypeSelector": "#overlay-index-components",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -168,7 +168,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-filter-panel']",
+      "prototypeSelector": "#overlay-filter-panel",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -185,7 +185,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-event-detail']",
+      "prototypeSelector": "#overlay-event-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -202,7 +202,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-pin-viewpoint']",
+      "prototypeSelector": "#overlay-pin-viewpoint",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

@@ -132,7 +132,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-delete-strategy']",
+      "prototypeSelector": "#overlay-delete-strategy",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -149,7 +149,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-submit-backtest']",
+      "prototypeSelector": "#overlay-submit-backtest",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -166,7 +166,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-copy-strategy']",
+      "prototypeSelector": "#overlay-copy-strategy",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -183,7 +183,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-version-rollback']",
+      "prototypeSelector": "#overlay-version-rollback",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -200,7 +200,7 @@
         "slot": "main",
         "action": "simulate-optimization"
       },
-      "prototypeSelector": "[data-overlay='overlay-optimization-simulation']",
+      "prototypeSelector": "#overlay-optimization-simulation",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -217,7 +217,7 @@
         "slot": "main",
         "action": "approve-optimization"
       },
-      "prototypeSelector": "[data-overlay='overlay-optimization-approval']",
+      "prototypeSelector": "#overlay-optimization-approval",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

@@ -115,7 +115,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-datasource-test']",
+      "prototypeSelector": "#overlay-datasource-test",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -132,7 +132,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-broker-test']",
+      "prototypeSelector": "#overlay-broker-test",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -149,7 +149,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-reset-config']",
+      "prototypeSelector": "#overlay-reset-config",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -166,7 +166,7 @@
         "slot": "main",
         "action": "save-ai-policy"
       },
-      "prototypeSelector": "[data-overlay='overlay-ai-policy-save-confirm']",
+      "prototypeSelector": "#overlay-ai-policy-save-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -183,7 +183,7 @@
         "slot": "main",
         "action": "open-tool-permission"
       },
-      "prototypeSelector": "[data-overlay='overlay-tool-permission-detail']",
+      "prototypeSelector": "#overlay-tool-permission-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

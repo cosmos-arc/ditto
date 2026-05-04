@@ -124,7 +124,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-new-backtest']",
+      "prototypeSelector": "#overlay-new-backtest",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -141,7 +141,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-new-strategy']",
+      "prototypeSelector": "#overlay-new-strategy",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -158,7 +158,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-new-experiment']",
+      "prototypeSelector": "#overlay-new-experiment",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -175,7 +175,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-run-detail']",
+      "prototypeSelector": "#overlay-run-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -192,7 +192,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-review-action']",
+      "prototypeSelector": "#overlay-review-action",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

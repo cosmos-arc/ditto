@@ -124,7 +124,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-ai-regime']",
+      "prototypeSelector": "#overlay-ai-regime",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

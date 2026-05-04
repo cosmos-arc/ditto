@@ -109,7 +109,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-strategy-clone']",
+      "prototypeSelector": "#overlay-strategy-clone",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -126,7 +126,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-strategy-delete']",
+      "prototypeSelector": "#overlay-strategy-delete",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

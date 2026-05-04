@@ -86,7 +86,7 @@
         "slot": "detail",
         "action": "confirm-signal"
       },
-      "prototypeSelector": "[data-overlay='overlay-order-confirm']",
+      "prototypeSelector": "#overlay-order-confirm",
       "reactComponent": "SignalDetailPanel",
       "closeBehavior": [
         "escape",
@@ -103,7 +103,7 @@
         "slot": "detail",
         "action": "ai-read"
       },
-      "prototypeSelector": "[data-overlay='overlay-ai-read']",
+      "prototypeSelector": "#overlay-ai-read",
       "reactComponent": "SignalAiReadDialog",
       "closeBehavior": [
         "escape",
@@ -120,7 +120,7 @@
         "slot": "detail",
         "action": "open-risk-officer"
       },
-      "prototypeSelector": "[data-overlay='overlay-risk-officer-detail']",
+      "prototypeSelector": "#overlay-risk-officer-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -137,7 +137,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-batch-confirm']",
+      "prototypeSelector": "#overlay-batch-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -154,7 +154,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-signal-confirm-to-order']",
+      "prototypeSelector": "#overlay-signal-confirm-to-order",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

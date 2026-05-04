@@ -132,7 +132,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-delete-strategy']",
+      "prototypeSelector": "#overlay-delete-strategy",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -149,7 +149,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-save-strategy']",
+      "prototypeSelector": "#overlay-save-strategy",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -166,7 +166,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-validation-toast']",
+      "prototypeSelector": "#overlay-validation-toast",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -183,7 +183,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-backtest-config']",
+      "prototypeSelector": "#overlay-backtest-config",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -200,7 +200,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-factor-preview']",
+      "prototypeSelector": "#overlay-factor-preview",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -217,7 +217,7 @@
         "slot": "inspector",
         "action": "open-agent-trace"
       },
-      "prototypeSelector": "[data-overlay='overlay-agent-run-trace']",
+      "prototypeSelector": "#overlay-agent-run-trace",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -234,7 +234,7 @@
         "slot": "main",
         "action": "approve-candidate"
       },
-      "prototypeSelector": "[data-overlay='overlay-strategy-candidate-approval']",
+      "prototypeSelector": "#overlay-strategy-candidate-approval",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

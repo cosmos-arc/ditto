@@ -138,7 +138,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-plan-create']",
+      "prototypeSelector": "#overlay-plan-create",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -155,7 +155,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-run-rerun']",
+      "prototypeSelector": "#overlay-run-rerun",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -172,7 +172,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-approval-confirm']",
+      "prototypeSelector": "#overlay-approval-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -189,7 +189,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-tool-trace-detail']",
+      "prototypeSelector": "#overlay-tool-trace-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -206,7 +206,7 @@
         "slot": "inspector",
         "action": "open-artifact"
       },
-      "prototypeSelector": "[data-overlay='overlay-artifact-preview']",
+      "prototypeSelector": "#overlay-artifact-preview",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -223,7 +223,7 @@
         "slot": "inspector",
         "action": "open-guardrail"
       },
-      "prototypeSelector": "[data-overlay='overlay-guardrail-detail']",
+      "prototypeSelector": "#overlay-guardrail-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -240,7 +240,7 @@
         "slot": "main",
         "action": "create-quality-run"
       },
-      "prototypeSelector": "[data-overlay='overlay-quality-run-create']",
+      "prototypeSelector": "#overlay-quality-run-create",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

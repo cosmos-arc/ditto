@@ -78,7 +78,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-cancel-confirm']",
+      "prototypeSelector": "#overlay-cancel-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -95,7 +95,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-retry-submit']",
+      "prototypeSelector": "#overlay-retry-submit",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -112,7 +112,7 @@
         "slot": "main",
         "action": "select-order"
       },
-      "prototypeSelector": "[data-overlay='overlay-order-detail']",
+      "prototypeSelector": "#overlay-order-detail",
       "reactComponent": "OrderDetailPanel",
       "closeBehavior": [
         "escape",
@@ -129,7 +129,7 @@
         "slot": "health",
         "action": "batch-cancel"
       },
-      "prototypeSelector": "[data-overlay='overlay-batch-cancel']",
+      "prototypeSelector": "#overlay-batch-cancel",
       "reactComponent": "BatchCancelDialog",
       "closeBehavior": [
         "escape",

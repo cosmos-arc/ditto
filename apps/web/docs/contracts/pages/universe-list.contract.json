@@ -109,7 +109,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-universe-edit']",
+      "prototypeSelector": "#overlay-universe-edit",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -126,7 +126,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-universe-delete']",
+      "prototypeSelector": "#overlay-universe-delete",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

@@ -124,7 +124,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-intelligence-detail']",
+      "prototypeSelector": "#overlay-intelligence-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -141,7 +141,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-custom-filter']",
+      "prototypeSelector": "#overlay-custom-filter",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -158,7 +158,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-bookmark-success']",
+      "prototypeSelector": "#overlay-bookmark-success",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -175,7 +175,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-delete-confirm']",
+      "prototypeSelector": "#overlay-delete-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -192,7 +192,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-send-to-copilot']",
+      "prototypeSelector": "#overlay-send-to-copilot",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

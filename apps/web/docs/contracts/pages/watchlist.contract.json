@@ -109,7 +109,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-add-instrument']",
+      "prototypeSelector": "#overlay-add-instrument",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -126,7 +126,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-bulk-delete']",
+      "prototypeSelector": "#overlay-bulk-delete",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

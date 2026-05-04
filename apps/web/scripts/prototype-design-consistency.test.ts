@@ -65,7 +65,7 @@ type PageContract = {
 	prototypeRef: string;
 	nextPrototypeRef?: string;
 	shellFamily: string;
-	overlays?: Array<{ prototypeSelector: string }>;
+	overlays?: Array<{ id: string; prototypeSelector: string }>;
 	nextOverlays?: Array<{ prototypeSelector: string }>;
 	nextSlots?: unknown[];
 };
@@ -126,6 +126,23 @@ function readPrototypeHtml(page: ManifestPage): string {
 
 function getOverlayIds(html: string): string[] {
 	return [...new Set([...html.matchAll(/id="(overlay-[^"]+)"/g)].map((match) => match[1]))];
+}
+
+function selectorReferencesOverlayId(selector: string, id: string): boolean {
+	return (
+		selector === `#${id}` ||
+		selector === `[data-overlay='${id}']` ||
+		selector === `[data-overlay="${id}"]` ||
+		selector === `[data-overlay-ref='${id}']` ||
+		selector === `[data-overlay-ref="${id}"]`
+	);
+}
+
+function getOverlayIdFromSelector(selector: string): string | undefined {
+	const idSelector = /^#(overlay-[\w-]+)$/.exec(selector)?.[1];
+	if (idSelector) return idSelector;
+
+	return /\[(?:data-overlay|data-overlay-ref)=['"](overlay-[\w-]+)['"]\]/.exec(selector)?.[1];
 }
 
 function readContracts(): PageContract[] {
@@ -1481,13 +1498,44 @@ describe("prototype design consistency", () => {
 				contractByPrototype.get(`docs/designs/specs/prototypes/${page.file}`) ?? new Set();
 
 			for (const id of getOverlayIds(readPrototypeHtml(page))) {
-				if (!selectors.has(`[data-overlay='${id}']`) && !selectors.has(`[data-overlay="${id}"]`)) {
+				if (![...selectors].some((selector) => selectorReferencesOverlayId(selector, id))) {
 					missing.push(`${page.id}:${id}`);
 				}
 			}
 		}
 
 		expect(missing).toEqual([]);
+	});
+
+	it("resolves registered active prototype overlay selectors in the canonical prototype DOM", () => {
+		const activePrototypeRefs = new Set(
+			readManifest()
+				.pages.filter(isActiveRoutePrototype)
+				.map((page) => `docs/designs/specs/prototypes/${page.file}`),
+		);
+		const failures: string[] = [];
+
+		for (const contract of readContracts()) {
+			if (!activePrototypeRefs.has(contract.prototypeRef)) continue;
+
+			const page = readManifest().pages.find(
+				(manifestPage) => `docs/designs/specs/prototypes/${manifestPage.file}` === contract.prototypeRef,
+			);
+			if (!page) continue;
+
+			const document = readPrototypeDocument(page);
+			const prototypeOverlayIds = new Set(getOverlayIds(readPrototypeHtml(page)));
+			for (const overlay of contract.overlays ?? []) {
+				const overlayId = getOverlayIdFromSelector(overlay.prototypeSelector);
+				if (!overlayId || !prototypeOverlayIds.has(overlayId)) continue;
+
+				if (!document.querySelector(overlay.prototypeSelector)) {
+					failures.push(`${contract.id}:${overlay.id}:${overlay.prototypeSelector}`);
+				}
+			}
+		}
+
+		expect(failures).toEqual([]);
 	});
 
 	it("matches known shell family decisions from blueprints", () => {

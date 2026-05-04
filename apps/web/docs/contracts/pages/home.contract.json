@@ -219,7 +219,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-signal-detail']",
+      "prototypeSelector": "#overlay-signal-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -236,7 +236,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-order-confirm']",
+      "prototypeSelector": "#overlay-order-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -253,7 +253,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-edit-workspace']",
+      "prototypeSelector": "#overlay-edit-workspace",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -270,7 +270,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-ai-advice']",
+      "prototypeSelector": "#overlay-ai-advice",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

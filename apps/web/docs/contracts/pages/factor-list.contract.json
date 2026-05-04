@@ -109,7 +109,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-factor-compare']",
+      "prototypeSelector": "#overlay-factor-compare",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

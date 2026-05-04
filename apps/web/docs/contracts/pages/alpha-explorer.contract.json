@@ -146,7 +146,7 @@
         "slot": "header",
         "action": "start-run"
       },
-      "prototypeSelector": "[data-overlay='overlay-explore-run-create']",
+      "prototypeSelector": "#overlay-explore-run-create",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -163,7 +163,7 @@
         "slot": "main",
         "action": "open-candidate"
       },
-      "prototypeSelector": "[data-overlay='overlay-candidate-deep-dive']",
+      "prototypeSelector": "#overlay-candidate-deep-dive",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -180,7 +180,7 @@
         "slot": "inspector",
         "action": "approve-adoption"
       },
-      "prototypeSelector": "[data-overlay='overlay-adoption-confirm']",
+      "prototypeSelector": "#overlay-adoption-confirm",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -197,7 +197,7 @@
         "slot": "graph",
         "action": "open-artifact"
       },
-      "prototypeSelector": "[data-overlay='overlay-artifact-preview']",
+      "prototypeSelector": "#overlay-artifact-preview",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -214,7 +214,7 @@
         "slot": "adoption",
         "action": "open-guardrail"
       },
-      "prototypeSelector": "[data-overlay='overlay-guardrail-detail']",
+      "prototypeSelector": "#overlay-guardrail-detail",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -231,7 +231,7 @@
         "slot": "inspector",
         "action": "open-copilot-context"
       },
-      "prototypeSelector": "[data-overlay='overlay-copilot-context']",
+      "prototypeSelector": "#overlay-copilot-context",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",

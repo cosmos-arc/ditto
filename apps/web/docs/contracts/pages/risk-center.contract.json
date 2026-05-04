@@ -87,7 +87,7 @@
         "slot": "main",
         "action": "open-overlay"
       },
-      "prototypeSelector": "[data-overlay='overlay-stress-config']",
+      "prototypeSelector": "#overlay-stress-config",
       "reactComponent": "PrototypeOnlyOverlay",
       "closeBehavior": [
         "escape",
@@ -104,7 +104,7 @@
         "slot": "main",
         "action": "select-breach"
       },
-      "prototypeSelector": "[data-overlay='overlay-breach-detail']",
+      "prototypeSelector": "#overlay-breach-detail",
       "reactComponent": "BreachDetailContent",
       "closeBehavior": [
         "escape",
@@ -121,7 +121,7 @@
         "slot": "analysis",
         "action": "edit-rule"
       },
-      "prototypeSelector": "[data-overlay='overlay-rule-editor']",
+      "prototypeSelector": "#overlay-rule-editor",
       "reactComponent": "RiskRuleEditorSheet",
       "closeBehavior": [
         "escape",
