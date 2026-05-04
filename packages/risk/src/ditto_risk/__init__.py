@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ditto_risk.contracts import RiskSlice
 from ditto_risk.post_trade import (
     CompositePostTradeGuard,
     ConcentrationLimitRule,
@@ -49,5 +50,6 @@ __all__ = [
     "RiskAction",
     "RiskActionType",
     "RiskSeverity",
+    "RiskSlice",
     "SingleLossLimitRule",
 ]

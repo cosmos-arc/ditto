@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
+from ditto_execution.audit.models import (
+    PreTradeDecisionPayload,
+    RiskScanPayload,
+)
 from ditto_execution.models import FillRecord, SignalRecord
 
 __all__ = ["FillReceiver", "OrderRouter", "TradeAuditor"]
@@ -31,10 +36,14 @@ class FillReceiver(Protocol):
 class TradeAuditor(Protocol):
     """交易审计接口 — 记录执行审计日志."""
 
-    def save_risk_log(self, run_id: str, records: tuple[object, ...]) -> int:
+    def save_risk_log(self, run_id: str, records: Sequence[RiskScanPayload]) -> int:
         """保存风控扫描审计日志."""
         ...
 
-    def save_pre_trade_log(self, run_id: str, records: tuple[object, ...]) -> int:
+    def save_pre_trade_log(
+        self,
+        run_id: str,
+        records: Sequence[PreTradeDecisionPayload],
+    ) -> int:
         """保存盘前决策审计日志."""
         ...
