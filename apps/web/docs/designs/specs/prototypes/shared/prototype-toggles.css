@@ -378,8 +378,16 @@
   border-radius: var(--panel-radius) !important;
   background: var(--surface-modal) !important;
   color: var(--text-secondary);
-  box-shadow: none !important;
+  box-shadow: 0 0 0 1px var(--border-subtle) !important;
   padding: var(--space-16);
+}
+
+/* Nested elevated panels inside overlays get explicit border for dark theme clarity.
+ * Surface-modal (oklch 0.290) and surface-panel-elevated (oklch 0.215) have
+ * noticeable contrast, but explicit borders ensure unambiguous boundary definition
+ * in dark theme where color differences alone can feel ambiguous. */
+.overlay-surface .panel-elevated {
+  border: 1px solid var(--border-subtle);
 }
 
 .overlay-surface--drawer {
