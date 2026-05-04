@@ -68,6 +68,8 @@
    *    Buttons:   data-tab-target="panel-id"
    *    Panels:    data-tab-panel="panel-id"
    * ══════════════════════════════════════════════ */
+  var tabIdCounter = 1;
+
   var Tabs = {
     init: function () {
       document.querySelectorAll('[data-tabs]').forEach(function (group) {
@@ -140,7 +142,10 @@
             var controllingBtn = Array.from(tabButtons).find(function (b) {
               return b.getAttribute('data-tab-target') === targetPanel;
             });
-            if (controllingBtn && controllingBtn.id) {
+            if (controllingBtn) {
+              if (!controllingBtn.id) {
+                controllingBtn.id = 'ditto-tab-' + (tabIdCounter++);
+              }
               panel.setAttribute('aria-labelledby', controllingBtn.id);
             }
           }

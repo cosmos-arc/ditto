@@ -2105,4 +2105,294 @@ describe("prototype interaction UX contracts", () => {
 		expect(startEdgeSeparator.getAttribute("aria-valuetext")).toBe("调整测试资源栏宽度 272 像素");
 		expect(group.style.getPropertyValue("--prototype-source-width")).toBe("272px");
 	});
-});
+
+		/* ── Phase 1 a11y contract tests ─────────────── */
+
+		describe("Phase 1 accessibility features", () => {
+			it("navigates between tabs with ArrowRight, ArrowLeft, Home, and End keys", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<main>
+								<div data-tabs="a11y-tabs" role="tablist" aria-label="无障碍标签页">
+									<button data-tab-target="tab-a" role="tab" id="tab-btn-a" aria-selected="true" aria-controls="panel-a">标签 A</button>
+									<button data-tab-target="tab-b" role="tab" id="tab-btn-b" aria-selected="false" aria-controls="panel-b">标签 B</button>
+									<button data-tab-target="tab-c" role="tab" id="tab-btn-c" aria-selected="false" aria-controls="panel-c">标签 C</button>
+								</div>
+								<div id="panel-a" data-tab-panel="tab-a" role="tabpanel" aria-labelledby="tab-btn-a" aria-hidden="false">A 内容</div>
+								<div id="panel-b" data-tab-panel="tab-b" role="tabpanel" aria-labelledby="tab-btn-b" aria-hidden="true">B 内容</div>
+								<div id="panel-c" data-tab-panel="tab-c" role="tabpanel" aria-labelledby="tab-btn-c" aria-hidden="true">C 内容</div>
+							</main>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/a11y-tabs-arrows.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const tabA = document.getElementById("tab-btn-a");
+				const tabB = document.getElementById("tab-btn-b");
+				const tabC = document.getElementById("tab-btn-c");
+
+				/* ArrowRight: A -> B */
+				tabA?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+				expect(tabB?.getAttribute("aria-selected")).toBe("true");
+				expect(tabB?.getAttribute("tabindex")).toBe("0");
+				expect(tabA?.getAttribute("aria-selected")).toBe("false");
+				expect(document.getElementById("panel-b")?.getAttribute("aria-hidden")).toBe("false");
+				expect(document.getElementById("panel-a")?.getAttribute("aria-hidden")).toBe("true");
+
+				/* ArrowRight: B -> C */
+				tabB?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+				expect(tabC?.getAttribute("aria-selected")).toBe("true");
+				expect(document.getElementById("panel-c")?.getAttribute("aria-hidden")).toBe("false");
+
+				/* ArrowRight wraps: C -> A */
+				tabC?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+				expect(tabA?.getAttribute("aria-selected")).toBe("true");
+				expect(document.getElementById("panel-a")?.getAttribute("aria-hidden")).toBe("false");
+
+				/* ArrowLeft wraps: A -> C */
+				tabA?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+				expect(tabC?.getAttribute("aria-selected")).toBe("true");
+				expect(document.getElementById("panel-c")?.getAttribute("aria-hidden")).toBe("false");
+
+				/* Home: goes to first tab */
+				tabC?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+				expect(tabA?.getAttribute("aria-selected")).toBe("true");
+				expect(document.getElementById("panel-a")?.getAttribute("aria-hidden")).toBe("false");
+
+				/* End: goes to last tab */
+				tabA?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "End", bubbles: true }));
+				expect(tabC?.getAttribute("aria-selected")).toBe("true");
+				expect(document.getElementById("panel-c")?.getAttribute("aria-hidden")).toBe("false");
+			});
+
+			it("wraps Tab focus within the command palette dialog", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div data-command-context-object="测试对象" data-command-context-actions="review-signal,open-risk"></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/a11y-cmd-focus-trap.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("cmd-trigger");
+				trigger?.click();
+
+				const palette = document.querySelector("[data-command-palette]");
+				expect(palette).not.toBeNull();
+				expect(palette?.hidden).toBe(false);
+				if (!palette) return;
+
+				const suggestions = palette.querySelectorAll("[data-command-suggestion]");
+				expect(suggestions.length).toBeGreaterThanOrEqual(2);
+
+				const first = suggestions[0];
+				const last = suggestions[suggestions.length - 1];
+
+				/* Focus on last item, Tab wraps to first */
+				(last as HTMLElement).focus();
+				palette.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+				expect(document.activeElement).toBe(first);
+
+				/* Focus on first item, Shift+Tab wraps to last */
+				(first as HTMLElement).focus();
+				palette.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }));
+				expect(document.activeElement).toBe(last);
+			});
+
+			it("restores focus to the trigger element when command palette closes", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div data-command-context-object="测试对象" data-command-context-actions="review-signal"></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/a11y-cmd-focus-restore.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("cmd-trigger") as HTMLElement | null;
+				expect(trigger).not.toBeNull();
+				if (!trigger) return;
+
+				trigger.focus();
+				trigger.click();
+
+				const palette = document.querySelector("[data-command-palette]");
+				expect(palette?.hidden).toBe(false);
+
+				/* Close with Escape */
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+				expect(palette?.hidden).toBe(true);
+				expect(document.activeElement).toBe(trigger);
+			});
+
+			it("sets aria-describedby on tooltip trigger on show and clears on hide", async () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="tip-trigger" type="button" data-tooltip="提示文字" data-tooltip-delay="0">悬停我</button>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/a11y-tooltip-describedby.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("tip-trigger");
+				const tooltipEl = document.querySelector(".ditto-tooltip[role='tooltip']");
+				expect(trigger).not.toBeNull();
+				expect(tooltipEl).not.toBeNull();
+				if (!trigger || !tooltipEl) return;
+
+				/* Before show: no aria-describedby on trigger */
+				expect(trigger.getAttribute("aria-describedby")).toBeNull();
+
+				/* Hover to trigger show (delay=0, but setTimeout is still async in JSDOM) */
+				trigger.dispatchEvent(new dom.window.MouseEvent("mouseover", { bubbles: true }));
+
+				/* Wait for the setTimeout(0) to flush */
+				await new Promise((resolve) => setTimeout(resolve, 50));
+
+				/* After show: trigger should have aria-describedby pointing to the tooltip */
+				const describedBy = trigger.getAttribute("aria-describedby");
+				expect(describedBy).not.toBeNull();
+				expect(describedBy?.startsWith("ditto-tooltip-")).toBe(true);
+				expect(tooltipEl.id).toBe(describedBy);
+				expect(tooltipEl.getAttribute("aria-hidden")).toBe("false");
+
+				/* Leave to trigger hide */
+				trigger.dispatchEvent(new dom.window.MouseEvent("mouseout", { bubbles: true, relatedTarget: null }));
+
+				/* Wait for the hide setTimeout(150) to flush */
+				await new Promise((resolve) => setTimeout(resolve, 200));
+
+				/* After hide: aria-describedby cleared */
+				expect(trigger.getAttribute("aria-describedby")).toBeNull();
+			});
+
+			it("activates filter chips with Enter and Space keys", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<div class="filter-group">
+								<button class="filter-chip active" type="button">选项 A</button>
+								<button class="filter-chip" type="button">选项 B</button>
+								<button class="filter-chip" type="button">选项 C</button>
+							</div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/a11y-filter-chips-keyboard.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const chips = Array.from(document.querySelectorAll(".filter-chip")) as HTMLElement[];
+				expect(chips.length).toBe(3);
+
+				/* Initial state: first chip is active */
+				expect(chips[0].getAttribute("aria-pressed")).toBe("true");
+				expect(chips[1].getAttribute("aria-pressed")).toBe("false");
+
+				/* Activate second chip with Enter */
+				chips[1].dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+				expect(chips[1].getAttribute("aria-pressed")).toBe("true");
+				expect(chips[1].classList.contains("active")).toBe(true);
+				expect(chips[0].getAttribute("aria-pressed")).toBe("false");
+				expect(chips[0].classList.contains("active")).toBe(false);
+
+				/* Activate third chip with Space */
+				chips[2].dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
+				expect(chips[2].getAttribute("aria-pressed")).toBe("true");
+				expect(chips[2].classList.contains("active")).toBe(true);
+				expect(chips[1].getAttribute("aria-pressed")).toBe("false");
+				expect(chips[1].classList.contains("active")).toBe(false);
+			});
+
+			it("generates a stable aria-labelledby ID for tab buttons without explicit IDs", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<main>
+								<div data-tabs="auto-id-tabs" role="tablist" aria-label="自动 ID 标签页">
+									<button data-tab-target="auto-a" role="tab" aria-selected="true" aria-controls="panel-auto-a">标签 A</button>
+									<button data-tab-target="auto-b" role="tab" aria-selected="false" aria-controls="panel-auto-b">标签 B</button>
+								</div>
+								<div id="panel-auto-a" data-tab-panel="auto-a" role="tabpanel" aria-hidden="false">A 内容</div>
+								<div id="panel-auto-b" data-tab-panel="auto-b" role="tabpanel" aria-hidden="true">B 内容</div>
+							</main>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/a11y-tabs-auto-id.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const buttons = Array.from(document.querySelectorAll("[data-tab-target]"));
+				const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+
+				/* Each button should now have an auto-generated ID */
+				for (const button of buttons) {
+					expect(button.id, "tab button should have an auto-generated ID").toBeTruthy();
+					expect(button.id.startsWith("ditto-tab-"), "auto-generated ID should have ditto-tab- prefix").toBe(true);
+				}
+
+				/* Each panel should have aria-labelledby pointing to its controlling button */
+				const panelA = panels.find((p) => p.getAttribute("data-tab-panel") === "auto-a");
+				const panelB = panels.find((p) => p.getAttribute("data-tab-panel") === "auto-b");
+				const btnA = buttons.find((b) => b.getAttribute("data-tab-target") === "auto-a");
+				const btnB = buttons.find((b) => b.getAttribute("data-tab-target") === "auto-b");
+
+				expect(panelA?.getAttribute("aria-labelledby")).toBe(btnA?.id);
+				expect(panelB?.getAttribute("aria-labelledby")).toBe(btnB?.id);
+
+				/* The generated IDs should be unique */
+				const ids = buttons.map((b) => b.id);
+				expect(new Set(ids).size).toBe(ids.length);
+			});
+		});
+	});
