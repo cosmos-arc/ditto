@@ -890,9 +890,10 @@
       padding-bottom: 2px;
     }
 
-    /* Rail logo subtle brand glow */
+    /* Rail logo domain tint */
     .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ══════════════════════════════════════════════
@@ -1671,9 +1672,10 @@
       50% { background: color-mix(in oklch, var(--system-down-fg) 7%, transparent); }
     }
 
-    /* Rail icon — enhanced active glow */
+    /* Rail icon — active domain tint */
     .rail-icon.active {
-      text-shadow: 0 0 10px color-mix(in oklch, var(--brand-accent) 20%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ══════════════════════════════════════════════
@@ -2105,7 +2107,7 @@
 
       <!-- Tab labels -->
       <div class="ops-main">
-        <div class="panel" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="300px">
+        <div class="panel" data-reveal="fade-up" data-reveal-delay="100">
           <div class="panel-header">
             <div class="panel-tabs">
               <label for="tab-providers" class="panel-tab panel-tab-radio active" data-tab-label="tab-providers" data-tab-target="services" role="tab" aria-selected="true" id="tab-control-providers" aria-controls="panel-providers">数据源 <span class="panel-subtitle">5 个源</span></label>
@@ -2598,7 +2600,7 @@
     </div>
 
     <!-- ═══ Detail Panel (340px right side) ═══ -->
-    <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="250px">
+    <div class="ops-detail" data-reveal="fade-up" data-reveal-delay="200">
       <div class="context-rail" data-contract-slot="rail">
         <!-- Section 1: 任务概览（聚合摘要，非逐条重复 Tab 2） -->
         <details class="context-section" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="190" open>

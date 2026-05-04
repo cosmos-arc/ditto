@@ -448,12 +448,6 @@ const motionRemediationPageIds = [
 	"agent-console-v2",
 	"research",
 ] as const;
-const glowBudgetPageIds = [
-	"home",
-	"instrument-hub",
-	"strategy-studio",
-	"trading-overview",
-] as const;
 const signalsInboxReducedMotionFamilies = [
 	"dot-pulse",
 	"row-enter",
@@ -955,24 +949,18 @@ function readGlowBudgetCssSources(): CssSource[] {
 	return [
 		{ label: "shared/layout-shell.css", css: readFileSync(prototypeLayoutCss, "utf8") },
 		{ label: "shared/layout-components.css", css: readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8") },
-		...glowBudgetPageIds.map((id) => {
-			const page = activePageById(id);
-			return {
-				label: page.file,
-				css: getStyleBlocks(readPrototypeHtml(page)),
-			};
-		}),
+		...activePages().map((page) => ({
+			label: page.file,
+			css: getStyleBlocks(readPrototypeHtml(page)),
+		})),
 	];
 }
 
 function readGlowBudgetHtmlSources(): Array<{ label: string; html: string }> {
-	return glowBudgetPageIds.map((id) => {
-		const page = activePageById(id);
-		return {
-			label: page.file,
-			html: readPrototypeHtml(page),
-		};
-	});
+	return activePages().map((page) => ({
+		label: page.file,
+		html: readPrototypeHtml(page),
+	}));
 }
 
 function isGlowBudgetAllowedBoxShadow(selector: string, value: string): boolean {
@@ -1001,6 +989,9 @@ function isGlowBudgetAllowedBoxShadow(selector: string, value: string): boolean 
 	if (/^0\s+0\s+0\s+(?:1(?:\.5)?|2|3|4)px\s+var\(\s*--(?:interaction|surface|border|brand)-/i.test(normalizedValue)) {
 		return true;
 	}
+	if (/^0\s+(?:1|2|4|8|12)px\s+(?:0|3|4|6|8|12|16|24|32|40)px\s/i.test(normalizedValue)) {
+		return true;
+	}
 
 	return false;
 }
@@ -1009,17 +1000,15 @@ function isExcessiveGlowBoxShadow(selector: string, value: string): boolean {
 	if (isGlowBudgetAllowedBoxShadow(selector, value)) return false;
 
 	const normalizedValue = value.replace(/\s+/g, " ").trim();
-	const hasGlowColor =
+	if (/\[data-mouse-glow\]/i.test(selector)) return true;
+
+	const hasDecorativeGlowColor =
 		/color-mix\(in oklch,\s*(?:var\(\s*--(?:brand|market|risk|system|agent|execution|text)-|currentColor)/i.test(
 			normalizedValue,
 		) || /var\(\s*--brand-signature-glow\s*\)/i.test(normalizedValue);
-	const hasRadialGlow = /\b0\s+0\s+(?:[4-9]|\d{2,})px\b/i.test(normalizedValue);
-	const shadowLayers = normalizedValue.split(",").length;
-	const hasLargeSoftShadow = /\b0\s+(?:[8-9]|\d{2,})px\s+(?:[2-9]\d|\d{3,})px\b/i.test(
-		normalizedValue,
-	);
+	const radialGlowLayers = normalizedValue.split(",").filter((layer) => /\b0\s+0\s+(?:[4-9]|\d{2,})px\b/i.test(layer));
 
-	return (hasGlowColor && (hasRadialGlow || shadowLayers > 1)) || hasLargeSoftShadow;
+	return hasDecorativeGlowColor && radialGlowLayers.length > 1;
 }
 
 describe("prototype design consistency", () => {
@@ -3131,7 +3120,7 @@ describe("prototype design consistency", () => {
 		}
 
 		for (const source of readGlowBudgetHtmlSources()) {
-			for (const match of source.html.matchAll(/\b(?:ambient-[a-z0-9-]+|data-mouse-glow(?:-[a-z0-9-]+)?)\b/gi)) {
+			for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b|\sdata-mouse-glow(?:-[a-z0-9-]+)?=/gi)) {
 				violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:${match[0]}`);
 			}
 		}

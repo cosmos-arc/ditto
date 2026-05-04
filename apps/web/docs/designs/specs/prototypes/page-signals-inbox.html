@@ -1616,9 +1616,10 @@
       z-index: 1;
     }
 
-    /* ── 2. Rail Logo Brand Glow (matches factor-analysis) ── */
+    /* ── 2. Rail Logo Domain Tint (matches factor-analysis) ── */
     .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ── 3. Overlay Accent Border (matches factor-analysis) ── */
@@ -1683,14 +1684,7 @@
       transform: translateY(-1px);
       box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 5%, transparent);
     }
-    .impact-card-value.up {
-      text-shadow: 0 0 8px color-mix(in oklch, var(--market-up-fg) 20%, transparent);
-    }
-    .impact-card-value.down {
-      text-shadow: 0 0 8px color-mix(in oklch, var(--market-down-fg) 20%, transparent);
-    }
-
-    /* ── 9. Batch Button Hover Shadow (match detail-action.primary) ── */
+    /* ── 9. Batch Button Hover Elevation (match detail-action.primary) ── */
     .batch-btn.primary:hover {
       box-shadow: 0 2px 8px color-mix(in oklch, var(--brand-accent) 30%, transparent);
     }
@@ -1941,7 +1935,7 @@
     </div>
 
     <!-- ═══ Main Content — Tab Panels ═══ -->
-    <main class="signals-main" id="main-content" data-contract-slot="main" data-selected-object-region role="main" data-mouse-glow="true">
+    <main class="signals-main" id="main-content" data-contract-slot="main" data-selected-object-region role="main">
 
       <!-- ══════════ Tab Panel: 待复核 (default) ══════════ -->
       <div class="tab-panel active-by-default" data-panel="tab-pending" role="tabpanel" aria-label="待复核信号" id="panel-pending" aria-labelledby="tab-control-pending" aria-hidden="false">
@@ -2486,7 +2480,7 @@
     <div class="resize-separator" data-resize-separator data-resize-var="--shell-signals-detail-width" data-resize-default="380" data-resize-min="300" data-resize-max="560" role="separator" tabindex="0" aria-label="调整信号详情宽度" aria-orientation="vertical" aria-controls="main-content signal-detail-panel" aria-valuemin="300" aria-valuemax="560" aria-valuenow="380" aria-valuetext="调整信号详情宽度 380 像素"></div>
 
     <!-- ═══ Detail Panel (380px) ═══ -->
-    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-mouse-glow="true" data-mouse-glow-size="150px">
+    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情">
       <div class="detail-header">
         <div>
           <div class="detail-header-title">贵州茅台</div>

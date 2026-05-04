@@ -146,9 +146,10 @@
       padding-bottom: 2px;
     }
 
-    /* Rail logo subtle brand glow */
+    /* Rail logo domain tint */
     .rail-logo {
-      text-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      color: var(--brand-accent);
+      font-weight: var(--font-weight-semibold);
     }
 
     /* ── Header: Portfolio Selector ── */
@@ -1647,7 +1648,7 @@
     </div>
 
     <!-- ═══ Risk Gauges — DonutGauge ═══ -->
-    <div class="flex-row-center gap-16 border-b-subtle risk-strip-band" data-contract-slot="risk-gauges" data-mouse-glow="true" data-mouse-glow-size="180px">
+    <div class="flex-row-center gap-16 border-b-subtle risk-strip-band" data-contract-slot="risk-gauges">
       <div class="flex-row-center gap-10" data-tooltip="VaR 额度使用率，当前 68% 安全" data-tooltip-delay="500">
         <svg data-donut='{"value":0.68,"label":"68%","size":72}' aria-label="风险利用率"></svg>
         <div class="flex-col gap-1">
@@ -1685,7 +1686,7 @@
         <div class="risk-charts" data-contract-slot="risk-dashboard">
 
           <!-- Chart 1: VaR 趋势图 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0" data-mouse-glow="true" data-mouse-glow-size="200px">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0">
             <div class="panel-header">
               <span class="panel-title">VaR 趋势</span>
               <span class="panel-subtitle panel-subtitle-offset">95% 置信区间 · 日线</span>
@@ -1709,7 +1710,7 @@
           </div>
 
           <!-- Chart 2: 回撤图 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="100" data-mouse-glow="true" data-mouse-glow-size="200px">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="100">
             <div class="panel-header">
               <span class="panel-title">最大回撤</span>
               <span class="panel-subtitle panel-subtitle-offset">当前 3.45% / 阈值 5.00%</span>
@@ -1732,7 +1733,7 @@
           </div>
 
           <!-- Chart 3: 行业暴露度 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="200" data-mouse-glow="true" data-mouse-glow-size="200px">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="200">
             <div class="panel-header">
               <span class="panel-title">行业暴露度</span>
               <span class="panel-subtitle panel-subtitle-offset">按中信一级行业分布</span>
