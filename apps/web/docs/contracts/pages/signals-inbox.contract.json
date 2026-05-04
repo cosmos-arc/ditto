@@ -112,23 +112,6 @@
       ]
     },
     {
-      "id": "signals.risk-officer-detail",
-      "kind": "drawer",
-      "blocking": false,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "detail",
-        "action": "open-risk-officer"
-      },
-      "prototypeSelector": "#overlay-risk-officer-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    },
-    {
       "id": "signals-inbox.batch-confirm",
       "kind": "modal",
       "blocking": true,

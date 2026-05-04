@@ -156,40 +156,6 @@
         "outside-click",
         "primary-action"
       ]
-    },
-    {
-      "id": "platform-settings.ai-policy-save-confirm",
-      "kind": "modal",
-      "blocking": true,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "save-ai-policy"
-      },
-      "prototypeSelector": "#overlay-ai-policy-save-confirm",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    },
-    {
-      "id": "platform-settings.tool-permission-detail",
-      "kind": "drawer",
-      "blocking": false,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-tool-permission"
-      },
-      "prototypeSelector": "#overlay-tool-permission-detail",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
     }
   ]
 }

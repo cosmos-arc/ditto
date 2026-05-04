@@ -138,13 +138,6 @@ function selectorReferencesOverlayId(selector: string, id: string): boolean {
 	);
 }
 
-function getOverlayIdFromSelector(selector: string): string | undefined {
-	const idSelector = /^#(overlay-[\w-]+)$/.exec(selector)?.[1];
-	if (idSelector) return idSelector;
-
-	return /\[(?:data-overlay|data-overlay-ref)=['"](overlay-[\w-]+)['"]\]/.exec(selector)?.[1];
-}
-
 function readContracts(): PageContract[] {
 	contractsCache ??= readdirSync(contractsDir)
 		.filter((file) => file.endsWith(".json"))
@@ -1507,7 +1500,7 @@ describe("prototype design consistency", () => {
 		expect(missing).toEqual([]);
 	});
 
-	it("resolves registered active prototype overlay selectors in the canonical prototype DOM", () => {
+	it("resolves every active prototype contract overlay selector in the canonical prototype DOM", () => {
 		const activePrototypeRefs = new Set(
 			readManifest()
 				.pages.filter(isActiveRoutePrototype)
@@ -1523,13 +1516,8 @@ describe("prototype design consistency", () => {
 			);
 			if (!page) continue;
 
-			const document = readPrototypeDocument(page);
-			const prototypeOverlayIds = new Set(getOverlayIds(readPrototypeHtml(page)));
 			for (const overlay of contract.overlays ?? []) {
-				const overlayId = getOverlayIdFromSelector(overlay.prototypeSelector);
-				if (!overlayId || !prototypeOverlayIds.has(overlayId)) continue;
-
-				if (!document.querySelector(overlay.prototypeSelector)) {
+				if (!readPrototypeDocument(page).querySelector(overlay.prototypeSelector)) {
 					failures.push(`${contract.id}:${overlay.id}:${overlay.prototypeSelector}`);
 				}
 			}

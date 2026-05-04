@@ -207,40 +207,6 @@
         "outside-click",
         "primary-action"
       ]
-    },
-    {
-      "id": "strategy-studio.agent-run-trace",
-      "kind": "drawer",
-      "blocking": false,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "inspector",
-        "action": "open-agent-trace"
-      },
-      "prototypeSelector": "#overlay-agent-run-trace",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    },
-    {
-      "id": "strategy-studio.candidate-approval",
-      "kind": "modal",
-      "blocking": true,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "approve-candidate"
-      },
-      "prototypeSelector": "#overlay-strategy-candidate-approval",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
     }
   ]
 }
