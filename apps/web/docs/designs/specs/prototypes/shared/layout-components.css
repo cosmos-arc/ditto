@@ -2813,6 +2813,7 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .skeleton--card   { height: 80px; border-radius: var(--radius-6); }
 .skeleton--row-lg { height: 48px; }
 .skeleton--input  { height: 32px; width: 100%; border-radius: var(--radius-4); }
+.skeleton-bar-md { height: 32px; width: 100%; border-radius: var(--radius-4); }
 .skeleton-bar--sm { height: 24px; border-radius: var(--radius-4); }
 .skeleton-bar--lg { height: 48px; width: 100%; border-radius: var(--radius-6); }
 .skeleton-bar--xl { height: 80px; width: 100%; border-radius: var(--radius-6); }
@@ -2825,10 +2826,14 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .skeleton--w50 { width: 50%; }
 .skeleton--w60,
 .skeleton--width-60 { width: 60%; }
+.skeleton--w64 { width: 64%; }
 .skeleton--w65 { width: 65%; }
+.skeleton--w72 { width: 72%; }
 .skeleton--w80,
 .skeleton--width-80 { width: 80%; }
+.skeleton--w86 { width: 86%; }
 .skeleton--w90 { width: 90%; }
+.skeleton--w94 { width: 94%; }
 .skeleton--w100 { width: 100px; }
 .skeleton--w120 { width: 120px; }
 .skeleton-w-40 { width: 40px; }

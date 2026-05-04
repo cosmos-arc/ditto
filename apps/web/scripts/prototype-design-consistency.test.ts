@@ -2322,9 +2322,14 @@ describe("prototype design consistency", () => {
 			".skeleton-badge",
 			".skeleton-chart",
 			".skeleton-bar",
+			".skeleton-bar-md",
 			".skeleton--block",
 			".skeleton--card",
 			".skeleton--w60",
+			".skeleton--w64",
+			".skeleton--w72",
+			".skeleton--w86",
+			".skeleton--w94",
 			".skeleton--width-60",
 		];
 		const violations = requiredSharedSelectors
@@ -2337,11 +2342,36 @@ describe("prototype design consistency", () => {
 
 			for (const rule of readTopLevelCssRules(css)) {
 				const hasPageLocalSkeletonDefinition = rule.selectors.some((selector) =>
-					/(^|[\s>+~,(])\.skeleton[-_a-z0-9]/i.test(selector),
+					/^\.skeleton(?:\b|[-_a-z0-9])/i.test(selector),
 				);
 				if (hasPageLocalSkeletonDefinition) {
 					violations.push(`${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);
 				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("preserves skeleton loading rhythm through shared modifiers", () => {
+		const violations: string[] = [];
+		const marketsPages = ["markets-calendar", "markets-screener"];
+
+		for (const pageId of marketsPages) {
+			const html = readPrototypeHtml(activePageById(pageId));
+			for (const classMatch of html.matchAll(/class="([^"]*\bskeleton\b[^"]*)"/g)) {
+				const classes = classMatch[1].split(/\s+/);
+				if (classes.includes("skeleton-bar") && !classes.includes("skeleton-bar-md")) {
+					violations.push(`${pageId}:bare-skeleton-bar`);
+				}
+			}
+		}
+
+		const strategyListHtml = readPrototypeHtml(activePageById("strategy-list"));
+		const expectedWidths = ["skeleton--w86", "skeleton--w72", "skeleton--w94", "skeleton--w64"];
+		for (const widthClass of expectedWidths) {
+			if (!strategyListHtml.includes(widthClass)) {
+				violations.push(`strategy-list:missing-${widthClass}`);
 			}
 		}
 
