@@ -325,15 +325,20 @@ source_modules =
     ditto_apps.**
 forbidden_modules =
     ditto_data.services.**
+    ditto_data.services
     ditto_data.models.**
     ditto_data.models
     ditto_data.errors.**
+    ditto_data.errors
     ditto_data.quality.**
+    ditto_data.quality
     ditto_data.config.**
+    ditto_data.config
 # Registry 豁免（Composition Root）
 ignore_imports =
     ditto_apps.registry.** -> ditto_data.services.**
     ditto_apps.registry.** -> ditto_data.quality.**
+    ditto_apps.registry.** -> ditto_data.config
     ditto_apps.registry.** -> ditto_data.config.**
     ditto_apps.jobs.context -> ditto_data.quality
     ditto_apps.jobs.context -> ditto_data.quality.protocols
