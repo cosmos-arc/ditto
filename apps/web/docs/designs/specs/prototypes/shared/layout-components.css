@@ -2813,6 +2813,42 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .skeleton--card   { height: 80px; border-radius: var(--radius-6); }
 .skeleton--row-lg { height: 48px; }
 .skeleton--input  { height: 32px; width: 100%; border-radius: var(--radius-4); }
+.skeleton-bar--sm { height: 24px; border-radius: var(--radius-4); }
+.skeleton-bar--lg { height: 48px; width: 100%; border-radius: var(--radius-6); }
+.skeleton-bar--xl { height: 80px; width: 100%; border-radius: var(--radius-6); }
+.skeleton-circle-lg { width: 100px; height: 100px; border-radius: 50%; }
+.skeleton-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ── Skeleton width modifiers ── */
+.skeleton--w30 { width: 30%; }
+.skeleton--w40 { width: 40%; }
+.skeleton--w50 { width: 50%; }
+.skeleton--w60,
+.skeleton--width-60 { width: 60%; }
+.skeleton--w65 { width: 65%; }
+.skeleton--w80,
+.skeleton--width-80 { width: 80%; }
+.skeleton--w90 { width: 90%; }
+.skeleton--w100 { width: 100px; }
+.skeleton--w120 { width: 120px; }
+.skeleton-w-40 { width: 40px; }
+.skeleton-w-50 { width: 50px; }
+.skeleton.w-40 { width: 40%; }
+.skeleton.w-60 { width: 60%; }
+.skeleton.h-40 { height: 40px; }
+.skeleton.h-48 { height: 48px; }
+.skeleton.faded { opacity: 0.6; }
+.skeleton.ghost { opacity: 0.5; }
+
+/* ── Skeleton layout compatibility ── */
+.skeleton-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-16); }
+.skeleton-row-flex { display: flex; gap: var(--space-8); align-items: center; }
+.skeleton-row-flex-wide { display: flex; gap: var(--space-16); }
+.skeleton-row-h { display: flex; align-items: center; gap: var(--space-6); }
+.skeleton-filter-row { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-4) 0; }
+.skeleton-tabs-row { display: flex; align-items: center; gap: var(--space-12); }
+.skeleton-state-row { display: flex; flex-direction: row; gap: var(--space-16); padding: var(--space-8) var(--space-16); }
+.skeleton-state-error { display: flex; flex-direction: row; gap: var(--space-12); padding: var(--space-8) var(--space-16); }
 
 /* ── Truncate ── */
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

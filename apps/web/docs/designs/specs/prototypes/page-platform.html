@@ -1107,37 +1107,6 @@
     }
 
     /* ══════════════════════════════════════════════
-     * R6: Skeleton shimmer — loading state placeholder
-     * ══════════════════════════════════════════════ */
-    .skeleton {
-      background: linear-gradient(
-        90deg,
-        var(--neutral-100) 25%,
-        var(--neutral-150) 50%,
-        var(--neutral-100) 75%
-      );
-      background-size: 200% 100%;
-      animation: skeleton-shimmer 1.5s ease-in-out infinite;
-      border-radius: var(--radius-2);
-    }
-    .skeleton-bar {
-      height: 12px;
-      width: 60px;
-    }
-    .skeleton-text {
-      height: 11px;
-      width: 80px;
-    }
-    .skeleton-text-sm {
-      height: 10px;
-      width: 48px;
-    }
-    @keyframes skeleton-shimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    /* ══════════════════════════════════════════════
      * R6: Mini sparkline — latency trend indicator
      * ══════════════════════════════════════════════ */
     .sparkline {
@@ -1454,33 +1423,6 @@
     .api-h-22 { height: 22px; }
     .api-h-24 { height: 24px; }
 
-    /* ══════════════════════════════════════════════
-     * Gallery Skeleton Utility Classes
-     * ══════════════════════════════════════════════ */
-    .skeleton-row-h {
-      display: flex;
-      align-items: center;
-      gap: var(--space-6);
-    }
-    .skeleton-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
-    .skeleton-w-50 { width: 50px; }
-    .skeleton-w-40 { width: 40px; }
-    .skeleton-state-row {
-      display: flex;
-      flex-direction: row;
-      gap: var(--space-16);
-      padding: var(--space-8) var(--space-16);
-    }
-    .skeleton-state-error {
-      display: flex;
-      flex-direction: row;
-      gap: var(--space-12);
-      padding: var(--space-8) var(--space-16);
-    }
     .state-error-icon-box {
       width: 20px;
       height: 20px;

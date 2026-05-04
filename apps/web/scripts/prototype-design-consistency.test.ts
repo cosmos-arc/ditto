@@ -2311,6 +2311,43 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
+	it("keeps skeleton primitives and modifiers in shared layout CSS only", () => {
+		const layoutCss = readAllLayoutCss();
+		const requiredSharedSelectors = [
+			".skeleton",
+			".skeleton-row",
+			".skeleton-text",
+			".skeleton-text-sm",
+			".skeleton-heading",
+			".skeleton-badge",
+			".skeleton-chart",
+			".skeleton-bar",
+			".skeleton--block",
+			".skeleton--card",
+			".skeleton--w60",
+			".skeleton--width-60",
+		];
+		const violations = requiredSharedSelectors
+			.filter((selector) => !getSelectorRuleBody(layoutCss, selector))
+			.map((selector) => `shared-layout-missing:${selector}`);
+
+		for (const page of activePages()) {
+			const style = getStyleBlocks(readPrototypeHtml(page));
+			const css = stripCssComments(style);
+
+			for (const rule of readTopLevelCssRules(css)) {
+				const hasPageLocalSkeletonDefinition = rule.selectors.some((selector) =>
+					/(^|[\s>+~,(])\.skeleton[-_a-z0-9]/i.test(selector),
+				);
+				if (hasPageLocalSkeletonDefinition) {
+					violations.push(`${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("uses one token and shared CSS import order across active prototypes", () => {
 		const expectedOrder = [
 			"tokens-base.css",
