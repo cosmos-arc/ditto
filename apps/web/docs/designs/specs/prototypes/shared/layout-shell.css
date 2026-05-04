@@ -622,16 +622,22 @@ body {
 }
 
 :is(
+  .btn,
   .header-utility-btn,
   .header-action-btn,
+  .header-avatar,
   .header-btn-badge,
   .decision-cta,
   .panel-action,
   .overlay-btn,
   .state-empty-cta,
+  .filter-btn,
   .filter-chip,
   .tab,
   .mode-tab,
+  .hub-tab,
+  .meta-chip,
+  .data-table tr.row,
   .worklist-row[role="row"]
 ):focus-visible {
   outline: 2px solid var(--interaction-focus-ring);
@@ -1355,4 +1361,3 @@ h1.header-title {
   width: var(--icon-size-lg);
   height: var(--icon-size-lg);
 }
-

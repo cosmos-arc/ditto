@@ -2133,8 +2133,8 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 }
 
 .collapsible-strip-toggle:focus-visible {
-  outline: 2px solid var(--brand-accent);
-  outline-offset: 1px;
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: 2px;
 }
 
 .collapsible-strip-toggle svg {
@@ -3076,4 +3076,3 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   padding: var(--space-8) var(--space-10);
   background: var(--danger-subtle-bg);
 }
-

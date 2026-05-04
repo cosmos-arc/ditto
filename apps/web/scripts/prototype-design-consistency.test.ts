@@ -412,6 +412,18 @@ const homeTokenFocusSelectors = [
 	".state-empty-cta",
 	'.worklist-row[role="row"]',
 ] as const;
+const sharedCanonicalFocusSelectors = [
+	".rail-icon",
+	".btn",
+	".header-action-btn",
+	".header-avatar",
+	".panel-action",
+	".filter-btn",
+	".filter-chip",
+	".hub-tab",
+	".meta-chip",
+	".data-table tr.row",
+] as const;
 const motionRemediationPageIds = [
 	"alpha-explorer",
 	"signals-inbox",
@@ -714,6 +726,20 @@ function hasTokenFocusRule(css: string, selector: string): boolean {
 			rule.selector.includes(selector) &&
 			/--interaction-focus-ring/.test(rule.body),
 	);
+}
+
+function hasCanonicalFocusOutlineRule(css: string, selector: string): boolean {
+	return readTopLevelCssRules(stripCssComments(css)).some(
+		(rule) =>
+			hasFocusSelector(rule.selector) &&
+			rule.selector.includes(selector) &&
+			hasDeclaration(rule.body, "outline", /^2px\s+solid\s+var\(\s*--interaction-focus-ring\s*\)$/i) &&
+			hasDeclaration(rule.body, "outline-offset", /^2px$/i),
+	);
+}
+
+function usesNonCanonicalFocusColor(body: string): boolean {
+	return /--(?:brand-accent|interaction-selected-[a-z-]+)/.test(body);
 }
 
 function getMotionDeclarations(css: string): Array<{ line: number; property: string; value: string }> {
@@ -1230,6 +1256,29 @@ describe("prototype design consistency", () => {
 		);
 
 		expect(missingSelectors).toEqual([]);
+	});
+
+	it("keeps shared common controls on the canonical focus outline", () => {
+		const css = readAllLayoutCss();
+		const missingSelectors = sharedCanonicalFocusSelectors.filter(
+			(selector) => !hasCanonicalFocusOutlineRule(css, selector),
+		);
+
+		expect(missingSelectors).toEqual([]);
+	});
+
+	it("keeps page-local focus-visible colors on the interaction focus ring token", () => {
+		const violations = activePages().flatMap((page) => {
+			const css = getStyleBlocks(readPrototypeHtml(page));
+
+			return getPrototypeCssRules(page)
+				.filter((rule) => /:focus-visible\b/.test(rule.selector))
+				.filter((rule) => usesNonCanonicalFocusColor(rule.body))
+				.filter((rule) => !/--interaction-focus-ring/.test(rule.body))
+				.map((rule) => `${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);
+		});
+
+		expect(violations).toEqual([]);
 	});
 
 	it("keeps task-scoped prototype animations covered by targeted reduced motion", () => {
