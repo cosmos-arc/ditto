@@ -285,7 +285,6 @@ extraPaths = [
 # ===================================================================
 [tool.pytest.ini_options]
 minversion = "7.0"
-importmode = "importlib"
 testpaths = ["packages/*/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -324,6 +323,7 @@ asyncio_mode = "strict"
 addopts = [
     "-ra",
     "-v",
+    "--import-mode=importlib",
     "-n", "auto",           # 默认并行运行
     "--dist", "loadfile",   # 同文件测试串行（避免 snapshot 冲突）
     "--strict-markers",

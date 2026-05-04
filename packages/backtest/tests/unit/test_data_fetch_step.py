@@ -7,7 +7,11 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import Mock
 
-from _helpers import (
+from ditto_backtest.data_feed import Slice
+from ditto_backtest.steps import DataFetchStep, StepContext, TradingStep
+from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.context import StrategyContext
+from packages.backtest.tests.unit._helpers import (
     IID_1,
     IID_2,
     _make_account_view,
@@ -15,10 +19,6 @@ from _helpers import (
     _make_slice,
     _make_snapshot,
 )
-from ditto_backtest.data_feed import Slice
-from ditto_backtest.steps import DataFetchStep, StepContext, TradingStep
-from ditto_kernel.identity import InstrumentId
-from ditto_strategy.alpha.context import StrategyContext
 
 
 class TestDataFetchStep:

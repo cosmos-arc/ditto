@@ -6,14 +6,14 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from _helpers import (
+from ditto_backtest.steps import StepContext, StrategyStep, TradingStep
+from ditto_strategy.alpha.context import StrategyContext
+from packages.backtest.tests.unit._helpers import (
     IID_1,
     _make_account_view,
     _make_slice,
     _make_snapshot,
 )
-from ditto_backtest.steps import StepContext, StrategyStep, TradingStep
-from ditto_strategy.alpha.context import StrategyContext
 
 
 class TestStrategyStep:

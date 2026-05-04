@@ -21,7 +21,7 @@ def build_pytest_command() -> list[str]:
     args = sys.argv[1:]  # 跳过脚本名
 
     # 默认基础参数
-    cmd = ["pytest", "-v"]
+    cmd = ["pytest", "-v", "--import-mode=importlib"]
 
     # 处理特殊参数
     has_snapshot = "--snapshot" in args
