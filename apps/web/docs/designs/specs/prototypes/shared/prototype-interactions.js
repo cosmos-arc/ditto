@@ -1206,7 +1206,7 @@
       if (total === 0) return;
 
       el.innerHTML = '';
-      el.className = (el.className || '') + ' flow-bar';
+      el.classList.add('flow-bar');
 
       segs.forEach(function (seg, i) {
         var pct = ((seg.value / total) * 100).toFixed(1);
@@ -1225,6 +1225,7 @@
    *     Smoothly transitions between numeric values
    *     MutationObserver watches data-counter for changes
    * ══════════════════════════════════════════════ */
+  var counterStates = new WeakMap();
   var AnimatedCounter = {
     init: function () {
       var els = document.querySelectorAll('[data-counter]');
@@ -1244,7 +1245,7 @@
           if (m.type === 'attributes' && m.attributeName === 'data-counter') {
             var newTarget = parseFloat(el.getAttribute('data-counter'));
             if (isNaN(newTarget)) return;
-            var state = el._dittoCounter;
+            var state = counterStates.get(el);
             if (state) {
               state.from = state.current;
               AnimatedCounter._animate(el, state, newTarget);
@@ -1274,7 +1275,7 @@
         raf: null,
       };
 
-      el._dittoCounter = state;
+      counterStates.set(el, state);
 
       if (reducedMotion) {
         state.current = target;
@@ -2063,6 +2064,59 @@
     },
   };
 
+  /* ══════════════════════════════════════════════
+   * 17. BulletGraph — data-bullet-value="72" data-bullet-target="85" data-bullet-max="100"
+   *     Compact horizontal bullet chart with target marker
+   * ══════════════════════════════════════════════ */
+  var BulletGraph = {
+    render: function (el) {
+      var value = parseFloat(el.getAttribute('data-bullet-value')) || 0;
+      var target = parseFloat(el.getAttribute('data-bullet-target')) || 0;
+      var max = parseFloat(el.getAttribute('data-bullet-max')) || 100;
+      var label = el.getAttribute('data-bullet-label') || '';
+
+      var pct = Math.min(value / max * 100, 100);
+      var targetPct = Math.min(target / max * 100, 100);
+
+      while (el.firstChild) el.removeChild(el.firstChild);
+
+      var track = document.createElement('div');
+      track.className = 'bullet-track';
+
+      var targetMarker = document.createElement('div');
+      targetMarker.className = 'bullet-target';
+      targetMarker.style.position = 'absolute';
+      targetMarker.style.left = targetPct + '%';
+      targetMarker.style.top = '-2px';
+      targetMarker.style.width = '2px';
+      targetMarker.style.height = '10px';
+      targetMarker.style.background = 'var(--text-primary)';
+      targetMarker.style.opacity = '0.6';
+
+      var fill = document.createElement('div');
+      fill.className = 'bullet-fill';
+      fill.style.height = '100%';
+      fill.style.width = pct + '%';
+      fill.style.background = 'var(--brand-accent)';
+      fill.style.borderRadius = '3px';
+
+      track.appendChild(targetMarker);
+      track.appendChild(fill);
+      el.appendChild(track);
+
+      if (label) {
+        var span = document.createElement('span');
+        span.className = 'bullet-label';
+        span.textContent = label;
+        el.appendChild(span);
+      }
+    },
+
+    init: function () {
+      document.querySelectorAll('[data-bullet-value]').forEach(BulletGraph.render);
+    },
+  };
+
   /* ── Inject shared CSS for dynamic modules ── */
   var style = document.createElement('style');
   style.textContent = [
@@ -2086,6 +2140,10 @@
     '  box-shadow:0 4px 12px oklch(0 0 0 / 0.3); /* no shadow token — oklch fallback is intentional */',
     '  opacity:0; transition:opacity 150ms cubic-bezier(0.4,0,0.2,1); display:none; }',
     '.ditto-tooltip--visible { opacity:1; }',
+    '/* BulletGraph */',
+    '.bullet-track { height:6px; background:var(--border-subtle); border-radius:3px; position:relative; }',
+    '.bullet-fill { height:100%; border-radius:3px; }',
+    '.bullet-label { font-size:0.7em; color:var(--text-tertiary); margin-top:2px; display:block; }',
   ].join('\n');
   document.head.appendChild(style);
 
@@ -2115,6 +2173,7 @@
     CommandPalette.init();
     BottomTray.init();
     ResizablePanels.init();
+    BulletGraph.init();
   }
 
   if (document.readyState === 'loading') {
