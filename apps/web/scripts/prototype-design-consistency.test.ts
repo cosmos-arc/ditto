@@ -545,6 +545,19 @@ function parseFontSizeMinimumPx(value: string): number | undefined {
 	return undefined;
 }
 
+function usesFontSizeToken(body: string, token: string): boolean {
+	return getCssFontSizeValues(body).some((fontSize) =>
+		new RegExp(`var\\(\\s*${token}\\s*\\)`, "i").test(fontSize),
+	);
+}
+
+function isOperationalElevenPxSelector(selector: string): boolean {
+	const normalized = selector.toLowerCase();
+	return /(?:button|btn|tab|header|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
+		normalized,
+	);
+}
+
 function isHiddenFromPrimaryContract(element: Element | null): boolean {
 	return Boolean(element?.closest("[aria-hidden='true']"));
 }
@@ -2099,6 +2112,25 @@ describe("prototype design consistency", () => {
 		]) {
 			expect(spec).toContain(token);
 		}
+	});
+
+	it("keeps 11px typography out of operational selectors", () => {
+		const violations = readManifest()
+			.pages.filter(isActiveRoutePrototype)
+			.flatMap((page) =>
+				getPrototypeCssRules(page)
+					.filter((rule) => usesFontSizeToken(rule.body, "--font-size-11"))
+					.flatMap((rule) =>
+						rule.selectors
+							.filter(isOperationalElevenPxSelector)
+							.map(
+								(selector) =>
+									`${page.file}:${getLineNumber(readPrototypeHtml(page), rule.start)}:${selector}`,
+							),
+					),
+			);
+
+		expect(violations).toEqual([]);
 	});
 
 	it("keeps active route prototypes free of negative letter spacing", () => {
