@@ -13,7 +13,17 @@ const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
 const contractsDir = join(root, "docs/contracts/pages");
 const prototypeFontsCss = join(prototypesDir, "shared/fonts.css");
-const prototypeLayoutCss = join(prototypesDir, "shared/layout-base.css");
+const prototypeLayoutCss = join(prototypesDir, "shared/layout-shell.css");
+const prototypeLayoutModulePaths = [
+	"shared/layout-shell.css",
+	"shared/layout-gallery.css",
+	"shared/layout-components.css",
+	"shared/layout-overlay.css",
+	"shared/layout-state.css",
+] as const;
+function readAllLayoutCss(): string {
+	return prototypeLayoutModulePaths.map((p) => readFileSync(join(prototypesDir, p), "utf8")).join("\n");
+}
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
@@ -300,7 +310,11 @@ function hasFocusRingBoxShadow(body: string): boolean {
 function readPrototypeCssSources(): CssSource[] {
 	return [
 		{ label: "shared/fonts.css", css: readFileSync(prototypeFontsCss, "utf8") },
-		{ label: "shared/layout-base.css", css: readFileSync(prototypeLayoutCss, "utf8") },
+		{ label: "shared/layout-shell.css", css: readFileSync(prototypeLayoutCss, "utf8") },
+		{ label: "shared/layout-gallery.css", css: readFileSync(join(prototypesDir, "shared/layout-gallery.css"), "utf8") },
+		{ label: "shared/layout-components.css", css: readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8") },
+		{ label: "shared/layout-overlay.css", css: readFileSync(join(prototypesDir, "shared/layout-overlay.css"), "utf8") },
+		{ label: "shared/layout-state.css", css: readFileSync(join(prototypesDir, "shared/layout-state.css"), "utf8") },
 		{ label: "shared/theme-switcher.css", css: readFileSync(prototypeThemeSwitcherCss, "utf8") },
 		{ label: "shared/prototype-toggles.css", css: readFileSync(prototypeTogglesCss, "utf8") },
 		{ label: "tokens-style.css", css: readFileSync(prototypeTokensStyleCss, "utf8") },
@@ -460,7 +474,7 @@ function readTokenCssBundle(): string {
 		tokenCss,
 		readFileSync(prototypeTokensStyleCss, "utf8"),
 		readFileSync(prototypeThemeSwitcherCss, "utf8"),
-		readFileSync(prototypeLayoutCss, "utf8"),
+		readAllLayoutCss(),
 	].join("\n");
 }
 
@@ -1109,7 +1123,7 @@ describe("prototype design consistency", () => {
 	});
 
 	it("keeps the Pro Max shared CSS and accessibility baseline machine-checkable", () => {
-		const css = readFileSync(prototypeLayoutCss, "utf8");
+		const css = readAllLayoutCss();
 		const orphanDeclaration = /}\s*\n\s*(appearance|cursor|transition)\s*:/m.exec(css);
 		const tokenDefinitions = extractCustomPropertyDefinitions(readTokenCssBundle());
 		const tokenReferences = extractCustomPropertyReferences(css);
@@ -1119,19 +1133,19 @@ describe("prototype design consistency", () => {
 		const violations: string[] = [];
 
 		if (orphanDeclaration) {
-			violations.push(`layout-base.css:orphan:${orphanDeclaration[1]}`);
+			violations.push(`shared-layout:orphan:${orphanDeclaration[1]}`);
 		}
 
 		for (const token of missingTokens) {
-			violations.push(`layout-base.css:missing-token:${token}`);
+			violations.push(`shared-layout:missing-token:${token}`);
 		}
 
 		if (css.includes("oklch(from")) {
-			violations.push("layout-base.css:oklch-from");
+			violations.push("shared-layout:oklch-from");
 		}
 
 		if (!css.includes("@media (prefers-reduced-motion: reduce)")) {
-			violations.push("layout-base.css:reduced-motion");
+			violations.push("shared-layout:reduced-motion");
 		}
 
 		for (const page of activePages()) {
@@ -1175,7 +1189,7 @@ describe("prototype design consistency", () => {
 	it("keeps Home custom controls on explicit token focus rings", () => {
 		const home = activePageById("home");
 		const css = [
-			readFileSync(prototypeLayoutCss, "utf8"),
+			readAllLayoutCss(),
 			getStyleBlocks(readPrototypeHtml(home)),
 		].join("\n");
 		const missingSelectors = homeTokenFocusSelectors.filter(
@@ -1979,8 +1993,8 @@ describe("prototype design consistency", () => {
 		const layoutCss = readFileSync(prototypeLayoutCss, "utf8");
 		const violations: string[] = [];
 
-		if (!/\.shell-hub\b/.test(layoutCss)) violations.push("layout-base.css:shell-hub");
-		if (!/\.shell-agent\b/.test(layoutCss)) violations.push("layout-base.css:shell-agent");
+		if (!/\.shell-hub\b/.test(layoutCss)) violations.push("layout-shell.css:shell-hub");
+		if (!/\.shell-agent\b/.test(layoutCss)) violations.push("layout-shell.css:shell-agent");
 
 		for (const page of activePages()) {
 			const style = getStyleBlocks(readPrototypeHtml(page));
@@ -1999,7 +2013,7 @@ describe("prototype design consistency", () => {
 	});
 
 	it("defines responsive viewport hardening rules in shared shell CSS", () => {
-		const layoutCss = stripCssComments(readFileSync(prototypeLayoutCss, "utf8"));
+		const layoutCss = stripCssComments(readAllLayoutCss());
 		const violations: string[] = [];
 		const lockedShellSelectors = [".shell", ".shell-v2", ".shell-catalog", ".shell-agent"];
 		const media1200 = getMediaBlock(layoutCss, 1200);
@@ -2010,19 +2024,19 @@ describe("prototype design consistency", () => {
 			const shellRule = new RegExp(`(?:^|\\n)${selector.replace(".", "\\.")}\\s*\\{([^{}]*)\\}`, "m")
 				.exec(layoutCss)?.[1];
 			if (!shellRule || !/\b(?:height|min-height)\s*:\s*(?:calc\()?100dvh\b/.test(shellRule)) {
-				violations.push(`layout-base.css:${selector}:100dvh`);
+				violations.push(`shared-layout:${selector}:100dvh`);
 			}
 		}
 
 		if (!hasDeclaration(getSelectorRuleBody(media1200 ?? "", ".shell-catalog"), "--prototype-detail-width", /^min\(300px,\s*28vw\)$/)) {
-			violations.push("layout-base.css:breakpoint-1200-catalog-detail");
+			violations.push("shared-layout:breakpoint-1200-catalog-detail");
 		}
 		if (!hasDeclaration(getSelectorRuleBody(media1024 ?? "", ".shell-header [data-header-utility-bar]"), "max-width", /^44vw$/)) {
-			violations.push("layout-base.css:breakpoint-1024-header-utilities");
+			violations.push("shared-layout:breakpoint-1024-header-utilities");
 		}
 		for (const selector of [".shell-catalog", ".shell-studio", ".shell-agent", ".shell-radar"]) {
 			if (!hasDeclaration(getSelectorRuleBody(media768 ?? "", selector), "overflow-x", /^auto$/)) {
-				violations.push(`layout-base.css:breakpoint-768-shell-overflow:${selector}`);
+				violations.push(`shared-layout:breakpoint-768-shell-overflow:${selector}`);
 			}
 		}
 
@@ -2192,7 +2206,11 @@ describe("prototype design consistency", () => {
 			"tokens-shell.css",
 			"tokens-data-viz.css",
 			"tokens-style.css",
-			"layout-base.css",
+			"layout-shell.css",
+			"layout-gallery.css",
+			"layout-components.css",
+			"layout-overlay.css",
+			"layout-state.css",
 			"theme-switcher.css",
 			"prototype-toggles.css",
 		];
@@ -2202,7 +2220,7 @@ describe("prototype design consistency", () => {
 			const html = readPrototypeHtml(page);
 			const imports = [
 				...html.matchAll(
-					/href="([^"]*(?:tokens-[^"]+\.css|layout-base\.css|theme-switcher\.css|prototype-toggles\.css))"/g,
+					/href="([^"]*(?:tokens-[^"]+\.css|layout-[^"]+\.css|theme-switcher\.css|prototype-toggles\.css))"/g,
 				),
 			].map((match) => match[1].split("/").at(-1));
 
@@ -2248,7 +2266,7 @@ describe("prototype design consistency", () => {
 
 	it("keeps comfortable density and resize suppression explicit", () => {
 		const densityCss = readFileSync(join(prototypesDir, "tokens-style.css"), "utf8");
-		const layoutCss = stripCssComments(readFileSync(prototypeLayoutCss, "utf8"));
+		const layoutCss = stripCssComments(readAllLayoutCss());
 		const comfortableBlock = /\[data-density="comfortable"\]\s*\{([^}]*)\}/.exec(densityCss)?.[1] ?? "";
 		const requiredComfortableVars = [
 			"--density-panel-padding",
@@ -2291,10 +2309,10 @@ describe("prototype design consistency", () => {
 		}
 
 		if (/html\[data-resizing-panel="true"\]\s+\*/.test(layoutCss)) {
-			violations.push("layout-base.css:global-resize-transition-suppression");
+			violations.push("shared-layout:global-resize-transition-suppression");
 		}
 		if (!/html\[data-resizing-panel="true"\]\s+(?::is\(\.shell|\.shell)/.test(layoutCss)) {
-			violations.push("layout-base.css:shell-scoped-resize-transition-suppression");
+			violations.push("shared-layout:shell-scoped-resize-transition-suppression");
 		}
 
 		expect(violations).toEqual([]);
@@ -2426,7 +2444,7 @@ describe("prototype design consistency", () => {
 	});
 
 	it("keeps prototype overlay, tray, and semantic feedback motion shared", () => {
-		const layoutCss = readFileSync(prototypeLayoutCss, "utf8");
+		const layoutCss = readAllLayoutCss();
 		const togglesCss = readFileSync(prototypeTogglesCss, "utf8");
 		const requiredSharedMotion = [
 			"@keyframes overlay-drawer-enter",

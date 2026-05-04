@@ -10,7 +10,7 @@ const prototypePath = resolve(
 );
 const layoutCssPath = resolve(
 	import.meta.dirname,
-	"../docs/designs/specs/prototypes/shared/layout-base.css",
+	"../docs/designs/specs/prototypes/shared/layout-shell.css",
 );
 const prototypeUrl = `file://${prototypePath}`;
 const navigationTimeoutMs = 10_000;

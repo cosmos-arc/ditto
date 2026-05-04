@@ -1,0 +1,129 @@
+/* ── Data Freshness Indicators ── */
+/* Three-level visual hierarchy for data recency:
+ *   realtime = pulsing green dot (live market data)
+ *   delayed  = static gray dot (snapshots, fundamentals, estimates)
+ *   eod      = no indicator (end-of-day / historical)
+ *
+ * Token colors defined in tokens-domain.css:
+ *   --freshness-realtime-color → --system-healthy-fg (green)
+ *   --freshness-delayed-color  → --text-disabled (neutral gray)
+ *
+ * Usage: Apply to data label or value containers.
+ * The ::after dot auto-positions to the right of the element.
+ */
+.freshness-realtime::after,
+.freshness-delayed::after {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin-left: var(--space-4);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.freshness-realtime::after {
+  background: var(--system-healthy-fg);
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+.freshness-delayed::after {
+  background: var(--text-disabled);
+}
+
+/* ── Pill / Tag ── */
+.pill {
+  font-size: var(--font-size-10);
+  font-weight: var(--font-weight-medium);
+  padding: var(--compact-padding-y) var(--space-8);
+  border-radius: var(--radius-12);
+  white-space: nowrap;
+}
+
+.pill-green  { background: var(--market-up-bg); color: var(--market-up-fg); }
+.pill-red    { background: var(--market-down-bg); color: var(--market-down-fg); }
+.pill-amber  { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
+.pill-blue   { background: var(--brand-accent-subtle); color: var(--brand-accent); }
+.pill-neutral { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+
+
+/* ── Semantic Feedback Motion ── */
+.semantic-value-flash {
+  animation: semantic-value-flash var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+  font-variant-numeric: tabular-nums;
+}
+
+.semantic-status-transition {
+  transition:
+    background-color var(--motion-duration-normal) var(--motion-easing-standard),
+    border-color var(--motion-duration-normal) var(--motion-easing-standard),
+    color var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+.threshold-crossed {
+  animation: threshold-crossed var(--motion-duration-slow) var(--motion-easing-emphasis) both;
+}
+
+.linked-region-pulse {
+  animation: linked-region-pulse var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+}
+
+/* ── Dot pulse — live indicator breathing (shared by freshness-realtime, status-dot.live, etc.) ── */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes semantic-value-flash {
+  from {
+    opacity: 0.82;
+    transform: translateY(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes threshold-crossed {
+  0% {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--risk-critical-fg) 32%, transparent);
+  }
+  55% {
+    box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--risk-critical-fg) 46%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+}
+
+@keyframes linked-region-pulse {
+  0% {
+    border-color: color-mix(in oklch, var(--brand-accent) 34%, var(--border-subtle));
+  }
+  100% {
+    border-color: var(--border-subtle);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .dot-pulse,
+  .dot-critical-pulse,
+  .price-breathe,
+  .tab-fade-in,
+  [data-reveal] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

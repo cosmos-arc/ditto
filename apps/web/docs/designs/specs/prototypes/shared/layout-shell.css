@@ -1,0 +1,1351 @@
+/* ─────────────────────────────────────────────
+ * Ditto Layout — Command Center Shell
+ * Grid: Rail (var) | Content
+ * Content: Header (var) | Strip | Main | Secondary | Workspace
+ * ───────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  /* Do NOT set font-size here — keep browser default 16px
+     so all rem values in tokens resolve correctly.
+     Body font-size is set separately below. */
+}
+
+body {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--surface-app);
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-13);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Button Reset ──
+ * Remove browser default background, border, color on all <button> elements.
+ * Individual component classes (decision-cta, switcher-btn, etc.) override as needed.
+ */
+button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: var(--font-family-ui);
+}
+
+.hit-target-24 {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.hit-target-y-24 {
+  min-height: 24px;
+}
+
+.hit-target-inline-24 {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+/* Shared WCAG 2.2 target-size floor for compact prototype controls. */
+:is(
+  button,
+  a[href],
+  [role="button"],
+  [role="tab"],
+  label[role="button"],
+  [data-answer-action],
+  .filter-chip,
+  .pagination-btn,
+  .filter-btn,
+  .order-tab,
+  .status-tab,
+  .regime-time-btn,
+  .agent-filter-tab,
+  .strip-action,
+  .trace-action-btn,
+  .row-action,
+  .rail-section-action,
+  .health-metric,
+  .scope-status-item,
+  .risk-strip-metric,
+  .regime-strip-metric,
+  .health-summary-item,
+  .perf-item,
+  .backtest-summary-item,
+  .experiment-summary-item,
+  .batch-summary__hint,
+  .scope-tag
+) {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+:is(a[href], span[role="button"], span[role="tab"], span[data-answer-action], label[role="button"]) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--space-16);
+  left: -9999px;
+  z-index: 1000;
+  padding: var(--space-6) var(--space-10);
+  border-radius: var(--radius-4);
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  font-size: var(--font-size-12);
+}
+
+.skip-link:focus {
+  left: var(--space-16);
+}
+
+/* ── Live Region (screen-reader-only announcements) ── */
+.live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Layout Component Variables (density-sensitive) ── */
+:root {
+  /* Shell grid */
+  --shell-rail-width:     56px;
+  --shell-header-height:  68px;
+  --shell-sidebar-width:  320px;
+  --shell-detail-width:   340px;
+  --shell-rail-radar-width: 18.75rem;
+  --shell-agent-detail-width: 368px;
+  --shell-noise-opacity: 0.018;
+
+  /* Rail */
+  --rail-logo-size:       32px;
+  --rail-icon-size:       36px;
+  --rail-icon-svg-size:   18px;
+
+  /* Header */
+  --header-btn-size:      32px;
+  --header-avatar-size:   28px;
+  --header-command-width:  176px;
+  --header-control-bg: var(--surface-panel-base);
+  --header-control-border: var(--border-subtle);
+  --header-control-fg: var(--text-secondary);
+  --header-control-hover-bg: var(--surface-panel-elevated);
+  --header-control-hover-border: var(--border-default);
+  --header-control-hover-fg: var(--text-primary);
+
+  /* Analytical Workspace */
+  --shell-activity-width:       300px;
+  --shell-analysis-band-height: 220px;
+
+  /* Catalog Workspace */
+  --shell-catalog-detail-width: 320px;
+  --prototype-detail-width: var(--shell-catalog-detail-width);
+  --prototype-studio-source-width: 240px;
+  --prototype-studio-inspector-width: 300px;
+  --prototype-agent-detail-width: var(--shell-agent-detail-width);
+
+  /* Status bar — alias for tokens-shell.css --shell-status-bar-height */
+  --status-bar-height: var(--shell-status-bar-height, 1.5rem);
+
+  /* Operations Console */
+  --shell-ops-detail-width:     340px;
+
+  /* Prototype-local compatibility aliases */
+  --brand-signature-glow: color-mix(in oklch, var(--brand-signature-fg) 60%, transparent);
+  --risk-warning-fg: var(--risk-medium-fg);
+  --surface-secondary: var(--surface-panel-elevated);
+  --radius-full: 9999px;
+  --space-1: 0.0625rem;
+
+  /* Icon sizes (replaces hardcoded pixel values) */
+  --icon-size-sm: 14px;
+  --icon-size-md: 16px;
+  --icon-size-lg: 18px;
+
+  /* Bar heights (confidence, progress, risk, limit) */
+  --bar-height-sm: 3px;
+  --bar-height-md: 4px;
+  --bar-height-lg: 6px;
+
+  /* Compact vertical padding (tags, badges) */
+  --compact-padding-y: 2px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-4);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ── App Shell Grid ── */
+.shell {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-sidebar-width);
+  grid-template-rows: var(--shell-header-height) auto 1fr;
+  grid-template-areas:
+    "rail header   header"
+    "rail pulse    pulse"
+    "rail main     sidebar";
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ── Shell v2 (status bar replaces pulse strip) ── */
+.shell-v2 {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) 1fr var(--shell-sidebar-width);
+  grid-template-rows: var(--shell-header-height) auto 1fr;
+  grid-template-areas:
+    "rail header   header"
+    "rail status   status"
+    "rail main     sidebar";
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ── Object Hub Shell ──
+ * Shared shell for instrument, strategy detail, factor analysis, and backtest result.
+ * Pages may set --shell-hub-grid-rows / --shell-hub-grid-areas on a page-specific
+ * root class when they need an extra context or status row.
+ */
+.shell-hub {
+  --shell-header-height: 76px;
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) minmax(0, 1fr);
+  grid-template-rows: var(
+    --shell-hub-grid-rows,
+    var(--shell-header-height) auto auto minmax(0, 1fr) auto
+  );
+  grid-template-areas: var(
+    --shell-hub-grid-areas,
+    "rail header"
+    "rail meta"
+    "rail tabs"
+    "rail main"
+    "rail bottom"
+  );
+  width: 100vw;
+  min-height: 100dvh;
+  overflow-y: auto;
+  position: relative;
+  box-sizing: border-box;
+  padding-bottom: var(--shell-hub-padding-bottom, 1.5rem);
+}
+
+/* Decoration layer budget: 1 pseudo-element per shell type.
+ * Noise texture is consolidated into ::before with a subtle
+ * brand-accent gradient line at top. The old separate ::after
+ * (ambient-top) is removed — pages that need an additional ambient
+ * glow should use a single .ambient div, not both pseudo-elements.
+ */
+.shell-hub::before,
+.shell-agent::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* Subtle brand-accent gradient line at top edge */
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
+      transparent 1.5px
+    ),
+    var(--surface-app);
+  filter: url(#noise-filter);
+  opacity: var(--shell-noise-opacity, 0.018);
+}
+
+/* Ambient top line removed from ::after — consolidated into ::before above.
+ * Pages needing a stronger ambient effect can add a single .ambient div
+ * inside the shell container. Keep decoration budget to max 2 layers:
+ * 1. ::before (noise + top accent line)
+ * 2. Optional page-specific .ambient div
+ */
+
+.shell-hub > *,
+.shell-agent > * {
+  position: relative;
+  z-index: 1;
+}
+
+.shell-hub .shell-rail,
+.shell-agent .shell-rail {
+  grid-area: rail;
+}
+
+.shell-hub .shell-header,
+.shell-agent .shell-header {
+  grid-area: header;
+}
+
+.shell-hub .shell-header {
+  padding-inline: var(--space-20) var(--space-16);
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.shell-hub .object-header {
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.shell-hub .object-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.shell-hub .object-name-row,
+.shell-hub .object-answer-row,
+.shell-hub .object-price-row {
+  min-width: 0;
+}
+
+.shell-hub .object-answer-row {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+  white-space: normal;
+}
+
+.shell-hub--with-context {
+  --shell-hub-grid-rows: var(--shell-header-height) auto auto auto minmax(0, 1fr) auto;
+  --shell-hub-grid-areas:
+    "rail header"
+    "rail meta"
+    "rail context"
+    "rail tabs"
+    "rail main"
+    "rail bottom";
+}
+
+.shell-hub--with-status {
+  --shell-hub-grid-rows: var(--shell-header-height) auto auto minmax(0, 1fr) auto var(--status-bar-height);
+  --shell-hub-grid-areas:
+    "rail header"
+    "rail meta"
+    "rail tabs"
+    "rail main"
+    "rail bottom"
+    "rail status";
+  --shell-hub-padding-bottom: 0;
+}
+
+.shell-hub--with-sidebar {
+  grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) var(--shell-detail-width);
+  --shell-hub-grid-rows: var(--shell-header-height) auto auto minmax(0, 1fr) auto var(--status-bar-height);
+  --shell-hub-grid-areas:
+    "rail header header"
+    "rail meta   meta"
+    "rail tabs   tabs"
+    "rail main   sidebar"
+    "rail bottom sidebar"
+    "rail status status";
+}
+
+/* ── Agent Studio Shell ── */
+.shell-agent {
+  display: grid;
+  grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) var(--shell-agent-detail-width, 368px);
+  grid-template-rows: var(--shell-header-height) auto minmax(0, 1fr);
+  grid-template-areas:
+    "rail header header"
+    "rail tabs   tabs"
+    "rail main   detail";
+  width: 100vw;
+  height: calc(100dvh - 1.5rem);
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.shell-agent .agent-tabs {
+  grid-area: tabs;
+}
+
+.shell-agent .agent-main {
+  grid-area: main;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shell-agent .agent-detail {
+  grid-area: detail;
+}
+
+.shell-agent .agent-main[data-tabs="agent-status-filter"] > [data-tab-panel][aria-hidden="false"] {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-right: var(--space-2);
+}
+
+.shell-agent[data-resizable-panel-group="studio-workspace"] {
+  grid-template-columns: var(--shell-rail-width) minmax(0, 1fr) 1px minmax(280px, var(--prototype-agent-detail-width));
+  grid-template-areas:
+    "rail header header    header"
+    "rail tabs   tabs      tabs"
+    "rail main   separator detail";
+}
+
+.shell-agent[data-resizable-panel-group="studio-workspace"] .resize-separator {
+  grid-area: separator;
+}
+
+/* ── Minimum viewport protection ──
+ * Desktop-first strategy: this is a financial tool (like Bloomberg Terminal)
+ * designed for 1024px+ viewports. The min-width below prevents layout collapse
+ * on desktop. Tablet (768-1023px) gets graceful degradation via the
+ * responsive breakpoints below. Below 768px, layouts scroll horizontally.
+ */
+.shell,
+.shell-v2,
+.shell-hub,
+.shell-agent,
+.shell-signals,
+.shell-analytical,
+.shell-catalog,
+.shell-ops,
+.shell-radar,
+.shell-intel,
+.shell-studio,
+.shell-ledger,
+.shell-regime {
+  min-width: 1024px;
+}
+
+body {
+  overflow-x: auto;
+}
+
+/* ── Responsive: Tablet (768-1023px) ──
+ * Graceful degradation: hide sidebars, collapse to 2-column rail+main.
+ * This is intentionally minimal — full mobile support is not expected.
+ */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  /* Allow horizontal scroll below desktop minimum */
+  .shell,
+  .shell-v2,
+  .shell-hub,
+  .shell-agent,
+  .shell-signals,
+  .shell-analytical,
+  .shell-catalog,
+  .shell-ops,
+  .shell-radar,
+  .shell-intel,
+  .shell-studio,
+  .shell-ledger,
+  .shell-regime {
+    min-width: 768px;
+  }
+
+  /* Reset sidebar/detail widths to 0 — content hidden */
+  :root {
+    --shell-sidebar-width: 0;
+    --shell-detail-width: 0;
+  }
+
+  /* 3-column shells collapse to 2-column: rail + main */
+  .shell {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail pulse"
+      "rail main";
+  }
+
+  .shell-v2 {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail status"
+      "rail main";
+  }
+
+  .shell-signals {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail toolbar"
+      "rail queue";
+  }
+
+  .shell-analytical {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail strip"
+      "rail main"
+      "rail analysis";
+  }
+
+  .shell-catalog {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail toolbar"
+      "rail table";
+  }
+
+  .shell-ops {
+    grid-template-columns: var(--shell-rail-width) 1fr;
+    grid-template-areas:
+      "rail header"
+      "rail health"
+      "rail main";
+  }
+
+  /* Hide detail panels and sidebars */
+  .shell-sidebar,
+  .shell-sidebar-collapsed,
+  .signal-detail,
+  .shell-catalog .catalog-detail,
+  .shell-ops .ops-detail,
+  .shell-agent .agent-detail {
+    display: none;
+  }
+}
+
+/* ── Responsive: Small tablet / large phone (below 768px) ──
+ * Rail stays icon-only (it already is). Body allows scrolling.
+ * Shells keep their min-width and scroll horizontally — not ideal
+ * but functional for quick checks on smaller devices.
+ */
+@media (max-width: 768px) {
+  body {
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .shell-catalog,
+  .shell-studio,
+  .shell-agent,
+  .shell-radar {
+    overflow-x: auto;
+  }
+}
+
+/* ── Rail (icon nav) ── */
+.shell-rail {
+  grid-area: rail;
+  background: var(--surface-app);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) 0;
+  gap: var(--space-4);
+  z-index: 10;
+}
+
+.rail-logo {
+  width: var(--rail-logo-size);
+  height: var(--rail-logo-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-12);
+  font-family: var(--font-family-numeric);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-14);
+  color: var(--brand-accent);
+  letter-spacing: 0;
+}
+
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.rail-icon {
+  width: var(--rail-icon-size);
+  height: var(--rail-icon-size);
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-8);
+  color: var(--icon-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard),
+              box-shadow 0.2s ease;
+  position: relative;
+}
+
+.rail-icon:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--icon-primary);
+}
+
+.rail-icon:focus-visible {
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: 2px;
+}
+
+:is(
+  .header-utility-btn,
+  .header-action-btn,
+  .header-btn-badge,
+  .decision-cta,
+  .panel-action,
+  .overlay-btn,
+  .state-empty-cta,
+  .filter-chip,
+  .tab,
+  .mode-tab,
+  .worklist-row[role="row"]
+):focus-visible {
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: 2px;
+}
+
+.rail-icon.active {
+  background: var(--brand-accent-subtle);
+  color: var(--brand-accent);
+}
+
+.rail-icon.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--brand-accent);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 6px var(--brand-signature-glow);
+}
+
+.rail-icon svg {
+  width: var(--rail-icon-svg-size);
+  height: var(--rail-icon-svg-size);
+}
+
+.rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ── Header ── */
+.shell-header {
+  grid-area: header;
+  height: var(--shell-header-height);
+  background: var(--surface-app);
+  border-bottom: 1px solid var(--border-subtle);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--density-gutter);
+  gap: var(--space-8);
+  position: relative;
+  flex-shrink: 0;
+  z-index: 120;
+}
+
+/* Override any page-level header ::after decoration */
+.shell-header.shell-header::after {
+  display: none;
+}
+
+.shell-header .header-title.header-title {
+  background: none;
+  background-clip: initial;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: currentColor;
+}
+
+.shell-header .header-title.header-title::after {
+  content: none;
+  display: none;
+}
+
+.header-title,
+h1.header-title {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  font-size: var(--font-size-16);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-family: var(--font-family-heading);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.header-title-group {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: var(--space-8);
+}
+
+.header-subtitle {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.header-spacer {
+  flex: 1;
+}
+
+.header-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-12);
+  background: var(--surface-panel-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-6);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-12);
+  cursor: pointer;
+  transition: border-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.header-search:hover {
+  border-color: var(--border-default);
+}
+
+.header-search kbd {
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-10);
+  padding: 1px var(--space-4);
+  background: var(--surface-strip);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2);
+  color: var(--text-tertiary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.header-utility-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.shell-header [data-header-utility-bar] {
+  flex: 0 0 auto;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="command"] {
+  order: 1;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="copilot"] {
+  order: 2;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="notifications"] {
+  order: 3;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="help"] {
+  order: 4;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="theme"] {
+  order: 5;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="density"] {
+  order: 6;
+}
+
+.shell-header [data-header-utility-bar] [data-shell-utility="account"] {
+  order: 7;
+}
+
+.shell-header :is(.header-utility-btn.header-utility-btn, .header-action-btn.header-action-btn, .header-btn-badge.header-btn-badge) {
+  width: var(--header-btn-size);
+  min-width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  min-height: var(--header-btn-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--header-control-border);
+  border-radius: var(--radius-6);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+}
+
+.shell-header :is(.header-utility-btn.header-utility-btn, .header-action-btn.header-action-btn, .header-btn-badge.header-btn-badge):hover {
+  border-color: var(--header-control-hover-border);
+  background: var(--header-control-hover-bg);
+  color: var(--header-control-hover-fg);
+}
+
+.shell-header .header-actions :is(.btn.btn, .btn-sm.btn-sm) {
+  min-height: var(--header-btn-size);
+  height: var(--header-btn-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: 0 var(--space-10);
+  border: 1px solid var(--header-control-border);
+  border-radius: var(--radius-6);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+}
+
+.shell-header .header-actions :is(.btn.btn, .btn-sm.btn-sm):hover {
+  border-color: var(--header-control-hover-border);
+  background: var(--header-control-hover-bg);
+  color: var(--header-control-hover-fg);
+}
+
+.shell-header .header-command-trigger.header-command-trigger {
+  width: var(--header-command-width);
+  min-width: var(--header-command-width);
+  justify-content: flex-start;
+  gap: var(--space-6);
+  padding: 0 var(--space-8);
+  border-color: var(--header-control-border);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-12);
+}
+
+.shell-header .header-command-trigger.header-command-trigger:hover {
+  border-color: var(--header-control-hover-border);
+  background: var(--header-control-hover-bg);
+  color: var(--header-control-hover-fg);
+}
+
+.command-prompt {
+  color: var(--brand-accent);
+  font-family: var(--font-family-code);
+  font-weight: var(--font-weight-semibold);
+}
+
+.command-query {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-family-code);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-shortcut {
+  flex: 0 0 auto;
+  padding: 1px var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-3);
+  background: var(--surface-strip);
+  color: var(--text-tertiary);
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-10);
+  line-height: 1.3;
+}
+
+.ditto-command-palette {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  z-index: 80;
+  width: min(380px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-8);
+  background: var(--surface-panel-elevated);
+  box-shadow: 0 16px 40px color-mix(in oklch, var(--text-primary) 18%, transparent);
+  overflow: hidden;
+}
+
+.ditto-command-palette.ditto-command-palette[hidden] {
+  display: none;
+}
+
+/* Search input area */
+.ditto-command-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) var(--space-10);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ditto-command-search-icon {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-14);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ditto-command-search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-13);
+  line-height: 1.4;
+  width: 100%;
+}
+
+.ditto-command-search:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--interaction-focus-ring);
+}
+
+.ditto-command-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Scrollable results */
+.ditto-command-results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-10) var(--space-8);
+}
+
+/* Category header */
+.ditto-command-category {
+  padding: var(--space-6) 0 var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-10);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.ditto-command-category:first-child {
+  padding-top: var(--space-2);
+}
+
+.ditto-command-item {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-6);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.ditto-command-item:hover {
+  background: var(--surface-panel-base);
+  color: var(--text-primary);
+}
+
+.ditto-command-item:focus-visible {
+  border-color: var(--brand-accent);
+  background: var(--surface-panel-base);
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--interaction-focus-ring);
+}
+
+/* Keyboard navigation highlight */
+.ditto-command-item.command-item-active {
+  background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
+  color: var(--text-primary);
+  border-color: color-mix(in oklch, var(--brand-accent) 30%, transparent);
+}
+
+.ditto-command-empty {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-12);
+  line-height: 1.4;
+  padding: var(--space-8) 0;
+}
+
+.shell-header .header-avatar.header-avatar {
+  width: var(--header-btn-size);
+  min-width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  border-radius: var(--radius-6);
+  border: 1px solid var(--header-control-border);
+  background: var(--header-control-bg);
+  color: var(--header-control-fg);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+}
+
+.header-action-btn {
+  width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-6);
+  color: var(--icon-secondary);
+  cursor: pointer;
+  position: relative;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.header-action-btn:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--icon-primary);
+}
+
+.header-utility-btn {
+  width: var(--header-btn-size);
+  height: var(--header-btn-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-6);
+  color: var(--icon-secondary);
+  cursor: pointer;
+  position: relative;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.header-utility-btn:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--icon-primary);
+}
+
+.header-action-btn .badge-dot {
+  position: absolute;
+  top: var(--badge-dot-offset);
+  right: var(--badge-dot-offset);
+  width: var(--badge-dot-size);
+  height: var(--badge-dot-size);
+  background: var(--red-500);
+  border-radius: 50%;
+  border: var(--badge-dot-border) solid var(--surface-app);
+}
+
+.header-avatar {
+  width: var(--header-avatar-size);
+  height: var(--header-avatar-size);
+  border-radius: 50%;
+  background: var(--brand-accent-subtle);
+  color: var(--brand-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+/* ── Header compact mode (768-1023px) ──
+ * Consolidated from the old @media (max-width: 720px) query.
+ * Applied within the tablet breakpoint range to hide non-essential
+ * header elements and collapse the command trigger.
+ */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .shell-header {
+    min-width: 0;
+    width: calc(100vw - var(--shell-rail-width));
+    max-width: calc(100vw - var(--shell-rail-width));
+    overflow: hidden;
+    gap: var(--space-8);
+    padding-inline: var(--space-10);
+  }
+
+  .shell-header.shell-header > :not(.header-title):not(.header-title-group):not(.header-spacer):not([data-header-utility-bar]) {
+    display: none;
+  }
+
+  .shell-header .header-title-group,
+  .shell-header .header-title {
+    min-width: 0;
+  }
+
+  .shell-header .header-title {
+    max-width: calc(100vw - var(--shell-rail-width) - 228px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .shell-header .header-subtitle {
+    display: none;
+  }
+
+  .shell-header .header-spacer {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .shell-header [data-header-utility-bar] {
+    margin-left: auto;
+    gap: var(--space-4);
+  }
+
+  .shell-header .header-command-trigger.header-command-trigger {
+    width: var(--header-btn-size);
+    min-width: var(--header-btn-size);
+    justify-content: center;
+    padding: 0;
+  }
+
+  .shell-header .header-command-trigger .command-query,
+  .shell-header .header-command-trigger .command-shortcut {
+    display: none;
+  }
+}
+
+/* ── Pulse Strip (operational status line — deliberately thin) ── */
+.shell-pulse {
+  grid-area: pulse;
+  background: var(--surface-strip);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-16);
+  gap: var(--space-16);
+  height: calc(var(--density-strip-height) - 4px);
+  overflow: hidden;
+}
+
+.pulse-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  white-space: nowrap;
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+}
+
+.pulse-item .pulse-label {
+  color: var(--text-tertiary);
+}
+
+.pulse-item .pulse-value {
+  font-family: var(--font-family-numeric);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+.pulse-item .pulse-value.positive {
+  color: var(--market-up-fg);
+}
+
+.pulse-item .pulse-value.negative {
+  color: var(--market-down-fg);
+}
+
+.pulse-separator {
+  width: 1px;
+  height: 10px;
+  background: var(--border-subtle);
+}
+
+/* ── Status Bar (v2 — lightweight operational status, from Header) ── */
+.shell-status-bar {
+  grid-area: status;
+  background: var(--surface-strip);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-16);
+  gap: var(--space-16);
+  height: var(--shell-status-bar-height);
+  overflow: hidden;
+}
+
+.status-bar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  white-space: nowrap;
+  font-size: var(--font-size-10);
+  color: var(--text-tertiary);
+}
+
+.status-bar-item .status-bar-label {
+  color: var(--text-tertiary);
+}
+
+.status-bar-item .status-bar-value {
+  font-family: var(--font-family-numeric);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+}
+
+.status-bar-item .status-bar-value.positive {
+  color: var(--market-up-fg);
+}
+
+.status-bar-item .status-bar-value.negative {
+  color: var(--market-down-fg);
+}
+
+.status-bar-separator {
+  width: 1px;
+  height: 10px;
+  background: var(--border-subtle);
+}
+
+/* ── Main Content Area (Decision Banner + Pending + Signals/Findings) ── */
+.shell-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--density-gutter) + var(--space-8));
+  padding: var(--density-gutter);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.main-primary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--density-section-gap);
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+/* ── Secondary (Signals + Findings) inside main ── */
+.shell-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--density-gutter);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Sidebar (context rail, spans full height) ── */
+.shell-sidebar {
+  grid-area: sidebar;
+  border-left: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar Collapsed (icon strip — 48px) ── */
+.shell-sidebar-collapsed {
+  grid-area: sidebar;
+  width: var(--shell-sidebar-collapsed-width);
+  border-left: 1px solid var(--border-subtle);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) 0;
+  gap: var(--space-4);
+}
+
+.sidebar-toggle {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-4);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: var(--font-size-12);
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard);
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--text-secondary);
+}
+
+.sidebar-collapsed-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-6);
+  color: var(--icon-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.sidebar-collapsed-icon:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--icon-primary);
+}
+
+.sidebar-collapsed-icon svg {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+}
+

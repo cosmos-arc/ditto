@@ -1,0 +1,288 @@
+/* ── Prototype Resizable Panels ── */
+.resize-separator,
+[data-resize-separator] {
+  position: relative;
+  width: 1px;
+  min-width: 1px;
+  align-self: stretch;
+  justify-self: stretch;
+  background: var(--border-subtle);
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 6;
+  transition:
+    background var(--motion-duration-fast) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.resize-separator::before,
+[data-resize-separator]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 24px;
+  transform: translateX(-50%);
+}
+
+.resize-separator::after,
+[data-resize-separator]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 40px;
+  border: 1px solid color-mix(in oklch, var(--border-strong) 68%, transparent);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 28%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 72%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 84%, transparent);
+  box-shadow: 0 1px 4px color-mix(in oklch, var(--text-primary) 12%, transparent);
+  opacity: 0.72;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard),
+    background var(--motion-duration-fast) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.resize-separator:hover,
+.resize-separator:focus-visible,
+.resize-separator[data-resizing="true"],
+[data-resize-separator]:hover,
+[data-resize-separator]:focus-visible,
+[data-resize-separator][data-resizing="true"] {
+  background: var(--brand-accent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 36%, transparent);
+  outline: none;
+}
+
+.resize-separator:hover::after,
+.resize-separator:focus-visible::after,
+.resize-separator[data-resizing="true"]::after,
+[data-resize-separator]:hover::after,
+[data-resize-separator]:focus-visible::after,
+[data-resize-separator][data-resizing="true"]::after {
+  border-color: var(--brand-accent);
+  background:
+    radial-gradient(circle at 50% 28%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 72%, var(--brand-accent) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 92%, var(--brand-accent));
+  box-shadow: 0 0 0 4px var(--interaction-selected-border);
+  opacity: 1;
+}
+
+.resize-separator:focus-visible,
+[data-resize-separator]:focus-visible {
+  box-shadow:
+    0 0 0 1px var(--brand-accent),
+    0 0 0 4px var(--interaction-selected-border);
+}
+
+.resize-separator[aria-orientation="horizontal"],
+[data-resize-separator][aria-orientation="horizontal"] {
+  width: auto;
+  min-width: 0;
+  height: 1px;
+  min-height: 1px;
+  cursor: row-resize;
+}
+
+.resize-separator[aria-orientation="horizontal"]::before,
+[data-resize-separator][aria-orientation="horizontal"]::before {
+  inset: 50% 0 auto;
+  width: auto;
+  height: 24px;
+  transform: translateY(-50%);
+}
+
+.resize-separator[aria-orientation="horizontal"]::after,
+[data-resize-separator][aria-orientation="horizontal"]::after {
+  width: 40px;
+  height: 10px;
+  background:
+    radial-gradient(circle at 28% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 50%, var(--text-tertiary) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 84%, transparent);
+}
+
+.resize-separator[aria-orientation="horizontal"]:hover::after,
+.resize-separator[aria-orientation="horizontal"]:focus-visible::after,
+.resize-separator[aria-orientation="horizontal"][data-resizing="true"]::after,
+[data-resize-separator][aria-orientation="horizontal"]:hover::after,
+[data-resize-separator][aria-orientation="horizontal"]:focus-visible::after,
+[data-resize-separator][aria-orientation="horizontal"][data-resizing="true"]::after {
+  background:
+    radial-gradient(circle at 28% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 50%, var(--brand-accent) 0 1px, transparent 1.5px),
+    color-mix(in oklch, var(--surface-panel-base) 92%, var(--brand-accent));
+}
+
+html[data-resizing-panel="true"],
+html[data-resizing-panel="true"] body {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Suppress transitions/animations during panel resize to prevent jitter.
+ * Uses html attribute selector for maximum specificity without !important. */
+html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-"], .catalog-shell, .object-shell),
+html[data-resizing-panel="true"] :is(.shell, [class^="shell-"], [class*=" shell-"], .catalog-shell, .object-shell) * {
+  transition: none;
+  animation: none;
+}
+
+
+
+/* ── Review Remediation Shared Contracts ── */
+/* Bottom tray: outer container uses max-height for overall sizing.
+ * Inner [data-bottom-tray-content] uses max-height transitions for animated collapse.
+ */
+[data-bottom-tray] {
+  --bottom-tray-peek-content-max-height: calc(var(--font-size-12) * 1.7 + var(--space-16));
+  --bottom-tray-expanded-content-max-height: min(32vh, 22rem);
+  overflow: hidden;
+  transition: max-height var(--motion-duration-normal) var(--motion-easing-standard), height var(--motion-duration-normal) var(--motion-easing-standard), padding var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+[data-bottom-tray].bottom-tray {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(38vh, 28rem);
+}
+
+.bottom-tray-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  flex: 0 0 auto;
+}
+
+/* Bottom tray content: max-height transitions for animated collapse. */
+[data-bottom-tray-content],
+.bottom-tray-content {
+  min-height: 0;
+  max-height: var(--bottom-tray-expanded-content-max-height);
+  overflow: auto;
+  opacity: 1;
+  transition: max-height var(--motion-duration-normal) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.bottom-tray [data-bottom-tray-content][aria-hidden="true"] {
+  display: block;
+}
+
+.status-bar[data-bottom-tray] {
+  max-height: 1.5rem;
+}
+
+.status-bar[data-bottom-tray] [data-bottom-tray-content] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[data-bottom-tray-toggle],
+.bottom-tray-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: var(--header-btn-size);
+  min-height: var(--header-btn-size);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-4);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+[data-bottom-tray][data-bottom-tray-state="collapsed"] [data-bottom-tray-content] {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-bottom-tray][data-bottom-tray-state="peek"] [data-bottom-tray-content] {
+  max-height: var(--bottom-tray-peek-content-max-height);
+  opacity: 1;
+}
+
+[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+  max-height: var(--bottom-tray-expanded-content-max-height);
+  opacity: 1;
+}
+
+[data-bottom-tray].bottom-tray[data-bottom-tray-state="collapsed"] {
+  max-height: var(--density-strip-height, 2rem);
+}
+
+[data-bottom-tray].bottom-tray[data-bottom-tray-state="peek"] {
+  max-height: calc(var(--density-strip-height, 2rem) + var(--bottom-tray-peek-content-max-height));
+}
+
+[data-bottom-tray].bottom-tray[data-bottom-tray-state="expanded"] {
+  max-height: min(38vh, 28rem);
+}
+
+.status-bar[data-bottom-tray][data-bottom-tray-state="collapsed"] {
+  max-height: 1.5rem;
+}
+
+.status-bar[data-bottom-tray][data-bottom-tray-state="peek"] {
+  max-height: 1.5rem;
+}
+
+/* Higher specificity via doubled attribute selector avoids !important */
+.status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-basis: auto;
+  height: auto;
+  min-height: 1.5rem;
+  max-height: min(28vh, 14rem);
+  overflow: visible;
+  padding-block: var(--space-4);
+}
+
+.status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+  flex-wrap: wrap;
+  max-height: calc(min(28vh, 14rem) - var(--space-8));
+  overflow: visible;
+  white-space: normal;
+}
+
+#default-view > .status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] {
+  flex: 0 0 auto !important;
+  flex-basis: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+#default-view > .status-bar.status-bar[data-bottom-tray][data-bottom-tray-state="expanded"] [data-bottom-tray-content] {
+  overflow: visible !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-bottom-tray],
+  [data-bottom-tray-content],
+  [data-bottom-tray-toggle] {
+    transition: none;
+  }
+}
+

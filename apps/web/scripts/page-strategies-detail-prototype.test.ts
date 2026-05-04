@@ -21,7 +21,7 @@ function loadPage() {
 describe("page-strategies-detail prototype", () => {
 	it("inherits the relaxed Object Hub header rhythm shared by detail pages", () => {
 		const layoutCss = readFileSync(
-			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-base.css"),
+			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-shell.css"),
 			"utf-8",
 		);
 

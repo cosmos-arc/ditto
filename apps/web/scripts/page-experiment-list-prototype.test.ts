@@ -21,7 +21,7 @@ function loadPage() {
 describe("page-experiment-list prototype", () => {
 	it("inherits centered button content for primary and detail actions", () => {
 		const layoutCss = readFileSync(
-			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-base.css"),
+			resolve(import.meta.dirname, "../docs/designs/specs/prototypes/shared/layout-components.css"),
 			"utf-8",
 		);
 

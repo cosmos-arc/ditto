@@ -2038,7 +2038,7 @@ describe("prototype interaction UX contracts", () => {
 				}
 			});
 		}
-		const sharedLayoutCss = readFileSync(join(prototypesDir, "shared/layout-base.css"), "utf8");
+		const sharedLayoutCss = readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8");
 		if (/\.batch-bar\[data-bulk-action-bar\]/.test(sharedLayoutCss)) {
 			violations.push("shared-layout: batch bars keep page-local styling when marked as bulk contract");
 		}
