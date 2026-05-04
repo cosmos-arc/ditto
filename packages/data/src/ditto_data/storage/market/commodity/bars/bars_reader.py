@@ -1,6 +1,7 @@
 """Commodity daily bars reader."""
 
-from ditto_data.storage.base import ParquetStore
+from ditto_platform.foundation.storage import ParquetStore
+
 from ditto_data.storage.base.dataset_reader import ParquetDatasetReader
 
 

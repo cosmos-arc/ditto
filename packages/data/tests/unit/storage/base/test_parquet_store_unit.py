@@ -7,7 +7,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_data.storage.base import ParquetStore
+from ditto_platform.foundation.storage import ParquetStore
 
 
 def test_parquet_store_write_and_read(tmp_path: Path) -> None:

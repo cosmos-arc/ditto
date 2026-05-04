@@ -20,12 +20,12 @@ from ditto_data.services.market_service import (
     MarketBarsQuery,
     MarketService,
 )
-from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.stock.adj import (
     StockAdjFactorReader,
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_platform.foundation.storage import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate
 
 # ==============================================================================

@@ -102,6 +102,6 @@ class TestParquetDatasetWriterProtocol:
     def test_satisfies_dataset_writer_protocol(
         self, writer: ParquetDatasetWriter
     ) -> None:
-        from ditto_data.storage.base.protocols import DatasetWriter
+        from ditto_platform.foundation.storage.protocols import DatasetWriter
 
         _: DatasetWriter = writer

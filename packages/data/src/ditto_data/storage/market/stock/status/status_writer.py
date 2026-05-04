@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import polars as pl
-from ditto_data.storage.base import ParquetStore
 from ditto_data.storage.base.dataset_writer import ParquetDatasetWriter
+from ditto_platform.foundation.storage import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate, WriteStoreResult
 
 

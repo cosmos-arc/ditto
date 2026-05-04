@@ -4,11 +4,11 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
-from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
+from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
 
 
 class TestCommodityBarsStore:

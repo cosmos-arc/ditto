@@ -5,8 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-
-from ditto_data.storage.base.parquet_store import ParquetStore
+from ditto_platform.foundation.storage import ParquetStore
 
 
 class ParquetDatasetReader:

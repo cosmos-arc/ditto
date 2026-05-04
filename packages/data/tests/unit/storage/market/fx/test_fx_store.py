@@ -4,8 +4,8 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
-from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
 
 
 class TestFxStore:

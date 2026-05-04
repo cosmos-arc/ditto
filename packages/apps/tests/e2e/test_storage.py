@@ -13,8 +13,8 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
+from ditto_platform.foundation.storage import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate
 from pytest_mock import MockerFixture
 

@@ -27,13 +27,8 @@ CQRS 迁移历史：
 - 各种 AdjFactorStore → AdjFactorReader/AdjFactorWriter
 """
 
-# Re-exported from platform (backward compat)
-from ditto_platform.foundation.storage import MergeResult, ParquetStore
-
 from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = [
-    "MergeResult",
-    "ParquetStore",
     "SQLiteClient",
 ]

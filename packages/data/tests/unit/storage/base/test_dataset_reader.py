@@ -132,6 +132,6 @@ class TestParquetDatasetReaderProtocol:
     def test_satisfies_dataset_reader_protocol(
         self, reader: ParquetDatasetReader
     ) -> None:
-        from ditto_data.storage.base.protocols import DatasetReader
+        from ditto_platform.foundation.storage.protocols import DatasetReader
 
         _: DatasetReader = reader

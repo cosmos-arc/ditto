@@ -1,7 +1,7 @@
 """Stock status reader."""
 
-from ditto_data.storage.base import ParquetStore
 from ditto_data.storage.base.dataset_reader import ParquetDatasetReader
+from ditto_platform.foundation.storage import ParquetStore
 
 
 class StockStatusReader(ParquetDatasetReader):

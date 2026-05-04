@@ -2,12 +2,12 @@
 
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation.concurrency import FileLockManager
+from ditto_platform.foundation.storage import ParquetStore
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.deps import MarketReaders, MarketWriters
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
-from ditto_data.storage.base.parquet_store import ParquetStore
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,

@@ -6,13 +6,27 @@ canonical location, not via ditto_data re-export shims.
 
 from pathlib import Path
 
+
+def _forbidden(prefix: str, suffix: str = "") -> str:
+    return f"{prefix}{suffix}"
+
+
 FORBIDDEN_IMPORTS = (
-    "from ditto_data.models.publication_safety import",
-    "from ditto_data.models.storage import WriteResult",
-    "from ditto_data.models.storage import WriteStoreResult",
-    "from ditto_data.models import OnDuplicate",
-    "from ditto_data.models.common import OnDuplicate",
-    "from ditto_data.errors import Derived",
+    _forbidden("from ditto_data.models.publication_safety", " import"),
+    _forbidden("from ditto_data.models.storage", " import WriteResult"),
+    _forbidden("from ditto_data.models.storage", " import WriteStoreResult"),
+    _forbidden("from ditto_data.models", " import OnDuplicate"),
+    _forbidden("from ditto_data.models.common", " import OnDuplicate"),
+    _forbidden("from ditto_data.errors", " import Derived"),
+    _forbidden("from ditto_data.storage.base", " import ParquetStore"),
+    _forbidden("from ditto_data.storage.base", " import MergeResult"),
+    _forbidden("from ditto_data.storage.base", " import PartitionStrategy"),
+    _forbidden("from ditto_data.storage.base", " import YearlyPartition"),
+    _forbidden("from ditto_data.storage.base", " import DatasetReader"),
+    _forbidden("from ditto_data.storage.base", " import DatasetWriter"),
+    _forbidden("from ditto_data.storage.base.parquet_store", " import"),
+    _forbidden("from ditto_data.storage.base.protocols", " import"),
+    _forbidden("from ditto_data.storage.base.partition_strategy", " import"),
 )
 
 
