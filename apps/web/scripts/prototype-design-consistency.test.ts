@@ -24,6 +24,13 @@ const prototypeLayoutModulePaths = [
 function readAllLayoutCss(): string {
 	return prototypeLayoutModulePaths.map((p) => readFileSync(join(prototypesDir, p), "utf8")).join("\n");
 }
+
+function readLayoutCssSources(): CssSource[] {
+	return prototypeLayoutModulePaths.map((path) => ({
+		label: path,
+		css: readFileSync(join(prototypesDir, path), "utf8"),
+	}));
+}
 const prototypeThemeSwitcherCss = join(prototypesDir, "shared/theme-switcher.css");
 const prototypeTogglesCss = join(prototypesDir, "shared/prototype-toggles.css");
 const prototypeTokensStyleCss = join(prototypesDir, "tokens-style.css");
@@ -266,7 +273,8 @@ function readTopLevelCssRules(css: string, offset = 0, mediaMaxWidth?: number): 
 }
 
 function getSelectorRuleBody(css: string, selector: string): string | undefined {
-	return readTopLevelCssRules(css).find((rule) => rule.selectors.includes(selector))?.body;
+	return readTopLevelCssRules(stripCssComments(css)).find((rule) => rule.selectors.includes(selector))
+		?.body;
 }
 
 function hasDeclaration(body: string | undefined, property: string, valuePattern: RegExp): boolean {
@@ -2349,6 +2357,17 @@ describe("prototype design consistency", () => {
 		for (const selector of canonicalPrimitiveSelectors) {
 			if (getSelectorRuleBody(togglesCss, selector)) {
 				violations.push(`prototype-toggles-duplicates:${selector}`);
+			}
+		}
+
+		for (const selector of requiredSharedSelectors) {
+			const owners = readLayoutCssSources().flatMap((source) =>
+				readTopLevelCssRules(stripCssComments(source.css))
+					.filter((rule) => rule.selectors.includes(selector))
+					.map((rule) => `${source.label}:${getLineNumber(source.css, rule.start)}`),
+			);
+			if (owners.length > 1) {
+				violations.push(`shared-layout-duplicates:${selector}:${owners.join(",")}`);
 			}
 		}
 

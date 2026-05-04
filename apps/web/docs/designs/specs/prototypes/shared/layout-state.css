@@ -93,14 +93,12 @@
   width: 100%;
 }
 
-.skeleton-block,
-.skeleton--block {
+.skeleton-block {
   height: 120px;
   width: 100%;
 }
 
-.skeleton-card,
-.skeleton--card {
+.skeleton-card {
   height: 80px;
   width: 100%;
   border-radius: var(--radius-6, 6px);

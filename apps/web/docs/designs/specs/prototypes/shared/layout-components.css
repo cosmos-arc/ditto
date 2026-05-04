@@ -2809,8 +2809,16 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .tab-button.active { color: var(--brand-accent); }
 
 /* ── Skeleton sizes ── */
-.skeleton--block  { height: 120px; }
-.skeleton--card   { height: 80px; border-radius: var(--radius-6); }
+.skeleton--block {
+  height: 120px;
+  width: 100%;
+}
+
+.skeleton--card {
+  height: 80px;
+  width: 100%;
+  border-radius: var(--radius-6);
+}
 .skeleton--row-lg { height: 48px; }
 .skeleton--input  { height: 32px; width: 100%; border-radius: var(--radius-4); }
 .skeleton-bar-md { height: 32px; width: 100%; border-radius: var(--radius-4); }
