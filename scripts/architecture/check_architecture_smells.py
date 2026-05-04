@@ -15,6 +15,7 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 10. Runtime package __version__ constants must not be reintroduced
 11. Data must not own derived feature/factor publication semantics
 12. Platform must not contain domain/business vocabulary
+13. Active source docstrings/comments must not use stale architecture terms
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -23,6 +24,8 @@ Usage:
 
 import argparse
 import ast
+import io
+import tokenize
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -215,6 +218,14 @@ STALE_ACTIVE_PACKAGE_REFERENCES = (
     "analytics →",
     "→ analytics",
     "Analytics",
+)
+
+STALE_SOURCE_ARCHITECTURE_TERMS = (
+    "Interfaces 层",
+    "interfaces/",
+    "infra/",
+    "analytics layer",
+    "engine 层",
 )
 
 
@@ -428,6 +439,42 @@ def check_platform_no_domain_semantics(source: str, rel_path: str) -> list[str]:
     ]
 
 
+def _iter_source_comment_and_docstring_text(source: str) -> list[str]:
+    texts: list[str] = []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        tree = None
+    if tree is not None:
+        for node in ast.walk(tree):
+            if isinstance(
+                node,
+                ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+            ):
+                docstring = ast.get_docstring(node, clean=False)
+                if docstring is not None:
+                    texts.append(docstring)
+
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for token in tokens:
+            if token.type == tokenize.COMMENT:
+                texts.append(token.string)
+    except tokenize.TokenError:
+        pass
+    return texts
+
+
+def check_source_architecture_terms(source: str, rel_path: str) -> list[str]:
+    """Check active source docstrings/comments for stale architecture terms."""
+    text = "\n".join(_iter_source_comment_and_docstring_text(source))
+    return [
+        f"{rel_path}: contains stale source architecture term {term!r}"
+        for term in STALE_SOURCE_ARCHITECTURE_TERMS
+        if term in text
+    ]
+
+
 def _check_per_file(verbose: bool) -> list[str]:
     """Run per-file checks (f-string logging, oversized files, boundary checks)."""
     errors: list[str] = []
@@ -462,6 +509,7 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_execution_no_simulation_ownership(source, rel_path))
         errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
         errors.extend(check_apps_non_registry_capability_imports(source, rel_path))
+        errors.extend(check_source_architecture_terms(source, rel_path))
         if _is_semantic_scan_target(rel_path):
             errors.extend(check_data_no_derived_feature_ownership(source, rel_path))
             errors.extend(check_platform_no_domain_semantics(source, rel_path))

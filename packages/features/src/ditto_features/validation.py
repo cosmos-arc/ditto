@@ -1,4 +1,4 @@
-"""Spec validation helpers for the analytics layer."""
+"""Spec validation helpers for ditto_features."""
 
 from __future__ import annotations
 

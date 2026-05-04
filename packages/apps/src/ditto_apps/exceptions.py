@@ -1,4 +1,4 @@
-"""Interfaces 层自定义异常."""
+"""Apps 层自定义异常."""
 
 from __future__ import annotations
 

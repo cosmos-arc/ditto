@@ -1,7 +1,7 @@
 """
 Kernel-level tracing — 零外部依赖的可插拔追踪装饰器.
 
-业务包（engine 等）通过此模块声明 tracing 意图；
+能力包（strategy、execution、backtest 等）通过此模块声明 tracing 意图；
 默认为 no-op（无副作用），可通过 install_trace_handler 注入真实实现。
 
 此模块不引入任何第三方依赖，满足 Kernel 零外部依赖约束。

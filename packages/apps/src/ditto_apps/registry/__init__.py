@@ -1,20 +1,20 @@
 """
 依赖注入注册表.
 
-Composition Root 模式：所有依赖在应用入口点（interfaces/）组装。
+Composition Root 模式：所有依赖在 apps 入口组装。
 DI Provider 已下沉至各业务包：
 - ditto_data.di: Data 层 Provider（原 Data + Core DQ）
-- ditto_application.providers: App 层 Provider
+- ditto_application.providers: Application 层 Provider
 
 目录结构：
-- infra/    : Infrastructure 层（配置、观测、通知）
+- platform providers: 平台能力组合（配置、观测、通知）
 - contexts/ : 上下文组合包（解决 ARCH-003/004）
 """
 
 from __future__ import annotations
 
-# Infrastructure 层
-# Contexts 层
+# Platform provider wiring
+# Context bundle wiring
 from .contexts import (
     IngestionBundle,
     MaterializationBundle,
