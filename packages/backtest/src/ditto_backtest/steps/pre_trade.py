@@ -30,6 +30,7 @@ from ditto_risk.pre_trade import (
 )
 
 from ditto_backtest.audit.records import PreTradeDecisionRecord
+from ditto_backtest.errors import SimulationError
 from ditto_backtest.steps.types import StepContext, StepResult
 
 __all__ = ["PreTradeStep"]
@@ -137,7 +138,7 @@ class PreTradeStep:
         slice_ = ctx.slice_
         if account_view is None or slice_ is None:
             msg = "account_view and slice_ required"
-            raise ValueError(msg)
+            raise SimulationError(msg, step="pre_trade")
 
         return PreTradeContext(
             account_view=account_view,

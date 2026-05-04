@@ -16,7 +16,7 @@ from __future__ import annotations
 import uuid
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from ditto_execution.brokerage import Brokerage
@@ -43,11 +43,13 @@ from loguru import logger
 
 from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed, Slice
+from ditto_backtest.errors import SimulationError
 from ditto_backtest.manifest import (
     RuleRefCollector,
     RunManifest,
     build_run_manifest,
 )
+from ditto_backtest.result import EngineResult
 from ditto_backtest.statistics import ExecutionAuditCollector
 from ditto_backtest.steps import (
     AuditStep,
@@ -69,41 +71,6 @@ __all__ = [
     "EngineOptions",
     "EngineResult",
 ]
-
-
-# ---------------------------------------------------------------------------
-# EngineResult
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class EngineResult:
-    """
-    引擎运行结果 -- 可变, 运行过程中累积.
-
-    Attributes:
-        run_id: 运行唯一 ID
-        period: (start_date, end_date)
-        final_nav: 最终净值
-        total_trades: 总成交笔数
-        orders: 所有提交的订单
-        fills: 所有成交事件
-        account_view: 最终账户快照
-        manifest: 运行清单 (None = 未启用 RuleRefCollector)
-        skipped_dates: Step 失败被跳过的日期
-
-    """
-
-    run_id: str
-    period: tuple[str, str]
-    final_nav: float = 0.0
-    total_trades: int = 0
-    orders: list[Order] = field(default_factory=list)
-    fills: list[FillEvent] = field(default_factory=list)
-    account_view: AccountView | None = None
-    manifest: RunManifest | None = None
-    skipped_dates: tuple[str, ...] = ()
-    cancelled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +119,7 @@ def _require_slice(slice_: Slice | None) -> Slice:
     """断言 slice_ 非 None — 用于 lambda 中类型收窄."""
     if slice_ is None:
         msg = "slice_ required"
-        raise ValueError(msg)
+        raise SimulationError(msg, step="engine")
     return slice_
 
 

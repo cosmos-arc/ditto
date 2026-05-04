@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 from ditto_kernel.math import pearson_correlation
 
+from ditto_backtest.errors import ReplayError
 from ditto_backtest.manifest import (
     InputRef,
     RunManifest,
@@ -213,7 +214,7 @@ class ReplayValidator:
         n = len(original)
         if n != len(replay):
             msg = f"NAV series length mismatch: {n} vs {len(replay)}"
-            raise ValueError(msg)
+            raise ReplayError(msg, point_count=n, replay_point_count=len(replay))
 
         if n == 0:
             return NavComparison(

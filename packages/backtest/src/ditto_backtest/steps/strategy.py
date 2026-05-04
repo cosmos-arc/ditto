@@ -14,6 +14,7 @@ from collections.abc import Callable
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 
+from ditto_backtest.errors import SimulationError
 from ditto_backtest.steps.input_bundle import build_input_bundle
 from ditto_backtest.steps.types import StepContext, StepResult
 
@@ -66,7 +67,7 @@ class StrategyStep:
         slice_ = ctx.slice_
         if slice_ is None:  # guarded by execute() -- unreachable in practice
             msg = "slice_ required"
-            raise ValueError(msg)
+            raise SimulationError(msg, step="strategy")
 
         return build_input_bundle(
             trade_date=ctx.date,

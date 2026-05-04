@@ -6,6 +6,7 @@ Phase 3.1 — Run Lineage / Replayability.
 from __future__ import annotations
 
 import pytest
+from ditto_backtest.errors import ReplayError
 from ditto_backtest.manifest import (
     InputRef,
     RuleRef,
@@ -399,7 +400,7 @@ class TestCompareNavSeries:
         assert comp.point_count == 0
 
     def test_length_mismatch_raises(self) -> None:
-        with pytest.raises(ValueError, match="length"):
+        with pytest.raises(ReplayError, match="length"):
             ReplayValidator.compare_nav_series([100.0], [100.0, 101.0])
 
     def test_bps_calculation(self) -> None:

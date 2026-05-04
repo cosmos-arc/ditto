@@ -15,6 +15,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRuleProvider, InstrumentRules
 from ditto_strategy.alpha.context import StrategyContext
 
+from ditto_backtest.errors import SimulationError
 from ditto_backtest.manifest import RuleRefCollector
 from ditto_backtest.steps.types import StepContext, StepResult
 
@@ -84,6 +85,6 @@ class PlanningStep:
         slice_ = ctx.slice_
         if slice_ is None:  # guarded by execute() -- unreachable in practice
             msg = "slice_ required"
-            raise ValueError(msg)
+            raise SimulationError(msg, step="planning")
         instrument_ids = list(slice_.bars.keys())
         return self._rule_provider.get_rules(ctx.date, instrument_ids)
