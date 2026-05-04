@@ -21,7 +21,7 @@ from typing import Any
 
 import polars as pl
 
-from ditto_platform.foundation import Metrics, logger, traced
+from ditto_platform.foundation import logger, traced
 from ditto_platform.foundation.storage.partition_strategy import (
     PartitionStrategy,
     YearlyPartition,
@@ -292,10 +292,6 @@ class ParquetStore:
             row_count=len(result),
             duration_ms=round(duration_ms, 2),
         )
-
-        # Record metrics
-        Metrics.data_records.add(len(result), {"dataset": dataset, "status": "success"})
-        Metrics.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
 
         return result
 

@@ -7,11 +7,19 @@ from typing import Any
 
 from dishka import Provider, Scope, provide
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.observability.metrics import METRIC_DEFINITIONS as DATA_METRICS
+from ditto_features.observability.metrics import METRIC_DEFINITIONS as FEATURE_METRICS
 from ditto_kernel.tracing import install_trace_handler, reset_trace_handler
 from ditto_platform.foundation.config.settings import Settings
 from ditto_platform.foundation.observability import init, shutdown
 from ditto_platform.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.observability.metrics import register_metric_definitions
 from ditto_platform.foundation.observability.tracing import traced as infra_traced
+from ditto_portfolio.observability.metrics import (
+    METRIC_DEFINITIONS as PORTFOLIO_METRICS,
+)
+from ditto_risk.observability.metrics import METRIC_DEFINITIONS as RISK_METRICS
+from ditto_strategy.observability.metrics import METRIC_DEFINITIONS as STRATEGY_METRICS
 
 from ditto_apps.registry.infra.config import RuntimeFlags
 
@@ -57,11 +65,24 @@ class ObservabilityProvider(Provider):
     @provide
     def observability(self, config: ObservabilityConfig) -> Iterator[None]:
         """初始化并在生命周期结束时关闭观测系统。"""
+        register_app_metric_definitions()
         init(config)
         install_trace_handler(_make_kernel_bridge())
         yield
         reset_trace_handler()
         shutdown()
+
+
+def register_app_metric_definitions() -> None:
+    """注册应用组合根持有的能力包指标目录。"""
+    for definitions in (
+        DATA_METRICS,
+        FEATURE_METRICS,
+        STRATEGY_METRICS,
+        PORTFOLIO_METRICS,
+        RISK_METRICS,
+    ):
+        register_metric_definitions(definitions)
 
 
 def _make_kernel_bridge() -> Callable[[str, Callable[..., Any], Any], Any]:

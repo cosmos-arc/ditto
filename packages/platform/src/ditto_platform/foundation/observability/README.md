@@ -49,19 +49,19 @@ span_id = get_span_id()
 
 ### 3. 指标 (Metrics)
 
-基于 OpenTelemetry 的指标收集，提供预定义的业务指标。
+基于 OpenTelemetry 的指标收集，平台只内置技术指标。领域指标目录由各 capability 包拥有，并在应用组合根注册。
 
 ```python
-from ditto_platform.foundation import M
+from ditto_platform.foundation import Metrics
 
 # Counter - 计数器
-M.data_records.add(100, {"source": "tushare", "table": "etf_daily"})
+Metrics.api_requests.add(1, {"endpoint": "/health", "status": "200"})
 
 # Gauge - 仪表
-M.kill_switch_level.set(2, {"strategy": "etf_rotation"})
+Metrics.cache_hit_rate.set(0.95)
 
 # Histogram - 直方图
-M.data_update_duration.record(1.5, {"source": "tushare"})
+Metrics.api_duration.record(0.12, {"endpoint": "/health"})
 ```
 
 ## 三、运行模式
@@ -134,18 +134,18 @@ span_id = get_span_id()    # 16位十六进制
 ### 指标 API
 
 ```python
-from ditto_platform.foundation import M
+from ditto_platform.foundation import Metrics
 
 # Counter (单调递增)
-M.data_records.add(delta, attributes)
-M.signal_total.increment(attributes)
+Metrics.api_requests.add(delta, attributes)
+Metrics.cache_hit.add(delta, attributes)
 
 # Gauge (可增减，简化接口无 attributes 参数)
-M.kill_switch_level.set(value)
-M.kill_switch_level.inc(delta)
+Metrics.cache_hit_rate.set(value)
+Metrics.cache_hit_rate.inc(delta)
 
 # Histogram (记录分布)
-M.data_update_duration.record(value, attributes)
+Metrics.api_duration.record(value, attributes)
 ```
 
 ### 测试辅助 API
@@ -177,52 +177,14 @@ buckets = [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 300.0]
 ```
 
 适用于以下指标：
-- `ditto.data.update.duration`
-- `ditto.factor.calc.duration`
 - `ditto.api.duration`
 - `ditto.sql.query.duration`
 - `ditto.json.serialize.duration`
 - `ditto.json.deserialize.duration`
 
-### 数据指标
+### 领域指标目录
 
-| 指标名 | 类型 | 属性示例 | 说明 |
-|--------|------|----------|------|
-| `ditto.data.update.duration` | Histogram | source, table | 数据更新耗时 (秒) |
-| `ditto.data.records_total` | Counter | source, table, status | 数据记录总数 |
-| `ditto.data.freshness_days` | Gauge | - | 数据新鲜度 (天) |
-| `ditto.data.errors_total` | Counter | source, table, error_type | 数据错误总数 |
-
-### 因子指标
-
-| 指标名 | 类型 | 属性示例 | 说明 |
-|--------|------|----------|------|
-| `ditto.factor.calc.duration` | Histogram | factor_name | 因子计算耗时 (秒) |
-| `ditto.factor.ic` | Gauge | factor_name, window | 因子 IC 值 |
-| `ditto.factor.health` | Gauge | factor_name | 因子健康分数 (0-100) |
-
-### 策略指标
-
-| 指标名 | 类型 | 属性示例 | 说明 |
-|--------|------|----------|------|
-| `ditto.signal.total` | Counter | strategy, signal_type | 信号总数 |
-| `ditto.rebalance.total` | Counter | strategy | 调仓总数 |
-
-### 组合指标
-
-| 指标名 | 类型 | 属性示例 | 说明 |
-|--------|------|----------|------|
-| `ditto.portfolio.value` | Gauge | strategy | 组合价值 |
-| `ditto.portfolio.drawdown` | Gauge | strategy | 组合回撤 |
-| `ditto.portfolio.drawdown_3d` | Gauge | strategy | 3天滚动回撤 |
-
-### 风控指标
-
-| 指标名 | 类型 | 属性示例 | 说明 |
-|--------|------|----------|------|
-| `ditto.risk.kill_switch_level` | Gauge | strategy | Kill Switch 等级 (0-3) |
-| `ditto.risk.kill_switch_total` | Counter | strategy, level | Kill Switch 触发总数 |
-
+平台不声明领域指标。各 capability 包在自己的 `observability.metrics` 模块中声明目录，应用组合根负责调用 `register_metric_definitions()` 统一注册。
 
 ### 缓存指标
 
@@ -315,7 +277,7 @@ def test_span_creation():
 
 ```python
 from ditto_platform.foundation.config import Environment
-from ditto_platform.foundation.observability import init, M, get_recorded_metrics, reset_for_testing
+from ditto_platform.foundation.observability import init, Metrics, get_recorded_metrics, reset_for_testing
 from ditto_platform.foundation.observability.config import ObservabilityConfig
 
 def test_metrics():
@@ -328,7 +290,7 @@ def test_metrics():
     )
     init(config, force=True)
 
-    M.data_records.add(100, {"source": "test"})
+    Metrics.api_requests.add(1, {"endpoint": "/test"})
 
     metrics = get_recorded_metrics()
     assert metrics is not None
@@ -459,6 +421,6 @@ class TracingState:
 3. **属性值**: 指标属性值必须是字符串，数字会被自动转换
 4. **force 参数**: `init(force=True)` 可强制重新初始化 (仅用于测试)
 5. **trace_id 格式**: 返回标准 UUID 格式字符串 (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-6. **ObservableGauge 限制**: 预定义的 Gauge 指标（如 `M.kill_switch_level`）当前实现不支持多标签 attributes。`set(attributes)` 中的 attributes 参数会被忽略，仅保留 API 兼容性。如需带标签的 Gauge，请直接使用 meter API 创建。
+6. **ObservableGauge 限制**: 预定义的 Gauge 指标（如 `Metrics.cache_hit_rate`）当前实现不支持多标签 attributes。`set(attributes)` 中的 attributes 参数会被忽略，仅保留 API 兼容性。如需带标签的 Gauge，请直接使用 meter API 创建。
 7. **生产环境日志格式**: 生产模式下日志文件为 `ditto.jsonl` (JSON Lines 格式)，便于 Vector 采集和分析。
 8. **Docker Desktop 依赖**: 部署外部依赖需要 Docker Desktop 运行，建议使用 WSL 2 后端。

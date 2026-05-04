@@ -2,7 +2,7 @@
 可观测性指标集成测试.
 
 验证 OpenTelemetry Metrics SDK 与 OTLP Exporter 的集成，
-覆盖 9 个类别的代表指标，每个指标验证元数据、数值、属性、类型行为四个维度.
+覆盖技术指标的代表类别，每个指标验证元数据、数值、属性、类型行为四个维度.
 
 以及 METRIC_DEFINITIONS 配置驱动的指标注册测试.
 """
@@ -34,160 +34,160 @@ wait_for_export = _mod.wait_for_export
 class TestMetricsIntegration:
     """可观测性指标集成测试。"""
 
-    # ==================== 数据指标 (Counter) ====================
+    # ==================== API 指标 (Counter) ====================
 
-    def test_data_counter_metadata(
+    def test_api_counter_metadata(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证数据 Counter 指标的元数据：name, description, unit."""
+        """验证 API Counter 指标的元数据：name, description, unit."""
         counter = meter.create_counter(
-            "ditto.data.records_total", description="Total data records processed"
+            "ditto.api.requests_total", description="Total API requests"
         )
 
         # 触发导出
-        counter.add(1, {"source": "test"})
+        counter.add(1, {"endpoint": "/health"})
         wait_for_export()
 
         # 获取导出的指标
-        metrics = metrics_exporter.get_metrics_by_name("ditto.data.records_total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         assert len(metrics) > 0, "指标应该被导出"
 
         metric = metrics[0]
-        assert metric.name == "ditto.data.records_total"
-        assert metric.description == "Total data records processed"
+        assert metric.name == "ditto.api.requests_total"
+        assert metric.description == "Total API requests"
         # Counter 类型的验证：数据点有 value 属性
         data_points = list(metric.data.data_points)
         assert len(data_points) > 0
         assert hasattr(data_points[0], "value")
 
-    def test_data_counter_values(
+    def test_api_counter_values(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Counter 数值正确累加."""
-        counter = meter.create_counter("ditto.data.records_total")
+        counter = meter.create_counter("ditto.api.requests_total")
 
-        counter.add(1, {"source": "test"})
-        counter.add(3, {"source": "test"})
+        counter.add(1, {"endpoint": "/health"})
+        counter.add(3, {"endpoint": "/health"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.data.records_total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         data_points = list(metrics[0].data.data_points)
 
         assert len(data_points) == 1
         assert data_points[0].value == 4  # 1 + 3
 
-    def test_data_counter_attributes(
+    def test_api_counter_attributes(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 attributes 正确传递和分组."""
-        counter = meter.create_counter("ditto.data.records_total")
+        counter = meter.create_counter("ditto.api.requests_total")
 
-        counter.add(1, {"source": "tushare", "status": "success"})
-        counter.add(2, {"source": "akshare", "status": "success"})
+        counter.add(1, {"endpoint": "/health", "method": "GET"})
+        counter.add(2, {"endpoint": "/metrics", "method": "GET"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.data.records_total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         data_points = list(metrics[0].data.data_points)
 
         # 验证两个不同的 time series
         assert len(data_points) == 2
 
         attrs_list = [dp.attributes for dp in data_points]
-        assert {"source": "tushare", "status": "success"} in attrs_list
-        assert {"source": "akshare", "status": "success"} in attrs_list
+        assert {"endpoint": "/health", "method": "GET"} in attrs_list
+        assert {"endpoint": "/metrics", "method": "GET"} in attrs_list
 
-    def test_data_counter_monotonic(
+    def test_api_counter_monotonic(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Counter 单调递增行为."""
-        counter = meter.create_counter("ditto.data.records_total")
+        counter = meter.create_counter("ditto.api.requests_total")
 
-        counter.add(5, {"source": "test"})
-        counter.add(3, {"source": "test"})
+        counter.add(5, {"endpoint": "/health"})
+        counter.add(3, {"endpoint": "/health"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.data.records_total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.requests_total")
         data_point = next(iter(metrics[0].data.data_points))
 
         # Counter 应该累加，而非覆盖
         assert data_point.value == 8  # 5 + 3
 
-    # ==================== 因子指标 (Histogram) ====================
+    # ==================== API 指标 (Histogram) ====================
 
-    def test_factor_histogram_metadata(
+    def test_api_histogram_metadata(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证因子 Histogram 指标的元数据."""
+        """验证 API Histogram 指标的元数据."""
         histogram = meter.create_histogram(
-            "ditto.factor.calc.duration",
-            description="Factor calculation duration in seconds",
+            "ditto.api.duration",
+            description="API request duration in seconds",
         )
 
-        histogram.record(0.5, {"factor": "momentum"})
+        histogram.record(0.5, {"endpoint": "/jobs"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.factor.calc.duration")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         assert len(metrics) > 0
 
         metric = metrics[0]
-        assert metric.name == "ditto.factor.calc.duration"
-        assert metric.description == "Factor calculation duration in seconds"
+        assert metric.name == "ditto.api.duration"
+        assert metric.description == "API request duration in seconds"
         # Histogram 类型的验证：数据点有 bucket_counts 属性
         data_points = list(metric.data.data_points)
         assert len(data_points) > 0
         assert hasattr(data_points[0], "bucket_counts")
 
-    def test_factor_histogram_values(
+    def test_api_histogram_values(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Histogram 记录值."""
-        histogram = meter.create_histogram("ditto.factor.calc.duration")
+        histogram = meter.create_histogram("ditto.api.duration")
 
-        histogram.record(0.3, {"factor": "momentum"})
-        histogram.record(1.5, {"factor": "momentum"})
+        histogram.record(0.3, {"endpoint": "/jobs"})
+        histogram.record(1.5, {"endpoint": "/jobs"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.factor.calc.duration")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_point = next(iter(metrics[0].data.data_points))
 
         # 验证 count 和 sum
         assert data_point.count == 2
         assert abs(data_point.sum - 1.8) < 0.01  # 0.3 + 1.5
 
-    def test_factor_histogram_attributes(
+    def test_api_histogram_attributes(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Histogram attributes 分组."""
-        histogram = meter.create_histogram("ditto.factor.calc.duration")
+        histogram = meter.create_histogram("ditto.api.duration")
 
-        histogram.record(0.5, {"factor": "momentum"})
-        histogram.record(0.8, {"factor": "reversal"})
+        histogram.record(0.5, {"endpoint": "/jobs"})
+        histogram.record(0.8, {"endpoint": "/reports"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.factor.calc.duration")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_points = list(metrics[0].data.data_points)
 
         # 验证两个不同的 time series
         assert len(data_points) == 2
 
         attrs_list = [dp.attributes for dp in data_points]
-        assert {"factor": "momentum"} in attrs_list
-        assert {"factor": "reversal"} in attrs_list
+        assert {"endpoint": "/jobs"} in attrs_list
+        assert {"endpoint": "/reports"} in attrs_list
 
-    def test_factor_histogram_buckets(
+    def test_api_histogram_buckets(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Histogram buckets 分布."""
-        histogram = meter.create_histogram("ditto.factor.calc.duration")
+        histogram = meter.create_histogram("ditto.api.duration")
 
         # 记录不同范围的值
-        histogram.record(0.05, {"factor": "test"})  # < 0.1
-        histogram.record(0.3, {"factor": "test"})  # 0.1 - 0.5
-        histogram.record(2.0, {"factor": "test"})  # 1.0 - 5.0
-        histogram.record(10.0, {"factor": "test"})  # 5.0 - 10.0
+        histogram.record(0.05, {"endpoint": "/test"})  # < 0.1
+        histogram.record(0.3, {"endpoint": "/test"})  # 0.1 - 0.5
+        histogram.record(2.0, {"endpoint": "/test"})  # 1.0 - 5.0
+        histogram.record(10.0, {"endpoint": "/test"})  # 5.0 - 10.0
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.factor.calc.duration")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
         data_point = next(iter(metrics[0].data.data_points))
 
         # 验证 bucket counts
@@ -200,41 +200,41 @@ class TestMetricsIntegration:
         assert counts[4] == 1  # 5.0 - 10.0
         assert counts[5] == 0  # 10.0 - 30.0
 
-    # ==================== 策略指标 (Counter) ====================
+    # ==================== Scheduler 指标 (Counter) ====================
 
-    def test_strategy_counter_metadata(
+    def test_scheduler_counter_metadata(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证策略 Counter 指标的元数据."""
+        """验证 Scheduler Counter 指标的元数据."""
         counter = meter.create_counter(
-            "ditto.signal.total", description="Total trading signals generated"
+            "ditto.scheduler.jobs_total", description="Total scheduler jobs executed"
         )
 
-        counter.add(1, {"strategy": "dual_thrust"})
+        counter.add(1, {"job": "daily_update"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.signal.total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         assert len(metrics) > 0
 
         metric = metrics[0]
-        assert metric.name == "ditto.signal.total"
-        assert metric.description == "Total trading signals generated"
+        assert metric.name == "ditto.scheduler.jobs_total"
+        assert metric.description == "Total scheduler jobs executed"
         # Counter 类型验证
         data_points = list(metric.data.data_points)
         assert len(data_points) > 0
         assert hasattr(data_points[0], "value")
 
-    def test_strategy_counter_values(
+    def test_scheduler_counter_values(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证策略信号计数."""
-        counter = meter.create_counter("ditto.signal.total")
+        """验证 Scheduler 作业计数."""
+        counter = meter.create_counter("ditto.scheduler.jobs_total")
 
-        counter.add(5, {"strategy": "dual_thrust", "direction": "long"})
-        counter.add(3, {"strategy": "dual_thrust", "direction": "short"})
+        counter.add(5, {"job": "daily_update", "status": "success"})
+        counter.add(3, {"job": "daily_update", "status": "failed"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.signal.total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         data_points = list(metrics[0].data.data_points)
 
         # 验证两个 time series
@@ -243,209 +243,218 @@ class TestMetricsIntegration:
         # 验证每个数据点的属性和值
         for dp in data_points:
             if (
-                dp.attributes.get("strategy") == "dual_thrust"
-                and dp.attributes.get("direction") == "long"
+                dp.attributes.get("job") == "daily_update"
+                and dp.attributes.get("status") == "success"
             ):
                 assert dp.value == 5
             elif (
-                dp.attributes.get("strategy") == "dual_thrust"
-                and dp.attributes.get("direction") == "short"
+                dp.attributes.get("job") == "daily_update"
+                and dp.attributes.get("status") == "failed"
             ):
                 assert dp.value == 3
 
-    def test_strategy_counter_attributes(
+    def test_scheduler_counter_attributes(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证策略维度 attributes."""
-        counter = meter.create_counter("ditto.signal.total")
+        """验证 Scheduler attributes."""
+        counter = meter.create_counter("ditto.scheduler.jobs_total")
 
-        counter.add(1, {"strategy": "dual_thrust", "symbol": "000001.SZ"})
-        counter.add(1, {"strategy": "alpha101", "symbol": "000001.SZ"})
+        counter.add(1, {"job": "daily_update", "queue": "default"})
+        counter.add(1, {"job": "metric_export", "queue": "default"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.signal.total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         data_points = list(metrics[0].data.data_points)
 
         assert len(data_points) == 2
 
         attrs_list = [dp.attributes for dp in data_points]
-        assert {"strategy": "dual_thrust", "symbol": "000001.SZ"} in attrs_list
-        assert {"strategy": "alpha101", "symbol": "000001.SZ"} in attrs_list
+        assert {"job": "daily_update", "queue": "default"} in attrs_list
+        assert {"job": "metric_export", "queue": "default"} in attrs_list
 
-    def test_strategy_counter_monotonic(
+    def test_scheduler_counter_monotonic(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证策略信号单调递增."""
-        counter = meter.create_counter("ditto.signal.total")
+        """验证 Scheduler 计数单调递增."""
+        counter = meter.create_counter("ditto.scheduler.jobs_total")
 
-        counter.add(10, {"strategy": "test"})
-        counter.add(5, {"strategy": "test"})
+        counter.add(10, {"job": "test"})
+        counter.add(5, {"job": "test"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.signal.total")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.scheduler.jobs_total")
         data_point = next(iter(metrics[0].data.data_points))
 
         assert data_point.value == 15  # 10 + 5
 
-    # ==================== 组合指标 (Gauge) ====================
+    # ==================== Cache 指标 (Gauge) ====================
 
-    def test_portfolio_gauge_metadata(
+    def test_cache_size_gauge_metadata(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证组合 Gauge 指标的元数据."""
+        """验证 Cache Gauge 指标的元数据."""
         gauge = meter.create_gauge(
-            "ditto.portfolio.value", description="Current portfolio value"
+            "ditto.cache.size", description="Current cache size (number of entries)"
         )
 
-        gauge.set(100000.0, {"account": "test_account"})
+        gauge.set(100000.0, {"cache": "test_cache"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.portfolio.value")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         assert len(metrics) > 0
 
         metric = metrics[0]
-        assert metric.name == "ditto.portfolio.value"
-        assert metric.description == "Current portfolio value"
+        assert metric.name == "ditto.cache.size"
+        assert metric.description == "Current cache size (number of entries)"
         # Gauge 类型验证：数据点有 value 属性（与 Counter 相同）
         # 但通过行为测试验证可逆性
         data_points = list(metric.data.data_points)
         assert len(data_points) > 0
         assert hasattr(data_points[0], "value")
 
-    def test_portfolio_gauge_values(
+    def test_cache_size_gauge_values(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Gauge 设置值（可覆盖）."""
-        gauge = meter.create_gauge("ditto.portfolio.value")
+        gauge = meter.create_gauge("ditto.cache.size")
 
-        gauge.set(100000.0, {"account": "test_account"})
-        gauge.set(105000.0, {"account": "test_account"})
+        gauge.set(100000.0, {"cache": "test_cache"})
+        gauge.set(105000.0, {"cache": "test_cache"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.portfolio.value")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         data_point = next(iter(metrics[0].data.data_points))
 
         # Gauge 应该覆盖，而非累加
         assert data_point.value == 105000.0
 
-    def test_portfolio_gauge_attributes(
+    def test_cache_size_gauge_attributes(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证组合账户 attributes."""
-        gauge = meter.create_gauge("ditto.portfolio.value")
+        """验证 Cache attributes."""
+        gauge = meter.create_gauge("ditto.cache.size")
 
-        gauge.set(100000.0, {"account": "account_001"})
-        gauge.set(200000.0, {"account": "account_002"})
+        gauge.set(100000.0, {"cache": "cache_001"})
+        gauge.set(200000.0, {"cache": "cache_002"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.portfolio.value")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         data_points = list(metrics[0].data.data_points)
 
         assert len(data_points) == 2
 
         # 验证每个数据点的属性和值
         for dp in data_points:
-            if dp.attributes.get("account") == "account_001":
+            if dp.attributes.get("cache") == "cache_001":
                 assert dp.value == 100000.0
-            elif dp.attributes.get("account") == "account_002":
+            elif dp.attributes.get("cache") == "cache_002":
                 assert dp.value == 200000.0
 
-    def test_portfolio_gauge_reversible(
+    def test_cache_size_gauge_reversible(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
         """验证 Gauge 可增可减."""
-        gauge = meter.create_gauge("ditto.portfolio.value")
+        gauge = meter.create_gauge("ditto.cache.size")
 
-        gauge.set(100000.0, {"account": "test"})
-        gauge.set(95000.0, {"account": "test"})  # 亏损
-        gauge.set(105000.0, {"account": "test"})  # 盈利
+        gauge.set(100000.0, {"cache": "test"})
+        gauge.set(95000.0, {"cache": "test"})
+        gauge.set(105000.0, {"cache": "test"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.portfolio.value")
+        metrics = metrics_exporter.get_metrics_by_name("ditto.cache.size")
         data_point = next(iter(metrics[0].data.data_points))
 
         # Gauge 应该支持任意值变化
         assert data_point.value == 105000.0
 
-    # ==================== 风控指标 (Counter) ====================
+    # ==================== Cache 指标 (Counter) ====================
 
-    def test_risk_counter_metadata(
+    def test_cache_counter_metadata(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证风控 Counter 指标的元数据."""
+        """验证 Cache Counter 指标的元数据."""
         counter = meter.create_counter(
-            "ditto.risk.kill_switch_total", description="Total kill switch triggers"
+            "ditto.cache.invalidations_total",
+            description="Total cache invalidations",
         )
 
-        counter.add(1, {"level": "2", "reason": "drawdown"})
+        counter.add(1, {"cache": "primary", "reason": "refresh"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.risk.kill_switch_total")
+        metrics = metrics_exporter.get_metrics_by_name(
+            "ditto.cache.invalidations_total"
+        )
         assert len(metrics) > 0
 
         metric = metrics[0]
-        assert metric.name == "ditto.risk.kill_switch_total"
-        assert metric.description == "Total kill switch triggers"
+        assert metric.name == "ditto.cache.invalidations_total"
+        assert metric.description == "Total cache invalidations"
         # Counter 类型验证
         data_points = list(metric.data.data_points)
         assert len(data_points) > 0
         assert hasattr(data_points[0], "value")
 
-    def test_risk_counter_values(
+    def test_cache_counter_values(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证风控事件计数."""
-        counter = meter.create_counter("ditto.risk.kill_switch_total")
+        """验证 Cache 事件计数."""
+        counter = meter.create_counter("ditto.cache.invalidations_total")
 
-        counter.add(1, {"level": "1"})
-        counter.add(1, {"level": "2"})
-        counter.add(1, {"level": "2"})
+        counter.add(1, {"cache": "primary"})
+        counter.add(1, {"cache": "secondary"})
+        counter.add(1, {"cache": "secondary"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.risk.kill_switch_total")
+        metrics = metrics_exporter.get_metrics_by_name(
+            "ditto.cache.invalidations_total"
+        )
         data_points = list(metrics[0].data.data_points)
 
-        # level 1: 1 次，level 2: 2 次
+        # primary: 1 次，secondary: 2 次
         assert len(data_points) == 2
 
         # 验证每个数据点的属性和值
         for dp in data_points:
-            if dp.attributes.get("level") == "1":
+            if dp.attributes.get("cache") == "primary":
                 assert dp.value == 1
-            elif dp.attributes.get("level") == "2":
+            elif dp.attributes.get("cache") == "secondary":
                 assert dp.value == 2
 
-    def test_risk_counter_attributes(
+    def test_cache_counter_attributes(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证风控事件 attributes."""
-        counter = meter.create_counter("ditto.risk.kill_switch_total")
+        """验证 Cache 事件 attributes."""
+        counter = meter.create_counter("ditto.cache.invalidations_total")
 
-        counter.add(1, {"level": "2", "reason": "drawdown"})
-        counter.add(1, {"level": "3", "reason": "volatility"})
+        counter.add(1, {"cache": "primary", "reason": "refresh"})
+        counter.add(1, {"cache": "secondary", "reason": "ttl"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.risk.kill_switch_total")
+        metrics = metrics_exporter.get_metrics_by_name(
+            "ditto.cache.invalidations_total"
+        )
         data_points = list(metrics[0].data.data_points)
 
         assert len(data_points) == 2
 
         attrs_list = [dp.attributes for dp in data_points]
-        assert {"level": "2", "reason": "drawdown"} in attrs_list
-        assert {"level": "3", "reason": "volatility"} in attrs_list
+        assert {"cache": "primary", "reason": "refresh"} in attrs_list
+        assert {"cache": "secondary", "reason": "ttl"} in attrs_list
 
-    def test_risk_counter_monotonic(
+    def test_cache_counter_monotonic(
         self, metrics_exporter: MetricReaderWrapper, meter
     ) -> None:
-        """验证风控计数器单调递增."""
-        counter = meter.create_counter("ditto.risk.kill_switch_total")
+        """验证 Cache 计数器单调递增."""
+        counter = meter.create_counter("ditto.cache.invalidations_total")
 
-        counter.add(1, {"level": "2"})
-        counter.add(1, {"level": "2"})
-        counter.add(1, {"level": "2"})
+        counter.add(1, {"cache": "primary"})
+        counter.add(1, {"cache": "primary"})
+        counter.add(1, {"cache": "primary"})
         wait_for_export()
 
-        metrics = metrics_exporter.get_metrics_by_name("ditto.risk.kill_switch_total")
+        metrics = metrics_exporter.get_metrics_by_name(
+            "ditto.cache.invalidations_total"
+        )
         data_point = next(iter(metrics[0].data.data_points))
 
         assert data_point.value == 3
@@ -500,7 +509,7 @@ class TestMetricsIntegration:
 
         histogram.record(0.1, {"endpoint": "/api/v1/data", "method": "GET"})
         histogram.record(0.2, {"endpoint": "/api/v1/data", "method": "POST"})
-        histogram.record(0.15, {"endpoint": "/api/v1/factor", "method": "GET"})
+        histogram.record(0.15, {"endpoint": "/api/v1/reports", "method": "GET"})
         wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.api.duration")
@@ -512,7 +521,7 @@ class TestMetricsIntegration:
         attrs_list = [dp.attributes for dp in data_points]
         assert {"endpoint": "/api/v1/data", "method": "GET"} in attrs_list
         assert {"endpoint": "/api/v1/data", "method": "POST"} in attrs_list
-        assert {"endpoint": "/api/v1/factor", "method": "GET"} in attrs_list
+        assert {"endpoint": "/api/v1/reports", "method": "GET"} in attrs_list
 
     def test_system_histogram_buckets(
         self, metrics_exporter: MetricReaderWrapper, meter
@@ -556,7 +565,7 @@ class TestMetricsIntegration:
             "ditto.cache.hit_rate", description="Cache hit rate (0-1)"
         )
 
-        gauge.set(0.85, {"cache": "factor_cache"})
+        gauge.set(0.85, {"cache": "primary_cache"})
         wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
@@ -576,9 +585,9 @@ class TestMetricsIntegration:
         """验证缓存命中率（百分比）."""
         gauge = meter.create_gauge("ditto.cache.hit_rate")
 
-        gauge.set(0.80, {"cache": "factor_cache"})
-        gauge.set(0.85, {"cache": "factor_cache"})
-        gauge.set(0.90, {"cache": "factor_cache"})
+        gauge.set(0.80, {"cache": "primary_cache"})
+        gauge.set(0.85, {"cache": "primary_cache"})
+        gauge.set(0.90, {"cache": "primary_cache"})
         wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
@@ -593,8 +602,8 @@ class TestMetricsIntegration:
         """验证缓存实例 attributes."""
         gauge = meter.create_gauge("ditto.cache.hit_rate")
 
-        gauge.set(0.85, {"cache": "factor_cache"})
-        gauge.set(0.92, {"cache": "data_cache"})
+        gauge.set(0.85, {"cache": "primary_cache"})
+        gauge.set(0.92, {"cache": "secondary_cache"})
         wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.cache.hit_rate")
@@ -604,9 +613,9 @@ class TestMetricsIntegration:
 
         # 验证每个数据点的属性和值
         for dp in data_points:
-            if dp.attributes.get("cache") == "factor_cache":
+            if dp.attributes.get("cache") == "primary_cache":
                 assert abs(dp.value - 0.85) < 0.001
-            elif dp.attributes.get("cache") == "data_cache":
+            elif dp.attributes.get("cache") == "secondary_cache":
                 assert abs(dp.value - 0.92) < 0.001
 
     def test_cache_gauge_percentage_range(
@@ -734,7 +743,7 @@ class TestMetricsIntegration:
             description="JSON serialization duration in seconds",
         )
 
-        histogram.record(0.01, {"data_type": "factor"})
+        histogram.record(0.01, {"data_type": "payload"})
         wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.json.serialize.duration")
@@ -773,8 +782,8 @@ class TestMetricsIntegration:
         """验证 JSON 操作类型 attributes."""
         histogram = meter.create_histogram("ditto.json.serialize.duration")
 
-        histogram.record(0.01, {"data_type": "factor", "operation": "serialize"})
-        histogram.record(0.02, {"data_type": "factor", "operation": "deserialize"})
+        histogram.record(0.01, {"data_type": "payload", "operation": "serialize"})
+        histogram.record(0.02, {"data_type": "payload", "operation": "deserialize"})
         wait_for_export()
 
         metrics = metrics_exporter.get_metrics_by_name("ditto.json.serialize.duration")
@@ -784,8 +793,8 @@ class TestMetricsIntegration:
         assert len(data_points) == 2
 
         attrs_list = [dp.attributes for dp in data_points]
-        assert {"data_type": "factor", "operation": "serialize"} in attrs_list
-        assert {"data_type": "factor", "operation": "deserialize"} in attrs_list
+        assert {"data_type": "payload", "operation": "serialize"} in attrs_list
+        assert {"data_type": "payload", "operation": "deserialize"} in attrs_list
 
     def test_json_histogram_fast_operations_bucket(
         self, metrics_exporter: MetricReaderWrapper, meter
@@ -822,30 +831,6 @@ class TestMetricDefinitions:
         config = ObservabilityConfig(environment=Environment.TESTING)
         configure_metrics(config)
 
-        # Verify所有数据指标存在
-        assert hasattr(Metrics, "data_update_duration")
-        assert hasattr(Metrics, "data_records")
-        assert hasattr(Metrics, "data_freshness")
-        assert hasattr(Metrics, "data_errors")
-
-        # Verify所有因子指标存在
-        assert hasattr(Metrics, "factor_calc_duration")
-        assert hasattr(Metrics, "factor_ic")
-        assert hasattr(Metrics, "factor_health")
-
-        # Verify所有策略指标存在
-        assert hasattr(Metrics, "signal_total")
-        assert hasattr(Metrics, "rebalance_total")
-
-        # Verify所有组合指标存在
-        assert hasattr(Metrics, "portfolio_value")
-        assert hasattr(Metrics, "portfolio_drawdown")
-        assert hasattr(Metrics, "portfolio_drawdown_3d")
-
-        # Verify所有风控指标存在
-        assert hasattr(Metrics, "kill_switch_level")
-        assert hasattr(Metrics, "kill_switch_total")
-
         # Verify所有系统指标存在
         assert hasattr(Metrics, "scheduler_jobs")
         assert hasattr(Metrics, "api_requests")
@@ -878,8 +863,6 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # Verify Histogram 类型指标有 record 方法
-        assert hasattr(Metrics.data_update_duration, "record")
-        assert hasattr(Metrics.factor_calc_duration, "record")
         assert hasattr(Metrics.api_duration, "record")
         assert hasattr(Metrics.sql_query_duration, "record")
         assert hasattr(Metrics.json_serialize_duration, "record")
@@ -893,11 +876,6 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # Verify Counter 类型指标有 add 方法
-        assert hasattr(Metrics.data_records, "add")
-        assert hasattr(Metrics.data_errors, "add")
-        assert hasattr(Metrics.signal_total, "add")
-        assert hasattr(Metrics.rebalance_total, "add")
-        assert hasattr(Metrics.kill_switch_total, "add")
         assert hasattr(Metrics.scheduler_jobs, "add")
         assert hasattr(Metrics.api_requests, "add")
         assert hasattr(Metrics.cache_hit, "add")
@@ -918,13 +896,6 @@ class TestMetricDefinitions:
 
         # Verify Gauge 类型指标有 set/inc/dec 方法
         for metric_name in [
-            "data_freshness",
-            "factor_ic",
-            "factor_health",
-            "portfolio_value",
-            "portfolio_drawdown",
-            "portfolio_drawdown_3d",
-            "kill_switch_level",
             "cache_hit_rate",
             "cache_size",
         ]:
@@ -943,12 +914,12 @@ class TestMetricDefinitions:
         # Verify部分指标名称(通过调用它们的底层方法)
         # [REVIEW]
 
-        # data_update_duration 应该是 Histogram
-        assert isinstance(Metrics.data_update_duration, SafeHistogram)
-        # data_records 应该是 Counter
-        assert isinstance(Metrics.data_records, SafeCounter)
-        # data_freshness 应该是 SafeGauge (有 set 方法)
-        assert hasattr(Metrics.data_freshness, "set")
+        # api_duration 应该是 Histogram
+        assert isinstance(Metrics.api_duration, SafeHistogram)
+        # api_requests 应该是 Counter
+        assert isinstance(Metrics.api_requests, SafeCounter)
+        # cache_hit_rate 应该是 SafeGauge (有 set 方法)
+        assert hasattr(Metrics.cache_hit_rate, "set")
 
     def test_metric_count_matches_definitions(self) -> None:
         """测试创建的指标数量与 METRIC_DEFINITIONS 中的定义一致."""
@@ -970,13 +941,9 @@ class TestMetricDefinitions:
                 ):
                     metric_count += 1
 
-        # [REVIEW] 28 个指标(根据任务描述)
-        # [REVIEW]: 4, 因子: 3, 策略: 2, 组合: 3, 风控: 2,
-        #           系统: 3, 缓存: 6, SQL: 4, JSON: 3
-        # [REVIEW]: 4 + 3 + 2 + 3 + 2 + 3 + 6 + 4 + 3 = 30
+        # 系统: 3, 缓存: 6, SQL: 4, JSON: 3
         # [REVIEW]setup 是类方法，不是指标
-        # [REVIEW]
-        expected_metric_count = 30
+        expected_metric_count = 16
 
         # [REVIEW](因为可能有其他类属性)
         assert metric_count >= expected_metric_count, (
@@ -991,12 +958,12 @@ class TestMetricDefinitions:
         configure_metrics(config)
 
         # [REVIEW] Counter
-        Metrics.data_records.add(100, {"source": "test"})
+        Metrics.api_requests.add(100, {"endpoint": "/test"})
 
         # [REVIEW] Histogram
-        Metrics.data_update_duration.record(1.5, {"source": "test"})
+        Metrics.api_duration.record(1.5, {"endpoint": "/test"})
 
         # [REVIEW] Gauge
-        Metrics.kill_switch_level.set(2.0)
-        Metrics.kill_switch_level.inc(1.0)
-        Metrics.kill_switch_level.dec(0.5)
+        Metrics.cache_hit_rate.set(0.8)
+        Metrics.cache_hit_rate.inc(0.1)
+        Metrics.cache_hit_rate.dec(0.05)

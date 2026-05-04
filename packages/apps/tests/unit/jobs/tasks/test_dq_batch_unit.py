@@ -4,6 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from ditto_application.processes.quality.types import L3CheckResult
+from ditto_apps.registry.infra.observability import register_app_metric_definitions
+from ditto_platform.foundation.observability.testing import reset_for_testing
 from pytest_mock import MockerFixture
 
 
@@ -32,6 +34,13 @@ def _mock_container(
 
     container.get.side_effect = _get_side_effect
     return container
+
+
+@pytest.fixture(autouse=True)
+def register_app_metrics() -> None:
+    """Register metrics for direct task-function execution."""
+    reset_for_testing()
+    register_app_metric_definitions()
 
 
 @pytest.mark.unit

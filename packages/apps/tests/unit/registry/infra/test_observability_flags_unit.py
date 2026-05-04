@@ -3,6 +3,19 @@
 import ast
 from pathlib import Path
 
+import pytest
+from ditto_apps.registry.infra.observability import register_app_metric_definitions
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.observability import init
+from ditto_platform.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.observability.metrics import (
+    Metrics,
+    SafeCounter,
+    SafeGauge,
+    SafeHistogram,
+)
+from ditto_platform.foundation.observability.testing import reset_for_testing
+
 
 class TestObservabilityUsesInjectedFlags:
     """验证 ObservabilityProvider 使用注入的 runtime_flags。"""
@@ -64,3 +77,51 @@ class TestObservabilityUsesInjectedFlags:
                                 "check PYTEST_CURRENT_TEST; "
                                 "use injected runtime_flags instead"
                             )
+
+
+def test_register_app_metric_definitions_registers_capability_catalogs() -> None:
+    """组合根显式注册所有 capability-owned 指标目录。"""
+    reset_for_testing()
+    register_app_metric_definitions()
+    init(
+        ObservabilityConfig(
+            environment=Environment.TESTING,
+            pytest_running=True,
+            metrics_enabled=True,
+        ),
+        force=True,
+    )
+
+    assert isinstance(Metrics.data_records, SafeCounter)
+    assert isinstance(Metrics.dq_batch_checks, SafeCounter)
+    assert isinstance(Metrics.factor_calc_duration, SafeHistogram)
+    assert isinstance(Metrics.signal_total, SafeCounter)
+    assert isinstance(Metrics.portfolio_value, SafeGauge)
+    assert isinstance(Metrics.kill_switch_total, SafeCounter)
+    reset_for_testing()
+
+
+def test_reset_for_testing_clears_capability_metric_catalogs() -> None:
+    """测试 reset 后不会残留组合根注册的领域指标目录。"""
+    reset_for_testing()
+    register_app_metric_definitions()
+
+    assert isinstance(Metrics.data_records, SafeCounter)
+
+    reset_for_testing()
+    with pytest.raises(AttributeError):
+        _ = Metrics.data_records
+
+    init(
+        ObservabilityConfig(
+            environment=Environment.TESTING,
+            pytest_running=True,
+            metrics_enabled=True,
+        ),
+        force=True,
+    )
+
+    assert isinstance(Metrics.api_requests, SafeCounter)
+    with pytest.raises(AttributeError):
+        _ = Metrics.data_records
+    reset_for_testing()

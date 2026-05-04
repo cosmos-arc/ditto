@@ -14,6 +14,156 @@ from opentelemetry import metrics
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 
+def test_platform_metrics_are_technology_only() -> None:
+    from ditto_platform.foundation.observability.metrics import METRIC_DEFINITIONS
+
+    names = {item["instrument_name"] for item in METRIC_DEFINITIONS}
+    assert not any(".data." in name for name in names)
+    assert not any(".factor." in name for name in names)
+    assert not any(".portfolio." in name for name in names)
+    assert not any(".risk." in name for name in names)
+    assert not any(".dq." in name for name in names)
+
+
+def test_register_metric_definitions_binds_after_meter_exists() -> None:
+    from ditto_platform.foundation.observability.metrics import (
+        Metrics,
+        register_metric_definitions,
+    )
+
+    _MetricsRegistry.reset()
+    meter = MagicMock(spec=metrics.Meter)
+    counter = MagicMock()
+    meter.create_counter.return_value = counter
+    _MetricsRegistry.set_meter(meter)
+
+    register_metric_definitions(
+        [
+            {
+                "name": "custom_jobs_total",
+                "instrument_name": "ditto.custom.jobs_total",
+                "type": "counter",
+                "description": "Total custom jobs",
+            }
+        ]
+    )
+
+    Metrics.custom_jobs_total.add(2)
+
+    meter.create_counter.assert_called_with(
+        "ditto.custom.jobs_total", description="Total custom jobs"
+    )
+    counter.add.assert_called_once_with(2, {})
+
+
+def test_register_metric_definitions_creates_noop_wrapper_before_meter_exists() -> None:
+    from ditto_platform.foundation.observability.metrics import (
+        Metrics,
+        SafeHistogram,
+        register_metric_definitions,
+    )
+
+    _MetricsRegistry.reset()
+
+    register_metric_definitions(
+        [
+            {
+                "name": "custom_duration_seconds",
+                "instrument_name": "ditto.custom.duration",
+                "type": "histogram",
+                "description": "Custom duration",
+            }
+        ]
+    )
+
+    assert isinstance(Metrics.custom_duration_seconds, SafeHistogram)
+    Metrics.custom_duration_seconds.record(0.2)
+
+
+def test_register_metric_definitions_rejects_late_histogram_registration() -> None:
+    from ditto_platform.foundation.observability.metrics import (
+        register_metric_definitions,
+    )
+
+    _MetricsRegistry.reset()
+    _MetricsRegistry.set_meter(MagicMock(spec=metrics.Meter))
+
+    with pytest.raises(RuntimeError, match="before configure_metrics"):
+        register_metric_definitions(
+            [
+                {
+                    "name": "late_duration_seconds",
+                    "instrument_name": "ditto.custom.late.duration",
+                    "type": "histogram",
+                    "description": "Late duration",
+                }
+            ]
+        )
+
+
+def test_register_metric_definitions_rejects_name_conflicts() -> None:
+    from ditto_platform.foundation.observability.metrics import (
+        register_metric_definitions,
+    )
+
+    _MetricsRegistry.reset()
+    register_metric_definitions(
+        [
+            {
+                "name": "conflicting_jobs_total",
+                "instrument_name": "ditto.custom.conflict_a.jobs_total",
+                "type": "counter",
+                "description": "Custom jobs A",
+            }
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Metric name 'conflicting_jobs_total'"):
+        register_metric_definitions(
+            [
+                {
+                    "name": "conflicting_jobs_total",
+                    "instrument_name": "ditto.custom.conflict_b.jobs_total",
+                    "type": "counter",
+                    "description": "Custom jobs B",
+                }
+            ]
+        )
+
+
+def test_register_metric_definitions_rejects_instrument_conflicts() -> None:
+    from ditto_platform.foundation.observability.metrics import (
+        register_metric_definitions,
+    )
+
+    _MetricsRegistry.reset()
+    register_metric_definitions(
+        [
+            {
+                "name": "instrument_conflict_a",
+                "instrument_name": "ditto.custom.instrument_conflict_total",
+                "type": "counter",
+                "description": "Instrument conflict A",
+            }
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"Metric instrument 'ditto\.custom\.instrument_conflict_total'",
+    ):
+        register_metric_definitions(
+            [
+                {
+                    "name": "instrument_conflict_b",
+                    "instrument_name": "ditto.custom.instrument_conflict_total",
+                    "type": "counter",
+                    "description": "Instrument conflict B",
+                }
+            ]
+        )
+
+
 @pytest.mark.unit
 class TestMetricsRegistry:
     """测试 _MetricsRegistry 类."""

@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 from ditto_apps.jobs.tasks.monitoring import monitor_ingestion_quality
+from ditto_apps.registry.infra.observability import register_app_metric_definitions
 from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability import init
@@ -23,6 +24,7 @@ MONITOR_INGESTION_QUALITY_RUNNER = _prefect_runner(monitor_ingestion_quality)
 def setup_observability():
     """Initialize observability for metrics testing."""
     reset_for_testing()
+    register_app_metric_definitions()
     config = ObservabilityConfig(
         environment=Environment.TESTING,
         pytest_running=True,

@@ -2443,7 +2443,7 @@ packages:
 - pypi: ./packages/apps
   name: ditto-apps
   version: 0.1.0
-  sha256: f579d236bb5418672c8636684fe101d67fde8f822080284287c26b3c967d2084
+  sha256: 25932016abec37077d4aff26b213a80dadc3399f908d3dcfe2769f2614a3b6fb
   requires_dist:
   - ditto-analysis
   - ditto-application
@@ -2452,6 +2452,8 @@ packages:
   - ditto-features
   - ditto-kernel
   - ditto-platform
+  - ditto-portfolio
+  - ditto-risk
   - ditto-strategy
   requires_python: '>=3.13'
 - pypi: ./packages/backtest

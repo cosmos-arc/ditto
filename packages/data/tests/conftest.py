@@ -7,6 +7,7 @@ from typing import Any
 
 import polars as pl
 import pytest
+from ditto_data.observability.metrics import register_metrics
 from ditto_platform.foundation import SQLitePool, init
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability.config import ObservabilityConfig
@@ -41,6 +42,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture(autouse=True)
 def init_observability() -> None:
     """Initialize observability in testing mode for all tests."""
+    register_metrics()
     config = ObservabilityConfig(
         environment=Environment.TESTING,
         pytest_running=True,
