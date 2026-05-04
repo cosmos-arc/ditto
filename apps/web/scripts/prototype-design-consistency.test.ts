@@ -2374,7 +2374,8 @@ describe("prototype design consistency", () => {
 		const dimensionDeclarationPattern =
 			/(?:^|;)\s*(?:width|height|border-radius|--(?:iv-)?sk-[a-z0-9-]+)\s*:/i;
 		const dimensionHelperSelectorPattern =
-			/^\.(?:iv-sk(?:eleton)?[-_a-z0-9]*|sk-\d|sk-(?:text|w)-|skel-(?:badge|text|heading|page-btn|w-|h-|h\d))/i;
+			/^\.(?:iv-sk(?:eleton)?[-_a-z0-9]*|sk-\d|sk-(?:text|w)-|skel-(?:badge|text|heading|page-btn|error-icon|w-|h-|h\d))/i;
+		const contextualSkeletonDimensionPattern = /\s\.skeleton$/i;
 
 		for (const page of activePages()) {
 			const style = getStyleBlocks(readPrototypeHtml(page));
@@ -2383,7 +2384,8 @@ describe("prototype design consistency", () => {
 			for (const rule of readTopLevelCssRules(css)) {
 				if (!dimensionDeclarationPattern.test(rule.body)) continue;
 				const hasPageLocalDimensionHelper = rule.selectors.some((selector) =>
-					dimensionHelperSelectorPattern.test(selector),
+					dimensionHelperSelectorPattern.test(selector) ||
+					contextualSkeletonDimensionPattern.test(selector),
 				);
 				if (hasPageLocalDimensionHelper) {
 					violations.push(`${page.id}:${getLineNumber(css, rule.start)}:${rule.selector}`);

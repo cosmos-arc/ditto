@@ -2879,6 +2879,7 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .skel-text-80 { width: 80px; height: 14px; }
 .skel-heading-60 { width: 60%; }
 .skel-page-btn { width: 28px; height: 28px; border-radius: var(--radius-4); }
+.skel-error-icon { width: 24px; height: 24px; font-size: 12px; }
 .skel-h24-w60 { height: 24px; width: 60%; }
 .skel-h24-w45 { height: 24px; width: 45%; }
 .skel-h12-w100 { height: 12px; width: 100%; }
