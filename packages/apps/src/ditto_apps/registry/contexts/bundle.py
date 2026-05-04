@@ -19,11 +19,9 @@ from ditto_application.processes.materialization.publication_facade import (
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
-from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
-    StrategyCatalogService,
-)
-from ditto_strategy.storage.sqlite.services.strategy_run_service import (
-    StrategyRunWriterProtocol,
+from ditto_strategy.contracts import (
+    StrategyCatalogReader,
+    StrategyRunStatusWriter,
 )
 
 
@@ -58,6 +56,6 @@ class StrategyBundle:
     """策略上下文组合包。"""
 
     strategy_facade: StrategyFacade
-    catalog_service: StrategyCatalogService | None = None
+    catalog_service: StrategyCatalogReader | None = None
     run_service: RunLifecycleService | None = None
-    run_writer: StrategyRunWriterProtocol | None = None
+    run_writer: StrategyRunStatusWriter | None = None
