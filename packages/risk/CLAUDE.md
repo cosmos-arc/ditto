@@ -51,6 +51,17 @@ ditto_risk/
 └── events.py             # 领域事件
 ```
 
+## 错误语义
+
+Risk 的正常业务结果通过返回值表达，不通过异常表达：
+
+- risk finding = return value，例如 `Decision`、`OrderCheckResult`、`RiskAction`。
+- risk configuration failure = exception，例如无法构造有意义规则的非法配置。
+- risk contract misuse = exception，例如调用方传入不满足公共契约的运行时上下文。
+
+不要把正常的约束命中、暴露超限、回撤触发建模成异常。这些情况应返回明确的
+风控决策或盘后动作，便于调用方组合、审计和持久化。
+
 ## 测试位置
 
 ```
