@@ -3,7 +3,7 @@
   "version": 2,
   "status": "draft",
   "createdAt": "2026-04-27",
-  "updatedAt": "2026-05-02",
+  "updatedAt": "2026-05-05",
   "route": "/platform/agents",
   "pagePattern": "studio-builder",
   "shellFamily": "studio",

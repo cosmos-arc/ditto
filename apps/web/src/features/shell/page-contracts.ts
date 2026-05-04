@@ -2,7 +2,7 @@
  * Page Contracts — 页面合同表
  *
  * 每个页面的 pattern / shell / source / slots / states 定义。
- * 这是实现与 specs/prototypes 收敛的唯一真源。
+ * 保留为历史手写合同参考；运行时导出使用 page-contracts.generated.ts。
  *
  * @see docs/designs/specs/11_ditto_page_pattern_library.md
  * @see docs/plans/2026-04-10-prototype-recovery-design.md §5
@@ -236,13 +236,22 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
 		hasStatusBar: true,
 	},
 	{
-		route: "/ai/agents",
-		pagePattern: "queue-ops-console",
-		shellFamily: "ops-console",
+		route: "/platform/agents",
+		pagePattern: "studio-builder",
+		shellFamily: "studio",
 		prototypeSource: "prototype-backed",
-		prototypeRef: "docs/designs/specs/prototypes/page-agent-console.html",
-		requiredSlots: ["main", "detail"],
-		requiredStates: [...UNIVERSAL_STATES, "no-agents", "agent-running"],
+		prototypeRef: "docs/designs/specs/prototypes/page-agent-console-v2.html",
+		requiredSlots: ["header", "tabs", "source", "main", "inspector"],
+		requiredStates: [
+			...UNIVERSAL_STATES,
+			"no-agents",
+			"agent-running",
+			"partial",
+			"blocked",
+			"waiting-approval",
+			"guardrail-blocked",
+			"quality-run",
+		],
 		hasStatusBar: true,
 	},
 

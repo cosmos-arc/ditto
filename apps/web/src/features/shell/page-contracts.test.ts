@@ -17,6 +17,7 @@ const IA_ROUTES = [
 	"/markets/calendar",
 	"/instruments/$id",
 	"/research",
+	"/research/alpha",
 	"/research/factors",
 	"/research/factors/$id",
 	"/research/strategies",

@@ -14,6 +14,7 @@ export const gateViewports = [
 type ManifestPage = {
 	id: string;
 	file: string;
+	status?: string;
 };
 
 type EditionManifest = {
@@ -30,6 +31,7 @@ function isActiveRoutePrototype(page: ManifestPage): boolean {
 	return (
 		page.file.startsWith("page-") &&
 		page.file.endsWith(".html") &&
+		page.status !== "archived-specimen" &&
 		!archivedPrototypeIds.has(page.id) &&
 		existsSync(join(prototypesDir, page.file))
 	);

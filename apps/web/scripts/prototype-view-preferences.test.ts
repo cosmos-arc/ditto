@@ -16,10 +16,15 @@ const visualMatrixPages = [
 	"page-instrument-hub.html",
 	"page-strategy-studio.html",
 ];
+const chromiumLaunchOptions = {
+	channel: "chromium",
+	args: ["--disable-gpu"],
+} as const;
 
 type ManifestPage = {
 	id: string;
 	file: string;
+	status?: string;
 };
 
 type EditionManifest = {
@@ -50,6 +55,19 @@ type HeaderControlStyle = {
 
 let browser: Browser;
 
+async function launchViewPreferencesBrowser(): Promise<Browser> {
+	return chromium.launch(chromiumLaunchOptions);
+}
+
+async function closeBrowserIfOpen(activeBrowser: Browser): Promise<void> {
+	await Promise.race([
+		activeBrowser.close().catch(() => undefined),
+		new Promise<void>((resolve) => {
+			setTimeout(resolve, 1_000);
+		}),
+	]);
+}
+
 function readManifest(): EditionManifest {
 	return JSON.parse(readFileSync(join(prototypesDir, ".edition-manifest.json"), "utf8")) as EditionManifest;
 }
@@ -59,6 +77,7 @@ function isActiveRoutePrototype(page: ManifestPage): boolean {
 		page.file?.startsWith("page-") &&
 		page.file.endsWith(".html") &&
 		page.id !== "token-showcase" &&
+		page.status !== "archived-specimen" &&
 		!archivedPrototypeIds.has(page.id)
 	);
 }
@@ -78,7 +97,12 @@ async function closePageIfOpen(page: Page): Promise<void> {
 	if (page.isClosed()) return;
 
 	try {
-		await page.close();
+		await Promise.race([
+			page.close(),
+			new Promise<void>((resolve) => {
+				setTimeout(resolve, 500);
+			}),
+		]);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (!message.includes("Target page, context or browser has been closed")) {
@@ -89,11 +113,11 @@ async function closePageIfOpen(page: Page): Promise<void> {
 
 describe("prototype view preferences", () => {
 	beforeAll(async () => {
-		browser = await chromium.launch({ channel: "chromium" });
+		browser = await launchViewPreferencesBrowser();
 	});
 
 	afterAll(async () => {
-		await browser.close();
+		await closeBrowserIfOpen(browser);
 	});
 
 	it("wires the light and density visual matrix audit command", () => {
@@ -168,38 +192,52 @@ describe("prototype view preferences", () => {
 
 	it("supports theme and density interactions across every active prototype", async () => {
 		const failures: string[] = [];
+		let page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+		page.setDefaultNavigationTimeout(10_000);
 
-		for (const prototype of readManifest().pages.filter(isActiveRoutePrototype)) {
-			const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+		try {
+			for (const prototype of readManifest().pages.filter(isActiveRoutePrototype)) {
+				try {
+					await page.addInitScript(() => {
+						localStorage.removeItem("ditto-theme");
+						localStorage.removeItem("ditto-density");
+					});
+					await page.goto(`file://${join(prototypesDir, prototype.file)}`, {
+						waitUntil: "domcontentloaded",
+						timeout: 10_000,
+					});
 
-			try {
-				await page.addInitScript(() => {
-					localStorage.removeItem("ditto-theme");
-					localStorage.removeItem("ditto-density");
-				});
-				await page.goto(`file://${join(prototypesDir, prototype.file)}`);
-				await page.waitForLoadState("domcontentloaded");
+					await page.click("#theme-toggle");
+					await page.click("#density-toggle");
 
-				await page.click("#theme-toggle");
-				await page.click("#density-toggle");
+					const selectionState = await getPreferenceSelectionState(page);
+					if (
+						selectionState.theme !== "light" ||
+						selectionState.preference !== "light" ||
+						selectionState.density !== "comfortable" ||
+						selectionState.hasMenu ||
+						!selectionState.themeLabel?.includes("浅色") ||
+						!selectionState.densityLabel?.includes("宽松")
+					) {
+						throw new Error(`selection did not stick: ${JSON.stringify(selectionState)}`);
+					}
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					if (!message.includes("Target page") && !message.includes("browser has been closed")) {
+						failures.push(`${prototype.id}: ${message}`);
+						continue;
+					}
 
-				const selectionState = await getPreferenceSelectionState(page);
-				if (
-					selectionState.theme !== "light" ||
-					selectionState.preference !== "light" ||
-					selectionState.density !== "comfortable" ||
-					selectionState.hasMenu ||
-					!selectionState.themeLabel?.includes("浅色") ||
-					!selectionState.densityLabel?.includes("宽松")
-				) {
-					throw new Error(`selection did not stick: ${JSON.stringify(selectionState)}`);
+					await closePageIfOpen(page);
+					await closeBrowserIfOpen(browser);
+					browser = await launchViewPreferencesBrowser();
+					page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+					page.setDefaultNavigationTimeout(10_000);
+					failures.push(`${prototype.id}: ${message}`);
 				}
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				failures.push(`${prototype.id}: ${message}`);
-			} finally {
-				await closePageIfOpen(page);
 			}
+		} finally {
+			await closePageIfOpen(page);
 		}
 
 		expect(failures).toEqual([]);
@@ -207,92 +245,106 @@ describe("prototype view preferences", () => {
 
 	it("renders one header control chrome across every active prototype", async () => {
 		const failures: string[] = [];
+		let page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+		page.setDefaultNavigationTimeout(10_000);
 
-		for (const prototype of readManifest().pages.filter(isActiveRoutePrototype)) {
-			const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+		try {
+			for (const prototype of readManifest().pages.filter(isActiveRoutePrototype)) {
+				try {
+					await page.goto(`file://${join(prototypesDir, prototype.file)}`, {
+						waitUntil: "domcontentloaded",
+						timeout: 10_000,
+					});
 
-			try {
-				await page.goto(`file://${join(prototypesDir, prototype.file)}`);
-				await page.waitForLoadState("domcontentloaded");
+					const controls = await page.evaluate<HeaderControlStyle[]>(() => {
+						const selectors: Array<{ kind: HeaderControlStyle["kind"]; selector: string }> = [
+							{ kind: "command", selector: ".shell-header .header-command-trigger" },
+							{ kind: "icon", selector: ".shell-header .header-utility-btn:not(.header-command-trigger)" },
+							{ kind: "icon", selector: ".shell-header .header-action-btn" },
+							{ kind: "icon", selector: ".shell-header .header-btn-badge" },
+							{ kind: "local", selector: ".shell-header .header-actions :is(.btn, .btn-sm)" },
+						];
 
-				const controls = await page.evaluate<HeaderControlStyle[]>(() => {
-					const selectors: Array<{ kind: HeaderControlStyle["kind"]; selector: string }> = [
-						{ kind: "command", selector: ".shell-header .header-command-trigger" },
-						{ kind: "icon", selector: ".shell-header .header-utility-btn:not(.header-command-trigger)" },
-						{ kind: "icon", selector: ".shell-header .header-action-btn" },
-						{ kind: "icon", selector: ".shell-header .header-btn-badge" },
-						{ kind: "local", selector: ".shell-header .header-actions :is(.btn, .btn-sm)" },
-					];
+						return selectors.flatMap(({ kind, selector }) =>
+							Array.from(document.querySelectorAll<HTMLElement>(selector)).map((element) => {
+								const rect = element.getBoundingClientRect();
+								const style = getComputedStyle(element);
 
-					return selectors.flatMap(({ kind, selector }) =>
-						Array.from(document.querySelectorAll<HTMLElement>(selector)).map((element) => {
-							const rect = element.getBoundingClientRect();
-							const style = getComputedStyle(element);
-
-							return {
-								kind,
-								label:
-									element.getAttribute("aria-label") ??
-									element.getAttribute("title") ??
-									element.textContent?.replace(/\s+/g, " ").trim() ??
-									selector,
-								width: Math.round(rect.width),
-								height: Math.round(rect.height),
-								fontSize: style.fontSize,
-								color: style.color,
-								backgroundColor: style.backgroundColor,
-								borderColor: style.borderColor,
-								borderWidth: style.borderWidth,
-								borderRadius: style.borderRadius,
-							};
-						}),
-					);
-				});
-
-				const reference = controls.find((control) => control.kind === "icon");
-				if (!reference) {
-					throw new Error("missing icon header control reference");
-				}
-
-				for (const control of controls) {
-					if (control.kind === "command" && control.width !== 176) {
-						failures.push(`${prototype.id}:${control.label}: expected command width 176, got ${control.width}`);
-					}
-					if (control.kind === "icon" && control.width !== 32) {
-						failures.push(`${prototype.id}:${control.label}: expected icon width 32, got ${control.width}`);
-					}
-					if (control.height !== 32) {
-						failures.push(`${prototype.id}:${control.label}: expected height 32, got ${control.height}`);
-					}
-					if (control.fontSize !== "12px") {
-						failures.push(`${prototype.id}:${control.label}: expected 12px font, got ${control.fontSize}`);
-					}
-					if (control.color !== reference.color) {
-						failures.push(`${prototype.id}:${control.label}: expected color ${reference.color}, got ${control.color}`);
-					}
-					if (control.backgroundColor !== reference.backgroundColor) {
-						failures.push(
-							`${prototype.id}:${control.label}: expected background ${reference.backgroundColor}, got ${control.backgroundColor}`,
+								return {
+									kind,
+									label:
+										element.getAttribute("aria-label") ??
+										element.getAttribute("title") ??
+										element.textContent?.replace(/\s+/g, " ").trim() ??
+										selector,
+									width: Math.round(rect.width),
+									height: Math.round(rect.height),
+									fontSize: style.fontSize,
+									color: style.color,
+									backgroundColor: style.backgroundColor,
+									borderColor: style.borderColor,
+									borderWidth: style.borderWidth,
+									borderRadius: style.borderRadius,
+								};
+							}),
 						);
+					});
+
+					const reference = controls.find((control) => control.kind === "icon");
+					if (!reference) {
+						throw new Error("missing icon header control reference");
 					}
-					if (control.borderColor !== reference.borderColor) {
-						failures.push(
-							`${prototype.id}:${control.label}: expected border color ${reference.borderColor}, got ${control.borderColor}`,
-						);
+
+					for (const control of controls) {
+						if (control.kind === "command" && control.width !== 176) {
+							failures.push(`${prototype.id}:${control.label}: expected command width 176, got ${control.width}`);
+						}
+						if (control.kind === "icon" && control.width !== 32) {
+							failures.push(`${prototype.id}:${control.label}: expected icon width 32, got ${control.width}`);
+						}
+						if (control.height !== 32) {
+							failures.push(`${prototype.id}:${control.label}: expected height 32, got ${control.height}`);
+						}
+						if (control.fontSize !== "12px") {
+							failures.push(`${prototype.id}:${control.label}: expected 12px font, got ${control.fontSize}`);
+						}
+						if (control.color !== reference.color) {
+							failures.push(`${prototype.id}:${control.label}: expected color ${reference.color}, got ${control.color}`);
+						}
+						if (control.backgroundColor !== reference.backgroundColor) {
+							failures.push(
+								`${prototype.id}:${control.label}: expected background ${reference.backgroundColor}, got ${control.backgroundColor}`,
+							);
+						}
+						if (control.borderColor !== reference.borderColor) {
+							failures.push(
+								`${prototype.id}:${control.label}: expected border color ${reference.borderColor}, got ${control.borderColor}`,
+							);
+						}
+						if (control.borderWidth !== "1px") {
+							failures.push(`${prototype.id}:${control.label}: expected 1px border, got ${control.borderWidth}`);
+						}
+						if (control.borderRadius !== "6px") {
+							failures.push(`${prototype.id}:${control.label}: expected 6px radius, got ${control.borderRadius}`);
+						}
 					}
-					if (control.borderWidth !== "1px") {
-						failures.push(`${prototype.id}:${control.label}: expected 1px border, got ${control.borderWidth}`);
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					if (!message.includes("Target page") && !message.includes("browser has been closed")) {
+						failures.push(`${prototype.id}: ${message}`);
+						continue;
 					}
-					if (control.borderRadius !== "6px") {
-						failures.push(`${prototype.id}:${control.label}: expected 6px radius, got ${control.borderRadius}`);
-					}
+
+					await closePageIfOpen(page);
+					await closeBrowserIfOpen(browser);
+					browser = await launchViewPreferencesBrowser();
+					page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+					page.setDefaultNavigationTimeout(10_000);
+					failures.push(`${prototype.id}: ${message}`);
 				}
-			} catch (error) {
-				const message = error instanceof Error ? error.message : String(error);
-				failures.push(`${prototype.id}: ${message}`);
-			} finally {
-				await closePageIfOpen(page);
 			}
+		} finally {
+			await closePageIfOpen(page);
 		}
 
 		expect(failures).toEqual([]);

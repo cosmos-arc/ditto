@@ -32,7 +32,7 @@ export const PROTOTYPE_SOURCES = [
 
 export const SHELL_SLOT_MAP: Record<ShellFamily, string[]> = {
   "radar": ["strip", "main", "right-rail", "tab-band", "context-bar", "scope-strip", "bottom-tab-band"],
-  "studio": ["header", "tabs", "main", "detail", "source", "inspector", "modes"],
+  "studio": ["header", "tabs", "source", "main", "inspector", "adoption", "graph", "modes"],
   "catalog": ["toolbar", "main", "detail", "header"],
   "object-hub": ["meta", "tabs", "main", "bottom"],
   "command-center": ["pulse", "main", "sidebar"],
@@ -120,7 +120,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-northbound-detail']",
+        "prototypeSelector": "#overlay-northbound-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -137,7 +137,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-sector-detail']",
+        "prototypeSelector": "#overlay-sector-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -154,7 +154,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-filter-panel']",
+        "prototypeSelector": "#overlay-filter-panel",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -171,7 +171,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-ai-analysis']",
+        "prototypeSelector": "#overlay-ai-analysis",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -197,9 +197,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     pagePattern: "studio-builder",
     shellFamily: "studio",
     prototypeSource: "prototype-backed",
-    prototypeRef: "docs/designs/specs/prototypes/page-agent-console.html",
-    requiredSlots: ["header", "tabs", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "no-agents", "agent-running"],
+    prototypeRef: "docs/designs/specs/prototypes/page-agent-console-v2.html",
+    requiredSlots: ["header", "tabs", "source", "main", "inspector"],
+    requiredStates: ["loading", "empty", "error", "stale", "no-agents", "agent-running", "partial", "blocked", "waiting-approval", "guardrail-blocked", "quality-run"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "missing",
@@ -218,7 +218,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-plan-create']",
+        "prototypeSelector": "#overlay-plan-create",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -235,7 +235,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-run-rerun']",
+        "prototypeSelector": "#overlay-run-rerun",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -252,7 +252,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-approval-confirm']",
+        "prototypeSelector": "#overlay-approval-confirm",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -269,7 +269,58 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-tool-trace']",
+        "prototypeSelector": "#overlay-tool-trace-detail",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "agent-console.artifact-preview",
+        "kind": "drawer",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "inspector",
+          "action": "open-artifact"
+        },
+        "prototypeSelector": "#overlay-artifact-preview",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "agent-console.guardrail-detail",
+        "kind": "drawer",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "inspector",
+          "action": "open-guardrail"
+        },
+        "prototypeSelector": "#overlay-guardrail-detail",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "agent-console.quality-run-create",
+        "kind": "sheet",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "main",
+          "action": "create-quality-run"
+        },
+        "prototypeSelector": "#overlay-quality-run-create",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -281,13 +332,150 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     a11yRoles: {
       "header": "banner",
       "tabs": "tablist",
+      "source": "complementary",
       "main": "main",
-      "detail": "complementary",
+      "inspector": "complementary",
     },
     responsiveBehavior: {
       "header": "collapsed",
       "tabs": "reflow",
-      "detail": "overlay",
+      "source": "collapsed",
+      "inspector": "overlay",
+    },
+  },
+  {
+    route: "/research/alpha",
+    pagePattern: "studio-builder",
+    shellFamily: "studio",
+    prototypeSource: "prototype-backed",
+    prototypeRef: "docs/designs/specs/prototypes/page-alpha-explorer.html",
+    requiredSlots: ["header", "source", "main", "inspector", "adoption", "graph"],
+    requiredStates: ["loading", "empty", "error", "stale", "running", "partial", "blocked", "waiting-approval", "budget-exceeded"],
+    landing: {
+      "reactRouteStatus": "missing",
+      "featureModule": "src/features/research",
+      "contractStatus": "draft",
+      "overlayStatus": "triggerable",
+      "visualAuditStatus": "missing"
+    },
+    overlays: [
+      {
+        "id": "alpha-explorer.explore-run-create",
+        "kind": "sheet",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "header",
+          "action": "start-run"
+        },
+        "prototypeSelector": "#overlay-explore-run-create",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "alpha-explorer.candidate-deep-dive",
+        "kind": "drawer",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "main",
+          "action": "open-candidate"
+        },
+        "prototypeSelector": "#overlay-candidate-deep-dive",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "alpha-explorer.adoption-confirm",
+        "kind": "modal",
+        "blocking": true,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "inspector",
+          "action": "approve-adoption"
+        },
+        "prototypeSelector": "#overlay-adoption-confirm",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "alpha-explorer.artifact-preview",
+        "kind": "drawer",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "graph",
+          "action": "open-artifact"
+        },
+        "prototypeSelector": "#overlay-artifact-preview",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "alpha-explorer.guardrail-detail",
+        "kind": "drawer",
+        "blocking": false,
+        "requiredInDefaultFlow": true,
+        "trigger": {
+          "slot": "adoption",
+          "action": "open-guardrail"
+        },
+        "prototypeSelector": "#overlay-guardrail-detail",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      },
+      {
+        "id": "alpha-explorer.copilot-context",
+        "kind": "sheet",
+        "blocking": false,
+        "requiredInDefaultFlow": false,
+        "trigger": {
+          "slot": "inspector",
+          "action": "open-copilot-context"
+        },
+        "prototypeSelector": "#overlay-copilot-context",
+        "reactComponent": "PrototypeOnlyOverlay",
+        "closeBehavior": [
+          "escape",
+          "outside-click",
+          "primary-action"
+        ]
+      }
+    ],
+    a11yRoles: {
+      "header": "banner",
+      "source": "complementary",
+      "main": "main",
+      "inspector": "complementary",
+      "adoption": "complementary",
+      "graph": "region",
+    },
+    responsiveBehavior: {
+      "header": "reflow",
+      "source": "collapsed",
+      "inspector": "overlay",
+      "adoption": "collapsed",
+      "graph": "collapsed",
     },
   },
   {
@@ -315,7 +503,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-backtest-compare']",
+        "prototypeSelector": "#overlay-backtest-compare",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -359,7 +547,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-export']",
+        "prototypeSelector": "#overlay-export",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -376,7 +564,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-enable-signal']",
+        "prototypeSelector": "#overlay-enable-signal",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -393,7 +581,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-ai-analysis']",
+        "prototypeSelector": "#overlay-ai-analysis",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -410,7 +598,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-compare-toast']",
+        "prototypeSelector": "#overlay-compare-toast",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -427,7 +615,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-compare']",
+        "prototypeSelector": "#overlay-compare",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -474,7 +662,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-market-depth']",
+        "prototypeSelector": "#overlay-market-depth",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -491,7 +679,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-index-components']",
+        "prototypeSelector": "#overlay-index-components",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -508,7 +696,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-filter-panel']",
+        "prototypeSelector": "#overlay-filter-panel",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -525,7 +713,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-event-detail']",
+        "prototypeSelector": "#overlay-event-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -542,7 +730,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-pin-viewpoint']",
+        "prototypeSelector": "#overlay-pin-viewpoint",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -591,7 +779,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-experiment-detail']",
+        "prototypeSelector": "#overlay-experiment-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -635,7 +823,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-add-backtest']",
+        "prototypeSelector": "#overlay-add-backtest",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -652,7 +840,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-add-experiment']",
+        "prototypeSelector": "#overlay-add-experiment",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -669,7 +857,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-ai-analysis']",
+        "prototypeSelector": "#overlay-ai-analysis",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -686,7 +874,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-diagnostic-detail']",
+        "prototypeSelector": "#overlay-diagnostic-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -732,7 +920,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-factor-compare']",
+        "prototypeSelector": "#overlay-factor-compare",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -758,7 +946,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-home.html",
     requiredSlots: ["pulse", "main", "sidebar"],
-    requiredStates: ["loading", "empty", "error", "stale", "no-alerts", "has-critical"],
+    requiredStates: ["loading", "empty", "error", "stale", "no-alerts", "has-critical", "daily-brief-stale", "pending-approvals", "priority-findings"],
     sidebarCollapsible: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -777,7 +965,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-signal-detail']",
+        "prototypeSelector": "#overlay-signal-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -794,7 +982,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-order-confirm']",
+        "prototypeSelector": "#overlay-order-confirm",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -811,7 +999,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-edit-workspace']",
+        "prototypeSelector": "#overlay-edit-workspace",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -828,7 +1016,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-ai-advice']",
+        "prototypeSelector": "#overlay-ai-advice",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -873,7 +1061,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-chart-toolbar']",
+        "prototypeSelector": "#overlay-chart-toolbar",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -890,7 +1078,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-news-detail']",
+        "prototypeSelector": "#overlay-news-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -907,7 +1095,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-announcement-detail']",
+        "prototypeSelector": "#overlay-announcement-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -924,7 +1112,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-add-watchlist']",
+        "prototypeSelector": "#overlay-add-watchlist",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -941,7 +1129,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-send-research']",
+        "prototypeSelector": "#overlay-send-research",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -958,7 +1146,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-halt-detail']",
+        "prototypeSelector": "#overlay-halt-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1004,7 +1192,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-event-detail']",
+        "prototypeSelector": "#overlay-event-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1021,7 +1209,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-reminder']",
+        "prototypeSelector": "#overlay-reminder",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1038,7 +1226,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-intelligence']",
+        "prototypeSelector": "#overlay-intelligence",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1084,7 +1272,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-intelligence-detail']",
+        "prototypeSelector": "#overlay-intelligence-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1101,7 +1289,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-custom-filter']",
+        "prototypeSelector": "#overlay-custom-filter",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1118,7 +1306,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-bookmark-success']",
+        "prototypeSelector": "#overlay-bookmark-success",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1135,7 +1323,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-delete-confirm']",
+        "prototypeSelector": "#overlay-delete-confirm",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1152,7 +1340,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-send-to-copilot']",
+        "prototypeSelector": "#overlay-send-to-copilot",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1198,7 +1386,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-save-preset']",
+        "prototypeSelector": "#overlay-save-preset",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1215,7 +1403,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-column-manage']",
+        "prototypeSelector": "#overlay-column-manage",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1232,7 +1420,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-compare']",
+        "prototypeSelector": "#overlay-compare",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1249,7 +1437,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-generate-pool']",
+        "prototypeSelector": "#overlay-generate-pool",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1266,7 +1454,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-export']",
+        "prototypeSelector": "#overlay-export",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1311,7 +1499,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-cancel-confirm']",
+        "prototypeSelector": "#overlay-cancel-confirm",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1328,7 +1516,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-retry-submit']",
+        "prototypeSelector": "#overlay-retry-submit",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1345,7 +1533,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "select-order"
         },
-        "prototypeSelector": "[data-overlay='overlay-order-detail']",
+        "prototypeSelector": "#overlay-order-detail",
         "reactComponent": "OrderDetailPanel",
         "closeBehavior": [
           "escape",
@@ -1362,7 +1550,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "health",
           "action": "batch-cancel"
         },
-        "prototypeSelector": "[data-overlay='overlay-batch-cancel']",
+        "prototypeSelector": "#overlay-batch-cancel",
         "reactComponent": "BatchCancelDialog",
         "closeBehavior": [
           "escape",
@@ -1388,7 +1576,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-platform-settings.html",
     requiredSlots: ["health", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "settings-dirty"],
+    requiredStates: ["loading", "empty", "error", "stale", "settings-dirty", "ai-policy-dirty", "guardrail-failed", "tool-permission-selected"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "missing",
@@ -1407,7 +1595,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-datasource-test']",
+        "prototypeSelector": "#overlay-datasource-test",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1424,7 +1612,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-broker-test']",
+        "prototypeSelector": "#overlay-broker-test",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1441,7 +1629,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-reset-config']",
+        "prototypeSelector": "#overlay-reset-config",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1486,7 +1674,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-pipeline-rerun']",
+        "prototypeSelector": "#overlay-pipeline-rerun",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1503,7 +1691,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-alert-handle']",
+        "prototypeSelector": "#overlay-alert-handle",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1520,7 +1708,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-task-detail']",
+        "prototypeSelector": "#overlay-task-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1565,7 +1753,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-position-detail']",
+        "prototypeSelector": "#overlay-position-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1582,7 +1770,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-trade-detail']",
+        "prototypeSelector": "#overlay-trade-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1599,7 +1787,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-confirm-close-all']",
+        "prototypeSelector": "#overlay-confirm-close-all",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1646,7 +1834,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-ai-regime']",
+        "prototypeSelector": "#overlay-ai-regime",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1692,7 +1880,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-new-backtest']",
+        "prototypeSelector": "#overlay-new-backtest",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1709,7 +1897,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-new-strategy']",
+        "prototypeSelector": "#overlay-new-strategy",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1726,7 +1914,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-new-experiment']",
+        "prototypeSelector": "#overlay-new-experiment",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1743,7 +1931,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-run-detail']",
+        "prototypeSelector": "#overlay-run-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1760,7 +1948,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-review-action']",
+        "prototypeSelector": "#overlay-review-action",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1807,7 +1995,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-stress-config']",
+        "prototypeSelector": "#overlay-stress-config",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1824,7 +2012,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "select-breach"
         },
-        "prototypeSelector": "[data-overlay='overlay-breach-detail']",
+        "prototypeSelector": "#overlay-breach-detail",
         "reactComponent": "BreachDetailContent",
         "closeBehavior": [
           "escape",
@@ -1841,7 +2029,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "analysis",
           "action": "edit-rule"
         },
-        "prototypeSelector": "[data-overlay='overlay-rule-editor']",
+        "prototypeSelector": "#overlay-rule-editor",
         "reactComponent": "RiskRuleEditorSheet",
         "closeBehavior": [
           "escape",
@@ -1869,7 +2057,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-signals-inbox.html",
     requiredSlots: ["health", "main", "detail"],
-    requiredStates: ["loading", "empty", "error", "stale", "selected-row", "sheet-open"],
+    requiredStates: ["loading", "empty", "error", "stale", "selected-row", "sheet-open", "ai-review", "risk-pass", "risk-warn", "risk-block", "evidence-open"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "implemented",
@@ -1888,7 +2076,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "detail",
           "action": "confirm-signal"
         },
-        "prototypeSelector": "[data-overlay='overlay-order-confirm']",
+        "prototypeSelector": "#overlay-order-confirm",
         "reactComponent": "SignalDetailPanel",
         "closeBehavior": [
           "escape",
@@ -1905,7 +2093,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "detail",
           "action": "ai-read"
         },
-        "prototypeSelector": "[data-overlay='overlay-ai-read']",
+        "prototypeSelector": "#overlay-ai-read",
         "reactComponent": "SignalAiReadDialog",
         "closeBehavior": [
           "escape",
@@ -1922,7 +2110,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-batch-confirm']",
+        "prototypeSelector": "#overlay-batch-confirm",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1939,7 +2127,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-signal-confirm-to-order']",
+        "prototypeSelector": "#overlay-signal-confirm-to-order",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -1965,7 +2153,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-strategies-detail.html",
     requiredSlots: ["meta", "tabs", "main", "bottom"],
-    requiredStates: ["loading", "empty", "error", "stale", "not-found"],
+    requiredStates: ["loading", "empty", "error", "stale", "not-found", "optimization-pending", "optimization-simulating", "optimization-simulated", "optimization-approved", "optimization-expired"],
     landing: {
       "reactRouteStatus": "missing",
       "featureModule": "src/features/strategy",
@@ -1983,7 +2171,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-delete-strategy']",
+        "prototypeSelector": "#overlay-delete-strategy",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2000,7 +2188,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-submit-backtest']",
+        "prototypeSelector": "#overlay-submit-backtest",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2017,7 +2205,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-copy-strategy']",
+        "prototypeSelector": "#overlay-copy-strategy",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2034,7 +2222,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-version-rollback']",
+        "prototypeSelector": "#overlay-version-rollback",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2080,7 +2268,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-strategy-clone']",
+        "prototypeSelector": "#overlay-strategy-clone",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2097,7 +2285,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-strategy-delete']",
+        "prototypeSelector": "#overlay-strategy-delete",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2123,7 +2311,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     prototypeSource: "prototype-backed",
     prototypeRef: "docs/designs/specs/prototypes/page-strategy-studio.html",
     requiredSlots: ["source", "main", "inspector", "modes"],
-    requiredStates: ["loading", "empty", "error", "stale", "no-session", "running"],
+    requiredStates: ["loading", "empty", "error", "stale", "no-session", "running", "guided", "agent-running", "waiting-approval", "blocked"],
     hasStatusBar: true,
     landing: {
       "reactRouteStatus": "missing",
@@ -2142,7 +2330,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-delete-strategy']",
+        "prototypeSelector": "#overlay-delete-strategy",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2159,7 +2347,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-save-strategy']",
+        "prototypeSelector": "#overlay-save-strategy",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2176,7 +2364,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-validation-toast']",
+        "prototypeSelector": "#overlay-validation-toast",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2193,7 +2381,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-backtest-config']",
+        "prototypeSelector": "#overlay-backtest-config",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2210,7 +2398,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-factor-preview']",
+        "prototypeSelector": "#overlay-factor-preview",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2257,7 +2445,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-pause-trading']",
+        "prototypeSelector": "#overlay-pause-trading",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2274,7 +2462,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-position-detail']",
+        "prototypeSelector": "#overlay-position-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2291,7 +2479,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-risk-alert-detail']",
+        "prototypeSelector": "#overlay-risk-alert-detail",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2308,7 +2496,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-limit-status']",
+        "prototypeSelector": "#overlay-limit-status",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2354,7 +2542,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-universe-edit']",
+        "prototypeSelector": "#overlay-universe-edit",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2371,7 +2559,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-universe-delete']",
+        "prototypeSelector": "#overlay-universe-delete",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2415,7 +2603,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-add-instrument']",
+        "prototypeSelector": "#overlay-add-instrument",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",
@@ -2432,7 +2620,7 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
           "slot": "main",
           "action": "open-overlay"
         },
-        "prototypeSelector": "[data-overlay='overlay-bulk-delete']",
+        "prototypeSelector": "#overlay-bulk-delete",
         "reactComponent": "PrototypeOnlyOverlay",
         "closeBehavior": [
           "escape",

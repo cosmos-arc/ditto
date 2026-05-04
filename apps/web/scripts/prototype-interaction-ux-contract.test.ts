@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
 import { describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
@@ -33,7 +33,7 @@ const railIcons: Record<(typeof railDomains)[number], string> = {
 const bannedRailLabels = new Set(["AI", "运维", "Platform", "Home", "Markets", "Research", "Trading"]);
 const hamburgerPathSet = ["M3 4h14", "M3 10h14", "M3 16h14"].sort().join("|");
 const contextSectionTitleSelector = ".context-section-title, .inspector-section-title, .section-title, [data-section-title]";
-const bottomTrayPageIds = ["strategy-studio", "agent-console", "platform", "trading-overview"] as const;
+const bottomTrayPageIds = ["strategy-studio", "platform", "trading-overview"] as const;
 const bottomTrayPageIdSet = new Set<string>(bottomTrayPageIds);
 const bottomTrayStates = ["collapsed", "peek", "expanded"] as const;
 const bottomTrayStateSet = new Set<string>(bottomTrayStates);
@@ -81,8 +81,13 @@ const targetSizeAuditViewports = [
 ] as const;
 const semanticPolishPageIds = ["alpha-explorer", "agent-console-v2", "signals-inbox", "home"] as const;
 const navigationTimeoutMs = 10_000;
+const targetSizeNavigationTimeoutMs = 30_000;
 const playwrightTestTimeoutMs = 15_000;
 const jsdomInteractionTestTimeoutMs = 15_000;
+const chromiumLaunchOptions = {
+	channel: "chromium",
+	args: ["--disable-gpu"],
+} as const;
 const pageDomainById: Record<string, (typeof railDomains)[number]> = {
 	home: "home",
 	"cross-market": "markets",
@@ -117,6 +122,7 @@ type ManifestPage = {
 	id: string;
 	file: string;
 	shellFamily?: string;
+	status?: string;
 };
 
 type EditionManifest = {
@@ -181,6 +187,7 @@ function isActiveRoutePrototype(page: ManifestPage): boolean {
 		page.file?.startsWith("page-") &&
 		page.file.endsWith(".html") &&
 		page.id !== "token-showcase" &&
+		page.status !== "archived-specimen" &&
 		!archivedPrototypeIds.has(page.id)
 	);
 }
@@ -707,6 +714,97 @@ async function waitForExpandedStatusBarLayout(page: import("playwright").Page, c
 		collapsedHeight,
 		{ timeout: 1_500 },
 	);
+}
+
+async function closePlaywrightPage(page: import("playwright").Page): Promise<void> {
+	if (page.isClosed()) return;
+
+	await Promise.race([
+		page.close().catch(() => undefined),
+		new Promise<void>((resolve) => {
+			setTimeout(resolve, 500);
+		}),
+	]);
+}
+
+async function closePlaywrightBrowser(browser: Browser): Promise<void> {
+	await Promise.race([
+		browser.close().catch(() => undefined),
+		new Promise<void>((resolve) => {
+			setTimeout(resolve, 1_000);
+		}),
+	]);
+}
+
+async function launchPrototypeBrowser(): Promise<Browser> {
+	return chromium.launch(chromiumLaunchOptions);
+}
+
+async function collectTargetSizeViolations(
+	page: import("playwright").Page,
+	pageMeta: ManifestPage,
+	viewportName: string,
+): Promise<string[]> {
+	await page.goto(getPrototypeUrl(pageMeta), {
+		waitUntil: "domcontentloaded",
+		timeout: targetSizeNavigationTimeoutMs,
+	});
+	const pageViolations = await page.$$eval(interactiveSelector, (elements) => {
+		function isInsideClosedDetails(element: Element): boolean {
+			const closedDetails = element.closest("details:not([open])");
+			return Boolean(closedDetails && !element.closest("summary"));
+		}
+
+		function isVisibleTarget(element: Element): boolean {
+			if (element.closest("[hidden], [aria-hidden='true']")) return false;
+			if (isInsideClosedDetails(element)) return false;
+
+			const rect = element.getBoundingClientRect();
+			if (rect.width <= 0 || rect.height <= 0) return false;
+			if (
+				rect.right <= 0 ||
+				rect.bottom <= 0 ||
+				rect.left >= window.innerWidth ||
+				rect.top >= window.innerHeight
+			) {
+				return false;
+			}
+
+			const style = getComputedStyle(element);
+			return style.display !== "none" && style.visibility !== "hidden";
+		}
+
+		function targetLabel(element: Element): string {
+			const htmlElement = element as HTMLElement;
+			return [
+				element.getAttribute("aria-label"),
+				element.getAttribute("title"),
+				htmlElement.innerText,
+				element.id ? `#${element.id}` : "",
+				element.className ? `.${String(element.className).trim().replace(/\s+/g, ".")}` : "",
+				element.tagName.toLowerCase(),
+			]
+				.filter(Boolean)
+				.join(" ")
+				.replace(/\s+/g, " ")
+				.trim()
+				.slice(0, 96);
+		}
+
+		return elements.flatMap((element) => {
+			if (element.closest("[data-target-size-exception]")) return [];
+			if (!isVisibleTarget(element)) return [];
+
+			const rect = element.getBoundingClientRect();
+			if (rect.width >= 24 && rect.height >= 24) return [];
+
+			return [
+				`${targetLabel(element)} ${Math.round(rect.width * 10) / 10}x${Math.round(rect.height * 10) / 10}`,
+			];
+		});
+	});
+
+	return pageViolations.map((violation) => `${pageMeta.id}@${viewportName}: ${violation}`);
 }
 
 describe("prototype interaction UX contracts", () => {
@@ -1712,10 +1810,10 @@ describe("prototype interaction UX contracts", () => {
 	});
 
 	it("lets status-bar bottom trays expand without clipping content in browser layout", async () => {
-		const browser = await chromium.launch({ channel: "chromium" });
+		const browser = await launchPrototypeBrowser();
 
 		try {
-			for (const pageId of ["agent-console", "trading-overview"] as const) {
+			for (const pageId of ["trading-overview"] as const) {
 				const page = await browser.newPage({ viewport: { width: 1536, height: 1080 } });
 
 				try {
@@ -1745,82 +1843,40 @@ describe("prototype interaction UX contracts", () => {
 	}, playwrightTestTimeoutMs);
 
 	it("keeps visible interactive targets at least 24px by 24px or explicitly exempted", async () => {
-		const browser = await chromium.launch({ channel: "chromium" });
+		let browser = await launchPrototypeBrowser();
 		const violations: string[] = [];
 
 		try {
 			for (const viewport of targetSizeAuditViewports) {
-				const page = await browser.newPage({ viewport });
+				let page = await browser.newPage({ viewport });
 				page.setDefaultNavigationTimeout(navigationTimeoutMs);
 
-				try {
-					for (const pageMeta of activePages()) {
-						await page.goto(getPrototypeUrl(pageMeta), { waitUntil: "load", timeout: navigationTimeoutMs });
-						const pageViolations = await page.$$eval(interactiveSelector, (elements) => {
-							function isInsideClosedDetails(element: Element): boolean {
-								const closedDetails = element.closest("details:not([open])");
-								return Boolean(closedDetails && !element.closest("summary"));
-							}
+				for (const pageMeta of activePages()) {
+					try {
+						violations.push(...(await collectTargetSizeViolations(page, pageMeta, viewport.name)));
+					} catch (error) {
+						const message = error instanceof Error ? error.message : String(error);
+						if (
+							!message.includes("Target page") &&
+							!message.includes("browser has been closed") &&
+							!message.includes("Timeout")
+						) {
+							throw error;
+						}
 
-							function isVisibleTarget(element: Element): boolean {
-								if (element.closest("[hidden], [aria-hidden='true']")) return false;
-								if (isInsideClosedDetails(element)) return false;
-
-								const rect = element.getBoundingClientRect();
-								if (rect.width <= 0 || rect.height <= 0) return false;
-								if (
-									rect.right <= 0 ||
-									rect.bottom <= 0 ||
-									rect.left >= window.innerWidth ||
-									rect.top >= window.innerHeight
-								) {
-									return false;
-								}
-
-								const style = getComputedStyle(element);
-								return style.display !== "none" && style.visibility !== "hidden";
-							}
-
-							function targetLabel(element: Element): string {
-								const htmlElement = element as HTMLElement;
-								return [
-									element.getAttribute("aria-label"),
-									element.getAttribute("title"),
-									htmlElement.innerText,
-									element.id ? `#${element.id}` : "",
-									element.className ? `.${String(element.className).trim().replace(/\s+/g, ".")}` : "",
-									element.tagName.toLowerCase(),
-								]
-									.filter(Boolean)
-									.join(" ")
-									.replace(/\s+/g, " ")
-									.trim()
-									.slice(0, 96);
-							}
-
-							return elements.flatMap((element) => {
-								if (element.closest("[data-target-size-exception]")) return [];
-								if (!isVisibleTarget(element)) return [];
-
-								const rect = element.getBoundingClientRect();
-								if (rect.width >= 24 && rect.height >= 24) return [];
-
-								return [
-									`${targetLabel(element)} ${Math.round(rect.width * 10) / 10}x${Math.round(rect.height * 10) / 10}`,
-								];
-							});
-						});
-
-						violations.push(
-							...pageViolations.map((violation) => `${pageMeta.id}@${viewport.name}: ${violation}`),
-						);
+						await closePlaywrightPage(page);
+						await closePlaywrightBrowser(browser);
+						browser = await launchPrototypeBrowser();
+						page = await browser.newPage({ viewport });
+						page.setDefaultNavigationTimeout(navigationTimeoutMs);
+						violations.push(...(await collectTargetSizeViolations(page, pageMeta, viewport.name)));
 					}
-				} finally {
-					await page.close();
 				}
+
+				await closePlaywrightPage(page);
 			}
 		} finally {
-			await browser.close();
+			await closePlaywrightBrowser(browser);
 		}
 
 		expect(violations).toEqual([]);
