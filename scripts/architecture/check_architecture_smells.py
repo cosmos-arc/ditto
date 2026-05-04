@@ -9,17 +9,17 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 4. Platform must not contain business table prefixes
 5. Production packages must not import ditto_analysis
 6. Kernel must not import ditto_platform
+7. Packages must not re-export symbols imported from other Ditto packages
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
     python scripts/architecture/check_architecture_smells.py --verbose
 """
 
-from __future__ import annotations
-
 import argparse
 import ast
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -127,6 +127,17 @@ STALE_ACTIVE_PACKAGE_REFERENCES = (
     "→ analytics",
     "Analytics",
 )
+
+
+@dataclass(frozen=True)
+class CrossPackageExport:
+    """A public symbol exported from a package that does not own it."""
+
+    path: str
+    exported_name: str
+    imported_from: str
+    owner_package: str
+    source_package: str
 
 
 def iter_source_files() -> list[Path]:
@@ -341,6 +352,177 @@ _IMPORT_TO_PKG: dict[str, str] = {
 
 _PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
 
+# Exact cross-package export exceptions only. Every entry must include a
+# design-boundary reason in the value before it is added here.
+ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {}
+_MIN_PACKAGE_SOURCE_PARTS = 4
+
+
+def _owner_package_for_source(path: Path, root: Path) -> str | None:
+    try:
+        rel_path = path.relative_to(root)
+    except ValueError:
+        return None
+    if len(rel_path.parts) < _MIN_PACKAGE_SOURCE_PARTS:
+        return None
+    if rel_path.parts[0] != "packages" or rel_path.parts[2] != "src":
+        return None
+    return rel_path.parts[1]
+
+
+def _is_all_target(target: ast.expr) -> bool:
+    return isinstance(target, ast.Name) and target.id == "__all__"
+
+
+def _literal_all_names(value: ast.expr) -> set[str]:
+    if not isinstance(value, (ast.List, ast.Tuple)):
+        return set()
+    names: set[str] = set()
+    for elt in value.elts:
+        if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+            names.add(elt.value)
+    return names
+
+
+def _all_assignment_value(node: ast.stmt) -> ast.expr | None:
+    if isinstance(node, ast.Assign) and any(
+        _is_all_target(target) for target in node.targets
+    ):
+        return node.value
+    if isinstance(node, ast.AnnAssign) and _is_all_target(node.target):
+        return node.value
+    return None
+
+
+def _collect_literal_all_names(tree: ast.Module) -> set[str]:
+    names: set[str] = set()
+    for node in tree.body:
+        value = _all_assignment_value(node)
+        if value is not None:
+            names.update(_literal_all_names(value))
+    return names
+
+
+def _is_all_assignment(node: ast.stmt) -> bool:
+    if isinstance(node, ast.Assign):
+        return any(_is_all_target(target) for target in node.targets)
+    if isinstance(node, ast.AnnAssign):
+        return _is_all_target(node.target)
+    return False
+
+
+def _is_module_docstring(node: ast.stmt) -> bool:
+    return (
+        isinstance(node, ast.Expr)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+    )
+
+
+def _is_pure_import_export_shim(tree: ast.Module) -> bool:
+    for node in tree.body:
+        if _is_module_docstring(node):
+            continue
+        if isinstance(node, ast.Import | ast.ImportFrom):
+            continue
+        if _is_all_assignment(node):
+            continue
+        return False
+    return True
+
+
+def _cross_package_imports(
+    tree: ast.Module,
+    owner_package: str,
+) -> list[tuple[str, str, str]]:
+    imports: list[tuple[str, str, str]] = []
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom) or node.module is None:
+            continue
+        source_package = _IMPORT_TO_PKG.get(node.module.split(".")[0])
+        if source_package is None or source_package == owner_package:
+            continue
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            imports.append((alias.asname or alias.name, node.module, source_package))
+    return imports
+
+
+def _find_cross_package_exports_in_file(
+    path: Path,
+    root: Path,
+) -> list[CrossPackageExport]:
+    owner_package = _owner_package_for_source(path, root)
+    if owner_package is None:
+        return []
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return []
+
+    exported_names = _collect_literal_all_names(tree)
+    cross_imports = _cross_package_imports(tree, owner_package)
+    if not cross_imports:
+        return []
+    if not exported_names and _is_pure_import_export_shim(tree):
+        exported_names = {name for name, _, _ in cross_imports}
+
+    exports: list[CrossPackageExport] = []
+    rel_path = path.relative_to(root).as_posix()
+    for exported_name, imported_from, source_package in cross_imports:
+        if exported_name not in exported_names:
+            continue
+        allow_key = (rel_path, exported_name, imported_from)
+        if allow_key in ALLOWED_CROSS_PACKAGE_EXPORTS:
+            continue
+        exports.append(
+            CrossPackageExport(
+                path=rel_path,
+                exported_name=exported_name,
+                imported_from=imported_from,
+                owner_package=owner_package,
+                source_package=source_package,
+            )
+        )
+    return exports
+
+
+def find_cross_package_exports(root: Path = ROOT) -> list[CrossPackageExport]:
+    """Find unapproved symbols re-exported from other Ditto packages."""
+    packages_root = root / "packages"
+    if not packages_root.is_dir():
+        return []
+
+    exports: list[CrossPackageExport] = []
+    for path in sorted(packages_root.glob("*/src/**/*.py")):
+        if "__pycache__" in path.parts or "tests" in path.parts:
+            continue
+        exports.extend(_find_cross_package_exports_in_file(path, root))
+
+    return sorted(
+        exports,
+        key=lambda item: (
+            item.path,
+            item.exported_name,
+            item.imported_from,
+            item.owner_package,
+            item.source_package,
+        ),
+    )
+
+
+def check_cross_package_exports(root: Path = ROOT) -> list[str]:
+    """Check for unapproved cross-package re-exports."""
+    return [
+        (
+            f"{export.path}: cross-package re-export {export.exported_name!r} "
+            f"from {export.imported_from!r} "
+            f"({export.owner_package} re-exports {export.source_package})"
+        )
+        for export in find_cross_package_exports(root)
+    ]
+
 
 def _scan_pkg_imports(src_dir: Path, pkg_name: str) -> set[str]:
     """Scan actual internal ditto-* imports from a package's src/."""
@@ -468,6 +650,14 @@ def main() -> int:
         errors,
         check_package_doc_stale_references(),
         "[OK] No stale package doc references found",
+        args.verbose,
+    )
+
+    # Check: Cross-package re-exports
+    _collect(
+        errors,
+        check_cross_package_exports(ROOT),
+        "[OK] No cross-package re-exports found",
         args.verbose,
     )
 

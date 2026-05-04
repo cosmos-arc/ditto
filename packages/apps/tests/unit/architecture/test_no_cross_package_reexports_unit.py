@@ -1,46 +1,30 @@
-"""Enforce canonical import paths for cross-package types.
+"""No hidden cross-package re-export debt."""
 
-Types owned by ditto_kernel or ditto_platform must be imported from their
-canonical location, not via ditto_data re-export shims.
-"""
-
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
-
-def _forbidden(prefix: str, suffix: str = "") -> str:
-    return f"{prefix}{suffix}"
-
-
-FORBIDDEN_IMPORTS = (
-    _forbidden("from ditto_data.models.publication_safety", " import"),
-    _forbidden("from ditto_data.models.storage", " import WriteResult"),
-    _forbidden("from ditto_data.models.storage", " import WriteStoreResult"),
-    _forbidden("from ditto_data.models", " import OnDuplicate"),
-    _forbidden("from ditto_data.models.common", " import OnDuplicate"),
-    _forbidden("from ditto_data.errors", " import Derived"),
-    _forbidden("from ditto_data.storage.base", " import ParquetStore"),
-    _forbidden("from ditto_data.storage.base", " import MergeResult"),
-    _forbidden("from ditto_data.storage.base", " import PartitionStrategy"),
-    _forbidden("from ditto_data.storage.base", " import YearlyPartition"),
-    _forbidden("from ditto_data.storage.base", " import DatasetReader"),
-    _forbidden("from ditto_data.storage.base", " import DatasetWriter"),
-    _forbidden("from ditto_data.storage.base.parquet_store", " import"),
-    _forbidden("from ditto_data.storage.base.protocols", " import"),
-    _forbidden("from ditto_data.storage.base.partition_strategy", " import"),
+_SCRIPT = (
+    Path(__file__).resolve().parents[5]
+    / "scripts"
+    / "architecture"
+    / "check_architecture_smells.py"
 )
 
 
-_THIS_FILE = Path(__file__).resolve()
+def _load_checker() -> object:
+    spec = spec_from_file_location("check_architecture_smells", _SCRIPT)
+    if spec is None or spec.loader is None:
+        msg = f"Cannot load {_SCRIPT}"
+        raise ImportError(msg)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
-def test_source_uses_canonical_cross_package_types() -> None:
-    offenders: list[str] = []
-    for path in Path("packages").rglob("*.py"):
-        if "__pycache__" in path.parts:
-            continue
-        if path.resolve() == _THIS_FILE:
-            continue
-        text = path.read_text(encoding="utf-8")
-        if any(pattern in text for pattern in FORBIDDEN_IMPORTS):
-            offenders.append(path.as_posix())
-    assert offenders == [], "\n".join(offenders)
+def test_no_unapproved_cross_package_reexports() -> None:
+    checker = _load_checker()
+    check_cross_package_exports = checker.check_cross_package_exports  # type: ignore[attr-defined]
+
+    errors: list[str] = check_cross_package_exports(Path.cwd())
+
+    assert errors == [], "\n".join(errors)
