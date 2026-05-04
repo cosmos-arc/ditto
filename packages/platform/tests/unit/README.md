@@ -1,4 +1,4 @@
-# Infra 单元测试
+# Platform 单元测试
 
 ## 测试分类
 
@@ -16,10 +16,10 @@
 ## 运行测试
 
 ```bash
-pixi run -e dev pytest packages/infra/tests/unit -v                          # 全部
-pixi run -e dev pytest packages/infra/tests/unit/observability -v            # 可观测性
-pixi run -e dev pytest packages/infra/tests/unit/util -v                     # 工具函数
-pixi run -e dev pytest packages/infra/tests/unit/config -v                   # 配置
+pixi run -e dev pytest packages/platform/tests/unit -v                          # 全部
+pixi run -e dev pytest packages/platform/tests/unit/observability -v            # 可观测性
+pixi run -e dev pytest packages/platform/tests/unit/util -v                     # 工具函数
+pixi run -e dev pytest packages/platform/tests/unit/config -v                   # 配置
 ```
 
 ## 覆盖率要求

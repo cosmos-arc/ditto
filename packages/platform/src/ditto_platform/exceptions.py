@@ -1,10 +1,10 @@
-"""Infra domain exception root."""
+"""Platform exception root."""
 
 from ditto_kernel.exceptions import DittoError
 
 
-class InfraError(DittoError):
-    """基础设施域基础异常."""
+class PlatformError(DittoError):
+    """平台基础设施错误根."""
 
 
-__all__ = ["InfraError"]
+__all__ = ["PlatformError"]

@@ -1,10 +1,10 @@
-# ditto-interfaces
+# ditto-apps
 
 **版本**: v0.6.0 | **日期**: 2026-04-04 | **状态**: 稳定
 
 ## 概要
 
-应用边界层（Application Boundary Layer）— Ditto 系统的唯一入口。提供 HTTP API、CLI 命令、Prefect 任务调度和 DI 容器组装，不含业务逻辑（业务逻辑在 `ditto_app` 包中）。
+应用边界层（Application Boundary Layer）— Ditto 系统的唯一入口。提供 HTTP API、CLI 命令、Prefect 任务调度和 DI 容器组装，不含业务逻辑（业务逻辑在 `ditto_application` 包中）。
 
 ## 目录结构
 
@@ -41,14 +41,13 @@ interfaces/
 ## 架构定位
 
 ```
-interfaces → app ✅       （query / process / command / builders）
-interfaces → engine ✅
-interfaces → data ✅      （services / sources，通过 DI 注入）
-interfaces → analytics ✅
-interfaces → infra ✅
+apps → application ✅     （query / process / command / builders）
+apps → data ✅            （services / sources，通过 DI 注入）
+apps → analytics ✅
+apps → platform ✅
 ```
 
-Interfaces 是依赖图的末端，禁止被任何其他 ditto 包依赖。
+Apps 是依赖图的末端，禁止被任何其他 ditto 包依赖。
 
 ## 核心功能
 
@@ -84,25 +83,25 @@ ditto query market         # 数据查询
 
 ## 业务逻辑去向
 
-业务逻辑已迁入 `ditto_app` 包：
+业务逻辑已迁入 `ditto_application` 包：
 
 | 原位置 | 新位置 |
 |--------|--------|
-| services/ingestion/ | ditto_app.process.ingestion |
-| services/strategy/ | ditto_app.process.strategy |
-| services/derived/ | ditto_app.process.materialization / query.derived |
-| models/config | ditto_app.config |
+| services/ingestion/ | ditto_application.processes.ingestion |
+| services/strategy/ | ditto_application.processes.execution |
+| services/derived/ | ditto_application.processes.materialization / queries.derived |
+| models/config | ditto_application.config |
 
 ## 相关文档
 
-- [Interfaces 层规范](CLAUDE.md)
-- [App 层规范](../packages/app/CLAUDE.md)
+- [Apps 层规范](CLAUDE.md)
+- [Application 层规范](../application/CLAUDE.md)
 
 ## 变更记录
 
 ### v0.6.0 (2026-04-04)
-- 包名从 `ditto-port` 重命名为 `ditto-interfaces`
-- 业务逻辑迁移至 `ditto_app` 包，Interfaces 层变为纯编排层
+- 包名从 `ditto-interfaces` 重命名为 `ditto-apps`
+- 业务逻辑迁移至 `ditto_application` 包，Apps 层变为纯编排层
 - 目录结构扁平化，移除 services/ 子目录
 - DI 容器简化为 container.py + init_providers.py
 

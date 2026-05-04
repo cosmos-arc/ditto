@@ -12,20 +12,21 @@
 
 ```
 ┌─────────────────────────────────────┐
-│         interfaces                  │
+│         packages/apps               │
 │     (应用边界层)                     │
 ├─────────────────────────────────────┤
-│      packages/app                   │
+│      packages/application           │
 │     (应用编排层)                     │
 ├─────────────────────────────────────┤
-│      packages/analytics             │
-│     (表达式编译 + 因子 + 研究)       │
+│      packages/analysis              │
+│     (纯研究分析)                     │
 ├─────────────────────────────────────┤
-│      packages/engine                │
-│     (核心业务层)                     │
+│  packages/strategy/portfolio/risk/  │
+│  execution/backtest/features        │
+│     (领域能力平面)                   │
 ├─────────────────────────────────────┤
 │      packages/data                  │
-│     (数据访问层)                     │
+│     (数据平台)                       │
 ├─────────────────────────────────────┤
 │      packages/kernel                │
 │     (共享内核 — 零业务行为类型)       │

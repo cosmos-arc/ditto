@@ -220,10 +220,10 @@ class TestPerPackageDomainRoots:
 
         assert issubclass(AppError, DittoError)
 
-    def test_infra_error_exists(self) -> None:
-        from ditto_platform.exceptions import InfraError
+    def test_platform_error_exists(self) -> None:
+        from ditto_platform.exceptions import PlatformError
 
-        assert issubclass(InfraError, DittoError)
+        assert issubclass(PlatformError, DittoError)
 
     def test_portfolio_orphan_uses_domain_root(self) -> None:
         from ditto_portfolio.accounting.order_book import StateTransitionError
@@ -253,12 +253,12 @@ class TestPerPackageDomainRoots:
         assert issubclass(MissingDependencyError, AppError)
 
     def test_infra_orphans_use_domain_root(self) -> None:
-        from ditto_platform.exceptions import InfraError
+        from ditto_platform.exceptions import PlatformError
         from ditto_platform.foundation.concurrency.filelock import LockAcquisitionError
         from ditto_platform.foundation.config.errors import ConfigInitError
 
-        assert issubclass(ConfigInitError, InfraError)
-        assert issubclass(LockAcquisitionError, InfraError)
+        assert issubclass(ConfigInitError, PlatformError)
+        assert issubclass(LockAcquisitionError, PlatformError)
 
 
 class TestNoBareExceptionInheritance:

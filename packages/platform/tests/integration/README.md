@@ -1,4 +1,4 @@
-# Infra 集成测试
+# Platform 集成测试
 
 ## 测试分类
 
@@ -9,10 +9,10 @@
 ## 运行测试
 
 ```bash
-pixi run -e dev pytest packages/infra/tests/integration -v                   # 全部
-pixi run -e dev pytest packages/infra/tests/integration/observability -v     # 可观测性
+pixi run -e dev pytest packages/platform/tests/integration -v                   # 全部
+pixi run -e dev pytest packages/platform/tests/integration/observability -v     # 可观测性
 ```
 
 ## 说明
 
-Infra 层作为基础设施，集成测试较少，核心逻辑由单元测试覆盖。
+Platform 层作为基础设施，集成测试较少，核心逻辑由单元测试覆盖。

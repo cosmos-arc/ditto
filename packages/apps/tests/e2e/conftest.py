@@ -352,7 +352,7 @@ def generate_report(
     """自动生成 E2E 验收报告。
 
     Session 级别自动 fixture，在所有测试结束后自动生成报告。
-    报告保存至 interfaces/tests/reports/e2e_validation_YYYYMMDD.md。
+    报告保存至 packages/apps/tests/reports/e2e_validation_YYYYMMDD.md。
 
     Args:
         request: pytest fixture 请求对象。
@@ -364,6 +364,6 @@ def generate_report(
     yield
     # 所有测试结束后生成报告
     output_path = Path(
-        f"interfaces/tests/reports/e2e_validation_{date.today():%Y%m%d}.md"
+        f"packages/apps/tests/reports/e2e_validation_{date.today():%Y%m%d}.md"
     )
     reporter.generate_markdown(output_path)

@@ -9,7 +9,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from ditto_platform.exceptions import InfraError
+from ditto_platform.exceptions import PlatformError
 from ditto_platform.foundation.observability import logger
 
 try:
@@ -23,7 +23,7 @@ except ImportError as e:
 __all__ = ["FileLockManager", "LockAcquisitionError"]
 
 
-class LockAcquisitionError(InfraError):
+class LockAcquisitionError(PlatformError):
     """
     获取锁失败异常.
 

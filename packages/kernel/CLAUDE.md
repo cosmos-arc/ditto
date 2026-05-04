@@ -177,7 +177,7 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 │  kernel → backtest ❌                       │
 │  kernel → analytics ❌                      │
 │  kernel → data ❌                           │
-│  kernel → infra ❌                          │
+│  kernel → platform ❌                        │
 └─────────────────────────────────────────────┘
 ```
 

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from ditto_platform.exceptions import InfraError
+from ditto_platform.exceptions import PlatformError
 
 
-class ConfigInitError(InfraError):
+class ConfigInitError(PlatformError):
     """
     Raised when configuration initialization fails during startup.
 
