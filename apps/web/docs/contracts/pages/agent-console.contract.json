@@ -7,8 +7,7 @@
   "route": "/platform/agents",
   "pagePattern": "studio-builder",
   "shellFamily": "studio",
-  "prototypeRef": "docs/designs/specs/prototypes/page-agent-console.html",
-  "nextPrototypeRef": "docs/designs/specs/prototypes/page-agent-console-v2.html",
+  "prototypeRef": "docs/designs/specs/prototypes/page-agent-console-v2.html",
   "blueprintRefs": [
     "02_core_page_blueprints.md#15-agent-console"
   ],
@@ -32,45 +31,6 @@
     }
   ],
   "slots": [
-    {
-      "name": "header",
-      "required": true,
-      "prototypeSelector": ".shell-agent .shell-header",
-      "reactSelector": "[data-slot='header']",
-      "a11yRole": "banner",
-      "responsiveBehavior": {
-        "compact": "collapsed"
-      }
-    },
-    {
-      "name": "tabs",
-      "required": true,
-      "prototypeSelector": ".shell-agent .agent-tabs",
-      "reactSelector": "[data-slot='tabs']",
-      "a11yRole": "tablist",
-      "responsiveBehavior": {
-        "compact": "reflow"
-      }
-    },
-    {
-      "name": "main",
-      "required": true,
-      "prototypeSelector": "[data-contract-slot='main']",
-      "reactSelector": "[data-slot='main']",
-      "a11yRole": "main"
-    },
-    {
-      "name": "detail",
-      "required": true,
-      "prototypeSelector": "[data-contract-slot='detail']",
-      "reactSelector": "[data-slot='detail']",
-      "a11yRole": "complementary",
-      "responsiveBehavior": {
-        "compact": "overlay"
-      }
-    }
-  ],
-  "nextSlots": [
     {
       "name": "header",
       "required": true,
@@ -169,76 +129,6 @@
     "pixelDiffRatio": 0.02
   },
   "overlays": [
-    {
-      "id": "agent-console.plan-create",
-      "kind": "sheet",
-      "blocking": false,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
-      "prototypeSelector": "[data-overlay='overlay-plan-create']",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    },
-    {
-      "id": "agent-console.run-rerun",
-      "kind": "sheet",
-      "blocking": false,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
-      "prototypeSelector": "[data-overlay='overlay-run-rerun']",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    },
-    {
-      "id": "agent-console.approval-confirm",
-      "kind": "modal",
-      "blocking": true,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
-      "prototypeSelector": "[data-overlay='overlay-approval-confirm']",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    },
-    {
-      "id": "agent-console.tool-trace",
-      "kind": "drawer",
-      "blocking": false,
-      "requiredInDefaultFlow": true,
-      "trigger": {
-        "slot": "main",
-        "action": "open-overlay"
-      },
-      "prototypeSelector": "[data-overlay='overlay-tool-trace']",
-      "reactComponent": "PrototypeOnlyOverlay",
-      "closeBehavior": [
-        "escape",
-        "outside-click",
-        "primary-action"
-      ]
-    }
-  ],
-  "nextOverlays": [
     {
       "id": "agent-console.plan-create",
       "kind": "sheet",

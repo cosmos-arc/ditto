@@ -36,7 +36,7 @@ const tokenStabilizationSpec = join(
 	root,
 	"docs/designs/specs/15_ditto_token_stabilization_spec.md",
 );
-const expectedActiveRoutePrototypeCount = 29;
+const expectedActiveRoutePrototypeCount = 28;
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const auditedPrototypeFiles = ["page-alpha-explorer.html", "page-agent-console-v2.html"] as const;
 const prototypeStructuralDimensionTokens = {
@@ -67,6 +67,7 @@ type PageContract = {
 	shellFamily: string;
 	overlays?: Array<{ prototypeSelector: string }>;
 	nextOverlays?: Array<{ prototypeSelector: string }>;
+	nextSlots?: unknown[];
 };
 
 type CssSource = {
@@ -108,6 +109,7 @@ function isActiveRoutePrototype(page: ManifestPage): boolean {
 		page.file?.startsWith("page-") &&
 		page.file.endsWith(".html") &&
 		page.id !== "token-showcase" &&
+		page.status !== "archived-specimen" &&
 		!archivedPrototypeIds.has(page.id)
 	);
 }
@@ -729,7 +731,7 @@ function getTransitionItems(value: string): string[] {
 }
 
 describe("prototype design consistency", () => {
-	it("keeps exactly 29 active route prototypes", () => {
+	it("keeps exactly 28 active route prototypes", () => {
 		const activePages = readManifest().pages.filter(isActiveRoutePrototype);
 
 		expect(activePages).toHaveLength(expectedActiveRoutePrototypeCount);
@@ -740,6 +742,27 @@ describe("prototype design consistency", () => {
 		const inactive = auditedPrototypeFiles.filter((file) => !manifestFiles.has(file));
 
 		expect(inactive).toEqual([]);
+	});
+
+	it("keeps Agent Console v2 as the only active canonical prototype", () => {
+		const agentConsolePages = readManifest().pages.filter((page) =>
+			page.id.startsWith("agent-console"),
+		);
+		const activeAgentConsolePages = agentConsolePages.filter(isActiveRoutePrototype);
+		const canonicalContract = readContracts().find((contract) => contract.id === "agent-console");
+
+		expect(activeAgentConsolePages.map((page) => page.file)).toEqual([
+			"page-agent-console-v2.html",
+		]);
+		expect(agentConsolePages.find((page) => page.id === "agent-console")?.status).toBe(
+			"archived-specimen",
+		);
+		expect(canonicalContract?.prototypeRef).toBe(
+			"docs/designs/specs/prototypes/page-agent-console-v2.html",
+		);
+		expect(canonicalContract?.nextPrototypeRef).toBeUndefined();
+		expect(canonicalContract?.nextSlots).toBeUndefined();
+		expect(canonicalContract?.nextOverlays).toBeUndefined();
 	});
 
 	it("keeps deprecated AI route specimens in the prototype archive", () => {

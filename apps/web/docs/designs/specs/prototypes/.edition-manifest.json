@@ -634,7 +634,7 @@
     {
       "id": "agent-console",
       "file": "page-agent-console.html",
-      "status": "reviewed",
+      "status": "archived-specimen",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -663,12 +663,13 @@
       "blueprintId": 15,
       "shellFamily": "studio",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "superseded",
         "featureModule": "src/features/platform",
-        "contractStatus": "draft",
-        "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
-      }
+        "contractStatus": "superseded",
+        "overlayStatus": "archived",
+        "visualAuditStatus": "superseded"
+      },
+      "archiveNote": "2026-05-04: superseded by page-agent-console-v2.html as the canonical /platform/agents prototype."
     },
     {
       "id": "agent-console-v2",
@@ -678,7 +679,7 @@
       "styleAnchor": "platform",
       "rounds": 1,
       "createdAt": "2026-05-02",
-      "note": "2026-05-03: promoted from nextPrototypeRef candidate to active platform studio route while legacy agent-console remains active.",
+      "note": "2026-05-04: canonical /platform/agents prototype; legacy page-agent-console.html is archived-specimen.",
       "stateCoverage": {
         "tabs": 0,
         "overlays": 7,
