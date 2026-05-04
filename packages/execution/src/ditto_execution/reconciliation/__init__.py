@@ -1,9 +1,20 @@
-"""
-Reconciliation — 交易对账。
+"""Reconciliation — 交易对账。"""
 
-负责实际成交与预期交易的对比、差异检测和报告生成。
-支持盘后自动对账和异常交易标记，确保交易执行的完整性和准确性。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from dataclasses import dataclass
+
+__all__ = ["ReconciliationReport"]
+
+
+@dataclass(frozen=True)
+class ReconciliationReport:
+    """Summary of expected versus actual execution records."""
+
+    report_id: str
+    account_id: str
+    trade_date: str
+    expected_count: int
+    actual_count: int
+    unmatched_count: int = 0
+    status: str = "pending"

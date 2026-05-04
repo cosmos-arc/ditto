@@ -1,9 +1,19 @@
-"""
-Audit — 策略审计追踪。
+"""Audit — 策略审计追踪。"""
 
-记录策略运行过程中的关键决策、信号变化和执行偏差。
-支持策略回溯审计和合规检查，确保策略行为可追溯。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from dataclasses import dataclass, field
+
+__all__ = ["StrategyAuditRecord"]
+
+
+@dataclass(frozen=True)
+class StrategyAuditRecord:
+    """Strategy-owned decision trace record."""
+
+    audit_id: str
+    strategy_id: str
+    run_id: str
+    event_type: str
+    occurred_at: str
+    details: dict[str, object] = field(default_factory=dict)

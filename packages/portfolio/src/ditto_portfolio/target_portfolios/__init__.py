@@ -1,10 +1,40 @@
-"""
-Target portfolios — 目标组合构建与管理。
+"""Target portfolios — 目标组合构建与管理。"""
 
-负责目标组合的生成、存储和版本管理，包括
-从策略信号到目标权重的映射、目标组合约束校验、
-以及目标组合与实际持仓的 diff 计算。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from dataclasses import dataclass, field
+from typing import Protocol
+
+__all__ = ["TargetPortfolio", "TargetPortfolioStore"]
+
+
+@dataclass(frozen=True)
+class TargetPortfolio:
+    """Desired portfolio weights produced for a trade date."""
+
+    portfolio_id: str
+    target_id: str
+    strategy_id: str
+    trade_date: str
+    weights: dict[int, float] = field(default_factory=dict)
+    cash_weight: float = 0.0
+
+
+class TargetPortfolioStore(Protocol):
+    """Persistence contract for target portfolio DTOs."""
+
+    def save_target_portfolio(self, target: TargetPortfolio) -> None:
+        """Persist one target portfolio."""
+        ...
+
+    def get_target_portfolio(self, target_id: str) -> TargetPortfolio | None:
+        """Return one target portfolio by id."""
+        ...
+
+    def list_target_portfolios(
+        self,
+        portfolio_id: str,
+        trade_date: str | None = None,
+    ) -> list[TargetPortfolio]:
+        """List target portfolios for a portfolio, optionally by date."""
+        ...

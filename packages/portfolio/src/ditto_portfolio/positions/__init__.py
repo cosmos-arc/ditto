@@ -1,10 +1,42 @@
-"""
-Positions — 持仓管理。
+"""Positions — 持仓管理。"""
 
-负责持仓规模计算（position sizing）、持仓对账（reconciliation）、
-持仓生命周期管理（开仓/调整/平仓）。与 accounting/position 模型互补，
-positions 侧重于持仓决策逻辑而非簿记。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from dataclasses import dataclass
+from typing import Protocol
+
+__all__ = ["PositionReader", "PositionSnapshot"]
+
+
+@dataclass(frozen=True)
+class PositionSnapshot:
+    """Lifecycle-oriented position snapshot."""
+
+    portfolio_id: str
+    snapshot_date: str
+    instrument_id: int
+    quantity: int
+    average_cost: float
+    market_value: float
+    status: str = "open"
+
+
+class PositionReader(Protocol):
+    """Read-only position snapshot contract."""
+
+    def get_position(
+        self,
+        portfolio_id: str,
+        instrument_id: int,
+        snapshot_date: str,
+    ) -> PositionSnapshot | None:
+        """Return one position snapshot if available."""
+        ...
+
+    def list_positions(
+        self,
+        portfolio_id: str,
+        snapshot_date: str,
+    ) -> list[PositionSnapshot]:
+        """Return all position snapshots for a portfolio and date."""
+        ...
