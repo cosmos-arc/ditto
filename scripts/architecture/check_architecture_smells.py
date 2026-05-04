@@ -110,7 +110,7 @@ STALE_AI_RULE_REFERENCES = (
 # Stale package references that should not appear in active package docs
 # (CLAUDE.md, README.md under packages/).
 STALE_ACTIVE_PACKAGE_REFERENCES = (
-    "ditto_app",
+    "ditto_app.",  # ditto_application / ditto_apps are OK
     "ditto_analytics",
     "ditto_engine",
     "ditto_interfaces",
