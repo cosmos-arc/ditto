@@ -19,6 +19,7 @@ from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.order_book import OrderBook
 from ditto_portfolio.accounting.position import Position
 from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
 from ditto_risk.post_trade import (
     CompositePostTradeGuard,
@@ -281,9 +282,11 @@ class TestMaxDrawdownRule:
         assert actions == []
 
     def test_invalid_thresholds_raise(self) -> None:
-        with pytest.raises(ValueError, match="must be non-negative"):
+        with pytest.raises(RiskConfigurationError, match="must be non-negative"):
             MaxDrawdownRule(warning_threshold=-0.1, emergency_threshold=0.2)
-        with pytest.raises(ValueError, match=r"warning_threshold.*emergency"):
+        with pytest.raises(
+            RiskConfigurationError, match=r"warning_threshold.*emergency"
+        ):
             MaxDrawdownRule(warning_threshold=0.30, emergency_threshold=0.20)
 
 
@@ -376,9 +379,9 @@ class TestSingleLossLimitRule:
         assert actions[0].instrument_id == 1
 
     def test_invalid_threshold_raises(self) -> None:
-        with pytest.raises(ValueError, match="threshold must be positive"):
+        with pytest.raises(RiskConfigurationError, match="threshold must be positive"):
             SingleLossLimitRule(threshold=0.0)
-        with pytest.raises(ValueError, match="threshold must be positive"):
+        with pytest.raises(RiskConfigurationError, match="threshold must be positive"):
             SingleLossLimitRule(threshold=-0.1)
 
 
@@ -443,9 +446,9 @@ class TestConcentrationLimitRule:
         assert actions == []
 
     def test_invalid_max_weight_raises(self) -> None:
-        with pytest.raises(ValueError, match="max_weight must be in"):
+        with pytest.raises(RiskConfigurationError, match="max_weight must be in"):
             ConcentrationLimitRule(max_weight=0.0)
-        with pytest.raises(ValueError, match="max_weight must be in"):
+        with pytest.raises(RiskConfigurationError, match="max_weight must be in"):
             ConcentrationLimitRule(max_weight=1.5)
 
 
@@ -544,9 +547,9 @@ class TestMarketAnomalyRule:
         assert actions[0].instrument_id == 2
 
     def test_invalid_threshold_raises(self) -> None:
-        with pytest.raises(ValueError, match="threshold must be positive"):
+        with pytest.raises(RiskConfigurationError, match="threshold must be positive"):
             MarketAnomalyRule(threshold=0.0)
-        with pytest.raises(ValueError, match="threshold must be positive"):
+        with pytest.raises(RiskConfigurationError, match="threshold must be positive"):
             MarketAnomalyRule(threshold=-0.05)
 
 

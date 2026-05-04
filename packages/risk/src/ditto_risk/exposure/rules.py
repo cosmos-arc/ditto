@@ -6,6 +6,7 @@ from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting.account import AccountView
 
 from ditto_risk._validation import validate_weight
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.post_trade import (
     RiskAction,
     RiskActionType,
@@ -79,7 +80,12 @@ class MarketAnomalyRule:
 
     def __init__(self, threshold: float = 0.05) -> None:
         if threshold <= 0:
-            raise ValueError(f"threshold must be positive, got {threshold}")
+            raise RiskConfigurationError(
+                f"threshold must be positive, got {threshold}",
+                field="threshold",
+                value=threshold,
+                min_exclusive=0.0,
+            )
         self._threshold = threshold
 
     def scan(

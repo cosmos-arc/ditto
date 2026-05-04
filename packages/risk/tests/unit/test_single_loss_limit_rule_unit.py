@@ -12,6 +12,7 @@ from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.position import Position
 from ditto_risk.drawdown.rules import SingleLossLimitRule
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 IID = InstrumentId(1)
@@ -88,8 +89,8 @@ class TestSingleLossLimitRule:
         assert actions == []
 
     def test_threshold_zero_rejected(self) -> None:
-        """阈值 <= 0 时抛 ValueError。"""
-        with pytest.raises(ValueError, match="positive"):
+        """阈值 <= 0 时抛 RiskConfigurationError。"""
+        with pytest.raises(RiskConfigurationError, match="positive"):
             SingleLossLimitRule(threshold=0.0)
 
     def test_reset_is_noop(self) -> None:

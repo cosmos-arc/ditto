@@ -15,6 +15,7 @@ from ditto_execution.audit.models import (
     PreTradeDecisionPayload,
     RiskScanPayload,
 )
+from ditto_execution.errors import AuditError
 from ditto_kernel.strategy import RiskScope
 from ditto_platform.foundation import SQLitePool
 
@@ -168,6 +169,24 @@ class TestSaveRiskLog:
         assert payload["rule_id"] == "max_drawdown"
         assert payload["severity"] == "warning"
         assert payload["action_taken"] == "alert"
+
+    def test_serialize_failure_raises_audit_error(
+        self,
+        audit_service: ExecutionAuditService,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Serialization failures should cross the boundary as AuditError."""
+
+        def _fail_dump(_: object) -> bytes:
+            raise TypeError("bad payload")
+
+        monkeypatch.setattr(orjson, "dumps", _fail_dump)
+
+        with pytest.raises(AuditError, match="serialize audit payload") as exc_info:
+            audit_service.save_risk_log("run-001", (_make_risk_payload(),))
+
+        assert exc_info.value.details["record_type"] == "RiskScanPayload"
+        assert exc_info.value.details["run_id"] == "run-001"
 
     def test_empty_tuple_returns_zero(
         self, audit_service: ExecutionAuditService

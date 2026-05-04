@@ -10,6 +10,7 @@ from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_risk.drawdown.rules import MaxDrawdownRule
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
 
@@ -84,11 +85,11 @@ class TestMaxDrawdownRule:
         assert actions == []
 
     def test_invalid_thresholds_rejected(self) -> None:
-        """warning >= emergency 时抛 ValueError。"""
-        with pytest.raises(ValueError, match="warning_threshold"):
+        """warning >= emergency 时抛 RiskConfigurationError。"""
+        with pytest.raises(RiskConfigurationError, match="warning_threshold"):
             MaxDrawdownRule(warning_threshold=0.20, emergency_threshold=0.10)
 
     def test_negative_threshold_rejected(self) -> None:
-        """负阈值时抛 ValueError。"""
-        with pytest.raises(ValueError, match="non-negative"):
+        """负阈值时抛 RiskConfigurationError。"""
+        with pytest.raises(RiskConfigurationError, match="non-negative"):
             MaxDrawdownRule(warning_threshold=-0.1, emergency_threshold=0.2)

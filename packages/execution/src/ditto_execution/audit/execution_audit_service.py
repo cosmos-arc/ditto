@@ -21,6 +21,7 @@ from ditto_execution.audit.models import (
     RiskScanPayload,
     TradeFillPayload,
 )
+from ditto_execution.errors import AuditError
 
 __all__ = [
     "ExecutionAuditService",
@@ -120,7 +121,7 @@ class ExecutionAuditService:
         conn = self._pool.get_connection()
         count = 0
         for rec in records:
-            payload = self._serialize_record(rec)
+            payload = self._serialize_record(rec, run_id=run_id)
             conn.execute(
                 _INSERT_SQL,
                 (
@@ -164,7 +165,7 @@ class ExecutionAuditService:
         conn = self._pool.get_connection()
         count = 0
         for rec in records:
-            payload = self._serialize_record(rec)
+            payload = self._serialize_record(rec, run_id=run_id)
             conn.execute(
                 _INSERT_SQL,
                 (
@@ -208,7 +209,7 @@ class ExecutionAuditService:
         conn = self._pool.get_connection()
         count = 0
         for rec in records:
-            payload = self._serialize_record(rec)
+            payload = self._serialize_record(rec, run_id=run_id)
             conn.execute(
                 _INSERT_SQL,
                 (
@@ -282,6 +283,15 @@ class ExecutionAuditService:
     @staticmethod
     def _serialize_record(
         record: RiskScanPayload | PreTradeDecisionPayload | TradeFillPayload,
+        *,
+        run_id: str,
     ) -> str:
         """将 frozen dataclass 序列化为 orjson 字符串。"""
-        return orjson.dumps(dataclasses.asdict(record)).decode("utf-8")
+        try:
+            return orjson.dumps(dataclasses.asdict(record)).decode("utf-8")
+        except (TypeError, orjson.JSONEncodeError) as exc:
+            raise AuditError(
+                "failed to serialize audit payload",
+                run_id=run_id,
+                record_type=type(record).__name__,
+            ) from exc

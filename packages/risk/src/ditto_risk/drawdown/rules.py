@@ -5,6 +5,7 @@ from __future__ import annotations
 from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting.account import AccountView
 
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.post_trade import (
     RiskAction,
     RiskActionType,
@@ -32,13 +33,21 @@ class MaxDrawdownRule:
         emergency_threshold: float = 0.20,
     ) -> None:
         if warning_threshold < 0 or emergency_threshold < 0:
-            raise ValueError("thresholds must be non-negative")
+            raise RiskConfigurationError(
+                "thresholds must be non-negative",
+                warning_threshold=warning_threshold,
+                emergency_threshold=emergency_threshold,
+            )
         if warning_threshold >= emergency_threshold:
             msg = (
                 f"warning_threshold ({warning_threshold}) must be "
                 f"< emergency_threshold ({emergency_threshold})"
             )
-            raise ValueError(msg)
+            raise RiskConfigurationError(
+                msg,
+                warning_threshold=warning_threshold,
+                emergency_threshold=emergency_threshold,
+            )
         self._warning_threshold = warning_threshold
         self._emergency_threshold = emergency_threshold
         self._peak_nav: float = 0.0
@@ -114,7 +123,12 @@ class SingleLossLimitRule:
 
     def __init__(self, threshold: float = 0.15) -> None:
         if threshold <= 0:
-            raise ValueError(f"threshold must be positive, got {threshold}")
+            raise RiskConfigurationError(
+                f"threshold must be positive, got {threshold}",
+                field="threshold",
+                value=threshold,
+                min_exclusive=0.0,
+            )
         self._threshold = threshold
 
     def scan(

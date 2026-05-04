@@ -21,6 +21,7 @@ from ditto_portfolio.accounting.order_book import (
     OrderStatus,
     OrderTicket,
 )
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -852,9 +853,9 @@ class TestConcentrationPreCheck:
         assert result.decision == Decision.ACCEPT
 
     def test_invalid_max_weight_raises(self) -> None:
-        with pytest.raises(ValueError, match="max_weight must be in"):
+        with pytest.raises(RiskConfigurationError, match="max_weight must be in"):
             ConcentrationPreCheck(max_weight=0.0)
-        with pytest.raises(ValueError, match="max_weight must be in"):
+        with pytest.raises(RiskConfigurationError, match="max_weight must be in"):
             ConcentrationPreCheck(max_weight=1.5)
 
 
@@ -982,9 +983,9 @@ class TestDailyTurnoverPreCheck:
         assert result.decision == Decision.ACCEPT
 
     def test_invalid_max_turnover_raises(self) -> None:
-        with pytest.raises(ValueError, match="max_turnover must be in"):
+        with pytest.raises(RiskConfigurationError, match="max_turnover must be in"):
             DailyTurnoverPreCheck(max_turnover=0.0)
-        with pytest.raises(ValueError, match="max_turnover must be in"):
+        with pytest.raises(RiskConfigurationError, match="max_turnover must be in"):
             DailyTurnoverPreCheck(max_turnover=1.5)
 
 

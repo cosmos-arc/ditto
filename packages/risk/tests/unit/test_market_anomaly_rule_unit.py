@@ -10,6 +10,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
 from ditto_portfolio.accounting.account import AccountView
 from ditto_portfolio.accounting.cash import CashBook
+from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.exposure.rules import MarketAnomalyRule
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 
@@ -76,6 +77,6 @@ class TestMarketAnomalyRule:
         assert actions == []
 
     def test_threshold_zero_rejected(self) -> None:
-        """阈值 <= 0 时抛 ValueError。"""
-        with pytest.raises(ValueError, match="positive"):
+        """阈值 <= 0 时抛 RiskConfigurationError。"""
+        with pytest.raises(RiskConfigurationError, match="positive"):
             MarketAnomalyRule(threshold=0.0)
