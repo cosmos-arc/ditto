@@ -40,14 +40,14 @@ Token Stabilization R1 是 Ditto Design Token 体系从"设计阶段"走向"工�
 
 ### 2.1 Layer 1: Foundation — `tokens-base.css`
 
-最底层物理原语，不直接表达业务语义。总计 49 个 token：
+最底层物理原语，不直接表达业务语义。总计 52 个 token：
 
 | 类别 | Token 数 | 说明 |
 |------|---------|------|
 | 中性色 neutral | 15 | neutral-0 ~ neutral-950，OKLCH 灰阶 |
 | 品牌色 brand | 5 | brand-300 ~ brand-700，品牌强调色 |
 | 功能色 functional | 18 | green/red/amber/orange/cyan/purple 各 3 级 (400/500/600) |
-| 字号 font-size | 6 | 10/12/13/14/16/24（R1 精简后） |
+| 字号 font-size | 9 | 10/11/12/13/14/16/18/20/24（Edition v1 当前基线） |
 | 字重 font-weight | 3 | regular(400)/medium(500)/semibold(600) |
 | 字体 font-family | 3 | ui / numeric / mono |
 | 间距 spacing | 11 | 2/4/6/8/10/12/16/20/24/32/40 (4pt 体系) |
@@ -183,15 +183,20 @@ module.trading.* / module.ai.* / module.platform.*
 
 ## 3. Typography Scale
 
-R1 精简后的 6 级字号体系。与上游规范 §6 相比，移除了 11/18/20/28 四档（转为 DEPRECATED）。
+Edition v1 当前采用 9 级字号体系。`--font-size-11` 保留为 tight context token，
+仅用于 dense 非交互元数据；交互元素、表格、header、tab、button、primary answer
+等 operational selector 的最小字号为 `--font-size-12`。
 
 | Token | Value | Rem | Role | Min Layer |
 |-------|-------|-----|------|-----------|
 | `--font-size-10` | 0.625rem | 10px | 辅助标签、时间戳、元数据 | L2-L4 |
+| `--font-size-11` | 0.6875rem | 11px | Tight contexts、dense 非交互元数据 | L2-L4 |
 | `--font-size-12` | 0.75rem | 12px | 交互元素最小字号、数据值、badge | L1-L3 |
 | `--font-size-13` | 0.8125rem | 13px | **正文主体** — 全站最常用字号 | All |
 | `--font-size-14` | 0.875rem | 14px | 区块标题、section heading、面板标题 | L2-L3 |
 | `--font-size-16` | 1rem | 16px | 页面标题、大号区块标题 | L3 |
+| `--font-size-18` | 1.125rem | 18px | Sub-heading、宽屏关键摘要 | L3 |
+| `--font-size-20` | 1.25rem | 20px | Card title、重点数字模块 | L3 |
 | `--font-size-24` | 1.5rem | 24px | 大标题、页面 hero | L3 |
 
 ### 字重
@@ -222,16 +227,18 @@ R1 精简后的 6 级字号体系。与上游规范 §6 相比，移除了 11/18
 | `--line-height-normal` | 1.45 | 全局默认（body） |
 | `--line-height-relaxed` | 1.60 | 说明文字、长段落、文档型内容 |
 
-### DEPRECATED Token
+### 11px Usage Policy
 
-以下 token 在 R1 中标记为废弃，**禁止在新代码中使用**：
+`--font-size-11` 是当前 9-step scale 的有效 token，但用途受限：
 
-| Token | 原值 | 迁移路径 |
-|-------|------|----------|
-| `--font-size-11` | 0.6875rem | → `--font-size-10` 或 `--font-size-12` |
-| `--font-size-18` | 1.125rem | → `--font-size-16` |
-| `--font-size-20` | 1.25rem | → `--font-size-16` |
-| `--font-size-28` | 1.75rem | → `--font-size-24` |
+| 场景 | 规则 |
+|------|------|
+| Dense 非交互元数据 | 可使用 `--font-size-11` |
+| 交互元素（button/link/label/role button/switch/tab） | 使用 `--font-size-12` 或更大 |
+| 表格、header、tab、button、primary answer selector | 使用 `--font-size-12` 或更大 |
+| `cursor: pointer` 的 operational chip / row / target | 使用 `--font-size-12` 或更大 |
+
+28px 不在 Edition v1 当前字号集合；大标题使用 `--font-size-24`。
 
 ---
 
@@ -506,7 +513,7 @@ R1 审计范围：所有 CSS 文件中的 token 引用、hardcoded 色值、inli
 
 | 问题类型 | 数量 | 位置分布 | 严重程度 |
 |---------|------|----------|---------|
-| `font-size-11` 引用（49 layout + 56 pages + 1 token def） | 106 | layout-base.css, 6 个页面文件 | 高 |
+| operational `font-size-11` 引用 | 多处 | layout/prototype 页面 | 高 |
 | `font-size-9` 引用（未定义 token） | 4 | 页面文件 | 高 |
 | `--font-family-mono` 引用（未定义 token） | 2 | 页面文件 | 中 |
 | `data-density="ultra"`（错误名称，应为 `dense`） | 1 | 页面文件 | 中 |
@@ -518,7 +525,7 @@ R1 审计范围：所有 CSS 文件中的 token 引用、hardcoded 色值、inli
 
 | 问题类型 | Before | After | 状态 |
 |---------|--------|-------|------|
-| `font-size-11` | 106 | 0 | ✅ 已清理，迁移至 10/12 |
+| operational `font-size-11` | 多处 | 0 | ✅ 已限制在 dense 非交互元数据场景 |
 | `font-size-9` | 4 | 0 | ✅ 已清理 |
 | `--font-family-mono` (undefined) | 2 | 0 | ✅ 已补充定义 |
 | `data-density="ultra"` | 1 | 0 | ✅ 已修正为 `dense` |

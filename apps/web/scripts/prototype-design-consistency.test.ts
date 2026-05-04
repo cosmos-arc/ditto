@@ -551,10 +551,54 @@ function usesFontSizeToken(body: string, token: string): boolean {
 	);
 }
 
+function hasCursorPointer(body: string): boolean {
+	return hasDeclaration(body, "cursor", /^pointer$/i);
+}
+
+function stripSelectorForDom(selector: string): string {
+	return selector
+		.replace(/::?[a-z-]+(?:\([^)]*\))?/gi, "")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function querySelectorAllSafe(document: Document, selector: string): Element[] {
+	const domSelector = stripSelectorForDom(selector);
+	if (!domSelector) return [];
+
+	try {
+		return [...document.querySelectorAll(domSelector)];
+	} catch {
+		return [];
+	}
+}
+
+function isInteractivePrototypeElement(element: Element): boolean {
+	return element.matches(
+		"button, a, label, input, select, textarea, summary, [role='button'], [role='switch'], [role='tab']",
+	);
+}
+
 function isOperationalElevenPxSelector(selector: string): boolean {
 	const normalized = selector.toLowerCase();
 	return /(?:button|btn|tab|header|table|\btbl\b|primary-answer|interactive|\blink\b|\baction\b|role=['"]button['"])/.test(
 		normalized,
+	);
+}
+
+function hasOperationalElevenPxUsage(
+	document: Document,
+	rule: CssRule,
+	selector: string,
+	pointerSelectors: string[],
+): boolean {
+	if (isOperationalElevenPxSelector(selector) || hasCursorPointer(rule.body)) return true;
+
+	const elements = querySelectorAllSafe(document, selector);
+	return elements.some(
+		(element) =>
+			isInteractivePrototypeElement(element) ||
+			pointerSelectors.some((pointerSelector) => element.matches(stripSelectorForDom(pointerSelector))),
 	);
 }
 
@@ -2090,14 +2134,17 @@ describe("prototype design consistency", () => {
 	it("documents the Edition v1 9-step typography scale as current token truth", () => {
 		const spec = readFileSync(tokenStabilizationSpec, "utf8");
 		const deprecatedTokenClaims = [
-			/--font-size-11[^。\n]*(?:deprecated|forbidden|禁止|废弃)/i,
-			/--font-size-18[^。\n]*(?:deprecated|forbidden|禁止|废弃)/i,
-			/--font-size-20[^。\n]*(?:deprecated|forbidden|禁止|废弃)/i,
+			/(?:移除|移除了|removed)[^。\n]*(?:11|18|20)/i,
+			/--font-size-11[^。\n]*(?:deprecated|forbidden|禁止|废弃|移除|removed)/i,
+			/--font-size-18[^。\n]*(?:deprecated|forbidden|禁止|废弃|移除|removed)/i,
+			/--font-size-20[^。\n]*(?:deprecated|forbidden|禁止|废弃|移除|removed)/i,
 		];
 
 		for (const claim of deprecatedTokenClaims) {
 			expect(spec).not.toMatch(claim);
 		}
+
+		expect(spec).toMatch(/9\s*级字号体系/);
 
 		for (const token of [
 			"--font-size-10",
@@ -2117,18 +2164,26 @@ describe("prototype design consistency", () => {
 	it("keeps 11px typography out of operational selectors", () => {
 		const violations = readManifest()
 			.pages.filter(isActiveRoutePrototype)
-			.flatMap((page) =>
-				getPrototypeCssRules(page)
+			.flatMap((page) => {
+				const document = readPrototypeDocument(page);
+				const rules = getPrototypeCssRules(page);
+				const pointerSelectors = rules
+					.filter((rule) => hasCursorPointer(rule.body))
+					.flatMap((rule) => rule.selectors);
+
+				return rules
 					.filter((rule) => usesFontSizeToken(rule.body, "--font-size-11"))
 					.flatMap((rule) =>
 						rule.selectors
-							.filter(isOperationalElevenPxSelector)
+							.filter((selector) =>
+								hasOperationalElevenPxUsage(document, rule, selector, pointerSelectors),
+							)
 							.map(
 								(selector) =>
 									`${page.file}:${getLineNumber(readPrototypeHtml(page), rule.start)}:${selector}`,
 							),
-					),
-			);
+					);
+			});
 
 		expect(violations).toEqual([]);
 	});
