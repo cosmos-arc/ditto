@@ -19,6 +19,7 @@ from ditto_kernel.trading import FeeModel, FeeSchedule
 from ditto_portfolio.accounting.order_book import Order
 
 from ditto_application.contracts import CostConfig
+from ditto_application.exceptions import AppProcessError
 
 __all__ = ["OverrideFeeModel", "build_fee_model", "build_slippage_model"]
 
@@ -88,7 +89,7 @@ def build_slippage_model(
 
     - cost_config=None 或 impact_model='none' → FixedBpsSlippage
     - impact_model='volume_share' → VolumeShareSlippage
-    - 其他 → ValueError
+    - 其他 → AppProcessError
     """
     if cost_config is None or cost_config.impact_model == "none":
         return FixedBpsSlippage(bps=cost_config.slippage_bps if cost_config else 2.0)
@@ -98,4 +99,8 @@ def build_slippage_model(
             impact_factor=0.1,
         )
     msg = f"Unknown impact model: {cost_config.impact_model}"
-    raise ValueError(msg)
+    raise AppProcessError(
+        msg,
+        field="impact_model",
+        value=cost_config.impact_model,
+    )

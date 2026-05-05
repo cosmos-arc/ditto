@@ -39,6 +39,7 @@ from ditto_kernel.research import (
 )
 
 from ditto_application.config import now_iso
+from ditto_application.exceptions import AppQueryError
 
 __all__ = ["ResearchDatasetFacade"]
 
@@ -57,7 +58,7 @@ def _sanitize_table_name(dataset_id: str) -> str:
     """
     table_name = dataset_id.replace("-", "_")
     if not _VALID_TABLE_NAME.match(table_name):
-        raise ValueError(f"Invalid dataset_id for table name: {dataset_id!r}")
+        raise AppQueryError(f"Invalid dataset_id for table name: {dataset_id!r}")
     return table_name
 
 
@@ -229,7 +230,7 @@ class ResearchDatasetFacade:
         elif fmt == "sqlite":
             self._export_sqlite(df, snapshot.dataset_id, path)
         else:
-            raise ValueError(f"不支持的导出格式: {fmt}")
+            raise AppQueryError(f"不支持的导出格式: {fmt}")
 
     @staticmethod
     def _export_sqlite(
@@ -480,7 +481,7 @@ def _attach_known_at(
 ) -> pl.DataFrame:
     if known_at_policy == KnownAtPolicy.EXPLICIT_CUTOFF:
         if explicit_cutoff is None:
-            raise ValueError(
+            raise AppQueryError(
                 "explicit_cutoff is required when "
                 + "known_at_policy is explicit_cutoff"
             )

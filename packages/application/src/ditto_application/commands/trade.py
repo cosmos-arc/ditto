@@ -8,6 +8,7 @@ from typing import Literal
 from ditto_execution.models import SignalRecord
 from ditto_execution.storage.sqlite.trade.service import TradeService
 
+from ditto_application.exceptions import AppCommandError
 from ditto_application.execution_dto import (
     ManualExecutionFill,
     fill_to_record,
@@ -99,7 +100,7 @@ class RecordFillHandler:
         self._validate_intent_match(intent_record, command)
         # _validate_intent_match raises when None; narrow for type checker
         if intent_record is None:
-            raise ValueError(f"Intent not found: {command.intent_id}")
+            raise AppCommandError(f"Intent not found: {command.intent_id}")
 
         # 2. Build DTO
         fill = self._build_fill_dto(command, self._tracker)
@@ -130,35 +131,35 @@ class RecordFillHandler:
         """验证 intent 存在且身份信息匹配."""
         if intent_record is None:
             msg = f"Intent not found: {command.intent_id}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         if intent_record.strategy_id != command.strategy_id:
             msg = (
                 f"Strategy mismatch: intent={intent_record.strategy_id}, "
                 f"command={command.strategy_id}"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         if intent_record.instrument_id != command.instrument_id:
             msg = (
                 f"Instrument mismatch: intent={intent_record.instrument_id}, "
                 f"command={command.instrument_id}"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         if intent_record.direction != command.direction:
             msg = (
                 f"Direction mismatch: intent={intent_record.direction}, "
                 f"command={command.direction}"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         if intent_record.status not in {"pending", "partially_filled"}:
             msg = (
                 f"Intent {command.intent_id} status is '{intent_record.status}', "
                 f"expected 'pending' or 'partially_filled'"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
     @staticmethod
     def _build_fill_dto(
@@ -228,12 +229,12 @@ class UpdateIntentStatusHandler:
         intent = self._service.get_intent(command.intent_id)
         if intent is None:
             msg = f"Intent not found: {command.intent_id}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         # 合法状态枚举校验
         if command.status not in _VALID_INTENT_STATUSES:
             msg = f"Invalid status: {command.status}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         # 状态转换矩阵校验
         allowed = _VALID_TRANSITIONS.get(intent.status, set())
@@ -242,7 +243,7 @@ class UpdateIntentStatusHandler:
                 f"Invalid transition: '{intent.status}' -> '{command.status}'. "
                 f"Allowed: {allowed or '(terminal)'}"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         # SQL 层状态前置条件：仅当当前状态在允许转换集合内时才更新
         expected = _VALID_TRANSITIONS.get(intent.status, set())
@@ -262,5 +263,5 @@ class UpdateIntentStatusHandler:
                 f"Concurrent status conflict: intent {command.intent_id} "
                 f"was updated by another request"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
         return True

@@ -26,7 +26,7 @@ from ditto_kernel.strategy import (
     MaterializationProfile,
 )
 
-from ditto_application.exceptions import AppError
+from ditto_application.exceptions import AppProcessError
 
 __all__ = [
     "DerivedInputProvider",
@@ -73,7 +73,9 @@ class InMemoryDerivedInputProvider:
         """Load one in-memory input frame."""
         frame = self._frames.get(context.spec.id)
         if frame is None:
-            raise KeyError(f"missing input frame for derived_id={context.spec.id}")
+            raise AppProcessError(
+                f"missing input frame for derived_id={context.spec.id}"
+            )
         return frame
 
 
@@ -92,7 +94,7 @@ class UnavailableDerivedInputProvider:
 # ---------------------------------------------------------------------------
 
 
-class MissingDependencyError(AppError):
+class MissingDependencyError(AppProcessError):
     """Raised when required dependency columns are missing from input data."""
 
     def __init__(self, missing: list[str], available: list[str]) -> None:
@@ -113,47 +115,105 @@ def hydrate_spec(record: DerivedSpecRecord) -> DerivedSpec:
     """Reconstruct a DerivedSpec from its persisted record."""
     payload = record.spec_json
     return DerivedSpec(
-        id=str(payload["id"]),
-        version=_require_int_payload(payload, "version"),
-        role=DerivedRole(str(payload["role"])),
-        materialization_profile=_materialization_profile(
-            payload["materialization_profile"]
+        id=str(_require_payload(payload, "id", record.derived_id)),
+        version=_require_int_payload(payload, "version", record.derived_id),
+        role=_derived_role(
+            _require_payload(payload, "role", record.derived_id),
+            record.derived_id,
         ),
-        expression=str(payload["expression"]),
+        materialization_profile=_materialization_profile(
+            _require_payload(payload, "materialization_profile", record.derived_id),
+            record.derived_id,
+        ),
+        expression=str(_require_payload(payload, "expression", record.derived_id)),
         entity_keys=tuple(
             cast(list[str], payload.get("entity_keys", ["instrument_id"]))
         ),
         grain=cast(GrainId, str(payload.get("grain", "1d"))),
-        time_keys=None
-        if payload.get("time_keys") is None
-        else tuple(cast(list[str], payload["time_keys"])),
+        time_keys=_optional_str_tuple_payload(payload, "time_keys"),
         calendar=cast(CalendarId, str(payload.get("calendar", "cn_stock"))),
-        description=None
-        if payload.get("description") is None
-        else str(payload["description"]),
-        time_spec=_time_spec(payload.get("time_spec")),
+        description=_optional_str_payload(payload, "description"),
+        time_spec=_time_spec(payload.get("time_spec"), record.derived_id),
         operator_versions=dict(
             cast(dict[str, str], payload.get("operator_versions", {}))
         ),
-        universe_id=None
-        if payload.get("universe_id") is None
-        else str(payload["universe_id"]),
+        universe_id=_optional_str_payload(payload, "universe_id"),
         execution_policy=_execution_policy(payload.get("execution_policy")),
     )
 
 
-def _materialization_profile(value: object) -> MaterializationProfile:
-    return MaterializationProfile(str(value))
+def _derived_role(value: object, derived_id: str) -> DerivedRole:
+    normalized = str(value)
+    try:
+        return DerivedRole(normalized)
+    except ValueError:
+        msg = (
+            f"malformed derived spec payload field role has invalid value: {normalized}"
+        )
+        raise AppProcessError(
+            msg,
+            derived_id=derived_id,
+            field="role",
+            value=normalized,
+        ) from None
 
 
-def _time_spec(raw: object) -> TimeSpec | None:
+def _materialization_profile(value: object, derived_id: str) -> MaterializationProfile:
+    normalized = str(value)
+    try:
+        return MaterializationProfile(normalized)
+    except ValueError:
+        msg = (
+            "malformed derived spec payload field materialization_profile "
+            f"has invalid value: {normalized}"
+        )
+        raise AppProcessError(
+            msg,
+            derived_id=derived_id,
+            field="materialization_profile",
+            value=normalized,
+        ) from None
+
+
+def _optional_str_payload(payload: Mapping[str, object], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    return str(value)
+
+
+def _optional_str_tuple_payload(
+    payload: Mapping[str, object], key: str
+) -> tuple[str, ...] | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    return tuple(cast(list[str], value))
+
+
+def _time_spec(raw: object, derived_id: str) -> TimeSpec | None:
     if raw is None:
         return None
-    d = cast(dict[str, Any], raw)
+    if not isinstance(raw, Mapping):
+        raise AppProcessError(
+            "malformed derived spec payload field time_spec must be a mapping",
+            derived_id=derived_id,
+            field="time_spec",
+        )
+    time_spec = cast(Mapping[str, object], raw)
+    event_time_key = time_spec.get("event_time_key")
+    if event_time_key is None:
+        missing_field = "time_spec.event_time_key"
+        raise AppProcessError(
+            f"malformed derived spec payload missing required field: {missing_field}",
+            derived_id=derived_id,
+            field=missing_field,
+        )
+    availability_time_key = time_spec.get("availability_time_key")
     return TimeSpec(
-        event_time_key=str(d["event_time_key"]),
-        availability_time_key=str(d["availability_time_key"])
-        if d.get("availability_time_key")
+        event_time_key=str(event_time_key),
+        availability_time_key=str(availability_time_key)
+        if availability_time_key
         else None,
     )
 
@@ -169,10 +229,29 @@ def _execution_policy(raw: object) -> ExecutionPolicy:
     )
 
 
-def _require_int_payload(payload: Mapping[str, object], key: str) -> int:
-    value = payload[key]
+def _require_payload(
+    payload: Mapping[str, object], key: str, derived_id: str
+) -> object:
+    if key not in payload:
+        raise AppProcessError(
+            f"malformed derived spec payload missing required field: {key}",
+            derived_id=derived_id,
+            field=key,
+        )
+    return payload[key]
+
+
+def _require_int_payload(
+    payload: Mapping[str, object], key: str, derived_id: str
+) -> int:
+    value = _require_payload(payload, key, derived_id)
     if not isinstance(value, int) or isinstance(value, bool):
-        raise TypeError(f"{key} must be an int")
+        raise AppProcessError(
+            f"malformed derived spec payload field {key} must be an int",
+            derived_id=derived_id,
+            field=key,
+            value=value,
+        )
     return value
 
 

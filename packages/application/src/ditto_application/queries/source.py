@@ -9,6 +9,8 @@ from ditto_data.services.source_service import SourceService
 from ditto_data.sources.fred.fred_source import FredSource
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
+from ditto_application.exceptions import AppQueryError
+
 __all__ = ["SourceQueryFacade"]
 
 SUPPORTED_SOURCE_DATASETS: frozenset[str] = frozenset({"stock_daily"})
@@ -48,7 +50,7 @@ class SourceQueryFacade:
             ds = Dataset(dataset)
         except ValueError:
             msg = f"不支持的数据集: {dataset}"
-            raise ValueError(msg) from None
+            raise AppQueryError(msg) from None
         return ds.asset_class
 
     def resolve_source_ticker(
@@ -116,7 +118,7 @@ class SourceQueryFacade:
         This method keeps the route boundary on application-facing primitives.
         """
         if source != "tushare":
-            raise ValueError(f"不支持的数据源: {source}")
+            raise AppQueryError(f"不支持的数据源: {source}")
 
         if dataset == "stock_daily":
             return self.tushare.fetch_stock_daily(
@@ -126,6 +128,6 @@ class SourceQueryFacade:
             )
 
         supported = ", ".join(sorted(SUPPORTED_SOURCE_DATASETS))
-        raise ValueError(
+        raise AppQueryError(
             f"数据集 {dataset} 暂不支持 Source API 查询, 支持: {supported}"
         )

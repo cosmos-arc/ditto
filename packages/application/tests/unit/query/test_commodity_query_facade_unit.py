@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_data.models.source_codes import (
     COMMODITY_CODE_TO_INSTRUMENT_ID,
@@ -55,12 +56,17 @@ class TestCommodityQueryFacadeMappings:
 
         assert result == 5_100_001
 
-    def test_code_to_instrument_id_raises_for_unknown(self) -> None:
+    def test_code_to_instrument_id_raises_app_query_error_for_unknown(self) -> None:
         service = MagicMock()
         facade = CommodityQueryFacade(market_service=service)
 
-        with pytest.raises(KeyError):
+        with pytest.raises(AppQueryError, match="UNKNOWN") as exc_info:
             facade.code_to_instrument_id("UNKNOWN")
+
+        assert exc_info.value.details == {
+            "asset_class": "commodity",
+            "code": "UNKNOWN",
+        }
 
     def test_instrument_id_to_code_commodity(self) -> None:
         service = MagicMock()

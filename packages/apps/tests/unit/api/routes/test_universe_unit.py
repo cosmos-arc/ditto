@@ -15,7 +15,9 @@ from ditto_application.commands.universe import (
     DeleteCustomUniverseCommand,
     UpdateCustomUniverseCommand,
 )
+from ditto_application.exceptions import AppCommandError
 from ditto_apps.api.errors import BadRequestError, ForbiddenError, NotFoundError
+from ditto_apps.api.routes.universe import delete_universe, update_universe
 from ditto_apps.models.common import APIResponse
 from ditto_apps.models.universe import (
     CreateUniverseRequest,
@@ -262,39 +264,189 @@ class TestAPIResponseWrapping:
 
 
 # ---------------------------------------------------------------------------
-# Error handler mapping (ValueError → APIError)
+# Error handler mapping (AppCommandError → APIError)
 # ---------------------------------------------------------------------------
 
 
 class TestErrorHandlerMapping:
-    """Tests for ValueError → APIError mapping."""
+    """Tests for AppCommandError → APIError mapping."""
 
     def test_create_duplicate_id_returns_400(self) -> None:
-        """创建重复 universe_id → ValueError → BadRequestError(400)."""
-        exc = ValueError("Universe already exists: my-u")
+        """创建重复 universe_id → AppCommandError → BadRequestError(400)."""
+        exc = AppCommandError("Universe already exists: my-u")
         api_exc = BadRequestError(str(exc))
         assert api_exc.status_code == 400
         assert "already exists" in api_exc.message
 
     def test_update_not_found_returns_404(self) -> None:
-        """更新不存在的 universe → ValueError → NotFoundError(404)."""
-        exc = ValueError("Universe not found: missing")
+        """更新不存在的 universe → AppCommandError → NotFoundError(404)."""
+        exc = AppCommandError("Universe not found: missing")
         api_exc = NotFoundError(str(exc))
         assert api_exc.status_code == 404
         assert "not found" in api_exc.message
 
     def test_update_preset_returns_403(self) -> None:
-        """更新预设 universe → PermissionError → ForbiddenError(403)."""
-        exc = PermissionError(
+        """更新预设 universe → AppCommandError → ForbiddenError(403)."""
+        exc = AppCommandError(
             "Preset universe cannot be modified 'csi300' (type=preset)"
         )
         api_exc = ForbiddenError(str(exc))
         assert api_exc.status_code == 403
         assert "cannot be modified" in api_exc.message
 
+    @pytest.mark.asyncio
+    async def test_update_invalid_members_returns_400(self) -> None:
+        """更新 members 校验失败映射为 BadRequestError(400)."""
+
+        class FailingUpdateHandler:
+            def handle(self, command: UpdateCustomUniverseCommand) -> None:
+                raise AppCommandError(
+                    "invalid members[0] for universe_id=custom: abc",
+                    universe_id=command.universe_id,
+                    field="members",
+                    index=0,
+                    value="abc",
+                )
+
+        body = UpdateUniverseRequest(name="Custom", members=["abc"])
+        update_route = update_universe.__dishka_orig_func__  # type: ignore[attr-defined]
+
+        with pytest.raises(BadRequestError) as exc_info:
+            await update_route(
+                "custom",
+                body,
+                FailingUpdateHandler(),  # type: ignore[arg-type]
+            )
+
+        assert exc_info.value.status_code == 400
+        assert "members[0]" in exc_info.value.message
+
+    @pytest.mark.asyncio
+    async def test_update_not_found_route_returns_404_from_details(self) -> None:
+        """更新不存在 universe 时 route 通过结构化 details 映射 404."""
+
+        class FailingUpdateHandler:
+            def handle(self, command: UpdateCustomUniverseCommand) -> None:
+                raise AppCommandError(
+                    "universe lookup failed",
+                    universe_id=command.universe_id,
+                    reason="not_found",
+                )
+
+        body = UpdateUniverseRequest(name="Missing")
+        update_route = update_universe.__dishka_orig_func__  # type: ignore[attr-defined]
+
+        with pytest.raises(NotFoundError) as exc_info:
+            await update_route(
+                "missing",
+                body,
+                FailingUpdateHandler(),  # type: ignore[arg-type]
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.message == "universe lookup failed"
+
+    @pytest.mark.asyncio
+    async def test_update_non_custom_route_returns_403_from_details(self) -> None:
+        """更新非 custom universe 时 route 通过结构化 details 映射 403."""
+
+        class FailingUpdateHandler:
+            def handle(self, command: UpdateCustomUniverseCommand) -> None:
+                raise AppCommandError(
+                    "universe is protected",
+                    universe_id=command.universe_id,
+                    reason="non_custom_universe",
+                    universe_type="index",
+                    operation="update",
+                )
+
+        body = UpdateUniverseRequest(name="Protected")
+        update_route = update_universe.__dishka_orig_func__  # type: ignore[attr-defined]
+
+        with pytest.raises(ForbiddenError) as exc_info:
+            await update_route(
+                "csi300",
+                body,
+                FailingUpdateHandler(),  # type: ignore[arg-type]
+            )
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.message == "universe is protected"
+
+    @pytest.mark.asyncio
+    async def test_delete_non_custom_route_returns_403_from_details(self) -> None:
+        """删除非 custom universe 时 route 通过结构化 details 映射 403."""
+
+        class FailingDeleteHandler:
+            def handle(self, command: DeleteCustomUniverseCommand) -> None:
+                raise AppCommandError(
+                    "universe is protected",
+                    universe_id=command.universe_id,
+                    reason="non_custom_universe",
+                    universe_type="index",
+                    operation="delete",
+                )
+
+        delete_route = delete_universe.__dishka_orig_func__  # type: ignore[attr-defined]
+
+        with pytest.raises(ForbiddenError) as exc_info:
+            await delete_route(
+                "csi300",
+                FailingDeleteHandler(),  # type: ignore[arg-type]
+            )
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.message == "universe is protected"
+
+    @pytest.mark.asyncio
+    async def test_delete_not_found_route_returns_404_from_details(self) -> None:
+        """删除不存在 universe 时 route 通过结构化 details 映射 404."""
+
+        class FailingDeleteHandler:
+            def handle(self, command: DeleteCustomUniverseCommand) -> None:
+                raise AppCommandError(
+                    "universe lookup failed",
+                    universe_id=command.universe_id,
+                    reason="not_found",
+                )
+
+        delete_route = delete_universe.__dishka_orig_func__  # type: ignore[attr-defined]
+
+        with pytest.raises(NotFoundError) as exc_info:
+            await delete_route(
+                "missing",
+                FailingDeleteHandler(),  # type: ignore[arg-type]
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.message == "universe lookup failed"
+
+    @pytest.mark.asyncio
+    async def test_delete_other_command_error_returns_400(self) -> None:
+        """删除其他命令错误不应被统一映射为 NotFoundError."""
+
+        class FailingDeleteHandler:
+            def handle(self, command: DeleteCustomUniverseCommand) -> None:
+                raise AppCommandError(
+                    "delete rejected",
+                    universe_id=command.universe_id,
+                    reason="validation_failed",
+                )
+
+        delete_route = delete_universe.__dishka_orig_func__  # type: ignore[attr-defined]
+
+        with pytest.raises(BadRequestError) as exc_info:
+            await delete_route(
+                "custom",
+                FailingDeleteHandler(),  # type: ignore[arg-type]
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.message == "delete rejected"
+
     def test_delete_preset_returns_403(self) -> None:
-        """删除预设 universe → ValueError(含 'preset') → ForbiddenError(403)."""
-        exc = ValueError("Cannot delete preset universe 'hs300' (type=preset)")
+        """删除预设 universe → AppCommandError(含 'preset') → ForbiddenError(403)."""
+        exc = AppCommandError("Cannot delete preset universe 'hs300' (type=preset)")
         msg = str(exc)
         # 路由层判断: "preset" in msg → 403
         assert "preset" in msg
@@ -302,9 +454,19 @@ class TestErrorHandlerMapping:
         assert api_exc.status_code == 403
         assert "preset" in api_exc.message
 
+    def test_update_preset_detection_is_case_insensitive(self) -> None:
+        """更新预设 universe 的路由判断应兼容大写 Preset."""
+        exc = AppCommandError(
+            "Preset universe cannot be modified 'csi300' (type=preset)"
+        )
+        msg = str(exc)
+        assert "preset" in msg.lower()
+        api_exc = ForbiddenError(msg)
+        assert api_exc.status_code == 403
+
     def test_delete_not_found_returns_404(self) -> None:
-        """删除不存在的 universe → ValueError(不含 'preset') → NotFoundError(404)."""
-        exc = ValueError("Universe not found: missing")
+        """删除不存在的 universe → AppCommandError → NotFoundError(404)."""
+        exc = AppCommandError("Universe not found: missing")
         msg = str(exc)
         assert "preset" not in msg
         api_exc = NotFoundError(msg)

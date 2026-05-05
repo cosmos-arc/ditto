@@ -25,6 +25,7 @@ from ditto_application.commands.strategy import (
     UpdateStrategyHandler,
 )
 from ditto_application.contracts import StrategySpecInfo
+from ditto_application.exceptions import AppError
 from ditto_application.queries.strategy import StrategyQueryFacade
 from fastapi import APIRouter, Depends
 
@@ -116,7 +117,7 @@ async def update_strategy(
     )
     try:
         info = await asyncio.to_thread(handler.handle, cmd)
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=to_strategy_response(info))
 
@@ -135,6 +136,6 @@ async def publish_strategy(
     )
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=result)

@@ -78,20 +78,27 @@ class TestIngestDateHandler:
             "test", "2025-06-15", force=False
         )
 
-    def test_handle_propagates_coordinator_error(self) -> None:
-        """Handler 传播 coordinator 抛出的异常."""
+    def test_handle_maps_coordinator_error(self) -> None:
+        """Handler 将 coordinator 领域错误映射为 AppCommandError."""
         import pytest
+        from ditto_application.exceptions import AppCommandError, AppProcessError
 
         coordinator = create_autospec(IngestionCoordinator, instance=True)
-        coordinator.ingest_date.side_effect = ValueError("不支持的数据集: bad")
+        coordinator.ingest_date.side_effect = AppProcessError("不支持的数据集: bad")
 
         from ditto_application.commands.ingestion import IngestDateHandler
 
         handler = IngestDateHandler(coordinator)
         cmd = IngestDateCommand(dataset="bad", trade_date=date(2025, 1, 1))
 
-        with pytest.raises(ValueError, match="不支持的数据集"):
+        with pytest.raises(AppCommandError, match="不支持的数据集") as exc_info:
             handler.handle(cmd)
+
+        assert exc_info.value.details == {
+            "command": "ingest_date",
+            "dataset": "bad",
+            "trade_date": "2025-01-01",
+        }
 
     def test_satisfies_command_handler_protocol(self) -> None:
         """IngestDateHandler 满足 CommandHandler Protocol."""

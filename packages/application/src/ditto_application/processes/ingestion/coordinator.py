@@ -25,6 +25,7 @@ from ditto_platform.foundation import logger
 from ditto_platform.foundation.storage.types import OnDuplicate, WriteResult
 
 from ditto_application.contracts import CheckDataQualityCommand
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.auto_init import (
     resolve_identifier_with_auto_init,
 )
@@ -73,7 +74,11 @@ def _validate_dataset(dataset: str) -> Dataset:
     try:
         return Dataset(dataset)
     except ValueError as e:
-        raise ValueError(f"不支持的数据集: {dataset}") from e
+        raise AppProcessError(
+            f"不支持的数据集: {dataset}",
+            field="dataset",
+            value=dataset,
+        ) from e
 
 
 def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
@@ -588,11 +593,19 @@ class IngestionCoordinator:
         dataset_enum = _validate_dataset(dataset)
 
         if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
-            raise ValueError(f"数据集 {dataset} 不支持按标的摄取")
+            raise AppProcessError(
+                f"数据集 {dataset} 不支持按标的摄取",
+                field="dataset",
+                value=dataset,
+            )
 
         asset_class = dataset_enum.asset_class
         if asset_class is None:
-            raise ValueError(f"数据集 {dataset} 缺少 asset_class 定义")
+            raise AppProcessError(
+                f"数据集 {dataset} 缺少 asset_class 定义",
+                field="dataset",
+                value=dataset,
+            )
 
         source_ticker = resolve_identifier_with_auto_init(
             params,
@@ -702,7 +715,11 @@ class IngestionCoordinator:
         )
 
         if dataset_enum not in handlers:
-            raise ValueError(f"不支持按标的摄取的数据集: {dataset_enum.value}")
+            raise AppProcessError(
+                f"不支持按标的摄取的数据集: {dataset_enum.value}",
+                field="dataset",
+                value=dataset_enum.value,
+            )
 
         return handlers[dataset_enum]()
 
@@ -718,7 +735,11 @@ class IngestionCoordinator:
         )
 
         if dataset_enum not in handlers:
-            raise ValueError(f"不支持的数据集: {dataset}")
+            raise AppProcessError(
+                f"不支持的数据集: {dataset}",
+                field="dataset",
+                value=dataset,
+            )
 
         return handlers[dataset_enum]()
 

@@ -15,6 +15,8 @@ from ditto_features.services.derived import (
 )
 from ditto_features.services.derived.query_service import DerivedQueryService
 
+from ditto_application.exceptions import AppQueryError
+
 type TemporalValue = date | datetime
 
 
@@ -37,9 +39,9 @@ def _coerce_str_tuple(values: Sequence[str], field_name: str) -> tuple[str, ...]
     """Convert request string sequences to tuples."""
     normalized = tuple(values)
     if not normalized:
-        raise ValueError(f"{field_name} must not be empty")
+        raise AppQueryError(f"{field_name} must not be empty")
     if any(not item for item in normalized):
-        raise ValueError(f"{field_name} must not contain empty values")
+        raise AppQueryError(f"{field_name} must not contain empty values")
     return normalized
 
 
@@ -47,20 +49,20 @@ def _coerce_int_tuple(values: Sequence[int], field_name: str) -> tuple[int, ...]
     """Convert request int sequences to tuples."""
     normalized = tuple(values)
     if not normalized:
-        raise ValueError(f"{field_name} must not be empty")
+        raise AppQueryError(f"{field_name} must not be empty")
     return normalized
 
 
 def _validate_version(version: int | None) -> None:
     """Validate optional positive version."""
     if version is not None and version <= 0:
-        raise ValueError("version must be greater than 0")
+        raise AppQueryError("version must be greater than 0")
 
 
 def _validate_limit(limit: int | None) -> None:
     """Validate optional positive limit."""
     if limit is not None and limit <= 0:
-        raise ValueError("limit must be greater than 0")
+        raise AppQueryError("limit must be greater than 0")
 
 
 def _validate_range(
@@ -69,7 +71,7 @@ def _validate_range(
 ) -> None:
     """Validate an optional start/end range."""
     if start is not None and end is not None and start > end:
-        raise ValueError("start must not be greater than end")
+        raise AppQueryError("start must not be greater than end")
 
 
 @dataclass(frozen=True)

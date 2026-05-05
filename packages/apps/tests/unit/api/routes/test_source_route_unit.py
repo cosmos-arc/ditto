@@ -8,6 +8,7 @@ Verify the extracted helpers:
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_apps.api.errors import APIError, BadRequestError
 from ditto_apps.api.routes.source import (
     SourceDataQueryParams,
@@ -36,7 +37,7 @@ class TestInferAssetClass:
     def test_raises_bad_request_for_unknown_dataset(self) -> None:
         """Unknown dataset raises BadRequestError."""
         mock_facade = MagicMock()
-        mock_facade.get_dataset_asset_class.side_effect = ValueError(
+        mock_facade.get_dataset_asset_class.side_effect = AppQueryError(
             "不支持的数据集: unknown"
         )
         with pytest.raises(BadRequestError, match="不支持的数据集"):

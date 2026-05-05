@@ -5,6 +5,8 @@ from __future__ import annotations
 import polars as pl
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 
+from ditto_application.exceptions import AppQueryError
+
 __all__ = ["MarketQueryFacade"]
 
 # 支持的复权类型
@@ -53,7 +55,7 @@ class MarketQueryFacade:
         """
         if adj not in _VALID_ADJ_TYPES:
             msg = f"adj must be one of {_VALID_ADJ_TYPES}, got '{adj}'"
-            raise ValueError(msg)
+            raise AppQueryError(msg)
 
         query = MarketBarsQuery(
             instrument_ids=instrument_ids,

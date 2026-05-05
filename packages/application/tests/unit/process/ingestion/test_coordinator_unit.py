@@ -4,6 +4,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
     IngestionCoordinator,
@@ -830,12 +831,12 @@ class TestIngestDate:
     def test_ingest_date_unsupported_dataset_raises_error(
         self, coordinator, mock_ingestion_log_service, mock_source
     ) -> None:
-        """不支持的 dataset 抛出 ValueError。"""
+        """不支持的 dataset 抛出 AppProcessError。"""
         # Arrange
         mock_ingestion_log_service.get_log.return_value = None
 
         # Act & Assert
-        with pytest.raises(ValueError, match="不支持的数据集"):
+        with pytest.raises(AppProcessError, match="不支持的数据集"):
             coordinator.ingest_date("unsupported_dataset", "2024-12-27")
 
 
@@ -1256,16 +1257,16 @@ class TestForceParameter:
 class TestFetchDataEdgeCases:
     """测试 _fetch_data 方法的边界情况。"""
 
-    def test_fetch_data_raises_value_error_for_unsupported_dataset(
+    def test_fetch_data_raises_app_process_error_for_unsupported_dataset(
         self, coordinator, mock_source
     ) -> None:
-        """验证 _fetch_data 对不支持的数据集抛出 ValueError。"""
+        """验证 _fetch_data 对不支持的数据集抛出 AppProcessError。"""
         # Arrange
         # 使用不在 _DATASET_METHODS 中的数据集
         unsupported_dataset = "unsupported_dataset"
 
         # Act & Assert
-        with pytest.raises(ValueError, match="不支持的数据集"):
+        with pytest.raises(AppProcessError, match="不支持的数据集"):
             coordinator._fetch_data(unsupported_dataset, "2024-12-27")
 
         # 验证没有调用 source 的任何方法

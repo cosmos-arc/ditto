@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.research import (
     ResearchDatasetFacade,
     _sanitize_table_name,
@@ -129,7 +130,7 @@ class TestResearchFacadeExportUnsupported:
         facade = _make_facade()
         snapshot = _make_snapshot()
 
-        with pytest.raises(ValueError, match="不支持的导出格式") as exc_info:
+        with pytest.raises(AppQueryError, match="不支持的导出格式") as exc_info:
             facade.export(snapshot, fmt="parquet", path=tmp_path / "out.parquet")
         assert "parquet" in str(exc_info.value)
 
@@ -196,7 +197,7 @@ class TestSanitizeTableNameRejectsInjection:
         """验证包含 SQL 注入字符的 ID 被拒绝."""
         import pytest
 
-        with pytest.raises(ValueError, match="Invalid dataset_id") as exc_info:
+        with pytest.raises(AppQueryError, match="Invalid dataset_id") as exc_info:
             _sanitize_table_name('"; DROP TABLE --')
         assert "DROP" in str(exc_info.value) or ";" in str(exc_info.value)
 
@@ -204,7 +205,7 @@ class TestSanitizeTableNameRejectsInjection:
         """验证以数字开头的 ID 被拒绝."""
         import pytest
 
-        with pytest.raises(ValueError, match="Invalid dataset_id") as exc_info:
+        with pytest.raises(AppQueryError, match="Invalid dataset_id") as exc_info:
             _sanitize_table_name("123bad")
         assert "123bad" in str(exc_info.value)
 
@@ -212,7 +213,7 @@ class TestSanitizeTableNameRejectsInjection:
         """验证空字符串被拒绝."""
         import pytest
 
-        with pytest.raises(ValueError, match="Invalid dataset_id") as exc_info:
+        with pytest.raises(AppQueryError, match="Invalid dataset_id") as exc_info:
             _sanitize_table_name("")
         assert "dataset_id" in str(exc_info.value)
 
@@ -220,7 +221,7 @@ class TestSanitizeTableNameRejectsInjection:
         """验证包含分号的 ID 被拒绝."""
         import pytest
 
-        with pytest.raises(ValueError, match="Invalid dataset_id") as exc_info:
+        with pytest.raises(AppQueryError, match="Invalid dataset_id") as exc_info:
             _sanitize_table_name("table;drop")
         assert "table;drop" in str(exc_info.value)
 

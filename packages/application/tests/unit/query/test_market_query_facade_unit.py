@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.market import MarketQueryFacade
 
 
@@ -47,7 +48,7 @@ class TestMarketQueryFacadeFindBars:
         service = MagicMock(spec=["find_bars"])
         facade = MarketQueryFacade(market_service=service)
 
-        with pytest.raises(ValueError, match="adj"):
+        with pytest.raises(AppQueryError, match="adj"):
             facade.find_bars(instrument_ids=[1], start=None, end=None, adj="invalid")
 
 

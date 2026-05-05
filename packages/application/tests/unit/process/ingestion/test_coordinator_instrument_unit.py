@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
     IngestionCoordinator,
@@ -360,7 +361,7 @@ class TestIngestByInstrument:
         mock_source.fetch_stock_daily.assert_called_once()
 
     def test_ingest_by_instrument_unsupported_dataset(self, coordinator) -> None:
-        """不支持的数据集抛出 ValueError."""
+        """不支持的数据集抛出 AppProcessError."""
         # Arrange
         params = InstrumentIngestParams(
             ticker="000001",
@@ -369,7 +370,7 @@ class TestIngestByInstrument:
         )
 
         # Act & Assert
-        with pytest.raises(ValueError, match="不支持按标的摄取"):
+        with pytest.raises(AppProcessError, match="不支持按标的摄取"):
             coordinator.ingest_by_instrument("calendar", params)
 
     def test_ingest_by_instrument_fetch_error(

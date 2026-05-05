@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.source import SourceQueryFacade
 
 
@@ -44,7 +45,7 @@ class TestSourceQueryFacadeGetDatasetAssetClass:
             metadata_service=metadata_service,
         )
 
-        with pytest.raises(ValueError, match="不支持的数据集"):
+        with pytest.raises(AppQueryError, match="不支持的数据集"):
             facade.get_dataset_asset_class("nonexistent_dataset")
 
 
@@ -145,7 +146,7 @@ class TestSourceQueryFacadeFetchSourceData:
             metadata_service=MagicMock(),
         )
 
-        with pytest.raises(ValueError, match="不支持的数据源"):
+        with pytest.raises(AppQueryError, match="不支持的数据源"):
             facade.fetch_source_data(
                 source="fred",
                 dataset="stock_daily",
@@ -160,7 +161,7 @@ class TestSourceQueryFacadeFetchSourceData:
             metadata_service=MagicMock(),
         )
 
-        with pytest.raises(ValueError, match="暂不支持 Source API 查询"):
+        with pytest.raises(AppQueryError, match="暂不支持 Source API 查询"):
             facade.fetch_source_data(
                 source="tushare",
                 dataset="index_daily",

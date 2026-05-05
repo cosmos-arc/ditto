@@ -11,6 +11,7 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 )
 
 from ditto_application.contracts import StrategySpecInfo, to_spec_info
+from ditto_application.exceptions import AppCommandError
 
 __all__ = [
     "CreateStrategyCommand",
@@ -84,7 +85,7 @@ class UpdateStrategyHandler:
         existing = self._service.get_spec(command.strategy_id)
         if existing is None:
             msg = f"Strategy not found: {command.strategy_id}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         # version=None 时自动使用当前版本（跳过乐观锁）
         effective_version = (
@@ -96,7 +97,7 @@ class UpdateStrategyHandler:
                 f"Version conflict for strategy {command.strategy_id}: "
                 f"expected {existing.version}, got {effective_version}"
             )
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         new_version = existing.version + 1
@@ -125,5 +126,5 @@ class PublishStrategyHandler:
         existing = self._service.get_spec(command.strategy_id, command.version)
         if existing is None:
             msg = f"Strategy not found: {command.strategy_id} v{command.version}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
         return self._service.publish_spec(command.strategy_id, command.version)

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
@@ -1072,7 +1073,7 @@ class TestBuildFactorAwareBundleBuilder:
         ctx = StepContext(date="2026-04-10", is_rebalance_day=True)
         ctx.slice_ = None
 
-        with pytest.raises(ValueError, match="slice_ required"):
+        with pytest.raises(AppProcessError, match="slice_ required"):
             builder(ctx)
 
     def test_lookback_days_from_compiled_max_lookback(self) -> None:

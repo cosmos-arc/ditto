@@ -45,6 +45,7 @@ from ditto_kernel.publication_safety import DerivedMinimalDQSummaryRecord
 from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 
 from ditto_application.config import now_iso
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.dependencies import (
     apply_cs_amplification,
 )
@@ -171,7 +172,7 @@ class DerivedMaterializationOrchestrator:
             request.version,
         )
         if spec_record is None:
-            raise KeyError(
+            raise AppProcessError(
                 "derived spec not found for "
                 + f"derived_id={request.derived_id} version={request.version}"
             )
@@ -180,7 +181,7 @@ class DerivedMaterializationOrchestrator:
             request.version,
         )
         if version_record is None:
-            raise KeyError(
+            raise AppProcessError(
                 "derived version not found for "
                 + f"derived_id={request.derived_id} version={request.version}"
             )
@@ -538,7 +539,7 @@ class DerivedMaterializationOrchestrator:
     ) -> None:
         publication_record_service = self._publication_record_service
         if publication_record_service is None:
-            raise RuntimeError("publication record service is not configured")
+            raise AppProcessError("publication record service is not configured")
         manifest_record = build_manifest_record(
             spec=spec,
             version=spec.version,

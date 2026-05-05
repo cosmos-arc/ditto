@@ -17,6 +17,7 @@ from ditto_application.builders._spec_deserializer import (
     read_required_str,
     read_str_value,
 )
+from ditto_application.exceptions import AppBuilderError
 
 # ---------------------------------------------------------------------------
 # _read_clamped_float
@@ -38,17 +39,17 @@ class TestReadClampedFloat:
 
     @pytest.mark.unit
     def test_above_range_raises(self) -> None:
-        with pytest.raises(ValueError, match=r"x 必须在 \[0.0, 1.0\] 范围内"):
+        with pytest.raises(AppBuilderError, match=r"x 必须在 \[0.0, 1.0\] 范围内"):
             _read_clamped_float(1.5, field_name="x", lo=0.0, hi=1.0)
 
     @pytest.mark.unit
     def test_below_range_raises(self) -> None:
-        with pytest.raises(ValueError, match=r"x 必须在 \[0.0, 1.0\] 范围内"):
+        with pytest.raises(AppBuilderError, match=r"x 必须在 \[0.0, 1.0\] 范围内"):
             _read_clamped_float(-0.1, field_name="x", lo=0.0, hi=1.0)
 
     @pytest.mark.unit
     def test_non_numeric_raises(self) -> None:
-        with pytest.raises(ValueError, match="x 必须是数字"):
+        with pytest.raises(AppBuilderError, match="x 必须是数字"):
             _read_clamped_float("abc", field_name="x", lo=0.0, hi=1.0)
 
 
@@ -61,7 +62,10 @@ class TestDeserializeRegimeConfigThresholdRange:
     @pytest.mark.unit
     def test_bull_threshold_above_one_raises(self) -> None:
         """bull_threshold=70.0（百分比思维）应被拒绝."""
-        with pytest.raises(ValueError, match=r"bull_threshold 必须在 \[0.0, 1.0\]"):
+        with pytest.raises(
+            AppBuilderError,
+            match=r"bull_threshold 必须在 \[0.0, 1.0\]",
+        ):
             deserialize_regime_config(
                 {
                     "indicators": [],
@@ -72,7 +76,10 @@ class TestDeserializeRegimeConfigThresholdRange:
     @pytest.mark.unit
     def test_bear_threshold_below_zero_raises(self) -> None:
         """bear_threshold=-0.5 应被拒绝."""
-        with pytest.raises(ValueError, match=r"bear_threshold 必须在 \[0.0, 1.0\]"):
+        with pytest.raises(
+            AppBuilderError,
+            match=r"bear_threshold 必须在 \[0.0, 1.0\]",
+        ):
             deserialize_regime_config(
                 {
                     "indicators": [],
@@ -125,17 +132,17 @@ class TestReadInt:
 
     @pytest.mark.unit
     def test_float_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_int(3.14, field_name="x")
 
     @pytest.mark.unit
     def test_true_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_int(True, field_name="x")
 
     @pytest.mark.unit
     def test_false_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_int(False, field_name="x")
 
 
@@ -155,12 +162,12 @@ class TestReadFloat:
 
     @pytest.mark.unit
     def test_true_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_float(True, field_name="x")
 
     @pytest.mark.unit
     def test_string_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_float("abc", field_name="x")
 
 
@@ -210,12 +217,12 @@ class TestReadBool:
 
     @pytest.mark.unit
     def test_int_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_bool(1, field_name="x")
 
     @pytest.mark.unit
     def test_string_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_bool("true", field_name="x")
 
 
@@ -231,17 +238,17 @@ class TestReadRequiredStr:
 
     @pytest.mark.unit
     def test_none_value_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_required_str({"x": None}, "x")
 
     @pytest.mark.unit
     def test_missing_key_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_required_str({}, "x")
 
     @pytest.mark.unit
     def test_empty_string_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             read_required_str({"x": ""}, "x")
 
 
@@ -265,7 +272,7 @@ class TestAsSequence:
 
     @pytest.mark.unit
     def test_string_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             as_sequence("abc", field_name="x")
 
 
@@ -281,7 +288,7 @@ class TestAsStrTuple:
 
     @pytest.mark.unit
     def test_element_type_error(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             as_str_tuple([1, 2], field_name="x")
 
 
@@ -297,7 +304,7 @@ class TestAsFloatTuple:
 
     @pytest.mark.unit
     def test_true_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             as_float_tuple([True], field_name="x")
 
 
@@ -317,12 +324,12 @@ class TestAsObjectDict:
 
     @pytest.mark.unit
     def test_string_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             as_object_dict("abc", field_name="x")
 
     @pytest.mark.unit
     def test_non_str_key_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(AppBuilderError):
             as_object_dict({1: "a"}, field_name="x")
 
 
@@ -346,7 +353,7 @@ class TestReadOptionalStr:
 
     @pytest.mark.unit
     def test_non_string_raises(self) -> None:
-        with pytest.raises(ValueError, match="x 必须是字符串"):
+        with pytest.raises(AppBuilderError, match="x 必须是字符串"):
             read_optional_str(42, field_name="x")
 
 
@@ -362,10 +369,10 @@ class TestReadStrValue:
 
     @pytest.mark.unit
     def test_empty_string_raises(self) -> None:
-        with pytest.raises(ValueError, match="x 必须是非空字符串"):
+        with pytest.raises(AppBuilderError, match="x 必须是非空字符串"):
             read_str_value("", field_name="x")
 
     @pytest.mark.unit
     def test_non_string_raises(self) -> None:
-        with pytest.raises(ValueError, match="x 必须是非空字符串"):
+        with pytest.raises(AppBuilderError, match="x 必须是非空字符串"):
             read_str_value(42, field_name="x")

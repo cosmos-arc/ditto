@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+from ditto_application.exceptions import AppCommandError
 from ditto_strategy.models import StrategySpecRecord
 
 
@@ -169,7 +170,7 @@ class TestUpdateStrategyHandler:
         )
 
         with pytest.raises(
-            ValueError,
+            AppCommandError,
             match="Version conflict for strategy strat-1: expected 3, got 2",
         ):
             handler.handle(cmd)
@@ -223,7 +224,7 @@ class TestUpdateStrategyHandler:
             spec_json={},
         )
 
-        with pytest.raises(ValueError, match="Strategy not found: missing"):
+        with pytest.raises(AppCommandError, match="Strategy not found: missing"):
             handler.handle(cmd)
 
 
@@ -274,7 +275,7 @@ class TestPublishStrategyHandler:
         handler = PublishStrategyHandler(catalog_service=service)
         cmd = PublishStrategyCommand(strategy_id="ghost", version=1)
 
-        with pytest.raises(ValueError, match="Strategy not found: ghost v1"):
+        with pytest.raises(AppCommandError, match="Strategy not found: ghost v1"):
             handler.handle(cmd)
 
     def test_handle_returns_false_on_failure(self) -> None:

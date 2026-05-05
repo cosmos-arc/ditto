@@ -51,6 +51,7 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
@@ -419,7 +420,7 @@ class BacktestService:
         slice_ = ctx.slice_
         if slice_ is None:
             msg = "slice_ required"
-            raise ValueError(msg)
+            raise AppProcessError(msg)
         bars = slice_.bars
         instrument_ids = list(bars.keys())
 

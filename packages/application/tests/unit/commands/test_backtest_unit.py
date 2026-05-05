@@ -20,6 +20,7 @@ from ditto_application.commands.backtest import (
     RetryRunCommand,
     RetryRunHandler,
 )
+from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.runs.models import StrategyRunRecord
@@ -135,7 +136,7 @@ class TestBacktestRunHandler:
 
         cmd = _make_command(strategy_id="nonexistent")
 
-        with pytest.raises(ValueError, match="Strategy not found"):
+        with pytest.raises(AppCommandError, match="Strategy not found"):
             handler.handle(cmd)
 
     def test_invalid_date_range_raises(
@@ -145,7 +146,7 @@ class TestBacktestRunHandler:
         """End date before start date raises ValueError."""
         cmd = _make_command(start_date="2025-06-01", end_date="2025-01-01")
 
-        with pytest.raises(ValueError, match="日期范围无效"):
+        with pytest.raises(AppCommandError, match="日期范围无效"):
             handler.handle(cmd)
 
     def test_invalid_date_format_raises(
@@ -155,7 +156,7 @@ class TestBacktestRunHandler:
         """Invalid date format raises ValueError."""
         cmd = _make_command(start_date="not-a-date")
 
-        with pytest.raises(ValueError, match="日期格式无效"):
+        with pytest.raises(AppCommandError, match="日期格式无效"):
             handler.handle(cmd)
 
     def test_factor_compile_failure_raises(
@@ -164,14 +165,14 @@ class TestBacktestRunHandler:
         mock_factor_bridge: Mock,
         mock_run_service: Mock,
     ) -> None:
-        """Factor compilation failure raises ValueError, no record created."""
-        mock_factor_bridge.compile_and_validate.side_effect = ValueError(
+        """Factor compilation failure raises typed process error, no record created."""
+        mock_factor_bridge.compile_and_validate.side_effect = AppProcessError(
             "编译失败 (signal_0): unknown function 'bad_func'"
         )
 
         cmd = _make_command()
 
-        with pytest.raises(ValueError, match="编译失败"):
+        with pytest.raises(AppProcessError, match="编译失败"):
             handler.handle(cmd)
 
         # No RunRecord should be created when compilation fails
@@ -207,6 +208,34 @@ class TestBacktestRunHandler:
 
         mock_factor_bridge.compile_and_validate.assert_not_called()
         assert isinstance(result, BacktestRunResult)
+
+    def test_invalid_signal_weight_raises_app_command_error(
+        self,
+        handler: BacktestRunHandler,
+        mock_catalog_service: Mock,
+        mock_factor_bridge: Mock,
+        mock_run_service: Mock,
+    ) -> None:
+        """Invalid signal weight values raise typed command errors."""
+        mock_catalog_service.get_spec.return_value = Mock(
+            strategy_id="bad-weights",
+            spec_json={
+                "signal_expressions": ["close"],
+                "signal_weights": ["not-a-number"],
+            },
+        )
+
+        with pytest.raises(AppCommandError, match="signal_weights") as exc_info:
+            handler.handle(_make_command(strategy_id="bad-weights"))
+
+        assert exc_info.value.details == {
+            "strategy_id": "bad-weights",
+            "field": "signal_weights",
+            "index": 0,
+            "value": "not-a-number",
+        }
+        mock_factor_bridge.compile_and_validate.assert_not_called()
+        mock_run_service.create_run.assert_not_called()
 
 
 class TestBacktestRunCommand:
@@ -292,7 +321,7 @@ class TestCancelRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="completed")
         handler = CancelRunHandler(run_service=run_svc)
 
-        with pytest.raises(ValueError, match="Cannot cancel"):
+        with pytest.raises(AppCommandError, match="Cannot cancel"):
             handler.handle(CancelRunCommand(run_id="abc123"))
         run_svc.mark_cancelled.assert_not_called()
 
@@ -302,7 +331,7 @@ class TestCancelRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="failed")
         handler = CancelRunHandler(run_service=run_svc)
 
-        with pytest.raises(ValueError, match="Cannot cancel"):
+        with pytest.raises(AppCommandError, match="Cannot cancel"):
             handler.handle(CancelRunCommand(run_id="abc123"))
 
     def test_cancel_not_found(self) -> None:
@@ -311,7 +340,7 @@ class TestCancelRunHandler:
         run_svc.get_run.return_value = None
         handler = CancelRunHandler(run_service=run_svc)
 
-        with pytest.raises(ValueError, match="Run not found"):
+        with pytest.raises(AppCommandError, match="Run not found"):
             handler.handle(CancelRunCommand(run_id="missing"))
 
 
@@ -352,7 +381,7 @@ class TestRetryRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="pending")
         handler = RetryRunHandler(run_service=run_svc)
 
-        with pytest.raises(ValueError, match="Cannot retry"):
+        with pytest.raises(AppCommandError, match="Cannot retry"):
             handler.handle(RetryRunCommand(run_id="abc123"))
         run_svc.create_run.assert_not_called()
 
@@ -362,7 +391,7 @@ class TestRetryRunHandler:
         run_svc.get_run.return_value = _make_run_record(status="running")
         handler = RetryRunHandler(run_service=run_svc)
 
-        with pytest.raises(ValueError, match="Cannot retry"):
+        with pytest.raises(AppCommandError, match="Cannot retry"):
             handler.handle(RetryRunCommand(run_id="abc123"))
 
     def test_retry_not_found(self) -> None:
@@ -371,7 +400,7 @@ class TestRetryRunHandler:
         run_svc.get_run.return_value = None
         handler = RetryRunHandler(run_service=run_svc)
 
-        with pytest.raises(ValueError, match="Run not found"):
+        with pytest.raises(AppCommandError, match="Run not found"):
             handler.handle(RetryRunCommand(run_id="missing"))
 
     def test_retry_preserves_strategy_version(self) -> None:

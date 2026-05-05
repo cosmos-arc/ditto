@@ -6,6 +6,7 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.derived import (
     DerivedQueryFacade,
     LatestDerivedRequest,
@@ -143,7 +144,7 @@ class TestLatestDerivedRequestValidation:
     def test_rejects_empty_derived_ids(self) -> None:
         """Empty derived_ids should raise ValueError."""
         with pytest.raises(
-            ValueError, match="derived_ids must not be empty"
+            AppQueryError, match="derived_ids must not be empty"
         ) as exc_info:
             LatestDerivedRequest(
                 derived_ids=(),
@@ -155,7 +156,7 @@ class TestLatestDerivedRequestValidation:
     def test_rejects_zero_version(self) -> None:
         """Zero version should raise ValueError."""
         with pytest.raises(
-            ValueError, match="version must be greater than 0"
+            AppQueryError, match="version must be greater than 0"
         ) as exc_info:
             LatestDerivedRequest(
                 derived_ids=("factor.momentum_20d",),
@@ -172,7 +173,7 @@ class TestSeriesDerivedRequestValidation:
     def test_rejects_inverted_range(self) -> None:
         """start > end should raise ValueError."""
         with pytest.raises(
-            ValueError, match="start must not be greater than end"
+            AppQueryError, match="start must not be greater than end"
         ) as exc_info:
             SeriesDerivedRequest(
                 derived_ids=("factor.momentum_20d",),
@@ -186,7 +187,7 @@ class TestSeriesDerivedRequestValidation:
     def test_rejects_zero_limit(self) -> None:
         """Zero limit should raise ValueError."""
         with pytest.raises(
-            ValueError, match="limit must be greater than 0"
+            AppQueryError, match="limit must be greater than 0"
         ) as exc_info:
             SeriesDerivedRequest(
                 derived_ids=("factor.momentum_20d",),

@@ -24,6 +24,7 @@ from ditto_application.commands.backtest import (
     RetryRunCommand,
     RetryRunHandler,
 )
+from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.queries.backtest import BacktestQueryFacade, RunSummary
 from ditto_apps.api.errors import APIError
@@ -141,7 +142,7 @@ class TestCancelStatusGuard:
         mock_cancel_handler: MagicMock,
     ) -> None:
         """status=completed → 409 Conflict."""
-        mock_cancel_handler.handle.side_effect = ValueError(
+        mock_cancel_handler.handle.side_effect = AppCommandError(
             "Cannot cancel run in 'completed' status"
         )
         resp = client.post("/api/v1/backtests/runs/run003/cancel")
@@ -154,7 +155,7 @@ class TestCancelStatusGuard:
         mock_cancel_handler: MagicMock,
     ) -> None:
         """status=failed → 409 Conflict."""
-        mock_cancel_handler.handle.side_effect = ValueError(
+        mock_cancel_handler.handle.side_effect = AppCommandError(
             "Cannot cancel run in 'failed' status"
         )
         resp = client.post("/api/v1/backtests/runs/run004/cancel")
@@ -167,7 +168,7 @@ class TestCancelStatusGuard:
         mock_cancel_handler: MagicMock,
     ) -> None:
         """status=cancelled → 409 Conflict."""
-        mock_cancel_handler.handle.side_effect = ValueError(
+        mock_cancel_handler.handle.side_effect = AppCommandError(
             "Cannot cancel run in 'cancelled' status"
         )
         resp = client.post("/api/v1/backtests/runs/run005/cancel")
@@ -188,7 +189,9 @@ class TestCancelNotFound:
         mock_cancel_handler: MagicMock,
     ) -> None:
         """取消不存在的 run → 404."""
-        mock_cancel_handler.handle.side_effect = ValueError("Run not found: missing")
+        mock_cancel_handler.handle.side_effect = AppCommandError(
+            "Run not found: missing"
+        )
         resp = client.post("/api/v1/backtests/missing/cancel")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
@@ -247,7 +250,7 @@ class TestRetryStatusGuard:
         mock_retry_handler: MagicMock,
     ) -> None:
         """status=running → 409 Conflict."""
-        mock_retry_handler.handle.side_effect = ValueError(
+        mock_retry_handler.handle.side_effect = AppCommandError(
             "Cannot retry run in 'running' status"
         )
         resp = client.post("/api/v1/backtests/runs/run003/retry")
@@ -260,7 +263,7 @@ class TestRetryStatusGuard:
         mock_retry_handler: MagicMock,
     ) -> None:
         """status=completed → 409 Conflict."""
-        mock_retry_handler.handle.side_effect = ValueError(
+        mock_retry_handler.handle.side_effect = AppCommandError(
             "Cannot retry run in 'completed' status"
         )
         resp = client.post("/api/v1/backtests/runs/run004/retry")
@@ -272,7 +275,7 @@ class TestRetryStatusGuard:
         mock_retry_handler: MagicMock,
     ) -> None:
         """status=pending → 409 Conflict."""
-        mock_retry_handler.handle.side_effect = ValueError(
+        mock_retry_handler.handle.side_effect = AppCommandError(
             "Cannot retry run in 'pending' status"
         )
         resp = client.post("/api/v1/backtests/runs/run005/retry")
@@ -293,7 +296,9 @@ class TestRetryNotFound:
         mock_retry_handler: MagicMock,
     ) -> None:
         """重试不存在的 run → 404."""
-        mock_retry_handler.handle.side_effect = ValueError("Run not found: missing")
+        mock_retry_handler.handle.side_effect = AppCommandError(
+            "Run not found: missing"
+        )
         resp = client.post("/api/v1/backtests/missing/retry")
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()

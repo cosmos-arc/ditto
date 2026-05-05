@@ -10,6 +10,8 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MarketFetcher
 from ditto_platform.foundation import logger, traced
 
+from ditto_application.exceptions import AppProcessError
+
 # list_date 推断的最早起始日期
 EARLIEST_LIST_DATE_INFERENCE = date(2010, 1, 1)
 
@@ -281,4 +283,8 @@ class ListDateInferenceService:
                 end_date=end_str,
             )
         else:
-            raise ValueError(f"Unsupported asset_class: {asset_class}")
+            raise AppProcessError(
+                f"Unsupported asset_class: {asset_class}",
+                field="asset_class",
+                value=asset_class,
+            )

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.fx import FXQueryFacade
 from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 
@@ -38,12 +39,17 @@ class TestFXQueryFacadeMappings:
 
         assert result == 4_000_001
 
-    def test_pair_to_instrument_id_raises_for_unknown(self) -> None:
+    def test_pair_to_instrument_id_raises_app_query_error_for_unknown(self) -> None:
         service = MagicMock()
         facade = FXQueryFacade(market_service=service)
 
-        with pytest.raises(KeyError):
+        with pytest.raises(AppQueryError, match="UNKNOWN") as exc_info:
             facade.pair_to_instrument_id("UNKNOWN")
+
+        assert exc_info.value.details == {
+            "asset_class": "fx",
+            "pair": "UNKNOWN",
+        }
 
     def test_instrument_id_to_pair(self) -> None:
         service = MagicMock()

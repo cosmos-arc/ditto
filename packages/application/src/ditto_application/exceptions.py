@@ -7,4 +7,31 @@ class AppError(DittoError):
     """应用域基础异常."""
 
 
-__all__ = ["AppError"]
+class AppConfigurationError(AppError):
+    """应用配置异常."""
+
+
+class AppCommandError(AppError):
+    """应用命令异常."""
+
+
+class AppQueryError(AppError):
+    """应用查询异常."""
+
+
+class AppProcessError(AppError):
+    """应用流程编排异常."""
+
+
+class AppBuilderError(AppError):
+    """应用运行时装配异常."""
+
+
+__all__ = [
+    "AppBuilderError",
+    "AppCommandError",
+    "AppConfigurationError",
+    "AppError",
+    "AppProcessError",
+    "AppQueryError",
+]

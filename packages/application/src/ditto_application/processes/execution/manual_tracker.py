@@ -17,6 +17,7 @@ import uuid
 from collections.abc import Callable
 from itertools import groupby
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
@@ -71,7 +72,7 @@ def _apply_sell_fill(
         (remaining_quantity, realized_pnl_increment)
 
     Raises:
-        ValueError: 卖出数量超过当前持仓.
+        AppProcessError: 卖出数量超过当前持仓.
 
     """
     sell_qty = fill.quantity
@@ -80,7 +81,7 @@ def _apply_sell_fill(
             f"oversold instrument_id={instrument_id}: "
             f"trying to sell {sell_qty} but holding {quantity}"
         )
-        raise ValueError(msg)
+        raise AppProcessError(msg)
 
     realized_pnl_increment = (fill.fill_price - avg_cost) * sell_qty
     return quantity - sell_qty, realized_pnl_increment

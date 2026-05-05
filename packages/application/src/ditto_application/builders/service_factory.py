@@ -40,6 +40,7 @@ from ditto_application.builders._resolution import (
 )
 from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
+from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
@@ -261,7 +262,7 @@ class StrategyServiceFactory:
         """从 published strategy catalog 直接构造 ``StrategyRunService``。"""
         if self._runtime_builder is None:
             msg = "StrategyRuntimeBuilder 未配置, 无法从 catalog 构造运行服务"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         resolved_version = version
         if resolved_version is None:
             resolved_version = self._parse_catalog_version(config.strategy_version)
@@ -314,7 +315,7 @@ class StrategyServiceFactory:
         """从 published strategy catalog 直接构造 ``BacktestService``。"""
         if self._backtest_runtime_builder is None:
             msg = "BacktestRuntimeBuilder 未配置, 无法从 catalog 构造回测服务"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         resolved_version = version
         if resolved_version is None:
             resolved_version = self._parse_catalog_version(config.strategy_version)

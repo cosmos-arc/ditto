@@ -17,6 +17,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
 from ditto_platform.foundation import logger
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator import (
     IngestionCoordinator,
@@ -71,8 +72,11 @@ def create_coordinator(
             source_key = Source(source_name.lower())
         except ValueError as e:
             supported = [s.value for s in Source]
-            raise ValueError(
-                f"Unknown source: '{source_name}'. Supported sources: {supported}"
+            raise AppProcessError(
+                f"Unknown source: '{source_name}'. Supported sources: {supported}",
+                field="source_name",
+                value=source_name,
+                supported=supported,
             ) from e
 
     data_source = services.source_service.tushare

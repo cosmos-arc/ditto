@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from ditto_data.services.metadata_service import MetadataService
+
+from ditto_application.exceptions import AppCommandError
 
 __all__ = [
     "CreateCustomUniverseCommand",
@@ -80,14 +83,24 @@ class UpdateCustomUniverseHandler:
         existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
-            raise ValueError(msg)
+            raise AppCommandError(
+                msg,
+                universe_id=command.universe_id,
+                reason="not_found",
+            )
         universe_type = existing.get("universe_type", "custom")
         if universe_type != "custom":
             msg = (
                 f"Preset universe cannot be modified"
                 f" '{command.universe_id}' (type={universe_type})"
             )
-            raise PermissionError(msg)
+            raise AppCommandError(
+                msg,
+                universe_id=command.universe_id,
+                reason="non_custom_universe",
+                universe_type=universe_type,
+                operation="update",
+            )
         self._service.update_universe(
             command.universe_id,
             command.name,
@@ -96,10 +109,25 @@ class UpdateCustomUniverseHandler:
         # 成分替换（可选）
         if command.members is not None:
             eff_date = command.effective_date or ""
-            records = [
-                {"instrument_id": int(m), "effective_from": eff_date}
-                for m in command.members
-            ]
+            records: list[dict[str, Any]] = []
+            for index, member in enumerate(command.members):
+                try:
+                    instrument_id = int(member)
+                except ValueError:
+                    msg = (
+                        f"invalid members[{index}] for universe_id="
+                        f"{command.universe_id}: {member}"
+                    )
+                    raise AppCommandError(
+                        msg,
+                        universe_id=command.universe_id,
+                        field="members",
+                        index=index,
+                        value=member,
+                    ) from None
+                records.append(
+                    {"instrument_id": instrument_id, "effective_from": eff_date}
+                )
             self._service.replace_constituents(
                 command.universe_id,
                 records,
@@ -119,13 +147,23 @@ class DeleteCustomUniverseHandler:
         existing = self._service.get_universe_detail(command.universe_id)
         if existing is None:
             msg = f"Universe not found: {command.universe_id}"
-            raise ValueError(msg)
+            raise AppCommandError(
+                msg,
+                universe_id=command.universe_id,
+                reason="not_found",
+            )
         universe_type = existing.get("universe_type", "custom")
         if universe_type != "custom":
             msg = (
                 f"Cannot delete preset universe"
                 f" '{command.universe_id}' (type={universe_type})"
             )
-            raise ValueError(msg)
+            raise AppCommandError(
+                msg,
+                universe_id=command.universe_id,
+                reason="non_custom_universe",
+                universe_type=universe_type,
+                operation="delete",
+            )
         self._service.delete_universe(command.universe_id)
         return True

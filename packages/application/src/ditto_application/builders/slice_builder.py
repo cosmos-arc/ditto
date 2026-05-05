@@ -11,6 +11,7 @@ from ditto_application.builders._resolution import (
     resolve_instrument_display,
 )
 from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_application.exceptions import AppBuilderError
 
 __all__ = [
     "StrategySliceBuilder",
@@ -70,5 +71,5 @@ class StrategySliceBuilder:
         )
         if trade_date not in data_feed.trading_days():
             msg = f"trade_date 不在可用交易日内: {trade_date}"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         return data_feed.get_slice(trade_date)

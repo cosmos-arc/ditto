@@ -15,6 +15,7 @@ from ditto_data.quality.protocols import (
 from ditto_kernel.quality import DQResult
 from ditto_platform.foundation import logger
 
+from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.quality.types import ReconciliationResult
 
 
@@ -103,12 +104,12 @@ class ReconcileSourcesHandler:
     ) -> pl.DataFrame | ReconciliationResult:
         """添加 ticker 列并应用黄金数据集过滤。返回过滤后的 DataFrame 或跳过结果."""
         if "instrument_id" not in primary_df.columns:
-            raise ValueError("primary_df must contain 'instrument_id' column")
+            raise AppCommandError("primary_df must contain 'instrument_id' column")
 
         primary_df = self._instrument_store.enrich_with_ticker(primary_df)
 
         if "ticker" not in primary_df.columns:
-            raise ValueError("Failed to enrich primary_df with ticker")
+            raise AppCommandError("Failed to enrich primary_df with ticker")
 
         primary_df = self._apply_golden_dataset_filter(primary_df)
 
