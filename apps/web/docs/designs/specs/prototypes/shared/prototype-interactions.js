@@ -1174,58 +1174,226 @@
     RECENT_KEY: 'ditto-recent-commands',
     MAX_RECENT: 3,
     triggerEl: null,
+    confirmationTriggerEl: null,
+    _pendingConfirmationAction: null,
     activeIndex: -1,
-    labels: {
-      'add-to-compare': '加入对比',
-      approve: '批准',
-      'clone-strategy': '复制策略',
-      'copy-params': '复制参数',
-      'create-incident': '创建事件',
-      'explain-priority': '解释优先级',
-      'generate-report': '生成报告',
-      'generate-signal': '生成信号',
-      'mute-alert': '静音告警',
-      'open-instrument-hub': '打开标的 Hub',
-      'open-orders': '打开订单',
-      'open-risk': '打开风控',
-      'pause-strategy': '暂停策略',
-      reject: '拒绝',
-      'remove-watch': '移出观察',
-      retry: '重试',
-      'review-signal': '复核信号',
-      'run-backtest': '运行回测',
-      'send-to-order': '发送到订单',
-      'send-to-research': '发送到研究',
-      'view-curve': '查看曲线',
-      'view-evidence': '查看证据',
-      'view-logs': '查看日志',
-      'view-recent-runs': '查看近期运行',
-    },
-    categories: {
-      'add-to-compare': '上下文操作',
-      approve: '工作流',
-      'clone-strategy': '策略',
-      'copy-params': '策略',
-      'create-incident': '工作流',
-      'explain-priority': '上下文操作',
-      'generate-report': '工作流',
-      'generate-signal': '工作流',
-      'mute-alert': '工作流',
-      'open-instrument-hub': '导航',
-      'open-orders': '导航',
-      'open-risk': '导航',
-      'pause-strategy': '策略',
-      reject: '工作流',
-      'remove-watch': '上下文操作',
-      retry: '工作流',
-      'review-signal': '工作流',
-      'run-backtest': '策略',
-      'send-to-order': '工作流',
-      'send-to-research': '工作流',
-      'view-curve': '导航',
-      'view-evidence': '上下文操作',
-      'view-logs': '导航',
-      'view-recent-runs': '导航',
+    actionRegistry: {
+      'add-to-compare': {
+        action: 'add-to-compare',
+        label: '加入对比',
+        category: '上下文操作',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '加入当前对比篮',
+        result: '已加入回测对比',
+      },
+      approve: {
+        action: 'approve',
+        label: '批准',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '批准当前信号',
+        result: '已提交批准记录',
+      },
+      'clone-strategy': {
+        action: 'clone-strategy',
+        label: '复制策略',
+        category: '策略',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '生成可编辑副本',
+        result: '策略副本已创建',
+      },
+      'copy-params': {
+        action: 'copy-params',
+        label: '复制参数',
+        category: '策略',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '复制参数快照',
+        result: '参数已复制',
+      },
+      'create-incident': {
+        action: 'create-incident',
+        label: '创建事件',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '创建平台事件单',
+        result: '事件单已创建',
+      },
+      'explain-priority': {
+        action: 'explain-priority',
+        label: '解释优先级',
+        category: '上下文操作',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '展开优先级依据',
+        result: '优先级解释已打开',
+      },
+      'generate-report': {
+        action: 'generate-report',
+        label: '生成报告',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '生成回测报告草稿',
+        result: '报告任务已启动',
+      },
+      'generate-signal': {
+        action: 'generate-signal',
+        label: '生成信号',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '生成观察标的信号',
+        result: '信号生成已排队',
+      },
+      'mute-alert': {
+        action: 'mute-alert',
+        label: '静音告警',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '暂时降低告警噪声',
+        result: '告警已静音',
+      },
+      'open-instrument-hub': {
+        action: 'open-instrument-hub',
+        label: '打开标的 Hub',
+        category: '导航',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '跳转标的工作台',
+        result: '标的 Hub 已准备打开',
+      },
+      'open-orders': {
+        action: 'open-orders',
+        label: '打开订单',
+        category: '导航',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '查看关联订单',
+        result: '订单视图已定位',
+      },
+      'open-risk': {
+        action: 'open-risk',
+        label: '打开风控',
+        category: '导航',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '查看风险约束',
+        result: '风控面板已定位',
+      },
+      'pause-strategy': {
+        action: 'pause-strategy',
+        label: '暂停策略',
+        category: '策略',
+        object: 'selected-object',
+        riskLevel: 'high',
+        preview: '暂停后续自动运行',
+        result: '已提交暂停请求',
+      },
+      reject: {
+        action: 'reject',
+        label: '拒绝',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'high',
+        preview: '拒绝当前信号',
+        result: '已提交拒绝记录',
+      },
+      'remove-watch': {
+        action: 'remove-watch',
+        label: '移出观察',
+        category: '上下文操作',
+        object: 'selected-object',
+        riskLevel: 'high',
+        preview: '从观察列表移除',
+        result: '已移出观察列表',
+      },
+      retry: {
+        action: 'retry',
+        label: '重试',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '重新执行失败任务',
+        result: '重试任务已派发',
+      },
+      'review-signal': {
+        action: 'review-signal',
+        label: '复核信号',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '检查证据链',
+        result: '已排入复核工作流',
+      },
+      'run-backtest': {
+        action: 'run-backtest',
+        label: '运行回测',
+        category: '策略',
+        object: 'selected-object',
+        riskLevel: 'medium',
+        preview: '按当前参数运行回测',
+        result: '回测任务已启动',
+      },
+      'send-to-order': {
+        action: 'send-to-order',
+        label: '发送到订单',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'high',
+        preview: '发送至订单准备队列',
+        result: '已提交订单准备请求',
+      },
+      'send-to-research': {
+        action: 'send-to-research',
+        label: '发送到研究',
+        category: '工作流',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '生成研究待办',
+        result: '研究待办已创建',
+      },
+      'view-curve': {
+        action: 'view-curve',
+        label: '查看曲线',
+        category: '导航',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '打开权益曲线',
+        result: '曲线视图已定位',
+      },
+      'view-evidence': {
+        action: 'view-evidence',
+        label: '查看证据',
+        category: '上下文操作',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '展开信号证据',
+        result: '证据面板已定位',
+      },
+      'view-logs': {
+        action: 'view-logs',
+        label: '查看日志',
+        category: '导航',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '打开关联日志',
+        result: '日志视图已定位',
+      },
+      'view-recent-runs': {
+        action: 'view-recent-runs',
+        label: '查看近期运行',
+        category: '导航',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '打开运行历史',
+        result: '近期运行已定位',
+      },
     },
 
     init: function () {
@@ -1353,8 +1521,20 @@
 
       return {
         object: (context && context.getAttribute('data-command-context-object')) || 'global',
+        route: (context && context.getAttribute('data-command-context-route')) || CommandPalette._routeKey(),
         actions: actions,
       };
+    },
+
+    _routeKey: function () {
+      var path = (window.location && window.location.pathname) || '/';
+      return path || '/';
+    },
+
+    _storageKey: function (context) {
+      var route = (context && context.route) || CommandPalette._routeKey();
+      var object = (context && context.object) || 'global';
+      return CommandPalette.RECENT_KEY + '::' + route + '::' + object;
     },
 
     /* Read data-command-category from action elements in the page */
@@ -1368,9 +1548,9 @@
       return map;
     },
 
-    _getRecent: function () {
+    _getRecent: function (context) {
       try {
-        var raw = window.localStorage.getItem(CommandPalette.RECENT_KEY);
+        var raw = window.localStorage.getItem(CommandPalette._storageKey(context || CommandPalette._readContext()));
         if (!raw) return [];
         var parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) return [];
@@ -1380,15 +1560,39 @@
       }
     },
 
-    _addRecent: function (action) {
-      var recent = CommandPalette._getRecent();
+    _addRecent: function (action, context) {
+      var scopedContext = context || CommandPalette._readContext();
+      var recent = CommandPalette._getRecent(scopedContext);
       /* Remove if already present */
       recent = recent.filter(function (r) { return r !== action; });
       recent.unshift(action);
       recent = recent.slice(0, CommandPalette.MAX_RECENT);
       try {
-        window.localStorage.setItem(CommandPalette.RECENT_KEY, JSON.stringify(recent));
+        window.localStorage.setItem(CommandPalette._storageKey(scopedContext), JSON.stringify(recent));
       } catch (_) { /* storage full or disabled */ }
+    },
+
+    _resolveAction: function (action, context, pageCategories) {
+      var base = CommandPalette.actionRegistry[action] || {
+        action: action,
+        label: action,
+        category: '全局操作',
+        object: 'selected-object',
+        riskLevel: 'low',
+        preview: '执行上下文动作',
+        result: '动作已完成',
+      };
+
+      return {
+        action: base.action,
+        label: base.label,
+        category: pageCategories[action] || base.category,
+        object: context.object,
+        route: context.route,
+        riskLevel: base.riskLevel || 'low',
+        preview: base.preview,
+        result: base.result,
+      };
     },
 
     _render: function (palette) {
@@ -1412,14 +1616,9 @@
 
       /* Build full items list with labels and categories */
       var pageCategories = CommandPalette._readCategories();
-      var recentActions = CommandPalette._getRecent();
+      var recentActions = CommandPalette._getRecent(context);
       var allItems = context.actions.map(function (action) {
-        return {
-          action: action,
-          label: CommandPalette.labels[action] || action,
-          category: pageCategories[action] || CommandPalette.categories[action] || '全局操作',
-          object: context.object,
-        };
+        return CommandPalette._resolveAction(action, context, pageCategories);
       });
 
       /* Render grouped */
@@ -1463,11 +1662,16 @@
     },
 
     _renderSection: function (container, title, items) {
+      var section = document.createElement('div');
+      section.className = 'ditto-command-section';
+      if (title === '最近使用') section.setAttribute('data-command-recent-section', '');
+      container.appendChild(section);
+
       var header = document.createElement('div');
       header.className = 'ditto-command-category';
       header.setAttribute('role', 'presentation');
       header.textContent = title;
-      container.appendChild(header);
+      section.appendChild(header);
 
       items.forEach(function (item) {
         var btn = document.createElement('button');
@@ -1479,9 +1683,34 @@
         btn.setAttribute('data-command-context-object', item.object);
         btn.setAttribute('data-command-label', item.label);
         btn.setAttribute('data-command-category-item', item.category);
+        btn.setAttribute('data-command-risk-level', item.riskLevel);
+        btn.setAttribute('data-command-preview', item.preview);
+        btn.setAttribute('data-command-result', item.result);
         btn.setAttribute('role', 'option');
-        btn.textContent = item.label;
-        container.appendChild(btn);
+
+        var text = document.createElement('span');
+        text.className = 'ditto-command-item-text';
+        var label = document.createElement('span');
+        label.className = 'ditto-command-item-label';
+        label.textContent = item.label;
+        var meta = document.createElement('span');
+        meta.className = 'ditto-command-item-meta';
+        meta.textContent = item.preview;
+        text.appendChild(label);
+        text.appendChild(meta);
+        btn.appendChild(text);
+
+        if (item.riskLevel === 'high') {
+          var badge = document.createElement('span');
+          badge.className = 'ditto-command-risk';
+          badge.textContent = '需确认';
+          btn.appendChild(badge);
+        }
+
+        btn.addEventListener('click', function () {
+          CommandPalette._activateAction(item, container.closest('[data-command-palette]'));
+        });
+        section.appendChild(btn);
       });
     },
 
@@ -1526,7 +1755,14 @@
       });
 
       categories.forEach(function (cat) {
-        cat.style.display = visibleCategories[cat.textContent] ? '' : 'none';
+        var section = cat.parentElement;
+        var visibleInSection = false;
+        if (section) {
+          section.querySelectorAll('[data-command-item]').forEach(function (item) {
+            if (item.style.display !== 'none') visibleInSection = true;
+          });
+        }
+        cat.style.display = visibleInSection || visibleCategories[cat.textContent] ? '' : 'none';
       });
     },
 
@@ -1558,9 +1794,186 @@
       if (!items.length) return;
 
       var item = items[idx];
-      var action = item.getAttribute('data-command-action');
-      if (action) CommandPalette._addRecent(action);
       item.click();
+    },
+
+    _activateAction: function (item, palette) {
+      if (!item || !item.action) return;
+      if (item.riskLevel === 'high') {
+        CommandPalette._openConfirmation(item, palette);
+        return;
+      }
+      CommandPalette._completeAction(item, palette);
+    },
+
+    _completeAction: function (item, palette) {
+      CommandPalette._addRecent(item.action, item);
+      CommandPalette._showFeedback(item);
+      if (palette && !palette.hidden) CommandPalette._close(palette);
+    },
+
+    _ensureFeedback: function () {
+      var existing = document.querySelector('[data-command-action-feedback]');
+      if (existing) return existing;
+
+      var feedback = document.createElement('aside');
+      feedback.className = 'ditto-command-feedback';
+      feedback.setAttribute('data-command-action-feedback', '');
+      feedback.setAttribute('role', 'status');
+      feedback.setAttribute('aria-live', 'polite');
+      feedback.hidden = true;
+      document.body.appendChild(feedback);
+      return feedback;
+    },
+
+    _appendFeedbackRow: function (container, label, value) {
+      var row = document.createElement('div');
+      row.className = 'ditto-command-feedback-row';
+      var key = document.createElement('span');
+      key.className = 'ditto-command-feedback-key';
+      key.textContent = label;
+      var val = document.createElement('span');
+      val.className = 'ditto-command-feedback-value';
+      val.textContent = value;
+      row.appendChild(key);
+      row.appendChild(val);
+      container.appendChild(row);
+    },
+
+    _showFeedback: function (item) {
+      var feedback = CommandPalette._ensureFeedback();
+      while (feedback.firstChild) feedback.removeChild(feedback.firstChild);
+
+      feedback.setAttribute('data-command-feedback-action', item.action);
+      feedback.setAttribute('data-command-feedback-risk', item.riskLevel);
+
+      var title = document.createElement('div');
+      title.className = 'ditto-command-feedback-title';
+      title.textContent = '动作完成';
+      feedback.appendChild(title);
+      CommandPalette._appendFeedbackRow(feedback, '命令', item.label);
+      CommandPalette._appendFeedbackRow(feedback, '对象', item.object);
+      CommandPalette._appendFeedbackRow(feedback, '影响', item.preview);
+      CommandPalette._appendFeedbackRow(feedback, '结果', item.result);
+
+      feedback.hidden = false;
+    },
+
+    _ensureConfirmation: function () {
+      var existing = document.querySelector('[data-command-confirmation]');
+      if (existing) return existing;
+
+      var dialog = document.createElement('section');
+      dialog.className = 'ditto-command-confirmation';
+      dialog.setAttribute('data-command-confirmation', '');
+      dialog.setAttribute('data-overlay', 'command-confirmation');
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-hidden', 'true');
+      dialog.setAttribute('aria-labelledby', 'command-confirmation-title');
+      dialog.hidden = true;
+
+      var surface = document.createElement('div');
+      surface.className = 'ditto-command-confirmation-surface';
+
+      var title = document.createElement('h2');
+      title.id = 'command-confirmation-title';
+      title.className = 'ditto-command-confirmation-title';
+      title.textContent = '确认高风险动作';
+
+      var body = document.createElement('div');
+      body.className = 'ditto-command-confirmation-body';
+      body.setAttribute('data-command-confirm-body', '');
+
+      var actions = document.createElement('div');
+      actions.className = 'ditto-command-confirmation-actions';
+
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'ditto-command-confirmation-button ditto-command-confirmation-button-secondary';
+      cancel.setAttribute('data-command-confirm-cancel', '');
+      cancel.textContent = '取消';
+
+      var confirm = document.createElement('button');
+      confirm.type = 'button';
+      confirm.className = 'ditto-command-confirmation-button ditto-command-confirmation-button-primary';
+      confirm.setAttribute('data-command-confirm-submit', '');
+      confirm.textContent = '确认执行';
+
+      actions.appendChild(cancel);
+      actions.appendChild(confirm);
+      surface.appendChild(title);
+      surface.appendChild(body);
+      surface.appendChild(actions);
+      dialog.appendChild(surface);
+      document.body.appendChild(dialog);
+
+      cancel.addEventListener('click', function () {
+        CommandPalette._closeConfirmation(dialog);
+      });
+      confirm.addEventListener('click', function () {
+        var pending = CommandPalette._pendingConfirmationAction;
+        CommandPalette._closeConfirmation(dialog);
+        if (pending) CommandPalette._completeAction(pending, null);
+      });
+      dialog.addEventListener('overlayclose', function (event) {
+        event.preventDefault();
+        CommandPalette._closeConfirmation(dialog);
+      });
+      dialog.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          CommandPalette._closeConfirmation(dialog);
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        var focusables = [cancel, confirm];
+        var first = focusables[0];
+        var last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
+      return dialog;
+    },
+
+    _openConfirmation: function (item, palette) {
+      var dialog = CommandPalette._ensureConfirmation();
+      var body = dialog.querySelector('[data-command-confirm-body]');
+      var confirm = dialog.querySelector('[data-command-confirm-submit]');
+      if (!body || !confirm) return;
+
+      CommandPalette._pendingConfirmationAction = item;
+      while (body.firstChild) body.removeChild(body.firstChild);
+      CommandPalette._appendFeedbackRow(body, '命令', item.label);
+      CommandPalette._appendFeedbackRow(body, '对象', item.object);
+      CommandPalette._appendFeedbackRow(body, '影响', item.preview);
+      CommandPalette._appendFeedbackRow(body, '结果', item.result);
+
+      if (palette && !palette.hidden) CommandPalette._close(palette);
+      CommandPalette.confirmationTriggerEl = document.activeElement;
+      dialog.hidden = false;
+      dialog.setAttribute('aria-hidden', 'false');
+      OverlayStack.push(dialog);
+      confirm.focus();
+    },
+
+    _closeConfirmation: function (dialog) {
+      var target = dialog || document.querySelector('[data-command-confirmation]');
+      if (!target) return;
+      target.hidden = true;
+      target.setAttribute('aria-hidden', 'true');
+      OverlayStack.remove(target);
+      CommandPalette._pendingConfirmationAction = null;
+      if (CommandPalette.confirmationTriggerEl && CommandPalette.confirmationTriggerEl.focus) {
+        CommandPalette.confirmationTriggerEl.focus();
+      }
+      CommandPalette.confirmationTriggerEl = null;
     },
 
     _open: function (palette, trigger) {

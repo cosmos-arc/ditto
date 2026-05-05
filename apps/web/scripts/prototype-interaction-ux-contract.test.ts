@@ -2255,6 +2255,126 @@ describe("prototype interaction UX contracts", () => {
 				expect(document.activeElement).toBe(trigger);
 			});
 
+			it("activates command actions into visible operational feedback and scoped recents", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div
+								data-command-context-route="/alpha"
+								data-command-context-object="测试对象"
+								data-command-context-actions="review-signal,open-risk"
+							></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/action-bus.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("cmd-trigger");
+				trigger?.click();
+				const palette = document.querySelector<HTMLElement>("[data-command-palette]");
+				const action = palette?.querySelector<HTMLElement>('[data-command-action="review-signal"]');
+
+				expect(palette).not.toBeNull();
+				expect(action).not.toBeNull();
+				action?.click();
+
+				const feedback = document.querySelector<HTMLElement>("[data-command-action-feedback]");
+				expect(feedback).not.toBeNull();
+				expect(feedback?.hidden).toBe(false);
+				expect(feedback?.getAttribute("data-command-feedback-action")).toBe("review-signal");
+				expect(feedback?.textContent).toContain("复核信号");
+				expect(feedback?.textContent).toContain("测试对象");
+				expect(feedback?.textContent).toContain("检查证据链");
+				expect(feedback?.textContent).toContain("已排入复核工作流");
+				expect(palette?.hidden).toBe(true);
+
+				const storageKey = "ditto-recent-commands::/alpha::测试对象";
+				expect(document.defaultView!.localStorage.getItem("ditto-recent-commands")).toBeNull();
+				expect(document.defaultView!.localStorage.getItem(storageKey)).toContain("review-signal");
+
+				trigger?.click();
+				const recentSection = document.querySelector<HTMLElement>("[data-command-palette] [data-command-recent-section]");
+				expect(recentSection?.textContent).toContain("复核信号");
+
+				const context = document.querySelector<HTMLElement>("[data-command-context-object]");
+				context?.setAttribute("data-command-context-route", "/beta");
+				trigger?.click();
+				const betaRecentSection = document.querySelector<HTMLElement>("[data-command-palette] [data-command-recent-section]");
+				expect(betaRecentSection?.textContent ?? "").not.toContain("复核信号");
+			});
+
+			it("routes high-risk command actions through an accessible confirmation dialog", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="strategy">命令</button>
+							<div
+								data-command-context-route="/research/strategies"
+								data-command-context-object="策略 V3.2"
+								data-command-context-actions="pause-strategy,clone-strategy"
+							></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/high-risk-action.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("cmd-trigger");
+				trigger?.click();
+				document.querySelector<HTMLElement>('[data-command-action="pause-strategy"]')?.click();
+
+				const dialog = document.querySelector<HTMLElement>("[data-command-confirmation]");
+				expect(dialog).not.toBeNull();
+				expect(dialog?.getAttribute("role")).toBe("dialog");
+				expect(dialog?.getAttribute("aria-modal")).toBe("true");
+				expect(dialog?.hidden).toBe(false);
+				expect(dialog?.textContent).toContain("暂停策略");
+				expect(dialog?.textContent).toContain("策略 V3.2");
+				expect(document.querySelector("[data-command-action-feedback]")).toBeNull();
+
+				const cancel = dialog?.querySelector<HTMLElement>("[data-command-confirm-cancel]");
+				cancel?.click();
+				expect(dialog?.hidden).toBe(true);
+				expect(document.querySelector("[data-command-action-feedback]")).toBeNull();
+
+				trigger?.click();
+				document.querySelector<HTMLElement>('[data-command-action="pause-strategy"]')?.click();
+				const reopenedDialog = document.querySelector<HTMLElement>("[data-command-confirmation]");
+				expect(reopenedDialog?.hidden).toBe(false);
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+				expect(reopenedDialog?.hidden).toBe(true);
+
+				trigger?.click();
+				document.querySelector<HTMLElement>('[data-command-action="pause-strategy"]')?.click();
+				document.querySelector<HTMLElement>("[data-command-confirm-submit]")?.click();
+
+				const feedback = document.querySelector<HTMLElement>("[data-command-action-feedback]");
+				expect(feedback).not.toBeNull();
+				expect(feedback?.getAttribute("data-command-feedback-risk")).toBe("high");
+				expect(feedback?.textContent).toContain("暂停策略");
+				expect(feedback?.textContent).toContain("策略 V3.2");
+				expect(feedback?.textContent).toContain("已提交暂停请求");
+				expect(document.defaultView!.localStorage.getItem("ditto-recent-commands::/research/strategies::策略 V3.2")).toContain(
+					"pause-strategy",
+				);
+			});
+
 			it("sets aria-describedby on tooltip trigger on show and clears on hide", async () => {
 				const dom = new JSDOM(
 					`<!doctype html>
