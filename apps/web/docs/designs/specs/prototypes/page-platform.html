@@ -944,25 +944,13 @@
     /* ══════════════════════════════════════════════
      * R3: Detail Panel — first section priority weight
      * ══════════════════════════════════════════════ */
-    /* Brand anchor: detail panel top glow bar */
+    /* Brand anchor: detail panel top border */
     .context-section:first-child {
       border-top: none;
     }
-    .ops-detail .context-rail::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
-        transparent 100%
-      );
+    .ops-detail .context-rail {
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--surface-panel-base) 96%, var(--brand-accent));
     }
 
     /* Detail panel section proportions: tasks 35%, resources 30%, events 35% */

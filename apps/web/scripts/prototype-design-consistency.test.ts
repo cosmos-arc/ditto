@@ -1009,18 +1009,13 @@ function isGlowBudgetAllowedBoxShadowLayer(selector: string, layer: string): boo
 	if (hasFocusSelector(normalizedSelector) && isFocusRingShadowLayer(normalizedValue)) {
 		return true;
 	}
-	if (/\.rail-icon\.active::before\b/.test(normalizedSelector)) return true;
-	if (
-		/(?:status|live|session|health-metric|breach|rule)-dot|regime-state-badge__dot|topo-node|\.dot(?:\.online|\.live|\.healthy)?\b/i.test(
-			normalizedSelector,
-		)
-	) {
+	if (isAllowedRailActiveGlowLayer(normalizedSelector, normalizedValue)) {
 		return true;
 	}
-	if (
-		/(?:\.decision-cta\.primary|\.btn-primary|\.primary-cta)/i.test(normalizedSelector) &&
-		/:(?:hover|active)\b/i.test(normalizedSelector)
-	) {
+	if (isAllowedStatusDotGlowLayer(normalizedSelector, normalizedValue)) {
+		return true;
+	}
+	if (isAllowedPrimaryCtaHoverLayer(normalizedSelector, normalizedValue)) {
 		return true;
 	}
 	if (hasDecorativeRadialGlow(normalizedValue)) {
@@ -1037,6 +1032,40 @@ function isGlowBudgetAllowedBoxShadowLayer(selector: string, layer: string): boo
 	}
 
 	return false;
+}
+
+function isAllowedRailActiveGlowLayer(selector: string, value: string): boolean {
+	return (
+		/\.rail-icon\.active::before\b/.test(selector) &&
+		/^0\s+0\s+(?:4|6)px(?:\s+-?1px)?\s+(?:var\(\s*--brand-signature-indicator-shadow\s*\)|var\(\s*--brand-signature-glow\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand-accent|brand-signature-fg)\s*\)\s+\d+%,\s*transparent\))$/i.test(
+			value,
+		)
+	);
+}
+
+function isStatusDotGlowSelector(selector: string): boolean {
+	return /(?:status|live|session|health-metric|breach|rule)-dot|regime-state-badge__dot|topo-node|\.dot(?:\.online|\.live|\.healthy)?\b/i.test(
+		selector,
+	);
+}
+
+function isAllowedStatusDotGlowLayer(selector: string, value: string): boolean {
+	return (
+		isStatusDotGlowSelector(selector) &&
+		/^0\s+0\s+(?:4|6)px(?:\s+-?\d+px)?\s+(?:var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)\s+\d+%,\s*transparent\))$/i.test(
+			value,
+		)
+	);
+}
+
+function isAllowedPrimaryCtaHoverLayer(selector: string, value: string): boolean {
+	return (
+		/(?:\.decision-cta\.primary|\.btn-primary|\.primary-cta)/i.test(selector) &&
+		/:(?:hover|active)\b/i.test(selector) &&
+		/^0\s+0\s+0\s+(?:1(?:\.5)?|2)px\s+(?:var\(\s*--(?:brand-accent|interaction-focus-ring|interaction-selected-border)\s*\)|color-mix\(in oklch,\s*var\(\s*--brand-accent\s*\)\s+\d+%,\s*transparent\))$/i.test(
+			value,
+		)
+	);
 }
 
 function isGlowBudgetAllowedBoxShadow(selector: string, value: string): boolean {
@@ -1077,12 +1106,12 @@ function hasDecorativeAmbientGradientRule(rule: CssRule): boolean {
 		/\btop\s*:\s*0\b/i.test(normalizedBody) &&
 		/\bleft\s*:\s*0\b/i.test(normalizedBody) &&
 		/\bright\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bheight\s*:\s*(?:1(?:\.5)?|2)px\b/i.test(normalizedBody);
+		/\bheight\s*:/i.test(normalizedBody);
 	const isRightEdgeLine =
 		/\bright\s*:\s*-?1px\b/i.test(normalizedBody) &&
 		/\btop\s*:\s*0\b/i.test(normalizedBody) &&
 		/\bbottom\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bwidth\s*:\s*(?:1(?:\.5)?|2)px\b/i.test(normalizedBody);
+		/\bwidth\s*:/i.test(normalizedBody);
 
 	return hasEdgePseudoSelector && hasAmbientGradient && (isTopEdgeLine || isRightEdgeLine);
 }
@@ -1182,8 +1211,26 @@ describe("prototype design consistency", () => {
 		).toBe(false);
 		expect(
 			isExcessiveGlowBoxShadow(
+				".rail-icon.active::before",
+				"0 0 4px color-mix(in oklch, var(--brand-accent) 30%, transparent), 0 0 20px color-mix(in oklch, var(--brand-accent) 14%, transparent)",
+			),
+		).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
 				".status-dot.live",
 				"0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent)",
+			),
+		).toBe(false);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".status-dot.live",
+				"0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent), 0 0 18px color-mix(in oklch, var(--system-healthy-fg) 16%, transparent)",
+			),
+		).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".decision-cta.primary:hover",
+				"0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent)",
 			),
 		).toBe(false);
 		expect(
@@ -1191,7 +1238,7 @@ describe("prototype design consistency", () => {
 				".decision-cta.primary:hover",
 				"0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent), 0 0 12px color-mix(in oklch, var(--brand-accent) 12%, transparent)",
 			),
-		).toBe(false);
+		).toBe(true);
 	});
 
 	it("collects glow budget violations from css selectors and declaration bodies", () => {
@@ -1207,11 +1254,24 @@ describe("prototype design consistency", () => {
 					top: 0;
 					left: 0;
 					right: 0;
-					height: 1px;
+					height: 4px;
 					background: linear-gradient(
 						90deg,
 						transparent 0%,
 						color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
+						transparent 100%
+					);
+				}
+				.shell-wash::before {
+					content: "";
+					position: absolute;
+					top: 0;
+					left: 0;
+					right: 0;
+					height: 32px;
+					background: linear-gradient(
+						180deg,
+						color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
 						transparent 100%
 					);
 				}
@@ -1221,13 +1281,16 @@ describe("prototype design consistency", () => {
 			`,
 		});
 
-		expect(violations).toEqual([
-			expect.stringContaining("data-mouse-glow-selector"),
-			expect.stringContaining("data-mouse-glow-body"),
-			expect.stringContaining("box-shadow"),
-			expect.stringContaining("ambient-gradient"),
-			expect.stringContaining("@keyframes decorative-pulse"),
-		]);
+		expect(violations).toEqual(
+			expect.arrayContaining([
+				expect.stringContaining("data-mouse-glow-selector"),
+				expect.stringContaining("data-mouse-glow-body"),
+				expect.stringContaining("box-shadow"),
+				expect.stringContaining("ambient-gradient"),
+				expect.stringContaining("@keyframes decorative-pulse"),
+			]),
+		);
+		expect(violations.filter((violation) => violation.includes(":ambient-gradient:"))).toHaveLength(2);
 	});
 
 	it("keeps exactly 28 active route prototypes", () => {
@@ -3318,7 +3381,7 @@ describe("prototype design consistency", () => {
 		}
 
 		for (const source of readGlowBudgetHtmlSources()) {
-			for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b|\sdata-mouse-glow(?:-[a-z0-9-]+)?=/gi)) {
+			for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b|\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/gi)) {
 				violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:${match[0]}`);
 			}
 		}

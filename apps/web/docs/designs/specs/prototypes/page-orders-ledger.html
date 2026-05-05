@@ -656,29 +656,11 @@
       grid-area: trace;
       background: var(--surface-panel-base);
       border-left: 1px solid var(--border-subtle);
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       position: relative;
-    }
-
-    /* Brand anchor: trace panel top glow bar */
-    .order-trace::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 70%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 50%, transparent) 70%,
-        transparent 100%
-      );
-      z-index: 1;
     }
 
     .trace-header {

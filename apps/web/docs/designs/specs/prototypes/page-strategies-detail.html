@@ -559,24 +559,13 @@
     /* ── Sidebar ── */
     .hub-sidebar {
       border-left: 1px solid var(--border-subtle);
+      border-top: 1px solid color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
+      background: color-mix(in oklch, var(--surface-panel-base) 97%, var(--brand-accent));
       display: flex;
       flex-direction: column;
       overflow: hidden;
       min-height: 0;
       position: relative;
-    }
-    .hub-sidebar::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 32px;
-      background: linear-gradient(
-        180deg,
-        color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
-        transparent 100%
-      );
-      pointer-events: none;
-      z-index: 0;
     }
     .hub-sidebar > * {
       position: relative;
