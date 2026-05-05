@@ -894,6 +894,154 @@ function hasReadableText(element: Element | null): boolean {
 	return Boolean(getReadablePrimaryText(element));
 }
 
+function hasPrototypeAccessibleName(element: Element): boolean {
+	if (element.getAttribute("aria-label")?.trim()) return true;
+	if (hasExistingIdTarget(element, "aria-labelledby")) return true;
+	if (element.querySelector("title")?.textContent?.trim()) return true;
+
+	return false;
+}
+
+function hasOverlaySurfaceAccessibleName(surface: Element): boolean {
+	return (
+		hasPrototypeAccessibleName(surface) ||
+		[
+			".overlay-title",
+			".drawer-title",
+			"h1",
+			"h2",
+			"h3",
+			"h4",
+			"[role='heading']",
+		].some((selector) => hasReadableText(surface.querySelector(selector)))
+	);
+}
+
+function isApprovedOverlaySurfaceRole(surface: Element): boolean {
+	const role = surface.getAttribute("role")?.trim();
+	if (!role) return false;
+	if (["dialog", "alertdialog"].includes(role)) {
+		return hasOverlaySurfaceAccessibleName(surface);
+	}
+
+	return ["region", "alert", "status"].includes(role) && hasOverlaySurfaceAccessibleName(surface);
+}
+
+function getOverlaySurfaceLikeElements(document: Document): Element[] {
+	const surfaces = [
+		...document.querySelectorAll(
+			[
+				"[data-overlay] .overlay-surface",
+				"[data-overlay] [class*='overlay-surface--']",
+				"[data-overlay].overlay-toast",
+				".gallery-card__preview--overlay .overlay-surface",
+				".gallery-card__preview--overlay [class*='overlay-surface--']",
+			].join(", "),
+		),
+	];
+
+	return [...new Set(surfaces)];
+}
+
+function isSvgInMeaningfulVisualizationContext(svg: Element): boolean {
+	const ownTokens = [
+		svg.getAttribute("class") ?? "",
+		svg.getAttribute("id") ?? "",
+		svg.getAttribute("name") ?? "",
+		svg.getAttribute("aria-label") ?? "",
+		svg.hasAttribute("data-sparkline") ? "sparkline" : "",
+	].join(" ");
+	if (/\b(?:sparkline|chart|heatmap|matrix|trend)\b/i.test(ownTokens)) return true;
+
+	const context = svg.closest(
+		[
+			"[data-chart-interaction-contract]",
+			"[data-viz-legend]",
+			".metric-card",
+			".kpi-card",
+			".summary-card",
+			".chart-panel",
+			".chart-body",
+			".chart-placeholder",
+			".pnl-chart",
+			".api-mini-chart",
+			".correlation-matrix",
+		].join(", "),
+	);
+
+	return Boolean(context);
+}
+
+function svgHasValidAccessibilitySemantics(svg: Element): boolean {
+	if (svg.getAttribute("aria-hidden") === "true") return true;
+	if (svg.getAttribute("role") === "img" && hasPrototypeAccessibleName(svg)) return true;
+
+	return false;
+}
+
+function isInteractiveDataVizCell(cell: Element): boolean {
+	return (
+		isInteractivePrototypeElement(cell) ||
+		cell.hasAttribute("onclick") ||
+		cell.hasAttribute("tabindex") ||
+		Boolean(cell.closest("[role='grid'], [role='table']"))
+	);
+}
+
+function isDataVizCellCandidate(cell: Element): boolean {
+	if (cell.tagName.toLowerCase() === "svg") return false;
+
+	const className = cell.getAttribute("class") ?? "";
+	const isCellLike = /\b(?:cell|heatmap|matrix|corr|treemap|stat-item|numeric)\b/i.test(className);
+	if (!isCellLike && !["td", "th"].includes(cell.tagName.toLowerCase())) return false;
+
+	if (cell.matches("[data-direction], [data-corr], [data-viz-cell-strength], [data-viz-cell-selected]")) {
+		return true;
+	}
+
+	return (
+		/\b(?:heatmap|matrix|corr-cell|viz-cell)\b/i.test(className) &&
+		isInteractiveDataVizCell(cell)
+	);
+}
+
+function hasDataVizCellRole(cell: Element): boolean {
+	const role = cell.getAttribute("role")?.trim();
+	if (role && ["cell", "gridcell", "button", "rowheader", "columnheader"].includes(role)) return true;
+
+	return ["td", "th"].includes(cell.tagName.toLowerCase());
+}
+
+function hasDataVizCellAccessibleLabel(cell: Element): boolean {
+	return hasPrototypeAccessibleName(cell);
+}
+
+function isSymbolOnlyControl(element: Element): boolean {
+	if (element.closest("[aria-hidden='true']")) return false;
+
+	const text = (element.textContent ?? "").replace(/\s+/g, "").trim();
+	if (!/^(?:×|✕|x|X|—|←|→|↗|↘|▾|▸|⌄|»|«|!|\+|-)$/.test(text)) return false;
+
+	const className = element.getAttribute("class") ?? "";
+	return (
+		isInteractivePrototypeElement(element) ||
+		element.hasAttribute("tabindex") ||
+		/\b(?:close|dismiss|toggle|expand|collapse|danger|tag-close|drawer-close|overlay-close|toast-close)\b/i.test(
+			className,
+		)
+	);
+}
+
+function hasSymbolOnlyControlAccessibleSemantics(element: Element): boolean {
+	if (element.getAttribute("aria-hidden") === "true") return true;
+	if (hasPrototypeAccessibleName(element)) return true;
+	if (!isInteractivePrototypeElement(element) && !element.hasAttribute("tabindex")) {
+		return Boolean(element.closest("[aria-label], [aria-labelledby]"));
+	}
+
+	return false;
+}
+
 function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
 	return pattern.test(getReadablePrimaryText(element));
 }
@@ -3479,6 +3627,71 @@ describe("prototype design consistency", () => {
 			}
 			if (!defaultView.querySelector(".viz-cell-strong, .viz-cell-selected, [data-viz-cell-strength='strong'], [data-viz-cell-selected]")) {
 				violations.push(`${page.id}:cell-affordance`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("requires active prototype overlays, charts, matrix cells, and symbol controls to expose accessible semantics", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+
+			for (const [index, surface] of getOverlaySurfaceLikeElements(document).entries()) {
+				if (!isApprovedOverlaySurfaceRole(surface)) {
+					violations.push(
+						`${page.id}:overlay-surface:${index + 1}:${surface.getAttribute("role") ?? "missing-role"}`,
+					);
+				}
+			}
+
+			for (const [index, svg] of [...document.querySelectorAll("svg")].entries()) {
+				if (
+					isSvgInMeaningfulVisualizationContext(svg) &&
+					!svgHasValidAccessibilitySemantics(svg)
+				) {
+					violations.push(
+						`${page.id}:svg:${index + 1}:${svg.getAttribute("class") ?? "unclassed"}`,
+					);
+				}
+			}
+
+			const dataVizCells = [
+				...document.querySelectorAll<HTMLElement>(
+					[
+						"[data-viz]",
+						"[data-viz-cell-strength]",
+						"[data-viz-cell-selected]",
+						"[data-direction]",
+						"[data-corr]",
+						".heatmap-cell",
+						".matrix-cell",
+						".corr-cell",
+						".viz-cell-strong",
+					].join(", "),
+				),
+			].filter(isDataVizCellCandidate);
+			for (const [index, cell] of dataVizCells.entries()) {
+				if (!hasDataVizCellRole(cell) || !hasDataVizCellAccessibleLabel(cell)) {
+					violations.push(
+						`${page.id}:viz-cell:${index + 1}:${cell.getAttribute("class") ?? cell.tagName.toLowerCase()}`,
+					);
+				}
+			}
+
+			const symbolOnlyControls = [
+				...document.querySelectorAll<HTMLElement>(
+					"button, label, [role='button'], [tabindex], .overlay-close, .drawer-close, .toast-close, .tag-close-icon, .collapse-toggle, .sidebar-toggle",
+				),
+			].filter(isSymbolOnlyControl);
+			for (const [index, control] of symbolOnlyControls.entries()) {
+				if (!hasSymbolOnlyControlAccessibleSemantics(control)) {
+					violations.push(
+						`${page.id}:symbol-control:${index + 1}:${control.getAttribute("class") ?? control.tagName.toLowerCase()}`,
+					);
+				}
 			}
 		}
 

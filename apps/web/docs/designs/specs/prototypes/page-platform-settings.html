@@ -1227,7 +1227,7 @@
     <div class="overlay-backdrop" data-overlay="overlay-datasource-test">
       <label class="overlay-dismiss" for="overlay-datasource-test" aria-label="关闭"></label>
       <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="连接测试">
-        <div class="overlay-header"><span class="overlay-title">数据源连接测试</span><label for="overlay-datasource-test" class="overlay-close">✕</label></div>
+        <div class="overlay-header"><span class="overlay-title">数据源连接测试</span><label for="overlay-datasource-test" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
           <div class="test-result success">✓ Wind 连接正常 — 延迟 120ms，数据完整性 99.8%</div>
         </div>
@@ -1237,7 +1237,7 @@
     <div class="overlay-backdrop" data-overlay="overlay-broker-test">
       <label class="overlay-dismiss" for="overlay-broker-test" aria-label="关闭"></label>
       <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="券商连接测试">
-        <div class="overlay-header"><span class="overlay-title">券商连接测试</span><label for="overlay-broker-test" class="overlay-close">✕</label></div>
+        <div class="overlay-header"><span class="overlay-title">券商连接测试</span><label for="overlay-broker-test" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
           <div class="test-progress"><div class="test-spinner"></div> 正在测试连接…</div>
         </div>
@@ -1247,7 +1247,7 @@
     <div class="overlay-backdrop" data-overlay="overlay-reset-config">
       <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
       <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置" data-danger-confirmation data-high-risk-confirmation>
-        <div class="overlay-header"><span class="overlay-title">重置配置</span><label for="overlay-reset-config" class="overlay-close">✕</label></div>
+        <div class="overlay-header"><span class="overlay-title">重置配置</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
           <p data-impact-summary><span data-danger-marker>!</span> 确认将所有配置重置为默认值？此操作不可撤销。</p>
           <p data-recovery-hint>恢复提示：重置前会保留 r17 stable 回滚点和配置 diff。</p>
@@ -1299,9 +1299,9 @@
       <div class="gallery-group">
         <div class="gallery-group__label">Overlays</div>
         <div class="gallery-cards">
-          <div class="gallery-card" data-overlay-ref="overlay-datasource-test"><div class="gallery-card__label">数据源测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet"><div class="overlay-header"><span class="overlay-title">连接测试</span><span class="overlay-close">✕</span></div><div class="overlay-body"><div class="test-result success">✓ 连接正常 — 延迟 120ms</div></div></div></div></div>
-          <div class="gallery-card" data-overlay-ref="overlay-broker-test"><div class="gallery-card__label">券商测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet"><div class="overlay-header"><span class="overlay-title">券商连接测试</span><span class="overlay-close">✕</span></div><div class="overlay-body"><div class="test-progress"><div class="test-spinner"></div> 正在测试…</div></div></div></div></div>
-          <div class="gallery-card" data-overlay-ref="overlay-reset-config"><div class="gallery-card__label">重置配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「重置为默认值」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet"><div class="overlay-header"><span class="overlay-title">重置配置</span><span class="overlay-close">✕</span></div><div class="overlay-body"><p>确认将所有配置重置为默认值？此操作不可撤销。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-datasource-test"><div class="gallery-card__label">数据源测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="连接测试"><div class="overlay-header"><span class="overlay-title">连接测试</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><div class="test-result success">✓ 连接正常 — 延迟 120ms</div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-broker-test"><div class="gallery-card__label">券商测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="券商连接测试"><div class="overlay-header"><span class="overlay-title">券商连接测试</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><div class="test-progress"><div class="test-spinner"></div> 正在测试…</div></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-reset-config"><div class="gallery-card__label">重置配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「重置为默认值」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="重置配置"><div class="overlay-header"><span class="overlay-title">重置配置</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><p>确认将所有配置重置为默认值？此操作不可撤销。</p></div></div></div></div>
         </div>
       </div>
     </div>
