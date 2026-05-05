@@ -1093,33 +1093,45 @@ function hasDecorativeRadialGlow(value: string): boolean {
 	return hasDecorativeGlowColor(value) && hasRadialGlowLayer(value);
 }
 
-function hasEdgeOffset(value: string, edge: "top" | "right" | "bottom" | "left"): boolean {
-	return new RegExp(`\\b${edge}\\s*:\\s*(?:-?1px|0(?:px)?)\\b`, "i").test(value);
+function hasPositionEdgeDeclaration(value: string, edge: "top" | "right" | "bottom" | "left"): boolean {
+	return new RegExp(`\\b${edge}\\s*:`, "i").test(value);
+}
+
+function hasDecorativeGradientBackground(value: string): boolean {
+	return (
+		/\bbackground(?:-image)?\s*:[^;]*\b(?:linear|radial)-gradient\(/i.test(value) &&
+		/var\(\s*--(?:brand|market|risk|system|agent|execution)-[a-z0-9-]+\s*\)/i.test(value) &&
+		/\btransparent\b/i.test(value)
+	);
+}
+
+function isAllowedAmbientGradientRule(selector: string): boolean {
+	return (
+		/\.rail-icon\.active::before\b/i.test(selector) ||
+		(isStatusDotGlowSelector(selector) && /::(?:before|after)\b/i.test(selector)) ||
+		/(?:\.decision-cta\.primary|\.btn-primary|\.primary-cta)[^,{]*:(?:hover|active)\b/i.test(selector)
+	);
+}
+
+function isPositionedEdgeAdjacentRule(value: string): boolean {
+	const isPositioned = /\bposition\s*:\s*(?:absolute|fixed|sticky)\b/i.test(value);
+	const usesInset = /\binset(?:-[a-z]+)?\s*:/i.test(value);
+	const touchesHorizontalEdge = hasPositionEdgeDeclaration(value, "left") || hasPositionEdgeDeclaration(value, "right");
+	const touchesVerticalEdge = hasPositionEdgeDeclaration(value, "top") || hasPositionEdgeDeclaration(value, "bottom");
+
+	return isPositioned && (usesInset || (touchesHorizontalEdge && touchesVerticalEdge));
 }
 
 function hasDecorativeAmbientGradientRule(rule: CssRule): boolean {
 	const normalizedSelector = rule.selector.replace(/\s+/g, " ").trim();
 	const normalizedBody = rule.body.replace(/\s+/g, " ").trim();
-	const hasEdgePseudoSelector = /::(?:before|after)\b/.test(normalizedSelector);
-	const hasAmbientGradient =
-		/\bbackground(?:-image)?\s*:[^;]*\b(?:linear|radial)-gradient\(/i.test(normalizedBody) &&
-		/color-mix\(in oklch,\s*var\(\s*--(?:brand|market|risk|system|agent|execution)-[a-z0-9-]+\s*\)[^)]*transparent/i.test(
-			normalizedBody,
-		);
-	const isFullInsetWash = /\binset\s*:\s*0(?:px)?\b/i.test(normalizedBody);
-	const spansHorizontally = isFullInsetWash || (hasEdgeOffset(normalizedBody, "left") && hasEdgeOffset(normalizedBody, "right"));
-	const spansVertically = isFullInsetWash || (hasEdgeOffset(normalizedBody, "top") && hasEdgeOffset(normalizedBody, "bottom"));
-	const hasHeight = /\bheight\s*:/i.test(normalizedBody);
-	const hasWidth = /\bwidth\s*:/i.test(normalizedBody);
-	const isTopEdgeLine = hasEdgeOffset(normalizedBody, "top") && spansHorizontally && hasHeight;
-	const isRightEdgeLine = hasEdgeOffset(normalizedBody, "right") && spansVertically && hasWidth;
-	const isBottomEdgeLine = hasEdgeOffset(normalizedBody, "bottom") && spansHorizontally && hasHeight;
-	const isLeftEdgeLine = hasEdgeOffset(normalizedBody, "left") && spansVertically && hasWidth;
+	const hasPseudoSelector = /::(?:before|after)\b/i.test(normalizedSelector);
+	const isDecorativeCandidate = hasPseudoSelector || isPositionedEdgeAdjacentRule(normalizedBody);
 
 	return (
-		hasEdgePseudoSelector &&
-		hasAmbientGradient &&
-		(isTopEdgeLine || isRightEdgeLine || isBottomEdgeLine || isLeftEdgeLine || isFullInsetWash)
+		isDecorativeCandidate &&
+		hasDecorativeGradientBackground(normalizedBody) &&
+		!isAllowedAmbientGradientRule(normalizedSelector)
 	);
 }
 
@@ -1332,6 +1344,75 @@ describe("prototype design consistency", () => {
 						transparent 140px
 					);
 				}
+				.shell-offset-radial-top::before {
+					content: "";
+					position: absolute;
+					top: -40px;
+					left: 20%;
+					right: 20%;
+					height: 80px;
+					background: radial-gradient(
+						ellipse at center,
+						color-mix(in oklch, var(--brand-signature-fg) 4%, transparent) 0%,
+						transparent 70%
+					);
+				}
+				.shell-offset-radial-bottom::after {
+					content: "";
+					position: absolute;
+					bottom: 0;
+					left: 10%;
+					right: 10%;
+					height: 60px;
+					background: radial-gradient(
+						ellipse at center bottom,
+						color-mix(in oklch, var(--brand-signature-fg) 3%, transparent) 0%,
+						transparent 70%
+					);
+				}
+				.shell-offset-left-wash::before {
+					content: "";
+					position: absolute;
+					top: 0;
+					left: -20px;
+					bottom: 0;
+					width: 40px;
+					background: linear-gradient(
+						to right,
+						transparent,
+						color-mix(in oklch, var(--brand-signature-fg) 2%, transparent) 50%,
+						transparent
+					);
+				}
+				.header-title::after {
+					content: "";
+					position: absolute;
+					bottom: -4px;
+					left: 0;
+					width: 200%;
+					height: 2px;
+					background: linear-gradient(
+						90deg,
+						color-mix(in oklch, var(--brand-accent) 70%, transparent) 0%,
+						var(--brand-accent) 15%,
+						transparent 100%
+					);
+				}
+				:root:has(#trading-mode:checked) label[for="trading-mode"]::after {
+					content: "";
+					position: absolute;
+					bottom: -1px;
+					left: 20%;
+					right: 20%;
+					height: 2px;
+					background: linear-gradient(
+						90deg,
+						transparent,
+						color-mix(in oklch, var(--brand-accent) 60%, transparent),
+						var(--brand-accent),
+						transparent
+					);
+				}
 				@keyframes decorative-pulse {
 					50% { box-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 30%, transparent); }
 				}
@@ -1345,9 +1426,14 @@ describe("prototype design consistency", () => {
 				expect.stringContaining("box-shadow"),
 				expect.stringContaining("ambient-gradient"),
 				expect.stringContaining("@keyframes decorative-pulse"),
+				expect.stringContaining("ambient-gradient:.shell-offset-radial-top::before"),
+				expect.stringContaining("ambient-gradient:.shell-offset-radial-bottom::after"),
+				expect.stringContaining("ambient-gradient:.shell-offset-left-wash::before"),
+				expect.stringContaining("ambient-gradient:.header-title::after"),
+				expect.stringContaining('ambient-gradient::root:has(#trading-mode:checked) label[for="trading-mode"]::after'),
 			]),
 		);
-		expect(violations.filter((violation) => violation.includes(":ambient-gradient:"))).toHaveLength(6);
+		expect(violations.filter((violation) => violation.includes(":ambient-gradient:"))).toHaveLength(11);
 	});
 
 	it("keeps exactly 28 active route prototypes", () => {

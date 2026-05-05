@@ -148,27 +148,10 @@
       -webkit-backdrop-filter: blur(16px) saturate(1.2);
       position: relative;
     }
-    /* ── Header title brand underline ── */
+    /* ── Header title structural accent ── */
     .shell-home .header-title {
       position: relative;
-    }
-    .shell-home .header-title::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 200%;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        color-mix(in oklch, var(--brand-accent) 70%, transparent) 0%,
-        var(--brand-accent) 15%,
-        color-mix(in oklch, var(--brand-signature-fg) 40%, transparent) 35%,
-        color-mix(in oklch, var(--brand-signature-fg) 18%, transparent) 60%,
-        transparent 100%
-      );
-      border-radius: 1px;
-      pointer-events: none;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
     }
 
     /* ── Rail active: domain-tinted selection ── */
@@ -860,23 +843,10 @@
       border-color: color-mix(in oklch, var(--risk-high-fg) 20%, transparent);
     }
 
-    /* ── Queue item P1 urgency backdrop ── */
+    /* ── Queue item P1 urgency edge ── */
     .shell-home .queue-item:has(.queue-item-bar.p1) {
       position: relative;
-    }
-    .shell-home .queue-item:has(.queue-item-bar.p1)::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 8px;
-      bottom: 8px;
-      width: 6px;
-      background: radial-gradient(
-        ellipse at left center,
-        color-mix(in oklch, var(--risk-high-fg) 6%, transparent) 0%,
-        transparent 80%
-      );
-      pointer-events: none;
+      box-shadow: inset 2px 0 0 color-mix(in oklch, var(--risk-high-fg) 42%, var(--border-subtle));
     }
 
     /* Queue item hover elevation */
@@ -1041,43 +1011,14 @@
      * R4: Brand-tinted surface depth
      * ══════════════════════════════════════════════ */
 
-    /* Main content area subtle brand tint */
-    .shell-home .main-primary::before {
-      content: '';
-      position: absolute;
-      top: -40px;
-      left: 20%;
-      right: 20%;
-      height: 80px;
-      background: radial-gradient(
-        ellipse at center,
-        color-mix(in oklch, var(--brand-signature-fg) 4%, transparent) 0%,
-        transparent 70%
-      );
-      pointer-events: none;
-      z-index: 0;
-    }
+    /* Main content area structural depth */
     .shell-home .main-primary {
       position: relative;
+      border-top: 1px solid color-mix(in oklch, var(--brand-signature-fg) 10%, var(--border-subtle));
     }
     .shell-home .main-primary > * {
       position: relative;
       z-index: 1;
-    }
-    .shell-home .main-primary::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 10%;
-      right: 10%;
-      height: 60px;
-      background: radial-gradient(
-        ellipse at center bottom,
-        color-mix(in oklch, var(--brand-signature-fg) 3%, transparent) 0%,
-        transparent 70%
-      );
-      pointer-events: none;
-      z-index: 0;
     }
     .shell-home .panel:hover {
       border-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-subtle));
@@ -1098,11 +1039,7 @@
       width: 3px;
       height: 12px;
       border-radius: 1.5px;
-      background: linear-gradient(
-        to bottom,
-        color-mix(in oklch, var(--brand-signature-fg) 50%, transparent),
-        color-mix(in oklch, var(--brand-signature-fg) 20%, transparent)
-      );
+      background: color-mix(in oklch, var(--brand-signature-fg) 42%, var(--border-default));
     }
 
     /* ── Sidebar context rail premium polish ── */
@@ -1393,24 +1330,10 @@
       animation-duration: 2.2s;
     }
 
-    /* ── Decision card brass surface tint ── */
+    /* ── Decision card brass structural line ── */
     .shell-home .panel[data-contract-slot="decision-card"] {
       position: relative;
-    }
-    .shell-home .panel[data-contract-slot="decision-card"]::before {
-      content: '';
-      position: absolute;
-      top: -8px;
-      left: 0;
-      width: 80px;
-      height: 40px;
-      background: radial-gradient(
-        ellipse at left center,
-        color-mix(in oklch, var(--brand-signature-fg) 6%, transparent) 0%,
-        transparent 80%
-      );
-      pointer-events: none;
-      z-index: 0;
+      border-top-color: color-mix(in oklch, var(--brand-signature-fg) 18%, var(--border-subtle));
     }
     .shell-home .panel[data-contract-slot="decision-card"] > * {
       position: relative;
@@ -1426,25 +1349,10 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
-    /* ── Sidebar brass edge tint ── */
+    /* ── Sidebar brass edge line ── */
     .shell-home .shell-sidebar {
       position: relative;
-    }
-    .shell-home .shell-sidebar::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -20px;
-      width: 40px;
-      bottom: 0;
-      background: linear-gradient(
-        to right,
-        transparent,
-        color-mix(in oklch, var(--brand-signature-fg) 2%, transparent) 50%,
-        transparent
-      );
-      pointer-events: none;
-      z-index: 0;
+      border-left: 1px solid color-mix(in oklch, var(--brand-signature-fg) 12%, var(--border-subtle));
     }
     .shell-home .context-rail {
       position: relative;
@@ -1452,9 +1360,6 @@
     }
 
     /* ── Light mode surface tuning ── */
-    [data-theme="light"] .shell-home .main-primary::before {
-      opacity: 0.3;
-    }
     [data-theme="light"] .shell-home .context-section:hover {
       background: color-mix(in oklch, var(--brand-signature-fg) 4%, var(--surface-panel-base));
     }

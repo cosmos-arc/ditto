@@ -615,7 +615,7 @@
       left: 0;
       right: 0;
       bottom: -24px;
-      background: linear-gradient(180deg, color-mix(in oklch, var(--market-up-fg) 10%, transparent) 0%, transparent 100%);
+      background: color-mix(in oklch, var(--market-up-fg) 7%, transparent);
       clip-path: polygon(0% 0%, 8% 40%, 18% 35%, 28% 30%, 38% 25%, 48% 20%, 58% 18%, 68% 15%, 78% 12%, 88% 10%, 95% 8%, 100% 100%, 0% 100%);
     }
 
@@ -1348,13 +1348,13 @@
       z-index: 0;
     }
     .regime-atmosphere--bull::before {
-      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-up-fg) 4%, transparent) 0%, transparent 70%);
+      background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);
     }
     .regime-atmosphere--bear::before {
-      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-down-fg) 4%, transparent) 0%, transparent 70%);
+      background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);
     }
     .regime-atmosphere--range::before {
-      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--risk-near-limit-fg) 3%, transparent) 0%, transparent 70%);
+      background: color-mix(in oklch, var(--risk-near-limit-fg) 3%, transparent);
     }
     .regime-atmosphere > * { position: relative; z-index: 1; }
 
@@ -1990,13 +1990,13 @@
 
     /* ── B: Regime Indicator Visual Anchor ── */
     .regime-atmosphere--bull::before {
-      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-up-fg) 8%, transparent) 0%, transparent 70%);
+      background: color-mix(in oklch, var(--market-up-fg) 8%, transparent);
     }
     .regime-atmosphere--bear::before {
-      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--market-down-fg) 8%, transparent) 0%, transparent 70%);
+      background: color-mix(in oklch, var(--market-down-fg) 8%, transparent);
     }
     .regime-atmosphere--range::before {
-      background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--risk-near-limit-fg) 6%, transparent) 0%, transparent 70%);
+      background: color-mix(in oklch, var(--risk-near-limit-fg) 6%, transparent);
     }
 
     /* Gauge center restrained elevation */

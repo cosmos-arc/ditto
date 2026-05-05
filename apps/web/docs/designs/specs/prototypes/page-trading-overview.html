@@ -106,25 +106,10 @@
       -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
-    /* Header title brand underline */
+    /* Header title structural accent */
     .shell-analytical.trading-variant .header-title {
       position: relative;
-    }
-    .shell-analytical.trading-variant .header-title::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 40%;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        var(--brand-accent) 30%,
-        var(--brand-signature-fg) 60%,
-        transparent 100%
-      );
-      border-radius: 1px;
-      pointer-events: none;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
     }
 
     /* Header subtitle (token-prefixed) */
@@ -1866,7 +1851,7 @@
       background: color-mix(in oklch, var(--brand-accent) 6%, var(--interaction-hover-subtle-bg));
     }
 
-    /* ── B3. Active tab brand gradient indicator ::after ── */
+    /* ── B3. Active tab structural indicator ::after ── */
     :root:has(#trading-mode:checked) label[for="trading-mode"]::after,
     :root:has(#review-mode:checked) label[for="review-mode"]::after {
       content: '';
@@ -1876,14 +1861,7 @@
       right: 20%;
       height: 2px;
       border-radius: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        color-mix(in oklch, var(--brand-accent) 60%, transparent),
-        var(--brand-accent),
-        color-mix(in oklch, var(--brand-accent) 60%, transparent),
-        transparent
-      );
+      background: var(--brand-accent);
       pointer-events: none;
     }
     .trading-mode-tab {

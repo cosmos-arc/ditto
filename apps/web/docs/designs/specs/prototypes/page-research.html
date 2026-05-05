@@ -707,12 +707,7 @@
     .chart-placeholder-area {
       position: absolute;
       inset: 0;
-      background: linear-gradient(
-        180deg,
-        color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
-        color-mix(in oklch, var(--brand-accent) 2%, transparent) 40%,
-        transparent 100%
-      );
+      background: color-mix(in oklch, var(--brand-accent) 4%, var(--surface-panel-base));
     }
 
     /* ── Chart grid lines ── */
@@ -1774,11 +1769,7 @@
       left: 0;
       width: 0;
       height: 2px;
-      background: linear-gradient(
-        90deg,
-        var(--brand-accent),
-        color-mix(in oklch, var(--brand-accent) 60%, transparent)
-      );
+      background: var(--brand-accent);
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .report-card:hover::after {
@@ -1800,11 +1791,7 @@
       left: 0;
       width: 0;
       height: 2px;
-      background: linear-gradient(
-        90deg,
-        var(--brand-accent),
-        color-mix(in oklch, var(--brand-accent) 60%, transparent)
-      );
+      background: var(--brand-accent);
       transition: width var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .backtest-card:hover::after {
