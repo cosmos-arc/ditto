@@ -2782,14 +2782,6 @@
                 <stop offset="60%" stop-color="var(--brand-accent)" stop-opacity="0.05"/>
                 <stop offset="100%" stop-color="var(--brand-accent)" stop-opacity="0"/>
               </linearGradient>
-              <!-- Glow filter for main trend line -->
-              <filter id="line-glow" x="-2%" y="-20%" width="104%" height="140%">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
-                <feMerge>
-                  <feMergeNode in="blur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
             </defs>
             <!-- Area fill for main line (动量12M) -->
             <polygon points="0,10 30,8 60,12 90,9 120,7 150,10 180,13 210,11 240,14 270,16 300,13 330,18 360,15 390,20 420,18 450,22 480,20 510,24 540,22 570,26 600,24 630,28 660,26 690,30 720,28 750,32 800,30 800,48 0,48" fill="url(#ic-area-gradient)"/>
@@ -2799,8 +2791,8 @@
             <polyline points="0,14 40,13 80,15 120,12 160,14 200,13 240,15 280,16 320,15 360,18 400,17 440,19 480,18 520,20 560,19 600,21 640,22 680,24 720,23 760,25 800,24" fill="none" stroke="var(--brand-accent)" stroke-width="1" opacity="0.3"/>
             <!-- Comparison line: 低波动 (opacity 0.15) -->
             <polyline points="0,18 40,17 80,19 120,18 160,20 200,19 240,21 280,20 320,22 360,21 400,23 440,22 480,24 520,25 560,26 600,27 640,28 680,29 720,30 760,31 800,32" fill="none" stroke="var(--brand-accent)" stroke-width="1" opacity="0.15"/>
-            <!-- Main line: 动量12M (bold, full opacity, glow) -->
-            <polyline points="0,10 30,8 60,12 90,9 120,7 150,10 180,13 210,11 240,14 270,16 300,13 330,18 360,15 390,20 420,18 450,22 480,20 510,24 540,22 570,26 600,24 630,28 660,26 690,30 720,28 750,32 800,30" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.85" filter="url(#line-glow)"/>
+            <!-- Main line: 动量12M (bold, full opacity) -->
+            <polyline points="0,10 30,8 60,12 90,9 120,7 150,10 180,13 210,11 240,14 270,16 300,13 330,18 360,15 390,20 420,18 450,22 480,20 510,24 540,22 570,26 600,24 630,28 660,26 690,30 720,28 750,32 800,30" fill="none" stroke="var(--brand-accent)" stroke-width="1.5" opacity="0.85"/>
             <!-- Data point markers on main line only (key inflections) -->
             <circle cx="120" cy="7" r="2" fill="var(--brand-accent)" opacity="0.9"/>
             <circle cx="300" cy="13" r="2" fill="var(--brand-accent)" opacity="0.9"/>

@@ -83,6 +83,11 @@ type CssSource = {
 	css: string;
 };
 
+type HtmlSource = {
+	label: string;
+	html: string;
+};
+
 type CssBlock = {
 	body: string;
 	start: number;
@@ -993,7 +998,7 @@ function readGlowBudgetCssSources(): CssSource[] {
 	];
 }
 
-function readGlowBudgetHtmlSources(): Array<{ label: string; html: string }> {
+function readGlowBudgetHtmlSources(): HtmlSource[] {
 	return activePages().map((page) => ({
 		label: page.file,
 		html: readPrototypeHtml(page),
@@ -1186,6 +1191,38 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 	}
 
 	return violations;
+}
+
+function collectGlowBudgetHtmlViolations(source: HtmlSource): string[] {
+	const violations: string[] = [];
+
+	for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b|\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/gi)) {
+		violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:${match[0]}`);
+	}
+
+	for (const match of source.html.matchAll(/<filter\b([^>]*)>([\s\S]*?)<\/filter>/gi)) {
+		const attributes = match[1];
+		const body = match[2];
+		const filterId = /\bid\s*=\s*(["'])([^"']+)\1/i.exec(attributes)?.[2] ?? "anonymous-filter";
+		const line = getLineNumber(source.html, match.index);
+
+		if (/\bglow\b|(?:^|[-_])glow(?:[-_]|$)/i.test(filterId)) {
+			violations.push(`${source.label}:${line}:svg-filter-glow-id:${filterId}`);
+		}
+		if (/<feGaussianBlur\b/i.test(body)) {
+			violations.push(`${source.label}:${line}:svg-feGaussianBlur:${filterId}`);
+		}
+	}
+
+	for (const match of source.html.matchAll(/\bfilter\s*=\s*(["'])\s*url\(#([^"')]*glow[^"')]*)\)\s*\1/gi)) {
+		violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:svg-filter-url:${match[2]}`);
+	}
+
+	for (const match of source.html.matchAll(/url\(#([^"')]*glow[^"')]*)\)/gi)) {
+		violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:svg-url-glow:${match[1]}`);
+	}
+
+	return [...new Set(violations)];
 }
 
 describe("prototype design consistency", () => {
@@ -1434,6 +1471,54 @@ describe("prototype design consistency", () => {
 			]),
 		);
 		expect(violations.filter((violation) => violation.includes(":ambient-gradient:"))).toHaveLength(11);
+	});
+
+	it("collects glow budget violations from svg glow filters in raw html", () => {
+		const violations = collectGlowBudgetHtmlViolations({
+			label: "fixture.html",
+			html: `
+				<svg viewBox="0 0 100 20">
+					<defs>
+						<linearGradient id="safe-gradient">
+							<stop offset="0%" stop-color="currentColor"/>
+						</linearGradient>
+						<filter id="line-glow">
+							<feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+						</filter>
+					</defs>
+					<polyline points="0,8 100,10" filter="url(#line-glow)"/>
+				</svg>
+			`,
+		});
+
+		expect(violations).toEqual(
+			expect.arrayContaining([
+				expect.stringContaining("svg-filter-glow-id:line-glow"),
+				expect.stringContaining("svg-feGaussianBlur:line-glow"),
+				expect.stringContaining("svg-filter-url:line-glow"),
+			]),
+		);
+	});
+
+	it("does not flag ordinary non-glow svg definitions", () => {
+		const violations = collectGlowBudgetHtmlViolations({
+			label: "fixture.html",
+			html: `
+				<svg viewBox="0 0 100 20">
+					<defs>
+						<linearGradient id="area-gradient">
+							<stop offset="0%" stop-color="currentColor"/>
+						</linearGradient>
+						<filter id="noise-filter">
+							<feTurbulence type="fractalNoise" baseFrequency="0.8"/>
+						</filter>
+					</defs>
+					<rect fill="url(#area-gradient)" filter="url(#noise-filter)"/>
+				</svg>
+			`,
+		});
+
+		expect(violations).toEqual([]);
 	});
 
 	it("keeps exactly 28 active route prototypes", () => {
@@ -3524,9 +3609,7 @@ describe("prototype design consistency", () => {
 		}
 
 		for (const source of readGlowBudgetHtmlSources()) {
-			for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b|\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/gi)) {
-				violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:${match[0]}`);
-			}
+			violations.push(...collectGlowBudgetHtmlViolations(source));
 		}
 
 		expect(violations).toEqual([]);
