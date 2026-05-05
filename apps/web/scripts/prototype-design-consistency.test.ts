@@ -3037,6 +3037,25 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
+	it("keeps layout center helpers out of reduced-motion transform resets", () => {
+		const layoutStateCss = readFileSync(join(prototypesDir, "shared/layout-state.css"), "utf8");
+		const reducedMotionCss = getMediaBlocksMatching(layoutStateCss, /prefers-reduced-motion\s*:\s*reduce/i).join(
+			"\n",
+		);
+		const centerLayoutSelectors = [".network-center", ".state-centered", ".flex-center"];
+		const violations = readTopLevelCssRules(stripCssComments(reducedMotionCss))
+			.filter((rule) => /(?:opacity\s*:\s*1|transform\s*:\s*none)(?:\s*!important)?\s*;/i.test(rule.body))
+			.flatMap((rule) =>
+				centerLayoutSelectors
+					.filter((selector) =>
+						rule.selectors.some((reducedSelector) => reducedMotionSelectorCoversUsage(reducedSelector, selector)),
+					)
+					.map((selector) => `${selector}:${rule.selector}`),
+			);
+
+		expect(violations).toEqual([]);
+	});
+
 	it("keeps the shared reduced-motion baseline centralized in layout-state", () => {
 		const sharedCssSources = [
 			...readLayoutCssSources(),
