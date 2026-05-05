@@ -2900,7 +2900,7 @@
             ResizablePanels._onPointerDown(event, group, separator);
           });
           separator.addEventListener('dblclick', function () {
-            ResizablePanels._setValue(group, separator, ResizablePanels._defaultValue(group, separator));
+            ResizablePanels._reset(group, separator);
           });
         });
       });
@@ -2962,6 +2962,11 @@
       ResizablePanels._persist(group, separator, nextValue);
     },
 
+    _reset: function (group, separator) {
+      ResizablePanels._sync(group, separator, ResizablePanels._defaultValue(group, separator));
+      ResizablePanels._clearPersistedValue(group, separator);
+    },
+
     _sync: function (group, separator, value) {
       var nextValue = ResizablePanels._clamp(value, ResizablePanels._minValue(separator), ResizablePanels._maxValue(separator));
       group.style.setProperty(ResizablePanels._cssVar(group, separator), Math.round(nextValue) + 'px');
@@ -3014,8 +3019,27 @@
     },
 
     _storageKey: function (group, separator) {
-      var varName = ResizablePanels._cssVar(group, separator);
-      return 'ditto:prototype:layout:' + window.location.pathname + ':' + varName;
+      return [
+        'ditto:prototype:layout',
+        window.location.pathname,
+        ResizablePanels._groupId(group),
+        ResizablePanels._panelId(separator),
+      ].join(':');
+    },
+
+    _groupId: function (group) {
+      var groupId = group.getAttribute('data-resizable-panel-group') || group.id;
+      return groupId ? groupId.trim() : 'default-group';
+    },
+
+    _panelId: function (separator) {
+      var explicitId = separator.getAttribute('data-resize-panel-id');
+      if (explicitId && explicitId.trim()) return explicitId.trim();
+
+      var controls = separator.getAttribute('aria-controls');
+      if (controls && controls.trim()) return controls.trim().split(/\s+/).join('+');
+
+      return ResizablePanels._cssVar(separator.closest('[data-resizable-panel-group]') || document.documentElement, separator);
     },
 
     _storedValue: function (group, separator) {
@@ -3037,6 +3061,14 @@
     _persist: function (group, separator, value) {
       try {
         window.localStorage.setItem(ResizablePanels._storageKey(group, separator), String(Math.round(value)));
+      } catch (_) {
+        // Prototype storage can be unavailable under opaque origins or locked-down previews.
+      }
+    },
+
+    _clearPersistedValue: function (group, separator) {
+      try {
+        window.localStorage.removeItem(ResizablePanels._storageKey(group, separator));
       } catch (_) {
         // Prototype storage can be unavailable under opaque origins or locked-down previews.
       }

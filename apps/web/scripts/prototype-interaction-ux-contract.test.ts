@@ -1132,6 +1132,16 @@ function assertResizableGroupContract(pageId: string, group: Element | null, gro
 	return violations;
 }
 
+function assertResizablePanelIdStorageContract(pageId: string, group: Element | null, groupName: string): string[] {
+	if (!group) return [`${pageId}: missing data-resizable-panel-group="${groupName}"`];
+
+	return Array.from(group.querySelectorAll<HTMLElement>("[data-resize-separator]")).flatMap((separator, index) => {
+		if (separator.getAttribute("data-resize-panel-id")?.trim()) return [];
+
+		return [`${pageId}:${groupName}:separator ${index + 1}: missing data-resize-panel-id for layout storage key`];
+	});
+}
+
 function createResizablePanelDom(
 	url: string,
 	prepareWindow?: (window: JSDOM["window"]) => void,
@@ -1145,6 +1155,7 @@ function createResizablePanelDom(
 					<div
 						class="resize-separator"
 						data-resize-separator
+						data-resize-panel-id="test-detail-panel"
 						data-resize-var="--prototype-detail-width"
 						data-resize-default="320"
 						data-resize-min="220"
@@ -1173,6 +1184,60 @@ function createResizablePanelDom(
 	expect(separator).not.toBeNull();
 	if (!(group instanceof dom.window.HTMLElement) || !separator) {
 		throw new Error("expected resizable panel fixture to be present");
+	}
+
+	prepareWindow?.(dom.window);
+	installInteractiveWindowStubs(dom.window);
+	evaluateSharedInteractionsScript(dom.window);
+	if (document.readyState === "loading") {
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+	}
+
+	return { document, group, separator };
+}
+
+function createHorizontalResizablePanelDom(
+	url: string,
+	prepareWindow?: (window: JSDOM["window"]) => void,
+): { document: Document; group: HTMLElement; separator: HTMLElement } {
+	const dom = new JSDOM(
+		`<!doctype html>
+		<html>
+			<body>
+				<div id="workspace" data-resizable-panel-group="test-workspace" data-resize-var="--prototype-bottom-tray-height">
+					<section id="test-main"></section>
+					<div
+						class="resize-separator"
+						data-resize-separator
+						data-resize-panel-id="test-bottom-tray"
+						data-resize-var="--prototype-bottom-tray-height"
+						data-resize-default="180"
+						data-resize-min="120"
+						data-resize-max="420"
+						role="separator"
+						tabindex="0"
+						aria-label="调整测试底部托盘高度"
+						aria-orientation="horizontal"
+						aria-controls="test-main test-bottom-tray"
+						aria-valuemin="120"
+						aria-valuemax="420"
+						aria-valuenow="180"
+						aria-valuetext="调整测试底部托盘高度 180 像素"
+					></div>
+					<aside id="test-bottom-tray"></aside>
+				</div>
+			</body>
+		</html>`,
+		{ pretendToBeVisual: true, url },
+	);
+	const { document } = dom.window;
+	const group = document.getElementById("workspace");
+	const separator = document.querySelector<HTMLElement>("[data-resize-separator]");
+
+	expect(group).not.toBeNull();
+	expect(separator).not.toBeNull();
+	if (!(group instanceof dom.window.HTMLElement) || !separator) {
+		throw new Error("expected horizontal resizable panel fixture to be present");
 	}
 
 	prepareWindow?.(dom.window);
@@ -2403,17 +2468,38 @@ describe("prototype interaction UX contracts", () => {
 		expect(violations).toEqual([]);
 	});
 
-	it("persists resizable panel values with a route-scoped preference key", () => {
+	it("uses explicit panel ids for representative persisted resize layout keys", () => {
+		const representativeGroups = [
+			{ pageId: "strategy-studio", groupName: "studio-workspace" },
+			{ pageId: "watchlist", groupName: "catalog-main-detail" },
+			{ pageId: "signals-inbox", groupName: "ops-main-detail" },
+		] as const;
+		const violations = representativeGroups.flatMap(({ pageId, groupName }) => {
+			const document = readPrototypeDocument(getActivePageById(pageId));
+			return assertResizablePanelIdStorageContract(
+				pageId,
+				document.querySelector(`[data-resizable-panel-group="${groupName}"]`),
+				groupName,
+			);
+		});
+
+		expect(violations).toEqual([]);
+	});
+
+	it("persists resizable panel values with a route, group, and explicit panel id preference key", () => {
 		const { document, separator } = createResizablePanelDom("https://prototype.local/research/strategies");
-		const storageKey = "ditto:prototype:layout:/research/strategies:--prototype-detail-width";
+		const storageKey = "ditto:prototype:layout:/research/strategies:test-workspace:test-detail-panel";
 
 		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
 
 		expect(document.defaultView!.localStorage.getItem(storageKey)).toBe("360");
+		expect(document.defaultView!.localStorage.getItem("ditto:prototype:layout:/research/strategies:--prototype-detail-width")).toBe(
+			null,
+		);
 	});
 
-	it("restores persisted resizable panel values only when they are inside separator bounds", () => {
-		const storageKey = "ditto:prototype:layout:/research/strategies:--prototype-detail-width";
+	it("restores persisted resizable panel values on reload only when they are inside separator bounds", () => {
+		const storageKey = "ditto:prototype:layout:/research/strategies:test-workspace:test-detail-panel";
 		const { group, separator } = createResizablePanelDom("https://prototype.local/research/strategies", (window) => {
 			window.localStorage.setItem(storageKey, "448");
 		});
@@ -2429,13 +2515,21 @@ describe("prototype interaction UX contracts", () => {
 		expect(outOfRange.group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
 	});
 
-	it("keeps resizable separator keyboard and double-click efficiency shortcuts explicit", () => {
+	it("keeps resize layout preferences separate from theme and density preferences during reset", () => {
 		const { document, group, separator } = createResizablePanelDom("https://prototype.local/research/strategies");
+		const storageKey = "ditto:prototype:layout:/research/strategies:test-workspace:test-detail-panel";
+		const window = document.defaultView;
+		expect(window).not.toBeNull();
+		if (!window) return;
+
+		window.localStorage.setItem("ditto-theme", "dark");
+		window.localStorage.setItem("ditto-density", "dense");
 
 		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("360");
 		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 360 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("360px");
+		expect(window.localStorage.getItem(storageKey)).toBe("360");
 
 		separator.dispatchEvent(
 			new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }),
@@ -2443,11 +2537,45 @@ describe("prototype interaction UX contracts", () => {
 		expect(separator.getAttribute("aria-valuenow")).toBe("352");
 		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 352 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("352px");
+		expect(window.localStorage.getItem(storageKey)).toBe("352");
 
 		separator.dispatchEvent(new document.defaultView!.MouseEvent("dblclick", { bubbles: true }));
 		expect(separator.getAttribute("aria-valuenow")).toBe("320");
 		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试面板宽度 320 像素");
 		expect(group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
+		expect(window.localStorage.getItem(storageKey)).toBeNull();
+		expect(window.localStorage.getItem("ditto-theme")).toBe("dark");
+		expect(window.localStorage.getItem("ditto-density")).toBe("dense");
+
+		const reload = createResizablePanelDom("https://prototype.local/research/strategies", (reloadWindow) => {
+			for (let index = 0; index < window.localStorage.length; index += 1) {
+				const key = window.localStorage.key(index);
+				if (key) reloadWindow.localStorage.setItem(key, window.localStorage.getItem(key) ?? "");
+			}
+		});
+
+		expect(reload.separator.getAttribute("aria-valuenow")).toBe("320");
+		expect(reload.group.style.getPropertyValue("--prototype-detail-width")).toBe("320px");
+		expect(reload.document.defaultView?.localStorage.getItem("ditto-theme")).toBe("dark");
+		expect(reload.document.defaultView?.localStorage.getItem("ditto-density")).toBe("dense");
+	});
+
+	it("persists horizontal separator height preferences by explicit panel id", () => {
+		const { document, group, separator } = createHorizontalResizablePanelDom("https://prototype.local/research/strategies");
+		const storageKey = "ditto:prototype:layout:/research/strategies:test-workspace:test-bottom-tray";
+
+		separator.dispatchEvent(new document.defaultView!.KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+
+		expect(separator.getAttribute("aria-valuenow")).toBe("220");
+		expect(separator.getAttribute("aria-valuetext")).toBe("调整测试底部托盘高度 220 像素");
+		expect(group.style.getPropertyValue("--prototype-bottom-tray-height")).toBe("220px");
+		expect(document.defaultView!.localStorage.getItem(storageKey)).toBe("220");
+
+		const reload = createHorizontalResizablePanelDom("https://prototype.local/research/strategies", (window) => {
+			window.localStorage.setItem(storageKey, "220");
+		});
+		expect(reload.separator.getAttribute("aria-valuenow")).toBe("220");
+		expect(reload.group.style.getPropertyValue("--prototype-bottom-tray-height")).toBe("220px");
 	});
 
 	it("exposes selected-object regions on active pages with selected rows", () => {
