@@ -1834,15 +1834,15 @@
       background: color-mix(in oklch, var(--brand-accent) 18%, transparent);
     }
 
-    /* ── Score bar fill glow on hover ── */
+    /* ── Score bar fill contrast on hover ── */
     .score-row:hover .score-bar-fill.brand {
-      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand-accent) 38%, transparent);
     }
     .score-row:hover .score-bar-fill.ok {
-      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-healthy-fg) 38%, transparent);
     }
     .score-row:hover .score-bar-fill.warn {
-      box-shadow: 0 0 8px -2px color-mix(in oklch, var(--system-degraded-fg) 40%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-degraded-fg) 38%, transparent);
     }
 
     /* ── Preset card: subtle inner shadow on hover for depth ── */

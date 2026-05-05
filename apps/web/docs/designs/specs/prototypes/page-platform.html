@@ -1561,7 +1561,7 @@
     .api-mini-bar.warn { background: var(--system-degraded-fg); opacity: 0.6; }
     .api-mini-bar.current { opacity: 1; }
 
-    /* Resource bar enhanced — gradient glow for critical */
+    /* Resource bar enhanced — critical contrast without ambient glow */
     .resource-bar-fill.critical {
       position: relative;
       overflow: visible;
@@ -1571,7 +1571,7 @@
       position: absolute;
       inset: 0;
       border-radius: var(--radius-2);
-      box-shadow: 0 0 6px 0 color-mix(in oklch, var(--system-down-fg) 30%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-down-fg) 42%, transparent);
       animation: bar-critical-pulse 2s ease-in-out infinite;
     }
     @keyframes bar-critical-pulse {
@@ -1845,15 +1845,15 @@
       border-radius: var(--radius-2) var(--radius-2) 0 0;
       background: var(--system-healthy-fg);
       opacity: 0.78;
-      box-shadow: 0 0 8px -5px color-mix(in oklch, var(--system-healthy-fg) 45%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-healthy-fg) 34%, transparent);
     }
     .dq-point.warn .dq-bar {
       background: var(--system-degraded-fg);
-      box-shadow: 0 0 8px -5px color-mix(in oklch, var(--system-degraded-fg) 45%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-degraded-fg) 34%, transparent);
     }
     .dq-point.down .dq-bar {
       background: var(--system-down-fg);
-      box-shadow: 0 0 8px -5px color-mix(in oklch, var(--system-down-fg) 45%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-down-fg) 34%, transparent);
     }
     .dq-point-value {
       font-family: var(--font-family-numeric);

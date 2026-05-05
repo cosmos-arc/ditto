@@ -1405,7 +1405,7 @@
       height: 12px;
       border-radius: 50%;
       background: var(--market-up-fg);
-      box-shadow: 0 0 8px color-mix(in oklch, var(--market-up-fg) 40%, transparent);
+      box-shadow: 0 0 0 1px color-mix(in oklch, var(--market-up-fg) 42%, transparent);
       animation: timeline-pulse 2s ease-in-out infinite;
     }
     @keyframes timeline-pulse {
@@ -2013,9 +2013,10 @@
       background: radial-gradient(ellipse at 30% 50%, color-mix(in oklch, var(--risk-near-limit-fg) 6%, transparent) 0%, transparent 70%);
     }
 
-    /* Gauge center glow */
+    /* Gauge center restrained elevation */
     .regime-gauge-svg-center {
-      box-shadow: 0 0 20px -6px color-mix(in oklch, var(--market-up-fg) 12%, transparent);
+      border: 1px solid color-mix(in oklch, var(--market-up-fg) 14%, var(--border-subtle));
+      box-shadow: 0 2px 8px color-mix(in oklch, var(--neutral-0) 16%, transparent);
     }
 
     /* Regime status name: preserve native glyph spacing for scan stability */

@@ -1688,25 +1688,9 @@
     }
 
     /* ── KPI card enhanced hover ── */
-    .kpi-card[data-mouse-glow] {
-      position: relative;
-      overflow: hidden;
-    }
-    .kpi-card[data-mouse-glow]::before {
-      content: '';
-      position: absolute;
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      background: radial-gradient(circle, color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%, transparent 70%);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
-      transform: translate(-50%, -50%);
-      z-index: 0;
-    }
-    .kpi-card[data-mouse-glow]:hover::before {
-      opacity: 1;
+    .kpi-card:hover {
+      border-color: var(--border-default);
+      background: color-mix(in oklch, var(--surface-panel-base) 97%, var(--brand-accent));
     }
 
     /* ── Reduced motion ── */
