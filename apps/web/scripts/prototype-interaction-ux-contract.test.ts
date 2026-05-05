@@ -355,6 +355,37 @@ function installReducedMotionWindowStubs(window: JSDOM["window"]): void {
 	});
 }
 
+function installMutableMotionWindowStubs(window: JSDOM["window"]): {
+	dispatchReducedMotionChange: (matches: boolean) => void;
+} {
+	installInteractiveWindowStubs(window);
+	const listeners: Array<(event: MediaQueryListEvent) => void> = [];
+	Object.defineProperty(window, "matchMedia", {
+		configurable: true,
+		value: (query: string): MediaQueryList => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addListener: () => undefined,
+			removeListener: () => undefined,
+			addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+				if (typeof listener === "function") {
+					listeners.push(listener as (event: MediaQueryListEvent) => void);
+				}
+			},
+			removeEventListener: () => undefined,
+			dispatchEvent: () => true,
+		}),
+	});
+
+	return {
+		dispatchReducedMotionChange: (matches: boolean) => {
+			const event = { matches, media: "(prefers-reduced-motion: reduce)" } as MediaQueryListEvent;
+			for (const listener of listeners) listener(event);
+		},
+	};
+}
+
 function evaluateSharedInteractionsScript(window: JSDOM["window"]): void {
 	const runSharedInteractions = new Function(
 		"window",
@@ -424,6 +455,45 @@ function installChartRect(element: Element, width = 400, height = 200): void {
 }
 
 describe("prototype chart interaction surfaces", () => {
+	it("normalizes enhanced chart semantics outside role img and exposes an action toolbar", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" role="img" aria-label="价格走势图" data-chart-interaction-contract="instrument-price-primary" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="instrument-hub-primary" data-chart-selection-command="instrument-chart-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-a11y.html" },
+		);
+		const { document } = dom.window;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart).not.toBeNull();
+		if (!chart) return;
+
+		const toolbar = chart.querySelector<HTMLElement>(".prototype-chart-actions");
+		const tooltip = chart.querySelector<HTMLElement>(".prototype-chart-tooltip");
+		expect(chart.getAttribute("role")).toBe("group");
+		expect(chart.getAttribute("aria-label")).toBe("价格走势图");
+		expect(chart.getAttribute("aria-roledescription")).toBe("interactive analysis chart");
+		expect(chart.getAttribute("aria-describedby")).toBe(tooltip?.id);
+		expect(toolbar?.getAttribute("role")).toBe("toolbar");
+		expect(toolbar?.getAttribute("aria-label")).toBe("图表动作");
+		expect(
+			[...chart.querySelectorAll<HTMLButtonElement>(".prototype-chart-action")].map((button) => ({
+				type: button.type,
+				label: button.textContent?.trim(),
+			})),
+		).toEqual([
+			{ type: "button", label: "建提醒" },
+			{ type: "button", label: "发研究" },
+			{ type: "button", label: "对比" },
+			{ type: "button", label: "查回撤" },
+		]);
+	});
+
 	it("keeps chart command payloads aligned with the rendered active datum after repeated init", () => {
 		const dom = new JSDOM(
 			`
@@ -461,7 +531,9 @@ describe("prototype chart interaction surfaces", () => {
 		const renderedTimestamp = chart.getAttribute("data-chart-active-timestamp");
 		const payloads: unknown[] = [];
 		document.addEventListener("prototype:chart-selection-command", (event) => {
-			if (event instanceof dom.window.CustomEvent) payloads.push(event.detail);
+			if (event instanceof dom.window.CustomEvent) {
+				payloads.push(event.detail);
+			}
 		});
 
 		chart.querySelector<HTMLButtonElement>('[data-chart-action="create-alert"]')?.click();
@@ -469,6 +541,122 @@ describe("prototype chart interaction surfaces", () => {
 		expect(payloads[0]).toMatchObject({ timestamp: renderedTimestamp });
 		expect(chart.querySelectorAll(".prototype-chart-layer")).toHaveLength(1);
 		expect(chart.querySelectorAll(".prototype-chart-actions")).toHaveLength(1);
+	});
+
+	it("uses one global chart drag listener pair and clears disconnected drag state", () => {
+		const dom = new JSDOM(
+			`
+			<section id="host">
+				<div id="chart-a" aria-label="VaR 趋势图" data-chart-interaction-contract="risk-var-trend" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-var-selection"></div>
+				<div id="chart-b" aria-label="最大回撤趋势图" data-chart-interaction-contract="risk-drawdown-trend" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-drawdown-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-drag-cleanup.html" },
+		);
+		const { document } = dom.window;
+		const chartWindowListeners: string[] = [];
+		const originalWindowAddEventListener = dom.window.addEventListener.bind(dom.window);
+		dom.window.addEventListener = ((
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+			options?: boolean | AddEventListenerOptions,
+		) => {
+			if (type === "mousemove" || type === "mouseup") chartWindowListeners.push(type);
+			originalWindowAddEventListener(type, listener, options);
+		}) as typeof dom.window.addEventListener;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const host = document.querySelector<HTMLElement>("#host");
+		const first = document.querySelector<HTMLElement>("#chart-a");
+		expect(host).not.toBeNull();
+		expect(first).not.toBeNull();
+		if (!host || !first) return;
+		installChartRect(first);
+		expect(chartWindowListeners.filter((type) => type === "mousemove")).toHaveLength(1);
+		const mouseupListenersAfterInit = chartWindowListeners.filter((type) => type === "mouseup").length;
+		expect(mouseupListenersAfterInit).toBeGreaterThanOrEqual(1);
+
+		first.dispatchEvent(new dom.window.MouseEvent("mousedown", { clientX: 100, bubbles: true }));
+		host.removeChild(first);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		const activeIndexBeforeWindowDrag = first.getAttribute("data-chart-active-index");
+		dom.window.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 150, bubbles: true }));
+
+		expect(first.getAttribute("data-chart-active-index")).toBe(activeIndexBeforeWindowDrag);
+		host.appendChild(first);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		expect(chartWindowListeners.filter((type) => type === "mousemove")).toHaveLength(1);
+		expect(chartWindowListeners.filter((type) => type === "mouseup")).toHaveLength(mouseupListenersAfterInit);
+	});
+
+	it("resynchronizes changed chart command and range attributes through mutation observation", async () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" aria-label="价格走势图" data-chart-interaction-contract="instrument-price-primary" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="instrument-hub-primary" data-chart-selection-command="instrument-chart-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-attrs.html" },
+		);
+		const { document } = dom.window;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart).not.toBeNull();
+		if (!chart) return;
+		const payloads: unknown[] = [];
+		document.addEventListener("prototype:chart-selection-command", (event) => {
+			if (event instanceof dom.window.CustomEvent) {
+				payloads.push(event.detail);
+			}
+		});
+
+		chart.setAttribute("data-chart-linked-time-range", "instrument-hub-secondary");
+		chart.setAttribute("data-chart-selection-command", "instrument-secondary-selection");
+		await new Promise((resolve) => dom.window.queueMicrotask(resolve));
+		chart.querySelector<HTMLButtonElement>('[data-chart-action="create-alert"]')?.click();
+
+		expect(payloads[0]).toMatchObject({
+			rangeId: "instrument-hub-secondary",
+			commandId: "instrument-secondary-selection",
+		});
+	});
+
+	it("syncs linked active state through wheel and drag interactions", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart-a" aria-label="VaR 趋势图" data-chart-interaction-contract="risk-var-trend" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-var-selection"></div>
+				<div id="chart-b" aria-label="最大回撤趋势图" data-chart-interaction-contract="risk-drawdown-trend" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-drawdown-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-wheel-drag.html" },
+		);
+		const { document } = dom.window;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const first = document.querySelector<HTMLElement>("#chart-a");
+		const second = document.querySelector<HTMLElement>("#chart-b");
+		expect(first).not.toBeNull();
+		expect(second).not.toBeNull();
+		if (!first || !second) return;
+		installChartRect(first);
+		installChartRect(second);
+
+		first.dispatchEvent(new dom.window.WheelEvent("wheel", { deltaY: -120, bubbles: true }));
+		expect(first.getAttribute("data-chart-visible-range")).toBe("1W");
+		expect(second.getAttribute("data-chart-visible-range")).toBe("1W");
+
+		first.dispatchEvent(new dom.window.MouseEvent("mousedown", { clientX: 300, bubbles: true }));
+		dom.window.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 250, bubbles: true }));
+		dom.window.dispatchEvent(new dom.window.MouseEvent("mouseup", { bubbles: true }));
+		expect(first.getAttribute("data-chart-active-index")).toBe(second.getAttribute("data-chart-active-index"));
 	});
 
 	it("enhances every representative chart marker on Instrument Hub, Risk Center, and Backtest Result", () => {
@@ -606,9 +794,13 @@ describe("prototype chart interaction surfaces", () => {
 		if (!chart) return;
 		installChartRect(chart);
 
+		const commandEvents: CustomEvent[] = [];
 		const payloads: unknown[] = [];
 		document.addEventListener("prototype:chart-selection-command", (event) => {
-			if (event instanceof dom.window.CustomEvent) payloads.push(event.detail);
+			if (event instanceof dom.window.CustomEvent) {
+				commandEvents.push(event);
+				payloads.push(event.detail);
+			}
 		});
 
 		chart.dispatchEvent(new dom.window.FocusEvent("focusin", { bubbles: true }));
@@ -616,10 +808,14 @@ describe("prototype chart interaction surfaces", () => {
 		chart.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
 		const inspectButton = chart.querySelector<HTMLButtonElement>('[data-chart-action="inspect-drawdown"]');
+		const compareButton = chart.querySelector<HTMLButtonElement>('[data-chart-action="compare-object"]');
 		expect(inspectButton).not.toBeNull();
+		expect(compareButton).not.toBeNull();
 		inspectButton?.click();
+		compareButton?.click();
 
-		expect(payloads.length).toBeGreaterThanOrEqual(2);
+		expect(payloads.length).toBeGreaterThanOrEqual(3);
+		expect(commandEvents[0]?.composed).toBe(true);
 		expect(payloads[0]).toMatchObject({
 			chartId: "backtest-nav-drawdown",
 			rangeId: "backtest-result-primary",
@@ -636,11 +832,47 @@ describe("prototype chart interaction surfaces", () => {
 			timestamp: null,
 			value: { actionId: "inspect-drawdown" },
 		});
+		expect(payloads[2]).toMatchObject({
+			selection: { kind: "series" },
+			timestamp: null,
+			value: { actionId: "compare-object" },
+		});
 		expect(
 			["create-alert", "send-to-research", "compare-object", "inspect-drawdown"].every(
 				(actionId) => chart.querySelector(`[data-chart-action="${actionId}"]`) !== null,
 			),
 		).toBe(true);
+	});
+
+	it("uses bar selection payloads for exposure chart point actions", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" aria-label="行业暴露度图" data-chart-interaction-contract="risk-exposure-breakdown" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-exposure-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-bar.html" },
+		);
+		const { document } = dom.window;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart).not.toBeNull();
+		if (!chart) return;
+		const payloads: unknown[] = [];
+		document.addEventListener("prototype:chart-selection-command", (event) => {
+			if (event instanceof dom.window.CustomEvent) payloads.push(event.detail);
+		});
+
+		chart.querySelector<HTMLButtonElement>('[data-chart-action="create-alert"]')?.click();
+
+		expect(payloads[0]).toMatchObject({
+			chartId: "risk-exposure-breakdown",
+			selection: { kind: "bar" },
+			seriesId: "sector-exposure",
+		});
 	});
 
 	it("marks reduced-motion chart state and exposes CSS that disables chart transitions", () => {
@@ -661,6 +893,27 @@ describe("prototype chart interaction surfaces", () => {
 		expect(chart?.getAttribute("data-chart-reduced-motion")).toBe("true");
 		expect(readSharedInteractionsCss()).toMatch(/prefers-reduced-motion:\s*reduce/);
 		expect(readSharedInteractionsCss()).toMatch(/\.prototype-chart-crosshair-x/);
+	});
+
+	it("syncs reduced-motion media changes onto existing chart surfaces", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" aria-label="行业暴露度图" data-chart-interaction-contract="risk-exposure-breakdown" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-exposure-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-motion-change.html" },
+		);
+		const { document } = dom.window;
+		const { dispatchReducedMotionChange } = installMutableMotionWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart?.getAttribute("data-chart-reduced-motion")).toBe("false");
+		dispatchReducedMotionChange(true);
+
+		expect(chart?.getAttribute("data-chart-reduced-motion")).toBe("true");
 	});
 });
 

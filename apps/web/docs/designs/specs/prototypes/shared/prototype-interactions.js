@@ -16,7 +16,14 @@
   motionQuery.addEventListener('change', function (event) {
     reducedMotion = event.matches;
     document.documentElement.toggleAttribute('data-reduced-motion', reducedMotion);
+    syncReducedMotionTargets();
   });
+
+  function syncReducedMotionTargets() {
+    document.querySelectorAll('[data-chart-prototype-ready="true"]').forEach(function (surface) {
+      surface.setAttribute('data-chart-reduced-motion', reducedMotion ? 'true' : 'false');
+    });
+  }
 
   /* ── Utility: Parse JSON from data attribute ── */
   function parseAttr(el, attr) {
@@ -3108,6 +3115,15 @@
     charts: [],
     groups: {},
     observerReady: false,
+    globalDragReady: false,
+    dragChart: null,
+    dragX: 0,
+    observedAttributes: [
+      'data-chart-interaction-contract',
+      'data-chart-linked-time-range',
+      'data-chart-selection-command',
+      'data-chart-affordances',
+    ],
     rangeTokens: ['1D', '1W', '1M', '3M', '1Y', 'YTD', 'ALL'],
     actions: [
       { id: 'create-alert', label: '建提醒', kind: 'point' },
@@ -3140,6 +3156,7 @@
       'risk-exposure-breakdown': {
         label: '科技敞口',
         seriesId: 'sector-exposure',
+        selectionKind: 'bar',
         unit: '%',
         threshold: '集中度阈值 85%',
         values: [62, 65, 67, 69, 71, 72, 73, 75, 76, 77, 78, 80, 79, 81, 80.2, 79, 78, 77, 76, 75, 73, 72, 71, 70],
@@ -3161,9 +3178,8 @@
     },
 
     init: function () {
-      PrototypeChartInteractions.charts = PrototypeChartInteractions.charts.filter(function (chart) {
-        return chart.surface && chart.surface.isConnected;
-      });
+      PrototypeChartInteractions._cleanupDisconnectedCharts();
+      PrototypeChartInteractions._bindGlobalDragHandlers();
       document.querySelectorAll('[data-chart-interaction-contract]').forEach(function (surface) {
         PrototypeChartInteractions._enhance(surface);
       });
@@ -3179,6 +3195,7 @@
         return entry.surface === surface;
       });
       var chart = existing || PrototypeChartInteractions._createChartState(surface, chartId);
+      if (existing) PrototypeChartInteractions._syncChartState(chart);
       PrototypeChartInteractions._ensureChrome(chart);
       PrototypeChartInteractions._syncReducedMotion(chart);
       PrototypeChartInteractions._updateRange(chart, PrototypeChartInteractions._initialRange(chart));
@@ -3201,8 +3218,6 @@
         data: PrototypeChartInteractions._dataFor(config),
         activeIndex: config.values.length - 1,
         range: '1M',
-        dragging: false,
-        dragX: 0,
       };
 
       PrototypeChartInteractions.charts.push(chart);
@@ -3212,10 +3227,32 @@
       return chart;
     },
 
+    _syncChartState: function (chart) {
+      var chartId = chart.surface.getAttribute('data-chart-interaction-contract') || chart.chartId;
+      var rangeId = chart.surface.getAttribute('data-chart-linked-time-range') || chartId;
+      var commandId = chart.surface.getAttribute('data-chart-selection-command') || chartId + '-selection';
+      var config = PrototypeChartInteractions.configs[chartId] || PrototypeChartInteractions._defaultConfig(chartId);
+      var chartChanged = chart.chartId !== chartId;
+
+      chart.chartId = chartId;
+      chart.rangeId = rangeId;
+      chart.commandId = commandId;
+      chart.config = config;
+      if (chartChanged || !chart.data || chart.data.length !== config.values.length) {
+        chart.data = PrototypeChartInteractions._dataFor(config);
+        chart.seriesNeedsRefresh = chartChanged;
+      }
+      chart.activeIndex = PrototypeChartInteractions._clamp(chart.activeIndex, 0, chart.data.length - 1);
+      if (!PrototypeChartInteractions.groups[rangeId]) {
+        PrototypeChartInteractions.groups[rangeId] = { activeIndex: chart.activeIndex };
+      }
+    },
+
     _ensureChrome: function (chart) {
       var surface = chart.surface;
       surface.classList.add('prototype-chart-surface');
       surface.setAttribute('data-chart-prototype-ready', 'true');
+      surface.setAttribute('role', 'group');
       surface.setAttribute('aria-roledescription', 'interactive analysis chart');
       if (!surface.hasAttribute('tabindex')) surface.setAttribute('tabindex', '0');
 
@@ -3244,13 +3281,30 @@
         layer.appendChild(tooltip);
         layer.appendChild(rangeReadout);
         surface.appendChild(layer);
+      } else if (chart.seriesNeedsRefresh) {
+        var generatedSeries = surface.querySelector('.prototype-chart-series-svg');
+        if (generatedSeries) generatedSeries.remove();
+        var nextSeries = PrototypeChartInteractions._seriesSvg(chart);
+        if (nextSeries) layer.insertBefore(nextSeries, layer.firstChild);
+        chart.seriesNeedsRefresh = false;
       }
 
-      if (surface.querySelector('.prototype-chart-actions')) return;
+      var tooltip = surface.querySelector('.prototype-chart-tooltip');
+      if (tooltip) {
+        tooltip.id = 'prototype-chart-tooltip-' + PrototypeChartInteractions._safeId(chart.chartId);
+        surface.setAttribute('aria-describedby', tooltip.id);
+      }
 
-      var actions = document.createElement('div');
-      actions.className = 'prototype-chart-actions';
+      var actions = surface.querySelector('.prototype-chart-actions');
+      if (!actions) {
+        actions = document.createElement('div');
+        actions.className = 'prototype-chart-actions';
+        surface.appendChild(actions);
+      }
+      actions.setAttribute('role', 'toolbar');
       actions.setAttribute('aria-label', '图表动作');
+      if (actions.childElementCount) return;
+
       PrototypeChartInteractions.actions.forEach(function (action) {
         var button = document.createElement('button');
         button.type = 'button';
@@ -3263,7 +3317,6 @@
         });
         actions.appendChild(button);
       });
-      surface.appendChild(actions);
     },
 
     _seriesSvg: function (chart) {
@@ -3336,18 +3389,28 @@
         PrototypeChartInteractions._setRange(chart.rangeId, event.deltaY < 0 ? '1W' : '3M');
       }, { passive: false });
       surface.addEventListener('mousedown', function (event) {
-        chart.dragging = true;
-        chart.dragX = event.clientX;
+        PrototypeChartInteractions.dragChart = chart;
+        PrototypeChartInteractions.dragX = event.clientX;
       });
+    },
+
+    _bindGlobalDragHandlers: function () {
+      if (PrototypeChartInteractions.globalDragReady) return;
+      PrototypeChartInteractions.globalDragReady = true;
       window.addEventListener('mousemove', function (event) {
-        if (!chart.dragging) return;
-        var delta = event.clientX - chart.dragX;
+        var chart = PrototypeChartInteractions.dragChart;
+        if (!chart) return;
+        if (!chart.surface || !chart.surface.isConnected) {
+          PrototypeChartInteractions._clearDragChart();
+          return;
+        }
+        var delta = event.clientX - PrototypeChartInteractions.dragX;
         if (Math.abs(delta) < 18) return;
-        chart.dragX = event.clientX;
+        PrototypeChartInteractions.dragX = event.clientX;
         PrototypeChartInteractions._moveActive(chart, delta > 0 ? -1 : 1);
       });
       window.addEventListener('mouseup', function () {
-        chart.dragging = false;
+        PrototypeChartInteractions._clearDragChart();
       });
     },
 
@@ -3385,16 +3448,52 @@
     _watchChartMutations: function () {
       if (PrototypeChartInteractions.observerReady || typeof MutationObserver === 'undefined') return;
       PrototypeChartInteractions.observerReady = true;
-      var observer = new MutationObserver(function () {
-        document.querySelectorAll('[data-chart-interaction-contract]').forEach(function (surface) {
-          if (!surface.querySelector('.prototype-chart-layer') || !surface.querySelector('.prototype-chart-actions')) {
-            surface.removeAttribute('data-chart-prototype-ready');
-            PrototypeChartInteractions._enhance(surface);
+      var observer = new MutationObserver(function (mutations) {
+        var surfaces = [];
+        var shouldBindRangeControls = false;
+
+        function addSurface(surface) {
+          if (!surface || surfaces.indexOf(surface) >= 0) return;
+          surfaces.push(surface);
+        }
+
+        PrototypeChartInteractions._cleanupDisconnectedCharts();
+        mutations.forEach(function (mutation) {
+          if (mutation.type === 'attributes') {
+            if (mutation.target && mutation.target.matches && mutation.target.matches('[data-chart-interaction-contract]')) {
+              addSurface(mutation.target);
+              shouldBindRangeControls = true;
+            }
+            return;
           }
+
+          shouldBindRangeControls = true;
+          if (mutation.target && mutation.target.matches && mutation.target.matches('[data-chart-interaction-contract]')) {
+            addSurface(mutation.target);
+          }
+          mutation.addedNodes.forEach(function (node) {
+            if (!node || node.nodeType !== 1) return;
+            if (node.matches && node.matches('[data-chart-interaction-contract]')) addSurface(node);
+            if (node.querySelectorAll) {
+              node.querySelectorAll('[data-chart-interaction-contract]').forEach(addSurface);
+            }
+          });
         });
-        PrototypeChartInteractions._bindRangeControls();
+
+        surfaces.forEach(function (surface) {
+          if (!surface.querySelector('.prototype-chart-layer') || !surface.querySelector('.prototype-chart-actions') || surface.getAttribute('data-chart-prototype-ready') !== 'true') {
+            surface.removeAttribute('data-chart-prototype-ready');
+          }
+          PrototypeChartInteractions._enhance(surface);
+        });
+        if (shouldBindRangeControls) PrototypeChartInteractions._bindRangeControls();
       });
-      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+      observer.observe(document.body || document.documentElement, {
+        attributes: true,
+        attributeFilter: PrototypeChartInteractions.observedAttributes,
+        childList: true,
+        subtree: true,
+      });
     },
 
     _activateFromClientX: function (chart, clientX, clientY) {
@@ -3506,13 +3605,14 @@
     _dispatchSelection: function (chart, kind, actionId) {
       var datum = chart.data[chart.activeIndex] || chart.data[chart.data.length - 1];
       var timeRange = PrototypeChartInteractions._timeRange(chart);
+      var selectionKind = PrototypeChartInteractions._selectionKind(chart, kind);
       var payload = {
         chartId: chart.chartId,
         rangeId: chart.rangeId,
         commandId: chart.commandId,
-        selection: { kind: kind },
+        selection: { kind: selectionKind },
         timeRange: timeRange,
-        timestamp: kind === 'range' || kind === 'series' ? null : datum.time,
+        timestamp: selectionKind === 'range' || selectionKind === 'series' ? null : datum.time,
         seriesId: chart.config.seriesId,
         value: {
           value: datum.value,
@@ -3523,8 +3623,14 @@
       };
       chart.surface.dispatchEvent(new CustomEvent('prototype:chart-selection-command', {
         bubbles: true,
+        composed: true,
         detail: payload,
       }));
+    },
+
+    _selectionKind: function (chart, kind) {
+      if (kind === 'point' && chart.config.selectionKind) return chart.config.selectionKind;
+      return kind;
     },
 
     _timeRange: function (chart) {
@@ -3598,11 +3704,29 @@
       chart.surface.setAttribute('data-chart-reduced-motion', reducedMotion ? 'true' : 'false');
     },
 
+    _cleanupDisconnectedCharts: function () {
+      PrototypeChartInteractions.charts = PrototypeChartInteractions.charts.filter(function (chart) {
+        return chart.surface && chart.surface.isConnected;
+      });
+      if (PrototypeChartInteractions.dragChart && (!PrototypeChartInteractions.dragChart.surface || !PrototypeChartInteractions.dragChart.surface.isConnected)) {
+        PrototypeChartInteractions._clearDragChart();
+      }
+    },
+
+    _clearDragChart: function () {
+      PrototypeChartInteractions.dragChart = null;
+      PrototypeChartInteractions.dragX = 0;
+    },
+
     _chartForSurface: function (surface) {
       for (var i = 0; i < PrototypeChartInteractions.charts.length; i += 1) {
         if (PrototypeChartInteractions.charts[i].surface === surface) return PrototypeChartInteractions.charts[i];
       }
       return null;
+    },
+
+    _safeId: function (value) {
+      return String(value || 'chart').replace(/[^a-zA-Z0-9_-]+/g, '-');
     },
 
     _defaultConfig: function (chartId) {
