@@ -22,9 +22,12 @@ Analysis is research-only, not imported by production packages.
 | Pre/post-trade risk, constraints | `risk` |
 | Orders, fills, broker gateway, audit | `execution` |
 | Backtest runtime, simulation, performance | `backtest` |
-| Reports, diagnostics, experiments, research | `analysis` |
+| Research dataset control-plane | `analysis` |
 | Shared stable value object | `kernel` |
 | Business-agnostic config/observability/db utilities | `platform` |
+
+Reports, diagnostics, experiments, and screeners are reserved/future analysis
+namespaces, not current runtime APIs.
 
 ## Test Placement
 

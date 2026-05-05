@@ -50,7 +50,8 @@ Ditto 当前的大分层已经成立，质量门禁也较强。主要不足不�
                          kernel
 
 platform 是横向技术基础设施，只在包契约允许的范围内被导入。
-analysis 仅限研究用途，生产包禁止依赖。
+analysis 当前实现 research dataset control-plane；product analysis namespaces
+保持 reserved/future 状态，生产域包禁止依赖。
 ```
 
 ### 3.1 各平面定位
@@ -66,7 +67,7 @@ analysis 仅限研究用途，生产包禁止依赖。
 | `risk` | 风险管理平面 | 盘前/盘后风控、约束、暴露度、回撤 | 策略决策、回测运行、数据存储 |
 | `execution` | 交易执行平面 | 订单、成交、券商网关、费用、审计 | 回测运行、数据源适配、HTTP/CLI |
 | `backtest` | 回测引擎平面 | 回测 runtime、step chain、绩效统计 | 数据源适配、HTTP/CLI、真实券商 |
-| `analysis` | 研究分析平面 | 报告、诊断、实验、研究数据集 | 被生产包导入、外部 I/O |
+| `analysis` | 研究分析平面 | research dataset control-plane；product analysis namespaces 保留给未来规划 | 被生产包导入、外部 I/O |
 | `application` | 用例编排与组合平面 | commands/queries/processes、对象装配、跨平面用例 | 核心领域规则、物理 I/O 细节、传输协议 |
 | `apps` | 传输适配平面 | FastAPI、CLI、Prefect job、请求响应模型、DI composition root | 业务计算、数据读写实现、引擎内部逻辑 |
 
@@ -85,7 +86,7 @@ analysis 仅限研究用途，生产包禁止依赖。
 | 它描述”盘前/盘后风控、约束、暴露度” | `risk` |
 | 它描述”订单、成交、券商网关、费用” | `execution` |
 | 它描述”回测 runtime、step chain、绩效统计” | `backtest` |
-| 它描述”报告、诊断、实验、研究” | `analysis` |
+| 它描述”研究数据集 control-plane（spec/snapshot/catalog/artifact）” | `analysis` |
 | 它描述”一次用户用例如何串起各能力包” | `application` |
 | 它描述”HTTP/CLI/job 如何接收请求并返回结果” | `apps` |
 
@@ -183,7 +184,8 @@ contracts/models
 `analysis` 是纯研究平面。
 
 - `research` 负责研究数据集语义，不成为 Data catalog 的替代品。
-- 生产包禁止依赖 analysis，只有 apps 的研究入口可以调用。
+- `reports`、`diagnostics`、`experiments`、`screeners` 当前只是 reserved/future namespaces，不是现有 runtime API。
+- 生产域包禁止依赖 analysis；application 仅 research query/facade/DI wiring 可使用 analysis；apps 仅 research jobs/api/registry composition 入口可使用 analysis。
 - 研究存储使用独立 SQLite。
 
 ### 4.5 Capability Packages（Strategy/Portfolio/Risk/Execution/Backtest）
@@ -407,7 +409,7 @@ application 编排能力包，apps 暴露 application。
 9. 它是否处理回测 runtime、step chain、绩效统计？
    - 是：考虑 `backtest`。
    - 否：继续。
-10. 它是否处理报告、诊断、实验、研究？
+10. 它是否处理研究数据集 control-plane（spec/snapshot/catalog/artifact）？
    - 是：考虑 `analysis`。
    - 否：继续。
 11. 它是否把多个能力包串成一次用户用例？

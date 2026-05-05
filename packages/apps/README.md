@@ -43,7 +43,7 @@ packages/apps/
 ```
 apps → application ✅     （query / process / command / builders）
 apps → data ✅            （services / sources，通过 DI 注入）
-apps → analysis ✅        （research / reporting 编排）
+apps → analysis ✅        （registry/research composition only；非 registry 路径通过 application facades）
 apps → platform ✅
 ```
 

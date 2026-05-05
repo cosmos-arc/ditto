@@ -16,6 +16,8 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 11. Data must not own derived feature/factor publication semantics
 12. Platform must not contain domain/business vocabulary
 13. Active source docstrings/comments must not use stale architecture terms
+14. Empty analysis placeholder namespaces must not imply available capability
+15. Active architecture docs must not imply reserved analysis capabilities exist
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -228,6 +230,52 @@ STALE_SOURCE_ARCHITECTURE_TERMS = (
     "infra/",
     "analytics layer",
     "engine 层",
+)
+
+ANALYSIS_PLACEHOLDER_INIT_PATHS = (
+    "packages/analysis/src/ditto_analysis/reports/__init__.py",
+    "packages/analysis/src/ditto_analysis/diagnostics/__init__.py",
+    "packages/analysis/src/ditto_analysis/experiments/__init__.py",
+    "packages/analysis/src/ditto_analysis/screeners/__init__.py",
+)
+
+ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
+    "CLAUDE.md",
+    "docs/architecture/boundaries-and-abstraction-standards.md",
+    "docs/architecture/agent-context-pack.md",
+    "packages/apps/README.md",
+)
+
+ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS = (
+    "纯研究分析（报告、诊断、实验）",
+    "报告、诊断、实验、研究数据集",
+    "它描述”报告、诊断、实验、研究”",
+    "是否处理报告、诊断、实验、研究",
+    "Reports, diagnostics, experiments, research",
+    "research / reporting 编排",
+)
+
+PLACEHOLDER_MISLEADING_AVAILABILITY_PHRASES = (
+    "提供",
+    "支持",
+    "负责",
+    "生成",
+    "管理",
+    "工具",
+    "筛选器",
+    "available",
+    "contains",
+    "handles",
+    "provides",
+    "responsible for",
+    "supports",
+)
+
+PLACEHOLDER_REQUIRED_RESERVED_PHRASES = (
+    "Reserved namespace",
+    "future analysis product work",
+    "No public runtime API is exported yet",
+    "Production code must not import this namespace for behavior",
 )
 
 
@@ -821,6 +869,67 @@ def check_cross_package_exports(root: Path = ROOT) -> list[str]:
     ]
 
 
+def _has_non_empty_literal_all(tree: ast.Module) -> bool:
+    return bool(_collect_literal_all_names(tree))
+
+
+def check_analysis_placeholder_honesty(root: Path = ROOT) -> list[str]:
+    """Check empty analysis placeholders do not imply available capability."""
+    errors: list[str] = []
+    for rel_path in ANALYSIS_PLACEHOLDER_INIT_PATHS:
+        path = root / rel_path
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+            errors.append(f"{rel_path}: cannot inspect placeholder docstring ({exc})")
+            continue
+
+        if _has_non_empty_literal_all(tree):
+            continue
+
+        docstring = ast.get_docstring(tree, clean=False) or ""
+        folded_docstring = docstring.casefold()
+        for phrase in PLACEHOLDER_REQUIRED_RESERVED_PHRASES:
+            if phrase.casefold() not in folded_docstring:
+                errors.append(
+                    f"{rel_path}: empty analysis placeholder docstring is "
+                    f"missing required reserved placeholder phrase {phrase!r}; "
+                    "empty placeholders must advertise reservation, no public "
+                    "runtime API, and no production behavior dependency"
+                )
+        for phrase in PLACEHOLDER_MISLEADING_AVAILABILITY_PHRASES:
+            if phrase in folded_docstring:
+                errors.append(
+                    f"{rel_path}: empty analysis placeholder docstring contains "
+                    f"misleading availability phrase {phrase!r}; mark it reserved "
+                    "until a public __all__ contract exists"
+                )
+    return errors
+
+
+def check_analysis_placeholder_active_docs(root: Path = ROOT) -> list[str]:
+    """Check active docs do not claim reserved analysis capabilities exist."""
+    errors: list[str] = []
+    for rel_path in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS:
+        path = root / rel_path
+        try:
+            content = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            continue
+        except (OSError, UnicodeDecodeError) as exc:
+            errors.append(f"{rel_path}: cannot inspect active analysis docs ({exc})")
+            continue
+
+        for phrase in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS:
+            if phrase in content:
+                errors.append(
+                    f"{rel_path}: active docs imply reserved analysis capability "
+                    f"{phrase!r}; describe research control-plane as current and "
+                    "reports/diagnostics/experiments/screeners as reserved/future"
+                )
+    return errors
+
+
 def _scan_pkg_imports(src_dir: Path, pkg_name: str) -> set[str]:
     """Scan actual internal ditto-* imports from a package's src/."""
     actual: set[str] = set()
@@ -1150,6 +1259,22 @@ def main() -> int:
         errors,
         check_cross_package_exports(ROOT),
         "[OK] No cross-package re-exports found",
+        args.verbose,
+    )
+
+    # Check: Empty analysis placeholders do not imply available capability
+    _collect(
+        errors,
+        check_analysis_placeholder_honesty(ROOT),
+        "[OK] Empty analysis placeholders are explicit reservations",
+        args.verbose,
+    )
+
+    # Check: Active architecture docs do not imply reserved analysis capability
+    _collect(
+        errors,
+        check_analysis_placeholder_active_docs(ROOT),
+        "[OK] Active architecture docs treat analysis placeholders as reserved",
         args.verbose,
     )
 

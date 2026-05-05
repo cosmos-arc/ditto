@@ -1,9 +1,9 @@
 """
-Diagnostics — 诊断分析工具。
+Diagnostics Reserved namespace.
 
-提供策略健康检查、数据质量诊断、模型偏差检测等工具。
-用于研发阶段的快速问题定位，不参与生产路径。
-
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
+This namespace is reserved for future analysis product work.
+No public runtime API is exported yet.
+Production code must not import this namespace for behavior.
 """
+
+__all__: list[str] = []

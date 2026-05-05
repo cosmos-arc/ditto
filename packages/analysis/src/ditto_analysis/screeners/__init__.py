@@ -1,9 +1,9 @@
 """
-Screeners — 证券筛选器。
+Screeners Reserved namespace.
 
-提供多维度选股筛选、条件组合过滤、动态 universe 构建等工具。
-筛选结果可作为策略 universe 输入。
-
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
+This namespace is reserved for future analysis product work.
+No public runtime API is exported yet.
+Production code must not import this namespace for behavior.
 """
+
+__all__: list[str] = []
