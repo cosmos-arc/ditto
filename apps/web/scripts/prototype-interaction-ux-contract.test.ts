@@ -148,6 +148,7 @@ let pageContractsCache: PageContract[] | undefined;
 let contractRouteByPageIdCache: Map<string, string> | undefined;
 let contractRouteByPrototypeFileCache: Map<string, string> | undefined;
 let sharedInteractionsScriptCache: string | undefined;
+let sharedInteractionsCssCache: string | undefined;
 let screenerWorkflowScriptCache: string | undefined;
 
 function readManifest(): EditionManifest {
@@ -254,6 +255,11 @@ function getPrototypeUrl(page: ManifestPage): string {
 function readSharedInteractionsScript(): string {
 	sharedInteractionsScriptCache ??= readFileSync(join(prototypesDir, "shared/prototype-interactions.js"), "utf8");
 	return sharedInteractionsScriptCache;
+}
+
+function readSharedInteractionsCss(): string {
+	sharedInteractionsCssCache ??= readFileSync(join(prototypesDir, "shared/prototype-interactions.css"), "utf8");
+	return sharedInteractionsCssCache;
 }
 
 function readScreenerWorkflowScript(): string {
@@ -649,6 +655,54 @@ function createResizablePanelDom(
 	}
 
 	return { document, group, separator };
+}
+
+function createRowContextMenuDom(): { document: Document; row: HTMLElement; outside: HTMLElement } {
+	const dom = new JSDOM(
+		`<!doctype html>
+		<html>
+			<body>
+				<button id="outside" type="button">外部动作</button>
+				<button id="cmd-trigger" type="button" data-shell-utility="command">命令</button>
+				<div
+					data-command-context-route="/research/strategies"
+					data-command-context-object="palette-strategy"
+					data-command-context-actions="pause-strategy,clone-strategy,view-recent-runs"
+				></div>
+				<table data-row-context-menu-ready aria-label="策略列表">
+					<tbody>
+						<tr
+							id="strategy-row"
+							tabindex="0"
+							data-row-context-route="/research/strategies"
+							data-row-context-object="row-strategy"
+							data-row-context-actions="pause-strategy,clone-strategy,view-recent-runs"
+						>
+							<td>Alpha-Momentum-v3</td>
+						</tr>
+					</tbody>
+				</table>
+			</body>
+		</html>`,
+		{ pretendToBeVisual: true, url: "https://prototype.local/row-context-menu.html" },
+	);
+	const { document } = dom.window;
+	const row = document.getElementById("strategy-row");
+	const outside = document.getElementById("outside");
+
+	expect(row).not.toBeNull();
+	expect(outside).not.toBeNull();
+	if (!(row instanceof dom.window.HTMLElement) || !(outside instanceof dom.window.HTMLElement)) {
+		throw new Error("expected row context menu fixture to be present");
+	}
+
+	installInteractiveWindowStubs(dom.window);
+	evaluateSharedInteractionsScript(dom.window);
+	if (document.readyState === "loading") {
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+	}
+
+	return { document, row, outside };
 }
 
 function parseCommandContextActions(element: Element): Set<string> {
@@ -2683,6 +2737,140 @@ describe("prototype interaction UX contracts", () => {
 						`ditto-recent-commands::${encodeURIComponent("/research/strategies")}::${encodeURIComponent("策略 V3.2")}`,
 					),
 				).toContain("pause-strategy");
+			});
+
+			it("keeps row context menu focus and viewport overflow affordances visible", () => {
+				const css = readSharedInteractionsCss();
+
+				expect(css).toMatch(
+					/\.ditto-row-context-menu\s*\{[^}]*max-height:\s*calc\(100vh - 16px\);[^}]*overflow:\s*auto;/s,
+				);
+				expect(css).toMatch(
+					/\.ditto-row-context-menu-item:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--interaction-focus-ring\);[^}]*outline-offset:\s*1px;/s,
+				);
+			});
+
+			it("opens row context menus from right-click with row action IDs and menu semantics", () => {
+				const { document, row } = createRowContextMenuDom();
+				const view = document.defaultView!;
+
+				row.dispatchEvent(
+					new view.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 160, clientY: 80 }),
+				);
+
+				const menu = document.querySelector<HTMLElement>("[data-row-context-menu]");
+				const items = [...document.querySelectorAll<HTMLElement>("[data-row-context-menu-item]")];
+
+				expect(menu).not.toBeNull();
+				expect(menu?.hidden).toBe(false);
+				expect(menu?.getAttribute("role")).toBe("menu");
+				expect(menu?.getAttribute("aria-hidden")).toBe("false");
+				expect(items.map((item) => item.getAttribute("role"))).toEqual(["menuitem", "menuitem", "menuitem"]);
+				expect(items.map((item) => item.getAttribute("data-command-action"))).toEqual([
+					"pause-strategy",
+					"clone-strategy",
+					"view-recent-runs",
+				]);
+				expect(items.map((item) => item.getAttribute("data-command-context-object"))).toEqual([
+					"row-strategy",
+					"row-strategy",
+					"row-strategy",
+				]);
+				expect(document.activeElement).toBe(items[0]);
+			});
+
+			it("opens row context menus from keyboard and restores row focus on Escape", () => {
+				const { document, row } = createRowContextMenuDom();
+				const view = document.defaultView!;
+
+				row.focus();
+				row.dispatchEvent(new view.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true }));
+
+				const menu = document.querySelector<HTMLElement>("[data-row-context-menu]");
+				const items = [...document.querySelectorAll<HTMLElement>("[data-row-context-menu-item]")];
+
+				expect(menu?.hidden).toBe(false);
+				expect(document.activeElement).toBe(items[0]);
+
+				menu?.dispatchEvent(new view.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+				expect(document.activeElement).toBe(items[1]);
+
+				menu?.dispatchEvent(new view.KeyboardEvent("keydown", { key: "End", bubbles: true }));
+				expect(document.activeElement).toBe(items[2]);
+
+				menu?.dispatchEvent(new view.KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+				expect(document.activeElement).toBe(items[0]);
+
+				menu?.dispatchEvent(new view.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+				expect(menu?.hidden).toBe(true);
+				expect(menu?.getAttribute("aria-hidden")).toBe("true");
+				expect(document.body.hasAttribute("data-row-context-menu-open")).toBe(false);
+				expect(document.activeElement).toBe(row);
+			});
+
+			it("closes pointer-opened row context menus without forcing row focus or hiding focused menu items", () => {
+				const { document, row, outside } = createRowContextMenuDom();
+				const view = document.defaultView!;
+
+				row.focus();
+				row.dispatchEvent(
+					new view.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 160, clientY: 80 }),
+				);
+				const menu = document.querySelector<HTMLElement>("[data-row-context-menu]");
+				const firstItem = document.querySelector<HTMLElement>("[data-row-context-menu-item]");
+
+				expect(firstItem).not.toBeNull();
+				expect(document.activeElement).toBe(firstItem);
+
+				outside.dispatchEvent(new view.MouseEvent("click", { bubbles: true }));
+				expect(menu?.hidden).toBe(true);
+				expect(document.body.hasAttribute("data-row-context-menu-open")).toBe(false);
+				expect(document.activeElement).not.toBe(row);
+				expect(menu?.contains(document.activeElement)).toBe(false);
+
+				row.dispatchEvent(
+					new view.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 160, clientY: 80 }),
+				);
+				expect(menu?.hidden).toBe(false);
+
+				view.dispatchEvent(new view.Event("scroll", { bubbles: true }));
+				expect(menu?.hidden).toBe(true);
+				expect(document.activeElement).not.toBe(row);
+				expect(menu?.contains(document.activeElement)).toBe(false);
+			});
+
+			it("routes high-risk row context actions through confirmation, feedback, and row-scoped recents", () => {
+				const { document, row } = createRowContextMenuDom();
+				const view = document.defaultView!;
+
+				row.dispatchEvent(new view.KeyboardEvent("keydown", { key: "ContextMenu", bubbles: true }));
+				document.querySelector<HTMLElement>('[data-row-context-menu-item][data-command-action="pause-strategy"]')?.click();
+
+				const dialog = document.querySelector<HTMLElement>("[data-command-confirmation]");
+				expect(dialog).not.toBeNull();
+				expect(dialog?.hidden).toBe(false);
+				expect(dialog?.textContent).toContain("暂停策略");
+				expect(dialog?.textContent).toContain("row-strategy");
+				expect(dialog?.textContent).not.toContain("palette-strategy");
+
+				document.querySelector<HTMLElement>("[data-command-confirm-submit]")?.click();
+
+				const feedback = document.querySelector<HTMLElement>("[data-command-action-feedback]");
+				expect(feedback).not.toBeNull();
+				expect(feedback?.getAttribute("data-command-feedback-action")).toBe("pause-strategy");
+				expect(feedback?.getAttribute("data-command-feedback-risk")).toBe("high");
+				expect(feedback?.textContent).toContain("row-strategy");
+				expect(feedback?.textContent).not.toContain("palette-strategy");
+				expect(
+					document.defaultView!.localStorage.getItem(
+						`ditto-recent-commands::${encodeURIComponent("/research/strategies")}::${encodeURIComponent("row-strategy")}`,
+					),
+				).toContain("pause-strategy");
+				expect(
+					document.defaultView!.localStorage.getItem(
+						`ditto-recent-commands::${encodeURIComponent("/research/strategies")}::${encodeURIComponent("palette-strategy")}`,
+					),
+				).toBeNull();
 			});
 
 			it("sets aria-describedby on tooltip trigger on show and clears on hide", async () => {

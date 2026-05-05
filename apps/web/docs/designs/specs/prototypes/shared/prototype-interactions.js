@@ -2274,6 +2274,8 @@
       var shouldRestore = !options || options.restoreFocus !== false;
       if (shouldRestore && RowContextMenu.triggerRow && RowContextMenu.triggerRow.focus) {
         RowContextMenu.triggerRow.focus({ preventScroll: true });
+      } else if (target.contains(document.activeElement) && document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
       }
       RowContextMenu.triggerRow = null;
     },
