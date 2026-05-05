@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
-const expertPages = ["page-home.html", "page-strategy-studio.html", "page-agent-console.html"];
+const expertPages = ["page-home.html", "page-strategy-studio.html", "page-agent-console-v2.html"];
 const rowContextMenuPages = [
 	"page-watchlist.html",
 	"page-signals-inbox.html",
@@ -85,7 +85,7 @@ describe("prototype expert efficiency", () => {
 	it("exposes Studio and Agent slots needed for React parity", () => {
 		const requiredSlots = new Map([
 			["page-strategy-studio.html", ["main", "sidebar", "inspector", "activity-log", "status"]],
-			["page-agent-console.html", ["main", "sidebar", "activity-log", "status"]],
+			["page-agent-console-v2.html", ["header", "tabs", "source", "main", "inspector", "status"]],
 		]);
 		const violations: string[] = [];
 
