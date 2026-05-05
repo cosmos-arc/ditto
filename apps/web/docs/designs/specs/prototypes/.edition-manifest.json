@@ -345,7 +345,7 @@
       "blueprintId": 7,
       "shellFamily": "studio",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -689,7 +689,7 @@
       "blueprintId": 15,
       "shellFamily": "studio",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -718,7 +718,7 @@
       "blueprintId": 19,
       "shellFamily": "object-hub",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -924,7 +924,7 @@
       },
       "note": "2026-04-26 R3: gates pass, shell-body display:contents, right-rail slot, CSS-only drawer/modal triggers, PnL curve, concentration heat strip, interaction targets >=24px",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -952,7 +952,7 @@
       },
       "note": "2026-04-27 R2: gates pass; catalog-shell, hidden skip-link, summary strip, batch selection, row actions, direction symbols, compact right-rail bottom clearance, detail sparkline/signal bars, CSS-only add/delete overlays, and search-bar state gallery added",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -980,7 +980,7 @@
       },
       "note": "2026-04-27 R2: gates pass, catalog-shell, filter/header slot, 12-row factor table with decay/action columns, CSS-only compare drawer, filter/health/table state gallery coverage, no inline styles",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -1008,7 +1008,7 @@
       },
       "note": "2026-04-26 R2: gates pass, catalog-shell, 12-row dense strategy table, MDD/action columns, CSS-only clone/delete overlays, filter/perf/table state gallery coverage, no inline styles",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -1036,7 +1036,7 @@
       },
       "note": "2026-04-27 R3: gates pass, catalog-shell, hidden skip-link, filter/header slot, 10-row backtest table with direction symbols/action column, summary strip, right preview, CSS-only compare drawer, filter/table state gallery coverage, no inline styles",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/backtest",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -1064,7 +1064,7 @@
       },
       "note": "2026-04-27 R2: gates pass, catalog-shell, filter/header slot, 10-row experiment table with outcome/action columns, CSS-only detail drawer, filter/summary/table state gallery coverage, no inline styles",
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -1092,7 +1092,7 @@
         "coveragePercent": 100
       },
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
@@ -1120,7 +1120,7 @@
         "coveragePercent": 100
       },
       "landing": {
-        "reactRouteStatus": "missing",
+        "reactRouteStatus": "implemented",
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",

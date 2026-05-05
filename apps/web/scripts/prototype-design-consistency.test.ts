@@ -55,6 +55,13 @@ const expectedActiveRoutePrototypeCount = 28;
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const auditedPrototypeFiles = ["page-alpha-explorer.html", "page-agent-console-v2.html"] as const;
 const landingVisualAuditStatuses = ["missing", "queued", "implemented", "verified"] as const;
+const landingSyncFields = [
+	"reactRouteStatus",
+	"featureModule",
+	"contractStatus",
+	"overlayStatus",
+	"visualAuditStatus",
+] as const;
 const prototypeStructuralDimensionTokens = {
 	"--panel-header-height": "38px",
 	"--tab-bar-height": "42px",
@@ -64,15 +71,20 @@ const prototypeStructuralDimensionTokens = {
 
 type LandingVisualAuditStatus = (typeof landingVisualAuditStatuses)[number];
 
+type LandingStatus = {
+	reactRouteStatus?: string;
+	featureModule?: string;
+	contractStatus?: string;
+	overlayStatus?: string;
+	visualAuditStatus?: string;
+};
+
 type ManifestPage = {
 	id: string;
 	file: string;
 	shellFamily?: string;
 	status?: string;
-	landing?: {
-		overlayStatus?: string;
-		visualAuditStatus?: string;
-	};
+	landing?: LandingStatus;
 };
 
 type EditionManifest = {
@@ -84,7 +96,7 @@ type PageContract = {
 	prototypeRef: string;
 	nextPrototypeRef?: string;
 	shellFamily: string;
-	landing?: {
+	landing?: LandingStatus & {
 		visualAuditStatus?: LandingVisualAuditStatus;
 	};
 	overlays?: Array<{ id: string; prototypeSelector: string }>;
@@ -2510,7 +2522,7 @@ describe("prototype design consistency", () => {
 		expect(inactive).toEqual([]);
 	});
 
-	it("keeps active prototype landing visual audit status in sync with page contracts", () => {
+	it("keeps active prototype landing status in sync with page contracts", () => {
 		const contractByPrototype = new Map(
 			readContracts().map((contract) => [contract.prototypeRef, contract]),
 		);
@@ -2520,23 +2532,28 @@ describe("prototype design consistency", () => {
 			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
 			const contract = contractByPrototype.get(prototypeRef);
 			const manifestStatus = page.landing?.visualAuditStatus;
-			const contractStatus = contract?.landing?.visualAuditStatus;
 
 			if (!contract) {
 				violations.push(`${page.id}:missing-contract`);
 				continue;
 			}
 
-			if (
-				!manifestStatus ||
-				!landingVisualAuditStatuses.includes(manifestStatus as LandingVisualAuditStatus)
-			) {
+			if (!manifestStatus || !landingVisualAuditStatuses.includes(manifestStatus as LandingVisualAuditStatus)) {
 				violations.push(`${page.id}:invalid-manifest-status:${manifestStatus ?? "missing-field"}`);
 				continue;
 			}
 
-			if (manifestStatus !== contractStatus) {
-				violations.push(`${page.id}:manifest-${manifestStatus}:contract-${contractStatus ?? "missing"}`);
+			for (const field of landingSyncFields) {
+				const manifestValue = page.landing?.[field];
+				const contractValue = contract.landing?.[field];
+
+				if (manifestValue !== contractValue) {
+					violations.push(
+						`${page.id}:${field}:manifest-${manifestValue ?? "missing"}:contract-${
+							contractValue ?? "missing"
+						}`,
+					);
+				}
 			}
 		}
 
