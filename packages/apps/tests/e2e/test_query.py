@@ -25,8 +25,9 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_platform.foundation.storage import ParquetStore
 from ditto_platform.foundation.storage.types import OnDuplicate
+
+from tests.e2e.parquet_helpers import market_parquet_store
 
 # ==============================================================================
 # Fixtures
@@ -46,7 +47,7 @@ def stock_bars_reader(tmp_path: Path) -> StockBarsReader:
         StockBarsReader: Stock 日线数据 Reader 实例.
 
     """
-    return StockBarsReader(ParquetStore(tmp_path))
+    return StockBarsReader(market_parquet_store(tmp_path))
 
 
 @pytest.fixture
@@ -60,7 +61,7 @@ def stock_bars_writer(tmp_path: Path) -> StockBarsWriter:
         StockBarsWriter: Stock 日线数据 Writer 实例.
 
     """
-    return StockBarsWriter(ParquetStore(tmp_path))
+    return StockBarsWriter(market_parquet_store(tmp_path))
 
 
 @pytest.fixture
@@ -74,7 +75,7 @@ def stock_adj_reader(tmp_path: Path) -> StockAdjFactorReader:
         StockAdjFactorReader: Stock 复权因子 Reader 实例.
 
     """
-    return StockAdjFactorReader(ParquetStore(tmp_path))
+    return StockAdjFactorReader(market_parquet_store(tmp_path))
 
 
 @pytest.fixture
@@ -88,7 +89,7 @@ def stock_adj_writer(tmp_path: Path) -> StockAdjFactorWriter:
         StockAdjFactorWriter: Stock 复权因子 Writer 实例.
 
     """
-    return StockAdjFactorWriter(ParquetStore(tmp_path))
+    return StockAdjFactorWriter(market_parquet_store(tmp_path))
 
 
 @pytest.fixture

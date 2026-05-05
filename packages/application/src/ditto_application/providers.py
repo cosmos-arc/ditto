@@ -16,9 +16,6 @@ from pathlib import Path
 
 from dishka import Provider, Scope, provide
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_data.ingestion.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-)
 from ditto_data.ingestion.quality_record_service import QualityRecordService
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
@@ -26,13 +23,9 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
-from ditto_data.storage.runtime.publication_shadow_sqlite import (
-    SQLiteDerivedShadowSlotReader,
-    SQLiteDerivedShadowSlotWriter,
-)
 from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_execution.audit import ExecutionAuditService
-from ditto_execution.storage.sqlite.trade import TradeService
+from ditto_execution.storage.sqlite.trade.service import TradeService
 
 # ---------------------------------------------------------------------------
 # Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
@@ -46,6 +39,20 @@ from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.services.derived_shadow_slot_service import (
     DerivedShadowSlotService,
+)
+from ditto_features.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
+)
+from ditto_features.storage.runtime.publication_safety import (
+    CertificationReader,
+    CertificationWriter,
+    ManifestReader,
+    ManifestWriter,
+    MinimalDQReader,
+    MinimalDQWriter,
+    ShadowReportReader,
+    ShadowReportWriter,
 )
 from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from ditto_platform.services.notification import AlertManager
@@ -313,17 +320,6 @@ class AppProcessProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def derived_shadow_slot_service(
-        self,
-        sqlite_client: SQLiteClient,
-    ) -> DerivedShadowSlotService:
-        """Shadow slot 控制面服务 — 组装 data 层 reader/writer 与 features 层服务."""
-        return DerivedShadowSlotService(
-            slot_reader=SQLiteDerivedShadowSlotReader(sqlite_client),
-            slot_writer=SQLiteDerivedShadowSlotWriter(sqlite_client),
-        )
-
-    @provide
     def compile_cache_service(
         self,
         sqlite_client: SQLiteClient,
@@ -344,6 +340,25 @@ class AppProcessProvider(Provider):
             market_service=market_service,
             artifact_root=Path(settings.data_root),
         )
+
+    @provide
+    def publication_safety_record_service(
+        self,
+        settings: DataStoreSettings,
+    ) -> PublicationSafetyRecordService:
+        """Feature-owned publication safety stores wired for app orchestration."""
+        data_root = settings.data_root
+        stores = PublicationSafetyRuntimeStores(
+            manifest_reader=ManifestReader(base_path=data_root),
+            manifest_writer=ManifestWriter(base_path=data_root),
+            minimal_dq_reader=MinimalDQReader(base_path=data_root),
+            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
+            shadow_report_reader=ShadowReportReader(base_path=data_root),
+            shadow_report_writer=ShadowReportWriter(base_path=data_root),
+            certification_reader=CertificationReader(base_path=data_root),
+            certification_writer=CertificationWriter(base_path=data_root),
+        )
+        return PublicationSafetyRecordService(stores)
 
     @provide
     def derived_materialization_orchestrator(

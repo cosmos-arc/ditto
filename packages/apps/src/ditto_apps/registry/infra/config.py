@@ -13,6 +13,7 @@ from ditto_data.config import DataSourceSettings, FileStorageSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
 from ditto_data.config.data_store import DataStoreSettings as _DataStoreSettings
 from ditto_data.quality.config import DQSettings
+from ditto_features.config import FeatureArtifactStoreSettings
 from ditto_platform.foundation import logger
 from ditto_platform.foundation.cache import DataCache
 from ditto_platform.foundation.config import (
@@ -35,6 +36,8 @@ from ditto_apps.registry.init_providers import MetadataDbInitProvider
 __all__ = [
     "ConfigProvider",
     "RuntimeFlags",
+    "data_root_init_directories",
+    "data_root_init_directories_from_data_store",
     "data_store_settings_type",
     "load_data_store_settings",
 ]
@@ -65,6 +68,34 @@ def load_data_store_settings(
         values["logs_path_override"] = override
 
     return _DataStoreSettings.model_validate(values)
+
+
+def data_root_init_directories(
+    data_store_settings: _DataStoreSettings,
+    feature_artifact_store_settings: FeatureArtifactStoreSettings,
+) -> list[str]:
+    """返回组合根需要初始化的所有 data-root 相对目录。"""
+    directories: list[str] = []
+    seen: set[str] = set()
+    for directory in (
+        *data_store_settings.all_directories(),
+        *feature_artifact_store_settings.all_directories(),
+    ):
+        if directory in seen:
+            continue
+        seen.add(directory)
+        directories.append(directory)
+    return directories
+
+
+def data_root_init_directories_from_data_store(
+    data_store_settings: _DataStoreSettings,
+) -> list[str]:
+    """从 DataStoreSettings 派生完整 data-root 初始化目录清单。"""
+    return data_root_init_directories(
+        data_store_settings,
+        FeatureArtifactStoreSettings(data_root=data_store_settings.data_root),
+    )
 
 
 def _load_keyring_secret(service: str, key: str) -> str | None:
@@ -140,12 +171,19 @@ class ConfigProvider(Provider):
 
     @provide
     def init_coordinator(
-        self, data_store_settings: _DataStoreSettings
+        self,
+        data_store_settings: _DataStoreSettings,
+        feature_artifact_store_settings: FeatureArtifactStoreSettings,
     ) -> ConfigInitCoordinator:
         """配置初始化协调器（注册所有 providers）."""
         coordinator = ConfigInitCoordinator()
         coordinator.register(
-            DataRootInitProvider(data_store_settings.all_directories())
+            DataRootInitProvider(
+                data_root_init_directories(
+                    data_store_settings,
+                    feature_artifact_store_settings,
+                )
+            )
         )
         coordinator.register(DataSourceValidationProvider())
         coordinator.register(MetadataDbInitProvider())
@@ -171,6 +209,14 @@ class ConfigProvider(Provider):
     def data_store_settings(self, config_loader: ConfigLoader) -> _DataStoreSettings:
         """加载数据存储配置。"""
         return load_data_store_settings(config_loader)
+
+    @provide
+    def feature_artifact_store_settings(
+        self,
+        data_store_settings: _DataStoreSettings,
+    ) -> FeatureArtifactStoreSettings:
+        """派生 features/factors artifact 存储配置。"""
+        return FeatureArtifactStoreSettings(data_root=data_store_settings.data_root)
 
     @provide
     def data_root(self, settings: _DataStoreSettings) -> Path:

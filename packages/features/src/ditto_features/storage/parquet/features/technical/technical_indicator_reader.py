@@ -13,6 +13,10 @@ import polars as pl
 from ditto_platform.foundation import logger, traced
 from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
 
+INDICATOR_KEY_COLUMNS = ("instrument_id", "trade_date", "indicator_id")
+INDICATOR_DATE_COLUMN = "trade_date"
+INDICATOR_INSTRUMENT_COLUMN = "instrument_id"
+
 
 class _TechnicalIndicatorParquetReader(ParquetStore):
     """
@@ -21,13 +25,15 @@ class _TechnicalIndicatorParquetReader(ParquetStore):
     Overrides hook methods to handle indicator-specific logic.
     """
 
-    def _get_key_columns(self) -> list[str]:
-        """Return key column names for deduplication."""
-        return ["instrument_id", "trade_date", "indicator_id"]
-
-    def _get_sort_columns(self) -> list[str]:
-        """Return sort columns."""
-        return ["instrument_id", "trade_date", "indicator_id"]
+    def __init__(self, data_root: Path) -> None:
+        """Initialize the indicator reader store with indicator-owned columns."""
+        super().__init__(
+            data_root,
+            YearlyPartition(),
+            key_columns=INDICATOR_KEY_COLUMNS,
+            date_column=INDICATOR_DATE_COLUMN,
+            instrument_column=INDICATOR_INSTRUMENT_COLUMN,
+        )
 
 
 class TechnicalIndicatorReader:
@@ -67,7 +73,6 @@ class TechnicalIndicatorReader:
         """
         self._store = _TechnicalIndicatorParquetReader(
             Path(data_root),
-            YearlyPartition(),
         )
         self._dataset = "features/technical/indicators_narrow"
 
@@ -104,11 +109,12 @@ class TechnicalIndicatorReader:
         )
 
         # Use ParquetStore to get raw data
+        filters = self._instrument_filters(instrument_ids)
         df = self._store.read(
             self._dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=filters,
         )
 
         # Apply indicator_id filter
@@ -158,11 +164,12 @@ class TechnicalIndicatorReader:
             Number of matching records.
 
         """
+        filters = self._instrument_filters(instrument_ids)
         return self._store.count(
             self._dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=filters,
         )
 
     def get_date_range(self) -> tuple[str | None, str | None]:
@@ -183,4 +190,14 @@ class TechnicalIndicatorReader:
             Sorted list of unique instrument IDs.
 
         """
-        return self._store.list_instrument_ids(self._dataset)
+        values = self._store.list_unique_values(
+            self._dataset,
+            INDICATOR_INSTRUMENT_COLUMN,
+        )
+        return [int(value) for value in values]
+
+    def _instrument_filters(self, instrument_ids: list[int] | None) -> list[pl.Expr]:
+        """Build instrument filters for indicator queries."""
+        if not instrument_ids:
+            return []
+        return [pl.col(INDICATOR_INSTRUMENT_COLUMN).is_in(instrument_ids)]

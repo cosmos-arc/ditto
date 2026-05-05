@@ -1,10 +1,42 @@
-"""
-Holdings — 持仓快照与追踪。
+"""Holdings — 持仓快照与追踪。"""
 
-管理当前持仓状态、目标持仓 vs 实际持仓对比、
-持仓历史快照等。与 accounting/position 不同，
-holdings 侧重于持仓的快照式查询和跨周期追踪。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from dataclasses import dataclass
+from typing import Protocol
+
+__all__ = ["HoldingReader", "HoldingSnapshot"]
+
+
+@dataclass(frozen=True)
+class HoldingSnapshot:
+    """Valuation snapshot for an account holding."""
+
+    account_id: str
+    snapshot_date: str
+    instrument_id: int
+    quantity: int
+    available_quantity: int
+    market_value: float
+    weight: float
+
+
+class HoldingReader(Protocol):
+    """Read-only holding snapshot contract."""
+
+    def get_holding(
+        self,
+        account_id: str,
+        instrument_id: int,
+        snapshot_date: str,
+    ) -> HoldingSnapshot | None:
+        """Return one holding snapshot if available."""
+        ...
+
+    def list_holdings(
+        self,
+        account_id: str,
+        snapshot_date: str,
+    ) -> list[HoldingSnapshot]:
+        """Return all holding snapshots for an account and date."""
+        ...

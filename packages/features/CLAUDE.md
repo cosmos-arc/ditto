@@ -2,15 +2,16 @@
 
 ## 定位
 
-Features 是**因子与表达式计算平面**，负责：
+Features 是**因子、表达式、衍生数据与发布安全能力平面**，负责：
 - 表达式语言（词法分析、语法解析、编译、代码生成）
 - 因子定义（spec、primitives、category implementations）
 - 物化计划（依赖推导、计划编排）
 - 因子评估（IC、Fama-MacBeth、暴露分析、归因分析）
 - 衍生数据服务（artifact 持久化、并发物化、GC）
+- 发布安全记录服务与发布安全运行时存储（manifest、minimal DQ、shadow report、certification）
 
 **核心原则**：
-- 纯计算层，不直接执行 I/O（物化服务通过 contracts 与 storage 层交互）
+- 表达式、因子和物化计划保持纯计算；feature-owned 的运行时/存储适配位于 `storage/`，通过 contracts/Protocols 与服务交互
 - `expression` 不依赖 `materialization`（单向依赖）
 - 因子定义依赖表达式和 spec，不依赖上层编排
 
@@ -40,6 +41,8 @@ ditto_features → ditto_apps ❌
 
 ```
 ditto_features/
+├── di/                   # Features Provider 注册
+│   └── storage.py        # Feature-owned storage Provider
 ├── expression/           # 表达式语言引擎
 │   ├── lexer.py          # 词法分析
 │   ├── parser.py         # 语法解析 → AST
@@ -83,6 +86,7 @@ ditto_features/
 ├── services/             # 衍生数据服务
 │   ├── derived_catalog_service.py
 │   ├── derived_shadow_slot_service.py
+│   ├── publication_safety_record_service.py
 │   └── derived/          # 衍生数据子服务
 │       ├── queries.py           # 查询接口
 │       ├── query_service.py     # 查询服务
@@ -91,8 +95,13 @@ ditto_features/
 │       ├── concurrent_materializer.py
 │       ├── garbage_collector.py
 │       └── gc_models.py
-├── storage/              # 存储适配
-│   └── derived_artifact_writer.py
+├── storage/              # Feature-owned 存储适配
+│   ├── derived_artifact_writer.py
+│   ├── parquet/          # 因子/特征 Parquet 存储
+│   ├── runtime/          # 发布运行时记录存储
+│   │   ├── publication_safety/
+│   │   └── publication_shadow_sqlite/
+│   └── sqlite/           # 衍生 artifact SQLite 存储
 ├── errors.py             # 错误定义
 ├── validation.py         # 校验工具
 ├── publication_safety.py # 发布安全
@@ -152,6 +161,9 @@ from ditto_features.evaluation.evaluator import FactorEvaluator
 
 # 衍生数据查询
 from ditto_features.services.derived.query_service import DerivedQueryService
+
+# 发布安全记录
+from ditto_features.services.publication_safety_record_service import PublicationSafetyRecordService
 ```
 
 ## 常用验证命令

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 from ditto_platform.foundation.storage import ParquetStore
+
+INSTRUMENT_ID_COLUMN = "instrument_id"
 
 
 class ParquetDatasetReader:
@@ -25,13 +29,18 @@ class ParquetDatasetReader:
         instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> pl.DataFrame:
         """读取数据。"""
+        store_filters = [
+            *self._instrument_filters(instrument_ids),
+            *self._normalize_filters(filters),
+        ]
         return self._store.read(
             self._dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=store_filters,
         )
 
     def count(
@@ -39,13 +48,18 @@ class ParquetDatasetReader:
         instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> int:
         """统计记录数。"""
+        store_filters = [
+            *self._instrument_filters(instrument_ids),
+            *self._normalize_filters(filters),
+        ]
         return self._store.count(
             self._dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=store_filters,
         )
 
     def get_years(self) -> list[int]:
@@ -62,4 +76,26 @@ class ParquetDatasetReader:
 
     def list_instrument_ids(self) -> list[int]:
         """列出所有工具 ID。"""
-        return self._store.list_instrument_ids(self._dataset)
+        values = self.list_unique_values(INSTRUMENT_ID_COLUMN)
+        return [int(value) for value in values]
+
+    def list_unique_values(self, column: str) -> list[Any]:
+        """列出指定列的唯一值。"""
+        return self._store.list_unique_values(self._dataset, column)
+
+    def _instrument_filters(self, instrument_ids: list[int] | None) -> list[pl.Expr]:
+        """构造工具 ID 过滤表达式。"""
+        if not instrument_ids:
+            return []
+        return [pl.col(INSTRUMENT_ID_COLUMN).is_in(instrument_ids)]
+
+    def _normalize_filters(
+        self,
+        filters: pl.Expr | Sequence[pl.Expr] | None,
+    ) -> list[pl.Expr]:
+        """规范化额外过滤表达式。"""
+        if filters is None:
+            return []
+        if isinstance(filters, pl.Expr):
+            return [filters]
+        return list(filters)

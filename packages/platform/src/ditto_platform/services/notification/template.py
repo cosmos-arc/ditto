@@ -42,7 +42,7 @@ class TemplateEngine:
         Render message for specific channel.
 
         Template lookup: {template_name}_{channel}.j2
-        Example: "dq_failure_email.html.j2"
+        Example: "system_alert_email.html.j2"
 
         Args:
             message: Notification message with template name and context.

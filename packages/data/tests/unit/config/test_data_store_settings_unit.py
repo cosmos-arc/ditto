@@ -64,8 +64,37 @@ class TestDataStoreSettingsAllDirectories:
             expected = settings.data_root / d
             assert expected == settings.data_root / d
 
+    def test_does_not_own_feature_or_factor_paths(self) -> None:
+        """Data 层不应拥有 Features/Factors 产物路径."""
+        settings = DataStoreSettings()
+        moved_properties = [
+            "features_technical_price_path",
+            "features_technical_indicators_narrow_path",
+            "features_technical_indicators_wide_path",
+            "factors_narrow_style_path",
+            "factors_wide_style_path",
+            "factors_narrow_path",
+            "factors_wide_path",
+        ]
+        moved_directories = [
+            "features/technical/price",
+            "features/technical/indicators_narrow",
+            "features/technical/indicators_wide",
+            "factors/narrow/style",
+            "factors/wide/style",
+            "factors/factors_narrow",
+            "factors/factors_wide",
+        ]
+
+        for property_name in moved_properties:
+            assert not hasattr(settings, property_name)
+
+        dirs = settings.all_directories()
+        for directory in moved_directories:
+            assert directory not in dirs
+
     def test_count_matches_previous_hardcoded_list(self) -> None:
         """验证目录数量与之前 Infra 硬编码的列表一致（24 个）."""
         settings = DataStoreSettings()
         dirs = settings.all_directories()
-        assert len(dirs) == 31, f"Expected 31 directories, got {len(dirs)}"
+        assert len(dirs) == 24, f"Expected 24 directories, got {len(dirs)}"

@@ -60,7 +60,7 @@ class CostConfig:
     """
     成本模型配置 — A 股标准费率默认值.
 
-    默认值来源于 engine 层常量（commission_rate, commission_min）
+    默认值来源于 ditto_kernel.trading 常量（commission_rate, commission_min）
     及 A 股标准费率（stamp_duty_rate, slippage_bps）。
     """
 
@@ -78,7 +78,7 @@ class CostConfig:
 
 @dataclass(frozen=True)
 class StrategySpecInfo:
-    """App 层策略摘要 DTO — 切断 interfaces → data 直接依赖."""
+    """Application 层策略摘要 DTO — 切断 apps → data 直接依赖."""
 
     strategy_id: str
     name: str

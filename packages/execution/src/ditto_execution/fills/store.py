@@ -1,9 +1,29 @@
-"""
-Fill store — 成交持久化接口。
+"""Fill store — 成交持久化接口。"""
 
-定义 FillStore Protocol，提供成交记录的写入、查询和聚合能力。
-具体实现可基于 SQLite（本地回测）或外部数据库（生产环境）。
+from __future__ import annotations
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+from typing import Protocol
+
+from ditto_execution.models import FillRecord
+
+__all__ = ["FillStore"]
+
+
+class FillStore(Protocol):
+    """Persistence contract for execution fills."""
+
+    def save_fill(self, record: FillRecord) -> None:
+        """Persist one fill record."""
+        ...
+
+    def get_fill(self, fill_id: str) -> FillRecord | None:
+        """Return one fill by id."""
+        ...
+
+    def list_fills(
+        self,
+        strategy_id: str,
+        trade_date: str | None = None,
+    ) -> list[FillRecord]:
+        """List fills for a strategy, optionally scoped to a date."""
+        ...

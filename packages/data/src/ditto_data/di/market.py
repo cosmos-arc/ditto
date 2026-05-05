@@ -40,6 +40,10 @@ from ditto_data.storage.metadata.instrument import InstrumentReader
 
 __all__ = ["MarketProvider"]
 
+MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
+MARKET_DATE_COLUMN = "trade_date"
+MARKET_INSTRUMENT_COLUMN = "instrument_id"
+
 
 class MarketProvider(Provider):
     """Market Domain Provider - 股票/ETF/指数行情、状态、复权因子."""
@@ -53,7 +57,7 @@ class MarketProvider(Provider):
         instrument_reader: InstrumentReader,
     ) -> MarketReaders:
         """Market 域读取依赖聚合。"""
-        store = ParquetStore(settings.data_root)
+        store = _market_parquet_store(settings)
         return MarketReaders(
             stock_bars=StockBarsReader(store),
             stock_status=StockStatusReader(store),
@@ -75,7 +79,7 @@ class MarketProvider(Provider):
         settings: DataStoreSettings,
     ) -> MarketWriters:
         """Market 域写入依赖聚合。"""
-        store = ParquetStore(settings.data_root)
+        store = _market_parquet_store(settings)
         return MarketWriters(
             stock_bars=StockBarsWriter(store),
             stock_status=StockStatusWriter(store),
@@ -103,3 +107,13 @@ class MarketProvider(Provider):
     ) -> MarketWriteService:
         """Market 写入服务。"""
         return MarketWriteService(write_ports=write_ports, file_lock=file_lock_manager)
+
+
+def _market_parquet_store(settings: DataStoreSettings) -> ParquetStore:
+    """Create the market-owned Parquet store with explicit domain columns."""
+    return ParquetStore(
+        settings.data_root,
+        key_columns=MARKET_KEY_COLUMNS,
+        date_column=MARKET_DATE_COLUMN,
+        instrument_column=MARKET_INSTRUMENT_COLUMN,
+    )

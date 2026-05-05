@@ -32,8 +32,8 @@ from ditto_data.storage.market.stock.bars import (  # noqa: E402
     StockBarsReader,
     StockBarsWriter,
 )
-from ditto_platform.foundation.storage import ParquetStore  # noqa: E402
 
+from tests.e2e.parquet_helpers import market_parquet_store  # noqa: E402
 from tests.e2e.reporter import E2EReporter  # noqa: E402
 
 # ==============================================================================
@@ -235,7 +235,7 @@ def stock_bars_reader(tmp_path: Path) -> StockBarsReader:
         StockBarsReader: Stock 日线数据 Reader 实例.
 
     """
-    return StockBarsReader(ParquetStore(tmp_path))
+    return StockBarsReader(market_parquet_store(tmp_path))
 
 
 @pytest.fixture
@@ -251,7 +251,7 @@ def stock_bars_writer(tmp_path: Path) -> StockBarsWriter:
         StockBarsWriter: Stock 日线数据 Writer 实例.
 
     """
-    return StockBarsWriter(ParquetStore(tmp_path))
+    return StockBarsWriter(market_parquet_store(tmp_path))
 
 
 @pytest.fixture

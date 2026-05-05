@@ -6,7 +6,7 @@ from dishka import Provider
 
 from .config import ConfigProvider
 from .notification import NotificationProvider
-from .observability import ObservabilityProvider
+from .observability import ObservabilityProvider, register_app_metric_definitions
 from .signal_delivery import SignalDeliveryProvider
 
 __all__ = ["get_infra_providers"]
@@ -14,6 +14,7 @@ __all__ = ["get_infra_providers"]
 
 def get_infra_providers() -> list[Provider]:
     """返回 Infrastructure 层的所有 Provider."""
+    register_app_metric_definitions()
     return [
         ConfigProvider(),
         ObservabilityProvider(),

@@ -62,8 +62,8 @@ class TestResetForTesting:
         init(_test_config(), force=True)
 
         # [REVIEW]
-        Metrics.data_records.add(100, {"source": "test"})
-        Metrics.kill_switch_level.set(2.0)
+        Metrics.api_requests.add(100, {"endpoint": "/test"})
+        Metrics.cache_hit_rate.set(0.8)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -82,7 +82,7 @@ class TestResetForTesting:
 
         # [REVIEW] spans 和 metrics
         with span("test_op"):
-            Metrics.data_records.add(50, {"source": "test"})
+            Metrics.api_requests.add(50, {"endpoint": "/test"})
 
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()
@@ -209,7 +209,7 @@ class TestGetRecordedMetrics:
         """测试返回字典类型."""
         init(_test_config(), force=True)
 
-        Metrics.data_records.add(100, {"source": "test"})
+        Metrics.api_requests.add(100, {"endpoint": "/test"})
 
         metrics_data = get_recorded_metrics()
         assert isinstance(metrics_data, dict)
@@ -218,8 +218,8 @@ class TestGetRecordedMetrics:
         """测试 counter 操作后获取指标."""
         init(_test_config(), force=True)
 
-        Metrics.data_records.add(100, {"source": "test", "table": "test_table"})
-        Metrics.data_records.add(50, {"source": "test", "table": "test_table"})
+        Metrics.api_requests.add(100, {"endpoint": "/test", "method": "GET"})
+        Metrics.api_requests.add(50, {"endpoint": "/test", "method": "GET"})
 
         metrics_data = get_recorded_metrics()
         # [REVIEW]
@@ -229,8 +229,8 @@ class TestGetRecordedMetrics:
         """测试 gauge 操作后获取指标."""
         init(_test_config(), force=True)
 
-        Metrics.kill_switch_level.set(2.0)
-        Metrics.data_freshness.set(1.5)
+        Metrics.cache_hit_rate.set(0.8)
+        Metrics.cache_size.set(100.0)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -250,10 +250,10 @@ class TestGetRecordedMetrics:
         init(_test_config(), force=True)
 
         # Counter
-        Metrics.data_records.add(100, {"source": "test"})
+        Metrics.api_requests.add(100, {"endpoint": "/test"})
 
         # Gauge
-        Metrics.kill_switch_level.set(1.0)
+        Metrics.cache_hit_rate.set(1.0)
 
         # Histogram
         Metrics.api_duration.record(0.5, {"endpoint": "/api/test"})
@@ -272,17 +272,17 @@ class TestIntegrationScenarios:
         init(_test_config(), force=True)
 
         # 2. 创建 span 和指标
-        with span("data_update", source="tushare", table="etf_daily") as s:
+        with span("api_request", endpoint="/test", method="GET") as s:
             s.set_attribute("rows_processed", "1000")
-            Metrics.data_records.add(1000, {"source": "tushare", "table": "etf_daily"})
-            Metrics.data_update_duration.record(2.5, {"source": "tushare"})
+            Metrics.api_requests.add(1000, {"endpoint": "/test", "method": "GET"})
+            Metrics.api_duration.record(2.5, {"endpoint": "/test"})
 
         # 3. 验证数据
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()
 
         assert len(spans) == 1
-        assert spans[0].name == "data_update"
+        assert spans[0].name == "api_request"
         assert metrics_data is not None
 
         # 4. 重置
@@ -304,7 +304,7 @@ class TestIntegrationScenarios:
 
         # [REVIEW] 3
         with span("operation3"):
-            Metrics.cache_miss.add(1, {"cache": "data_cache"})
+            Metrics.cache_miss.add(1, {"cache": "primary_cache"})
 
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()
@@ -321,11 +321,11 @@ class TestIntegrationScenarios:
 
             with span("child_operation1") as child1:
                 child1.set_attribute("level", "child1")
-                Metrics.data_records.add(100, {"operation": "child1"})
+                Metrics.api_requests.add(100, {"operation": "child1"})
 
             with span("child_operation2") as child2:
                 child2.set_attribute("level", "child2")
-                Metrics.data_records.add(200, {"operation": "child2"})
+                Metrics.api_requests.add(200, {"operation": "child2"})
 
         spans = get_recorded_spans()
         metrics_data = get_recorded_metrics()

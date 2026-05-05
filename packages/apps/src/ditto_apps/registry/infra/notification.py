@@ -46,7 +46,7 @@ class NotificationProvider(Provider):
         3. 提供 AlertManager（组合以上组件）
 
     模板路径：
-        ditto_platform.services.notification.templates（合并后的统一模板）
+        ditto_apps.registry.infra.notification_templates
 
     """
 
@@ -61,8 +61,7 @@ class NotificationProvider(Provider):
             TemplateEngine: 配置好的模板引擎实例
 
         """
-        # 模板路径（已合并到 infra）
-        templates = files("ditto_platform.services.notification.templates")
+        templates = files("ditto_apps.registry.infra.notification_templates")
         template_path = Path(str(templates))
 
         logger.debug(
@@ -151,7 +150,7 @@ class NotificationProvider(Provider):
         """
         Alert 管理器（应用级单例）.
 
-        组合 TemplateEngine 和 NotificationSenders 提供业务级通知能力。
+        组合 TemplateEngine 和 NotificationSenders 提供通知能力。
 
         Args:
             template_engine: 模板引擎

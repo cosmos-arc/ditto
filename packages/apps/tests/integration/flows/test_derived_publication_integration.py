@@ -24,9 +24,6 @@ from ditto_apps.jobs.flows.materialization import (
 )
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
-from ditto_data.ingestion.publication_safety_record_service import (
-    PublicationSafetyRecordService,
-)
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_features.materialization import DerivedMaterializationRequest
@@ -43,6 +40,9 @@ from ditto_features.publication_safety import (
 from ditto_features.services.derived import DerivedLatestQuery
 from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services.publication_safety_record_service import (
+    PublicationSafetyRecordService,
+)
 from ditto_kernel.publication_safety import CompatibilityManifestRecord
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 

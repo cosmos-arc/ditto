@@ -79,26 +79,9 @@ class TestFindProjectRoot:
         assert root == inner
 
 
-class TestGetDefaultDQRulesDir:
-    """默认 DQ 规则目录测试。"""
+def test_project_root_module_exports_only_generic_helpers() -> None:
+    """project_root 模块只保留通用根目录发现能力。"""
+    from ditto_platform.foundation.config import project_root
 
-    def test_default_dq_rules_dir_exists(self) -> None:
-        """默认 DQ 规则目录必须存在。"""
-        from ditto_platform.foundation.config.project_root import (
-            get_default_dq_rules_dir,
-        )
-
-        dq_dir = get_default_dq_rules_dir()
-        assert dq_dir.exists(), f"DQ rules directory not found: {dq_dir}"
-
-    def test_default_dq_rules_dir_has_yaml_files(self) -> None:
-        """默认 DQ 规则目录必须包含 yml 文件。"""
-        from ditto_platform.foundation.config.project_root import (
-            get_default_dq_rules_dir,
-        )
-
-        dq_dir = get_default_dq_rules_dir()
-        yaml_files = list(dq_dir.glob("*.yml"))
-        assert yaml_files, f"No DQ rule files in: {dq_dir}"
-        # 验证至少包含 stock_daily.yml
-        assert any(f.name == "stock_daily.yml" for f in yaml_files)
+    assert not hasattr(project_root, "get_default_dq_rules_dir")
+    assert not hasattr(project_root, "get_default_golden_dataset_path")

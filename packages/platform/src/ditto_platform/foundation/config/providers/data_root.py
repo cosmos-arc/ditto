@@ -36,7 +36,11 @@ class DataRootInitProvider(ConfigInitProvider):
 
     def check(self, data_root: Path) -> bool:
         """检查 data_root 是否需要初始化."""
-        return not data_root.exists()
+        if not data_root.exists():
+            return True
+        return any(
+            not (data_root / dir_path).exists() for dir_path in self._directories
+        )
 
     def initialize(self, data_root: Path) -> InitResult:
         """创建目录结构."""

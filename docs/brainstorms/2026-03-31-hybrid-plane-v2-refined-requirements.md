@@ -236,7 +236,7 @@ builders -X-> query / write         # 只装配，不查询不写入
 |------|---------|------|
 | `models/strategy.py, strategy_run.py, strategy_audit.py` | `engine.alpha/` | 策略域模型 |
 | `models/portfolio.py, trading.py` | `engine.portfolio/` / `engine.accounting/` | 执行域模型 |
-| `models/derived.py, publication_safety.py` | `engine.materialization/` | 衍生计算模型 |
+| `models/derived.py, publication_safety.py` | `features.models/` / `ditto_features.publication_safety` | 衍生与发布安全计算模型 |
 | `services/strategy/` (4 files) | `app.backtest/` | 策略编排服务（Process 层） |
 | `services/audit/execution_audit_service.py` | `engine.backtest.audit/` | 执行审计 |
 | `services/derived/` (10 files) | `app.materialization/` | 衍生物化编排（Process 层） |
@@ -247,11 +247,11 @@ builders -X-> query / write         # 只装配，不查询不写入
 | `helpers/pit/dataframe.py, sql.py` | `data.helpers/` | PIT 工具（依赖 data 存储） |
 | `stores/runtime/derived_sqlite/` | `data.storage.runtime/` | 衍生 SQLite 存储 |
 | `stores/runtime/research_sqlite/` | `data.storage.runtime/` | 研究 SQLite 存储 |
-| `stores/runtime/publication_shadow_sqlite/` | `data.storage.runtime/` | 发布安全 SQLite 存储 |
-| `stores/runtime/publication_safety/` | `data.storage.runtime/` | 发布安全存储 |
+| `stores/runtime/publication_shadow_sqlite/` | `features.storage.runtime/`（当前迁移目标） | 发布安全 SQLite 存储 |
+| `stores/runtime/publication_safety/` | `features.storage.runtime/`（已由当前架构接管） | 发布安全存储 |
 | `stores/runtime/derived_artifact_writer.py` | `data.storage.runtime/` | 衍生产物写入 |
 
-> **关键约束**：`runtime/sql_engine.py`、`helpers/`、`stores/runtime/` 中的模块依赖 data 存储基础设施。R7 禁止 engine→data，因此这些模块不能进入 engine 包。保留在 `data/` 内部，作为 data 平面的计算基础设施。
+> **关键约束**：`runtime/sql_engine.py`、`helpers/`、`stores/runtime/` 中的 data-owned 模块依赖 data 存储基础设施。发布安全运行时存储已由当前 capability 架构划归 features；上表中旧路径仅保留为当时 brainstorm 的迁移来源语境。
 
 ### 迁移到 analytics 的模块（~15 文件）
 

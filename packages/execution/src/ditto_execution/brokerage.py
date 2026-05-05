@@ -1,4 +1,11 @@
-"""Execution brokerage ports."""
+"""
+Runtime-facing execution brokerage ports.
+
+Brokerage is the higher-level runtime-facing port used by backtest/live execution
+loops. It may wrap a BrokerGateway, but the adapter from Brokerage.place_order to
+BrokerGateway.submit_order belongs in execution/application wiring, not in
+backtest.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +25,7 @@ __all__ = ["Brokerage", "ProcessInput"]
 @dataclass(frozen=True)
 class ProcessInput:
     """
-    Pending-order processing input for a brokerage adapter.
+    Pending-order processing input for a runtime-facing brokerage.
 
     Paper adapters may fill this from the current market slice; live adapters
     may ignore the bar map and query their gateway state instead.
@@ -30,7 +37,14 @@ class ProcessInput:
 
 
 class Brokerage(Protocol):
-    """Brokerage port shared by simulation and live execution adapters."""
+    """
+    Runtime-facing brokerage port for backtest/live execution loops.
+
+    Implementations own order lifecycle progression through process_pending.
+    A live runtime can adapt place_order to a BrokerGateway.submit_order call in
+    execution/application wiring, while backtest implementations process fills
+    directly from ProcessInput.
+    """
 
     def connect(self) -> None:
         """Establish the brokerage connection."""
@@ -41,7 +55,7 @@ class Brokerage(Protocol):
         ...
 
     def place_order(self, order: Order) -> OrderTicket:
-        """Submit an order."""
+        """place_order accepts an execution-loop order into the runtime."""
         ...
 
     def cancel_order(self, order_id: str) -> bool:
@@ -49,5 +63,5 @@ class Brokerage(Protocol):
         ...
 
     def process_pending(self, process_input: ProcessInput) -> tuple[FillEvent, ...]:
-        """Process pending orders and return generated fills."""
+        """process_pending advances pending orders and returns generated fills."""
         ...

@@ -3,7 +3,7 @@
 
 Handler 编排: StrategyCatalogService（读策略）+ FactorBridge（预编译）
 + RunLifecycleService（创建 RunRecord）。
-Prefect flow 提交由 API 层负责（Interfaces 层边界）。
+Prefect flow 提交由 apps API 层负责（apps 边界）。
 """
 
 from __future__ import annotations

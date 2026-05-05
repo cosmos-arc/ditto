@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
-from typing import Protocol
+from typing import Any, Protocol
 
 import polars as pl
 
@@ -15,18 +16,20 @@ class DatasetReader(Protocol):
 
     def read(
         self,
-        instrument_ids: list[int] | None = None,
+        *,
         start_date: str | None = None,
         end_date: str | None = None,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> pl.DataFrame:
         """Read data from dataset."""
         ...
 
     def count(
         self,
-        instrument_ids: list[int] | None = None,
+        *,
         start_date: str | None = None,
         end_date: str | None = None,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> int:
         """Count records in dataset."""
         ...
@@ -43,8 +46,8 @@ class DatasetReader(Protocol):
         """Get checksum for partition."""
         ...
 
-    def list_instrument_ids(self) -> list[int]:
-        """List unique instrument IDs."""
+    def list_unique_values(self, column: str) -> list[Any]:
+        """List unique values for a column."""
         ...
 
 
@@ -62,9 +65,10 @@ class DatasetWriter(Protocol):
 
     def delete(
         self,
-        instrument_ids: list[int] | None = None,
+        *,
         start_date: str | None = None,
         end_date: str | None = None,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> int:
         """Delete data from dataset."""
         ...

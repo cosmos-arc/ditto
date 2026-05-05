@@ -14,6 +14,10 @@ import polars as pl
 from ditto_platform.foundation import logger, traced
 from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
 
+FACTOR_KEY_COLUMNS = ("instrument_id", "trade_date", "factor_id", "effective_from")
+FACTOR_DATE_COLUMN = "trade_date"
+FACTOR_INSTRUMENT_COLUMN = "instrument_id"
+
 
 class _FactorParquetReader(ParquetStore):
     """
@@ -22,22 +26,15 @@ class _FactorParquetReader(ParquetStore):
     Overrides hook methods to handle PIT-specific logic.
     """
 
-    def _get_key_columns(self) -> list[str]:
-        """
-        Return key column names for deduplication.
-
-        For PIT data, the key includes effective_from to allow
-        multiple versions of the same factor value.
-        """
-        return ["instrument_id", "trade_date", "factor_id", "effective_from"]
-
-    def _get_sort_columns(self) -> list[str]:
-        """Return sort columns."""
-        return ["instrument_id", "trade_date", "factor_id", "effective_from"]
-
-    def _get_date_column(self) -> str:
-        """Return the date column name (default trade_date)."""
-        return "trade_date"
+    def __init__(self, data_root: Path) -> None:
+        """Initialize the factor reader store with factor-owned columns."""
+        super().__init__(
+            data_root,
+            YearlyPartition(),
+            key_columns=FACTOR_KEY_COLUMNS,
+            date_column=FACTOR_DATE_COLUMN,
+            instrument_column=FACTOR_INSTRUMENT_COLUMN,
+        )
 
 
 class FactorReader:
@@ -79,7 +76,7 @@ class FactorReader:
             data_root: Root directory for data storage.
 
         """
-        self._store = _FactorParquetReader(Path(data_root), YearlyPartition())
+        self._store = _FactorParquetReader(Path(data_root))
         self._dataset = "factors/factors_narrow"
 
     @traced("data.factor_query")
@@ -115,11 +112,12 @@ class FactorReader:
         )
 
         # Use custom ParquetStore to get raw data
+        filters = self._instrument_filters(instrument_ids)
         df = self._store.read(
             self._dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=filters,
         )
 
         if df.is_empty():
@@ -192,11 +190,12 @@ class FactorReader:
             Number of matching records.
 
         """
+        filters = self._instrument_filters(instrument_ids)
         return self._store.count(
             self._dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=filters,
         )
 
     def get_date_range(self) -> tuple[str | None, str | None]:
@@ -217,4 +216,14 @@ class FactorReader:
             Sorted list of unique instrument IDs.
 
         """
-        return self._store.list_instrument_ids(self._dataset)
+        values = self._store.list_unique_values(
+            self._dataset,
+            FACTOR_INSTRUMENT_COLUMN,
+        )
+        return [int(value) for value in values]
+
+    def _instrument_filters(self, instrument_ids: list[int] | None) -> list[pl.Expr]:
+        """Build instrument filters for factor queries."""
+        if not instrument_ids:
+            return []
+        return [pl.col(FACTOR_INSTRUMENT_COLUMN).is_in(instrument_ids)]

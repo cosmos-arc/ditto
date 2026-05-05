@@ -8,6 +8,13 @@ from ditto_platform.foundation.storage import SQLiteClient
 from ditto_features.services.derived import DerivedArtifactReader
 from ditto_features.services.derived.query_service import DerivedQueryService
 from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services.derived_shadow_slot_service import (
+    DerivedShadowSlotService,
+)
+from ditto_features.storage.runtime.publication_shadow_sqlite import (
+    SQLiteDerivedShadowSlotReader,
+    SQLiteDerivedShadowSlotWriter,
+)
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
@@ -38,6 +45,22 @@ class FeaturesStorageProvider(Provider):
         return SQLiteDerivedCatalogWriter(sqlite_client)
 
     @provide
+    def derived_shadow_slot_reader(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDerivedShadowSlotReader:
+        """Derived publication shadow slot reader."""
+        return SQLiteDerivedShadowSlotReader(sqlite_client)
+
+    @provide
+    def derived_shadow_slot_writer(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteDerivedShadowSlotWriter:
+        """Derived publication shadow slot writer."""
+        return SQLiteDerivedShadowSlotWriter(sqlite_client)
+
+    @provide
     def derived_catalog_service(
         self,
         derived_catalog_reader: SQLiteDerivedCatalogReader,
@@ -47,6 +70,18 @@ class FeaturesStorageProvider(Provider):
         return DerivedCatalogService(
             catalog_reader=derived_catalog_reader,
             catalog_writer=derived_catalog_writer,
+        )
+
+    @provide
+    def derived_shadow_slot_service(
+        self,
+        derived_shadow_slot_reader: SQLiteDerivedShadowSlotReader,
+        derived_shadow_slot_writer: SQLiteDerivedShadowSlotWriter,
+    ) -> DerivedShadowSlotService:
+        """Derived publication shadow slot service."""
+        return DerivedShadowSlotService(
+            slot_reader=derived_shadow_slot_reader,
+            slot_writer=derived_shadow_slot_writer,
         )
 
     @provide

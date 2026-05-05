@@ -29,31 +29,7 @@ class TestMSetup:
         meter = configure_metrics(config)
         Metrics.setup(meter)
 
-        # Verify所有指标都已创建
-        # [REVIEW]
-        assert hasattr(Metrics, "data_update_duration")
-        assert hasattr(Metrics, "data_records")
-        assert hasattr(Metrics, "data_freshness")
-        assert hasattr(Metrics, "data_errors")
-
-        # [REVIEW]
-        assert hasattr(Metrics, "factor_calc_duration")
-        assert hasattr(Metrics, "factor_ic")
-        assert hasattr(Metrics, "factor_health")
-
-        # [REVIEW]
-        assert hasattr(Metrics, "signal_total")
-        assert hasattr(Metrics, "rebalance_total")
-
-        # [REVIEW]
-        assert hasattr(Metrics, "portfolio_value")
-        assert hasattr(Metrics, "portfolio_drawdown")
-        assert hasattr(Metrics, "portfolio_drawdown_3d")
-
-        # [REVIEW]
-        assert hasattr(Metrics, "kill_switch_level")
-        assert hasattr(Metrics, "kill_switch_total")
-
+        # Verify所有平台指标都已创建
         # [REVIEW]
         assert hasattr(Metrics, "scheduler_jobs")
         assert hasattr(Metrics, "api_requests")
@@ -78,11 +54,6 @@ class TestMSetup:
         assert hasattr(Metrics, "json_deserialize_duration")
         assert hasattr(Metrics, "json_bytes_total")
 
-        # DQ 指标
-        assert hasattr(Metrics, "dq_batch_checks")
-        assert hasattr(Metrics, "dq_batch_issues")
-        assert hasattr(Metrics, "dq_batch_alerts")
-
     def test_m_setup_histogram_types(self) -> None:
         """测试 Metrics.setup() 正确创建 Histogram 类型."""
         reset_for_testing()
@@ -93,9 +64,9 @@ class TestMSetup:
         Metrics.setup(meter)
 
         # Verify Histogram 类型
-        assert isinstance(Metrics.data_update_duration, SafeHistogram)
-        assert isinstance(Metrics.factor_calc_duration, SafeHistogram)
         assert isinstance(Metrics.api_duration, SafeHistogram)
+        assert isinstance(Metrics.sql_query_duration, SafeHistogram)
+        assert isinstance(Metrics.json_serialize_duration, SafeHistogram)
 
     def test_m_setup_counter_types(self) -> None:
         """测试 Metrics.setup() 正确创建 Counter 类型."""
@@ -107,9 +78,9 @@ class TestMSetup:
         Metrics.setup(meter)
 
         # Verify Counter 类型
-        assert isinstance(Metrics.data_records, SafeCounter)
-        assert isinstance(Metrics.signal_total, SafeCounter)
-        assert isinstance(Metrics.kill_switch_total, SafeCounter)
+        assert isinstance(Metrics.api_requests, SafeCounter)
+        assert isinstance(Metrics.scheduler_jobs, SafeCounter)
+        assert isinstance(Metrics.cache_hit, SafeCounter)
 
     def test_m_setup_gauge_types(self) -> None:
         """测试 Metrics.setup() 正确创建 Gauge 类型."""
@@ -122,9 +93,8 @@ class TestMSetup:
 
         # Verify SafeGauge 类型
 
-        assert isinstance(Metrics.data_freshness, SafeGauge)
-        assert isinstance(Metrics.factor_ic, SafeGauge)
-        assert isinstance(Metrics.kill_switch_level, SafeGauge)
+        assert isinstance(Metrics.cache_hit_rate, SafeGauge)
+        assert isinstance(Metrics.cache_size, SafeGauge)
 
     def test_m_setup_unknown_metric_type_raises_error(self) -> None:
         """测试 Metrics.setup() 遇到未知类型抛出异常."""
@@ -166,15 +136,15 @@ class TestMSetup:
 
         # [REVIEW] setup
         Metrics.setup(meter)
-        first_data_records = Metrics.data_records
+        first_api_requests = Metrics.api_requests
 
         # [REVIEW] setup(应该覆盖)
         Metrics.setup(meter)
-        second_data_records = Metrics.data_records
+        second_api_requests = Metrics.api_requests
 
         # [REVIEW] Counter 类型
-        assert isinstance(first_data_records, SafeCounter)
-        assert isinstance(second_data_records, SafeCounter)
+        assert isinstance(first_api_requests, SafeCounter)
+        assert isinstance(second_api_requests, SafeCounter)
 
 
 @pytest.mark.integration

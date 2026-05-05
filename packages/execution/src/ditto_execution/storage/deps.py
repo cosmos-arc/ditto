@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_execution.storage.sqlite.trade import (
-    FillReader,
-    FillWriter,
-    IntentReader,
-    IntentWriter,
+from ditto_execution.storage.sqlite.trade.fills import FillReader, FillWriter
+from ditto_execution.storage.sqlite.trade.intents import IntentReader, IntentWriter
+from ditto_execution.storage.sqlite.trade.positions import (
     PositionReader,
     PositionWriter,
 )

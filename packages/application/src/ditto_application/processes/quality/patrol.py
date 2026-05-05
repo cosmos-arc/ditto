@@ -14,7 +14,7 @@ import polars.exceptions as pl_exceptions
 from ditto_data.quality.protocols import QualityEngineProtocol
 from ditto_kernel.quality import DQIssue, DQResult
 from ditto_platform.foundation import logger
-from ditto_platform.services.notification import AlertManager, alert_dq_failure
+from ditto_platform.services.notification import AlertManager, NotificationLevel
 
 from ditto_application.processes.quality.types import L3CheckResult
 from ditto_application.queries.market import MarketQueryFacade
@@ -274,10 +274,14 @@ class QualityPatrolService:
         )
         if self._alert_manager is None:
             return
-        alert_dq_failure(
-            manager=self._alert_manager,
-            dataset=dataset,
-            trade_date=trade_date,
-            failed_rules=failed_rules,
-            error_count=len(issues),
+        level = NotificationLevel.ERROR if issues else NotificationLevel.WARNING
+        self._alert_manager.send_alert(
+            template="dq_failure",
+            context={
+                "dataset": dataset,
+                "trade_date": trade_date,
+                "failed_rules": failed_rules,
+                "error_count": len(issues),
+            },
+            level=level,
         )

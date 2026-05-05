@@ -53,7 +53,7 @@ class Notification:
     The actual content is rendered by template engine in each channel.
 
     Args:
-        template: Template name (e.g., "dq_failure")
+        template: Template name (e.g., "system_alert")
         context: Template variables for rendering
         level: Notification severity level
         timestamp: Optional timestamp for the notification

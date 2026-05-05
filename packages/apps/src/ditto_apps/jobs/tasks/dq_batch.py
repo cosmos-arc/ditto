@@ -10,7 +10,7 @@ from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel.quality import DQIssue
 from ditto_platform.foundation import Metrics, logger
-from ditto_platform.services.notification import AlertManager, alert_dq_failure
+from ditto_platform.services.notification import AlertManager, NotificationLevel
 from prefect import task
 
 from ditto_apps.jobs.context import create_prefect_host
@@ -310,12 +310,16 @@ def _send_dq_alert(trade_date: str, issues: list[Any]) -> None:
         with create_prefect_host() as container:
             manager = container.get(AlertManager)
             failed_rules = [i.rule_name for i in issues]
-            alert_dq_failure(
-                manager=manager,
-                dataset="batch",
-                trade_date=trade_date,
-                failed_rules=failed_rules,
-                error_count=len(issues),
+            level = NotificationLevel.ERROR if issues else NotificationLevel.WARNING
+            manager.send_alert(
+                template="dq_failure",
+                context={
+                    "dataset": "batch",
+                    "trade_date": trade_date,
+                    "failed_rules": failed_rules,
+                    "error_count": len(issues),
+                },
+                level=level,
             )
     except Exception as exc:
         logger.exception(

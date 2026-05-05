@@ -7,19 +7,21 @@ This module provides a unified Parquet store implementation that supports:
 - Duplicate data handling (error/keep_first/keep_last)
 - Automatic deduplication (batch internal duplicates)
 - Metadata operations:
-  get_years, get_checksum, count, get_date_range, list_instrument_ids
+  get_years, get_checksum, count, get_date_range, list_unique_values
 """
 
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
-from ditto_platform.foundation import Metrics, logger, traced
+from ditto_platform.foundation import logger, traced
 from ditto_platform.foundation.storage.partition_strategy import (
     PartitionStrategy,
     YearlyPartition,
@@ -49,7 +51,7 @@ class ParquetStore:
     - Duplicate data handling (error/keep_first/keep_last)
     - Automatic deduplication (batch internal duplicates)
     - Metadata operations (get_years, get_checksum, count, get_date_range,
-      list_instrument_ids)
+      list_unique_values)
 
     Attributes:
         data_root: Root directory path for data.
@@ -61,6 +63,9 @@ class ParquetStore:
         self,
         data_root: Path,
         partition_strategy: PartitionStrategy = YearlyPartition(),
+        key_columns: tuple[str, ...] = (),
+        date_column: str | None = None,
+        instrument_column: str | None = None,
     ) -> None:
         """
         Initialize ParquetStore.
@@ -68,10 +73,16 @@ class ParquetStore:
         Args:
             data_root: Root directory path for data.
             partition_strategy: Partition strategy, default yearly.
+            key_columns: Unique key column names for deduplication.
+            date_column: Column used for date filtering and date metadata.
+            instrument_column: Optional caller-owned column metadata.
 
         """
         self._data_root = Path(data_root)
         self._partition = partition_strategy
+        self._key_columns = tuple(key_columns)
+        self._date_column = date_column
+        self._instrument_column = instrument_column
 
     @property
     def data_root(self) -> Path:
@@ -155,7 +166,7 @@ class ParquetStore:
             Key column names.
 
         """
-        return ["instrument_id", "trade_date"]
+        return list(self._key_columns)
 
     def _get_sort_columns(self) -> list[str]:
         """
@@ -167,15 +178,23 @@ class ParquetStore:
         """
         return self._get_key_columns()
 
-    def _get_date_column(self) -> str:
+    def _get_date_column(self) -> str | None:
         """
-        Get date column name (default trade_date).
+        Get date column name.
 
         Returns:
-            Date column name.
+            Date column name, if configured.
 
         """
-        return "trade_date"
+        return self._date_column
+
+    def _require_date_column(self) -> str:
+        """Return the configured date column or fail with a clear message."""
+        date_column = self._get_date_column()
+        if date_column is None:
+            msg = "date_column is required for date-based operations"
+            raise ValueError(msg)
+        return date_column
 
     def _validate_data(self, df: pl.DataFrame) -> None:
         """
@@ -197,20 +216,18 @@ class ParquetStore:
     def read(
         self,
         dataset: str,
-        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        **kwargs: object,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> pl.DataFrame:
         """
         Read data.
 
         Args:
             dataset: Dataset name.
-            instrument_ids: Instrument ID list (optional).
             start_date: Start date (YYYY-MM-DD) (optional).
             end_date: End date (YYYY-MM-DD) (optional).
-            **kwargs: Other parameters (ignored).
+            filters: Optional expression or expressions applied to the scan.
 
         Returns:
             DataFrame with matching records.
@@ -237,27 +254,31 @@ class ParquetStore:
         lf = pl.scan_parquet([str(p) for p in paths])
 
         # Apply filters
-        if instrument_ids:
-            lf = lf.filter(pl.col("instrument_id").is_in(instrument_ids))
+        for expr in self._normalize_filters(filters):
+            lf = lf.filter(expr)
 
-        date_col = self._get_date_column()
-        if start_date:
-            # Convert string to literal date
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col(date_col) >= pl.lit(start_dt))
+        if start_date or end_date:
+            date_col = self._require_date_column()
 
-        if end_date:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
-            lf = lf.filter(pl.col(date_col) <= pl.lit(end_dt))
+            if start_date:
+                # Convert string to literal date
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+                lf = lf.filter(pl.col(date_col) >= pl.lit(start_dt))
+
+            if end_date:
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+                lf = lf.filter(pl.col(date_col) <= pl.lit(end_dt))
 
         # Ensure sorting for correct unique(keep="last") and result order
         sort_cols = self._get_sort_columns()
-        result = (
-            lf.sort(sort_cols)
-            .unique(subset=self._get_key_columns(), keep="last")
-            .sort(sort_cols)
-            .collect()
-        )
+        key_columns = self._get_key_columns()
+        if sort_cols:
+            lf = lf.sort(sort_cols)
+        if key_columns:
+            lf = lf.unique(subset=key_columns, keep="last")
+        if sort_cols:
+            lf = lf.sort(sort_cols)
+        result = lf.collect()
 
         duration_ms = (time.time() - start_time) * 1000
 
@@ -267,16 +288,23 @@ class ParquetStore:
             dataset=dataset,
             start_date=start_date,
             end_date=end_date,
-            sids_count=len(instrument_ids) if instrument_ids else None,
+            filters_count=len(self._normalize_filters(filters)),
             row_count=len(result),
             duration_ms=round(duration_ms, 2),
         )
 
-        # Record metrics
-        Metrics.data_records.add(len(result), {"dataset": dataset, "status": "success"})
-        Metrics.data_update_duration.record(duration_ms / 1000, {"dataset": dataset})
-
         return result
+
+    def _normalize_filters(
+        self,
+        filters: pl.Expr | Sequence[pl.Expr] | None,
+    ) -> list[pl.Expr]:
+        """Normalize an optional expression collection to a list."""
+        if filters is None:
+            return []
+        if isinstance(filters, pl.Expr):
+            return [filters]
+        return list(filters)
 
     # ============ Write operation ============
 
@@ -292,13 +320,15 @@ class ParquetStore:
 
         """
         date_col = self._get_date_column()
-        if date_col in df.columns:
+        if date_col is not None and date_col in df.columns:
             if df[date_col].dtype == pl.String:
                 df = df.with_columns(pl.col(date_col).str.strptime(pl.Date, "%Y-%m-%d"))
             elif df[date_col].dtype != pl.Date:
                 df = df.with_columns(pl.col(date_col).cast(pl.Date))
 
         sort_cols = self._get_sort_columns()
+        if not sort_cols:
+            return df
         return df.sort(sort_cols)
 
     def _merge_with_existing(
@@ -323,6 +353,9 @@ class ParquetStore:
 
         """
         key_columns = self._get_key_columns()
+        if not key_columns:
+            combined = pl.concat([existing, df])
+            return MergeResult(df=combined, added=len(df), updated=0)
 
         # Detect duplicate data
         existing_keys = existing.select(key_columns)
@@ -433,21 +466,22 @@ class ParquetStore:
 
         # Detect batch internal duplicates and auto-dedup
         key_columns = self._get_key_columns()
-        batch_duplicates = (
-            df.group_by(key_columns)
-            .agg(pl.len().alias("_count"))
-            .filter(pl.col("_count") > 1)
-        )
-
-        if not batch_duplicates.is_empty():
-            logger.warning(
-                "Batch internal duplicates detected, auto-dedup (keep first)",
-                event="batch_internal_duplicates",
-                dataset=dataset,
-                year=year,
-                duplicate_count=len(batch_duplicates),
+        if key_columns:
+            batch_duplicates = (
+                df.group_by(key_columns)
+                .agg(pl.len().alias("_count"))
+                .filter(pl.col("_count") > 1)
             )
-            df = df.unique(subset=key_columns, keep="first")
+
+            if not batch_duplicates.is_empty():
+                logger.warning(
+                    "Batch internal duplicates detected, auto-dedup (keep first)",
+                    event="batch_internal_duplicates",
+                    dataset=dataset,
+                    year=year,
+                    duplicate_count=len(batch_duplicates),
+                )
+                df = df.unique(subset=key_columns, keep="first")
 
         # Merge with existing data and get statistics
         added = 0
@@ -498,20 +532,18 @@ class ParquetStore:
     def delete(
         self,
         dataset: str,
-        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        **kwargs: object,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> int:
         """
         Delete data.
 
         Args:
             dataset: Dataset name.
-            instrument_ids: Instrument ID list (optional).
             start_date: Start date (YYYY-MM-DD) (optional).
             end_date: End date (YYYY-MM-DD) (optional).
-            **kwargs: Other parameters (ignored).
+            filters: Optional expression or expressions selecting rows to delete.
 
         Returns:
             Number of deleted records.
@@ -524,7 +556,7 @@ class ParquetStore:
             return 0
 
         total_deleted = 0
-        date_col = self._get_date_column()
+        date_col = self._require_date_column() if start_date or end_date else ""
 
         for path in paths:
             # Read existing data
@@ -533,15 +565,12 @@ class ParquetStore:
             # Count before deletion
             original_count = len(df)
 
-            # Build delete condition: keep data NOT in delete range
-            keep_mask = pl.lit(True)
+            delete_mask: pl.Expr | None = None
 
-            if instrument_ids:
-                # Delete specified instrument_id: keep data NOT in instrument_ids
-                keep_mask = keep_mask & ~pl.col("instrument_id").is_in(instrument_ids)
+            for expr in self._normalize_filters(filters):
+                delete_mask = expr if delete_mask is None else delete_mask & expr
 
             if start_date and end_date:
-                # Delete data in date range: keep data NOT in range
                 in_range = (
                     pl.col(date_col)
                     >= pl.lit(start_date).str.strptime(pl.Date, "%Y-%m-%d")
@@ -549,22 +578,29 @@ class ParquetStore:
                     pl.col(date_col)
                     <= pl.lit(end_date).str.strptime(pl.Date, "%Y-%m-%d")
                 )
-                keep_mask = keep_mask & ~in_range
+                delete_mask = (
+                    in_range if delete_mask is None else delete_mask & in_range
+                )
             elif start_date:
-                # Only delete data after start_date
-                keep_mask = keep_mask & ~(
-                    pl.col(date_col)
-                    >= pl.lit(start_date).str.strptime(pl.Date, "%Y-%m-%d")
+                in_range = pl.col(date_col) >= pl.lit(start_date).str.strptime(
+                    pl.Date, "%Y-%m-%d"
+                )
+                delete_mask = (
+                    in_range if delete_mask is None else delete_mask & in_range
                 )
             elif end_date:
-                # Only delete data before end_date
-                keep_mask = keep_mask & ~(
-                    pl.col(date_col)
-                    <= pl.lit(end_date).str.strptime(pl.Date, "%Y-%m-%d")
+                in_range = pl.col(date_col) <= pl.lit(end_date).str.strptime(
+                    pl.Date, "%Y-%m-%d"
+                )
+                delete_mask = (
+                    in_range if delete_mask is None else delete_mask & in_range
                 )
 
+            if delete_mask is None:
+                continue
+
             # Apply filter (keep data NOT matching delete conditions)
-            df = df.filter(keep_mask)
+            df = df.filter(~delete_mask)
 
             # Count deleted
             deleted_count = original_count - len(df)
@@ -646,18 +682,18 @@ class ParquetStore:
     def count(
         self,
         dataset: str,
-        instrument_ids: list[int] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
+        filters: pl.Expr | Sequence[pl.Expr] | None = None,
     ) -> int:
         """
         Count records in a dataset.
 
         Args:
             dataset: Dataset name.
-            instrument_ids: Filter by instrument IDs.
             start_date: Start date (YYYY-MM-DD).
             end_date: End date (YYYY-MM-DD).
+            filters: Optional expression or expressions applied before counting.
 
         Returns:
             Number of matching records.
@@ -665,9 +701,9 @@ class ParquetStore:
         """
         df = self.read(
             dataset,
-            instrument_ids=instrument_ids,
             start_date=start_date,
             end_date=end_date,
+            filters=filters,
         )
         return len(df)
 
@@ -692,7 +728,7 @@ class ParquetStore:
             return None, None
 
         lf = pl.scan_parquet([str(p) for p in paths])
-        date_col = self._get_date_column()
+        date_col = self._require_date_column()
         min_max = lf.select(
             [
                 pl.col(date_col).min().alias("min"),
@@ -705,15 +741,16 @@ class ParquetStore:
 
         return str(min_max["min"][0]), str(min_max["max"][0])
 
-    def list_instrument_ids(self, dataset: str) -> list[int]:
+    def list_unique_values(self, dataset: str, column: str) -> list[Any]:
         """
-        List unique instrument IDs in a dataset.
+        List unique values from a dataset column.
 
         Args:
             dataset: Dataset name.
+            column: Column to inspect.
 
         Returns:
-            Sorted list of unique instrument IDs.
+            Sorted list of unique values.
 
         """
         years = self.get_years(dataset)
@@ -725,7 +762,7 @@ class ParquetStore:
             return []
 
         lf = pl.scan_parquet([str(p) for p in paths])
-        result = lf.select(pl.col("instrument_id").unique()).collect()
+        result = lf.select(pl.col(column).unique().sort()).collect()
 
-        instrument_ids: list[int] = result["instrument_id"].to_list()
-        return instrument_ids
+        values: list[Any] = result[column].to_list()
+        return values

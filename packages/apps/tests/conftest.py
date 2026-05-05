@@ -220,8 +220,12 @@ def reset_observability() -> Generator[None, None, None]:
 @pytest.fixture
 def obs_noop() -> None:
     """静默模式 - 最快, 不输出日志."""
+    from ditto_apps.registry.infra.observability import register_app_metric_definitions
     from ditto_platform.foundation import init
+    from ditto_platform.foundation.observability.testing import reset_for_testing
 
+    reset_for_testing()
+    register_app_metric_definitions()
     config = ObservabilityConfig(
         environment=Environment.TESTING,
         pytest_running=True,
@@ -236,8 +240,12 @@ def obs_noop() -> None:
 @pytest.fixture
 def obs_assertions() -> None:
     """断言模式 - 可验证, 内存记录."""
+    from ditto_apps.registry.infra.observability import register_app_metric_definitions
     from ditto_platform.foundation import init
+    from ditto_platform.foundation.observability.testing import reset_for_testing
 
+    reset_for_testing()
+    register_app_metric_definitions()
     config = ObservabilityConfig(
         environment=Environment.TESTING,
         pytest_running=True,

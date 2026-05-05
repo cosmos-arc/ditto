@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from typing import Any, TypedDict
 
 from opentelemetry import metrics
@@ -55,90 +56,6 @@ class MetricDefinition(TypedDict):
 
 
 METRIC_DEFINITIONS: list[MetricDefinition] = [
-    {
-        "name": "data_update_duration",
-        "instrument_name": "ditto.data.update.duration",
-        "type": "histogram",
-        "description": "Data update operation duration in seconds",
-    },
-    {
-        "name": "data_records",
-        "instrument_name": "ditto.data.records_total",
-        "type": "counter",
-        "description": "Total data records processed",
-    },
-    {
-        "name": "data_freshness",
-        "instrument_name": "ditto.data.freshness_days",
-        "type": "gauge",
-        "description": "Data freshness in days since last update",
-    },
-    {
-        "name": "data_errors",
-        "instrument_name": "ditto.data.errors_total",
-        "type": "counter",
-        "description": "Total data processing errors",
-    },
-    {
-        "name": "factor_calc_duration",
-        "instrument_name": "ditto.factor.calc.duration",
-        "type": "histogram",
-        "description": "Factor calculation duration in seconds",
-    },
-    {
-        "name": "factor_ic",
-        "instrument_name": "ditto.factor.ic",
-        "type": "gauge",
-        "description": "Factor Information Coefficient (IC)",
-    },
-    {
-        "name": "factor_health",
-        "instrument_name": "ditto.factor.health",
-        "type": "gauge",
-        "description": "Factor health score (0-100)",
-    },
-    {
-        "name": "signal_total",
-        "instrument_name": "ditto.signal.total",
-        "type": "counter",
-        "description": "Total trading signals generated",
-    },
-    {
-        "name": "rebalance_total",
-        "instrument_name": "ditto.rebalance.total",
-        "type": "counter",
-        "description": "Total portfolio rebalances executed",
-    },
-    {
-        "name": "portfolio_value",
-        "instrument_name": "ditto.portfolio.value",
-        "type": "gauge",
-        "description": "Current portfolio value",
-    },
-    {
-        "name": "portfolio_drawdown",
-        "instrument_name": "ditto.portfolio.drawdown",
-        "type": "gauge",
-        "description": "Current portfolio drawdown",
-    },
-    {
-        "name": "portfolio_drawdown_3d",
-        "instrument_name": "ditto.portfolio.drawdown_3d",
-        "type": "gauge",
-        "description": "3-day rolling portfolio drawdown",
-    },
-    {
-        "name": "kill_switch_level",
-        "instrument_name": "ditto.risk.kill_switch_level",
-        "type": "gauge",
-        "description": "Current kill switch level (0-3)",
-    },
-    {
-        "name": "kill_switch_total",
-        "instrument_name": "ditto.risk.kill_switch_total",
-        "type": "counter",
-        "description": "Total kill switch triggers",
-    },
     {
         "name": "scheduler_jobs",
         "instrument_name": "ditto.scheduler.jobs_total",
@@ -235,25 +152,67 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
         "type": "counter",
         "description": "Total JSON bytes processed",
     },
-    {
-        "name": "dq_batch_checks",
-        "instrument_name": "ditto.dq.batch.checks_total",
-        "type": "counter",
-        "description": "Total DQ batch checks executed",
-    },
-    {
-        "name": "dq_batch_issues",
-        "instrument_name": "ditto.dq.batch.issues_total",
-        "type": "counter",
-        "description": "Total DQ batch issues found",
-    },
-    {
-        "name": "dq_batch_alerts",
-        "instrument_name": "ditto.dq.batch.alerts_total",
-        "type": "counter",
-        "description": "Total DQ batch alerts generated",
-    },
 ]
+
+_REGISTERED_METRIC_DEFINITIONS: dict[str, MetricDefinition] = {}
+_REGISTERED_METRIC_NAMES: dict[str, MetricDefinition] = {}
+
+
+def _all_metric_definitions() -> list[MetricDefinition]:
+    return [*METRIC_DEFINITIONS, *_REGISTERED_METRIC_DEFINITIONS.values()]
+
+
+def _normalize_metric_definition(
+    definition: MetricDefinition | Mapping[str, str],
+) -> MetricDefinition:
+    return {
+        "name": definition["name"],
+        "instrument_name": definition["instrument_name"],
+        "type": definition["type"],
+        "description": definition["description"],
+    }
+
+
+def _platform_definitions_by_instrument() -> dict[str, MetricDefinition]:
+    return {
+        definition["instrument_name"]: definition for definition in METRIC_DEFINITIONS
+    }
+
+
+def _platform_definitions_by_name() -> dict[str, MetricDefinition]:
+    return {definition["name"]: definition for definition in METRIC_DEFINITIONS}
+
+
+def _check_duplicate_metric_definition(metric_def: MetricDefinition) -> bool:
+    instrument_name = metric_def["instrument_name"]
+    name = metric_def["name"]
+
+    by_instrument = {
+        **_platform_definitions_by_instrument(),
+        **_REGISTERED_METRIC_DEFINITIONS,
+    }
+    by_name = {
+        **_platform_definitions_by_name(),
+        **_REGISTERED_METRIC_NAMES,
+    }
+
+    if existing := by_instrument.get(instrument_name):
+        if existing != metric_def:
+            msg = (
+                f"Metric instrument {instrument_name!r} already registered with "
+                f"different definition {existing!r}"
+            )
+            raise ValueError(msg)
+        return True
+
+    if existing := by_name.get(name):
+        msg = (
+            f"Metric name {name!r} already registered for instrument "
+            f"{existing['instrument_name']!r}"
+        )
+        raise ValueError(msg)
+
+    return False
 
 
 class SafeCounter:
@@ -324,31 +283,21 @@ class SafeGauge:
         )
 
 
-class Metrics:
+class _MetricsMeta(type):
+    def __getattr__(cls, name: str) -> Any:  # noqa: ANN401
+        definition = _REGISTERED_METRIC_NAMES.get(name)
+        if definition is None:
+            msg = f"type object {cls.__name__!r} has no attribute {name!r}"
+            raise AttributeError(msg)
+        return cls.ensure_definition(definition)
+
+
+class Metrics(metaclass=_MetricsMeta):
     """
     指标入口（绑定全局 Meter 后可直接使用）。
 
     使用防御式包装器，未初始化时静默跳过。
     """
-
-    data_update_duration: SafeHistogram = SafeHistogram()
-    data_records: SafeCounter = SafeCounter()
-    data_freshness: SafeGauge = SafeGauge()
-    data_errors: SafeCounter = SafeCounter()
-
-    factor_calc_duration: SafeHistogram = SafeHistogram()
-    factor_ic: SafeGauge = SafeGauge()
-    factor_health: SafeGauge = SafeGauge()
-
-    signal_total: SafeCounter = SafeCounter()
-    rebalance_total: SafeCounter = SafeCounter()
-
-    portfolio_value: SafeGauge = SafeGauge()
-    portfolio_drawdown: SafeGauge = SafeGauge()
-    portfolio_drawdown_3d: SafeGauge = SafeGauge()
-
-    kill_switch_level: SafeGauge = SafeGauge()
-    kill_switch_total: SafeCounter = SafeCounter()
 
     scheduler_jobs: SafeCounter = SafeCounter()
     api_requests: SafeCounter = SafeCounter()
@@ -370,31 +319,121 @@ class Metrics:
     json_deserialize_duration: SafeHistogram = SafeHistogram()
     json_bytes_total: SafeCounter = SafeCounter()
 
-    dq_batch_checks: SafeCounter = SafeCounter()
-    dq_batch_issues: SafeCounter = SafeCounter()
-    dq_batch_alerts: SafeCounter = SafeCounter()
-
     @classmethod
     def setup(cls, meter: metrics.Meter) -> None:
         """基于 Meter 初始化指标对象。"""
-        for metric_def in METRIC_DEFINITIONS:
-            metric_type = metric_def["type"]
-            name = metric_def["name"]
-            instrument_name = metric_def["instrument_name"]
-            description = metric_def["description"]
+        for metric_def in _all_metric_definitions():
+            cls.setup_definition(meter, metric_def)
 
-            if metric_type == "histogram":
-                histogram = meter.create_histogram(
-                    instrument_name, description=description
-                )
-                getattr(cls, name).set_histogram(histogram)
-            elif metric_type == "counter":
-                counter = meter.create_counter(instrument_name, description=description)
-                getattr(cls, name).set_counter(counter)
-            elif metric_type == "gauge":
-                getattr(cls, name).set_gauge(meter, instrument_name, description)
-            else:
-                raise ValueError(f"Unknown metric type: {metric_type}")
+    @classmethod
+    def setup_definition(
+        cls, meter: metrics.Meter, metric_def: MetricDefinition
+    ) -> None:
+        """基于 Meter 初始化单个指标对象。"""
+        metric_type = metric_def["type"]
+        name = metric_def["name"]
+        instrument_name = metric_def["instrument_name"]
+        description = metric_def["description"]
+
+        if metric_type == "histogram":
+            histogram = meter.create_histogram(instrument_name, description=description)
+            wrapper = cls._ensure_histogram(name)
+            wrapper.set_histogram(histogram)
+        elif metric_type == "counter":
+            counter = meter.create_counter(instrument_name, description=description)
+            wrapper = cls._ensure_counter(name)
+            wrapper.set_counter(counter)
+        elif metric_type == "gauge":
+            wrapper = cls._ensure_gauge(name)
+            wrapper.set_gauge(meter, instrument_name, description)
+        else:
+            raise ValueError(f"Unknown metric type: {metric_type}")
+
+    @classmethod
+    def ensure_definition(cls, metric_def: MetricDefinition) -> object:
+        """创建指标安全包装器；未绑定 Meter 时保持 no-op。"""
+        metric_type = metric_def["type"]
+        name = metric_def["name"]
+
+        if metric_type == "histogram":
+            return cls._ensure_histogram(name)
+        if metric_type == "counter":
+            return cls._ensure_counter(name)
+        if metric_type == "gauge":
+            return cls._ensure_gauge(name)
+        raise ValueError(f"Unknown metric type: {metric_type}")
+
+    @classmethod
+    def _ensure_counter(cls, name: str) -> SafeCounter:
+        existing = cls.__dict__.get(name)
+        if isinstance(existing, SafeCounter):
+            return existing
+        wrapper = SafeCounter()
+        setattr(cls, name, wrapper)
+        return wrapper
+
+    @classmethod
+    def _ensure_histogram(cls, name: str) -> SafeHistogram:
+        existing = cls.__dict__.get(name)
+        if isinstance(existing, SafeHistogram):
+            return existing
+        wrapper = SafeHistogram()
+        setattr(cls, name, wrapper)
+        return wrapper
+
+    @classmethod
+    def _ensure_gauge(cls, name: str) -> SafeGauge:
+        existing = cls.__dict__.get(name)
+        if isinstance(existing, SafeGauge):
+            return existing
+        wrapper = SafeGauge()
+        setattr(cls, name, wrapper)
+        return wrapper
+
+    @classmethod
+    def reset_wrappers(cls, external_names: Iterable[str]) -> None:
+        """重置平台 wrapper，并移除外部动态指标 wrapper。"""
+        for metric_def in METRIC_DEFINITIONS:
+            setattr(cls, metric_def["name"], _new_noop_wrapper(metric_def))
+
+        platform_names = {definition["name"] for definition in METRIC_DEFINITIONS}
+        for name in external_names:
+            if name not in platform_names and name in cls.__dict__:
+                delattr(cls, name)
+
+
+def _new_noop_wrapper(metric_def: MetricDefinition) -> object:
+    metric_type = metric_def["type"]
+    if metric_type == "histogram":
+        return SafeHistogram()
+    if metric_type == "counter":
+        return SafeCounter()
+    if metric_type == "gauge":
+        return SafeGauge()
+    raise ValueError(f"Unknown metric type: {metric_type}")
+
+
+def register_metric_definitions(
+    definitions: Iterable[MetricDefinition | Mapping[str, str]],
+) -> None:
+    """注册外部指标定义，并在 Meter 已存在时立即绑定。"""
+    meter = _MetricsRegistry.get_meter()
+    for definition in definitions:
+        metric_def = _normalize_metric_definition(definition)
+        if _check_duplicate_metric_definition(metric_def):
+            continue
+        if meter is not None and metric_def["type"] == "histogram":
+            msg = (
+                "Histogram metric definitions must be registered before "
+                "configure_metrics() so their custom bucket views are installed"
+            )
+            raise RuntimeError(msg)
+        instrument_name = metric_def["instrument_name"]
+        _REGISTERED_METRIC_DEFINITIONS[instrument_name] = metric_def
+        _REGISTERED_METRIC_NAMES[metric_def["name"]] = metric_def
+        Metrics.ensure_definition(metric_def)
+        if meter is not None:
+            Metrics.setup_definition(meter, metric_def)
 
 
 def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
@@ -415,7 +454,9 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
         boundaries=_HISTOGRAM_BUCKETS,
     )
     duration_histogram_names = [
-        m["instrument_name"] for m in METRIC_DEFINITIONS if m["type"] == "histogram"
+        m["instrument_name"]
+        for m in _all_metric_definitions()
+        if m["type"] == "histogram"
     ]
     duration_histogram_views = [
         View(
@@ -469,8 +510,11 @@ def configure_metrics(config: ObservabilityConfig) -> metrics.Meter:
 
 
 def reset_metrics() -> None:
-    """重置 Metrics 注册表。"""
+    """重置 Metrics 注册表和外部指标目录。"""
     _MetricsRegistry.reset()
+    Metrics.reset_wrappers(_REGISTERED_METRIC_NAMES)
+    _REGISTERED_METRIC_DEFINITIONS.clear()
+    _REGISTERED_METRIC_NAMES.clear()
 
 
 def get_in_memory_reader() -> InMemoryMetricReader | None:
@@ -485,5 +529,6 @@ __all__ = [
     "SafeHistogram",
     "configure_metrics",
     "get_in_memory_reader",
+    "register_metric_definitions",
     "reset_metrics",
 ]

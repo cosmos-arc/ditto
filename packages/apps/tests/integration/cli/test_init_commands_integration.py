@@ -32,6 +32,9 @@ def test_init_config_with_data_root(tmp_path: Path):
     )
     # 命令应该成功执行
     assert result.exit_code == 0
+    assert (tmp_path / "features" / "technical" / "price").is_dir()
+    assert (tmp_path / "factors" / "factors_narrow").is_dir()
+    assert (tmp_path / "metadata" / "metadata.sqlite").is_file()
 
 
 def test_init_config_with_force(tmp_path: Path):

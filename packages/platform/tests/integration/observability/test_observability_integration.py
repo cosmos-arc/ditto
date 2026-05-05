@@ -351,8 +351,8 @@ class TestMetrics:
         reset_for_testing()
         init(_test_config(), force=True)
 
-        Metrics.data_records.add(
-            100, {"source": "test", "table": "test", "status": "success"}
+        Metrics.api_requests.add(
+            100, {"endpoint": "/test", "method": "GET", "status": "success"}
         )
 
         # [REVIEW]
@@ -364,7 +364,7 @@ class TestMetrics:
         reset_for_testing()
         init(_test_config(), force=True)
 
-        Metrics.kill_switch_level.set(2.0)
+        Metrics.cache_hit_rate.set(0.8)
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None
@@ -374,7 +374,7 @@ class TestMetrics:
         reset_for_testing()
         init(_test_config(), force=True)
 
-        Metrics.data_update_duration.record(1.5, {"source": "test", "table": "test"})
+        Metrics.api_duration.record(1.5, {"endpoint": "/test"})
 
         metrics_data = get_recorded_metrics()
         assert metrics_data is not None

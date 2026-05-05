@@ -181,45 +181,6 @@ class DataStoreSettings(BaseModel):
         """宏观指标路径。"""
         return self.data_root / "macro" / "indicators"
 
-    # ========== 特征路径 ==========
-
-    @property
-    def features_technical_price_path(self) -> Path:
-        """技术特征（价格）路径。"""
-        return self.data_root / "features" / "technical" / "price"
-
-    @property
-    def features_technical_indicators_narrow_path(self) -> Path:
-        """技术指标窄表路径。"""
-        return self.data_root / "features" / "technical" / "indicators_narrow"
-
-    @property
-    def features_technical_indicators_wide_path(self) -> Path:
-        """技术指标宽表路径。"""
-        return self.data_root / "features" / "technical" / "indicators_wide"
-
-    # ========== 因子路径 ==========
-
-    @property
-    def factors_narrow_style_path(self) -> Path:
-        """窄风格因子路径。"""
-        return self.data_root / "factors" / "narrow" / "style"
-
-    @property
-    def factors_wide_style_path(self) -> Path:
-        """宽风格因子路径。"""
-        return self.data_root / "factors" / "wide" / "style"
-
-    @property
-    def factors_narrow_path(self) -> Path:
-        """因子窄表路径。"""
-        return self.data_root / "factors" / "factors_narrow"
-
-    @property
-    def factors_wide_path(self) -> Path:
-        """因子宽表路径。"""
-        return self.data_root / "factors" / "factors_wide"
-
     # ========== 通用路径 ==========
 
     @property
@@ -267,13 +228,6 @@ class DataStoreSettings(BaseModel):
             "fundamental/indicator",
             "fundamental/forecast",
             "fundamental/holding",
-            "features/technical/price",
-            "features/technical/indicators_narrow",
-            "features/technical/indicators_wide",
-            "factors/narrow/style",
-            "factors/wide/style",
-            "factors/factors_narrow",
-            "factors/factors_wide",
             "macro/indicators",
             "logs",
             "backups",

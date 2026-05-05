@@ -9,7 +9,10 @@ from ditto_platform.foundation.config import ConfigInitCoordinator
 from ditto_platform.foundation.config.initializer import InitScope
 from ditto_platform.foundation.config.providers import DataRootInitProvider
 
-from ditto_apps.registry.infra.config import load_data_store_settings
+from ditto_apps.registry.infra.config import (
+    data_root_init_directories_from_data_store,
+    load_data_store_settings,
+)
 from ditto_apps.registry.init_providers import MetadataDbInitProvider
 
 app = typer.Typer(help="配置初始化命令")
@@ -29,9 +32,16 @@ def _make_coordinator() -> ConfigInitCoordinator:
     """创建并注册所有初始化提供者的协调器。"""
     coordinator = ConfigInitCoordinator()
     settings = load_data_store_settings()
-    coordinator.register(DataRootInitProvider(settings.all_directories()))
+    coordinator.register(
+        DataRootInitProvider(data_root_init_directories_from_data_store(settings))
+    )
     coordinator.register(MetadataDbInitProvider())
     return coordinator
+
+
+def _init_scope(force: bool) -> InitScope:
+    """选择 CLI 初始化作用域。"""
+    return InitScope.ALWAYS if force else InitScope.STARTUP
 
 
 @app.command()
@@ -44,7 +54,7 @@ def config(
     data_root_path = _resolve_data_root(ctx, data_root)
 
     coordinator = _make_coordinator()
-    scope = InitScope.ALWAYS if force else InitScope.MANUAL
+    scope = _init_scope(force)
     results = coordinator.initialize(scope=scope, data_root=data_root_path, force=force)
 
     all_success = True
@@ -72,7 +82,7 @@ def dq(
     data_root_path = _resolve_data_root(ctx, data_root)
 
     coordinator = _make_coordinator()
-    scope = InitScope.ALWAYS if force else InitScope.MANUAL
+    scope = _init_scope(force)
     results = coordinator.initialize(scope=scope, data_root=data_root_path, force=force)
 
     dq_results = {
@@ -106,7 +116,7 @@ def db(
     data_root_path = _resolve_data_root(ctx, data_root)
 
     coordinator = _make_coordinator()
-    scope = InitScope.ALWAYS if force else InitScope.MANUAL
+    scope = _init_scope(force)
     results = coordinator.initialize(scope=scope, data_root=data_root_path, force=force)
 
     db_results = {
