@@ -849,7 +849,7 @@
     .shell-analytical .status-bar { grid-area: status; }
 
     /* ══════════════════════════════════════════════
-     * Noise texture + ambient light
+     * Noise texture + structural top line
      * ══════════════════════════════════════════════ */
     .shell-analytical::before {
       content: '';
@@ -861,7 +861,7 @@
       pointer-events: none;
       z-index: 0;
     }
-    /* Top-edge ambient light */
+    /* Top-edge structural line */
     .shell-analytical::after {
       content: '';
       position: absolute;
@@ -869,14 +869,7 @@
       left: 0;
       right: 0;
       height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 2;
     }
@@ -1362,12 +1355,7 @@
       right: 12%;
       height: 2px;
       border-radius: 1px;
-      background: linear-gradient(
-        90deg,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent),
-        var(--brand-accent) 50%,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent)
-      );
+      background: var(--border-subtle);
     }
     .risk-tab {
       position: relative;
@@ -1428,7 +1416,7 @@
       box-shadow: 0 0 4px color-mix(in oklch, var(--risk-near-limit-fg) 30%, transparent);
     }
 
-    /* ── D. Status bar top accent (brand gradient ::before) ── */
+    /* ── D. Status bar top structural line ── */
     .status-bar::before {
       content: '';
       position: absolute;
@@ -1436,14 +1424,7 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 70%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
     }
     .status-bar {

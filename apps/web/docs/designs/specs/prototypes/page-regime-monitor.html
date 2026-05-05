@@ -153,7 +153,7 @@
       position: relative;
     }
 
-    /* Header bottom ambient glow */
+    /* Header bottom structural line */
     .shell-regime .shell-header::after {
       content: '';
       position: absolute;
@@ -161,18 +161,11 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
     }
 
-    /* Rail right edge ambient glow */
+    /* Rail right edge structural line */
     .shell-regime .shell-rail::after {
       content: '';
       position: absolute;
@@ -180,14 +173,7 @@
       right: -1px;
       bottom: 0;
       width: 1px;
-      background: linear-gradient(
-        180deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 70%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
     }
 

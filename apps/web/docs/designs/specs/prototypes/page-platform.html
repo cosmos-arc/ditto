@@ -162,8 +162,7 @@
     .shell-ops .ops-health {
       border-bottom: 1px solid var(--border-subtle);
     }
-    /* Health strip glow: box-shadow only — removed redundant ::after bar for restraint */
-    /* (glow handled by box-shadow on .ops-health above) */
+    /* Health strip uses border contrast only; no decorative light layer. */
 
     /* ── Panel body breathing room ── */
     .shell-ops .panel-body {
@@ -1083,7 +1082,7 @@
       pointer-events: none;
       z-index: 0;
     }
-    /* Subtle top-edge ambient light */
+    /* Subtle top-edge structural line */
     .shell-ops::after {
       content: '';
       position: absolute;
@@ -1091,14 +1090,7 @@
       left: 0;
       right: 0;
       height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 2;
     }
@@ -1146,8 +1138,8 @@
       animation: task-pulse 2s ease-in-out infinite;
     }
     @keyframes task-pulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in oklch, var(--brand-accent) 40%, transparent); }
-      50%      { opacity: 0.7; box-shadow: 0 0 0 4px color-mix(in oklch, var(--brand-accent) 0%, transparent); }
+      0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+      50%      { opacity: 0.72; transform: translateY(-50%) scale(1.18); }
     }
 
     /* ══════════════════════════════════════════════
@@ -1172,7 +1164,7 @@
       background: color-mix(in oklch, var(--brand-accent) 80%, transparent);
     }
 
-    /* Rail right edge ambient light — brand continuity */
+    /* Rail right edge structural line */
     .shell-ops .shell-rail {
       position: relative;
     }
@@ -1183,14 +1175,7 @@
       right: -1px;
       bottom: 0;
       width: 1px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 5;
     }

@@ -174,7 +174,7 @@
       pointer-events: none;
       z-index: 0;
     }
-    /* Subtle top-edge ambient light */
+    /* Subtle top-edge structural line */
     .shell-ledger::after {
       content: '';
       position: absolute;
@@ -182,14 +182,7 @@
       left: 0;
       right: 0;
       height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 2;
     }
@@ -198,7 +191,7 @@
       z-index: 1;
     }
 
-    /* Rail right edge ambient light — brand continuity */
+    /* Rail right edge structural line */
     .shell-ledger .shell-rail {
       position: relative;
     }
@@ -209,14 +202,7 @@
       right: -1px;
       bottom: 0;
       width: 1px;
-      background: linear-gradient(
-        to bottom,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 5;
     }
@@ -902,8 +888,8 @@
     }
 
     @keyframes timeline-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--execution-partial-fg) 30%, transparent); }
-      50%      { box-shadow: 0 0 0 4px color-mix(in oklch, var(--execution-partial-fg) 0%, transparent); }
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.72; transform: scale(1.08); }
     }
 
     .timeline-indicator svg {

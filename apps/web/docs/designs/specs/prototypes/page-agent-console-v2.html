@@ -909,8 +909,7 @@
     }
 
     .resize-separator:focus-visible {
-      box-shadow: 0 0 0 2px var(--interaction-focus-ring),
-                  0 0 8px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      box-shadow: 0 0 0 2px var(--interaction-focus-ring);
     }
 
     /* ── P0: Confidence color coding ── */
@@ -952,9 +951,9 @@
       50% { opacity: 0.85; }
     }
 
-    @keyframes glow-pulse {
-      0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent); }
-      50% { box-shadow: 0 0 0 5px color-mix(in oklch, var(--system-healthy-fg) 12%, transparent); }
+    @keyframes indicator-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.78; transform: scale(1.08); }
     }
 
     @keyframes progress-shift {
@@ -967,7 +966,7 @@
     }
 
     .status-indicator {
-      animation: glow-pulse 2.5s var(--motion-easing-standard) infinite;
+      animation: indicator-pulse 2.5s var(--motion-easing-standard) infinite;
     }
 
     .progress-fill {

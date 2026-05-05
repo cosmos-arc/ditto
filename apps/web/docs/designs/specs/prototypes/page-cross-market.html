@@ -1456,7 +1456,7 @@
     .flow-bar-value.outflow { color: var(--market-down-fg); }
 
     /* ══════════════════════════════════════════════
-     * Top-edge ambient light (instrument-hub pattern)
+     * Top-edge structural line
      * ══════════════════════════════════════════════ */
     .shell-radar::after {
       content: '';
@@ -1465,14 +1465,7 @@
       left: 0;
       right: 0;
       height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 2;
     }

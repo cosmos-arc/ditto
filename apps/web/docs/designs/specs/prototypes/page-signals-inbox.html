@@ -1719,7 +1719,7 @@
      * Round 3 polish — 9.3 → 9.5+
      * ══════════════════════════════════ */
 
-    /* ── 1. Top Accent Line (matches backtest-result shell-hub::after) ── */
+    /* ── 1. Top Structural Line ── */
     .shell-signals::after {
       content: '';
       position: absolute;
@@ -1727,14 +1727,7 @@
       left: 0;
       right: 0;
       height: 1.5px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 18%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 80%,
-        transparent 100%
-      );
+      background: var(--border-subtle);
       pointer-events: none;
       z-index: 2;
     }

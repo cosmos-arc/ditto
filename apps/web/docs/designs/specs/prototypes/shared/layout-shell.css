@@ -285,11 +285,9 @@ button {
   opacity: var(--shell-noise-opacity, 0.018);
 }
 
-/* Ambient top line removed from ::after — consolidated into ::before above.
- * Pages needing a stronger ambient effect can add a single .ambient div
- * inside the shell container. Keep decoration budget to max 2 layers:
- * 1. ::before (noise + top accent line)
- * 2. Optional page-specific .ambient div
+/* Shell surface treatment stays structural: shared noise plus restrained
+ * border/surface/elevation contrast. Page-specific shell accents should use
+ * ordinary borders or surface contrast instead of decorative light layers.
  */
 
 .shell-hub > *,
