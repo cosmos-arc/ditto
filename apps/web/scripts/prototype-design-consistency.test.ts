@@ -1143,13 +1143,12 @@ function getAnimationFamilyUsages(
 		}));
 }
 
-function hasReducedMotionDeclaration(body: string): boolean {
+function hasAnimationReducedMotionDeclaration(body: string): boolean {
 	return (
 		/\banimation\s*:\s*none(?:\s*!important)?\s*;/i.test(body) ||
 		/\banimation-name\s*:\s*none(?:\s*!important)?\s*;/i.test(body) ||
 		/\banimation-duration\s*:\s*0\.01ms(?:\s*!important)?\s*;/i.test(body) ||
-		/\banimation-iteration-count\s*:\s*1(?:\s*!important)?\s*;/i.test(body) ||
-		/\btransition\s*:\s*none(?:\s*!important)?\s*;/i.test(body)
+		/\banimation-iteration-count\s*:\s*1(?:\s*!important)?\s*;/i.test(body)
 	);
 }
 
@@ -1160,28 +1159,73 @@ function normalizeSelectorForMotionCoverage(selector: string): string {
 		.trim();
 }
 
-function selectorCoverageTokens(selector: string): string[] {
+function getTerminalSelectorCompound(selector: string): string {
 	const normalized = normalizeSelectorForMotionCoverage(selector);
-	const tokens = [
-		...normalized.matchAll(/\.([a-z0-9_-]+)/gi),
-		...normalized.matchAll(/\[([a-z0-9_-]+)(?:[*^$|~]?=\s*["']?([a-z0-9_-]+)["']?)?\]/gi),
-	]
-		.flatMap((match) => match.slice(1))
-		.filter((token): token is string => Boolean(token));
+	const parts = normalized
+		.split(/\s*[>+~]\s*|\s+/)
+		.map((part) => part.trim())
+		.filter(Boolean);
 
-	return [...new Set(tokens)];
+	return parts.at(-1) ?? "";
+}
+
+type SelectorAttribute = {
+	name: string;
+	operator?: string;
+	value?: string;
+};
+
+function getSelectorClasses(selector: string): string[] {
+	return [...selector.matchAll(/\.([a-z0-9_-]+)/gi)].map((match) => match[1]);
+}
+
+function getSelectorAttributes(selector: string): SelectorAttribute[] {
+	return [...selector.matchAll(/\[([a-z0-9_-]+)(?:\s*([*^$|~]?=)\s*["']?([a-z0-9_-]+)["']?)?\]/gi)].map(
+		(match) => ({
+			name: match[1],
+			operator: match[2],
+			value: match[3],
+		}),
+	);
+}
+
+function terminalCompoundCoversUsage(reducedTerminal: string, usageTerminal: string): boolean {
+	if (!reducedTerminal || !usageTerminal) return false;
+	if (reducedTerminal === usageTerminal) return true;
+
+	const reducedClasses = getSelectorClasses(reducedTerminal);
+	const usageClasses = getSelectorClasses(usageTerminal);
+	const reducedAttributes = getSelectorAttributes(reducedTerminal);
+	const usageAttributes = getSelectorAttributes(usageTerminal);
+	if (reducedClasses.length === 0 && reducedAttributes.length === 0) return false;
+
+	const classesCovered = reducedClasses.every((className) => usageClasses.includes(className));
+	const attributesCovered = reducedAttributes.every((attribute) => {
+		if (attribute.name === "class" && attribute.operator === "*=" && attribute.value) {
+			return usageClasses.some((className) => className.includes(attribute.value ?? ""));
+		}
+
+		return usageAttributes.some((usageAttribute) => {
+			if (usageAttribute.name !== attribute.name) return false;
+			if (!attribute.operator || !attribute.value) return true;
+			if (!usageAttribute.value) return false;
+
+			if (attribute.operator === "=") return usageAttribute.value === attribute.value;
+			if (attribute.operator === "*=") return usageAttribute.value.includes(attribute.value);
+			if (attribute.operator === "^=") return usageAttribute.value.startsWith(attribute.value);
+			if (attribute.operator === "$=") return usageAttribute.value.endsWith(attribute.value);
+			return usageAttribute.value === attribute.value;
+		});
+	});
+
+	return classesCovered && attributesCovered;
 }
 
 function reducedMotionSelectorCoversUsage(reducedSelector: string, usageSelector: string): boolean {
-	const reduced = normalizeSelectorForMotionCoverage(reducedSelector);
-	const usage = normalizeSelectorForMotionCoverage(usageSelector);
-	if (!reduced || !usage) return false;
-	if (reduced === usage || reduced.includes(usage) || usage.includes(reduced)) return true;
-
-	const reducedTokens = selectorCoverageTokens(reduced);
-	if (reducedTokens.length === 0) return false;
-
-	return reducedTokens.some((token) => usage.includes(token));
+	return terminalCompoundCoversUsage(
+		getTerminalSelectorCompound(reducedSelector),
+		getTerminalSelectorCompound(usageSelector),
+	);
 }
 
 function reducedMotionCssCoversFamily(reducedMotionCss: string, family: string): boolean {
@@ -1193,7 +1237,7 @@ function reducedMotionCssCoversFamily(reducedMotionCss: string, family: string):
 
 	return readTopLevelCssRules(stripCssComments(reducedMotionCss)).some(
 		(rule) =>
-			hasReducedMotionDeclaration(rule.body) &&
+			hasAnimationReducedMotionDeclaration(rule.body) &&
 			rule.selectors.some((selector) => familyTokens.some((token) => selector.includes(token))),
 	);
 }
@@ -1204,7 +1248,7 @@ function reducedMotionCssCoversUsage(
 ): boolean {
 	return readTopLevelCssRules(stripCssComments(reducedMotionCss)).some(
 		(rule) =>
-			hasReducedMotionDeclaration(rule.body) &&
+			hasAnimationReducedMotionDeclaration(rule.body) &&
 			rule.selectors.some((reducedSelector) =>
 				usage.selectors.some((usageSelector) =>
 					reducedMotionSelectorCoversUsage(reducedSelector, usageSelector),
@@ -2842,6 +2886,32 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
+	});
+
+	it("does not treat ancestor reduced-motion selectors as covering child element animations", () => {
+		const reducedMotionCss = `
+			.regime-state-badge {
+				animation: none !important;
+			}
+		`;
+		const childDotUsage = {
+			selectors: [".regime-state-badge:hover .regime-state-badge__dot"],
+		};
+
+		expect(reducedMotionCssCoversUsage(reducedMotionCss, childDotUsage)).toBe(false);
+	});
+
+	it("does not treat transition-only reduced-motion declarations as keyframe coverage", () => {
+		const reducedMotionCss = `
+			.spinner {
+				transition: none !important;
+			}
+		`;
+		const spinnerUsage = {
+			selectors: [".spinner"],
+		};
+
+		expect(reducedMotionCssCoversUsage(reducedMotionCss, spinnerUsage)).toBe(false);
 	});
 
 	it("keeps the shared reduced-motion baseline centralized in layout-state", () => {
