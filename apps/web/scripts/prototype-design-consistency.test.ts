@@ -27,7 +27,12 @@ const glowBudgetSharedCssResourcePaths = [
 	"shared/prototype-toggles.css",
 	"shared/prototype-interactions.css",
 ] as const;
-const glowBudgetSharedTextResourcePaths = ["shared/prototype-interactions.js"] as const;
+const glowBudgetSharedTextResourcePaths = [
+	"shared/prototype-interactions.js",
+	"shared/theme-switcher.js",
+	"shared/mock-data.js",
+	"shared/screener-workflow.js",
+] as const;
 function readAllLayoutCss(): string {
 	return prototypeLayoutModulePaths.map((p) => readFileSync(join(prototypesDir, p), "utf8")).join("\n");
 }
@@ -1279,15 +1284,15 @@ function isExcessiveGlowBoxShadow(
 	if (isGlowBudgetAllowedBoxShadow(selector, value, customProperties)) return false;
 
 	const normalizedValue = value.replace(/\s+/g, " ").trim();
-	if (/\[data-mouse-glow(?:-[a-z0-9-]+)?\]/i.test(selector)) return true;
+	if (/\[data-[a-z0-9-]*glow[a-z0-9-]*\]/i.test(selector)) return true;
 
 	return splitCssList(normalizedValue).some((layer) =>
 		isDecorativeRadialGlowLayer(selector, layer, customProperties),
 	);
 }
 
-function hasForbiddenMouseGlowReference(value: string): boolean {
-	return /\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/i.test(value);
+function hasForbiddenDataGlowReference(value: string): boolean {
+	return /\bdata-[a-z0-9-]*glow[a-z0-9-]*\b/i.test(value);
 }
 
 function collectGlowBudgetCssViolations(source: CssSource): string[] {
@@ -1312,11 +1317,11 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 
 	for (const rule of readTopLevelCssRules(css)) {
 		const selector = formatCssRuleSelector(rule);
-		if (hasForbiddenMouseGlowReference(selector)) {
-			violations.push(`${source.label}:${getLineNumber(css, rule.start)}:data-mouse-glow-selector:${selector}`);
+		if (hasForbiddenDataGlowReference(selector)) {
+			violations.push(`${source.label}:${getLineNumber(css, rule.start)}:data-glow-selector:${selector}`);
 		}
-		if (hasForbiddenMouseGlowReference(rule.body)) {
-			violations.push(`${source.label}:${getLineNumber(css, rule.start)}:data-mouse-glow-body:${selector}`);
+		if (hasForbiddenDataGlowReference(rule.body)) {
+			violations.push(`${source.label}:${getLineNumber(css, rule.start)}:data-glow-body:${selector}`);
 		}
 		if (hasDecorativeAmbientGradientRule(rule)) {
 			violations.push(`${source.label}:${getLineNumber(css, rule.start)}:ambient-gradient:${selector}`);
@@ -1340,8 +1345,12 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 function collectGlowBudgetHtmlViolations(source: HtmlSource): string[] {
 	const violations: string[] = [];
 
-	for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b|\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/gi)) {
+	for (const match of source.html.matchAll(/\bambient-[a-z0-9-]+\b/gi)) {
 		violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:${match[0]}`);
+	}
+
+	for (const match of source.html.matchAll(/\s(data-[a-z0-9-]*glow[a-z0-9-]*)(?=\s|=|\/?>)/gi)) {
+		violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:data-glow-marker:${match[1]}`);
 	}
 
 	for (const match of source.html.matchAll(/<filter\b([^>]*)>([\s\S]*?)<\/filter>/gi)) {
@@ -1372,7 +1381,7 @@ function collectGlowBudgetHtmlViolations(source: HtmlSource): string[] {
 function collectGlowBudgetSharedTextViolations(source: TextSource): string[] {
 	const violations: string[] = [];
 	const markerPatterns: Array<{ pattern: RegExp; reason: string }> = [
-		{ pattern: /\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/gi, reason: "data-mouse-glow-runtime" },
+		{ pattern: /\bdata-[a-z0-9-]*glow[a-z0-9-]*\b/gi, reason: "data-glow-runtime" },
 		{ pattern: /\bMouseGlow\b/g, reason: "mouse-glow-module" },
 		{ pattern: /\b--_glow-[a-z0-9-]+\b/gi, reason: "mouse-glow-custom-property" },
 		{ pattern: /radial-gradient\s*\([\s\S]{0,320}?\bglow\b/gi, reason: "radial-gradient-glow-runtime" },
@@ -1637,8 +1646,8 @@ describe("prototype design consistency", () => {
 
 		expect(violations).toEqual(
 			expect.arrayContaining([
-				expect.stringContaining("data-mouse-glow-selector"),
-				expect.stringContaining("data-mouse-glow-body"),
+				expect.stringContaining("data-glow-selector"),
+				expect.stringContaining("data-glow-body"),
 				expect.stringContaining("box-shadow"),
 				expect.stringContaining("ambient-gradient"),
 				expect.stringContaining("@keyframes decorative-pulse"),
@@ -1711,6 +1720,24 @@ describe("prototype design consistency", () => {
 				expect.stringContaining("svg-filter-url:line-glow"),
 			]),
 		);
+	});
+
+	it("collects glow budget violations from data attribute markers in raw html", () => {
+		const violations = collectGlowBudgetHtmlViolations({
+			label: "fixture.html",
+			html: `
+				<div data-glow></div>
+				<div data-mouse-glow-size="160px"></div>
+				<script>
+					const inertFixture = "data-glow";
+				</script>
+			`,
+		});
+
+		expect(violations).toEqual([
+			"fixture.html:2:data-glow-marker:data-glow",
+			"fixture.html:3:data-glow-marker:data-mouse-glow-size",
+		]);
 	});
 
 	it("does not flag ordinary non-glow svg definitions", () => {
@@ -3823,6 +3850,9 @@ describe("prototype design consistency", () => {
 		);
 		expect(readGlowBudgetSharedTextSources().map((source) => source.label)).toEqual([
 			"shared/prototype-interactions.js",
+			"shared/theme-switcher.js",
+			"shared/mock-data.js",
+			"shared/screener-workflow.js",
 		]);
 
 		for (const source of readGlowBudgetCssSources()) {
