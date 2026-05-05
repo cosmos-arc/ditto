@@ -1534,7 +1534,7 @@
     _storageKey: function (context) {
       var route = (context && context.route) || CommandPalette._routeKey();
       var object = (context && context.object) || 'global';
-      return CommandPalette.RECENT_KEY + '::' + route + '::' + object;
+      return CommandPalette.RECENT_KEY + '::' + encodeURIComponent(route) + '::' + encodeURIComponent(object);
     },
 
     /* Read data-command-category from action elements in the page */
@@ -1628,9 +1628,13 @@
     _renderGrouped: function (container, items, recentActions) {
       /* Separate recent vs non-recent */
       var recentSet = {};
+      var itemsByAction = {};
+      items.forEach(function (item) { itemsByAction[item.action] = item; });
       recentActions.forEach(function (r) { recentSet[r] = true; });
 
-      var recentItems = items.filter(function (item) { return recentSet[item.action]; });
+      var recentItems = recentActions
+        .map(function (action) { return itemsByAction[action]; })
+        .filter(Boolean);
       var otherItems = items.filter(function (item) { return !recentSet[item.action]; });
 
       /* Group other items by category */
@@ -1871,6 +1875,7 @@
       dialog.setAttribute('aria-modal', 'true');
       dialog.setAttribute('aria-hidden', 'true');
       dialog.setAttribute('aria-labelledby', 'command-confirmation-title');
+      dialog.setAttribute('aria-describedby', 'command-confirmation-body');
       dialog.hidden = true;
 
       var surface = document.createElement('div');
@@ -1882,6 +1887,7 @@
       title.textContent = '确认高风险动作';
 
       var body = document.createElement('div');
+      body.id = 'command-confirmation-body';
       body.className = 'ditto-command-confirmation-body';
       body.setAttribute('data-command-confirm-body', '');
 

@@ -2297,7 +2297,7 @@ describe("prototype interaction UX contracts", () => {
 				expect(feedback?.textContent).toContain("已排入复核工作流");
 				expect(palette?.hidden).toBe(true);
 
-				const storageKey = "ditto-recent-commands::/alpha::测试对象";
+				const storageKey = `ditto-recent-commands::${encodeURIComponent("/alpha")}::${encodeURIComponent("测试对象")}`;
 				expect(document.defaultView!.localStorage.getItem("ditto-recent-commands")).toBeNull();
 				expect(document.defaultView!.localStorage.getItem(storageKey)).toContain("review-signal");
 
@@ -2310,6 +2310,73 @@ describe("prototype interaction UX contracts", () => {
 				trigger?.click();
 				const betaRecentSection = document.querySelector<HTMLElement>("[data-command-palette] [data-command-recent-section]");
 				expect(betaRecentSection?.textContent ?? "").not.toContain("复核信号");
+			});
+
+			it("keeps command recent storage keys stable when route or object contains delimiters", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div
+								data-command-context-route="/alpha::desk"
+								data-command-context-object="对象::A"
+								data-command-context-actions="review-signal"
+							></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/recent-key-collision.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				document.getElementById("cmd-trigger")?.click();
+				document.querySelector<HTMLElement>('[data-command-action="review-signal"]')?.click();
+
+				const encodedKey = `ditto-recent-commands::${encodeURIComponent("/alpha::desk")}::${encodeURIComponent("对象::A")}`;
+				const ambiguousKey = "ditto-recent-commands::/alpha::desk::对象::A";
+				expect(document.defaultView!.localStorage.getItem(encodedKey)).toContain("review-signal");
+				expect(document.defaultView!.localStorage.getItem(ambiguousKey)).toBeNull();
+			});
+
+			it("renders recent command actions in stored recency order", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div
+								data-command-context-route="alpha"
+								data-command-context-object="object"
+								data-command-context-actions="review-signal,open-risk,open-orders"
+							></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/recent-order.html" },
+				);
+				const { document } = dom.window;
+				document.defaultView!.localStorage.setItem(
+					"ditto-recent-commands::alpha::object",
+					JSON.stringify(["open-orders", "review-signal"]),
+				);
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				document.getElementById("cmd-trigger")?.click();
+				const recentActions = [
+					...document.querySelectorAll<HTMLElement>("[data-command-recent-section] [data-command-action]"),
+				].map((action) => action.getAttribute("data-command-action"));
+
+				expect(recentActions).toEqual(["open-orders", "review-signal"]);
 			});
 
 			it("routes high-risk command actions through an accessible confirmation dialog", () => {
@@ -2343,6 +2410,9 @@ describe("prototype interaction UX contracts", () => {
 				expect(dialog).not.toBeNull();
 				expect(dialog?.getAttribute("role")).toBe("dialog");
 				expect(dialog?.getAttribute("aria-modal")).toBe("true");
+				const describedBy = dialog?.getAttribute("aria-describedby");
+				expect(describedBy).toBe("command-confirmation-body");
+				expect(describedBy ? document.getElementById(describedBy) : null).not.toBeNull();
 				expect(dialog?.hidden).toBe(false);
 				expect(dialog?.textContent).toContain("暂停策略");
 				expect(dialog?.textContent).toContain("策略 V3.2");
@@ -2370,9 +2440,11 @@ describe("prototype interaction UX contracts", () => {
 				expect(feedback?.textContent).toContain("暂停策略");
 				expect(feedback?.textContent).toContain("策略 V3.2");
 				expect(feedback?.textContent).toContain("已提交暂停请求");
-				expect(document.defaultView!.localStorage.getItem("ditto-recent-commands::/research/strategies::策略 V3.2")).toContain(
-					"pause-strategy",
-				);
+				expect(
+					document.defaultView!.localStorage.getItem(
+						`ditto-recent-commands::${encodeURIComponent("/research/strategies")}::${encodeURIComponent("策略 V3.2")}`,
+					),
+				).toContain("pause-strategy");
 			});
 
 			it("sets aria-describedby on tooltip trigger on show and clears on hide", async () => {
