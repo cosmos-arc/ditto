@@ -54,12 +54,15 @@ const tokenStabilizationSpec = join(
 const expectedActiveRoutePrototypeCount = 28;
 const archivedPrototypeIds = new Set(["ai-overview", "ai-copilot"]);
 const auditedPrototypeFiles = ["page-alpha-explorer.html", "page-agent-console-v2.html"] as const;
+const landingVisualAuditStatuses = ["missing", "queued", "implemented", "verified"] as const;
 const prototypeStructuralDimensionTokens = {
 	"--panel-header-height": "38px",
 	"--tab-bar-height": "42px",
 	"--progress-bar-height": "6px",
 	"--surface-noise-opacity": "0.018",
 } as const;
+
+type LandingVisualAuditStatus = (typeof landingVisualAuditStatuses)[number];
 
 type ManifestPage = {
 	id: string;
@@ -68,6 +71,7 @@ type ManifestPage = {
 	status?: string;
 	landing?: {
 		overlayStatus?: string;
+		visualAuditStatus?: string;
 	};
 };
 
@@ -80,6 +84,9 @@ type PageContract = {
 	prototypeRef: string;
 	nextPrototypeRef?: string;
 	shellFamily: string;
+	landing?: {
+		visualAuditStatus?: LandingVisualAuditStatus;
+	};
 	overlays?: Array<{ id: string; prototypeSelector: string }>;
 	nextOverlays?: Array<{ prototypeSelector: string }>;
 	nextSlots?: unknown[];
@@ -2501,6 +2508,39 @@ describe("prototype design consistency", () => {
 		const inactive = auditedPrototypeFiles.filter((file) => !manifestFiles.has(file));
 
 		expect(inactive).toEqual([]);
+	});
+
+	it("keeps active prototype landing visual audit status in sync with page contracts", () => {
+		const contractByPrototype = new Map(
+			readContracts().map((contract) => [contract.prototypeRef, contract]),
+		);
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
+			const contract = contractByPrototype.get(prototypeRef);
+			const manifestStatus = page.landing?.visualAuditStatus;
+			const contractStatus = contract?.landing?.visualAuditStatus;
+
+			if (!contract) {
+				violations.push(`${page.id}:missing-contract`);
+				continue;
+			}
+
+			if (
+				!manifestStatus ||
+				!landingVisualAuditStatuses.includes(manifestStatus as LandingVisualAuditStatus)
+			) {
+				violations.push(`${page.id}:invalid-manifest-status:${manifestStatus ?? "missing-field"}`);
+				continue;
+			}
+
+			if (manifestStatus !== contractStatus) {
+				violations.push(`${page.id}:manifest-${manifestStatus}:contract-${contractStatus ?? "missing"}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
 	});
 
 	it("keeps Agent Console v2 as the only active canonical prototype", () => {

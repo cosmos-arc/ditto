@@ -58,7 +58,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -90,7 +90,7 @@
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -141,7 +141,7 @@
         "featureModule": "src/features/home",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -173,7 +173,7 @@
         "featureModule": "src/features/screener",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -206,7 +206,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -270,7 +270,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -310,7 +310,7 @@
         "featureModule": "src/features/instruments",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -349,7 +349,7 @@
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -389,7 +389,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -428,7 +428,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -468,7 +468,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -544,7 +544,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -586,7 +586,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -693,7 +693,7 @@
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -722,7 +722,7 @@
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -751,7 +751,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -780,7 +780,7 @@
         "featureModule": "src/features/backtest",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -826,7 +826,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -873,7 +873,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -928,7 +928,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -956,7 +956,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -984,7 +984,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -1012,7 +1012,7 @@
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -1040,7 +1040,7 @@
         "featureModule": "src/features/backtest",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -1068,7 +1068,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -1096,7 +1096,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     },
     {
@@ -1124,7 +1124,7 @@
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "queued"
       }
     }
   ],
