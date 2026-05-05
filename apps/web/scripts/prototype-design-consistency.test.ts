@@ -1166,8 +1166,12 @@ function isAllowedRailActiveGlowLayer(selector: string, value: string): boolean 
 }
 
 function isStatusDotGlowSelector(selector: string): boolean {
-	return /(?:status|live|session|health-metric|breach|rule)-dot|regime-state-badge__dot|topo-node|\.dot(?:\.online|\.live|\.healthy)?\b/i.test(
-		selector,
+	return (
+		/\.(?:[a-z0-9-]*-)?(?:status|live|session|health-metric|breach|rule)-dot(?:-[a-z0-9-]+)?\b/i.test(
+			selector,
+		) ||
+		/\.regime-state-badge__dot\b/i.test(selector) ||
+		/\.topo-node\.(?:topo-(?:ok|warn|down)|is-(?:live|healthy|degraded|down))\b/i.test(selector)
 	);
 }
 
@@ -1311,8 +1315,8 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 		violations.push(`${source.label}:${getLineNumber(css, match.index)}:${match[0]}`);
 	}
 
-	for (const match of css.matchAll(/--brand-signature-glow\s*:/gi)) {
-		violations.push(`${source.label}:${getLineNumber(css, match.index)}:prototype-glow-token:--brand-signature-glow`);
+	for (const match of css.matchAll(/(--[a-z0-9-]*glow[a-z0-9-]*)\s*:/gi)) {
+		violations.push(`${source.label}:${getLineNumber(css, match.index)}:prototype-glow-token:${match[1]}`);
 	}
 
 	for (const rule of readTopLevelCssRules(css)) {
@@ -1459,6 +1463,20 @@ describe("prototype design consistency", () => {
 				"0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent), 0 0 18px color-mix(in oklch, var(--system-healthy-fg) 16%, transparent)",
 			),
 		).toBe(true);
+		expect(isExcessiveGlowBoxShadow(".decorative .dot", "0 0 6px var(--brand-accent)")).toBe(true);
+		expect(isExcessiveGlowBoxShadow(".decorative .dot", "0 0 12px var(--brand-accent)")).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".topo-node",
+				"0 0 4px -1px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent)",
+			),
+		).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".topo-node.topo-ok",
+				"0 0 4px -1px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent)",
+			),
+		).toBe(false);
 		expect(
 			isExcessiveGlowBoxShadow(
 				".decision-cta.primary:hover",
@@ -1480,6 +1498,7 @@ describe("prototype design consistency", () => {
 				.metric[data-mouse-glow-color] { color: var(--text-primary); }
 				.metric-body { content: "data-mouse-glow-size"; }
 				.metric-ambient { box-shadow: 0 0 12px var(--brand-accent-subtle); }
+				.decorative .dot { box-shadow: 0 0 12px var(--brand-accent); }
 				.shell-custom::after {
 					content: "";
 					position: absolute;
@@ -1689,10 +1708,14 @@ describe("prototype design consistency", () => {
 				css: `
 					:root {
 						--brand-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.60);
+						--sidebar-glow-height: 4px;
 					}
 				`,
 			}),
-		).toEqual(["tokens-style.css:3:prototype-glow-token:--brand-signature-glow"]);
+		).toEqual([
+			"tokens-style.css:3:prototype-glow-token:--brand-signature-glow",
+			"tokens-style.css:4:prototype-glow-token:--sidebar-glow-height",
+		]);
 	});
 
 	it("collects glow budget violations from svg glow filters in raw html", () => {
