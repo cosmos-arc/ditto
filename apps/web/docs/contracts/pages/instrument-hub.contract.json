@@ -15,7 +15,11 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/instruments/components/info-level-annotations.test.tsx",
       "src/features/instruments/components/instrument-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "InstrumentHubPage"
     ]
   },
   "viewports": [

@@ -9,6 +9,7 @@ import { StrategyHeader } from "./strategy-header";
 import { FactorBrowser } from "./factor-browser";
 import { StrategyEditor } from "./strategy-editor";
 import { StrategyInspector } from "./strategy-inspector";
+import { StrategyListPage } from "./strategy-list-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -24,6 +25,16 @@ function createWrapper() {
 }
 
 beforeEach(() => server.use(...strategyHandlers));
+
+describe("Strategy route page contract handoffs", () => {
+	it("covers StrategyListPage route composition", () => {
+		render(<StrategyListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("策略列表")).toBeInTheDocument();
+		expect(screen.getByText("Strategies")).toBeInTheDocument();
+		expect(screen.getByText("Promotion")).toBeInTheDocument();
+	});
+});
 
 describe("StrategyHeader", () => {
 	it("渲染策略名称", async () => {

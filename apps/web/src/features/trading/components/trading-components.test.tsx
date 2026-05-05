@@ -10,6 +10,7 @@ import { EquityPnlBlock } from "./equity-pnl-block";
 import { PositionsSummary } from "./positions-summary";
 import { RiskAlertsBlock } from "./risk-alerts-block";
 import { TradingPage } from "./trading-page";
+import { PortfolioPage } from "./portfolio-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -25,6 +26,16 @@ function createWrapper() {
 }
 
 beforeEach(() => server.use(...tradingHandlers));
+
+describe("Trading route page contract handoffs", () => {
+	it("covers PortfolioPage route composition", () => {
+		render(<PortfolioPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("组合总览")).toBeInTheDocument();
+		expect(screen.getByText("Allocation")).toBeInTheDocument();
+		expect(screen.getByText("Activity")).toBeInTheDocument();
+	});
+});
 
 describe("TradingSessionStrip", () => {
 	it("渲染交易阶段", async () => {

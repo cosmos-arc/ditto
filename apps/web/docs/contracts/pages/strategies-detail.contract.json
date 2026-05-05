@@ -18,7 +18,11 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/strategy/components/info-level-annotations.test.tsx",
       "src/features/strategy/components/strategy-detail-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "StrategyDetailPage"
     ]
   },
   "viewports": [

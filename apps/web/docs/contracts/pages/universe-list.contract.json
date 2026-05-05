@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/research/components/research-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "UniverseListPage"
     ]
   },
   "viewports": [

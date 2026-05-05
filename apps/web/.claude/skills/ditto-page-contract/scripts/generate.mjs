@@ -126,6 +126,7 @@ function generateTS(contracts) {
   lines.push("  overlayStatus: PageLandingOverlayStatus;");
   lines.push("  visualAuditStatus: PageLandingVisualAuditStatus;");
   lines.push("  reactTestRefs?: string[];");
+  lines.push("  reactComponentRefs?: string[];");
   lines.push("}");
   lines.push("");
   lines.push("export interface PageOverlayContract {");

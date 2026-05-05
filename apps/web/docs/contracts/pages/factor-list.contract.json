@@ -15,8 +15,12 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/research/components/research-components.test.tsx",
       "src/features/research/components/factor-components.test.tsx",
       "src/features/research/components/factor-table.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "FactorListPage"
     ]
   },
   "viewports": [

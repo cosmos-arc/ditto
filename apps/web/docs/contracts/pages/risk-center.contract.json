@@ -17,6 +17,9 @@
     "reactTestRefs": [
       "src/features/trading/components/risk-components.test.tsx",
       "src/features/trading/components/risk-breach-detail.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "RiskPage"
     ]
   },
   "viewports": [

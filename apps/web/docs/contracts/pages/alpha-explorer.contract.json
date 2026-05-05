@@ -17,7 +17,8 @@
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
     "visualAuditStatus": "missing",
-    "reactTestRefs": []
+    "reactTestRefs": [],
+    "reactComponentRefs": []
   },
   "viewports": [
     {

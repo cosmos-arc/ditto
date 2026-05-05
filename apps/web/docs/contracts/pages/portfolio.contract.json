@@ -17,6 +17,9 @@
     "reactTestRefs": [
       "src/features/trading/components/trading-components.test.tsx",
       "src/features/trading/components/positions-summary.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "PortfolioPage"
     ]
   },
   "viewports": [

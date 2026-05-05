@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/markets/components/calendar-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "CalendarPage"
     ]
   },
   "viewports": [

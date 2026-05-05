@@ -19,6 +19,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/platform/components/platform-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "PlatformAgentsPage"
     ]
   },
   "viewports": [

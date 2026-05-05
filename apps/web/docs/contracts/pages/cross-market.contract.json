@@ -17,6 +17,9 @@
     "reactTestRefs": [
       "src/features/markets/components/markets-page.test.tsx",
       "src/features/markets/components/markets-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "MarketsPage"
     ]
   },
   "viewports": [

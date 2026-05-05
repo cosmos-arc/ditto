@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/trading/components/orders-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "OrdersPage"
     ]
   },
   "viewports": [

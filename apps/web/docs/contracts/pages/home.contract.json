@@ -20,6 +20,9 @@
     "reactTestRefs": [
       "src/features/home/components/home-components.test.tsx",
       "src/features/home/hooks/home-hooks.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "HomePage"
     ]
   },
   "viewports": [

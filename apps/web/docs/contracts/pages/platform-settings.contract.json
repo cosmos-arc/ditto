@@ -20,6 +20,9 @@
     "reactTestRefs": [
       "src/features/platform/components/platform-components.test.tsx",
       "src/features/platform/hooks/platform-hooks.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "PlatformSettingsPage"
     ]
   },
   "viewports": [

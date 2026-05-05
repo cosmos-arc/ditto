@@ -15,7 +15,11 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/backtest/components/info-level-annotations.test.tsx",
       "src/features/backtest/components/backtest-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "BacktestPage"
     ]
   },
   "viewports": [

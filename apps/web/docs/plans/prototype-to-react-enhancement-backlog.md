@@ -81,42 +81,42 @@
 
 ## Contract Handoff Matrix
 
-| Route | Contract | Feature module | React tests | Visual audit |
-| --- | --- | --- | --- | --- |
-| `/` | `home.contract.json` | `src/features/home` | `home-components.test.tsx`, `home-hooks.test.tsx` | `queued` |
-| `/markets` | `cross-market.contract.json` | `src/features/markets` | `markets-page.test.tsx`, `markets-components.test.tsx` | `queued` |
-| `/markets/a-shares` | `a-shares.contract.json` | `src/features/markets` | `a-shares-components.test.tsx` | `queued` |
-| `/markets/screener` | `markets-screener.contract.json` | `src/features/screener` | `screener-components.test.tsx` | `queued` |
-| `/markets/watchlist` | `watchlist.contract.json` | `src/features/markets` | `markets-components.test.tsx` | `queued` |
-| `/markets/intelligence` | `markets-intelligence.contract.json` | `src/features/markets` | `intelligence-page.test.tsx`, `intelligence-components.test.tsx` | `queued` |
-| `/markets/calendar` | `markets-calendar.contract.json` | `src/features/markets` | `calendar-components.test.tsx` | `queued` |
-| `/instruments/$id` | `instrument-hub.contract.json` | `src/features/instruments` | `instrument-components.test.tsx` | `queued` |
-| `/research` | `research.contract.json` | `src/features/research` | `research-components.test.tsx` | `queued` |
-| `/research/alpha` | `alpha-explorer.contract.json` | `src/features/research` | none, route missing | `missing` |
-| `/research/factors` | `factor-list.contract.json` | `src/features/research` | `factor-components.test.tsx`, `factor-table.test.tsx` | `queued` |
-| `/research/factors/$id` | `factor-analysis.contract.json` | `src/features/research` | `factor-components.test.tsx` | `queued` |
-| `/research/strategies` | `strategy-list.contract.json` | `src/features/strategy` | `strategy-components.test.tsx` | `queued` |
-| `/research/strategies/$id` | `strategies-detail.contract.json` | `src/features/strategy` | `strategy-detail-components.test.tsx` | `queued` |
-| `/research/strategies/$id/studio` | `strategy-studio.contract.json` | `src/features/strategy` | `strategy-components.test.tsx`, `studio-mode-bar.test.tsx` | `queued` |
-| `/research/backtest` | `backtest-list.contract.json` | `src/features/backtest` | `backtest-components.test.tsx` | `queued` |
-| `/research/backtest/$id` | `backtest-result.contract.json` | `src/features/backtest` | `backtest-components.test.tsx` | `queued` |
-| `/research/experiments` | `experiment-list.contract.json` | `src/features/research` | `research-components.test.tsx` | `queued` |
-| `/research/regime` | `regime-monitor.contract.json` | `src/features/research` | `regime-components.test.tsx` | `queued` |
-| `/research/universes` | `universe-list.contract.json` | `src/features/research` | `research-components.test.tsx` | `queued` |
-| `/trading` | `trading-overview.contract.json` | `src/features/trading` | `trading-components.test.tsx` | `queued` |
-| `/trading/signals` | `signals-inbox.contract.json` | `src/features/trading` | `signals-components.test.tsx` | `queued` |
-| `/trading/orders` | `orders-ledger.contract.json` | `src/features/trading` | `orders-components.test.tsx` | `queued` |
-| `/trading/portfolio` | `portfolio.contract.json` | `src/features/trading` | `trading-components.test.tsx`, `positions-summary.test.tsx` | `queued` |
-| `/trading/risk` | `risk-center.contract.json` | `src/features/trading` | `risk-components.test.tsx`, `risk-breach-detail.test.tsx` | `queued` |
-| `/platform` | `platform.contract.json` | `src/features/platform` | `platform-components.test.tsx`, `platform-hooks.test.tsx` | `queued` |
-| `/platform/settings` | `platform-settings.contract.json` | `src/features/platform` | `platform-components.test.tsx`, `platform-hooks.test.tsx` | `queued` |
-| `/platform/agents` | `agent-console.contract.json` | `src/features/platform` | `platform-components.test.tsx` | `queued` |
+| Route | Contract | React component | Feature module | React tests | Visual audit |
+| --- | --- | --- | --- | --- | --- |
+| `/` | `home.contract.json` | `HomePage` | `src/features/home` | `home-components.test.tsx`, `home-hooks.test.tsx` | `queued` |
+| `/markets` | `cross-market.contract.json` | `MarketsPage` | `src/features/markets` | `markets-page.test.tsx`, `markets-components.test.tsx` | `queued` |
+| `/markets/a-shares` | `a-shares.contract.json` | `ASharesPage` | `src/features/markets` | `a-shares-components.test.tsx` | `queued` |
+| `/markets/screener` | `markets-screener.contract.json` | `ScreenerPage` | `src/features/screener` | `info-level-annotations.test.tsx`, `screener-components.test.tsx` | `queued` |
+| `/markets/watchlist` | `watchlist.contract.json` | `WatchlistPage` | `src/features/markets` | `markets-components.test.tsx` | `queued` |
+| `/markets/intelligence` | `markets-intelligence.contract.json` | `IntelligencePage` | `src/features/markets` | `intelligence-page.test.tsx`, `intelligence-components.test.tsx` | `queued` |
+| `/markets/calendar` | `markets-calendar.contract.json` | `CalendarPage` | `src/features/markets` | `calendar-components.test.tsx` | `queued` |
+| `/instruments/$id` | `instrument-hub.contract.json` | `InstrumentHubPage` | `src/features/instruments` | `info-level-annotations.test.tsx`, `instrument-components.test.tsx` | `queued` |
+| `/research` | `research.contract.json` | `ResearchPage` | `src/features/research` | `info-level-annotations.test.tsx`, `research-components.test.tsx` | `queued` |
+| `/research/alpha` | `alpha-explorer.contract.json` | none, route missing | `src/features/research` | none, route missing | `missing` |
+| `/research/factors` | `factor-list.contract.json` | `FactorListPage` | `src/features/research` | `research-components.test.tsx`, `factor-components.test.tsx`, `factor-table.test.tsx` | `queued` |
+| `/research/factors/$id` | `factor-analysis.contract.json` | `FactorPage` | `src/features/research` | `info-level-annotations.test.tsx`, `factor-components.test.tsx` | `queued` |
+| `/research/strategies` | `strategy-list.contract.json` | `StrategyListPage` | `src/features/strategy` | `strategy-components.test.tsx` | `queued` |
+| `/research/strategies/$id` | `strategies-detail.contract.json` | `StrategyDetailPage` | `src/features/strategy` | `info-level-annotations.test.tsx`, `strategy-detail-components.test.tsx` | `queued` |
+| `/research/strategies/$id/studio` | `strategy-studio.contract.json` | `StrategyPage` | `src/features/strategy` | `info-level-annotations.test.tsx`, `strategy-components.test.tsx`, `studio-mode-bar.test.tsx` | `queued` |
+| `/research/backtest` | `backtest-list.contract.json` | `BacktestListPage` | `src/features/backtest` | `backtest-components.test.tsx` | `queued` |
+| `/research/backtest/$id` | `backtest-result.contract.json` | `BacktestPage` | `src/features/backtest` | `info-level-annotations.test.tsx`, `backtest-components.test.tsx` | `queued` |
+| `/research/experiments` | `experiment-list.contract.json` | `ExperimentListPage` | `src/features/research` | `research-components.test.tsx` | `queued` |
+| `/research/regime` | `regime-monitor.contract.json` | `RegimePage` | `src/features/research` | `info-level-annotations.test.tsx`, `regime-components.test.tsx` | `queued` |
+| `/research/universes` | `universe-list.contract.json` | `UniverseListPage` | `src/features/research` | `research-components.test.tsx` | `queued` |
+| `/trading` | `trading-overview.contract.json` | `TradingPage` | `src/features/trading` | `trading-components.test.tsx` | `queued` |
+| `/trading/signals` | `signals-inbox.contract.json` | `SignalsPage` | `src/features/trading` | `signals-components.test.tsx` | `queued` |
+| `/trading/orders` | `orders-ledger.contract.json` | `OrdersPage` | `src/features/trading` | `orders-components.test.tsx` | `queued` |
+| `/trading/portfolio` | `portfolio.contract.json` | `PortfolioPage` | `src/features/trading` | `trading-components.test.tsx`, `positions-summary.test.tsx` | `queued` |
+| `/trading/risk` | `risk-center.contract.json` | `RiskPage` | `src/features/trading` | `risk-components.test.tsx`, `risk-breach-detail.test.tsx` | `queued` |
+| `/platform` | `platform.contract.json` | `PlatformPage` | `src/features/platform` | `platform-components.test.tsx`, `info-level-annotations.test.tsx`, `platform-hooks.test.tsx` | `queued` |
+| `/platform/settings` | `platform-settings.contract.json` | `PlatformSettingsPage` | `src/features/platform` | `platform-components.test.tsx`, `platform-hooks.test.tsx` | `queued` |
+| `/platform/agents` | `agent-console.contract.json` | `PlatformAgentsPage` | `src/features/platform` | `platform-components.test.tsx` | `queued` |
 
 ---
 
 ## 维护规则
 
 - 每次原型迭代完成后，只把“必须在 React 中实现”的项加入 React product epics；静态 HTML polish 留在 prototype-only 区域。
-- 每个已实现 React route 的合同必须有 `landing.featureModule` 和至少一个存在的 `landing.reactTestRefs`。
+- 每个已实现 React route 的合同必须有 `landing.featureModule`、`landing.reactComponentRefs`，并且至少一个存在的 `landing.reactTestRefs` 要覆盖对应 page component 或显式 handoff marker。
 - `visualAuditStatus` 只能使用 `missing | queued | implemented | verified`；没有视觉审计通过证据时不得写 `verified`。
 - 完成 React 实现后，在对应 epic 下记录 commit hash，并同步合同与 generated artifacts。

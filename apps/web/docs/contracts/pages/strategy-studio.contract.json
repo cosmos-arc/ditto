@@ -18,8 +18,12 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/strategy/components/info-level-annotations.test.tsx",
       "src/features/strategy/components/strategy-components.test.tsx",
       "src/features/strategy/components/studio-mode-bar.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "StrategyPage"
     ]
   },
   "viewports": [

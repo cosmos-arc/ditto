@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/markets/components/markets-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "WatchlistPage"
     ]
   },
   "viewports": [

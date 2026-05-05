@@ -62,6 +62,7 @@ export interface PageLandingStatus {
   overlayStatus: PageLandingOverlayStatus;
   visualAuditStatus: PageLandingVisualAuditStatus;
   reactTestRefs?: string[];
+  reactComponentRefs?: string[];
 }
 
 export interface PageOverlayContract {
@@ -112,6 +113,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/markets/components/a-shares-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ASharesPage"
       ]
     },
     overlays: [
@@ -213,6 +217,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/platform/components/platform-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "PlatformAgentsPage"
       ]
     },
     overlays: [
@@ -364,7 +371,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
       "visualAuditStatus": "missing",
-      "reactTestRefs": []
+      "reactTestRefs": [],
+      "reactComponentRefs": []
     },
     overlays: [
       {
@@ -502,6 +510,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/backtest/components/backtest-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "BacktestListPage"
       ]
     },
     overlays: [
@@ -548,7 +559,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/backtest/components/info-level-annotations.test.tsx",
         "src/features/backtest/components/backtest-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "BacktestPage"
       ]
     },
     overlays: [
@@ -668,6 +683,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/markets/components/markets-page.test.tsx",
         "src/features/markets/components/markets-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "MarketsPage"
       ]
     },
     overlays: [
@@ -788,6 +806,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/research/components/research-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ExperimentListPage"
       ]
     },
     overlays: [
@@ -834,7 +855,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/research/components/info-level-annotations.test.tsx",
         "src/features/research/components/factor-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "FactorPage"
       ]
     },
     overlays: [
@@ -934,8 +959,12 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/research/components/research-components.test.tsx",
         "src/features/research/components/factor-components.test.tsx",
         "src/features/research/components/factor-table.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "FactorListPage"
       ]
     },
     overlays: [
@@ -985,6 +1014,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/home/components/home-components.test.tsx",
         "src/features/home/hooks/home-hooks.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "HomePage"
       ]
     },
     overlays: [
@@ -1083,7 +1115,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/instruments/components/info-level-annotations.test.tsx",
         "src/features/instruments/components/instrument-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "InstrumentHubPage"
       ]
     },
     overlays: [
@@ -1218,6 +1254,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/markets/components/calendar-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "CalendarPage"
       ]
     },
     overlays: [
@@ -1302,6 +1341,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/markets/components/intelligence-page.test.tsx",
         "src/features/markets/components/intelligence-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "IntelligencePage"
       ]
     },
     overlays: [
@@ -1418,7 +1460,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/screener/components/info-level-annotations.test.tsx",
         "src/features/screener/components/screener-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ScreenerPage"
       ]
     },
     overlays: [
@@ -1535,6 +1581,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/trading/components/orders-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "OrdersPage"
       ]
     },
     overlays: [
@@ -1635,6 +1684,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/platform/components/platform-components.test.tsx",
         "src/features/platform/hooks/platform-hooks.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "PlatformSettingsPage"
       ]
     },
     overlays: [
@@ -1717,7 +1769,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/platform/components/platform-components.test.tsx",
+        "src/features/platform/components/info-level-annotations.test.tsx",
         "src/features/platform/hooks/platform-hooks.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "PlatformPage"
       ]
     },
     overlays: [
@@ -1801,6 +1857,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/trading/components/trading-components.test.tsx",
         "src/features/trading/components/positions-summary.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "PortfolioPage"
       ]
     },
     overlays: [
@@ -1884,7 +1943,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/research/components/info-level-annotations.test.tsx",
         "src/features/research/components/regime-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "RegimePage"
       ]
     },
     overlays: [
@@ -1933,7 +1996,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/research/components/info-level-annotations.test.tsx",
         "src/features/research/components/research-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "ResearchPage"
       ]
     },
     overlays: [
@@ -2053,6 +2120,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "reactTestRefs": [
         "src/features/trading/components/risk-components.test.tsx",
         "src/features/trading/components/risk-breach-detail.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "RiskPage"
       ]
     },
     overlays: [
@@ -2137,6 +2207,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/trading/components/signals-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "SignalsPage"
       ]
     },
     overlays: [
@@ -2234,7 +2307,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/strategy/components/info-level-annotations.test.tsx",
         "src/features/strategy/components/strategy-detail-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "StrategyDetailPage"
       ]
     },
     overlays: [
@@ -2335,6 +2412,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/strategy/components/strategy-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "StrategyListPage"
       ]
     },
     overlays: [
@@ -2399,8 +2479,12 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "overlayStatus": "triggerable",
       "visualAuditStatus": "queued",
       "reactTestRefs": [
+        "src/features/strategy/components/info-level-annotations.test.tsx",
         "src/features/strategy/components/strategy-components.test.tsx",
         "src/features/strategy/components/studio-mode-bar.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "StrategyPage"
       ]
     },
     overlays: [
@@ -2519,6 +2603,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/trading/components/trading-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "TradingPage"
       ]
     },
     overlays: [
@@ -2619,6 +2706,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/research/components/research-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "UniverseListPage"
       ]
     },
     overlays: [
@@ -2683,6 +2773,9 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "visualAuditStatus": "queued",
       "reactTestRefs": [
         "src/features/markets/components/markets-components.test.tsx"
+      ],
+      "reactComponentRefs": [
+        "WatchlistPage"
       ]
     },
     overlays: [

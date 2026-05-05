@@ -15,7 +15,11 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/research/components/info-level-annotations.test.tsx",
       "src/features/research/components/research-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ResearchPage"
     ]
   },
   "viewports": [

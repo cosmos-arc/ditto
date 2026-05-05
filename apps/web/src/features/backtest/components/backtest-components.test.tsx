@@ -9,6 +9,7 @@ import { BacktestKpiStrip } from "./backtest-kpi-strip";
 import { BacktestTrades } from "./backtest-trades";
 import { BacktestOverview } from "./backtest-overview";
 import { BacktestReturnsView } from "./backtest-returns-view";
+import { BacktestListPage } from "./backtest-list-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -24,6 +25,16 @@ function createWrapper() {
 }
 
 beforeEach(() => server.use(...backtestHandlers));
+
+describe("Backtest route page contract handoffs", () => {
+	it("covers BacktestListPage route composition", () => {
+		render(<BacktestListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("回测列表")).toBeInTheDocument();
+		expect(screen.getByText("Backtests")).toBeInTheDocument();
+		expect(screen.getByText("Result Preview")).toBeInTheDocument();
+	});
+});
 
 describe("BacktestKpiStrip", () => {
 	it("渲染 KPI 指标", async () => {

@@ -15,7 +15,11 @@
     "overlayStatus": "triggerable",
     "visualAuditStatus": "queued",
     "reactTestRefs": [
+      "src/features/screener/components/info-level-annotations.test.tsx",
       "src/features/screener/components/screener-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ScreenerPage"
     ]
   },
   "viewports": [

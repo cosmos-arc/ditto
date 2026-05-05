@@ -8,6 +8,7 @@ import { marketsHandlers } from "@/mocks/handlers/markets";
 import { MarketCardGrid } from "./market-card-grid";
 import { MacroDriversBar } from "./macro-drivers-bar";
 import { CapitalRotationTable } from "./capital-rotation-table";
+import { WatchlistPage } from "./watchlist-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -23,6 +24,16 @@ function createWrapper() {
 }
 
 beforeEach(() => server.use(...marketsHandlers));
+
+describe("Markets route page contract handoffs", () => {
+	it("covers WatchlistPage route composition", () => {
+		render(<WatchlistPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("自选监控")).toBeInTheDocument();
+		expect(screen.getByText("Watchlist")).toBeInTheDocument();
+		expect(screen.getByText("Context")).toBeInTheDocument();
+	});
+});
 
 describe("MarketCardGrid", () => {
 	it("渲染 6 张市场卡片", async () => {

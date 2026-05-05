@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
 	PAGE_CONTRACTS,
@@ -53,6 +53,11 @@ const GENERATED_SOURCE = readFileSync(
 	resolve(process.cwd(), "src/features/shell/page-contracts.generated.ts"),
 	"utf-8",
 );
+
+type LandingWithComponentRefs = {
+	reactComponentRefs?: string[];
+	reactTestRefs?: string[];
+};
 
 describe("Generated page contracts", () => {
 	it("exports the generated contract dictionaries", () => {
@@ -126,15 +131,36 @@ describe("Generated page contracts", () => {
 	it("maps implemented React route contracts to feature tests", () => {
 		for (const contract of PAGE_CONTRACTS) {
 			if (contract.landing?.reactRouteStatus !== "implemented") continue;
+			const landing = contract.landing as typeof contract.landing & LandingWithComponentRefs;
 
 			expect(
-				contract.landing.featureModule,
+				landing.featureModule,
 				`${contract.route} missing featureModule`,
 			).toMatch(/^src\/features\/[^/]+$/);
 			expect(
-				contract.landing.reactTestRefs,
+				landing.reactTestRefs,
 				`${contract.route} missing reactTestRefs`,
 			).toEqual(expect.arrayContaining([expect.stringMatching(/^src\/features\/.+\.test\.(ts|tsx)$/)]));
+			expect(
+				landing.reactComponentRefs,
+				`${contract.route} missing reactComponentRefs`,
+			).toEqual(expect.arrayContaining([expect.stringMatching(/^[A-Z][A-Za-z0-9]+$/)]));
+
+			const testSources = (landing.reactTestRefs ?? []).map((ref) => {
+				const path = resolve(process.cwd(), ref);
+				expect(existsSync(path), `${contract.route} test ref does not exist: ${ref}`).toBe(true);
+
+				return readFileSync(path, "utf-8");
+			});
+
+			for (const componentRef of landing.reactComponentRefs ?? []) {
+				const handoffMarker = `@contract-handoff ${componentRef}`;
+				const jsxMarker = `<${componentRef}`;
+				expect(
+					testSources.some((source) => source.includes(jsxMarker) || source.includes(handoffMarker)),
+					`${contract.route} reactTestRefs do not cover ${componentRef}`,
+				).toBe(true);
+			}
 		}
 	});
 });

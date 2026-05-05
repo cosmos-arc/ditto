@@ -4,11 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { server } from "@/mocks/server";
 import { platformHandlers } from "@/mocks/handlers/platform";
+import { aiHandlers } from "@/mocks/handlers/ai";
 
 import { HealthStrip } from "./health-strip";
 import { ProviderTable } from "./provider-table";
 import { PipelineTable } from "./pipeline-table";
 import { AlertList } from "./alert-list";
+import { PlatformPage } from "./platform-page";
+import { PlatformAgentsPage } from "./agents-page";
+import { PlatformSettingsPage } from "./settings-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -26,7 +30,32 @@ function createWrapper() {
 }
 
 beforeEach(() => {
-	server.use(...platformHandlers);
+	server.use(...platformHandlers, ...aiHandlers);
+});
+
+describe("Platform route page contract handoffs", () => {
+	it("covers PlatformPage route composition", async () => {
+		render(<PlatformPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("Data Providers")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("Pipelines & Jobs")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("System Alerts")).resolves.toBeInTheDocument();
+	});
+
+	it("covers PlatformAgentsPage route composition", async () => {
+		render(<PlatformAgentsPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("因子池优化扫描")).resolves.toBeInTheDocument();
+		await expect(screen.findAllByText(/动量因子 IC 连续 3 周下降/)).resolves.not.toHaveLength(0);
+	});
+
+	it("covers PlatformSettingsPage route composition", () => {
+		render(<PlatformSettingsPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("平台设置")).toBeInTheDocument();
+		expect(screen.getByText("Settings")).toBeInTheDocument();
+		expect(screen.getByText("Change Log")).toBeInTheDocument();
+	});
 });
 
 describe("HealthStrip", () => {

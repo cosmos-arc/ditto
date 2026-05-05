@@ -237,6 +237,14 @@
             "pattern": "^src/features/.+\\.test\\.(ts|tsx)$"
           },
           "description": "Existing React feature tests that cover this contract handoff"
+        },
+        "reactComponentRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z0-9]+$"
+          },
+          "description": "React page or contract handoff component names covered by reactTestRefs"
         }
       }
     },

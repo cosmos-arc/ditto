@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/markets/components/a-shares-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "ASharesPage"
     ]
   },
   "viewports": [

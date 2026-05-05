@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/strategy/components/strategy-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "StrategyListPage"
     ]
   },
   "viewports": [

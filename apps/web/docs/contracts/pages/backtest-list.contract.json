@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/backtest/components/backtest-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "BacktestListPage"
     ]
   },
   "viewports": [

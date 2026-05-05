@@ -17,6 +17,9 @@
     "reactTestRefs": [
       "src/features/markets/components/intelligence-page.test.tsx",
       "src/features/markets/components/intelligence-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "IntelligencePage"
     ]
   },
   "viewports": [

@@ -9,6 +9,10 @@ import { ResearchPulseStrip } from "./research-pulse-strip";
 import { FactorTable } from "./factor-table";
 import { RecentRuns } from "./recent-runs";
 import { ExperimentQueue } from "./experiment-queue";
+import { ResearchPage } from "./research-page";
+import { FactorListPage } from "./factor-list-page";
+import { ExperimentListPage } from "./experiment-list-page";
+import { UniverseListPage } from "./universe-list-page";
 
 function createQueryClient(): QueryClient {
 	return new QueryClient({
@@ -24,6 +28,40 @@ function createWrapper() {
 }
 
 beforeEach(() => server.use(...researchHandlers));
+
+describe("Research route page contract handoffs", () => {
+	it("covers ResearchPage route composition", async () => {
+		render(<ResearchPage />, { wrapper: createWrapper() });
+
+		await expect(screen.findByText("因子监控")).resolves.toBeInTheDocument();
+		await expect(screen.findByText("近期运行")).resolves.toBeInTheDocument();
+		await expect(screen.findAllByText("实验")).resolves.not.toHaveLength(0);
+	});
+
+	it("covers FactorListPage route composition", () => {
+		render(<FactorListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("因子库")).toBeInTheDocument();
+		expect(screen.getByText("Factors")).toBeInTheDocument();
+		expect(screen.getByText("Factor Detail")).toBeInTheDocument();
+	});
+
+	it("covers ExperimentListPage route composition", () => {
+		render(<ExperimentListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("实验队列")).toBeInTheDocument();
+		expect(screen.getByText("Experiments")).toBeInTheDocument();
+		expect(screen.getByText("Run Detail")).toBeInTheDocument();
+	});
+
+	it("covers UniverseListPage route composition", () => {
+		render(<UniverseListPage />, { wrapper: createWrapper() });
+
+		expect(screen.getByText("股票池")).toBeInTheDocument();
+		expect(screen.getByText("Universes")).toBeInTheDocument();
+		expect(screen.getByText("Rules")).toBeInTheDocument();
+	});
+});
 
 describe("ResearchPulseStrip", () => {
 	it("渲染 4 个脉动指标", async () => {

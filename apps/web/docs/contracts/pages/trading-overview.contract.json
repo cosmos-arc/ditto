@@ -16,6 +16,9 @@
     "visualAuditStatus": "queued",
     "reactTestRefs": [
       "src/features/trading/components/trading-components.test.tsx"
+    ],
+    "reactComponentRefs": [
+      "TradingPage"
     ]
   },
   "viewports": [
