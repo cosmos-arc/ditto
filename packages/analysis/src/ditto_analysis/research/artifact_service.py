@@ -22,7 +22,7 @@ _EXPORT_WRITERS: dict[ExportFormat, str] = {
 
 
 class ResearchArtifactService:
-    """Encapsulates research artifact file I/O for the Data layer."""
+    """Encapsulates analysis-owned research artifact file I/O."""
 
     def __init__(self, *, artifact_root: Path) -> None:
         self._root = Path(artifact_root)

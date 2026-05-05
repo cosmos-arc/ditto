@@ -201,6 +201,134 @@ APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
     for allowance in APPS_HOST_COMPOSITION_ALLOWANCES
 }
 
+APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/container.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_analysis.di",
+                "ditto_data.di",
+                "ditto_execution.di",
+                "ditto_features.di",
+                "ditto_strategy.di",
+            }
+        ),
+        owner="apps registry root container",
+        reason=(
+            "The registry container is the host composition root for capability "
+            "provider sets; ordinary apps modules must use application facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/contexts/bundle.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.sources.exchange_transformers",
+                "ditto_strategy.contracts",
+            }
+        ),
+        owner="apps registry context bundle",
+        reason=(
+            "The context bundle owns typed composition references shared across "
+            "registry context factories only."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/contexts/ingestion.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.ingestion.freeze_service",
+                "ditto_data.ingestion.ingestion_cursor_service",
+                "ditto_data.ingestion.ingestion_log_service",
+                "ditto_data.services.capital_service",
+                "ditto_data.services.fundamental_service",
+                "ditto_data.services.macro_service",
+                "ditto_data.services.market_service",
+                "ditto_data.services.market_write_service",
+                "ditto_data.services.metadata_service",
+                "ditto_data.services.source_service",
+                "ditto_data.sources.exchange_transformers",
+            }
+        ),
+        owner="apps ingestion registry context",
+        reason=(
+            "Ingestion registry context owns data service wiring for application "
+            "ingestion handlers."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/contexts/query.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.services.capital_service",
+                "ditto_data.services.fundamental_service",
+                "ditto_data.services.macro_service",
+                "ditto_data.services.market_service",
+                "ditto_data.services.metadata_service",
+            }
+        ),
+        owner="apps query registry context",
+        reason=(
+            "Query registry context owns data query service wiring behind "
+            "application query facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/contexts/strategy.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_strategy.storage.sqlite.services.strategy_catalog_service",
+                "ditto_strategy.storage.sqlite.services.strategy_run_service",
+            }
+        ),
+        owner="apps strategy registry context",
+        reason=(
+            "Strategy registry context owns concrete strategy storage wiring for "
+            "application execution facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/infra/config.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.config",
+                "ditto_data.config.data_source_validation",
+                "ditto_data.config.data_store",
+                "ditto_data.quality.config",
+                "ditto_features.config",
+            }
+        ),
+        owner="apps registry infrastructure config",
+        reason=(
+            "Host config initialization owns capability config object assembly; "
+            "runtime apps code must consume the resulting settings."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/infra/observability.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.config.data_store",
+                "ditto_data.observability.metrics",
+                "ditto_features.observability.metrics",
+                "ditto_portfolio.observability.metrics",
+                "ditto_risk.observability.metrics",
+                "ditto_strategy.observability.metrics",
+            }
+        ),
+        owner="apps registry observability bootstrap",
+        reason=(
+            "Host observability bootstrap owns capability metric definition "
+            "registration before runtime services start."
+        ),
+    ),
+)
+
+APPS_REGISTRY_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
+    allowance.path: allowance.allowed_modules
+    for allowance in APPS_REGISTRY_COMPOSITION_ALLOWANCES
+}
+
 PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
     ProductionAnalysisWiringAllowance(
         path="packages/application/src/ditto_application/providers.py",
@@ -438,19 +566,55 @@ ANALYSIS_PLACEHOLDER_INIT_PATHS = (
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
+    ".claude/rules/architecture.md",
     "CLAUDE.md",
+    "README.md",
     "docs/architecture/boundaries-and-abstraction-standards.md",
     "docs/architecture/agent-context-pack.md",
     "packages/apps/README.md",
 )
 
+ANALYSIS_PLACEHOLDER_ACTIVE_DOC_GLOBS = ("packages/*/README.md",)
+
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS = (
     "纯研究分析（报告、诊断、实验）",  # noqa: RUF001 - exact stale doc phrase
     "报告、诊断、实验、研究数据集",
+    "报告、诊断、实验、筛选",
+    "研究报告",
+    "诊断工具",
+    "实验与筛选",
+    "研究/报告/诊断",
+    "研究/评估",
+    "纯研究分析",
     "它描述”报告、诊断、实验、研究”",
     "是否处理报告、诊断、实验、研究",
     "Reports, diagnostics, experiments, research",
     "research / reporting 编排",
+)
+
+ANALYSIS_DOC_CONTEXT_ANCHORS = (
+    "analysis/",
+    "ditto_analysis",
+    "packages/analysis",
+)
+
+ANALYSIS_DOC_RESERVED_NAMESPACE_CLAIMS = (
+    "evaluation/",
+    "reports/",
+    "diagnostics/",
+    "experiments/",
+    "screeners/",
+)
+
+ANALYSIS_DOC_RESERVED_CONTEXT_MARKERS = (
+    "reserved",
+    "future",
+    "not current",
+    "no public runtime",
+    "保留",
+    "未来",
+    "不是现有",
+    "当前只是",
 )
 
 PLACEHOLDER_MISLEADING_AVAILABILITY_PHRASES = (
@@ -677,17 +841,28 @@ def _repo_python_module_exists(module: str) -> bool:
 
 
 def check_apps_non_registry_capability_imports(source: str, rel_path: str) -> list[str]:
-    """Check apps non-registry source does not import capability internals."""
+    """Check apps source imports capability internals only from owned composition."""
     if not _is_package_source(rel_path, "ditto_apps"):
         return []
-    if rel_path.startswith(APPS_REGISTRY_SOURCE_PREFIX):
-        return []
 
-    allowed_modules = APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST.get(rel_path, frozenset())
+    is_registry = rel_path.startswith(APPS_REGISTRY_SOURCE_PREFIX)
+    allowed_modules = (
+        APPS_REGISTRY_COMPOSITION_IMPORT_ALLOWLIST.get(rel_path, frozenset())
+        if is_registry
+        else APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST.get(rel_path, frozenset())
+    )
     errors: list[str] = []
     for module in sorted(_wildcard_import_modules_from_source(source)):
         root = module.split(".")[0]
-        if root in APPS_CAPABILITY_IMPORT_ROOTS and module in allowed_modules:
+        if root not in APPS_CAPABILITY_IMPORT_ROOTS or module not in allowed_modules:
+            continue
+        if is_registry:
+            errors.append(
+                f"{rel_path}: apps registry composition allowance cannot use "
+                f"wildcard import from {module!r}; import explicit owned "
+                "symbols or protocols"
+            )
+        else:
             errors.append(
                 f"{rel_path}: apps host composition allowance cannot use "
                 f"wildcard import from {module!r}; import explicit owned "
@@ -696,6 +871,13 @@ def check_apps_non_registry_capability_imports(source: str, rel_path: str) -> li
     for module in sorted(_imported_modules_from_source(source)):
         root = module.split(".")[0]
         if root not in APPS_CAPABILITY_IMPORT_ROOTS or module in allowed_modules:
+            continue
+        if is_registry:
+            errors.append(
+                f"{rel_path}: apps registry module imports unowned capability "
+                f"package {module!r}; add an owned exact registry composition "
+                "allowance or use application facades"
+            )
             continue
         errors.append(
             f"{rel_path}: apps non-registry module imports capability package "
@@ -1361,10 +1543,75 @@ def check_analysis_placeholder_honesty(root: Path = ROOT) -> list[str]:
     return errors
 
 
+def _analysis_placeholder_active_doc_paths(root: Path) -> tuple[str, ...]:
+    rel_paths = set(ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS)
+    for pattern in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_GLOBS:
+        for path in root.glob(pattern):
+            if path.is_file():
+                rel_paths.add(path.relative_to(root).as_posix())
+    return tuple(sorted(rel_paths))
+
+
+def _is_reserved_analysis_doc_context(text: str) -> bool:
+    folded = text.casefold()
+    return any(
+        marker.casefold() in folded for marker in ANALYSIS_DOC_RESERVED_CONTEXT_MARKERS
+    )
+
+
+def _has_analysis_doc_anchor(text: str) -> bool:
+    folded = text.casefold()
+    return any(anchor.casefold() in folded for anchor in ANALYSIS_DOC_CONTEXT_ANCHORS)
+
+
+def _analysis_placeholder_stale_claim_errors(
+    rel_path: str,
+    line_no: int,
+    line: str,
+) -> list[str]:
+    errors: list[str] = []
+    if _is_reserved_analysis_doc_context(line):
+        return errors
+    for phrase in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS:
+        if phrase not in line:
+            continue
+        errors.append(
+            f"{rel_path}:{line_no}: active docs imply reserved "
+            f"analysis capability "
+            f"{phrase!r}; describe research control-plane as current and "
+            "reports/diagnostics/experiments/screeners as reserved/future"
+        )
+    return errors
+
+
+def _analysis_placeholder_namespace_claim_errors(
+    rel_path: str,
+    line_no: int,
+    lines: list[str],
+) -> list[str]:
+    line = lines[line_no - 1]
+    errors: list[str] = []
+    for namespace in ANALYSIS_DOC_RESERVED_NAMESPACE_CLAIMS:
+        if namespace.casefold() not in line.casefold():
+            continue
+        context = "\n".join(lines[max(0, line_no - 4) : min(len(lines), line_no + 1)])
+        if not _has_analysis_doc_anchor(context):
+            continue
+        if _is_reserved_analysis_doc_context(context):
+            continue
+        errors.append(
+            f"{rel_path}:{line_no}: active docs list reserved or "
+            f"absent analysis namespace {namespace!r}; describe "
+            "research control-plane as current and "
+            "reports/diagnostics/experiments/screeners as reserved/future"
+        )
+    return errors
+
+
 def check_analysis_placeholder_active_docs(root: Path = ROOT) -> list[str]:
     """Check active docs do not claim reserved analysis capabilities exist."""
     errors: list[str] = []
-    for rel_path in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS:
+    for rel_path in _analysis_placeholder_active_doc_paths(root):
         path = root / rel_path
         try:
             content = path.read_text(encoding="utf-8")
@@ -1374,13 +1621,14 @@ def check_analysis_placeholder_active_docs(root: Path = ROOT) -> list[str]:
             errors.append(f"{rel_path}: cannot inspect active analysis docs ({exc})")
             continue
 
-        for phrase in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS:
-            if phrase in content:
-                errors.append(
-                    f"{rel_path}: active docs imply reserved analysis capability "
-                    f"{phrase!r}; describe research control-plane as current and "
-                    "reports/diagnostics/experiments/screeners as reserved/future"
-                )
+        lines = content.splitlines()
+        for line_no, line in enumerate(lines, start=1):
+            errors.extend(
+                _analysis_placeholder_stale_claim_errors(rel_path, line_no, line)
+            )
+            errors.extend(
+                _analysis_placeholder_namespace_claim_errors(rel_path, line_no, lines)
+            )
     return errors
 
 

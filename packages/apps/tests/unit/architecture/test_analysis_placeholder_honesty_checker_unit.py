@@ -111,11 +111,91 @@ def test_active_doc_checker_rejects_reserved_placeholder_capability_claims(
     errors = check(tmp_path)
 
     assert errors == [
-        "docs/architecture/agent-context-pack.md: active docs imply reserved "
-        "analysis capability 'Reports, diagnostics, experiments, research'; "
-        "describe research control-plane as current and "
+        "docs/architecture/agent-context-pack.md:1: active docs imply "
+        "reserved analysis capability "
+        "'Reports, diagnostics, experiments, research'; describe research "
+        "control-plane as current and "
         "reports/diagnostics/experiments/screeners as reserved/future"
     ]
+
+
+def test_active_doc_checker_scans_agent_rules_for_chinese_placeholder_claims(
+    tmp_path: Path,
+) -> None:
+    check = _MODULE.check_analysis_placeholder_active_docs  # type: ignore[attr-defined]
+    path = tmp_path / ".claude" / "rules" / "architecture.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "| `ditto_analysis` | 报告、诊断、实验、筛选(非生产路径) |\n",
+        encoding="utf-8",
+    )
+
+    errors = check(tmp_path)
+
+    assert errors == [
+        ".claude/rules/architecture.md:1: active docs imply reserved "
+        "analysis capability '报告、诊断、实验、筛选'; describe research "
+        "control-plane as current and "
+        "reports/diagnostics/experiments/screeners as reserved/future"
+    ]
+
+
+def test_active_doc_checker_rejects_analysis_evaluation_tree_claim(
+    tmp_path: Path,
+) -> None:
+    check = _MODULE.check_analysis_placeholder_active_docs  # type: ignore[attr-defined]
+    path = tmp_path / "README.md"
+    path.write_text(
+        "\n".join(
+            (
+                "│   ├── analysis/                # research control-plane",
+                "│   │   └── src/ditto_analysis/",
+                "│   │       ├── evaluation/      # factor evaluation",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    errors = check(tmp_path)
+
+    assert errors == [
+        "README.md:3: active docs list reserved or absent analysis namespace "
+        "'evaluation/'; describe research control-plane as current and "
+        "reports/diagnostics/experiments/screeners as reserved/future"
+    ]
+
+
+def test_active_doc_checker_scans_package_readmes(tmp_path: Path) -> None:
+    check = _MODULE.check_analysis_placeholder_active_docs  # type: ignore[attr-defined]
+    path = tmp_path / "packages" / "platform" / "README.md"
+    path.parent.mkdir(parents=True)
+    path.write_text("│     (纯研究分析)                     │\n", encoding="utf-8")
+
+    errors = check(tmp_path)
+
+    assert errors == [
+        "packages/platform/README.md:1: active docs imply reserved "
+        "analysis capability '纯研究分析'; describe research control-plane "
+        "as current and reports/diagnostics/experiments/screeners as "
+        "reserved/future"
+    ]
+
+
+def test_active_doc_checker_allows_reserved_future_placeholder_notice(
+    tmp_path: Path,
+) -> None:
+    check = _MODULE.check_analysis_placeholder_active_docs  # type: ignore[attr-defined]
+    path = tmp_path / "docs" / "architecture" / "agent-context-pack.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "Reports, diagnostics, experiments, and screeners are "
+        "reserved/future analysis namespaces, not current runtime APIs.\n",
+        encoding="utf-8",
+    )
+
+    errors = check(tmp_path)
+
+    assert errors == []
 
 
 def test_active_architecture_docs_do_not_imply_reserved_placeholder_capabilities() -> (

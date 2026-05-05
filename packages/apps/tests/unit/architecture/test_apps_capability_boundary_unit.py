@@ -42,6 +42,25 @@ def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
     }
 
 
+def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
+    allowances = _MODULE.APPS_REGISTRY_COMPOSITION_ALLOWANCES  # type: ignore[attr-defined]
+
+    assert allowances
+    assert all(allowance.owner for allowance in allowances)
+    assert all(allowance.reason for allowance in allowances)
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/contexts/query.py"
+    ] == frozenset(
+        {
+            "ditto_data.services.capital_service",
+            "ditto_data.services.fundamental_service",
+            "ditto_data.services.macro_service",
+            "ditto_data.services.market_service",
+            "ditto_data.services.metadata_service",
+        }
+    )
+
+
 def test_apps_capability_import_guard_reports_non_registry_routes() -> None:
     check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
 
@@ -82,6 +101,54 @@ def test_apps_capability_import_guard_allows_registry_composition() -> None:
     )
 
     assert errors == []
+
+
+def test_apps_capability_import_guard_rejects_unowned_registry_future_file() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.services.market_service import MarketService",
+        "packages/apps/src/ditto_apps/registry/contexts/future.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/registry/contexts/future.py: "
+        "apps registry module imports unowned capability package "
+        "'ditto_data.services.market_service'; add an owned exact registry "
+        "composition allowance or use application facades",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_unowned_registry_module() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_features.di import get_features_providers",
+        "packages/apps/src/ditto_apps/registry/contexts/query.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/registry/contexts/query.py: "
+        "apps registry module imports unowned capability package "
+        "'ditto_features.di'; add an owned exact registry composition "
+        "allowance or use application facades",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_registry_wildcard_import() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.services.market_service import *",
+        "packages/apps/src/ditto_apps/registry/contexts/query.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/registry/contexts/query.py: "
+        "apps registry composition allowance cannot use wildcard import "
+        "from 'ditto_data.services.market_service'; import explicit owned "
+        "symbols or protocols",
+    ]
 
 
 def test_apps_capability_import_guard_allows_prefect_host_quality_exception() -> None:

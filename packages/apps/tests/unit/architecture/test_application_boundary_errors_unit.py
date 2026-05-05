@@ -16,7 +16,7 @@ SCANNED_DIRS = (
     APPLICATION_ROOT / "processes",
 )
 LOCAL_PRECONDITION_HELPERS: frozenset[Path] = frozenset()
-FORBIDDEN_BOUNDARY_ERRORS = {"KeyError", "RuntimeError", "ValueError"}
+FORBIDDEN_BOUNDARY_ERRORS = {"KeyError", "RuntimeError", "TypeError", "ValueError"}
 MAPPING_SUBSCRIPT_NAME_MARKERS = (
     "payload",
     "_map",
