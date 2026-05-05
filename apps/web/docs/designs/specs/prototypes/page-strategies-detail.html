@@ -271,22 +271,6 @@
       height: var(--density-strip-height);
       overflow: hidden;
     }
-    .hub-meta::after {
-      content: '';
-      position: absolute;
-      bottom: -1px; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 8%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 14%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 8%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     .meta-chip {
       display: inline-flex;
       align-items: center;
@@ -647,22 +631,6 @@
       flex-shrink: 0;
       position: relative;
     }
-    .hub-bottom::before {
-      content: '';
-      position: absolute;
-      top: -1px; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 6%, transparent) 20%,
-        color-mix(in oklch, var(--brand-accent) 10%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 6%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     .bottom-item {
       display: inline-flex;
       align-items: center;

@@ -176,28 +176,11 @@
       letter-spacing: 0;
     }
 
-    /* ── Header: frosted glass + signature gradient line (page-specific) ── */
+    /* ── Header: frosted glass page-specific surface ── */
     .shell-intel .shell-header {
       background: var(--surface-frosted);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-    }
-    .shell-intel .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 40%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 20%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
     }
 
     .shell-intel .rail-nav {

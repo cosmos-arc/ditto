@@ -1093,6 +1093,10 @@ function hasDecorativeRadialGlow(value: string): boolean {
 	return hasDecorativeGlowColor(value) && hasRadialGlowLayer(value);
 }
 
+function hasEdgeOffset(value: string, edge: "top" | "right" | "bottom" | "left"): boolean {
+	return new RegExp(`\\b${edge}\\s*:\\s*(?:-?1px|0(?:px)?)\\b`, "i").test(value);
+}
+
 function hasDecorativeAmbientGradientRule(rule: CssRule): boolean {
 	const normalizedSelector = rule.selector.replace(/\s+/g, " ").trim();
 	const normalizedBody = rule.body.replace(/\s+/g, " ").trim();
@@ -1102,18 +1106,21 @@ function hasDecorativeAmbientGradientRule(rule: CssRule): boolean {
 		/color-mix\(in oklch,\s*var\(\s*--(?:brand|market|risk|system|agent|execution)-[a-z0-9-]+\s*\)[^)]*transparent/i.test(
 			normalizedBody,
 		);
-	const isTopEdgeLine =
-		/\btop\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bleft\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bright\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bheight\s*:/i.test(normalizedBody);
-	const isRightEdgeLine =
-		/\bright\s*:\s*-?1px\b/i.test(normalizedBody) &&
-		/\btop\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bbottom\s*:\s*0\b/i.test(normalizedBody) &&
-		/\bwidth\s*:/i.test(normalizedBody);
+	const isFullInsetWash = /\binset\s*:\s*0(?:px)?\b/i.test(normalizedBody);
+	const spansHorizontally = isFullInsetWash || (hasEdgeOffset(normalizedBody, "left") && hasEdgeOffset(normalizedBody, "right"));
+	const spansVertically = isFullInsetWash || (hasEdgeOffset(normalizedBody, "top") && hasEdgeOffset(normalizedBody, "bottom"));
+	const hasHeight = /\bheight\s*:/i.test(normalizedBody);
+	const hasWidth = /\bwidth\s*:/i.test(normalizedBody);
+	const isTopEdgeLine = hasEdgeOffset(normalizedBody, "top") && spansHorizontally && hasHeight;
+	const isRightEdgeLine = hasEdgeOffset(normalizedBody, "right") && spansVertically && hasWidth;
+	const isBottomEdgeLine = hasEdgeOffset(normalizedBody, "bottom") && spansHorizontally && hasHeight;
+	const isLeftEdgeLine = hasEdgeOffset(normalizedBody, "left") && spansVertically && hasWidth;
 
-	return hasEdgePseudoSelector && hasAmbientGradient && (isTopEdgeLine || isRightEdgeLine);
+	return (
+		hasEdgePseudoSelector &&
+		hasAmbientGradient &&
+		(isTopEdgeLine || isRightEdgeLine || isBottomEdgeLine || isLeftEdgeLine || isFullInsetWash)
+	);
 }
 
 function isExcessiveGlowBoxShadow(selector: string, value: string): boolean {
@@ -1275,6 +1282,56 @@ describe("prototype design consistency", () => {
 						transparent 100%
 					);
 				}
+				.shell-bottom::after {
+					content: "";
+					position: absolute;
+					left: 0;
+					right: 0;
+					bottom: -1px;
+					height: 1px;
+					background: linear-gradient(
+						90deg,
+						transparent 0%,
+						color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
+						transparent 100%
+					);
+				}
+				.shell-left::before {
+					content: "";
+					position: absolute;
+					left: 0;
+					top: 0;
+					bottom: 0;
+					width: 8px;
+					background: linear-gradient(
+						180deg,
+						color-mix(in oklch, var(--brand-accent) 12%, transparent) 0%,
+						transparent 100%
+					);
+				}
+				.shell-right::after {
+					content: "";
+					position: absolute;
+					right: 0;
+					top: 0;
+					bottom: 0;
+					width: 12px;
+					background: linear-gradient(
+						180deg,
+						color-mix(in oklch, var(--execution-filled-fg) 12%, transparent) 0%,
+						transparent 100%
+					);
+				}
+				.shell-full-wash::before {
+					content: "";
+					position: absolute;
+					inset: 0;
+					background: linear-gradient(
+						180deg,
+						color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
+						transparent 140px
+					);
+				}
 				@keyframes decorative-pulse {
 					50% { box-shadow: 0 0 12px color-mix(in oklch, var(--brand-accent) 30%, transparent); }
 				}
@@ -1290,7 +1347,7 @@ describe("prototype design consistency", () => {
 				expect.stringContaining("@keyframes decorative-pulse"),
 			]),
 		);
-		expect(violations.filter((violation) => violation.includes(":ambient-gradient:"))).toHaveLength(2);
+		expect(violations.filter((violation) => violation.includes(":ambient-gradient:"))).toHaveLength(6);
 	});
 
 	it("keeps exactly 28 active route prototypes", () => {

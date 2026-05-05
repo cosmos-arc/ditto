@@ -142,24 +142,6 @@
       -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
-    .shell-ledger .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     /* ── Noise material texture ── */
     .shell-ledger {
       position: relative;
@@ -301,23 +283,6 @@
       overflow-x: auto;
       position: relative;
     }
-    /* Brand accent bottom line */
-    .status-strip::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 35%, transparent) 50%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     .status-tabs {
       display: flex;
       align-items: center;
@@ -1542,26 +1507,9 @@
       border-left: 2px solid color-mix(in oklch, var(--cyan-500) 25%, transparent);
     }
 
-    /* ── KPI strip border accent ── */
-    .kpi-strip::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 70%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
     .kpi-strip {
       position: relative;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     /* ── Page-local column widths (non-standard) ── */
@@ -1580,26 +1528,9 @@
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
-    /* Table header brand gradient bottom border */
-    .ledger-table thead tr::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 30%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 70%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
     .ledger-table thead tr {
       position: relative;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     /* Trace section title upgrade — 12px semibold for readability */
@@ -1734,23 +1665,6 @@
     /* ── D2. Status bar top accent for visual continuity ── */
     .status-bar {
       border-top-color: color-mix(in oklch, var(--brand-accent) 25%, var(--border-subtle));
-    }
-    .status-bar::before {
-      content: '';
-      position: absolute;
-      top: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 15%, transparent) 70%,
-        transparent 100%
-      );
-      pointer-events: none;
     }
 
     /* ── D3. Batch action bar brand touch (matches signals-inbox pattern) ── */

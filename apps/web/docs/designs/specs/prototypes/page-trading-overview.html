@@ -106,24 +106,6 @@
       -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
-    .shell-analytical.trading-variant .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     /* Header title brand underline */
     .shell-analytical.trading-variant .header-title {
       position: relative;
@@ -1854,7 +1836,7 @@
       border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
     }
 
-    /* ── A4. Status bar top accent (brand gradient ::before) ── */
+    /* ── A4. Status bar structural positioning ── */
     .status-bar {
       position: relative;
     }
@@ -1867,24 +1849,6 @@
       width: calc(100vw - var(--shell-rail-width));
       overflow: hidden !important;
     }
-    .status-bar::before {
-      content: '';
-      position: absolute;
-      top: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 30%,
-        color-mix(in oklch, var(--brand-accent) 20%, transparent) 50%,
-        color-mix(in oklch, var(--brand-accent) 12%, transparent) 70%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     /* ── B1. Tab stagger animation (matches backtest-result tab-fade-in) ── */
     @keyframes trading-tab-fade-in {
       from { opacity: 0; transform: translateY(2px); }

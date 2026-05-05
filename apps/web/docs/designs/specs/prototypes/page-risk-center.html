@@ -114,24 +114,6 @@
       -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
-    .shell-analytical .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     /* ── Header title underline (brand anchor) ── */
     .header-title {
       background: linear-gradient(
@@ -1270,24 +1252,9 @@
       color: var(--brand-accent);
     }
 
-    /* Risk tab bar brand gradient bottom line */
-    .risk-tab-bar::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-accent) 35%, transparent) 50%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
     .risk-tab-bar {
       position: relative;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     /* Breach progress bar — 3px → 4px */
@@ -1344,7 +1311,7 @@
       border-radius: var(--radius-3) var(--radius-3) 0 0;
     }
 
-    /* ── A. Active tab indicator — brand gradient ::after ── */
+    /* ── A. Active tab indicator — structural underline ::after ── */
     .shell-analytical:has(#risk-summary:checked) label[for="risk-summary"]::after,
     .shell-analytical:has(#risk-stress:checked) label[for="risk-stress"]::after,
     .shell-analytical:has(#risk-incidents:checked) label[for="risk-incidents"]::after {

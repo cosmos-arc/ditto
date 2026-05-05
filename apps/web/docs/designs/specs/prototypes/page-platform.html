@@ -139,25 +139,6 @@
       -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
-    /* Header floating layer — light from behind */
-    .shell-ops .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     /* Brand anchor: health strip accent light band */
     .shell-ops .ops-health {
       border-bottom: 1px solid var(--border-subtle);

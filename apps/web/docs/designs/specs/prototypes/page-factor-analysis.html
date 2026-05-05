@@ -290,12 +290,6 @@
       transform: translateY(-1px);
       box-shadow: 0 2px 8px color-mix(in oklch, var(--neutral-0) 12%, transparent), 0 0 0 1px color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
-    .metric-card::after {
-      content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
-      background: radial-gradient(ellipse at top right, color-mix(in oklch, var(--brand-accent) 4%, transparent) 0%, transparent 60%);
-      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard); pointer-events: none;
-    }
-    .metric-card:hover::after { opacity: 1; }
     .metric-label { font-size: var(--font-size-12); color: var(--text-tertiary); }
     .metric-value {
       font-family: var(--font-family-numeric);

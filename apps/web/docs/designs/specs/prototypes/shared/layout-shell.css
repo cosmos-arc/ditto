@@ -262,9 +262,8 @@ button {
 }
 
 /* Decoration layer budget: 1 pseudo-element per shell type.
- * Noise texture is consolidated into ::before with a subtle
- * brand-accent gradient line at top. Pages that need emphasis should
- * rely on surface elevation, border contrast, or the approved rail indicator.
+ * Noise texture is consolidated into ::before. Pages that need emphasis
+ * should rely on surface elevation, border contrast, or the approved rail indicator.
  */
 .shell-hub::before,
 .shell-agent::before {
@@ -273,14 +272,7 @@ button {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    /* Subtle brand-accent gradient line at top edge */
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--brand-accent) 6%, transparent) 0%,
-      transparent 1.5px
-    ),
-    var(--surface-app);
+  background: var(--surface-app);
   filter: url(#noise-filter);
   opacity: var(--shell-noise-opacity, 0.018);
 }

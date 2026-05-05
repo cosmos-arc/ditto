@@ -1470,25 +1470,6 @@
       z-index: 2;
     }
 
-    /* Header signature bottom line (instrument-hub pattern) */
-    .shell-radar .shell-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     /* ══════════════════════════════════════════════
      * Macro Driver mini-bar — visual indicator
      * ══════════════════════════════════════════════ */

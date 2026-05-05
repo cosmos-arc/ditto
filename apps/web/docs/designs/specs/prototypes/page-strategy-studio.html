@@ -257,25 +257,6 @@
       z-index: 5;
       position: relative;
     }
-    /* Header domain rule */
-    .studio-header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 20%,
-        color-mix(in oklch, var(--brand-signature-line) 25%, transparent) 50%,
-        color-mix(in oklch, var(--brand-signature-line) 15%, transparent) 80%,
-        transparent 100%
-      );
-      pointer-events: none;
-    }
-
     .header-title {
       font-size: var(--font-size-16);
       font-weight: var(--font-weight-semibold);
@@ -1878,17 +1859,6 @@
       letter-spacing: 0.02em;
       user-select: none;
       z-index: 25;
-    }
-    /* Brand accent bottom bar */
-    .status-bar::before {
-      content: '';
-      position: absolute;
-      top: -1px;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: var(--brand-accent);
-      opacity: 0.4;
     }
     .status-indicator {
       width: var(--status-dot-size);
