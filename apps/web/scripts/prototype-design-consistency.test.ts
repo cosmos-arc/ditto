@@ -950,6 +950,8 @@ function isSvgInMeaningfulVisualizationContext(svg: Element): boolean {
 		svg.getAttribute("name") ?? "",
 		svg.getAttribute("aria-label") ?? "",
 		svg.hasAttribute("data-sparkline") ? "sparkline" : "",
+		svg.hasAttribute("data-donut") ? "chart" : "",
+		svg.hasAttribute("data-heatgrid") ? "heatmap" : "",
 	].join(" ");
 	if (/\b(?:sparkline|chart|heatmap|matrix|trend)\b/i.test(ownTokens)) return true;
 
@@ -3631,6 +3633,22 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
+	});
+
+	it("classifies generated donut and heatgrid SVGs as meaningful visualizations", () => {
+		const document = new JSDOM(`
+			<section>
+				<svg data-donut='{"value":0.72}' aria-label="Risk-On 概率"></svg>
+				<svg data-heatgrid='{"rows":2,"cols":2}' aria-label="市场状态矩阵"></svg>
+				<svg aria-hidden="true"><path d="M0 0h1"/></svg>
+			</section>
+		`).window.document;
+
+		const [donut, heatgrid, icon] = [...document.querySelectorAll("svg")];
+
+		expect(isSvgInMeaningfulVisualizationContext(donut)).toBe(true);
+		expect(isSvgInMeaningfulVisualizationContext(heatgrid)).toBe(true);
+		expect(isSvgInMeaningfulVisualizationContext(icon)).toBe(false);
 	});
 
 	it("requires active prototype overlays, charts, matrix cells, and symbol controls to expose accessible semantics", () => {
