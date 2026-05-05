@@ -1012,6 +1012,28 @@ function splitCssList(value: string): string[] {
 	return items.filter(Boolean);
 }
 
+function readCssFunctionArguments(value: string, functionName: string): string[] {
+	const items: string[] = [];
+	const pattern = new RegExp(`${functionName}\\s*\\(`, "gi");
+
+	for (const match of value.matchAll(pattern)) {
+		let parenthesesDepth = 1;
+		const argumentStart = (match.index ?? 0) + match[0].length;
+
+		for (let index = argumentStart; index < value.length; index += 1) {
+			const char = value[index];
+			if (char === "(") parenthesesDepth += 1;
+			if (char === ")") parenthesesDepth -= 1;
+			if (parenthesesDepth === 0) {
+				items.push(value.slice(argumentStart, index).trim());
+				break;
+			}
+		}
+	}
+
+	return items;
+}
+
 function toPosixPath(path: string): string {
 	return path.replaceAll("\\", "/");
 }
@@ -1242,6 +1264,8 @@ function isSingleEdgeShadowLayer(value: string): boolean {
 function isStructuralRingSelector(selector: string): boolean {
 	return (
 		!/(?:^|\s)\.[a-z0-9-]*(?:decorative|ambient|wash|glow)[a-z0-9-]*(?:::before|::after)?\b/i.test(selector) &&
+		!/\.dot(?:[.#:[\s]|$)/i.test(selector) &&
+		!/\.point(?:[.#:[\s]|$)/i.test(selector) &&
 		(/:(?:hover|active|focus-within)\b/i.test(selector) ||
 			/\b(?:active|selected|current|checked|pressed|dragging|accepted|blocked|unread)\b/i.test(selector) ||
 			/\.(?:is-|has-)?(?:active|selected|current|checked|pressed|dragging|accepted|blocked|unread)\b/i.test(
@@ -1250,7 +1274,7 @@ function isStructuralRingSelector(selector: string): boolean {
 			/\[(?:aria|data)-(?:selected|current|checked|pressed|active|dragging|impact|corr)(?:=["']?[a-z0-9-]+["']?)?\]/i.test(
 				selector,
 			) ||
-			/\b(?:border|outline|ring|separator|resize|handle|control|button|btn|tab|chip|filter|segment|option|input|switch|toggle|row|cell|item|panel|card|surface|tray|bar|rail|point)\b/i.test(
+			/\b(?:border|outline|ring|separator|resize|handle|control|button|btn|tab|chip|filter|segment|option|input|switch|toggle|row|cell|item|panel|card|surface|tray|bar|rail)\b/i.test(
 				selector,
 			))
 	);
@@ -1292,20 +1316,17 @@ function isAllowedRailActiveGlowLayer(selector: string, value: string): boolean 
 
 function isStatusDotGlowSelector(selector: string): boolean {
 	return (
-		/\.(?:[a-z0-9-]*-)?(?:status|live|session|health-metric|breach|rule)-dot(?:-[a-z0-9-]+)?\b/i.test(
-			selector,
-		) ||
-		/\.status-indicator\b/i.test(selector) ||
-		/\.point(?:\.(?:accepted|blocked))?\b/i.test(selector) ||
-		/\.regime-state-badge__dot\b/i.test(selector) ||
-		/\.topo-node\.(?:topo-(?:ok|warn|down)|is-(?:live|healthy|degraded|down))\b/i.test(selector)
+		/\.live-dot\b/i.test(selector) ||
+		/\.status-dot\.(?:live|is-live)\b/i.test(selector) ||
+		/\.status-dot\b[^{,]*\[(?:data-state|data-status)=["']?live["']?\]/i.test(selector) ||
+		/\.session-dot\.live\b/i.test(selector)
 	);
 }
 
 function isAllowedStatusDotGlowLayer(selector: string, value: string): boolean {
 	return (
 		isStatusDotGlowSelector(selector) &&
-		/^(?:0\s+0\s+(?:4|6)px(?:\s+-?\d+px)?|0\s+0\s+0\s+(?:1|2|3|4)px)\s+(?:var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)\s+\d+%,\s*transparent\))$/i.test(
+		/^(?:0\s+0\s+(?:4|6)px(?:\s+-?\d+px)?|0\s+0\s+0\s+(?:1|2)px)\s+(?:var\(\s*--(?:system-healthy-fg|brand-accent)\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:system-healthy-fg|brand-accent)\s*\)\s+\d+%,\s*transparent\))$/i.test(
 			value,
 		)
 	);
@@ -1439,6 +1460,13 @@ function isExcessiveGlowBoxShadow(
 	);
 }
 
+function isExcessiveDropShadowFilter(selector: string, value: string): boolean {
+	const dropShadowLayers = readCssFunctionArguments(value, "drop-shadow");
+	if (dropShadowLayers.length === 0) return false;
+
+	return dropShadowLayers.some((layer) => !isAllowedStatusDotGlowLayer(selector, layer.replace(/\s+/g, " ").trim()));
+}
+
 function hasForbiddenDataGlowReference(value: string): boolean {
 	return /\bdata-[a-z0-9-]*glow[a-z0-9-]*\b/i.test(value);
 }
@@ -1483,6 +1511,13 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 					isExcessiveGlowBoxShadow(rule.selector, value, shadowCustomProperties))
 			) {
 				violations.push(`${source.label}:${getLineNumber(css, rule.start)}:box-shadow:${selector}`);
+			}
+		}
+
+		for (const match of rule.body.matchAll(/(?:^|[;\s])filter\s*:\s*([^;]+)/gi)) {
+			const value = match[1].trim();
+			if (!/^none(?:\s*!important)?$/i.test(value) && isExcessiveDropShadowFilter(rule.selector, value)) {
+				violations.push(`${source.label}:${getLineNumber(css, rule.start)}:filter-drop-shadow:${selector}`);
 			}
 		}
 	}
@@ -1615,8 +1650,24 @@ describe("prototype design consistency", () => {
 				"0 0 6px color-mix(in oklch, var(--system-healthy-fg) 30%, transparent), 0 0 18px color-mix(in oklch, var(--system-healthy-fg) 16%, transparent)",
 			),
 		).toBe(true);
+		expect(isExcessiveGlowBoxShadow(".health-metric-dot.healthy", "0 0 6px var(--system-healthy-fg)")).toBe(
+			true,
+		);
+		expect(isExcessiveGlowBoxShadow(".rule-dot.warn", "0 0 6px var(--risk-near-limit-fg)")).toBe(true);
 		expect(isExcessiveGlowBoxShadow(".decorative .dot", "0 0 6px var(--brand-accent)")).toBe(true);
 		expect(isExcessiveGlowBoxShadow(".decorative .dot", "0 0 12px var(--brand-accent)")).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".trace-item:hover .dot",
+				"0 0 0 3px color-mix(in oklch, var(--brand-accent) 15%, transparent)",
+			),
+		).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".point.accepted",
+				"0 0 0 4px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent)",
+			),
+		).toBe(true);
 		expect(
 			isExcessiveGlowBoxShadow(
 				".topo-node",
@@ -1628,7 +1679,7 @@ describe("prototype design consistency", () => {
 				".topo-node.topo-ok",
 				"0 0 4px -1px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent)",
 			),
-		).toBe(false);
+		).toBe(true);
 		expect(
 			isExcessiveGlowBoxShadow(
 				".decision-cta.primary:hover",
@@ -1651,6 +1702,12 @@ describe("prototype design consistency", () => {
 				.metric-body { content: "data-mouse-glow-size"; }
 				.metric-ambient { box-shadow: 0 0 12px var(--brand-accent-subtle); }
 				.decorative .dot { box-shadow: 0 0 12px var(--brand-accent); }
+				.health-metric-dot.healthy { box-shadow: 0 0 6px var(--system-healthy-fg); }
+				.rule-dot.warn { box-shadow: 0 0 6px var(--risk-near-limit-fg); }
+				.topo-node.topo-ok { box-shadow: 0 0 4px -1px color-mix(in oklch, var(--system-healthy-fg) 40%, transparent); }
+				.status-dot.live { box-shadow: 0 0 6px var(--system-healthy-fg); }
+				.health-metric-dot.degraded { filter: drop-shadow(0 0 6px var(--system-healthy-fg)); }
+				.status-dot.live[data-state="live"] { filter: drop-shadow(0 0 6px var(--system-healthy-fg)); }
 				.decorative-card::after { box-shadow: 0 0 0 4px var(--brand-accent); }
 				.hero-wash { box-shadow: 0 12px 40px color-mix(in oklch, var(--brand-accent) 20%, transparent); }
 				.shell-custom::after {
@@ -1824,6 +1881,10 @@ describe("prototype design consistency", () => {
 				expect.stringContaining("box-shadow"),
 				expect.stringContaining("box-shadow:.decorative-card::after"),
 				expect.stringContaining("box-shadow:.hero-wash"),
+				expect.stringContaining("box-shadow:.health-metric-dot.healthy"),
+				expect.stringContaining("box-shadow:.rule-dot.warn"),
+				expect.stringContaining("box-shadow:.topo-node.topo-ok"),
+				expect.stringContaining("filter-drop-shadow:.health-metric-dot.degraded"),
 				expect.stringContaining("ambient-gradient"),
 				expect.stringContaining("@keyframes decorative-pulse"),
 				expect.stringContaining("ambient-gradient:.shell-offset-radial-top::before"),

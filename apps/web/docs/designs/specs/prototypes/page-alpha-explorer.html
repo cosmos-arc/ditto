@@ -671,17 +671,18 @@
       height: 10px;
       border-radius: 50%;
       background: var(--brand-accent);
-      box-shadow: 0 0 0 4px color-mix(in oklch, var(--brand-accent) 16%, transparent);
+      box-sizing: border-box;
+      border: 1px solid var(--brand-accent);
     }
 
     .point.accepted {
       background: var(--system-healthy-fg);
-      box-shadow: 0 0 0 4px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
+      border-color: var(--system-healthy-fg);
     }
 
     .point.blocked {
       background: var(--risk-critical-fg);
-      box-shadow: 0 0 0 4px color-mix(in oklch, var(--risk-critical-fg) 18%, transparent);
+      border-color: var(--risk-critical-fg);
       border-radius: var(--radius-2);
       transform: rotate(45deg);
     }
@@ -888,7 +889,8 @@
       height: 6px;
       border-radius: var(--radius-full);
       background: var(--system-healthy-fg);
-      box-shadow: 0 0 0 3px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
+      box-sizing: border-box;
+      border: 1px solid var(--system-healthy-fg);
     }
 
     .status-live {

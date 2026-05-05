@@ -1474,18 +1474,20 @@
       width: 6px;
       height: 6px;
       border-radius: 50%;
+      box-sizing: border-box;
+      border: 1px solid transparent;
     }
     .regime-state-badge--bull .regime-state-badge__dot {
       background: var(--market-up-fg);
-      box-shadow: 0 0 6px color-mix(in oklch, var(--market-up-fg) 50%, transparent);
+      border-color: var(--market-up-fg);
     }
     .regime-state-badge--bear .regime-state-badge__dot {
       background: var(--market-down-fg);
-      box-shadow: 0 0 6px color-mix(in oklch, var(--market-down-fg) 50%, transparent);
+      border-color: var(--market-down-fg);
     }
     .regime-state-badge--range .regime-state-badge__dot {
       background: var(--risk-medium-fg);
-      box-shadow: 0 0 6px color-mix(in oklch, var(--risk-medium-fg) 50%, transparent);
+      border-color: var(--risk-medium-fg);
     }
 
     /* ── Radial progress for factor weight ── */
@@ -1646,7 +1648,7 @@
       box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 12%, transparent);
     }
     .regime-state-badge__dot {
-      transition: box-shadow var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .regime-state-badge:hover .regime-state-badge__dot {
       animation: dot-glow 1.5s ease-in-out infinite;

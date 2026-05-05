@@ -429,11 +429,12 @@
       height: 7px;
       border-radius: 999px;
       background: var(--market-up-fg);
-      box-shadow: 0 0 0 2px color-mix(in oklch, var(--market-up-fg) 18%, transparent);
+      box-sizing: border-box;
+      border: 1px solid var(--market-up-fg);
     }
     .rule-dot.warn {
       background: var(--risk-medium-fg);
-      box-shadow: 0 0 0 2px color-mix(in oklch, var(--risk-medium-fg) 18%, transparent);
+      border-color: var(--risk-medium-fg);
     }
     .rule-value {
       color: var(--text-tertiary);

@@ -419,10 +419,12 @@
       border-radius: 50%;
       flex-shrink: 0;
       margin-top: 5px;
+      box-sizing: border-box;
+      border: 1px solid transparent;
     }
     .breach-dot.ok { background: var(--status-connected-color); }
-    .breach-dot.warn { background: var(--risk-near-limit-fg); animation: dot-pulse 3s ease-in-out infinite; }
-    .breach-dot.critical { background: var(--risk-breach-fg); animation: dot-pulse 1.5s ease-in-out infinite; }
+    .breach-dot.warn { background: var(--risk-near-limit-fg); border-color: var(--risk-near-limit-fg); animation: dot-pulse 3s ease-in-out infinite; }
+    .breach-dot.critical { background: var(--risk-breach-fg); border-color: var(--risk-breach-fg); animation: dot-pulse 1.5s ease-in-out infinite; }
 
     .breach-body {
       flex: 1;
@@ -1377,10 +1379,10 @@
 
     /* ── C. Status indicator iconography consistency ── */
     .breach-dot.critical {
-      box-shadow: 0 0 6px color-mix(in oklch, var(--risk-breach-fg) 40%, transparent);
+      opacity: 0.95;
     }
     .breach-dot.warn {
-      box-shadow: 0 0 4px color-mix(in oklch, var(--risk-near-limit-fg) 30%, transparent);
+      opacity: 0.88;
     }
 
     /* ── D. Status bar top structural line ── */

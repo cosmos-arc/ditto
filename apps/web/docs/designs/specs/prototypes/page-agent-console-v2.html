@@ -684,6 +684,8 @@
       margin-top: 5px;
       border-radius: 50%;
       background: var(--brand-accent);
+      box-sizing: border-box;
+      border: 1px solid transparent;
     }
 
     .approval-box {
@@ -743,7 +745,8 @@
       height: 6px;
       border-radius: var(--radius-full);
       background: var(--system-healthy-fg);
-      box-shadow: 0 0 0 3px color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
+      box-sizing: border-box;
+      border: 1px solid var(--system-healthy-fg);
     }
 
     .status-sep {
@@ -892,7 +895,8 @@
     }
 
     .trace-item:hover .dot {
-      box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      border-color: var(--brand-accent);
+      opacity: 0.86;
     }
 
     .btn-ghost:active { background: var(--interaction-active-bg); }
