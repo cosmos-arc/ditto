@@ -2242,7 +2242,11 @@
               <div data-flow='{"segments":[{"label":"股票","value":45},{"label":"期货","value":25},{"label":"期权","value":18},{"label":"现金","value":12}]}' aria-label="资金流向"></div>
             </div>
           </div>
-          <div class="equity-chart" role="img" aria-label="权益曲线：近一个月持续上涨，当前 +0.34%">
+          <div class="equity-chart" role="img" aria-label="权益曲线：近一个月持续上涨，当前 +0.34%"
+            data-chart-interaction-contract="trading-equity-pnl"
+            data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command"
+            data-chart-linked-time-range="trading-session-primary"
+            data-chart-selection-command="trading-equity-selection">
             <svg data-sparkline='{"data":[100,102,101,104,103,107,106,110,108,112,115,113,118,120,122,119,125,128,126,130,133,131,136,140,138,142,145,143,148,152],"series":"up","fill":true,"width":200,"height":60}' aria-label="权益曲线 Sparkline"></svg>
             <span class="equity-chart-label">权益曲线 · 日线</span>
             <div class="equity-timeframe-tabs">

@@ -12,6 +12,7 @@ import { findHardcodedColors } from "./prototype-color-audit";
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
 const contractsDir = join(root, "docs/contracts/pages");
+const chartInteractionContractPath = join(root, "docs/contracts/prototype-chart-interactions.md");
 const prototypeFontsCss = join(prototypesDir, "shared/fonts.css");
 const prototypeLayoutCss = join(prototypesDir, "shared/layout-shell.css");
 const prototypeLayoutModulePaths = [
@@ -459,6 +460,37 @@ const highRiskActionPages = [
 	"universe-list",
 	"strategy-list",
 ];
+const requiredChartAffordances = [
+	"crosshair",
+	"tooltip",
+	"zoom-pan",
+	"linked-time-range",
+	"selection-to-command",
+] as const;
+const requiredChartDataAttributes = [
+	"data-chart-interaction-contract",
+	"data-chart-affordances",
+	"data-chart-linked-time-range",
+	"data-chart-selection-command",
+] as const;
+const chartInteractionPrototypeRequirements = [
+	{
+		pageId: "instrument-hub",
+		contracts: ["instrument-price-primary"],
+	},
+	{
+		pageId: "risk-center",
+		contracts: ["risk-var-trend", "risk-drawdown-trend", "risk-exposure-breakdown"],
+	},
+	{
+		pageId: "backtest-result",
+		contracts: ["backtest-nav-drawdown"],
+	},
+	{
+		pageId: "trading-overview",
+		contracts: ["trading-equity-pnl"],
+	},
+] as const;
 const approvedHeaderTitleTerms = ["Alpha"] as const;
 const homeTokenFocusSelectors = [
 	".header-utility-btn",
@@ -3099,6 +3131,69 @@ describe("prototype design consistency", () => {
 			const text = state.textContent?.replace(/\s+/g, " ").trim() ?? "";
 			if (!staleMarkerPattern.test(text)) {
 				violations.push(`markets-intelligence:stale-state:${index + 1}:missing-marker`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("documents the prototype chart interaction contract for future lightweight-charts implementation", () => {
+		expect(existsSync(chartInteractionContractPath)).toBe(true);
+
+		const contract = readFileSync(chartInteractionContractPath, "utf8");
+		const requiredText = [
+			...requiredChartAffordances,
+			...requiredChartDataAttributes,
+			"lightweight-charts",
+			"prefers-reduced-motion",
+			"aria-label",
+			"keyboard",
+			"Instrument Hub",
+			"Risk Center",
+			"Backtest Result",
+			"Trading Overview",
+		];
+		const missing = requiredText.filter((text) => !contract.includes(text));
+
+		expect(missing).toEqual([]);
+	});
+
+	it("marks representative chart placeholders with the chart interaction contract", () => {
+		const violations: string[] = [];
+		const requiredAffordanceSet = new Set(requiredChartAffordances);
+
+		for (const requirement of chartInteractionPrototypeRequirements) {
+			const document = readPrototypeDocument(activePageById(requirement.pageId));
+
+			for (const contractId of requirement.contracts) {
+				const marker = document.querySelector(
+					`[data-chart-interaction-contract="${contractId}"]`,
+				);
+				if (!marker) {
+					violations.push(`${requirement.pageId}:${contractId}:missing-marker`);
+					continue;
+				}
+
+				const affordances = new Set(
+					(marker.getAttribute("data-chart-affordances") ?? "")
+						.split(/\s+/)
+						.filter(Boolean),
+				);
+				for (const affordance of requiredAffordanceSet) {
+					if (!affordances.has(affordance)) {
+						violations.push(`${requirement.pageId}:${contractId}:affordance:${affordance}`);
+					}
+				}
+
+				if (!marker.getAttribute("data-chart-linked-time-range")?.trim()) {
+					violations.push(`${requirement.pageId}:${contractId}:linked-time-range`);
+				}
+				if (!marker.getAttribute("data-chart-selection-command")?.trim()) {
+					violations.push(`${requirement.pageId}:${contractId}:selection-command`);
+				}
+				if (!marker.getAttribute("aria-label")?.trim()) {
+					violations.push(`${requirement.pageId}:${contractId}:aria-label`);
+				}
 			}
 		}
 
