@@ -338,6 +338,23 @@ function installInteractiveWindowStubs(window: JSDOM["window"]): void {
 	});
 }
 
+function installReducedMotionWindowStubs(window: JSDOM["window"]): void {
+	installInteractiveWindowStubs(window);
+	Object.defineProperty(window, "matchMedia", {
+		configurable: true,
+		value: (query: string): MediaQueryList => ({
+			matches: query === "(prefers-reduced-motion: reduce)",
+			media: query,
+			onchange: null,
+			addListener: () => undefined,
+			removeListener: () => undefined,
+			addEventListener: () => undefined,
+			removeEventListener: () => undefined,
+			dispatchEvent: () => true,
+		}),
+	});
+}
+
 function evaluateSharedInteractionsScript(window: JSDOM["window"]): void {
 	const runSharedInteractions = new Function(
 		"window",
@@ -388,6 +405,264 @@ function readInteractivePrototypeDocument(page: ManifestPage, prepare?: (documen
 function normalizePathData(value: string): string {
 	return value.replace(/\s+/g, " ").trim();
 }
+
+function installChartRect(element: Element, width = 400, height = 200): void {
+	Object.defineProperty(element, "getBoundingClientRect", {
+		configurable: true,
+		value: () => ({
+			x: 0,
+			y: 0,
+			left: 0,
+			top: 0,
+			right: width,
+			bottom: height,
+			width,
+			height,
+			toJSON: () => ({}),
+		}),
+	});
+}
+
+describe("prototype chart interaction surfaces", () => {
+	it("keeps chart command payloads aligned with the rendered active datum after repeated init", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" aria-label="价格走势图" data-chart-interaction-contract="instrument-price-primary" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="instrument-hub-primary" data-chart-selection-command="instrument-chart-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-reinit.html" },
+		);
+		const { document } = dom.window;
+		const addedWindowListeners: string[] = [];
+		const originalWindowAddEventListener = dom.window.addEventListener.bind(dom.window);
+		dom.window.addEventListener = ((
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+			options?: boolean | AddEventListenerOptions,
+		) => {
+			addedWindowListeners.push(type);
+			originalWindowAddEventListener(type, listener, options);
+		}) as typeof dom.window.addEventListener;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart).not.toBeNull();
+		if (!chart) return;
+		installChartRect(chart);
+		const windowListenersAfterFirstInit = addedWindowListeners.length;
+
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+		expect(addedWindowListeners.length).toBe(windowListenersAfterFirstInit);
+
+		chart.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 0, clientY: 80, bubbles: true }));
+		const renderedTimestamp = chart.getAttribute("data-chart-active-timestamp");
+		const payloads: unknown[] = [];
+		document.addEventListener("prototype:chart-selection-command", (event) => {
+			if (event instanceof dom.window.CustomEvent) payloads.push(event.detail);
+		});
+
+		chart.querySelector<HTMLButtonElement>('[data-chart-action="create-alert"]')?.click();
+
+		expect(payloads[0]).toMatchObject({ timestamp: renderedTimestamp });
+		expect(chart.querySelectorAll(".prototype-chart-layer")).toHaveLength(1);
+		expect(chart.querySelectorAll(".prototype-chart-actions")).toHaveLength(1);
+	});
+
+	it("enhances every representative chart marker on Instrument Hub, Risk Center, and Backtest Result", () => {
+		const requirements = [
+			{
+				pageId: "instrument-hub",
+				contracts: ["instrument-price-primary"],
+				linkedRange: "instrument-hub-primary",
+			},
+			{
+				pageId: "risk-center",
+				contracts: ["risk-var-trend", "risk-drawdown-trend", "risk-exposure-breakdown"],
+				linkedRange: "risk-center-summary",
+			},
+			{
+				pageId: "backtest-result",
+				contracts: ["backtest-nav-drawdown"],
+				linkedRange: "backtest-result-primary",
+			},
+		] as const;
+
+		for (const requirement of requirements) {
+			const document = readInteractivePrototypeDocument(getActivePageById(requirement.pageId));
+			for (const contract of requirement.contracts) {
+				const chart = document.querySelector<HTMLElement>(`[data-chart-interaction-contract="${contract}"]`);
+				expect(chart, `${requirement.pageId}:${contract}`).not.toBeNull();
+				if (!chart) continue;
+
+				expect(chart.getAttribute("data-chart-prototype-ready")).toBe("true");
+				expect(chart.getAttribute("data-chart-linked-time-range")).toBe(requirement.linkedRange);
+				expect(chart.querySelector(".prototype-chart-crosshair-x")).not.toBeNull();
+				expect(chart.querySelector(".prototype-chart-tooltip")).not.toBeNull();
+				expect(chart.querySelectorAll("[data-chart-action]")).toHaveLength(4);
+			}
+		}
+	});
+
+	it("syncs the real Risk Center charts through their shared time-range controls", () => {
+		const document = readInteractivePrototypeDocument(getActivePageById("risk-center"));
+		const charts = [
+			"risk-var-trend",
+			"risk-drawdown-trend",
+			"risk-exposure-breakdown",
+		].map((contract) =>
+			document.querySelector<HTMLElement>(`[data-chart-interaction-contract="${contract}"]`),
+		);
+
+		for (const chart of charts) {
+			expect(chart).not.toBeNull();
+			if (chart) expect(chart.getAttribute("data-chart-visible-range")).toBe("1M");
+		}
+
+		const rangeControl = document.querySelector<HTMLElement>(
+			'[data-chart-range-control="3M"][data-chart-linked-time-range="risk-center-summary"]',
+		);
+		expect(rangeControl).not.toBeNull();
+		rangeControl?.click();
+
+		for (const chart of charts) {
+			expect(chart?.getAttribute("data-chart-visible-range")).toBe("3M");
+		}
+		expect(rangeControl?.getAttribute("aria-pressed")).toBe("true");
+	});
+
+	it("enhances marked charts with crosshair tooltip controls and linked range state", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div class="panel">
+					<div class="panel-header">
+						<button class="chart-period-btn active" aria-pressed="true">1M</button>
+						<button class="chart-period-btn" aria-pressed="false">3M</button>
+					</div>
+					<div id="chart-a" aria-label="VaR 趋势图" data-chart-interaction-contract="risk-var-trend" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-var-selection"></div>
+				</div>
+				<div class="panel">
+					<div id="chart-b" aria-label="最大回撤趋势图" data-chart-interaction-contract="risk-drawdown-trend" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-drawdown-selection"></div>
+				</div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-contract.html" },
+		);
+		const { document } = dom.window;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const first = document.querySelector<HTMLElement>("#chart-a");
+		const second = document.querySelector<HTMLElement>("#chart-b");
+		expect(first).not.toBeNull();
+		expect(second).not.toBeNull();
+		if (!first || !second) return;
+		installChartRect(first);
+		installChartRect(second);
+
+		expect(first.getAttribute("data-chart-prototype-ready")).toBe("true");
+		expect(first.getAttribute("tabindex")).toBe("0");
+		expect(first.querySelector(".prototype-chart-series-svg")).not.toBeNull();
+		expect(first.querySelector(".prototype-chart-crosshair-x")).not.toBeNull();
+		expect(first.querySelector(".prototype-chart-tooltip")).not.toBeNull();
+		expect(first.querySelectorAll("[data-chart-action]").length).toBeGreaterThanOrEqual(4);
+
+		first.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 300, clientY: 90, bubbles: true }));
+
+		expect(first.getAttribute("data-chart-active-index")).toBe(second.getAttribute("data-chart-active-index"));
+		expect(first.querySelector(".prototype-chart-tooltip")?.getAttribute("aria-hidden")).toBe("false");
+		expect(first.textContent).toContain("VaR");
+
+		const rangeButton = document.querySelector<HTMLButtonElement>(".chart-period-btn:nth-child(2)");
+		expect(rangeButton).not.toBeNull();
+		if (!rangeButton) return;
+		rangeButton.click();
+
+		expect(first.getAttribute("data-chart-visible-range")).toBe("3M");
+		expect(second.getAttribute("data-chart-visible-range")).toBe("3M");
+		expect(rangeButton.getAttribute("aria-pressed")).toBe("true");
+	});
+
+	it("dispatches chart selection command payloads from keyboard and visible action hooks", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" aria-label="回测净值曲线与回撤" data-chart-interaction-contract="backtest-nav-drawdown" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="backtest-result-primary" data-chart-selection-command="backtest-chart-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-command.html" },
+		);
+		const { document } = dom.window;
+		installInteractiveWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart).not.toBeNull();
+		if (!chart) return;
+		installChartRect(chart);
+
+		const payloads: unknown[] = [];
+		document.addEventListener("prototype:chart-selection-command", (event) => {
+			if (event instanceof dom.window.CustomEvent) payloads.push(event.detail);
+		});
+
+		chart.dispatchEvent(new dom.window.FocusEvent("focusin", { bubbles: true }));
+		chart.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+		chart.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+		const inspectButton = chart.querySelector<HTMLButtonElement>('[data-chart-action="inspect-drawdown"]');
+		expect(inspectButton).not.toBeNull();
+		inspectButton?.click();
+
+		expect(payloads.length).toBeGreaterThanOrEqual(2);
+		expect(payloads[0]).toMatchObject({
+			chartId: "backtest-nav-drawdown",
+			rangeId: "backtest-result-primary",
+			commandId: "backtest-chart-selection",
+			selection: { kind: "point" },
+			seriesId: "nav",
+		});
+		expect(payloads[0]).toHaveProperty("timeRange.from");
+		expect(payloads[0]).toHaveProperty("timeRange.to");
+		expect(payloads[0]).toHaveProperty("timestamp");
+		expect(payloads[0]).toHaveProperty("value");
+		expect(payloads[1]).toMatchObject({
+			selection: { kind: "range" },
+			timestamp: null,
+			value: { actionId: "inspect-drawdown" },
+		});
+		expect(
+			["create-alert", "send-to-research", "compare-object", "inspect-drawdown"].every(
+				(actionId) => chart.querySelector(`[data-chart-action="${actionId}"]`) !== null,
+			),
+		).toBe(true);
+	});
+
+	it("marks reduced-motion chart state and exposes CSS that disables chart transitions", () => {
+		const dom = new JSDOM(
+			`
+			<section>
+				<div id="chart" aria-label="行业暴露度图" data-chart-interaction-contract="risk-exposure-breakdown" data-chart-affordances="crosshair tooltip zoom-pan linked-time-range selection-to-command" data-chart-linked-time-range="risk-center-summary" data-chart-selection-command="risk-exposure-selection"></div>
+			</section>
+			`,
+			{ pretendToBeVisual: true, url: "https://prototype.local/chart-reduced-motion.html" },
+		);
+		const { document } = dom.window;
+		installReducedMotionWindowStubs(dom.window);
+		evaluateSharedInteractionsScript(dom.window);
+		document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+		const chart = document.querySelector<HTMLElement>("#chart");
+		expect(chart?.getAttribute("data-chart-reduced-motion")).toBe("true");
+		expect(readSharedInteractionsCss()).toMatch(/prefers-reduced-motion:\s*reduce/);
+		expect(readSharedInteractionsCss()).toMatch(/\.prototype-chart-crosshair-x/);
+	});
+});
 
 function toRailDomain(value: string | null | undefined): (typeof railDomains)[number] | null {
 	return value && railDomainSet.has(value) ? (value as (typeof railDomains)[number]) : null;
