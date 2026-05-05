@@ -24,7 +24,7 @@
   - order-status: default[covered] loading[covered] empty[covered] failed[covered]
   - daily-attribution: default[covered] loading[covered] empty[covered] failed[covered]
   - position-health: default[covered] loading[covered] empty[covered] failed[covered]
-  - decision-pipeline: default[covered] loading[not-implemented] empty[covered] failed[not-implemented] stale[not-implemented]
+  - decision-pipeline: default[covered] empty[covered]
 
   v1.1 changes:
   - Added decision-pipeline (Signal-to-Order Pipeline, v2.0)
@@ -35,7 +35,7 @@
   - Removed AI Rail button (contradicts v2.0 IA)
   - Fixed aria-live conflict on decision-banner
 
-  Coverage Score: 93% (40/43 states covered)
+  Coverage Score: 95% (38/40 states covered)
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="trading">
 <head>
@@ -119,8 +119,8 @@
       margin-left: var(--space-4);
     }
 
-    /* Scope strip domain border */
-    .shell-analytical.trading-variant .scope-strip {
+    /* Trading context domain border */
+    .shell-analytical.trading-variant .trading-context-bar {
       position: relative;
       border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 8%, var(--border-subtle));
     }
@@ -222,7 +222,7 @@
       overflow: hidden;
       grid-template-rows:
         var(--shell-header-height)
-        var(--density-strip-height, 32px)
+        auto
         auto
         minmax(0, 1fr);
       grid-template-areas:
@@ -254,16 +254,15 @@
     .trading-context-bar {
       display: flex;
       align-items: center;
+      align-content: center;
+      flex-wrap: wrap;
       gap: var(--space-8);
       white-space: nowrap;
-      height: var(--density-strip-height, 36px);
       min-height: var(--density-strip-height, 36px);
-      max-height: calc(var(--density-strip-height, 36px) + var(--space-1));
-      padding: 0 var(--density-gutter, var(--space-12));
+      padding: var(--space-3) var(--density-gutter, var(--space-12));
       background: var(--surface-strip);
       border-bottom: 1px solid var(--border-subtle);
-      overflow-x: auto;
-      overflow: hidden;
+      overflow: visible;
     }
 
     /* Trading phase pill */
@@ -364,11 +363,6 @@
       padding: var(--space-1) var(--space-4);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-3);
-      cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .pipeline-stage:hover {
-      background: var(--interaction-hover-subtle-bg);
     }
     .pipeline-stage-label {
       color: var(--text-tertiary);
@@ -1805,8 +1799,8 @@
       border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
     }
 
-    /* ── A3. Session strip brand-tinted bottom border ── */
-    .shell-analytical.trading-variant .scope-strip {
+    /* ── A3. Trading context brand-tinted bottom border ── */
+    .shell-analytical.trading-variant .trading-context-bar {
       border-bottom-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
     }
 
@@ -2059,7 +2053,7 @@
     </header>
 
     <!-- ═══ Trading Context Bar: session + margin + connectivity + risk + queue ═══ -->
-    <div class="trading-context-bar" role="status" aria-label="交易上下文：会话、保证金、连接、风险与执行队列" data-contract-slot="trading-context-bar">
+    <div class="trading-context-bar" role="region" aria-label="交易上下文：会话、保证金、连接、风险与执行队列" data-contract-slot="trading-context-bar">
       <div class="trading-context-item scope-phase">
         <span class="phase-dot"></span>
         连续竞价
@@ -2133,7 +2127,7 @@
                 <span class="status-value" data-tooltip="限价单 1 笔，部分成交 1 笔">2</span>
               </div>
             </div>
-            <div class="decision-pipeline" data-pipeline-context role="status" aria-label="信号到订单流转状态">
+            <div class="decision-pipeline" data-pipeline-context role="group" aria-label="信号到订单流转状态">
               <div class="pipeline-stage" data-tooltip="信号池中的待处理信号">
                 <span class="pipeline-stage-label">信号池</span>
                 <span class="pipeline-stage-count">4</span>
@@ -3032,7 +3026,7 @@
           <div class="gallery-group__label">other</div>
           <div class="gallery-cards">
   <div class="gallery-card">
-      <div class="gallery-card__label">Session Strip · Loading</div>
+      <div class="gallery-card__label">Trading Context Bar · Loading</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="loading">
         <div class="state-loading">
@@ -3048,7 +3042,7 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Session Strip · Failed</div>
+      <div class="gallery-card__label">Trading Context Bar · Failed</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="failed">
         <div class="state-error">
@@ -3061,12 +3055,52 @@
       </div>
     </div>
   <div class="gallery-card">
-      <div class="gallery-card__label">Session Strip · Stale</div>
+      <div class="gallery-card__label">Trading Context Bar · Stale</div>
       <div class="gallery-card__preview">
 <div class="state-variant-content" data-state="stale">
         <div class="state-stale">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
           数据延迟 — 交易指标可能不是最新，上次更新 45 秒前
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Decision Pipeline · Default</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="default">
+        <div class="decision-pipeline" data-pipeline-context role="group" aria-label="信号到订单流转状态">
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-label">信号池</span>
+            <span class="pipeline-stage-count">4</span>
+          </div>
+          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-label">待复核</span>
+            <span class="pipeline-stage-count warning">2</span>
+          </div>
+          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-label">已下单</span>
+            <span class="pipeline-stage-count">3</span>
+          </div>
+          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-label">已成交</span>
+            <span class="pipeline-stage-count ok">47</span>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  <div class="gallery-card">
+      <div class="gallery-card__label">Decision Pipeline · Empty</div>
+      <div class="gallery-card__preview">
+<div class="state-variant-content" data-state="empty">
+        <div class="state-empty">
+          <div class="state-empty-icon text-healthy">✓</div>
+          <div class="state-empty-title">信号到订单队列已清空</div>
+          <div class="state-empty-desc">当前没有待复核信号、待提交订单或未完成委托。</div>
         </div>
       </div>
       </div>
