@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import {
@@ -20,12 +20,6 @@ const prototypeLayoutModulePaths = [
 	"shared/layout-components.css",
 	"shared/layout-overlay.css",
 	"shared/layout-state.css",
-] as const;
-const glowBudgetSharedCssResourcePaths = [
-	...prototypeLayoutModulePaths,
-	"shared/theme-switcher.css",
-	"shared/prototype-toggles.css",
-	"shared/prototype-interactions.css",
 ] as const;
 const glowBudgetSharedTextResourcePaths = [
 	"shared/prototype-interactions.js",
@@ -1018,13 +1012,62 @@ function splitCssList(value: string): string[] {
 	return items.filter(Boolean);
 }
 
+function toPosixPath(path: string): string {
+	return path.replaceAll("\\", "/");
+}
+
+function getCssSourceLabel(path: string): string {
+	const prototypeRelativePath = toPosixPath(relative(prototypesDir, path));
+	if (prototypeRelativePath !== ".." && !prototypeRelativePath.startsWith("../")) {
+		return prototypeRelativePath;
+	}
+
+	return toPosixPath(relative(root, path));
+}
+
+function normalizeStylesheetHref(href: string): string | undefined {
+	const normalizedHref = href.trim();
+	if (!normalizedHref || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(normalizedHref)) return undefined;
+
+	const resourcePath = normalizedHref.split(/[?#]/, 1)[0];
+	return resourcePath.endsWith(".css") ? resourcePath : undefined;
+}
+
+function readActiveLinkedCssSources(): CssSource[] {
+	const sources: CssSource[] = [];
+	const seenPaths = new Set<string>();
+
+	for (const page of activePages()) {
+		const pageDir = dirname(join(prototypesDir, page.file));
+		const links = [...readPrototypeDocument(page).querySelectorAll("link[href]")].filter((link) =>
+			link
+				.getAttribute("rel")
+				?.toLowerCase()
+				.split(/\s+/)
+				.includes("stylesheet"),
+		);
+
+		for (const link of links) {
+			const href = normalizeStylesheetHref(link.getAttribute("href") ?? "");
+			if (!href) continue;
+
+			const path = join(pageDir, href);
+			if (seenPaths.has(path)) continue;
+
+			seenPaths.add(path);
+			sources.push({
+				label: getCssSourceLabel(path),
+				css: readFileSync(path, "utf8"),
+			});
+		}
+	}
+
+	return sources;
+}
+
 function readGlowBudgetCssSources(): CssSource[] {
 	return [
-		...glowBudgetSharedCssResourcePaths.map((path) => ({
-			label: path,
-			css: readFileSync(join(prototypesDir, path), "utf8"),
-		})),
-		{ label: "tokens-style.css", css: readFileSync(prototypeTokensStyleCss, "utf8") },
+		...readActiveLinkedCssSources(),
 		...activePages().map((page) => ({
 			label: page.file,
 			css: getStyleBlocks(readPrototypeHtml(page)),
@@ -3869,7 +3912,7 @@ describe("prototype design consistency", () => {
 		const cssSourceLabels = readGlowBudgetCssSources().map((source) => source.label);
 
 		expect(cssSourceLabels).toEqual(
-			expect.arrayContaining([...glowBudgetSharedCssResourcePaths, "tokens-style.css"]),
+			expect.arrayContaining(["shared/fonts.css", "src/styles/design-tokens/tokens-base.css"]),
 		);
 		expect(readGlowBudgetSharedTextSources().map((source) => source.label)).toEqual([
 			"shared/prototype-interactions.js",
