@@ -1527,7 +1527,7 @@
       position: absolute;
       inset: 0;
       border-radius: var(--radius-2);
-      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-down-fg) 42%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-strong) 70%, transparent);
       animation: bar-critical-pulse 2s ease-in-out infinite;
     }
     @keyframes bar-critical-pulse {
@@ -1803,15 +1803,15 @@
       border-radius: var(--radius-2) var(--radius-2) 0 0;
       background: var(--system-healthy-fg);
       opacity: 0.78;
-      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-healthy-fg) 34%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 62%, transparent);
     }
     .dq-point.warn .dq-bar {
       background: var(--system-degraded-fg);
-      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-degraded-fg) 34%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 62%, transparent);
     }
     .dq-point.down .dq-bar {
       background: var(--system-down-fg);
-      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--system-down-fg) 34%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-default) 62%, transparent);
     }
     .dq-point-value {
       font-family: var(--font-family-numeric);

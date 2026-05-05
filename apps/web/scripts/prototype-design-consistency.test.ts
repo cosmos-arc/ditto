@@ -1245,9 +1245,40 @@ function hasNeutralStructuralShadowColor(value: string): boolean {
 }
 
 function isInsetBorderShadowLayer(value: string): boolean {
+	const lengthPattern = "(-?(?:\\d+(?:\\.\\d+)?px|0))";
+	const match = new RegExp(
+		`^inset\\s+${lengthPattern}\\s+${lengthPattern}\\s+${lengthPattern}(?:\\s+${lengthPattern})?\\s+(.+?)(?:\\s*!important)?$`,
+		"i",
+	).exec(value);
+	if (!match) return false;
+
+	const [, offsetX, offsetY, blur, spread, color] = match;
+	if (!isZeroShadowLength(blur) || !isStructuralInsetShadowColor(color)) return false;
+
+	if (isZeroShadowLength(offsetX) && isZeroShadowLength(offsetY) && spread) {
+		return /^(?:1(?:\.5)?|2|3|4)px$/i.test(spread);
+	}
+
+	return !spread && isSingleInsetEdgeOffset(offsetX, offsetY);
+}
+
+function isZeroShadowLength(value: string): boolean {
+	return /^(?:0|0px)$/i.test(value);
+}
+
+function isSingleInsetEdgeOffset(offsetX: string, offsetY: string): boolean {
+	const structuralEdgeLength = /^-?(?:1(?:\.5)?|2|3|4)px$/i;
 	return (
-		/^inset\s+(?:(?:-?(?:\d+(?:\.\d+)?px|0))\s+){2,4}/i.test(value) &&
-		/var\(\s*--[a-z0-9-]+\s*\)/i.test(value)
+		(structuralEdgeLength.test(offsetX) && isZeroShadowLength(offsetY)) ||
+		(isZeroShadowLength(offsetX) && structuralEdgeLength.test(offsetY))
+	);
+}
+
+function isStructuralInsetShadowColor(value: string): boolean {
+	if (hasDecorativeSemanticShadowColor(value)) return false;
+
+	return /(?:var\(\s*--(?:(?:interaction|border|surface|text|overlay|neutral)-[a-z0-9-]+|heat-(?:line|(?:up|down)-line-\d+))\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:(?:interaction|border|surface|text|overlay|neutral)-[a-z0-9-]+|heat-(?:line|(?:up|down)-line-\d+))\s*\)[^)]+\))(?:\s*!important)?$/i.test(
+		value,
 	);
 }
 
@@ -1617,6 +1648,14 @@ describe("prototype design consistency", () => {
 			),
 		).toBe(true);
 		expect(isExcessiveGlowBoxShadow(".resize-separator", "inset 0 0 0 1px var(--border-subtle)")).toBe(false);
+		expect(isExcessiveGlowBoxShadow(".resize-separator", "inset 0 0 0 2px var(--border-default)")).toBe(false);
+		expect(isExcessiveGlowBoxShadow(".selected-row", "inset 2px 0 0 var(--interaction-selected-border)")).toBe(
+			false,
+		);
+		expect(isExcessiveGlowBoxShadow(".decorative-card", "inset 0 0 24px 6px var(--brand-accent)")).toBe(
+			true,
+		);
+		expect(isExcessiveGlowBoxShadow(".status-card", "inset 0 0 12px var(--system-healthy-fg)")).toBe(true);
 		expect(
 			isExcessiveGlowBoxShadow(
 				".resize-separator:focus-visible",

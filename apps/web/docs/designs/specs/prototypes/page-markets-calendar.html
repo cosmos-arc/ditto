@@ -459,15 +459,15 @@
 
     .cal-day.selected {
       background: color-mix(in oklch, var(--brand-accent) 12%, transparent);
-      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
 
     .cal-day[data-impact="high"] {
-      box-shadow: inset 2px 0 0 color-mix(in oklch, var(--risk-high-fg) 78%, transparent);
+      box-shadow: inset 2px 0 0 var(--border-strong);
     }
 
     .cal-day[data-impact="medium"] {
-      box-shadow: inset 2px 0 0 color-mix(in oklch, var(--system-degraded-fg) 74%, transparent);
+      box-shadow: inset 2px 0 0 var(--border-default);
     }
 
     .cal-day-head {
