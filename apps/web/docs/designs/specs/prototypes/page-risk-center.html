@@ -200,6 +200,10 @@
     .risk-strip-value.warn { color: var(--risk-near-limit-fg); }
     .risk-strip-value.critical { color: var(--risk-breach-fg); }
     .risk-strip-value.neutral { color: var(--text-secondary); }
+    .risk-strip-value.ok::before { content: "✓ "; }
+    .risk-strip-value.warn::before,
+    .risk-strip-value.critical::before { content: "! "; }
+    .risk-strip-value.neutral::before { content: "中性 "; }
 
     .risk-strip-separator {
       width: 1px;

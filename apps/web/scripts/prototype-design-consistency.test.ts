@@ -677,6 +677,13 @@ function getPrototypeCssRules(page: ManifestPage): CssRule[] {
 	return readTopLevelCssRules(stripCssComments(getStyleBlocks(readPrototypeHtml(page))));
 }
 
+function getPrototypeAndSharedCssRules(page: ManifestPage): CssRule[] {
+	return [
+		...readTopLevelCssRules(stripCssComments(readAllLayoutCss())),
+		...getPrototypeCssRules(page),
+	];
+}
+
 function parseFontSizeMinimumPx(value: string): number | undefined {
 	const tokenMatch = /var\(\s*--font-size-(\d+)\s*\)/i.exec(value);
 	if (tokenMatch) return Number.parseInt(tokenMatch[1], 10);
@@ -883,6 +890,31 @@ function hasReadableText(element: Element | null): boolean {
 
 function hasReadableTextMatch(element: Element, pattern: RegExp): boolean {
 	return pattern.test(getReadablePrimaryText(element));
+}
+
+function getCssContentMarkers(body: string): string[] {
+	return [...body.matchAll(/content\s*:\s*(["'])(.*?)\1/gi)].map((match) =>
+		match[2].replace(/\\[a-f0-9]{1,6}\s?/gi, " ").trim(),
+	);
+}
+
+function elementHasPseudoSemanticMarker(
+	document: Document,
+	element: Element,
+	rules: CssRule[],
+	markerPattern: RegExp,
+): boolean {
+	for (const rule of rules) {
+		if (!/::(?:before|after)\b/i.test(rule.selector)) continue;
+		if (!getCssContentMarkers(rule.body).some((marker) => markerPattern.test(marker))) continue;
+
+		for (const selector of rule.selectors) {
+			if (!/::(?:before|after)\b/i.test(selector)) continue;
+			if (querySelectorAllSafe(document, selector).includes(element)) return true;
+		}
+	}
+
+	return false;
 }
 
 function isDefaultVisibleElement(element: Element): boolean {
@@ -3193,6 +3225,52 @@ describe("prototype design consistency", () => {
 			const text = state.textContent?.replace(/\s+/g, " ").trim() ?? "";
 			if (!staleMarkerPattern.test(text)) {
 				violations.push(`markets-intelligence:stale-state:${index + 1}:missing-marker`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("requires status pills and risk badges to expose semantic markers beyond color", () => {
+		const violations: string[] = [];
+		const badgeSelector = [
+			".status-pill",
+			".risk-badge",
+			".cell-badge.risk-low",
+			".cell-badge.risk-med",
+			".cell-badge.risk-high",
+			".health-status",
+			".stress-tag",
+			".risk-strip-value",
+		].join(", ");
+		const markerPattern =
+			/▲|▼|✓|!|✕|●|◐|P[0-3]|运行|暂停|草稿|归档|健康|异常|风险|突破|接近|警告|阻断|通过|待(?:复核|处理|审批)|完成|确认|忽略|订单|提交|补测|追踪|流式|审批|选中|延迟|陈旧|过期|失效|有效|匹配|变更|稳定|中性|active|paused|draft|archived|running|pending|confirmed|ignored|ordered|valid|match|stale|breach|expired|ready|manual|paper|review|enabled|stable|warn|bad|live|blocked|pass|fail|critical|healthy|degraded/i;
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			const rules = getPrototypeAndSharedCssRules(page);
+			const badges = [...document.querySelectorAll<HTMLElement>(badgeSelector)].filter(
+				isDefaultVisibleElement,
+			);
+
+			for (const [index, badge] of badges.entries()) {
+				const readableText = [
+					getReadablePrimaryText(badge),
+					badge.getAttribute("aria-label") ?? "",
+				].join(" ");
+				const hasTextMarker = markerPattern.test(readableText);
+				const hasPseudoMarker = elementHasPseudoSemanticMarker(
+					document,
+					badge,
+					rules,
+					markerPattern,
+				);
+
+				if (!hasTextMarker && !hasPseudoMarker) {
+					violations.push(
+						`${page.id}:semantic-badge:${index + 1}:${badge.className}:${readableText || "empty"}`,
+					);
+				}
 			}
 		}
 

@@ -806,6 +806,10 @@
       white-space: nowrap;
     }
 
+    .status-pill.ok::before { content: "✓ "; }
+    .status-pill.warn::before,
+    .status-pill.bad::before { content: "! "; }
+
     .status-pill.ok {
       color: var(--system-healthy-fg);
       border-color: color-mix(in oklch, var(--system-healthy-fg) 20%, transparent);
