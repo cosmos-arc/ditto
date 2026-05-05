@@ -18,6 +18,8 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 13. Active source docstrings/comments must not use stale architecture terms
 14. Empty analysis placeholder namespaces must not imply available capability
 15. Active architecture docs must not imply reserved analysis capabilities exist
+16. Application providers must not read environment variables directly
+17. Generic helpers/utils source paths must have owned architecture allowances
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -41,6 +43,7 @@ SRC_ROOTS = [
 ]
 
 MAX_FILE_LINES = 800
+MIN_PACKAGE_SOURCE_PATH_PARTS = 5
 
 # Logger methods that should NOT use f-strings (lazy formatting is preferred).
 FORBIDDEN_FSTRING_LOG_PATTERNS = (
@@ -91,6 +94,13 @@ class CompositionImportAllowance:
 
 @dataclass(frozen=True)
 class ProductionAnalysisWiringAllowance:
+    path: str
+    owner: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class GenericHelperNamespaceAllowance:
     path: str
     owner: str
     reason: str
@@ -237,6 +247,128 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "instead of importing analysis directly."
         ),
     ),
+)
+
+GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
+    GenericHelperNamespaceAllowance(
+        path="packages/application/src/ditto_application/processes/materialization/helpers.py",
+        owner="application materialization process",
+        reason=(
+            "Existing local process helper module; future growth needs "
+            "semantic naming review."
+        ),
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/api/utils/__init__.py",
+        owner="apps API adapter",
+        reason=(
+            "Existing transport adapter utility namespace; future growth needs "
+            "semantic naming review."
+        ),
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/api/utils/identifier.py",
+        owner="apps API adapter",
+        reason="Existing identifier adapter helpers for API boundaries.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/cli/utils/__init__.py",
+        owner="apps CLI adapter",
+        reason=(
+            "Existing CLI adapter utility namespace; future growth needs "
+            "semantic naming review."
+        ),
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/cli/utils/identifier.py",
+        owner="apps CLI adapter",
+        reason="Existing identifier adapter helpers for CLI boundaries.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/cli/utils/output.py",
+        owner="apps CLI adapter",
+        reason="Existing CLI output formatting adapter helpers.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/cli/utils/params.py",
+        owner="apps CLI adapter",
+        reason="Existing CLI parameter adapter helpers.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/apps/src/ditto_apps/cli/utils/validation.py",
+        owner="apps CLI adapter",
+        reason="Existing CLI validation adapter helpers.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/helpers/__init__.py",
+        owner="data compatibility helpers",
+        reason=(
+            "Existing data helper namespace; future growth needs semantic "
+            "naming review."
+        ),
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/helpers/adjustment.py",
+        owner="data adjustment helpers",
+        reason="Existing data adjustment helper module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/helpers/pit/__init__.py",
+        owner="data point-in-time helpers",
+        reason="Existing point-in-time helper namespace.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/helpers/pit/dataframe.py",
+        owner="data point-in-time helpers",
+        reason="Existing point-in-time dataframe helper module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/helpers/pit/policy.py",
+        owner="data point-in-time helpers",
+        reason="Existing point-in-time policy helper module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/helpers/pit/sql.py",
+        owner="data point-in-time helpers",
+        reason="Existing point-in-time SQL helper module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/sources/tushare/utils/__init__.py",
+        owner="data Tushare source adapter",
+        reason="Existing source adapter utility namespace.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/sources/tushare/utils/http_utils.py",
+        owner="data Tushare source adapter",
+        reason="Existing source adapter HTTP utility module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/sources/tushare/utils/rate_limiter.py",
+        owner="data Tushare source adapter",
+        reason="Existing source adapter rate limiting utility module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/utils/__init__.py",
+        owner="data compatibility utilities",
+        reason=(
+            "Existing data utility namespace; future growth needs semantic "
+            "naming review."
+        ),
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/utils/ticker_utils.py",
+        owner="data ticker utilities",
+        reason="Existing ticker normalization utility module.",
+    ),
+    GenericHelperNamespaceAllowance(
+        path="packages/data/src/ditto_data/utils/timezone_utils.py",
+        owner="data timezone utilities",
+        reason="Existing timezone utility module.",
+    ),
+)
+
+GENERIC_HELPER_NAMESPACE_ALLOWLIST = frozenset(
+    allowance.path for allowance in GENERIC_HELPER_NAMESPACE_ALLOWANCES
 )
 
 # AI rule files that should use current package names.
@@ -519,6 +651,21 @@ def _imported_modules_from_source(source: str) -> set[str]:
     return modules
 
 
+def _wildcard_import_modules_from_source(source: str) -> set[str]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+
+    return {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module is not None
+        and any(alias.name == "*" for alias in node.names)
+    }
+
+
 def _repo_python_module_exists(module: str) -> bool:
     module_path = Path(*module.split("."))
     for src_root in (ROOT / "packages").glob("*/src"):
@@ -538,6 +685,14 @@ def check_apps_non_registry_capability_imports(source: str, rel_path: str) -> li
 
     allowed_modules = APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST.get(rel_path, frozenset())
     errors: list[str] = []
+    for module in sorted(_wildcard_import_modules_from_source(source)):
+        root = module.split(".")[0]
+        if root in APPS_CAPABILITY_IMPORT_ROOTS and module in allowed_modules:
+            errors.append(
+                f"{rel_path}: apps host composition allowance cannot use "
+                f"wildcard import from {module!r}; import explicit owned "
+                "symbols or protocols"
+            )
     for module in sorted(_imported_modules_from_source(source)):
         root = module.split(".")[0]
         if root not in APPS_CAPABILITY_IMPORT_ROOTS or module in allowed_modules:
@@ -547,6 +702,215 @@ def check_apps_non_registry_capability_imports(source: str, rel_path: str) -> li
             f"{module!r}; use application facades or registry composition"
         )
     return errors
+
+
+def _is_os_environ_expr(node: ast.AST, os_names: set[str]) -> bool:
+    return (
+        isinstance(node, ast.Attribute)
+        and node.attr == "environ"
+        and isinstance(node.value, ast.Name)
+        and node.value.id in os_names
+    )
+
+
+def _is_imported_environ_expr(node: ast.AST, environ_names: set[str]) -> bool:
+    return (
+        isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id in environ_names
+    )
+
+
+def _environment_expr_kind(
+    node: ast.AST,
+    os_names: set[str],
+    environ_names: set[str],
+) -> str | None:
+    if _is_os_environ_expr(node, os_names):
+        return "os.environ"
+    if _is_imported_environ_expr(node, environ_names):
+        return "environ"
+    return None
+
+
+def _is_environment_expr_consumed_by_parent(
+    node: ast.AST,
+    parent_by_node: dict[ast.AST, ast.AST],
+) -> bool:
+    parent = parent_by_node.get(node)
+    return (isinstance(parent, ast.Subscript) and parent.value is node) or (
+        isinstance(parent, ast.Attribute) and parent.value is node
+    )
+
+
+def _environment_subscript_read_kind(
+    node: ast.Subscript,
+    os_names: set[str],
+    environ_names: set[str],
+) -> str | None:
+    return _environment_expr_kind(node.value, os_names, environ_names)
+
+
+def _environment_attribute_call_read_kind(
+    func: ast.Attribute,
+    os_names: set[str],
+    environ_names: set[str],
+) -> str | None:
+    if func.attr == "get" and _is_os_environ_expr(func.value, os_names):
+        return "os.environ.get"
+    if (
+        func.attr == "get"
+        and isinstance(func.value, ast.Name)
+        and func.value.id in environ_names
+    ):
+        return "environ.get"
+    if (
+        func.attr == "getenv"
+        and isinstance(func.value, ast.Name)
+        and func.value.id in os_names
+    ):
+        return "os.getenv"
+    return _environment_expr_kind(func.value, os_names, environ_names)
+
+
+def _environment_call_read_kind(
+    node: ast.Call,
+    os_names: set[str],
+    environ_names: set[str],
+    getenv_names: set[str],
+) -> str | None:
+    func = node.func
+    if isinstance(func, ast.Attribute):
+        return _environment_attribute_call_read_kind(
+            func,
+            os_names,
+            environ_names,
+        )
+    if isinstance(func, ast.Name) and func.id in getenv_names:
+        return "getenv"
+    return None
+
+
+def _environment_read_kind(
+    node: ast.AST,
+    os_names: set[str],
+    environ_names: set[str],
+    getenv_names: set[str],
+    parent_by_node: dict[ast.AST, ast.AST],
+) -> str | None:
+    if isinstance(node, ast.Subscript):
+        return _environment_subscript_read_kind(node, os_names, environ_names)
+    if isinstance(node, ast.Call):
+        return _environment_call_read_kind(
+            node,
+            os_names,
+            environ_names,
+            getenv_names,
+        )
+    if _is_environment_expr_consumed_by_parent(node, parent_by_node):
+        return None
+    return _environment_expr_kind(node, os_names, environ_names)
+
+
+def _os_environment_import_names(
+    tree: ast.AST,
+) -> tuple[set[str], set[str], set[str]]:
+    os_names: set[str] = set()
+    environ_names: set[str] = set()
+    getenv_names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "os":
+                    os_names.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module == "os":
+            for alias in node.names:
+                imported_name = alias.asname or alias.name
+                if alias.name == "environ":
+                    environ_names.add(imported_name)
+                elif alias.name == "getenv":
+                    getenv_names.add(imported_name)
+    return os_names, environ_names, getenv_names
+
+
+def is_application_provider_module_path(rel_path: str) -> bool:
+    """Return whether a source path is an application provider module."""
+    path = Path(rel_path)
+    return (
+        path.parent.as_posix() == "packages/application/src/ditto_application"
+        and path.suffix == ".py"
+        and (path.name == "providers.py" or path.name.startswith("providers_"))
+    )
+
+
+def check_application_provider_no_environment_reads(
+    source: str,
+    rel_path: str,
+) -> list[str]:
+    """Check application provider modules do not read process environment."""
+    if not is_application_provider_module_path(rel_path):
+        return []
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    os_names, environ_names, getenv_names = _os_environment_import_names(tree)
+    parent_by_node = {
+        child: parent
+        for parent in ast.walk(tree)
+        for child in ast.iter_child_nodes(parent)
+    }
+    errors: list[str] = []
+    for node in ast.walk(tree):
+        kind = _environment_read_kind(
+            node,
+            os_names,
+            environ_names,
+            getenv_names,
+            parent_by_node,
+        )
+        if kind is None:
+            continue
+        errors.append(
+            f"{rel_path}: application provider reads environment via {kind}; "
+            "route configuration through apps/platform settings"
+        )
+    return errors
+
+
+def is_generic_helper_namespace_path(rel_path: str) -> bool:
+    """Return whether a production source path uses generic helpers/utils names."""
+    parts = Path(rel_path).parts
+    if (
+        len(parts) < MIN_PACKAGE_SOURCE_PATH_PARTS
+        or parts[0] != "packages"
+        or parts[2] != "src"
+    ):
+        return False
+    if not rel_path.endswith(".py"):
+        return False
+    if "tests" in parts:
+        return False
+
+    return (
+        Path(rel_path).stem in {"helper", "helpers", "util", "utils"}
+        or "helpers" in parts
+        or "utils" in parts
+    )
+
+
+def check_generic_helper_namespace_allowance(rel_path: str) -> list[str]:
+    """Check generic helpers/utils source paths are explicitly allowed."""
+    if not is_generic_helper_namespace_path(rel_path):
+        return []
+    if rel_path in GENERIC_HELPER_NAMESPACE_ALLOWLIST:
+        return []
+    return [
+        f"{rel_path}: generic helpers/utils namespace requires architecture "
+        "review; rename to a semantic module or add an owned, reasoned allowance"
+    ]
 
 
 def check_data_no_derived_feature_ownership(source: str, rel_path: str) -> list[str]:
@@ -647,6 +1011,8 @@ def _check_per_file(verbose: bool) -> list[str]:
         errors.extend(check_execution_no_simulation_ownership(source, rel_path))
         errors.extend(check_execution_sqlite_legacy_not_extension_point(rel_path))
         errors.extend(check_apps_non_registry_capability_imports(source, rel_path))
+        errors.extend(check_application_provider_no_environment_reads(source, rel_path))
+        errors.extend(check_generic_helper_namespace_allowance(rel_path))
         errors.extend(check_source_architecture_terms(source, rel_path))
         if _is_semantic_scan_target(rel_path):
             errors.extend(check_data_no_derived_feature_ownership(source, rel_path))

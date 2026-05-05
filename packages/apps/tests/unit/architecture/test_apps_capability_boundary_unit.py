@@ -122,6 +122,37 @@ def test_apps_capability_import_guard_rejects_prefect_host_quality_submodule() -
     ]
 
 
+def test_apps_capability_import_guard_rejects_prefect_host_wildcard_import() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality import *",
+        "packages/apps/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/jobs/context.py: "
+        "apps host composition allowance cannot use wildcard import from "
+        "'ditto_data.quality'; import explicit owned symbols or protocols",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_only_real_mixed_submodule() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality import QualityEngine, golden",
+        "packages/apps/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.quality.golden'; use application facades or "
+        "registry composition",
+    ]
+
+
 def test_apps_capability_import_guard_limits_prefect_host_exception() -> None:
     check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
 

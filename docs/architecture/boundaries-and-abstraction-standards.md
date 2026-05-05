@@ -543,9 +543,9 @@ route 只做薄适配。若 route 中出现超过少量分支的业务计算，�
 | `execution` 禁止依赖 `backtest` | 防止 runtime 污染执行 | **已添加** ✅ |
 | 生产包禁止依赖 `analysis` | 研究层隔离 | **已添加** ✅ |
 | `apps.api.routes` 禁止依赖 `ditto_data.services` / `ditto_data.storage` | route 保持传输适配 | 待添加 |
-| `application.providers` 禁止读取 `os.environ` | 配置入口集中 | 待添加 |
+| `application.providers` 禁止读取 `os.environ` | 配置入口集中 | **已添加** ✅ |
 | `data.storage` 只允许依赖明确的 storage model/contracts | 收紧 storage-model 豁免 | 待添加 |
-| `helpers/utils` 新增文件需要架构审查 | 防止无语义目录扩张 | 待添加 |
+| `helpers/utils` 新增文件需要架构审查 | 防止无语义目录扩张 | **已添加** ✅ |
 
 ## 12. Agent 开发检查清单
 
