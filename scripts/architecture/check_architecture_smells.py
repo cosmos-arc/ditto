@@ -1572,8 +1572,9 @@ def _analysis_placeholder_stale_claim_errors(
     errors: list[str] = []
     if _is_reserved_analysis_doc_context(line):
         return errors
+    folded_line = line.casefold()
     for phrase in ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS:
-        if phrase not in line:
+        if phrase.casefold() not in folded_line:
             continue
         errors.append(
             f"{rel_path}:{line_no}: active docs imply reserved "

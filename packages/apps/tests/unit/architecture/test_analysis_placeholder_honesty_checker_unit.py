@@ -119,6 +119,28 @@ def test_active_doc_checker_rejects_reserved_placeholder_capability_claims(
     ]
 
 
+def test_active_doc_checker_rejects_case_variants_of_english_claims(
+    tmp_path: Path,
+) -> None:
+    check = _MODULE.check_analysis_placeholder_active_docs  # type: ignore[attr-defined]
+    path = tmp_path / "docs" / "architecture" / "agent-context-pack.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "| reports, diagnostics, experiments, research | `analysis` |\n",
+        encoding="utf-8",
+    )
+
+    errors = check(tmp_path)
+
+    assert errors == [
+        "docs/architecture/agent-context-pack.md:1: active docs imply "
+        "reserved analysis capability "
+        "'Reports, diagnostics, experiments, research'; describe research "
+        "control-plane as current and "
+        "reports/diagnostics/experiments/screeners as reserved/future"
+    ]
+
+
 def test_active_doc_checker_scans_agent_rules_for_chinese_placeholder_claims(
     tmp_path: Path,
 ) -> None:
