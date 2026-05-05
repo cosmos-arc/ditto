@@ -80,6 +80,22 @@ PRODUCTION_PACKAGES = (
     "ditto_application",
 )
 
+
+@dataclass(frozen=True)
+class CompositionImportAllowance:
+    path: str
+    allowed_modules: frozenset[str]
+    owner: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class ProductionAnalysisWiringAllowance:
+    path: str
+    owner: str
+    reason: str
+
+
 EXECUTION_SIMULATION_OWNERSHIP_TERMS = (
     "BacktestBrokerage",
     "BrokerageModel",
@@ -152,25 +168,75 @@ SEMANTIC_SCAN_SKIP_PATH_PARTS = frozenset(
     }
 )
 
-# Prefect host code owns task-level container lookup. Keep this exception narrow:
-# it may request the DQ engine from the container, but ordinary jobs/routes should
-# use application facades or registry composition.
+APPS_HOST_COMPOSITION_ALLOWANCES = (
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/jobs/context.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.quality",
+                "ditto_data.quality.protocols",
+            }
+        ),
+        owner="apps Prefect host composition",
+        reason=(
+            "Prefect task context owns task-level DQ container lookup only; "
+            "ordinary routes and jobs must use application facades or registry "
+            "composition instead of direct capability imports."
+        ),
+    ),
+)
+
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
-    "packages/apps/src/ditto_apps/jobs/context.py": frozenset(
-        {
-            "ditto_data.quality",
-            "ditto_data.quality.protocols",
-        }
-    )
+    allowance.path: allowance.allowed_modules
+    for allowance in APPS_HOST_COMPOSITION_ALLOWANCES
 }
 
-# DI wiring / service re-export paths that legitimately cross analysis boundary.
-# Keep in sync with .importlinter data-boundary + analysis-no-production-dependency.
-PRODUCTION_ANALYSIS_WIRING_ALLOWLIST = (
-    "ditto_data/di/",
-    "ditto_data/services/__init__",
-    "ditto_application/providers_",
-    "ditto_application/queries/research",
+PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers.py",
+        owner="application DI providers",
+        reason=(
+            "Application providers wire analysis dependencies into the host "
+            "container; ordinary application services and queries must not "
+            "directly depend on analysis."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers_market.py",
+        owner="application DI providers",
+        reason=(
+            "Application market providers wire analysis dependencies into the "
+            "host container; ordinary application services and queries must "
+            "not directly depend on analysis."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers_portfolio.py",
+        owner="application DI providers",
+        reason=(
+            "Application portfolio providers are explicit host wiring modules; "
+            "ordinary application services and queries must not directly depend "
+            "on analysis."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/providers_strategy.py",
+        owner="application DI providers",
+        reason=(
+            "Application strategy providers are explicit host wiring modules; "
+            "ordinary application services and queries must not directly depend "
+            "on analysis."
+        ),
+    ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/queries/research.py",
+        owner="application research query facade",
+        reason=(
+            "The research query facade is the production-facing boundary for "
+            "analysis reads; other application query paths must use that facade "
+            "instead of importing analysis directly."
+        ),
+    ),
 )
 
 # AI rule files that should use current package names.
@@ -247,7 +313,7 @@ ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_STALE_CLAIMS = (
-    "纯研究分析（报告、诊断、实验）",
+    "纯研究分析（报告、诊断、实验）",  # noqa: RUF001 - exact stale doc phrase
     "报告、诊断、实验、研究数据集",
     "它描述”报告、诊断、实验、研究”",
     "是否处理报告、诊断、实验、研究",
@@ -383,11 +449,18 @@ def check_platform_business_tables(source: str, rel_path: str) -> list[str]:
     return errors
 
 
+def _matches_production_analysis_wiring_allowance(rel_path: str) -> bool:
+    return any(
+        rel_path == allowance.path
+        for allowance in PRODUCTION_ANALYSIS_WIRING_ALLOWANCES
+    )
+
+
 def check_production_no_analysis(source: str, rel_path: str) -> list[str]:
     """Check production packages do not import ditto_analysis."""
     if not _is_package_source(rel_path, *PRODUCTION_PACKAGES):
         return []
-    if any(pattern in rel_path for pattern in PRODUCTION_ANALYSIS_WIRING_ALLOWLIST):
+    if _matches_production_analysis_wiring_allowance(rel_path):
         return []
     if _has_import(source, "ditto_analysis"):
         msg = f"{rel_path}: production imports ditto_analysis (check import-linter)"
@@ -437,8 +510,23 @@ def _imported_modules_from_source(source: str) -> set[str]:
         if isinstance(node, ast.Import):
             modules.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
-            modules.add(node.module)
+            for alias in node.names:
+                candidate = f"{node.module}.{alias.name}"
+                if _repo_python_module_exists(candidate):
+                    modules.add(candidate)
+                else:
+                    modules.add(node.module)
     return modules
+
+
+def _repo_python_module_exists(module: str) -> bool:
+    module_path = Path(*module.split("."))
+    for src_root in (ROOT / "packages").glob("*/src"):
+        if (src_root / module_path).with_suffix(".py").is_file():
+            return True
+        if (src_root / module_path / "__init__.py").is_file():
+            return True
+    return False
 
 
 def check_apps_non_registry_capability_imports(source: str, rel_path: str) -> list[str]:

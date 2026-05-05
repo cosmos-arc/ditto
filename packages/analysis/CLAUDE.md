@@ -56,8 +56,9 @@ ditto_analysis → ditto_apps ❌
 - `layered-architecture` 允许 apps/application 作为上层组合 analysis；它不负责 application/apps 的细粒度 research-only 路径约束
 
 `scripts/architecture/check_architecture_smells.py` 细粒度约束：
-- `check_production_no_analysis` 将 `ditto_application` 纳入生产路径扫描，仅 allowlist research query/facade/DI wiring 路径导入 `ditto_analysis`
+- `check_production_no_analysis` 将 `ditto_application` 纳入生产路径扫描，仅 allowlist application provider wiring 与 exact research query 路径导入 `ditto_analysis`
 - `check_apps_non_registry_capability_imports` 禁止 apps 非 registry/composition 模块直接导入 capability internals；apps 应通过 application facades 或 registry composition 使用 analysis
+其中 production→analysis wiring 豁免以 `PRODUCTION_ANALYSIS_WIRING_ALLOWANCES` 作为 enforcement source；当前只覆盖 application provider/research query 路径，并且每条必须带 owner/reason。
 
 架构策略：
 - application/apps 不得把 `reports`、`diagnostics`、`experiments`、`screeners` 当行为依赖

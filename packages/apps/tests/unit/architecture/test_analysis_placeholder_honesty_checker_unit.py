@@ -118,7 +118,9 @@ def test_active_doc_checker_rejects_reserved_placeholder_capability_claims(
     ]
 
 
-def test_active_architecture_docs_do_not_imply_reserved_placeholder_capabilities() -> None:
+def test_active_architecture_docs_do_not_imply_reserved_placeholder_capabilities() -> (
+    None
+):
     check = _MODULE.check_analysis_placeholder_active_docs  # type: ignore[attr-defined]
 
     errors = check(Path.cwd())

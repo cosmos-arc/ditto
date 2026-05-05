@@ -26,6 +26,22 @@ def _load_module() -> object:
 _MODULE = _load_module()
 
 
+def test_apps_host_composition_allowances_are_owned_and_reasoned() -> None:
+    allowances = _MODULE.APPS_HOST_COMPOSITION_ALLOWANCES  # type: ignore[attr-defined]
+
+    assert allowances
+    assert all(allowance.owner for allowance in allowances)
+    assert all(allowance.reason for allowance in allowances)
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances} == {
+        "packages/apps/src/ditto_apps/jobs/context.py": frozenset(
+            {
+                "ditto_data.quality",
+                "ditto_data.quality.protocols",
+            }
+        )
+    }
+
+
 def test_apps_capability_import_guard_reports_non_registry_routes() -> None:
     check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
 
@@ -39,6 +55,21 @@ def test_apps_capability_import_guard_reports_non_registry_routes() -> None:
         "apps non-registry module imports capability package "
         "'ditto_data.sources.protocols'; use application facades or "
         "registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_reports_alias_imported_capability() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data import services",
+        "packages/apps/src/ditto_apps/api/routes/source.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/api/routes/source.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.services'; use application facades or registry composition",
     ]
 
 
@@ -57,16 +88,38 @@ def test_apps_capability_import_guard_allows_prefect_host_quality_exception() ->
     check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
 
     errors = check(
-        "\n".join(
-            (
-                "from ditto_data.quality import QualityEngine",
-                "from ditto_data.quality.protocols import QualityEngineProtocol",
-            )
-        ),
+        "from ditto_data import quality",
         "packages/apps/src/ditto_apps/jobs/context.py",
     )
 
     assert errors == []
+
+
+def test_apps_capability_import_guard_allows_prefect_host_quality_protocols() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality.protocols import QualityEngineProtocol",
+        "packages/apps/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == []
+
+
+def test_apps_capability_import_guard_rejects_prefect_host_quality_submodule() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data.quality import golden",
+        "packages/apps/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.quality.golden'; use application facades or "
+        "registry composition",
+    ]
 
 
 def test_apps_capability_import_guard_limits_prefect_host_exception() -> None:
@@ -82,4 +135,19 @@ def test_apps_capability_import_guard_limits_prefect_host_exception() -> None:
         "apps non-registry module imports capability package "
         "'ditto_data.services.market_service'; use application facades or "
         "registry composition",
+    ]
+
+
+def test_apps_capability_import_guard_rejects_unowned_host_alias_import() -> None:
+    check = _MODULE.check_apps_non_registry_capability_imports  # type: ignore[attr-defined]
+
+    errors = check(
+        "from ditto_data import services",
+        "packages/apps/src/ditto_apps/jobs/context.py",
+    )
+
+    assert errors == [
+        "packages/apps/src/ditto_apps/jobs/context.py: "
+        "apps non-registry module imports capability package "
+        "'ditto_data.services'; use application facades or registry composition",
     ]
