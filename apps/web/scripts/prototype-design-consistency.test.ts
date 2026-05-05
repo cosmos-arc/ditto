@@ -1230,15 +1230,14 @@ function reducedMotionSelectorCoversUsage(reducedSelector: string, usageSelector
 
 function reducedMotionCssCoversFamily(reducedMotionCss: string, family: string): boolean {
 	const familyPattern = new RegExp(`\\b${family}\\b`, "i");
-	if (familyPattern.test(reducedMotionCss)) return true;
-
 	const familyTokens = family.split("-").filter((token) => token.length >= 4);
 	if (familyTokens.length === 0) return false;
 
 	return readTopLevelCssRules(stripCssComments(reducedMotionCss)).some(
 		(rule) =>
 			hasAnimationReducedMotionDeclaration(rule.body) &&
-			rule.selectors.some((selector) => familyTokens.some((token) => selector.includes(token))),
+			(rule.selectors.some((selector) => familyTokens.some((token) => selector.includes(token))) ||
+				familyPattern.test(rule.body)),
 	);
 }
 
@@ -2912,6 +2911,30 @@ describe("prototype design consistency", () => {
 		};
 
 		expect(reducedMotionCssCoversUsage(reducedMotionCss, spinnerUsage)).toBe(false);
+	});
+
+	it("does not treat shared family name mentions as reduced-motion animation coverage", () => {
+		const transitionOnlyCss = `
+			/* dot-glow is handled by the page-local owner. */
+			.status-dot {
+				transition: none !important;
+			}
+		`;
+		const durationCoverageCss = `
+			.dot-glow {
+				animation-duration: 0.01ms !important;
+				animation-iteration-count: 1 !important;
+			}
+		`;
+		const animationCoverageCss = `
+			[class*="glow"] {
+				animation: none !important;
+			}
+		`;
+
+		expect(reducedMotionCssCoversFamily(transitionOnlyCss, "dot-glow")).toBe(false);
+		expect(reducedMotionCssCoversFamily(durationCoverageCss, "dot-glow")).toBe(true);
+		expect(reducedMotionCssCoversFamily(animationCoverageCss, "dot-glow")).toBe(true);
 	});
 
 	it("keeps the shared reduced-motion baseline centralized in layout-state", () => {
