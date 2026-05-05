@@ -69,10 +69,8 @@
 .ditto-shortcuts-body { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-12, 12px); min-height:0; overflow:auto; padding:var(--space-12, 12px); }
 .ditto-shortcuts-section { min-width:0; }
 .ditto-shortcuts-section-title { margin:0 0 var(--space-8, 8px); color:var(--text-tertiary); font-size:var(--font-size-11); font-weight:var(--font-weight-semibold); line-height:1.25; }
-.ditto-shortcuts-list { display:flex; flex-direction:column; gap:var(--space-6, 6px); }
-.ditto-shortcuts-item { display:grid; grid-template-columns:minmax(80px, 0.35fr) minmax(0, 1fr); align-items:center; gap:var(--space-8, 8px); min-height:36px; padding:var(--space-6, 6px) var(--space-8, 8px); border:1px solid var(--border-subtle); border-radius:var(--radius-6); background:var(--surface-panel-elevated); color:var(--text-primary); text-align:left; cursor:pointer; }
-.ditto-shortcuts-item:hover { border-color:var(--border-default); background:var(--interaction-hover-subtle-bg, var(--overlay-4)); }
-.ditto-shortcuts-item:focus-visible,
+.ditto-shortcuts-list { display:flex; flex-direction:column; gap:var(--space-6, 6px); margin:0; padding:0; list-style:none; }
+.ditto-shortcuts-item { display:grid; grid-template-columns:minmax(80px, 0.35fr) minmax(0, 1fr); align-items:center; gap:var(--space-8, 8px); min-height:36px; padding:var(--space-6, 6px) var(--space-8, 8px); border:1px solid var(--border-subtle); border-radius:var(--radius-6); background:var(--surface-panel-elevated); color:var(--text-primary); text-align:left; }
 .ditto-shortcuts-close:focus-visible { border-color:var(--brand-accent); outline:2px solid var(--interaction-focus-ring); outline-offset:1px; }
 .ditto-shortcuts-keys { display:flex; flex-wrap:wrap; gap:var(--space-4, 4px); }
 .ditto-shortcuts-key { min-width:24px; padding:1px 5px; border:1px solid var(--border-default); border-radius:var(--radius-3); background:var(--surface-strip); color:var(--text-secondary); font-family:var(--font-family-code, ui-monospace); font-size:var(--font-size-10); font-weight:var(--font-weight-medium); line-height:1.4; text-align:center; }

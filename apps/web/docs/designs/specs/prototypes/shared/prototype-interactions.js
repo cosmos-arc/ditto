@@ -2309,6 +2309,9 @@
     triggerEl: null,
 
     init: function () {
+      if (document.documentElement.getAttribute('data-shortcuts-overlay-ready') === 'true') return;
+      document.documentElement.setAttribute('data-shortcuts-overlay-ready', 'true');
+
       var overlay = KeyboardShortcutsOverlay._ensureOverlay();
       overlay.addEventListener('overlayclose', function (event) {
         event.preventDefault();
@@ -2319,7 +2322,9 @@
     open: function () {
       var overlay = KeyboardShortcutsOverlay._ensureOverlay();
       KeyboardShortcutsOverlay._render(overlay);
-      KeyboardShortcutsOverlay.triggerEl = document.activeElement;
+      if (overlay.hidden) {
+        KeyboardShortcutsOverlay.triggerEl = document.activeElement;
+      }
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       document.body.setAttribute('data-shortcuts-overlay-open', 'true');
@@ -2448,14 +2453,15 @@
       heading.textContent = title;
       section.appendChild(heading);
 
-      var list = document.createElement('div');
+      var list = document.createElement('ul');
       list.className = 'ditto-shortcuts-list';
+      list.setAttribute('role', 'list');
 
       items.forEach(function (item) {
-        var row = document.createElement('button');
-        row.type = 'button';
+        var row = document.createElement('li');
         row.className = 'ditto-shortcuts-item';
         row.setAttribute('data-shortcuts-item', '');
+        row.setAttribute('role', 'listitem');
         if (item.action) row.setAttribute('data-shortcuts-action', item.action);
         if (item.category) row.setAttribute('data-shortcuts-category', item.category);
 
@@ -2519,10 +2525,23 @@
       target.setAttribute('aria-hidden', 'true');
       document.body.removeAttribute('data-shortcuts-overlay-open');
       OverlayStack.remove(target);
-      if (KeyboardShortcutsOverlay.triggerEl && KeyboardShortcutsOverlay.triggerEl.focus) {
-        KeyboardShortcutsOverlay.triggerEl.focus();
+
+      var restoreTarget = KeyboardShortcutsOverlay._restoreTarget(target);
+      if (restoreTarget && restoreTarget.focus) restoreTarget.focus();
+      if (target.contains(document.activeElement) && document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
       }
       KeyboardShortcutsOverlay.triggerEl = null;
+    },
+
+    _restoreTarget: function (overlay) {
+      var trigger = KeyboardShortcutsOverlay.triggerEl;
+      if (trigger && trigger.isConnected && !overlay.contains(trigger)) return trigger;
+
+      var fallback = document.querySelector('[data-shell-utility="command"], [data-command-trigger], .header-command-trigger');
+      if (fallback && fallback.isConnected && !overlay.contains(fallback)) return fallback;
+
+      return document.body;
     },
   };
 
@@ -2534,6 +2553,8 @@
   var KeyboardShortcuts = {
     init: function () {
       KeyboardShortcutsOverlay.init();
+      if (document.documentElement.getAttribute('data-keyboard-shortcuts-ready') === 'true') return;
+      document.documentElement.setAttribute('data-keyboard-shortcuts-ready', 'true');
 
       document.addEventListener('keydown', function (e) {
         /* Ignore when typing in inputs */

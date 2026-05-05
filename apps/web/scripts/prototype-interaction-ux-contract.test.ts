@@ -2307,13 +2307,17 @@ describe("prototype interaction UX contracts", () => {
 				expect(overlay?.textContent).toContain("双击");
 				expect(overlay?.textContent).toContain("复核信号");
 				expect(overlay?.textContent).toContain("打开风控");
+				expect(overlay?.querySelectorAll("[data-shortcuts-item]").length).toBeGreaterThanOrEqual(2);
+				expect(overlay?.querySelector("[data-shortcuts-item]")?.tagName).toBe("LI");
+				expect(overlay?.querySelector("[data-shortcuts-item]")?.getAttribute("role")).toBe("listitem");
+				expect(overlay?.querySelector("[data-shortcuts-item] button")).toBeNull();
 
 				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 				expect(overlay?.hidden).toBe(true);
 				expect(document.activeElement).toBe(trigger);
 			});
 
-			it("wraps Tab focus within the keyboard shortcuts overlay", () => {
+			it("keeps Tab focus on the keyboard shortcuts close button when it is the only focusable element", () => {
 				const dom = new JSDOM(
 					`<!doctype html>
 					<html>
@@ -2339,21 +2343,154 @@ describe("prototype interaction UX contracts", () => {
 				expect(overlay).not.toBeNull();
 				if (!overlay) return;
 
-				const focusables = [
-					...overlay.querySelectorAll<HTMLElement>("[data-shortcuts-close], [data-shortcuts-item]"),
-				];
-				expect(focusables.length).toBeGreaterThanOrEqual(2);
+				const close = overlay.querySelector<HTMLElement>("[data-shortcuts-close]");
+				expect(close).not.toBeNull();
+				expect([...overlay.querySelectorAll<HTMLElement>("button")]).toEqual(close ? [close] : []);
+				if (!close) return;
 
-				const first = focusables[0];
-				const last = focusables[focusables.length - 1];
-
-				last.focus();
+				close.focus();
 				overlay.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
-				expect(document.activeElement).toBe(first);
+				expect(document.activeElement).toBe(close);
 
-				first.focus();
+				close.focus();
 				overlay.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }));
-				expect(document.activeElement).toBe(last);
+				expect(document.activeElement).toBe(close);
+			});
+
+			it("restores focus to the original trigger after repeated shortcut overlay opens", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="help-trigger" type="button">帮助</button>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div data-command-context-object="测试对象" data-command-context-actions="review-signal"></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/shortcut-overlay-repeat.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("help-trigger") as HTMLElement | null;
+				expect(trigger).not.toBeNull();
+				if (!trigger) return;
+
+				trigger.focus();
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "?", bubbles: true }));
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "?", bubbles: true }));
+
+				const overlay = document.querySelector<HTMLElement>("[data-shortcuts-overlay]");
+				expect(overlay?.hidden).toBe(false);
+				expect(document.activeElement).toBe(overlay?.querySelector("[data-shortcuts-close]"));
+
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+				expect(overlay?.hidden).toBe(true);
+				expect(document.activeElement).toBe(trigger);
+			});
+
+			it("falls back to a stable entry when the shortcut overlay trigger is removed before close", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="help-trigger" type="button">帮助</button>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div data-command-context-object="测试对象" data-command-context-actions="review-signal"></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/shortcut-overlay-trigger-removed.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const trigger = document.getElementById("help-trigger") as HTMLElement | null;
+				const commandTrigger = document.getElementById("cmd-trigger");
+				expect(trigger).not.toBeNull();
+				expect(commandTrigger).not.toBeNull();
+				if (!trigger || !commandTrigger) return;
+
+				trigger.focus();
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "?", bubbles: true }));
+				const overlay = document.querySelector<HTMLElement>("[data-shortcuts-overlay]");
+				trigger.remove();
+
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+				expect(overlay?.hidden).toBe(true);
+				expect(overlay?.contains(document.activeElement)).toBe(false);
+				expect(document.activeElement).toBe(commandTrigger);
+			});
+
+			it("does not open the keyboard shortcuts overlay while typing in a field", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<input id="query" aria-label="搜索" />
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div data-command-context-object="测试对象" data-command-context-actions="review-signal"></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/shortcut-overlay-input.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				if (document.readyState === "loading") {
+					document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				}
+
+				const input = document.getElementById("query");
+				input?.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "?", bubbles: true }));
+
+				const overlay = document.querySelector<HTMLElement>("[data-shortcuts-overlay]");
+				expect(overlay?.hidden).toBe(true);
+			});
+
+			it("keeps shortcut overlay initialization idempotent across repeated init events", () => {
+				const dom = new JSDOM(
+					`<!doctype html>
+					<html>
+						<body>
+							<button id="help-trigger" type="button">帮助</button>
+							<button id="cmd-trigger" type="button" data-shell-utility="command" data-command-scope="home">命令</button>
+							<div data-command-context-object="测试对象" data-command-context-actions="review-signal"></div>
+						</body>
+					</html>`,
+					{ pretendToBeVisual: true, url: "https://prototype.local/shortcut-overlay-idempotent.html" },
+				);
+				const { document } = dom.window;
+
+				installInteractiveWindowStubs(dom.window);
+				evaluateSharedInteractionsScript(dom.window);
+				document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+				document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
+
+				const trigger = document.getElementById("help-trigger") as HTMLElement | null;
+				expect(trigger).not.toBeNull();
+				if (!trigger) return;
+
+				trigger.focus();
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "?", bubbles: true }));
+
+				const overlay = document.querySelector<HTMLElement>("[data-shortcuts-overlay]");
+				expect(document.querySelectorAll("[data-shortcuts-overlay]").length).toBe(1);
+				expect(overlay?.hidden).toBe(false);
+
+				document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+				expect(overlay?.hidden).toBe(true);
+				expect(document.activeElement).toBe(trigger);
 			});
 
 			it("activates command actions into visible operational feedback and scoped recents", () => {
