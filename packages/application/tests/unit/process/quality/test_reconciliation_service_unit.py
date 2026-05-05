@@ -317,7 +317,7 @@ class TestDailyReconciliationEdgeCases:
 
         assert result.passed is False
         assert result.error is not None
-        assert "ValueError" in result.error
+        assert "AppCommandError" in result.error
 
     def test_enrich_with_ticker_fails(
         self,
@@ -364,7 +364,7 @@ class TestDailyReconciliationEdgeCases:
         # Assert
         assert result.passed is False
         assert result.error is not None
-        assert "ValueError" in result.error
+        assert "AppCommandError" in result.error
 
     def test_unexpected_error_returns_error_dict(
         self,

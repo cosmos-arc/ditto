@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_features.errors import FactorValidationError
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import (
     DerivedSpecRecord,
@@ -134,12 +135,14 @@ class TestDerivedQueryService:
 
     def test_latest_query_rejects_empty_derived_ids(self) -> None:
         """Derived latest queries should reject empty ids."""
-        with pytest.raises(ValueError, match="derived_ids must not be empty"):
+        with pytest.raises(
+            FactorValidationError, match="derived_ids must not be empty"
+        ):
             DerivedLatestQuery(derived_ids=(), instrument_ids=(1,))
 
     def test_series_query_rejects_non_positive_limit(self) -> None:
         """Derived series queries should validate positive limits."""
-        with pytest.raises(ValueError, match="limit must be greater than 0"):
+        with pytest.raises(FactorValidationError, match="limit must be greater than 0"):
             DerivedSeriesQuery(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
@@ -148,7 +151,7 @@ class TestDerivedQueryService:
 
     def test_latest_query_rejects_unsupported_source_scope(self) -> None:
         """Derived latest queries should reject unsupported source scopes."""
-        with pytest.raises(ValueError, match="unsupported source_scope"):
+        with pytest.raises(FactorValidationError, match="unsupported source_scope"):
             DerivedLatestQuery(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
@@ -261,7 +264,7 @@ class TestDerivedQueryService:
 
     def test_compare_query_rejects_duplicate_sources(self) -> None:
         """Compare queries should require two distinct source scopes."""
-        with pytest.raises(ValueError, match="two distinct scopes"):
+        with pytest.raises(FactorValidationError, match="two distinct scopes"):
             DerivedCompareQuery(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
