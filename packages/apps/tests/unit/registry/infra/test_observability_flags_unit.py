@@ -101,6 +101,43 @@ def test_register_app_metric_definitions_registers_capability_catalogs() -> None
     reset_for_testing()
 
 
+def test_make_app_container_registers_capability_metric_catalogs() -> None:
+    """App 容器创建后，领域服务可直接使用 capability 指标。"""
+    from ditto_apps.registry.container import make_app_container
+
+    reset_for_testing()
+    container = make_app_container()
+    try:
+        assert isinstance(Metrics.data_records, SafeCounter)
+        assert isinstance(Metrics.dq_batch_checks, SafeCounter)
+    finally:
+        container.close()
+        reset_for_testing()
+
+
+def test_make_app_container_handles_platform_initialized_metrics() -> None:
+    """App 容器可从平台测试先初始化 metrics 的 worker 状态中恢复。"""
+    from ditto_apps.registry.container import make_app_container
+
+    reset_for_testing()
+    init(
+        ObservabilityConfig(
+            environment=Environment.TESTING,
+            pytest_running=True,
+            metrics_enabled=True,
+        ),
+        force=True,
+    )
+
+    container = make_app_container()
+    try:
+        assert isinstance(Metrics.data_records, SafeCounter)
+        assert isinstance(Metrics.factor_calc_duration, SafeHistogram)
+    finally:
+        container.close()
+        reset_for_testing()
+
+
 def test_reset_for_testing_clears_capability_metric_catalogs() -> None:
     """测试 reset 后不会残留组合根注册的领域指标目录。"""
     reset_for_testing()

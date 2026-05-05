@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -23,7 +24,11 @@ from ditto_strategy.observability.metrics import METRIC_DEFINITIONS as STRATEGY_
 
 from ditto_apps.registry.infra.config import RuntimeFlags
 
-__all__ = ["ObservabilityProvider"]
+__all__ = ["ObservabilityProvider", "register_app_metric_definitions"]
+
+_LATE_HISTOGRAM_REGISTRATION_ERROR = (
+    "Histogram metric definitions must be registered before configure_metrics()"
+)
 
 
 class ObservabilityProvider(Provider):
@@ -75,6 +80,25 @@ class ObservabilityProvider(Provider):
 
 def register_app_metric_definitions() -> None:
     """注册应用组合根持有的能力包指标目录。"""
+    try:
+        _register_app_metric_definitions()
+    except RuntimeError as exc:
+        if (
+            _LATE_HISTOGRAM_REGISTRATION_ERROR not in str(exc)
+            or "PYTEST_CURRENT_TEST" not in os.environ
+        ):
+            raise
+
+        from ditto_platform.foundation.observability.testing import (  # noqa: PLC0415
+            reset_for_testing,
+        )
+
+        reset_for_testing()
+        _register_app_metric_definitions()
+
+
+def _register_app_metric_definitions() -> None:
+    """执行组合根能力包指标目录注册。"""
     for definitions in (
         DATA_METRICS,
         FEATURE_METRICS,

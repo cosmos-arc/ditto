@@ -25,6 +25,8 @@ class TestInitConfigCommand:
     def test_init_config_uses_default_data_root(self, mocker: MockerFixture, mock_ctx):
         """测试使用默认数据根目录。"""
         # Arrange
+        from ditto_platform.foundation.config.initializer import InitScope
+
         mocker.patch(
             "ditto_apps.cli.commands.init._load_data_root",
             return_value=Path("/mock/data"),
@@ -50,6 +52,7 @@ class TestInitConfigCommand:
         # Assert
         assert mock_coordinator.initialize.call_count == 1
         call_args = mock_coordinator.initialize.call_args
+        assert call_args.kwargs["scope"] == InitScope.STARTUP
         assert call_args.kwargs["data_root"] == Path("/mock/data")
 
     def test_init_config_with_custom_data_root(self, mocker: MockerFixture, mock_ctx):
@@ -115,6 +118,28 @@ class TestInitConfigCommand:
         with pytest.raises(click.exceptions.Exit):
             init.config(mock_ctx, data_root=None, force=False)
 
+    def test_make_coordinator_registers_feature_artifact_dirs(
+        self,
+        tmp_path: Path,
+        mocker: MockerFixture,
+    ) -> None:
+        """CLI 初始化协调器包含 features-owned artifact 目录。"""
+        from ditto_data.config.data_store import DataStoreSettings
+        from ditto_platform.foundation.config.initializer import InitScope
+
+        data_root = tmp_path / "data"
+        mocker.patch(
+            "ditto_apps.cli.commands.init.load_data_store_settings",
+            return_value=DataStoreSettings(data_root=data_root),
+        )
+
+        coordinator = init._make_coordinator()
+        results = coordinator.initialize(scope=InitScope.STARTUP, data_root=data_root)
+
+        assert results["data_root"].success
+        assert (data_root / "features" / "technical" / "price").is_dir()
+        assert (data_root / "factors" / "factors_narrow").is_dir()
+
 
 @pytest.mark.unit
 class TestInitDQCommand:
@@ -123,6 +148,8 @@ class TestInitDQCommand:
     def test_init_dq_filters_results(self, mocker: MockerFixture, mock_ctx):
         """测试只显示 DQ 相关结果。"""
         # Arrange
+        from ditto_platform.foundation.config.initializer import InitScope
+
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
             "dq_config": mocker.Mock(
@@ -142,6 +169,8 @@ class TestInitDQCommand:
 
         # Assert - 应该只处理 dq 相关结果
         assert mock_coordinator.initialize.call_count == 1
+        call_args = mock_coordinator.initialize.call_args
+        assert call_args.kwargs["scope"] == InitScope.STARTUP
 
 
 @pytest.mark.unit
@@ -151,6 +180,8 @@ class TestInitDBCommand:
     def test_init_db_filters_results(self, mocker: MockerFixture, mock_ctx):
         """测试只显示数据库相关结果。"""
         # Arrange
+        from ditto_platform.foundation.config.initializer import InitScope
+
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
             "dq_config": mocker.Mock(success=True, skipped=False, message="DQ配置"),
@@ -168,3 +199,5 @@ class TestInitDBCommand:
 
         # Assert - 应该只处理 database 相关结果
         assert mock_coordinator.initialize.call_count == 1
+        call_args = mock_coordinator.initialize.call_args
+        assert call_args.kwargs["scope"] == InitScope.STARTUP

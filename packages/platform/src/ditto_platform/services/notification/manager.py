@@ -1,4 +1,4 @@
-"""业务级通知管理器."""
+"""通知管理器."""
 
 from datetime import datetime
 from typing import Any
@@ -15,11 +15,10 @@ from ditto_platform.services.notification.template import TemplateEngine
 
 class AlertManager:
     """
-    Business-level alert management.
+    Alert management.
 
     Coordinates template rendering and multi-channel notification delivery.
-    Uses Foundation's TemplateEngine and NotificationSender for actual
-    rendering and delivery.
+    Uses TemplateEngine and NotificationSender for actual rendering and delivery.
 
     Args:
         template_engine: Template engine for rendering notifications
@@ -54,7 +53,7 @@ class AlertManager:
         Send alert to all configured channels.
 
         Args:
-            template: Template name (e.g., "dq_failure")
+            template: Template name (e.g., "system_alert")
             context: Template variables for rendering
             level: Notification severity level
             timestamp: Optional timestamp for the notification

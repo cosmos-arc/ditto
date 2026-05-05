@@ -53,8 +53,7 @@ ditto_platform/
 │   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
 └── services/                     # 基础服务
     └── notification/             # 通知服务（Telegram、Email、Webhook）
-        ├── channels/             # 通知渠道实现
-        └── templates/            # 通知模板
+        └── channels/             # 通知渠道实现
 ```
 
 ## 核心功能
@@ -70,7 +69,6 @@ ditto_platform/
 | `observability` | 日志、追踪、指标、生命周期 |
 | `notification` | Telegram、Email、Webhook 通知 |
 | `notification/channels` | 通知渠道实现 |
-| `notification/templates` | 通知模板 |
 
 ## 使用方式
 
@@ -83,7 +81,7 @@ from ditto_platform.foundation import (
     FileLockManager,
 )
 from ditto_platform.foundation.config import get_environment, Settings
-from ditto_platform.services.notification import NotificationManager
+from ditto_platform.services.notification import AlertManager
 ```
 
 ## 测试
@@ -95,7 +93,8 @@ pixi run -e dev pytest packages/platform/tests/
 ## 变更记录
 
 ### v0.2.0 (2026-04-27)
-- 新增 config/providers/、notification/channels/、notification/templates/ 子目录
+- 新增 config/providers/、notification/channels/ 子目录
+- 通知模板由 apps composition root 管理，platform 仅保留通用通知基础设施
 - 扩展 observability 细节（日志/追踪/指标/生命周期）
 
 ## 历史说明
