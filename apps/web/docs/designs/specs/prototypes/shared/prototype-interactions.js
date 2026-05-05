@@ -2302,12 +2302,239 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 16b. KeyboardShortcuts
+   * 16b. KeyboardShortcutsOverlay
+   *     Expert shortcut reference for global and route-context actions
+   * ══════════════════════════════════════════════ */
+  var KeyboardShortcutsOverlay = {
+    triggerEl: null,
+
+    init: function () {
+      var overlay = KeyboardShortcutsOverlay._ensureOverlay();
+      overlay.addEventListener('overlayclose', function (event) {
+        event.preventDefault();
+        KeyboardShortcutsOverlay._close(overlay);
+      });
+    },
+
+    open: function () {
+      var overlay = KeyboardShortcutsOverlay._ensureOverlay();
+      KeyboardShortcutsOverlay._render(overlay);
+      KeyboardShortcutsOverlay.triggerEl = document.activeElement;
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.setAttribute('data-shortcuts-overlay-open', 'true');
+      OverlayStack.push(overlay);
+
+      var closeButton = overlay.querySelector('[data-shortcuts-close]');
+      if (closeButton && closeButton.focus) closeButton.focus();
+    },
+
+    _ensureOverlay: function () {
+      var existing = document.querySelector('[data-shortcuts-overlay]');
+      if (existing) return existing;
+
+      var overlay = document.createElement('section');
+      overlay.id = 'prototype-keyboard-shortcuts';
+      overlay.className = 'ditto-shortcuts-overlay';
+      overlay.setAttribute('data-shortcuts-overlay', '');
+      overlay.setAttribute('data-overlay', 'keyboard-shortcuts');
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.setAttribute('aria-labelledby', 'keyboard-shortcuts-title');
+      overlay.hidden = true;
+
+      var surface = document.createElement('div');
+      surface.className = 'ditto-shortcuts-surface';
+
+      var header = document.createElement('div');
+      header.className = 'ditto-shortcuts-header';
+
+      var titleWrap = document.createElement('div');
+      titleWrap.className = 'ditto-shortcuts-title-wrap';
+
+      var title = document.createElement('h2');
+      title.id = 'keyboard-shortcuts-title';
+      title.className = 'ditto-shortcuts-title';
+      title.textContent = '快捷键';
+
+      var subtitle = document.createElement('p');
+      subtitle.className = 'ditto-shortcuts-subtitle';
+      subtitle.textContent = '全局工作流和当前页面动作';
+
+      var close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'ditto-shortcuts-close';
+      close.setAttribute('data-shortcuts-close', '');
+      close.setAttribute('aria-label', '关闭快捷键');
+      close.textContent = 'Esc';
+
+      var body = document.createElement('div');
+      body.className = 'ditto-shortcuts-body';
+      body.setAttribute('data-shortcuts-body', '');
+
+      titleWrap.appendChild(title);
+      titleWrap.appendChild(subtitle);
+      header.appendChild(titleWrap);
+      header.appendChild(close);
+      surface.appendChild(header);
+      surface.appendChild(body);
+      overlay.appendChild(surface);
+      document.body.appendChild(overlay);
+
+      close.addEventListener('click', function () {
+        KeyboardShortcutsOverlay._close(overlay);
+      });
+      overlay.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          KeyboardShortcutsOverlay._close(overlay);
+          return;
+        }
+        if (event.key === 'Tab') {
+          KeyboardShortcutsOverlay._trapFocus(event, overlay);
+        }
+      });
+
+      return overlay;
+    },
+
+    _render: function (overlay) {
+      var body = overlay.querySelector('[data-shortcuts-body]');
+      if (!body) return;
+      while (body.firstChild) body.removeChild(body.firstChild);
+
+      KeyboardShortcutsOverlay._renderSection(body, '全局', KeyboardShortcutsOverlay._globalShortcuts());
+      KeyboardShortcutsOverlay._renderSection(body, '当前页面', KeyboardShortcutsOverlay._contextShortcuts());
+    },
+
+    _globalShortcuts: function () {
+      return [
+        { keys: ['Ctrl K'], label: '打开命令面板', detail: '搜索并执行当前页面动作' },
+        { keys: ['/'], label: '聚焦搜索', detail: '跳到页头搜索或命令入口' },
+        { keys: ['Esc'], label: '关闭当前浮层', detail: '只关闭最上层对话框' },
+        { keys: ['?'], label: '打开快捷键', detail: '查看全局和上下文动作' },
+        { keys: ['主题'], label: '切换主题', detail: '使用页头主题按钮' },
+        { keys: ['密度'], label: '切换密度', detail: '使用页头密度按钮' },
+        { keys: ['双击'], label: '面板宽度恢复默认', detail: '双击面板分隔条' },
+      ];
+    },
+
+    _contextShortcuts: function () {
+      var context = CommandPalette._readContext();
+      if (!context.actions.length) {
+        return [{ keys: ['Ctrl K'], label: '暂无上下文动作', detail: context.object }];
+      }
+
+      var pageCategories = CommandPalette._readCategories();
+      return context.actions.map(function (action) {
+        var item = CommandPalette._resolveAction(action, context, pageCategories);
+        return {
+          keys: ['Ctrl K'],
+          label: item.label,
+          detail: item.preview,
+          action: item.action,
+          category: item.category,
+        };
+      });
+    },
+
+    _renderSection: function (container, title, items) {
+      var section = document.createElement('section');
+      section.className = 'ditto-shortcuts-section';
+
+      var heading = document.createElement('h3');
+      heading.className = 'ditto-shortcuts-section-title';
+      heading.textContent = title;
+      section.appendChild(heading);
+
+      var list = document.createElement('div');
+      list.className = 'ditto-shortcuts-list';
+
+      items.forEach(function (item) {
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'ditto-shortcuts-item';
+        row.setAttribute('data-shortcuts-item', '');
+        if (item.action) row.setAttribute('data-shortcuts-action', item.action);
+        if (item.category) row.setAttribute('data-shortcuts-category', item.category);
+
+        var keys = document.createElement('span');
+        keys.className = 'ditto-shortcuts-keys';
+        item.keys.forEach(function (keyLabel) {
+          var key = document.createElement('kbd');
+          key.className = 'ditto-shortcuts-key';
+          key.textContent = keyLabel;
+          keys.appendChild(key);
+        });
+
+        var text = document.createElement('span');
+        text.className = 'ditto-shortcuts-text';
+
+        var label = document.createElement('span');
+        label.className = 'ditto-shortcuts-label';
+        label.textContent = item.label;
+
+        var detail = document.createElement('span');
+        detail.className = 'ditto-shortcuts-detail';
+        detail.textContent = item.detail;
+
+        text.appendChild(label);
+        text.appendChild(detail);
+        row.appendChild(keys);
+        row.appendChild(text);
+        list.appendChild(row);
+      });
+
+      section.appendChild(list);
+      container.appendChild(section);
+    },
+
+    _focusables: function (overlay) {
+      return Array.from(overlay.querySelectorAll('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])'))
+        .filter(function (el) {
+          return !el.disabled && !el.hidden;
+        });
+    },
+
+    _trapFocus: function (event, overlay) {
+      var focusables = KeyboardShortcutsOverlay._focusables(overlay);
+      if (!focusables.length) return;
+
+      var first = focusables[0];
+      var last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    },
+
+    _close: function (overlay) {
+      var target = overlay || document.querySelector('[data-shortcuts-overlay]');
+      if (!target) return;
+      target.hidden = true;
+      target.setAttribute('aria-hidden', 'true');
+      document.body.removeAttribute('data-shortcuts-overlay-open');
+      OverlayStack.remove(target);
+      if (KeyboardShortcutsOverlay.triggerEl && KeyboardShortcutsOverlay.triggerEl.focus) {
+        KeyboardShortcutsOverlay.triggerEl.focus();
+      }
+      KeyboardShortcutsOverlay.triggerEl = null;
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 16c. KeyboardShortcuts
    *     Global keyboard shortcuts: / search, ? help
    *     Escape is handled by OverlayStack._bindEsc()
    * ══════════════════════════════════════════════ */
   var KeyboardShortcuts = {
     init: function () {
+      KeyboardShortcutsOverlay.init();
+
       document.addEventListener('keydown', function (e) {
         /* Ignore when typing in inputs */
         if (e.target && typeof e.target.matches === 'function' && e.target.matches('input, textarea, select, [contenteditable]')) return;
@@ -2319,7 +2546,8 @@
             if (searchInput) searchInput.focus();
             break;
           case '?':
-            /* Future: shortcut help panel */
+            e.preventDefault();
+            KeyboardShortcutsOverlay.open();
             break;
         }
       });
