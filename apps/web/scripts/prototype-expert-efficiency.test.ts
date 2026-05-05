@@ -5,9 +5,22 @@ import { describe, expect, it } from "vitest";
 
 const prototypesDir = resolve(import.meta.dirname, "../docs/designs/specs/prototypes");
 const expertPages = ["page-home.html", "page-strategy-studio.html", "page-agent-console.html"];
+const rowContextMenuPages = [
+	"page-watchlist.html",
+	"page-signals-inbox.html",
+	"page-strategy-list.html",
+	"page-orders-ledger.html",
+];
 
 function loadDocument(file: string): Document {
 	return new JSDOM(readFileSync(resolve(prototypesDir, file), "utf8")).window.document;
+}
+
+function readActionIds(element: Element | null): string[] {
+	return (element?.getAttribute("data-row-context-actions") ?? element?.getAttribute("data-command-context-actions") ?? "")
+		.split(",")
+		.map((action) => action.trim())
+		.filter(Boolean);
 }
 
 describe("prototype expert efficiency", () => {
@@ -82,6 +95,26 @@ describe("prototype expert efficiency", () => {
 				if (!document.querySelector(`[data-contract-slot="${slot}"]`)) {
 					violations.push(`${file}:${slot}`);
 				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps row context menu core actions aligned with command palette context actions", () => {
+		const violations: string[] = [];
+
+		for (const file of rowContextMenuPages) {
+			const document = loadDocument(file);
+			const commandContext = document.querySelector("[data-command-context-actions]");
+			const row = document.querySelector(
+				"[data-row-context-menu-ready] tbody tr[data-row-context-actions], [data-row-context-menu-ready] tbody tr[data-command-context-actions]",
+			);
+			const commandActions = readActionIds(commandContext);
+			const rowActions = readActionIds(row);
+
+			if (!commandActions.length || rowActions.join("|") !== commandActions.join("|")) {
+				violations.push(`${file}:${rowActions.join(",") || "missing-row-actions"}`);
 			}
 		}
 

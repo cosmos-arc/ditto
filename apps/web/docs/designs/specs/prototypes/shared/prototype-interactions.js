@@ -2027,6 +2027,259 @@
   };
 
   /* ══════════════════════════════════════════════
+   * 14a. RowContextMenu
+   *      Shared row-level context action contract for prototype tables.
+   *      Tables opt in with [data-row-context-menu-ready].
+   *      Rows provide actions/object via data-row-context-* attributes.
+   * ══════════════════════════════════════════════ */
+  var RowContextMenu = {
+    triggerRow: null,
+    activeIndex: -1,
+
+    init: function () {
+      var tables = Array.from(document.querySelectorAll('[data-row-context-menu-ready]'));
+      if (!tables.length) return;
+
+      var menu = RowContextMenu._ensureMenu();
+
+      tables.forEach(function (table) {
+        if (table.getAttribute('data-row-context-menu-bound') === 'true') return;
+        table.setAttribute('data-row-context-menu-bound', 'true');
+
+        table.addEventListener('contextmenu', function (event) {
+          var row = RowContextMenu._eventRow(event, table);
+          if (!row) return;
+
+          var context = RowContextMenu._readContext(row, table);
+          if (!context.actions.length) return;
+
+          event.preventDefault();
+          RowContextMenu._open(menu, row, context, event.clientX, event.clientY);
+        });
+
+        table.addEventListener('keydown', function (event) {
+          var isContextKey = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
+          if (!isContextKey) return;
+
+          var row = RowContextMenu._eventRow(event, table);
+          if (!row) return;
+
+          var context = RowContextMenu._readContext(row, table);
+          if (!context.actions.length) return;
+
+          event.preventDefault();
+          var rect = row.getBoundingClientRect();
+          RowContextMenu._open(menu, row, context, rect.left + 16, rect.top + Math.min(rect.height, 32));
+        });
+      });
+
+      if (document.documentElement.getAttribute('data-row-context-menu-ready-bound') === 'true') return;
+      document.documentElement.setAttribute('data-row-context-menu-ready-bound', 'true');
+
+      menu.addEventListener('overlayclose', function (event) {
+        event.preventDefault();
+        RowContextMenu._close(menu);
+      });
+
+      document.addEventListener('click', function (event) {
+        if (menu.hidden) return;
+        if (menu.contains(event.target)) return;
+        RowContextMenu._close(menu, { restoreFocus: false });
+      });
+
+      window.addEventListener('resize', function () {
+        if (!menu.hidden) RowContextMenu._close(menu, { restoreFocus: false });
+      });
+      window.addEventListener('scroll', function () {
+        if (!menu.hidden) RowContextMenu._close(menu, { restoreFocus: false });
+      }, true);
+    },
+
+    _ensureMenu: function () {
+      var existing = document.querySelector('[data-row-context-menu]');
+      if (existing) return existing;
+
+      var menu = document.createElement('div');
+      menu.id = 'prototype-row-context-menu';
+      menu.className = 'ditto-row-context-menu';
+      menu.setAttribute('data-row-context-menu', '');
+      menu.setAttribute('data-overlay', 'row-context-menu');
+      menu.setAttribute('role', 'menu');
+      menu.setAttribute('aria-label', '行上下文菜单');
+      menu.setAttribute('aria-hidden', 'true');
+      menu.hidden = true;
+      document.body.appendChild(menu);
+
+      menu.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          RowContextMenu._close(menu);
+          return;
+        }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          RowContextMenu._navigate(menu, event.key === 'ArrowDown' ? 1 : -1);
+          return;
+        }
+        if (event.key === 'Home' || event.key === 'End') {
+          event.preventDefault();
+          RowContextMenu._focusAt(menu, event.key === 'Home' ? 0 : RowContextMenu._items(menu).length - 1);
+          return;
+        }
+        if (event.key === 'Tab') {
+          RowContextMenu._close(menu);
+        }
+      });
+
+      return menu;
+    },
+
+    _eventRow: function (event, table) {
+      if (!event.target || typeof event.target.closest !== 'function') return null;
+      var row = event.target.closest('tbody tr');
+      if (!row || !table.contains(row)) return null;
+      return row;
+    },
+
+    _readActions: function (row, table) {
+      var source = row.getAttribute('data-row-context-actions') ||
+        row.getAttribute('data-command-context-actions') ||
+        table.getAttribute('data-row-context-actions') ||
+        table.getAttribute('data-command-context-actions') ||
+        '';
+
+      return source
+        .split(',')
+        .map(function (action) { return action.trim(); })
+        .filter(Boolean);
+    },
+
+    _readContext: function (row, table) {
+      var pageContext = CommandPalette._readContext();
+      return {
+        object: row.getAttribute('data-row-context-object') ||
+          row.getAttribute('data-command-context-object') ||
+          row.getAttribute('data-order-id') ||
+          table.getAttribute('data-row-context-object') ||
+          table.getAttribute('data-command-context-object') ||
+          pageContext.object,
+        route: row.getAttribute('data-row-context-route') ||
+          row.getAttribute('data-command-context-route') ||
+          table.getAttribute('data-row-context-route') ||
+          table.getAttribute('data-command-context-route') ||
+          pageContext.route,
+        actions: RowContextMenu._readActions(row, table),
+      };
+    },
+
+    _open: function (menu, row, context, x, y) {
+      RowContextMenu._render(menu, context);
+      if (!menu.querySelector('[data-row-context-menu-item]')) return;
+
+      RowContextMenu.triggerRow = row;
+      RowContextMenu.activeIndex = 0;
+      menu.hidden = false;
+      menu.setAttribute('aria-hidden', 'false');
+      document.body.setAttribute('data-row-context-menu-open', 'true');
+      OverlayStack.push(menu);
+      RowContextMenu._position(menu, x, y);
+
+      var first = menu.querySelector('[data-row-context-menu-item]');
+      if (first && first.focus) first.focus({ preventScroll: true });
+    },
+
+    _render: function (menu, context) {
+      while (menu.firstChild) menu.removeChild(menu.firstChild);
+
+      var pageCategories = CommandPalette._readCategories();
+      context.actions.forEach(function (action) {
+        var item = CommandPalette._resolveAction(action, context, pageCategories);
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ditto-row-context-menu-item';
+        button.setAttribute('data-row-context-menu-item', '');
+        button.setAttribute('data-command-action', item.action);
+        button.setAttribute('data-command-context-object', item.object);
+        button.setAttribute('data-command-label', item.label);
+        button.setAttribute('data-command-category-item', item.category);
+        button.setAttribute('data-command-risk-level', item.riskLevel);
+        button.setAttribute('data-command-preview', item.preview);
+        button.setAttribute('data-command-result', item.result);
+        button.setAttribute('role', 'menuitem');
+        button.textContent = item.label;
+
+        if (item.riskLevel === 'high') {
+          var risk = document.createElement('span');
+          risk.className = 'ditto-row-context-menu-risk';
+          risk.textContent = '需确认';
+          button.appendChild(risk);
+        }
+
+        button.addEventListener('click', function () {
+          RowContextMenu._activate(menu, item);
+        });
+        menu.appendChild(button);
+      });
+    },
+
+    _position: function (menu, x, y) {
+      var gap = 8;
+      var maxLeft = Math.max(gap, window.innerWidth - menu.offsetWidth - gap);
+      var maxTop = Math.max(gap, window.innerHeight - menu.offsetHeight - gap);
+      var left = Math.min(Math.max(gap, x), maxLeft);
+      var top = Math.min(Math.max(gap, y), maxTop);
+      menu.style.left = left + 'px';
+      menu.style.top = top + 'px';
+    },
+
+    _items: function (menu) {
+      return Array.from(menu.querySelectorAll('[data-row-context-menu-item]'));
+    },
+
+    _navigate: function (menu, direction) {
+      var items = RowContextMenu._items(menu);
+      if (!items.length) return;
+      RowContextMenu._focusAt(menu, RowContextMenu.activeIndex + direction);
+    },
+
+    _focusAt: function (menu, index) {
+      var items = RowContextMenu._items(menu);
+      if (!items.length) return;
+      var next = index;
+      if (next < 0) next = items.length - 1;
+      if (next >= items.length) next = 0;
+      RowContextMenu.activeIndex = next;
+      items[next].focus({ preventScroll: true });
+    },
+
+    _activate: function (menu, item) {
+      var row = RowContextMenu.triggerRow;
+      RowContextMenu._close(menu, { restoreFocus: false });
+      if (row && row.focus) row.focus({ preventScroll: true });
+      CommandPalette._activateAction(item, null);
+    },
+
+    _close: function (menu, options) {
+      var target = menu || document.querySelector('[data-row-context-menu]');
+      if (!target) return;
+
+      target.hidden = true;
+      target.setAttribute('aria-hidden', 'true');
+      target.style.removeProperty('left');
+      target.style.removeProperty('top');
+      document.body.removeAttribute('data-row-context-menu-open');
+      OverlayStack.remove(target);
+      RowContextMenu.activeIndex = -1;
+
+      var shouldRestore = !options || options.restoreFocus !== false;
+      if (shouldRestore && RowContextMenu.triggerRow && RowContextMenu.triggerRow.focus) {
+        RowContextMenu.triggerRow.focus({ preventScroll: true });
+      }
+      RowContextMenu.triggerRow = null;
+    },
+  };
+
+  /* ══════════════════════════════════════════════
    * 15. BottomTray
    *     Shared collapsed → peek → expanded state contract
    * ══════════════════════════════════════════════ */
@@ -2868,6 +3121,7 @@
     KeyboardShortcuts.init();
     CollapseToggle.init();
     CommandPalette.init();
+    RowContextMenu.init();
     BottomTray.init();
     ResizablePanels.init();
     BulletGraph.init();
