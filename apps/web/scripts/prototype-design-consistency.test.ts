@@ -1186,17 +1186,99 @@ function isGlowBudgetAllowedBoxShadowLayer(
 	if (hasDecorativeRadialGlow(normalizedValue)) {
 		return false;
 	}
-	if (/^inset\s+(?:[-\d.]+px\s+){2,4}var\(\s*--(?:border|text|surface|heat|overlay|brand|market)-/i.test(normalizedValue)) {
+	if (isInsetBorderShadowLayer(normalizedValue)) {
 		return true;
 	}
-	if (/^0\s+0\s+0\s+(?:1(?:\.5)?|2|3|4)px\s+var\(\s*--(?:interaction|surface|border|brand)-/i.test(normalizedValue)) {
+	if (isStructuralSpreadRingShadowLayer(normalizedSelector, normalizedValue)) {
 		return true;
 	}
-	if (/^0\s+(?:1|2|4|8|12)px\s+(?:0|3|4|6|8|12|16|24|32|40)px\s/i.test(normalizedValue)) {
+	if (isStructuralSingleEdgeShadowLayer(normalizedSelector, normalizedValue)) {
+		return true;
+	}
+	if (isNeutralStructuralElevationShadowLayer(normalizedValue)) {
 		return true;
 	}
 
 	return false;
+}
+
+function hasDecorativeSemanticShadowColor(value: string): boolean {
+	return (
+		/color-mix\(in oklch,\s*(?:var\(\s*--(?:brand|market|risk|system|agent|execution)-|currentColor)/i.test(
+			value,
+		) ||
+		/var\(\s*--(?:brand|market|risk|system|agent|execution)-[a-z0-9-]+\s*\)/i.test(value) ||
+		/\bcurrentColor\b/i.test(value)
+	);
+}
+
+function hasNeutralStructuralShadowColor(value: string): boolean {
+	return (
+		/var\(\s*--(?:neutral|text|surface|overlay|border)-[a-z0-9-]+\s*\)/i.test(value) ||
+		/color-mix\(in oklch,\s*var\(\s*--(?:neutral|text|surface|overlay|border)-[a-z0-9-]+\s*\)/i.test(
+			value,
+		) ||
+		/oklch\(\s*(?:0(?:\s+0)?|from\s+var\(\s*--(?:neutral|text|surface|overlay|border)-)/i.test(value)
+	);
+}
+
+function isInsetBorderShadowLayer(value: string): boolean {
+	return (
+		/^inset\s+(?:(?:-?(?:\d+(?:\.\d+)?px|0))\s+){2,4}/i.test(value) &&
+		/var\(\s*--[a-z0-9-]+\s*\)/i.test(value)
+	);
+}
+
+function isSpreadOnlyRingShadowLayer(value: string): boolean {
+	return /^0\s+0\s+0\s+(?:1(?:\.5)?|2|3|4)px\s+/i.test(value);
+}
+
+function isSingleEdgeShadowLayer(value: string): boolean {
+	return /^(?:0\s+1px\s+0|0\s+-1px\s+0|1px\s+0\s+0|-1px\s+0\s+0)\s+(?:var\(\s*--[a-z0-9-]+\s*\)|color-mix\(in oklch,\s*var\(\s*--[a-z0-9-]+\s*\)[^)]+\))(?:\s*!important)?$/i.test(
+		value,
+	);
+}
+
+function isStructuralRingSelector(selector: string): boolean {
+	return (
+		!/(?:^|\s)\.[a-z0-9-]*(?:decorative|ambient|wash|glow)[a-z0-9-]*(?:::before|::after)?\b/i.test(selector) &&
+		(/:(?:hover|active|focus-within)\b/i.test(selector) ||
+			/\b(?:active|selected|current|checked|pressed|dragging|accepted|blocked|unread)\b/i.test(selector) ||
+			/\.(?:is-|has-)?(?:active|selected|current|checked|pressed|dragging|accepted|blocked|unread)\b/i.test(
+				selector,
+			) ||
+			/\[(?:aria|data)-(?:selected|current|checked|pressed|active|dragging|impact|corr)(?:=["']?[a-z0-9-]+["']?)?\]/i.test(
+				selector,
+			) ||
+			/\b(?:border|outline|ring|separator|resize|handle|control|button|btn|tab|chip|filter|segment|option|input|switch|toggle|row|cell|item|panel|card|surface|tray|bar|rail|point)\b/i.test(
+				selector,
+			))
+	);
+}
+
+function isStructuralRingColor(value: string): boolean {
+	return /(?:var\(\s*--(?:(?:interaction-(?:focus-ring|focus-border|selected-border|dragging-border))|(?:(?:surface|border|text|overlay|brand|market|risk|system|agent|execution)-[a-z0-9-]+))\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:(?:interaction-(?:focus-ring|focus-border|selected-border|dragging-border))|(?:(?:surface|border|text|overlay|brand|market|risk|system|agent|execution)-[a-z0-9-]+))\s*\)[^)]+\))(?:\s*!important)?$/i.test(
+		value,
+	);
+}
+
+function isStructuralSpreadRingShadowLayer(selector: string, value: string): boolean {
+	return isSpreadOnlyRingShadowLayer(value) && isStructuralRingSelector(selector) && isStructuralRingColor(value);
+}
+
+function isStructuralSingleEdgeShadowLayer(selector: string, value: string): boolean {
+	return isSingleEdgeShadowLayer(value) && isStructuralRingSelector(selector);
+}
+
+function isNeutralStructuralElevationShadowLayer(value: string): boolean {
+	const match =
+		/^0\s+(?:1|2|4|8|12)px\s+(?:0|3|4|6|8|12|16|24|32|40)px(?:\s+-?\d+(?:\.\d+)?px)?\s+(.+?)(?:\s*!important)?$/i.exec(
+			value,
+		);
+	if (!match) return false;
+
+	const color = match[1];
+	return !hasDecorativeSemanticShadowColor(color) && hasNeutralStructuralShadowColor(color);
 }
 
 function isAllowedRailActiveGlowLayer(selector: string, value: string): boolean {
@@ -1213,6 +1295,8 @@ function isStatusDotGlowSelector(selector: string): boolean {
 		/\.(?:[a-z0-9-]*-)?(?:status|live|session|health-metric|breach|rule)-dot(?:-[a-z0-9-]+)?\b/i.test(
 			selector,
 		) ||
+		/\.status-indicator\b/i.test(selector) ||
+		/\.point(?:\.(?:accepted|blocked))?\b/i.test(selector) ||
 		/\.regime-state-badge__dot\b/i.test(selector) ||
 		/\.topo-node\.(?:topo-(?:ok|warn|down)|is-(?:live|healthy|degraded|down))\b/i.test(selector)
 	);
@@ -1221,7 +1305,7 @@ function isStatusDotGlowSelector(selector: string): boolean {
 function isAllowedStatusDotGlowLayer(selector: string, value: string): boolean {
 	return (
 		isStatusDotGlowSelector(selector) &&
-		/^0\s+0\s+(?:4|6)px(?:\s+-?\d+px)?\s+(?:var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)\s+\d+%,\s*transparent\))$/i.test(
+		/^(?:0\s+0\s+(?:4|6)px(?:\s+-?\d+px)?|0\s+0\s+0\s+(?:1|2|3|4)px)\s+(?:var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand|market|risk|system|agent|execution|text)-[a-z0-9-]+\s*\)\s+\d+%,\s*transparent\))$/i.test(
 			value,
 		)
 	);
@@ -1229,9 +1313,11 @@ function isAllowedStatusDotGlowLayer(selector: string, value: string): boolean {
 
 function isAllowedPrimaryCtaHoverLayer(selector: string, value: string): boolean {
 	return (
-		/(?:\.decision-cta\.primary|\.btn-primary|\.primary-cta)/i.test(selector) &&
+		/(?:\.decision-cta\.primary|\.btn-primary|\.primary-cta|\.detail-action\.primary|\.batch-btn\.primary|\.batch-action-btn\.accent)/i.test(
+			selector,
+		) &&
 		/:(?:hover|active)\b/i.test(selector) &&
-		/^0\s+0\s+0\s+(?:1(?:\.5)?|2)px\s+(?:var\(\s*--(?:brand-accent|interaction-focus-ring|interaction-selected-border)\s*\)|color-mix\(in oklch,\s*var\(\s*--brand-accent\s*\)\s+\d+%,\s*transparent\))$/i.test(
+		/^(?:0\s+0\s+0\s+(?:1(?:\.5)?|2)px|0\s+2px\s+8px)\s+(?:var\(\s*--(?:brand-accent|interaction-focus-ring|interaction-selected-border)\s*\)|color-mix\(in oklch,\s*var\(\s*--brand-accent\s*\)\s+\d+%,\s*transparent\))$/i.test(
 			value,
 		)
 	);
@@ -1323,6 +1409,20 @@ function isDecorativeRadialGlowLayer(
 	return splitCssList(resolvedShadowToken).some((resolvedLayer) => hasDecorativeRadialGlow(resolvedLayer));
 }
 
+function isDisallowedDecorativeSemanticShadowLayer(
+	selector: string,
+	layer: string,
+	customProperties: Map<string, string>,
+): boolean {
+	const resolvedShadowToken = resolveShadowTokenLayer(layer, customProperties);
+	const layers = resolvedShadowToken ? splitCssList(resolvedShadowToken) : [layer];
+
+	return layers.some((candidate) => {
+		if (isGlowBudgetAllowedBoxShadowLayer(selector, candidate, customProperties)) return false;
+		return hasDecorativeSemanticShadowColor(candidate);
+	});
+}
+
 function isExcessiveGlowBoxShadow(
 	selector: string,
 	value: string,
@@ -1334,7 +1434,8 @@ function isExcessiveGlowBoxShadow(
 	if (/\[data-[a-z0-9-]*glow[a-z0-9-]*\]/i.test(selector)) return true;
 
 	return splitCssList(normalizedValue).some((layer) =>
-		isDecorativeRadialGlowLayer(selector, layer, customProperties),
+		isDecorativeRadialGlowLayer(selector, layer, customProperties) ||
+		isDisallowedDecorativeSemanticShadowLayer(selector, layer, customProperties),
 	);
 }
 
@@ -1473,6 +1574,14 @@ describe("prototype design consistency", () => {
 				"0 2px 8px color-mix(in oklch, var(--neutral-0) 16%, transparent)",
 			),
 		).toBe(false);
+		expect(isExcessiveGlowBoxShadow(".decorative-card::after", "0 0 0 4px var(--brand-accent)")).toBe(true);
+		expect(
+			isExcessiveGlowBoxShadow(
+				".hero-wash",
+				"0 12px 40px color-mix(in oklch, var(--brand-accent) 20%, transparent)",
+			),
+		).toBe(true);
+		expect(isExcessiveGlowBoxShadow(".resize-separator", "inset 0 0 0 1px var(--border-subtle)")).toBe(false);
 		expect(
 			isExcessiveGlowBoxShadow(
 				".resize-separator:focus-visible",
@@ -1542,6 +1651,8 @@ describe("prototype design consistency", () => {
 				.metric-body { content: "data-mouse-glow-size"; }
 				.metric-ambient { box-shadow: 0 0 12px var(--brand-accent-subtle); }
 				.decorative .dot { box-shadow: 0 0 12px var(--brand-accent); }
+				.decorative-card::after { box-shadow: 0 0 0 4px var(--brand-accent); }
+				.hero-wash { box-shadow: 0 12px 40px color-mix(in oklch, var(--brand-accent) 20%, transparent); }
 				.shell-custom::after {
 					content: "";
 					position: absolute;
@@ -1711,6 +1822,8 @@ describe("prototype design consistency", () => {
 				expect.stringContaining("data-glow-selector"),
 				expect.stringContaining("data-glow-body"),
 				expect.stringContaining("box-shadow"),
+				expect.stringContaining("box-shadow:.decorative-card::after"),
+				expect.stringContaining("box-shadow:.hero-wash"),
 				expect.stringContaining("ambient-gradient"),
 				expect.stringContaining("@keyframes decorative-pulse"),
 				expect.stringContaining("ambient-gradient:.shell-offset-radial-top::before"),
