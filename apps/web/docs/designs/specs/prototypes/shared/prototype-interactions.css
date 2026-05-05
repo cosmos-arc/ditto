@@ -121,11 +121,3 @@
   .ditto-shortcuts-body { grid-template-columns:1fr; }
   .ditto-shortcuts-item { grid-template-columns:minmax(68px, 0.3fr) minmax(0, 1fr); }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .prototype-chart-crosshair-x,
-  .prototype-chart-crosshair-y,
-  .prototype-chart-tooltip {
-    transition:none;
-  }
-}

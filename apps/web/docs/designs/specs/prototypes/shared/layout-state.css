@@ -200,9 +200,29 @@
   .dot-critical-pulse,
   .price-breathe,
   .tab-fade-in,
+  .tab-group [data-panel],
+  .object-shell [data-panel],
+  .trace-section,
+  .pin-toast,
+  .spinner,
+  .test-spinner,
+  .stale-pulse,
+  [class*="breathe"],
+  [class*="enter"],
+  [class*="entrance"],
+  [class*="fade"],
+  [class*="pulse"],
+  [class*="reveal"],
+  [class*="spin"],
   [data-reveal] {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+
+  .prototype-chart-crosshair-x,
+  .prototype-chart-crosshair-y,
+  .prototype-chart-tooltip {
+    transition: none !important;
   }
 }

@@ -149,6 +149,7 @@ let contractRouteByPageIdCache: Map<string, string> | undefined;
 let contractRouteByPrototypeFileCache: Map<string, string> | undefined;
 let sharedInteractionsScriptCache: string | undefined;
 let sharedInteractionsCssCache: string | undefined;
+let sharedLayoutStateCssCache: string | undefined;
 let screenerWorkflowScriptCache: string | undefined;
 
 function readManifest(): EditionManifest {
@@ -260,6 +261,11 @@ function readSharedInteractionsScript(): string {
 function readSharedInteractionsCss(): string {
 	sharedInteractionsCssCache ??= readFileSync(join(prototypesDir, "shared/prototype-interactions.css"), "utf8");
 	return sharedInteractionsCssCache;
+}
+
+function readSharedLayoutStateCss(): string {
+	sharedLayoutStateCssCache ??= readFileSync(join(prototypesDir, "shared/layout-state.css"), "utf8");
+	return sharedLayoutStateCssCache;
 }
 
 function readScreenerWorkflowScript(): string {
@@ -891,8 +897,8 @@ describe("prototype chart interaction surfaces", () => {
 
 		const chart = document.querySelector<HTMLElement>("#chart");
 		expect(chart?.getAttribute("data-chart-reduced-motion")).toBe("true");
-		expect(readSharedInteractionsCss()).toMatch(/prefers-reduced-motion:\s*reduce/);
-		expect(readSharedInteractionsCss()).toMatch(/\.prototype-chart-crosshair-x/);
+		expect(readSharedLayoutStateCss()).toMatch(/prefers-reduced-motion:\s*reduce/);
+		expect(readSharedLayoutStateCss()).toMatch(/\.prototype-chart-crosshair-x/);
 	});
 
 	it("syncs reduced-motion media changes onto existing chart surfaces", () => {

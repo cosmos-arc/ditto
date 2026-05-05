@@ -566,6 +566,12 @@ const signalsInboxReducedMotionFamilies = [
 	"spin",
 	"scope-tab-enter",
 ] as const;
+const dataCriticalInstantMotionExemptions = {
+	// Data-critical instantaneous state change: short, one-shot value flash preserves update feedback without decorative travel.
+	"value-flash": "data-critical-instant",
+	// Data-critical instantaneous state change: short, one-shot semantic value flash preserves update feedback without decorative travel.
+	"semantic-value-flash": "data-critical-instant",
+} as const;
 const catalogSubtypeSummaryRequirements: Record<string, Array<{ label: string; pattern: RegExp }>> = {
 	"strategy-list": [
 		{ label: "可运行", pattern: /可运行/ },
@@ -1109,6 +1115,102 @@ function getMotionDeclarations(css: string): Array<{ line: number; property: str
 			},
 		];
 	});
+}
+
+function getKeyframeNames(css: string): Set<string> {
+	return new Set(
+		readTopLevelCssRules(stripCssComments(css))
+			.map((rule) => /^@keyframes\s+([a-z0-9_-]+)\b/i.exec(rule.selector)?.[1])
+			.filter((name): name is string => Boolean(name)),
+	);
+}
+
+function getAnimationFamilyUsages(
+	css: string,
+	family: string,
+): Array<{ line: number; selector: string; selectors: string[] }> {
+	const rules = readTopLevelCssRules(stripCssComments(css));
+	const familyPattern = new RegExp(`\\b${family}\\b`, "i");
+
+	return rules
+		.filter((rule) => !/^@keyframes\b/i.test(rule.selector))
+		.filter((rule) => familyPattern.test(rule.body))
+		.filter((rule) => /\banimation(?:-name)?\s*:/i.test(rule.body))
+		.map((rule) => ({
+			line: getLineNumber(css, rule.start),
+			selector: rule.selector,
+			selectors: rule.selectors,
+		}));
+}
+
+function hasReducedMotionDeclaration(body: string): boolean {
+	return (
+		/\banimation\s*:\s*none(?:\s*!important)?\s*;/i.test(body) ||
+		/\banimation-name\s*:\s*none(?:\s*!important)?\s*;/i.test(body) ||
+		/\banimation-duration\s*:\s*0\.01ms(?:\s*!important)?\s*;/i.test(body) ||
+		/\banimation-iteration-count\s*:\s*1(?:\s*!important)?\s*;/i.test(body) ||
+		/\btransition\s*:\s*none(?:\s*!important)?\s*;/i.test(body)
+	);
+}
+
+function normalizeSelectorForMotionCoverage(selector: string): string {
+	return selector
+		.replace(/::?[a-z-]+(?:\([^)]*\))?/gi, "")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function selectorCoverageTokens(selector: string): string[] {
+	const normalized = normalizeSelectorForMotionCoverage(selector);
+	const tokens = [
+		...normalized.matchAll(/\.([a-z0-9_-]+)/gi),
+		...normalized.matchAll(/\[([a-z0-9_-]+)(?:[*^$|~]?=\s*["']?([a-z0-9_-]+)["']?)?\]/gi),
+	]
+		.flatMap((match) => match.slice(1))
+		.filter((token): token is string => Boolean(token));
+
+	return [...new Set(tokens)];
+}
+
+function reducedMotionSelectorCoversUsage(reducedSelector: string, usageSelector: string): boolean {
+	const reduced = normalizeSelectorForMotionCoverage(reducedSelector);
+	const usage = normalizeSelectorForMotionCoverage(usageSelector);
+	if (!reduced || !usage) return false;
+	if (reduced === usage || reduced.includes(usage) || usage.includes(reduced)) return true;
+
+	const reducedTokens = selectorCoverageTokens(reduced);
+	if (reducedTokens.length === 0) return false;
+
+	return reducedTokens.some((token) => usage.includes(token));
+}
+
+function reducedMotionCssCoversFamily(reducedMotionCss: string, family: string): boolean {
+	const familyPattern = new RegExp(`\\b${family}\\b`, "i");
+	if (familyPattern.test(reducedMotionCss)) return true;
+
+	const familyTokens = family.split("-").filter((token) => token.length >= 4);
+	if (familyTokens.length === 0) return false;
+
+	return readTopLevelCssRules(stripCssComments(reducedMotionCss)).some(
+		(rule) =>
+			hasReducedMotionDeclaration(rule.body) &&
+			rule.selectors.some((selector) => familyTokens.some((token) => selector.includes(token))),
+	);
+}
+
+function reducedMotionCssCoversUsage(
+	reducedMotionCss: string,
+	usage: { selectors: string[] },
+): boolean {
+	return readTopLevelCssRules(stripCssComments(reducedMotionCss)).some(
+		(rule) =>
+			hasReducedMotionDeclaration(rule.body) &&
+			rule.selectors.some((reducedSelector) =>
+				usage.selectors.some((usageSelector) =>
+					reducedMotionSelectorCoversUsage(reducedSelector, usageSelector),
+				),
+			),
+	);
 }
 
 function getTransitionItems(value: string): string[] {
@@ -2700,6 +2802,69 @@ describe("prototype design consistency", () => {
 		for (const family of signalsInboxReducedMotionFamilies) {
 			if (!signalsReducedMotionCss.includes(family)) {
 				violations.push(`signals-inbox:reduced-motion:${family}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps page-local keyframes covered by targeted reduced motion", () => {
+		const sharedReducedMotionCss = getMediaBlocksMatching(
+			readFileSync(join(prototypesDir, "shared/layout-state.css"), "utf8"),
+			/prefers-reduced-motion\s*:\s*reduce/i,
+		).join("\n");
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const css = getStyleBlocks(readPrototypeHtml(page));
+			const reducedMotionCss = getMediaBlocksMatching(css, /prefers-reduced-motion\s*:\s*reduce/i).join("\n");
+
+			for (const family of getKeyframeNames(css)) {
+				if (family in dataCriticalInstantMotionExemptions) continue;
+
+				const usages = getAnimationFamilyUsages(css, family);
+				if (usages.length === 0) continue;
+				if (reducedMotionCssCoversFamily(sharedReducedMotionCss, family)) continue;
+				if (
+					usages.every(
+						(usage) =>
+							reducedMotionCssCoversUsage(reducedMotionCss, usage) ||
+							reducedMotionCssCoversUsage(sharedReducedMotionCss, usage),
+					)
+				) {
+					continue;
+				}
+
+				for (const usage of usages) {
+					violations.push(`${page.id}:${usage.line}:${family}:${usage.selector}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps the shared reduced-motion baseline centralized in layout-state", () => {
+		const sharedCssSources = [
+			...readLayoutCssSources(),
+			{ label: "shared/prototype-interactions.css", css: readFileSync(join(prototypesDir, "shared/prototype-interactions.css"), "utf8") },
+		];
+		const violations: string[] = [];
+
+		for (const source of sharedCssSources) {
+			const reducedMotionBlocks = getMediaBlocksMatching(source.css, /prefers-reduced-motion\s*:\s*reduce/i);
+			const hasGlobalWildcardBaseline = reducedMotionBlocks.some((block) =>
+				/\*\s*,\s*\*::before\s*,\s*\*::after\s*\{[^}]*animation-duration\s*:\s*0\.01ms/i.test(
+					stripCssComments(block),
+				),
+			);
+
+			if (source.label === "shared/layout-state.css") {
+				if (!hasGlobalWildcardBaseline) {
+					violations.push(`${source.label}:missing-global-reduced-motion-baseline`);
+				}
+			} else if (hasGlobalWildcardBaseline) {
+				violations.push(`${source.label}:duplicate-global-reduced-motion-baseline`);
 			}
 		}
 
