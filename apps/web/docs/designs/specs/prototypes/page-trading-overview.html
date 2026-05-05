@@ -16,7 +16,7 @@
   - overlay-limit-status (Sheet: 涨跌停标的状态概览) [covered]
 
   State Variants: 9 components × multi-state
-  - session-strip: default[covered] loading[covered] failed[covered] stale[covered]
+  - trading-context-bar: default[covered] loading[covered] failed[covered] stale[covered]
   - equity-pnl: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
   - risk-alerts: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
   - positions-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] bulk[covered] t1-locked[covered]
@@ -24,11 +24,11 @@
   - order-status: default[covered] loading[covered] empty[covered] failed[covered]
   - daily-attribution: default[covered] loading[covered] empty[covered] failed[covered]
   - position-health: default[covered] loading[covered] empty[covered] failed[covered]
-  - pipeline-strip: default[covered] loading[not-implemented] empty[covered] failed[not-implemented] stale[not-implemented]
+  - decision-pipeline: default[covered] loading[not-implemented] empty[covered] failed[not-implemented] stale[not-implemented]
 
   v1.1 changes:
-  - Added pipeline-strip (Signal-to-Order Pipeline, v2.0)
-  - Added 两融数据行 (融资余额/融券余额/担保比例)
+  - Added decision-pipeline (Signal-to-Order Pipeline, v2.0)
+  - Folded 两融数据行 into Trading Context Bar
   - Added T+1 locked row in positions table
   - Added equity time frame tabs (日/周/月)
   - Replaced chart SVG with data-viz tokens
@@ -214,7 +214,7 @@
     }
 
     /* ══════════════════════════════════════════════
-     * Trading Variant: 4-row override (banner + no analysis band)
+     * Trading Variant: compact context + banner + main
      * ══════════════════════════════════════════════ */
     .shell-analytical.trading-variant {
       height: calc(100dvh - 1.5rem);
@@ -223,22 +223,16 @@
       grid-template-rows:
         var(--shell-header-height)
         var(--density-strip-height, 32px)
-        var(--density-strip-height, 32px)
-        var(--density-strip-height, 32px)
         auto
         minmax(0, 1fr);
       grid-template-areas:
         "rail header   header"
-        "rail session  session"
-        "rail margin   margin"
-        "rail pipeline pipeline"
+        "rail context  context"
         "rail banner   banner"
         "rail main     activity";
     }
 
-    .shell-analytical.trading-variant .session-strip { grid-area: session; }
-    .shell-analytical.trading-variant .collapsible-strip[data-contract-slot="margin-strip-wrapper"] { grid-area: margin; }
-    .shell-analytical.trading-variant .pipeline-strip { grid-area: pipeline; }
+    .shell-analytical.trading-variant .trading-context-bar { grid-area: context; }
 
     /* Banner grid area */
     .trading-banner {
@@ -248,39 +242,28 @@
       overflow: hidden;
     }
     .trading-banner .panel {
-      padding: var(--space-8) var(--space-12);
+      padding: var(--space-4) var(--space-8);
     }
     .trading-banner .decision-banner {
       /* Trading context: tighter gap for analytical density — shared default is var(--space-16) */
-      gap: var(--space-12);
+      gap: var(--space-10);
+      padding: var(--space-8) var(--space-12);
     }
 
-    /* ── Session Strip — Trading Phase Indicator + Metrics ── */
-    .scope-strip {
+    /* ── Trading Context Bar — session, margin, risk, connectivity, queue ── */
+    .trading-context-bar {
       display: flex;
       align-items: center;
-      gap: var(--space-4);
+      gap: var(--space-8);
       white-space: nowrap;
       height: var(--density-strip-height, 36px);
       min-height: var(--density-strip-height, 36px);
       max-height: calc(var(--density-strip-height, 36px) + var(--space-1));
-    }
-
-    /* ── Collapsible Margin Strip ── */
-    .collapsible-strip[data-contract-slot="margin-strip-wrapper"] {
-      background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
-      border-bottom: 1px solid var(--border-subtle);
-      overflow: hidden;
-    }
-    .collapsible-strip[data-contract-slot="margin-strip-wrapper"] .scope-strip {
       padding: 0 var(--density-gutter, var(--space-12));
-      border-bottom: none;
-    }
-    .collapsible-strip[data-contract-slot="margin-strip-wrapper"] .collapsible-strip-header {
+      background: var(--surface-strip);
       border-bottom: 1px solid var(--border-subtle);
-    }
-    .collapsible-strip[data-collapsed-state="true"][data-contract-slot="margin-strip-wrapper"] .collapsible-strip-header {
-      border-bottom: none;
+      overflow-x: auto;
+      overflow: hidden;
     }
 
     /* Trading phase pill */
@@ -305,6 +288,7 @@
       animation: dot-pulse 2s ease-in-out infinite;
     }
 
+    .trading-context-item,
     .scope-metric {
       display: flex;
       align-items: center;
@@ -347,10 +331,6 @@
       background: var(--border-subtle);
     }
 
-    .trading-variant .collapsible-strip-title {
-      font-size: var(--font-size-12);
-    }
-
     .scope-status-dot {
       width: 6px;
       height: 6px;
@@ -365,23 +345,24 @@
       border-color: var(--system-healthy-fg);
     }
 
-    /* ── Pipeline Strip: Signal-to-Order Pipeline (v2.0) ── */
-    .pipeline-strip {
+    /* ── Decision Pipeline: Signal-to-Order Pipeline (v2.0) ── */
+    .decision-pipeline {
       display: flex;
       align-items: center;
       gap: var(--space-4);
-      padding: var(--space-4) var(--density-gutter, var(--space-12));
-      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
-      border-bottom: 1px solid var(--border-subtle);
+      padding: 0;
+      background: transparent;
+      border: none;
       font-size: var(--font-size-10);
-      height: var(--density-strip-height, 32px);
-      min-height: var(--density-strip-height, 32px);
+      min-height: 24px;
+      overflow: hidden;
     }
     .pipeline-stage {
       display: flex;
       align-items: center;
       gap: var(--space-4);
-      padding: var(--space-2) var(--space-6);
+      padding: var(--space-1) var(--space-4);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-3);
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
@@ -408,6 +389,12 @@
       color: var(--text-tertiary);
       opacity: 0.4;
       font-size: var(--font-size-10);
+    }
+
+    .trading-variant .decision-primary,
+    .trading-variant .decision-judgment,
+    .trading-variant .decision-execution {
+      gap: var(--space-6);
     }
 
     /* ── Header: Account Selector ── */
@@ -483,9 +470,9 @@
       min-height: 0;
     }
 
-    /* Panel 1: Equity / PnL (~30%) */
+    /* Panel 1: Equity / PnL (~23%) */
     .panel-equity {
-      flex: 3;
+      flex: 2.2;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -597,9 +584,9 @@
       min-height: 24px;
     }
 
-    /* Panel 2: Positions (~38%) */
+    /* Panel 2: Positions (~45%) */
     .panel-positions {
-      flex: 3.8;
+      flex: 4.3;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -618,9 +605,9 @@
       overflow-y: auto;
     }
 
-    /* Panel 3: Orders (~27%) */
+    /* Panel 3: Orders (~32%) */
     .panel-orders {
-      flex: 2.7;
+      flex: 3;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -2071,100 +2058,51 @@
       </div>
     </header>
 
-    <!-- ═══ Session Strip (with Trading Phase Indicator) ═══ -->
-    <div class="scope-strip session-strip" role="status" aria-label="交易会话状态" data-contract-slot="session-strip">
-      <div class="scope-phase">
+    <!-- ═══ Trading Context Bar: session + margin + connectivity + risk + queue ═══ -->
+    <div class="trading-context-bar" role="status" aria-label="交易上下文：会话、保证金、连接、风险与执行队列" data-contract-slot="trading-context-bar">
+      <div class="trading-context-item scope-phase">
         <span class="phase-dot"></span>
         连续竞价
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="账户可用资金（含未冻结保证金）">
+      <div class="trading-context-item scope-metric" data-tooltip="账户可用资金（含未冻结保证金）">
         <span class="scope-metric-label freshness-realtime">可用资金</span>
         <span class="scope-metric-value"><span data-ticker="8432180.50" data-decimals="2" data-ticker-prefix="¥" data-ticker-suffix="">8,432,180.50</span></span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="当前保证金占用金额">
-        <span class="scope-metric-label freshness-realtime">保证金占用</span>
+      <div class="trading-context-item scope-metric" data-tooltip="当前保证金占用金额">
+        <span class="scope-metric-label freshness-realtime">保证金</span>
         <span class="scope-metric-value">¥3,218,400</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="风险预算使用率，阈值 70% 预警、85% 熔断">
+      <div class="trading-context-item scope-metric" data-tooltip="维持担保比例，预警线 150%、平仓线 130%">
+        <span class="scope-metric-label freshness-realtime">担保比例</span>
+        <span class="scope-metric-value ok">286%</span>
+      </div>
+      <div class="scope-separator"></div>
+      <div class="trading-context-item scope-metric" data-tooltip="风险预算使用率，阈值 70% 预警、85% 熔断">
         <span class="scope-metric-label freshness-realtime">风险预算</span>
         <span class="scope-metric-value warning"><span data-ticker="68.2" data-decimals="1" data-ticker-prefix="" data-ticker-suffix="%">68.2</span>%</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="华泰证券极速通道，延迟 < 20ms 为优">
+      <div class="trading-context-item scope-metric" data-tooltip="华泰证券极速通道，延迟 < 20ms 为优">
         <span class="scope-status-dot green"></span>
         <span class="scope-metric-label freshness-realtime">券商连接</span>
         <span class="scope-metric-value ok">已连接</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="订单通道往返延迟">
+      <div class="trading-context-item scope-metric" data-tooltip="订单通道往返延迟">
         <span class="scope-metric-label freshness-realtime">通道延迟</span>
         <span class="scope-metric-value">12ms</span>
       </div>
       <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="今日已成交订单总数">
-        <span class="scope-metric-label freshness-delayed">今日成交</span>
-        <span class="scope-metric-value"><span data-ticker="47" data-decimals="0" data-ticker-prefix="" data-ticker-suffix=" 笔">47</span> 笔</span>
+      <div class="trading-context-item scope-metric" data-tooltip="执行队列：3 笔待成交，今日已成交 47 笔">
+        <span class="scope-metric-label freshness-realtime">执行队列</span>
+        <span class="scope-metric-value">3 待成 · <span data-ticker="47" data-decimals="0" data-ticker-prefix="" data-ticker-suffix=" 笔">47</span> 成交</span>
       </div>
     </div>
 
-    <!-- ═══ Session Strip: 两融数据行 (collapsible, default collapsed) ═══ -->
-    <div class="collapsible-strip" data-collapsible-strip data-default-collapsed="true" data-contract-slot="margin-strip-wrapper" aria-label="两融数据">
-      <div class="collapsible-strip-header">
-        <span class="collapsible-strip-title">两融数据</span>
-        <span class="collapsible-strip-count">担保 286%</span>
-        <button class="collapsible-strip-toggle" data-strip-toggle="两融数据" aria-expanded="false" aria-label="展开 两融数据" type="button">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>
-        </button>
-      </div>
-      <div class="collapsible-content" id="trading-margin-strip-content">
-        <div class="collapsible-inner">
-    <div class="scope-strip margin-strip" role="status" aria-label="两融数据" data-contract-slot="margin-strip">
-      <div class="scope-metric" data-tooltip="融资买入余额">
-        <span class="scope-metric-label freshness-delayed">融资余额</span>
-        <span class="scope-metric-value up">+¥1.2亿</span>
-      </div>
-      <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="融券卖出余额">
-        <span class="scope-metric-label freshness-delayed">融券余额</span>
-        <span class="scope-metric-value down">¥860万</span>
-      </div>
-      <div class="scope-separator"></div>
-      <div class="scope-metric" data-tooltip="维持担保比例，预警线 150%、平仓线 130%">
-        <span class="scope-metric-label freshness-realtime">担保比例</span>
-        <span class="scope-metric-value ok">286%</span>
-      </div>
-    </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ Pipeline Strip: Signal-to-Order Pipeline (v2.0) ═══ -->
-    <div class="pipeline-strip" data-contract-slot="pipeline-strip" role="status" aria-label="信号到订单流转状态">
-      <div class="pipeline-stage" data-tooltip="信号池中的待处理信号">
-        <span class="pipeline-stage-label">信号池</span>
-        <span class="pipeline-stage-count">4</span>
-      </div>
-      <div class="pipeline-arrow" aria-hidden="true">→</div>
-      <div class="pipeline-stage" data-tooltip="等待人工复核的信号">
-        <span class="pipeline-stage-label">待复核</span>
-        <span class="pipeline-stage-count warning">2</span>
-      </div>
-      <div class="pipeline-arrow" aria-hidden="true">→</div>
-      <div class="pipeline-stage" data-tooltip="已提交但未完全成交的订单">
-        <span class="pipeline-stage-label">已下单</span>
-        <span class="pipeline-stage-count">3</span>
-      </div>
-      <div class="pipeline-arrow" aria-hidden="true">→</div>
-      <div class="pipeline-stage" data-tooltip="今日已完全成交的订单">
-        <span class="pipeline-stage-label">已成交</span>
-        <span class="pipeline-stage-count ok">47</span>
-      </div>
-    </div>
-
-    <!-- State Variants: Session Strip -->
+    <!-- State Variants: Trading Context Bar -->
 
 
 
@@ -2193,6 +2131,27 @@
               <div class="decision-judgment-metric" data-answer-evidence>
                 <span class="status-label">待成交订单</span>
                 <span class="status-value" data-tooltip="限价单 1 笔，部分成交 1 笔">2</span>
+              </div>
+            </div>
+            <div class="decision-pipeline" data-pipeline-context role="status" aria-label="信号到订单流转状态">
+              <div class="pipeline-stage" data-tooltip="信号池中的待处理信号">
+                <span class="pipeline-stage-label">信号池</span>
+                <span class="pipeline-stage-count">4</span>
+              </div>
+              <div class="pipeline-arrow" aria-hidden="true">→</div>
+              <div class="pipeline-stage" data-tooltip="等待人工复核的信号">
+                <span class="pipeline-stage-label">待复核</span>
+                <span class="pipeline-stage-count warning">2</span>
+              </div>
+              <div class="pipeline-arrow" aria-hidden="true">→</div>
+              <div class="pipeline-stage" data-tooltip="已提交但未完全成交的订单">
+                <span class="pipeline-stage-label">已下单</span>
+                <span class="pipeline-stage-count">3</span>
+              </div>
+              <div class="pipeline-arrow" aria-hidden="true">→</div>
+              <div class="pipeline-stage" data-tooltip="今日已完全成交的订单">
+                <span class="pipeline-stage-label">已成交</span>
+                <span class="pipeline-stage-count ok">47</span>
               </div>
             </div>
           </div>
