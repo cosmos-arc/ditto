@@ -8,7 +8,10 @@ dependencies = [
     "polars",
     "numpy",
     "cachebox",
+    "dishka",
+    "loguru",
     "orjson",
+    "pydantic",
 ]
 
 [build-system]

@@ -25,6 +25,8 @@ Usage:
 import argparse
 import ast
 import io
+import re
+import sys
 import tokenize
 import tomllib
 from dataclasses import dataclass
@@ -586,6 +588,54 @@ _IMPORT_TO_PKG: dict[str, str] = {
 _PKG_TO_DEP = {v: f"ditto-{v}" for v in _IMPORT_TO_PKG.values()}
 _PKG_TO_IMPORT = {v: k for k, v in _IMPORT_TO_PKG.items()}
 
+_EXTERNAL_IMPORT_TO_DEP: dict[str, str] = {
+    "cachebox": "cachebox",
+    "click": "click",
+    "cvxpy": "cvxpy",
+    "dishka": "dishka",
+    "dotenv": "python-dotenv",
+    "duckdb": "duckdb",
+    "filelock": "filelock",
+    "fastapi": "fastapi",
+    "granian": "granian",
+    "httpx": "httpx",
+    "jinja2": "jinja2",
+    "keyring": "keyring",
+    "limits": "limits",
+    "loguru": "loguru",
+    "numpy": "numpy",
+    "opentelemetry": "opentelemetry-api",
+    "orjson": "orjson",
+    "pandas": "pandas",
+    "polars": "polars",
+    "prefect": "prefect",
+    "pydantic": "pydantic",
+    "pydantic_settings": "pydantic-settings",
+    "rich": "rich",
+    "scipy": "scipy",
+    "starlette": "starlette",
+    "structlog": "structlog",
+    "tenacity": "tenacity",
+    "typer": "typer",
+    "typing_extensions": "typing-extensions",
+    "xxhash": "xxhash",
+    "yaml": "PyYAML",
+}
+
+_EXTERNAL_IMPORT_PREFIX_TO_DEP: tuple[tuple[str, str], ...] = (
+    (
+        "opentelemetry.exporter.otlp.proto.http",
+        "opentelemetry-exporter-otlp-proto-http",
+    ),
+    ("opentelemetry.sdk", "opentelemetry-sdk"),
+    ("opentelemetry", "opentelemetry-api"),
+)
+
+_STDLIB_MODULES = frozenset(sys.stdlib_module_names) | frozenset(
+    sys.builtin_module_names
+)
+_DEP_NAME_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)")
+
 # Exact cross-package export exceptions only. Every entry must include a
 # design-boundary reason in the value before it is added here.
 ALLOWED_CROSS_PACKAGE_EXPORTS: dict[tuple[str, str, str], str] = {}
@@ -794,6 +844,155 @@ def _scan_pkg_imports(src_dir: Path, pkg_name: str) -> set[str]:
     return actual
 
 
+def _normalize_dep_name(name: str) -> str:
+    """Normalize distribution names for dependency metadata comparisons."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _declared_dependency_names(pyproject: Path) -> set[str]:
+    """Read normalized project dependency names from pyproject.toml."""
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    declared: set[str] = set()
+    for dependency in data.get("project", {}).get("dependencies", []):
+        match = _DEP_NAME_RE.match(str(dependency))
+        if match:
+            declared.add(_normalize_dep_name(match.group(1)))
+    return declared
+
+
+def _package_local_top_level_modules(src_dir: Path) -> set[str]:
+    """Collect import roots owned by a package's own src/ tree."""
+    modules: set[str] = set()
+    for child in src_dir.iterdir():
+        if child.name == "__pycache__":
+            continue
+        if child.is_file() and child.suffix == ".py" and child.stem != "__init__":
+            modules.add(child.stem)
+        elif child.is_dir() and (child / "__init__.py").exists():
+            modules.add(child.name)
+    return modules
+
+
+def _external_dependency_for_module(module: str) -> str:
+    """Map an import module name to its distribution dependency name."""
+    for prefix, dependency in _EXTERNAL_IMPORT_PREFIX_TO_DEP:
+        if module == prefix or module.startswith(f"{prefix}."):
+            return dependency
+    root = module.split(".", maxsplit=1)[0]
+    return _EXTERNAL_IMPORT_TO_DEP.get(root, root)
+
+
+def _is_optional_import_guard(handler: ast.excepthandler) -> bool:
+    """Return True when an except handler catches missing optional imports."""
+    if any(isinstance(node, ast.Raise) for node in ast.walk(handler)):
+        return False
+    error = handler.type
+    if error is None:
+        return False
+    if isinstance(error, ast.Name):
+        return error.id in {"ImportError", "ModuleNotFoundError"}
+    if isinstance(error, ast.Tuple):
+        return any(
+            isinstance(elt, ast.Name)
+            and elt.id in {"ImportError", "ModuleNotFoundError"}
+            for elt in error.elts
+        )
+    return False
+
+
+def _optional_import_nodes(tree: ast.AST) -> set[ast.AST]:
+    """Find import nodes inside try bodies guarded by ImportError handlers."""
+    optional_nodes: set[ast.AST] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        if not any(_is_optional_import_guard(handler) for handler in node.handlers):
+            continue
+        for body_node in node.body:
+            for nested in ast.walk(body_node):
+                if isinstance(nested, ast.Import | ast.ImportFrom):
+                    optional_nodes.add(nested)
+    return optional_nodes
+
+
+def _external_imports_in_file(path: Path, local_modules: set[str]) -> set[str]:
+    """Scan direct external import roots from one Python source file."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return set()
+
+    optional_imports = _optional_import_nodes(tree)
+    imports: set[str] = set()
+    for node in ast.walk(tree):
+        if node in optional_imports:
+            continue
+        modules: list[str] = []
+        if isinstance(node, ast.Import):
+            modules = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level > 0 or node.module is None:
+                continue
+            modules = [node.module]
+
+        for module in modules:
+            root = module.split(".")[0]
+            if (
+                root in local_modules
+                or root in _STDLIB_MODULES
+                or root == "__future__"
+                or root.startswith("ditto_")
+            ):
+                continue
+            imports.add(_external_dependency_for_module(module))
+    return imports
+
+
+def _is_external_runtime_import_source(path: Path) -> bool:
+    """Return whether a source file should contribute runtime dependencies."""
+    return (
+        "__pycache__" not in path.parts
+        and "tests" not in path.parts
+        and (path.name != "testing.py")
+    )
+
+
+def _scan_external_pkg_imports(src_dir: Path) -> set[str]:
+    """Scan direct runtime external dependencies imported from a package's src/."""
+    local_modules = _package_local_top_level_modules(src_dir)
+    deps: set[str] = set()
+    for py_file in sorted(src_dir.rglob("*.py")):
+        if not _is_external_runtime_import_source(py_file):
+            continue
+        for import_root in _external_imports_in_file(py_file, local_modules):
+            deps.add(import_root)
+    return deps
+
+
+def check_external_package_metadata(root: Path) -> list[str]:
+    """Check package pyproject.toml deps declare direct external runtime imports."""
+    errors: list[str] = []
+    for pkg_dir in sorted((root / "packages").iterdir()):
+        if not pkg_dir.is_dir():
+            continue
+        pyproject = pkg_dir / "pyproject.toml"
+        src_dir = pkg_dir / "src"
+        if not pyproject.exists() or not src_dir.is_dir():
+            continue
+
+        actual = _scan_external_pkg_imports(src_dir)
+        declared = _declared_dependency_names(pyproject)
+        missing = [
+            dep for dep in sorted(actual) if _normalize_dep_name(dep) not in declared
+        ]
+        if missing:
+            errors.append(
+                f"{pyproject.relative_to(root)}: "
+                f"missing external runtime dependencies {missing}"
+            )
+    return errors
+
+
 def _check_version_mismatch(
     pyproject: Path,
     src_dir: Path,
@@ -967,6 +1166,12 @@ def main() -> int:
         errors,
         check_package_metadata(ROOT),
         "[OK] Package metadata matches source imports",
+        args.verbose,
+    )
+    _collect(
+        errors,
+        check_external_package_metadata(ROOT),
+        "[OK] Package metadata declares external runtime imports",
         args.verbose,
     )
 

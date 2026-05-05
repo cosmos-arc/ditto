@@ -5,6 +5,17 @@ version = "0.1.0"
 dependencies = [
     "ditto-kernel",
     "ditto-platform",
+    "PyYAML",
+    "dishka",
+    "duckdb",
+    "httpx",
+    "limits",
+    "loguru",
+    "orjson",
+    "polars",
+    "pydantic",
+    "tenacity",
+    "xxhash",
 ]
 
 [build-system]
