@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import polars as pl
 
+from ditto_strategy.errors import StrategySpecError
+
 __all__ = ["FrameCol", "validate_frame"]
 
 
@@ -39,4 +41,9 @@ def validate_frame(frame: pl.DataFrame, required: tuple[str, ...]) -> None:
     if __debug__:
         missing = set(required) - set(frame.columns)
         if missing:
-            raise ValueError(f"DecisionFrame missing required columns: {missing}")
+            raise StrategySpecError(
+                f"DecisionFrame missing required columns: {missing}",
+                missing_columns=tuple(sorted(missing)),
+                required_columns=required,
+                available_columns=tuple(frame.columns),
+            )

@@ -7,6 +7,7 @@ import math
 import numpy as np
 import polars as pl
 
+from ditto_features.errors import EvaluationError
 from ditto_features.evaluation.report import (
     ICSummary,
     RegimeICResult,
@@ -365,8 +366,12 @@ def sub_period_ic(
             ),
         )
     else:
-        msg = f"Unknown frequency: {freq!r}; use 'year' or 'quarter'"
-        raise ValueError(msg)
+        raise EvaluationError(
+            f"Unknown frequency: {freq!r}; use 'year' or 'quarter'",
+            field="freq",
+            value=freq,
+            supported=("year", "quarter"),
+        )
 
     results: dict[str, ICSummary] = {}
     for key, group_df in df.group_by("period"):

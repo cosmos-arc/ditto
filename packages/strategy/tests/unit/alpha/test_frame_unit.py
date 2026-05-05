@@ -9,6 +9,7 @@ import polars as pl
 import pytest
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.frame import FrameCol, validate_frame
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # FrameCol 常量
@@ -78,10 +79,10 @@ class TestValidateFrameDebug:
         validate_frame(frame, ())
 
     def test_missing_columns_raises_assertion(self) -> None:
-        """缺少必需列时应抛出 ValueError。"""
+        """缺少必需列时应抛出 StrategySpecError。"""
         frame = pl.DataFrame({"x": [1]})
         with pytest.raises(
-            ValueError,
+            StrategySpecError,
             match="DecisionFrame missing required columns",
         ):
             validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
@@ -89,9 +90,14 @@ class TestValidateFrameDebug:
     def test_missing_some_columns_reports_all(self) -> None:
         """缺少多列时，错误信息应包含所有缺失列。"""
         frame = pl.DataFrame({"x": [1]})
-        with pytest.raises(ValueError, match="signal_value") as exc_info:
+        with pytest.raises(StrategySpecError, match="signal_value") as exc_info:
             validate_frame(frame, (FrameCol.INSTRUMENT_ID, FrameCol.SIGNAL))
         assert "instrument_id" in str(exc_info.value)
+        assert exc_info.value.details == {
+            "missing_columns": ("instrument_id", "signal_value"),
+            "required_columns": (FrameCol.INSTRUMENT_ID, FrameCol.SIGNAL),
+            "available_columns": ("x",),
+        }
 
     def test_extra_columns_pass(self) -> None:
         """额外列不影响校验通过。"""
@@ -176,21 +182,23 @@ class TestValidateFrameReleaseMode:
 
     def test_function_uses_debug_guard(self) -> None:
         """
-        验证 validate_frame 使用 ValueError 进行帧验证。
+        验证 validate_frame 使用 StrategySpecError 进行帧验证。
 
-        validate_frame 通过 raise ValueError 报告缺失列，
+        validate_frame 通过 raise StrategySpecError 报告缺失列，
         替代原来的 assert + __debug__ 守卫方案，确保在所有模式下都有效。
         """
         import inspect
 
         source = inspect.getsource(validate_frame)
-        assert "ValueError" in source, "validate_frame 应使用 ValueError 报告缺失列"
+        assert "StrategySpecError" in source, (
+            "validate_frame 应使用 StrategySpecError 报告缺失列"
+        )
 
     def test_debug_mode_raises_on_missing(self) -> None:
-        """缺少列时应抛出 ValueError。"""
+        """缺少列时应抛出 StrategySpecError。"""
         frame = pl.DataFrame({"x": [1]})
         with pytest.raises(
-            ValueError,
+            StrategySpecError,
             match="DecisionFrame missing required columns",
         ):
             validate_frame(frame, (FrameCol.INSTRUMENT_ID,))

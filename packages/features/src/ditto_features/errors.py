@@ -29,9 +29,9 @@ class EvaluationError(FeaturesError):
     """因子评估失败."""
 
 
-class FactorValidationError(FeaturesError, ValueError):
+class FactorValidationError(FeaturesError):
     """因子验证失败."""
 
 
-class FeatureStorageError(FeaturesError, ValueError):
+class FeatureStorageError(FeaturesError):
     """因子存储失败."""

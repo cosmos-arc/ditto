@@ -7,6 +7,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
+from ditto_analysis.errors import ResearchDatasetError
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 
 
@@ -104,11 +105,19 @@ class TestExportDataset:
         assert result["col"].to_list() == [1, 2]
 
     def test_export_dataset_unsupported(self, service: ResearchArtifactService) -> None:
-        """Exporting with an unsupported format should raise ValueError."""
+        """Exporting with an unsupported format should raise ResearchDatasetError."""
         frame = pl.DataFrame({"col": [1]})
 
-        with pytest.raises(ValueError, match="unsupported format"):
+        with pytest.raises(
+            ResearchDatasetError, match="unsupported format"
+        ) as exc_info:
             service.export_dataset("out.xlsx", frame, fmt="xlsx")  # type: ignore[arg-type]
+        assert exc_info.value.details == {
+            "relative_path": "out.xlsx",
+            "format": "xlsx",
+            "supported": ("parquet", "csv", "feather"),
+            "supported_formats": ("parquet", "csv", "feather"),
+        }
 
 
 class TestReadJson:
@@ -134,12 +143,19 @@ class TestReadJson:
     def test_read_json_not_dict(
         self, service: ResearchArtifactService, tmp_path: Path
     ) -> None:
-        """Reading a JSON file that is not a dict should raise ValueError."""
+        """Reading a JSON file that is not a dict should raise ResearchDatasetError."""
         path = tmp_path / "list.json"
         path.write_bytes(orjson.dumps([1, 2, 3]))
 
-        with pytest.raises(ValueError, match="expected JSON object"):
+        with pytest.raises(
+            ResearchDatasetError, match="expected JSON object"
+        ) as exc_info:
             service.read_json("list.json")
+        assert exc_info.value.details == {
+            "relative_path": "list.json",
+            "expected": "object",
+            "actual": "list",
+        }
 
 
 class TestWriteJson:

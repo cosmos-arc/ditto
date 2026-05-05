@@ -217,4 +217,9 @@ def _apply_late_arrival_policy(
             f"Late arrival detected ({late_count} rows), snapshot must be rebuilt"
         )
 
-    raise ValueError(f"Unknown late arrival policy: {policy}")
+    raise ResearchDatasetError(
+        f"Unknown late arrival policy: {policy}",
+        policy=policy,
+        supported=tuple(item.value for item in LateArrivalPolicy),
+        supported_policies=tuple(item.value for item in LateArrivalPolicy),
+    )

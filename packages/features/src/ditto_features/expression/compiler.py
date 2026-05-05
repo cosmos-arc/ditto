@@ -10,6 +10,7 @@ import polars as pl
 from ditto_kernel.strategy import DerivedSpec
 from ditto_kernel.tracing import traced
 
+from ditto_features.errors import FactorValidationError
 from ditto_features.expression.analyzer import analyze_expression
 from ditto_features.expression.ast import (
     BinaryOpNode,
@@ -220,7 +221,11 @@ def _measure_expression(expression: ExpressionNode) -> tuple[int, int]:
                 max_depth = max(max_depth, depth)
                 total_nodes += nodes
             return (max_depth + 1, total_nodes)
-    raise ValueError(f"unsupported expression node: {expression!r}")
+    raise FactorValidationError(
+        f"unsupported expression node: {expression!r}",
+        reason="unsupported_expression_node",
+        expression_node=type(expression).__name__,
+    )
 
 
 def detect_dependency_cycles(
@@ -237,7 +242,7 @@ def detect_dependency_cycles(
 
     Raises
     ------
-    ValueError
+    FactorValidationError
         If a cycle is detected.  The message includes the names of the
         nodes involved in the cycle.
 
@@ -267,4 +272,8 @@ def detect_dependency_cycles(
 
     if visited != len(graph):
         cycle_nodes = [n for n, d in in_degree.items() if d > 0]
-        raise ValueError(f"dependency cycle detected involving nodes: {cycle_nodes}")
+        raise FactorValidationError(
+            f"dependency cycle detected involving nodes: {cycle_nodes}",
+            reason="dependency_cycle",
+            cycle_nodes=tuple(cycle_nodes),
+        )
