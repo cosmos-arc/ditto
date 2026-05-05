@@ -1,8 +1,8 @@
 # A-Shares Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-a-shares.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-a-shares.html`  
+**目标**: `/ditto-design-cycle page-a-shares.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-a-shares.html`
 **结果**: 9.8 / 10（best 级地图精修 + 全页风格回归 Graphite Studio，未标记 done）
 
 ## 结论

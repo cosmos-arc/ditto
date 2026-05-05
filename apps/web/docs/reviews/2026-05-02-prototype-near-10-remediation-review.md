@@ -1,8 +1,8 @@
 # Prototype Near-10 Remediation Review
 
-> Date: 2026-05-02  
-> Branch: `feat/prototype-three-zone-architecture`  
-> Scope: `docs/designs/specs/prototypes/` active route prototypes, shared prototype CSS/JS, prototype contracts, and design specs  
+> Date: 2026-05-02
+> Branch: `feat/prototype-three-zone-architecture`
+> Scope: `docs/designs/specs/prototypes/` active route prototypes, shared prototype CSS/JS, prototype contracts, and design specs
 > Plan: `docs/plans/2026-05-02-prototype-near-10-remediation-plan.md`
 
 ## Summary

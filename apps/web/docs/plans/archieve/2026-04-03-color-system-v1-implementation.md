@@ -309,19 +309,19 @@ All 8 steps executed:
 - ✅ Step 0: Domain bg DRY refactor — 5 intermediate variables, 21 dark mode references replaced
  agent-running-bg migrated to relative color
  light mode agent-running-bg migrated to relative color
-  
+
 - ✅ Step 1: Neutral 15-level scale → hue 253, reduced chroma, Light mode 15-level neutral added
-  
+
 - ✅ Step 2: Brand 5-level scale → hue 255-258, Light mode 5-level brand added
-  
+
 - ✅ Step 3: Semantic tokens → surface/text/border/code/scrollbar all updated to V1 values. Surface uses var(--neutral-*) chain. Brand-accent-subtle uses relative color
-  
+
 - ✅ Step 4: Interaction tokens → all 4 hardcoded values replaced with oklch(from var(--brand-500)...)
-  
+
 - ✅ Step 5: Signature Brass tokens — 4 dark + 4 light mode tokens added
-  
+
 - ✅ Step 6: Hardcoded fixes — ai-overview (2 brand refs → relative color), cross-market (neutral hue 260→253). instrument-hub (JS fallbacks hue 260→253)
-  
+
 - ✅ Step 7: Brass touchpoints — shell header hairline (13 files). header title decorative line (3 files). empty state icon border (shared CSS). style label color (16 files)
 
 ### Verification results

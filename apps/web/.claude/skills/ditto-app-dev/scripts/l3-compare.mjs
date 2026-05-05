@@ -31,7 +31,7 @@ async function main() {
   // Pixel comparison using raw buffer analysis
   const protoBuf = fs.readFileSync('/tmp/proto-l3.png');
   const reactBuf = fs.readFileSync('/tmp/react-l3.png');
-  
+
   // Parse PNG manually (simplified: use pngjs)
   const { PNG } = await import('pngjs');
   const protoPng = PNG.sync.read(protoBuf);

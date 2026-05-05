@@ -5,14 +5,14 @@ const VIEWPORT = { width: 1536, height: 900 };
 
 async function main() {
   const browser = await chromium.launch({ channel: 'chromium' });
-  
+
   // Get background colors of key elements on both sides
   const protoCtx = await browser.newContext({ viewport: VIEWPORT });
   const protoPage = await protoCtx.newPage();
   await protoPage.goto('http://localhost:8888/page-home.html', { waitUntil: 'networkidle' });
   await protoPage.addStyleTag({ content: PROTOTYPE_NORMALIZE_CSS });
   await protoPage.waitForTimeout(300);
-  
+
   const protoColors = await protoPage.evaluate(() => {
     const el = (sel) => { const e = document.querySelector(sel); return e ? getComputedStyle(e).backgroundColor : 'NOT FOUND'; };
     return {
@@ -31,7 +31,7 @@ async function main() {
   const reactPage = await reactCtx.newPage();
   await reactPage.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
   await reactPage.waitForTimeout(300);
-  
+
   const reactColors = await reactPage.evaluate(() => {
     const el = (sel) => { const e = document.querySelector(sel); return e ? getComputedStyle(e).backgroundColor : 'NOT FOUND'; };
     return {
@@ -51,7 +51,7 @@ async function main() {
   console.log('=== Background Color Comparison ===\n');
   console.log(`${'Element'.padEnd(15)} ${'Prototype'.padEnd(35)} ${'React'.padEnd(35)} ${'Match'.padEnd(6)}`);
   console.log('-'.repeat(95));
-  
+
   for (const key of Object.keys(protoColors)) {
     const p = protoColors[key];
     const r = reactColors[key];

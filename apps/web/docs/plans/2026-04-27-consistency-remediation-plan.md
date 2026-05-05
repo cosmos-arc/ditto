@@ -991,8 +991,8 @@ Expected: PASS.
 
 **Step 5: Repeat in batches**
 
-Batch 2: Watchlist, Strategy List, Factor List, Backtest List.  
-Batch 3: Home, Research, Markets, Instrument Hub.  
+Batch 2: Watchlist, Strategy List, Factor List, Backtest List.
+Batch 3: Home, Research, Markets, Instrument Hub.
 Batch 4: remaining route pages.
 
 ### Task 3.4: Implement Overlay Registry Consumption In React Pages

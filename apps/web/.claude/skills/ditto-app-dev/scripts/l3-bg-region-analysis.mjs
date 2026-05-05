@@ -36,16 +36,16 @@ let totalBgPixels = 0;
 for (const r of REGIONS) {
   let bgDiff = 0;
   let bgPx = 0;
-  
+
   for (let y = r.y; y < Math.min(r.y + r.h, height); y++) {
     for (let x = r.x; x < Math.min(r.x + r.w, width); x++) {
       const idx = (y * width + x) * 4;
       const pAvg = (protoPng.data[idx] + protoPng.data[idx+1] + protoPng.data[idx+2]) / 3;
       const rAvg = (reactPng.data[idx] + reactPng.data[idx+1] + reactPng.data[idx+2]) / 3;
-      
+
       // Skip text-like pixels
       if (pAvg > 140 || rAvg > 140) continue;
-      
+
       bgPx++;
       const dr = Math.abs(protoPng.data[idx] - reactPng.data[idx]);
       const dg = Math.abs(protoPng.data[idx+1] - reactPng.data[idx+1]);
@@ -64,4 +64,3 @@ for (const r of REGIONS) {
 console.log('-'.repeat(68));
 const totalRatio = totalBgPixels > 0 ? totalBgDiff / totalBgPixels : 0;
 console.log(`${'TOTAL'.padEnd(30)} ${String(totalBgPixels).padStart(10)} ${String(totalBgDiff).padStart(8)} ${(totalRatio*100).toFixed(4).padStart(9)}% ${totalRatio < 0.02 ? 'PASS' : 'FAIL'}`);
-

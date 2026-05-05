@@ -1,8 +1,8 @@
 # Markets Screener Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-markets-screener.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-markets-screener.html`  
+**目标**: `/ditto-design-cycle page-markets-screener.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-markets-screener.html`
 **结果**: 9.7 / 10（best 级 Catalog/Screener 精修，未标记 done）
 
 ## 结论

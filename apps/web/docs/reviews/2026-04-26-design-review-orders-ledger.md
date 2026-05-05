@@ -1,8 +1,8 @@
 # Orders Ledger Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-orders-ledger.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-orders-ledger.html`  
+**目标**: `/ditto-design-cycle page-orders-ledger.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-orders-ledger.html`
 **结果**: 9.7 / 10（best 级结构修复 + 信息效率提升，未标记 done）
 
 ## 结论

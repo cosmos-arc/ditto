@@ -5,13 +5,13 @@ const VIEWPORT = { width: 1536, height: 900 };
 
 async function main() {
   const browser = await chromium.launch({ channel: 'chromium' });
-  
+
   // Extract CSS variables from both sides
   const protoCtx = await browser.newContext({ viewport: VIEWPORT });
   const protoPage = await protoCtx.newPage();
   await protoPage.goto('http://localhost:8888/page-home.html', { waitUntil: 'networkidle' });
   await protoPage.addStyleTag({ content: PROTOTYPE_NORMALIZE_CSS });
-  
+
   const protoVars = await protoPage.evaluate(() => {
     const cs = getComputedStyle(document.documentElement);
     const keys = ['--brand-accent', '--color-bg-app', '--surface-frosted', '--surface-card', '--surface-panel', '--border-subtle'];
@@ -27,7 +27,7 @@ async function main() {
   const reactCtx = await browser.newContext({ viewport: VIEWPORT });
   const reactPage = await reactCtx.newPage();
   await reactPage.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
-  
+
   const reactVars = await reactPage.evaluate(() => {
     const cs = getComputedStyle(document.documentElement);
     const keys = ['--color-accent', '--color-surface-app', '--color-surface-frosted', '--color-surface-panel-base', '--color-surface-card', '--color-border-subtle', '--color-bg-app'];

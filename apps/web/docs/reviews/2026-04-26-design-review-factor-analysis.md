@@ -1,8 +1,8 @@
 # Factor Analysis Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-factor-analysis.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-factor-analysis.html`  
+**目标**: `/ditto-design-cycle page-factor-analysis.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-factor-analysis.html`
 **结果**: 9.7 / 10（best 级 Object Hub 精修，静态原型阶段未虚报 10）
 
 ## 结论

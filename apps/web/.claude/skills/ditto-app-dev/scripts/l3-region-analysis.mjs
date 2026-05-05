@@ -63,7 +63,7 @@ async function main() {
 
   // Now analyze diff content - classify by type
   console.log('\n=== Diff Root Cause Classification ===\n');
-  
+
   // Sample pixels in diff areas to understand what's different
   const diffSamples = [];
   for (let y = 0; y < height; y += 4) {
@@ -83,12 +83,12 @@ async function main() {
   let textDiffs = 0;
   let bgDiffs = 0;
   let effectDiffs = 0;
-  
+
   for (const s of diffSamples) {
     const pLum = (s.pr + s.pg + s.pb) / 3;
     const rLum = (s.rr + s.rg + s.rb) / 3;
     const lumDiff = Math.abs(pLum - rLum);
-    
+
     // Text-like: either side is bright on dark (high contrast)
     if (pLum > 150 || rLum > 150) {
       textDiffs++;

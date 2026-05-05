@@ -1,8 +1,8 @@
 # Agent Console Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-agent-console.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-27  
-**对象**: `docs/designs/specs/prototypes/page-agent-console.html`  
+**目标**: `/ditto-design-cycle page-agent-console.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-27
+**对象**: `docs/designs/specs/prototypes/page-agent-console.html`
 **结果**: 9.7 / 10（best 级门禁修复 + 交互闭环，未伪造满分）
 
 ## 结论

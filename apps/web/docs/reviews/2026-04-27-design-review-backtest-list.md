@@ -1,8 +1,8 @@
 # Backtest List Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-backtest-list.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-27  
-**对象**: `docs/designs/specs/prototypes/page-backtest-list.html`  
+**目标**: `/ditto-design-cycle page-backtest-list.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-27
+**对象**: `docs/designs/specs/prototypes/page-backtest-list.html`
 **结果**: 9.7 / 10（best 级 Backtest Catalog 精修，已标记 reviewed，未虚报 10）
 
 ## 结论

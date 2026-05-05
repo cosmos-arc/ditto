@@ -1,8 +1,8 @@
 # Platform Settings Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-platform-settings.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-27  
-**对象**: `docs/designs/specs/prototypes/page-platform-settings.html`  
+**目标**: `/ditto-design-cycle page-platform-settings.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-27
+**对象**: `docs/designs/specs/prototypes/page-platform-settings.html`
 **结果**: 9.5 / 10（CSS 静态原型阶段 best，上限内未标记 done）
 
 ## 结论

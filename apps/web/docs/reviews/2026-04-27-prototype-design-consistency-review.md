@@ -1,7 +1,7 @@
 # Ditto 原型设计一致性审查报告
 
-**日期**：2026-04-27  
-**范围**：`docs/designs/specs/prototypes/` 29 个 route prototype、`docs/designs/specs/*`、`docs/contracts/pages/*`、`.arch-manifest.json`  
+**日期**：2026-04-27
+**范围**：`docs/designs/specs/prototypes/` 29 个 route prototype、`docs/designs/specs/*`、`docs/contracts/pages/*`、`.arch-manifest.json`
 **边界**：只审查原型设计与设计契约，不评价 React 功能实现质量。
 
 ---
@@ -98,7 +98,7 @@
 
 ### P1-4：Typography 规范与实际 token 冲突
 
-当前 `DESIGN.md` 和 `src/styles/design-tokens/tokens-base.css` 均使用 9 级字号：10 / 11 / 12 / 13 / 14 / 16 / 18 / 20 / 24。  
+当前 `DESIGN.md` 和 `src/styles/design-tokens/tokens-base.css` 均使用 9 级字号：10 / 11 / 12 / 13 / 14 / 16 / 18 / 20 / 24。
 `15_ditto_token_stabilization_spec.md` 仍写 R1 精简为 6 级，并将 11 / 18 / 20 标为 deprecated。
 
 实际 prototype 中 22 个 route pages 使用了 11 / 18 / 20，说明 6 级方案并没有成为真实约束。
@@ -148,7 +148,7 @@ Drawer / Sheet / Modal 的差异由 modifier 和 contract `kind` 表达，不再
 
 ### P2-1：页面局部 CSS 过多，应逐步沉淀共享原型语法
 
-29 个 route prototype 已做到 0 actual inline style attributes，这是好事。  
+29 个 route prototype 已做到 0 actual inline style attributes，这是好事。
 但大量重复的 overlay、button、gallery、drawer field、state card 样式仍散在 page-local `<style>` 中。
 
 建议优先沉淀到共享层：
@@ -185,19 +185,19 @@ Edition manifest 中 29 个 route pages 的 `visualAuditStatus` 大多仍是 `mi
 
 ## 5. 已做得更好的设计选择
 
-1. **三段式原型视图是正确方向**  
+1. **三段式原型视图是正确方向**
    `页面设计 / 状态画廊 / 弹层画廊` 的分离让默认页保持干净，也让状态覆盖能被持续审计。
 
-2. **Radar 不应退回 Analytical**  
+2. **Radar 不应退回 Analytical**
    `/markets` 与 `/markets/a-shares` 的扫描、比较、下钻任务与普通 analytical 页不同。Radar 是更优选择。
 
-3. **Catalog 列表族的收敛是正确方向**  
+3. **Catalog 列表族的收敛是正确方向**
    Watchlist / Factor List / Strategy List / Backtest List / Universe List 等列表族使用 Catalog，比各自发明半个 dashboard 更利于落地。
 
-4. **Agent Console 采用 Studio 语气更合理**  
+4. **Agent Console 采用 Studio 语气更合理**
    Agent 的核心不是系统告警，而是 plan / run / evidence / approval 的编排工作台。Studio 更贴近任务。
 
-5. **高密度不是问题，缺少合同才是问题**  
+5. **高密度不是问题，缺少合同才是问题**
    当前页面密度整体符合量化工作台定位。不要为了“统一”把页面变松、变卡片化；应该统一 slot、overlay、state 和 token 口径。
 
 ---

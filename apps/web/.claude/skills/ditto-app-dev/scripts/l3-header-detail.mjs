@@ -5,23 +5,23 @@ const VIEWPORT = { width: 1536, height: 900 };
 
 async function main() {
   const browser = await chromium.launch({ channel: 'chromium' });
-  
+
   // Sample pixels in header area from both sides
   const protoCtx = await browser.newContext({ viewport: VIEWPORT });
   const protoPage = await protoCtx.newPage();
   await protoPage.goto('http://localhost:8888/page-home.html', { waitUntil: 'networkidle' });
   await protoPage.addStyleTag({ content: PROTOTYPE_NORMALIZE_CSS });
   await protoPage.waitForTimeout(300);
-  
+
   // Get header inner elements' computed styles
   const protoHeader = await protoPage.evaluate(() => {
     const header = document.querySelector('.shell-header');
     const title = header?.querySelector('.header-title');
     const search = header?.querySelector('.header-search');
     const actions = header?.querySelector('.header-actions');
-    
+
     const cs = (el) => el ? getComputedStyle(el) : null;
-    
+
     return {
       headerBg: cs(header)?.backgroundColor,
       headerBorder: cs(header)?.borderBottom,
@@ -40,18 +40,18 @@ async function main() {
       })) : [],
     };
   });
-  
+
   const reactCtx = await browser.newContext({ viewport: VIEWPORT });
   const reactPage = await reactCtx.newPage();
   await reactPage.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
   await reactPage.waitForTimeout(300);
-  
+
   const reactHeader = await reactPage.evaluate(() => {
     const header = document.querySelector('header');
     const buttons = header?.querySelectorAll('button');
-    
+
     const cs = (el) => el ? getComputedStyle(el) : null;
-    
+
     return {
       headerBg: cs(header)?.backgroundColor,
       headerBorder: cs(header)?.borderBottom,
@@ -65,9 +65,9 @@ async function main() {
       })) : [],
     };
   });
-  
+
   await browser.close();
-  
+
   console.log('=== Header Detail Comparison ===\n');
   console.log('Prototype:');
   console.log(`  bg: ${protoHeader.headerBg}`);
@@ -77,7 +77,7 @@ async function main() {
   console.log(`  title font: ${protoHeader.titleFontSize} ${protoHeader.titleFontWeight} ${protoHeader.titleFontFamily}`);
   if (protoHeader.search) console.log(`  search bg: ${protoHeader.searchBg}`);
   for (const a of protoHeader.actions) console.log(`  action: "${a.text}" bg=${a.bg} border=${a.border}`);
-  
+
   console.log('\nReact:');
   console.log(`  bg: ${reactHeader.headerBg}`);
   console.log(`  border-bottom: ${reactHeader.headerBorder}`);

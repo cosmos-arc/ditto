@@ -1,9 +1,9 @@
 # Prototype UI/UX Pro Max Best Review
 
-> 日期：2026-04-30  
-> 审核范围：`docs/designs/specs/prototypes/` 当前 27 个活跃原型  
-> 审核模式：`/audit /ui-ux-pro-max /frontend-design /brainstorming /ditto-design-cycle --edition-review --level best`  
-> 审核目标：以最严格标准评估当前原型设计，并给出交互设计、色彩系统、信息布局的系统提升建议。  
+> 日期：2026-04-30
+> 审核范围：`docs/designs/specs/prototypes/` 当前 27 个活跃原型
+> 审核模式：`/audit /ui-ux-pro-max /frontend-design /brainstorming /ditto-design-cycle --edition-review --level best`
+> 审核目标：以最严格标准评估当前原型设计，并给出交互设计、色彩系统、信息布局的系统提升建议。
 > 说明：用户提到的 `specs/prototypes` 在当前仓库中对应实际目录 `docs/designs/specs/prototypes/`。
 
 ---
@@ -377,17 +377,17 @@ Ditto 的定位是金融终端，不是 SaaS dashboard。信息布局应优先�
 
 ## 9. 参考标准
 
-- W3C WCAG 2.1 Contrast Minimum 1.4.3  
+- W3C WCAG 2.1 Contrast Minimum 1.4.3
   https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum
-- W3C WCAG 2.1 Use of Color 1.4.1  
+- W3C WCAG 2.1 Use of Color 1.4.1
   https://www.w3.org/WAI/WCAG21/Understanding/use-of-color.html
-- W3C WCAG 2.2 Target Size 2.5.8  
+- W3C WCAG 2.2 Target Size 2.5.8
   https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
-- Ditto Product Criteria  
+- Ditto Product Criteria
   `docs/designs/specs/00_ditto_product_criteria.md`
-- Ditto Shell Family Spec  
+- Ditto Shell Family Spec
   `docs/designs/specs/10_ditto_shell_family_spec.md`
-- Ditto Page Pattern Library  
+- Ditto Page Pattern Library
   `docs/designs/specs/11_ditto_page_pattern_library.md`
-- Interaction UX Audit  
+- Interaction UX Audit
   `docs/designs/specs/20_interaction_ux_audit.md`

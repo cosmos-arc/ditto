@@ -1,7 +1,7 @@
 # Ditto 项目一致性与原型落地审查报告
 
-**日期**：2026-04-27  
-**范围**：当前完整项目、产品 specs / 蓝图、`.arch-manifest.json`、Edition v1 原型 manifest、React 路由与组件实现  
+**日期**：2026-04-27
+**范围**：当前完整项目、产品 specs / 蓝图、`.arch-manifest.json`、Edition v1 原型 manifest、React 路由与组件实现
 **结论级别**：不建议直接进入候选原型批量功能落地；应先完成路由、Page Contract、Overlay Registry、组件 token 四条主线收敛。
 
 ---
@@ -70,7 +70,7 @@
 
 ### 3.1 路由一致性
 
-IA 目标主路由：27  
+IA 目标主路由：27
 React 当前 `createFileRoute` 目标：24
 
 **缺失的 IA 目标路由：**
@@ -202,8 +202,8 @@ DESIGN 定义：
 
 ### P0-1：React 路由未对齐 IA v2.0
 
-**问题**：缺失 11 条目标路由，同时保留 8 条旧口径 / 辅助路由。  
-**影响**：原型无法按 IA 的产品闭环进入功能落地；导航域、breadcrumb、active domain、page contract、visual audit 都会继续漂移。  
+**问题**：缺失 11 条目标路由，同时保留 8 条旧口径 / 辅助路由。
+**影响**：原型无法按 IA 的产品闭环进入功能落地；导航域、breadcrumb、active domain、page contract、visual audit 都会继续漂移。
 **建议**：
 
 1. 以 IA v2.0 为唯一主路由表。
@@ -218,8 +218,8 @@ DESIGN 定义：
 
 ### P0-2：Page Contract 真源分裂
 
-**问题**：generated contract 只有 Home，legacy contract 是旧 21 route，tests 也硬编码旧口径。  
-**影响**：合同不能保护 29 个 reviewed prototypes，也不能驱动 visual audit / app implementation。  
+**问题**：generated contract 只有 Home，legacy contract 是旧 21 route，tests 也硬编码旧口径。
+**影响**：合同不能保护 29 个 reviewed prototypes，也不能驱动 visual audit / app implementation。
 **建议**：
 
 1. 立即停止把 `page-contracts.ts` 作为主真源。
@@ -232,8 +232,8 @@ DESIGN 定义：
 
 ### P0-3：候选原型与功能模块落地队列缺少映射
 
-**问题**：新增候选原型已经覆盖 Watchlist、Factor List、Strategy List、Backtest List、Experiment List、Universe List、Platform Settings、Portfolio 等，但 React route / feature module 未跟进。  
-**影响**：设计完成度与工程落地状态无法一眼判断，后续会出现“原型通过，但产品功能没入口”的假完成。  
+**问题**：新增候选原型已经覆盖 Watchlist、Factor List、Strategy List、Backtest List、Experiment List、Universe List、Platform Settings、Portfolio 等，但 React route / feature module 未跟进。
+**影响**：设计完成度与工程落地状态无法一眼判断，后续会出现“原型通过，但产品功能没入口”的假完成。
 **建议**：
 
 在 `.edition-manifest.json` 或 contract JSON 中补充落地字段：
@@ -253,8 +253,8 @@ DESIGN 定义：
 
 ### P1-1：Overlay Gallery 需要统一为 Registry 驱动
 
-**问题**：蓝图将 overlay 定义为页面工作流动作；原型大多将 overlay 放在独立 gallery 展示；React 少数页面直接实现 Drawer。  
-**影响**：交互一致性不可控，也不利于候选原型完整落地。  
+**问题**：蓝图将 overlay 定义为页面工作流动作；原型大多将 overlay 放在独立 gallery 展示；React 少数页面直接实现 Drawer。
+**影响**：交互一致性不可控，也不利于候选原型完整落地。
 **更优选择**：
 
 采用“三层统一模型”：
@@ -304,8 +304,8 @@ DESIGN 定义：
 
 ### P1-2：共享 UI primitive 未完全接入 Ditto token 命名层
 
-**问题**：`Button` / `Badge` / `Tabs` 仍大量使用 shadcn 默认 token 名称，而项目 token 层已经是 Ditto semantic 命名。  
-**影响**：局部组件可能渲染不到预期颜色，或形成与 prototype 不一致的视觉语法。  
+**问题**：`Button` / `Badge` / `Tabs` 仍大量使用 shadcn 默认 token 名称，而项目 token 层已经是 Ditto semantic 命名。
+**影响**：局部组件可能渲染不到预期颜色，或形成与 prototype 不一致的视觉语法。
 **建议**：
 
 1. 将 `components/ui` 迁移到 Ditto token：
@@ -320,8 +320,8 @@ DESIGN 定义：
 
 ### P1-3：状态栏渲染由页面手动决定，容易漏 padding / 漏合同
 
-**问题**：`StatusBar` 是 fixed overlay，页面需要手动 render，并手动添加 `pb-(--height-status-bar)`。  
-**影响**：新页面落地时很容易漏掉 padding 或合同字段，导致底部内容被遮挡。  
+**问题**：`StatusBar` 是 fixed overlay，页面需要手动 render，并手动添加 `pb-(--height-status-bar)`。
+**影响**：新页面落地时很容易漏掉 padding 或合同字段，导致底部内容被遮挡。
 **建议**：
 
 1. 让 Shell Layout 或 route contract wrapper 负责 `hasStatusBar`。
@@ -330,8 +330,8 @@ DESIGN 定义：
 
 ### P1-4：AI 域残留影响导航、域色与心智
 
-**问题**：导航仍有 AI 域，React routes 仍有 AI 三页，DESIGN 仍有 “six business domains” 文案。  
-**影响**：产品心智与 v2.0 specs 冲突；域签名色会继续分裂。  
+**问题**：导航仍有 AI 域，React routes 仍有 AI 三页，DESIGN 仍有 “six business domains” 文案。
+**影响**：产品心智与 v2.0 specs 冲突；域签名色会继续分裂。
 **建议**：
 
 1. `DomainId` 移除 `"ai"`。
@@ -349,7 +349,7 @@ DESIGN 定义：
 - 21 个 prototype page 缺 `shellFamily` / `blueprintId`。
 - `DESIGN.md` 局部仍保留 6 域表述。
 
-**影响**：后续自动生成合同、视觉审计、候选原型排期都会缺少稳定归属。  
+**影响**：后续自动生成合同、视觉审计、候选原型排期都会缺少稳定归属。
 **建议**：
 
 1. 更新 `.arch-manifest.json`，记录本轮 edition review 与 route/contract drift。
@@ -359,7 +359,7 @@ DESIGN 定义：
 
 ### P2-1：inline style 与动态尺寸策略不清晰
 
-**问题**：项目规则禁止 inline styles，但 chart / flow / progress 类组件仍用 `style={{ width }}` / `style={{ height }}`。  
+**问题**：项目规则禁止 inline styles，但 chart / flow / progress 类组件仍用 `style={{ width }}` / `style={{ height }}`。
 **建议**：
 
 - 对纯动态数值组件建立统一例外策略：例如 `DataBar` / `ChartFrame` 这种组件内部允许 CSS variable style，但必须集中封装，业务页面不得直接写 inline styles。
@@ -466,22 +466,22 @@ Gallery 不应被取消，但定位要变：
 
 ### 更优选择 A：先收 Page Contract，不先批量补页面
 
-原因：当前 route / contract / visual-audit 三者断裂。如果先补 React 页面，会继续复制旧路由和旧 token 问题。  
+原因：当前 route / contract / visual-audit 三者断裂。如果先补 React 页面，会继续复制旧路由和旧 token 问题。
 预期收益：一次性建立 29 个 reviewed prototypes 的落地地图，后续每补一个页面都有验收门禁。
 
 ### 更优选择 B：AI 不再作为域，只作为 capability
 
-原因：IA / Shell spec 已统一为 5 域，AI sidecar 是跨域能力。继续保留 AI 域会让导航、域色、路由、合同全部分裂。  
+原因：IA / Shell spec 已统一为 5 域，AI sidecar 是跨域能力。继续保留 AI 域会让导航、域色、路由、合同全部分裂。
 预期收益：产品心智更清楚，Agent Console 归 Platform，Copilot 归全局交互层。
 
 ### 更优选择 C：Overlay Registry 优先于组件局部实现
 
-原因：订单确认、审批、删除、配置、详情查看都是跨页面一致性问题，不应由每个页面各自拼 Drawer / Dialog。  
+原因：订单确认、审批、删除、配置、详情查看都是跨页面一致性问题，不应由每个页面各自拼 Drawer / Dialog。
 预期收益：原型、合同、React、测试能围绕同一组 overlay id 对齐。
 
 ### 更优选择 D：组件 token 层先清理 `components/ui`
 
-原因：Button / Badge / Tabs 是后续所有页面的基础。如果 primitive 仍是 shadcn 默认 token，页面越多越难收。  
+原因：Button / Badge / Tabs 是后续所有页面的基础。如果 primitive 仍是 shadcn 默认 token，页面越多越难收。
 预期收益：颜色、字体、圆角、focus、density 在基础层统一。
 
 ---

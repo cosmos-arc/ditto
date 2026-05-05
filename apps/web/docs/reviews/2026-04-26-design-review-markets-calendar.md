@@ -1,8 +1,8 @@
 # Markets Calendar Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-markets-calendar.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-markets-calendar.html`  
+**目标**: `/ditto-design-cycle page-markets-calendar.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-markets-calendar.html`
 **结果**: 9.76 / 10（best 级 Calendar/Catalog 精修，未标记 done）
 
 ## 结论

@@ -1,8 +1,8 @@
 # Edition v1 验收审查报告
 
-**审查日期**: 2026-04-27  
-**审查类型**: Edition 级跨页验收  
-**命令**: `/ditto-design-cycle --edition-review`  
+**审查日期**: 2026-04-27
+**审查类型**: Edition 级跨页验收
+**命令**: `/ditto-design-cycle --edition-review`
 **审查方式**: manifest 读取 + Playwright 批量门禁 + VP-STANDARD/VP-COMPACT 截图拼版 + HTML 源码快检
 
 ---

@@ -1,7 +1,7 @@
 # Cross-Market Design Cycle R4
 
-**日期**: 2026-04-25  
-**目标**: `/ditto-design-cycle page-cross-market.html --iterate --goal 10 --max-rounds 100 --level best`  
+**日期**: 2026-04-25
+**目标**: `/ditto-design-cycle page-cross-market.html --iterate --goal 10 --max-rounds 100 --level best`
 **文件**: `docs/designs/specs/prototypes/page-cross-market.html`
 
 ## 结论

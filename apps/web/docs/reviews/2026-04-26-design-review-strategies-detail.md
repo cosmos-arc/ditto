@@ -1,8 +1,8 @@
 # Strategies Detail Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-strategies-detail.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-strategies-detail.html`  
+**目标**: `/ditto-design-cycle page-strategies-detail.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-strategies-detail.html`
 **结果**: 9.7 / 10（best 级 Object Hub 精修，已保持 reviewed，未标记 done）
 
 ## 结论

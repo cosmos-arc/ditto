@@ -1,8 +1,8 @@
 # Instrument Hub Design Cycle Review
 
-**目标**: `/ditto-design-cycle page-instrument-hub.html --iterate --goal 10 --max-rounds 100 --level best`  
-**日期**: 2026-04-26  
-**对象**: `docs/designs/specs/prototypes/page-instrument-hub.html`  
+**目标**: `/ditto-design-cycle page-instrument-hub.html --iterate --goal 10 --max-rounds 100 --level best`
+**日期**: 2026-04-26
+**对象**: `docs/designs/specs/prototypes/page-instrument-hub.html`
 **结果**: 9.7 / 10（CSS 原型阶段上限区间，未标记 done）
 
 ## 结论

@@ -10,7 +10,7 @@ async function main() {
   const { PNG } = await import('pngjs');
 
   const browser = await chromium.launch({ channel: 'chromium' });
-  
+
   // Prototype screenshot
   const protoCtx = await browser.newContext({ viewport: VIEWPORT });
   const protoPage = await protoCtx.newPage();
@@ -27,14 +27,14 @@ async function main() {
   await reactPage.waitForFunction(() => document.fonts.ready);
   await reactPage.waitForTimeout(500);
   await reactPage.screenshot({ path: '/tmp/react-l3.png', fullPage: false });
-  
+
   await browser.close();
 
   // Now mask ALL text content on both sides and re-compare
   // Strategy: mask pixels that are bright on dark background (text pixels)
   const protoPng = PNG.sync.read(fs.readFileSync('/tmp/proto-l3.png'));
   const reactPng = PNG.sync.read(fs.readFileSync('/tmp/react-l3.png'));
-  
+
   const width = protoPng.width;
   const height = protoPng.height;
   const totalPixels = width * height;
@@ -48,19 +48,19 @@ async function main() {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
-      
+
       // Check if this pixel is "text-like" (bright on dark background)
       const pAvg = (protoPng.data[idx] + protoPng.data[idx+1] + protoPng.data[idx+2]) / 3;
       const rAvg = (reactPng.data[idx] + reactPng.data[idx+1] + reactPng.data[idx+2]) / 3;
       const isTextProto = pAvg > 140;
       const isTextReact = rAvg > 140;
       const isText = isTextProto || isTextReact;
-      
+
       const dr = Math.abs(protoPng.data[idx] - reactPng.data[idx]);
       const dg = Math.abs(protoPng.data[idx+1] - reactPng.data[idx+1]);
       const db = Math.abs(protoPng.data[idx+2] - reactPng.data[idx+2]);
       const pixelDiff = dr + dg + db;
-      
+
       if (isText) {
         textPixels++;
         if (pixelDiff > 30) textMaskedDiff++;
@@ -68,7 +68,7 @@ async function main() {
         bgPixels++;
         if (pixelDiff > 30) bgOnlyDiff++;
       }
-      
+
       if (pixelDiff > 30) totalDiff++;
     }
   }
