@@ -15,9 +15,6 @@
   --font-family-numeric: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
   --font-family-code:    'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  /* ── Brand Signature Glow (prototype-only) ── */
-  --brand-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.60);
-
   /* ── Prototype structural dimensions — approved Edition v1 surface ── */
   --panel-header-height:    38px;
   --tab-bar-height:         42px;
@@ -50,33 +47,19 @@
 }
 
 /* ─────────────────────────────────────────────
- * Light Mode Atmosphere
+ * Light Mode Prototype Adjustments
  * Shared adjustments for all prototype pages when
  * theme-switcher toggles to [data-theme="light"].
  * Page-specific overrides (e.g. .map-container
  * tokens in page-a-shares) remain in-page.
  * ───────────────────────────────────────────── */
 
-[data-theme="light"] .ambient-top,
-[data-theme="light"] .ambient-rail {
-  opacity: 0.3;
-}
-
 [data-theme="light"] .noise-layer {
   opacity: 0.005;
 }
 
-/* ── Atmosphere Intensity Levels ── */
-[data-atmosphere-intensity="elevated"] .ambient-top {
-  opacity: 0.45;
-}
-
 [data-atmosphere-intensity="elevated"] .noise-layer {
   opacity: calc(var(--surface-noise-opacity, 0.018) * 2);
-}
-
-[data-atmosphere-intensity="intense"] .ambient-top {
-  opacity: 0.75;
 }
 
 [data-atmosphere-intensity="intense"] .noise-layer {

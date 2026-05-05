@@ -1005,6 +1005,7 @@ function readGlowBudgetCssSources(): CssSource[] {
 	return [
 		{ label: "shared/layout-shell.css", css: readFileSync(prototypeLayoutCss, "utf8") },
 		{ label: "shared/layout-components.css", css: readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8") },
+		{ label: "tokens-style.css", css: readFileSync(prototypeTokensStyleCss, "utf8") },
 		...activePages().map((page) => ({
 			label: page.file,
 			css: getStyleBlocks(readPrototypeHtml(page)),
@@ -1132,7 +1133,7 @@ function isGlowBudgetAllowedBoxShadowLayer(
 function isAllowedRailActiveGlowLayer(selector: string, value: string): boolean {
 	return (
 		/\.rail-icon\.active::before\b/.test(selector) &&
-		/^0\s+0\s+(?:4|6)px(?:\s+-?1px)?\s+(?:var\(\s*--brand-signature-indicator-shadow\s*\)|var\(\s*--brand-signature-glow\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand-accent|brand-signature-fg)\s*\)\s+\d+%,\s*transparent\))$/i.test(
+		/^0\s+0\s+(?:4|6)px(?:\s+-?1px)?\s+(?:var\(\s*--brand-signature-indicator-shadow\s*\)|color-mix\(in oklch,\s*var\(\s*--(?:brand-accent|brand-signature-fg)\s*\)\s+\d+%,\s*transparent\))$/i.test(
 			value,
 		)
 	);
@@ -1284,6 +1285,10 @@ function collectGlowBudgetCssViolations(source: CssSource): string[] {
 		violations.push(`${source.label}:${getLineNumber(css, match.index)}:${match[0]}`);
 	}
 
+	for (const match of css.matchAll(/--brand-signature-glow\s*:/gi)) {
+		violations.push(`${source.label}:${getLineNumber(css, match.index)}:prototype-glow-token:--brand-signature-glow`);
+	}
+
 	for (const rule of readTopLevelCssRules(css)) {
 		const selector = formatCssRuleSelector(rule);
 		if (hasForbiddenMouseGlowReference(selector)) {
@@ -1389,6 +1394,9 @@ describe("prototype design consistency", () => {
 				"0 0 4px color-mix(in oklch, var(--brand-accent) 30%, transparent), 0 0 20px color-mix(in oklch, var(--brand-accent) 14%, transparent)",
 			),
 		).toBe(true);
+		expect(isExcessiveGlowBoxShadow(".rail-icon.active::before", "0 0 4px var(--brand-signature-glow)")).toBe(
+			true,
+		);
 		expect(
 			isExcessiveGlowBoxShadow(
 				".status-dot.live",
@@ -1622,6 +1630,19 @@ describe("prototype design consistency", () => {
 				`,
 			}),
 		).toEqual(["fixture.css:5:box-shadow:.token-card"]);
+	});
+
+	it("collects prototype-only glow token definitions from shared css", () => {
+		expect(
+			collectGlowBudgetCssViolations({
+				label: "tokens-style.css",
+				css: `
+					:root {
+						--brand-signature-glow: oklch(from var(--brand-signature-fg) l c h / 0.60);
+					}
+				`,
+			}),
+		).toEqual(["tokens-style.css:3:prototype-glow-token:--brand-signature-glow"]);
 	});
 
 	it("collects glow budget violations from svg glow filters in raw html", () => {
@@ -3754,6 +3775,8 @@ describe("prototype design consistency", () => {
 
 	it("keeps glow budgeted active prototypes free of decorative glow", () => {
 		const violations: string[] = [];
+
+		expect(readGlowBudgetCssSources().map((source) => source.label)).toContain("tokens-style.css");
 
 		for (const source of readGlowBudgetCssSources()) {
 			violations.push(...collectGlowBudgetCssViolations(source));
