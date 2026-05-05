@@ -13,7 +13,10 @@
     "featureModule": "src/features/instruments",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/instruments/components/instrument-components.test.tsx"
+    ]
   },
   "viewports": [
     {

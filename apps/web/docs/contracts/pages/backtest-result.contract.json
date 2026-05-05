@@ -13,7 +13,10 @@
     "featureModule": "src/features/backtest",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/backtest/components/backtest-components.test.tsx"
+    ]
   },
   "viewports": [
     {

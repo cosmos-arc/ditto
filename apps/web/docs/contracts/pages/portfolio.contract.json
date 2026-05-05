@@ -9,11 +9,15 @@
   "shellFamily": "analytical",
   "prototypeRef": "docs/designs/specs/prototypes/page-portfolio.html",
   "landing": {
-    "reactRouteStatus": "missing",
+    "reactRouteStatus": "implemented",
     "featureModule": "src/features/trading",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/trading/components/trading-components.test.tsx",
+      "src/features/trading/components/positions-summary.test.tsx"
+    ]
   },
   "viewports": [
     {

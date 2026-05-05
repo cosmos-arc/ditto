@@ -13,7 +13,11 @@
     "featureModule": "src/features/trading",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/trading/components/risk-components.test.tsx",
+      "src/features/trading/components/risk-breach-detail.test.tsx"
+    ]
   },
   "viewports": [
     {

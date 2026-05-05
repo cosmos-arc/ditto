@@ -12,11 +12,15 @@
     "02_core_page_blueprints.md#26-platform-settings轻量"
   ],
   "landing": {
-    "reactRouteStatus": "missing",
+    "reactRouteStatus": "implemented",
     "featureModule": "src/features/platform",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/platform/components/platform-components.test.tsx",
+      "src/features/platform/hooks/platform-hooks.test.tsx"
+    ]
   },
   "viewports": [
     {

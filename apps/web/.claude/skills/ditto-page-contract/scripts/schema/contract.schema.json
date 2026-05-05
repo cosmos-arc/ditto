@@ -228,7 +228,15 @@
         },
         "visualAuditStatus": {
           "type": "string",
-          "enum": ["missing", "baseline", "pass"]
+          "enum": ["missing", "queued", "implemented", "verified"]
+        },
+        "reactTestRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^src/features/.+\\.test\\.(ts|tsx)$"
+          },
+          "description": "Existing React feature tests that cover this contract handoff"
         }
       }
     },

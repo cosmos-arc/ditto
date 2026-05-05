@@ -12,11 +12,14 @@
     "02_core_page_blueprints.md#19-strategy-detail"
   ],
   "landing": {
-    "reactRouteStatus": "missing",
+    "reactRouteStatus": "implemented",
     "featureModule": "src/features/strategy",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/strategy/components/strategy-detail-components.test.tsx"
+    ]
   },
   "viewports": [
     {

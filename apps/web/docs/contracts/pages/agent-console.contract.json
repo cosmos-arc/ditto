@@ -12,11 +12,14 @@
     "02_core_page_blueprints.md#15-agent-console"
   ],
   "landing": {
-    "reactRouteStatus": "missing",
+    "reactRouteStatus": "implemented",
     "featureModule": "src/features/platform",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/platform/components/platform-components.test.tsx"
+    ]
   },
   "viewports": [
     {

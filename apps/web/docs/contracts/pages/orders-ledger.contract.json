@@ -13,7 +13,10 @@
     "featureModule": "src/features/trading",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/trading/components/orders-components.test.tsx"
+    ]
   },
   "viewports": [
     {

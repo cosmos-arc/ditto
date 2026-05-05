@@ -13,7 +13,10 @@
     "featureModule": "src/features/research",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/research/components/research-components.test.tsx"
+    ]
   },
   "viewports": [
     {

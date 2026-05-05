@@ -51,7 +51,7 @@ export type PrototypeSource = (typeof PROTOTYPE_SOURCES)[number];
 export type PageLandingRouteStatus = "missing" | "scaffolded" | "implemented";
 export type PageLandingContractStatus = "missing" | "draft" | "generated" | "verified";
 export type PageLandingOverlayStatus = "none" | "gallery-only" | "triggerable" | "implemented";
-export type PageLandingVisualAuditStatus = "missing" | "baseline" | "pass";
+export type PageLandingVisualAuditStatus = "missing" | "queued" | "implemented" | "verified";
 export type PageOverlayKind = "drawer" | "sheet" | "modal" | "alert-dialog" | "toast" | "inline";
 export type PageOverlayCloseBehavior = "escape" | "outside-click" | "primary-action";
 
@@ -61,6 +61,7 @@ export interface PageLandingStatus {
   contractStatus: PageLandingContractStatus;
   overlayStatus: PageLandingOverlayStatus;
   visualAuditStatus: PageLandingVisualAuditStatus;
+  reactTestRefs?: string[];
 }
 
 export interface PageOverlayContract {
@@ -108,7 +109,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/markets/components/a-shares-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -202,11 +206,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredStates: ["loading", "empty", "error", "stale", "no-agents", "agent-running", "partial", "blocked", "waiting-approval", "guardrail-blocked", "quality-run"],
     hasStatusBar: true,
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/platform",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/platform/components/platform-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -356,7 +363,8 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "missing",
+      "reactTestRefs": []
     },
     overlays: [
       {
@@ -487,11 +495,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["toolbar", "main", "detail"],
     requiredStates: ["loading", "empty", "error", "stale", "selected-backtest"],
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/backtest",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/backtest/components/backtest-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -535,7 +546,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/backtest",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/backtest/components/backtest-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -650,7 +664,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/markets/components/markets-page.test.tsx",
+        "src/features/markets/components/markets-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -763,11 +781,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredStates: ["loading", "empty", "error", "stale", "experiment-running"],
     hasStatusBar: true,
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/research-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -811,7 +832,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/factor-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -904,11 +928,15 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["toolbar", "main", "detail"],
     requiredStates: ["loading", "empty", "error", "stale", "selected-factor"],
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/factor-components.test.tsx",
+        "src/features/research/components/factor-table.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -953,7 +981,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/home",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/home/components/home-components.test.tsx",
+        "src/features/home/hooks/home-hooks.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1049,7 +1081,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/instruments",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/instruments/components/instrument-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1180,7 +1215,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/markets/components/calendar-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1260,7 +1298,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/markets/components/intelligence-page.test.tsx",
+        "src/features/markets/components/intelligence-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1374,7 +1416,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/screener",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/screener/components/screener-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1487,7 +1532,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/trading/components/orders-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1579,11 +1627,15 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredStates: ["loading", "empty", "error", "stale", "settings-dirty", "ai-policy-dirty", "guardrail-failed", "tool-permission-selected"],
     hasStatusBar: true,
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/platform",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/platform/components/platform-components.test.tsx",
+        "src/features/platform/hooks/platform-hooks.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1662,7 +1714,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/platform",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/platform/components/platform-components.test.tsx",
+        "src/features/platform/hooks/platform-hooks.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1737,11 +1793,15 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredStates: ["loading", "empty", "error", "stale", "no-positions"],
     hasStatusBar: true,
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/trading/components/trading-components.test.tsx",
+        "src/features/trading/components/positions-summary.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1822,7 +1882,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/regime-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1868,7 +1931,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/research-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -1983,7 +2049,11 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/trading/components/risk-components.test.tsx",
+        "src/features/trading/components/risk-breach-detail.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2064,7 +2134,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/trading/components/signals-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2155,11 +2228,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["meta", "tabs", "main", "bottom"],
     requiredStates: ["loading", "empty", "error", "stale", "not-found", "optimization-pending", "optimization-simulating", "optimization-simulated", "optimization-approved", "optimization-expired"],
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/strategy",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/strategy/components/strategy-detail-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2252,11 +2328,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["toolbar", "main", "detail"],
     requiredStates: ["loading", "empty", "error", "stale", "selected-strategy"],
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/strategy",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/strategy/components/strategy-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2314,11 +2393,15 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredStates: ["loading", "empty", "error", "stale", "no-session", "running", "guided", "agent-running", "waiting-approval", "blocked"],
     hasStatusBar: true,
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/strategy",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/strategy/components/strategy-components.test.tsx",
+        "src/features/strategy/components/studio-mode-bar.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2433,7 +2516,10 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
       "featureModule": "src/features/trading",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/trading/components/trading-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2526,11 +2612,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["toolbar", "main", "detail"],
     requiredStates: ["loading", "empty", "error", "stale", "selected-universe"],
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/research",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/research/components/research-components.test.tsx"
+      ]
     },
     overlays: [
       {
@@ -2587,11 +2676,14 @@ export const PAGE_CONTRACTS: readonly PageContract[] = [
     requiredSlots: ["toolbar", "main", "detail"],
     requiredStates: ["loading", "empty", "error", "stale", "no-symbols"],
     landing: {
-      "reactRouteStatus": "missing",
+      "reactRouteStatus": "implemented",
       "featureModule": "src/features/markets",
       "contractStatus": "draft",
       "overlayStatus": "triggerable",
-      "visualAuditStatus": "missing"
+      "visualAuditStatus": "queued",
+      "reactTestRefs": [
+        "src/features/markets/components/markets-components.test.tsx"
+      ]
     },
     overlays: [
       {

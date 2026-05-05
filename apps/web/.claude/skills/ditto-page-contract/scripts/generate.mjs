@@ -115,7 +115,7 @@ function generateTS(contracts) {
   lines.push("export type PageLandingRouteStatus = \"missing\" | \"scaffolded\" | \"implemented\";");
   lines.push("export type PageLandingContractStatus = \"missing\" | \"draft\" | \"generated\" | \"verified\";");
   lines.push("export type PageLandingOverlayStatus = \"none\" | \"gallery-only\" | \"triggerable\" | \"implemented\";");
-  lines.push("export type PageLandingVisualAuditStatus = \"missing\" | \"baseline\" | \"pass\";");
+  lines.push("export type PageLandingVisualAuditStatus = \"missing\" | \"queued\" | \"implemented\" | \"verified\";");
   lines.push("export type PageOverlayKind = \"drawer\" | \"sheet\" | \"modal\" | \"alert-dialog\" | \"toast\" | \"inline\";");
   lines.push("export type PageOverlayCloseBehavior = \"escape\" | \"outside-click\" | \"primary-action\";");
   lines.push("");
@@ -125,6 +125,7 @@ function generateTS(contracts) {
   lines.push("  contractStatus: PageLandingContractStatus;");
   lines.push("  overlayStatus: PageLandingOverlayStatus;");
   lines.push("  visualAuditStatus: PageLandingVisualAuditStatus;");
+  lines.push("  reactTestRefs?: string[];");
   lines.push("}");
   lines.push("");
   lines.push("export interface PageOverlayContract {");

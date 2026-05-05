@@ -16,7 +16,10 @@
     "featureModule": "src/features/trading",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/trading/components/signals-components.test.tsx"
+    ]
   },
   "viewports": [
     {

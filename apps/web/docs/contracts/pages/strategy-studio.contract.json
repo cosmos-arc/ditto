@@ -12,11 +12,15 @@
     "02_core_page_blueprints.md#7-strategy-studio"
   ],
   "landing": {
-    "reactRouteStatus": "missing",
+    "reactRouteStatus": "implemented",
     "featureModule": "src/features/strategy",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/strategy/components/strategy-components.test.tsx",
+      "src/features/strategy/components/studio-mode-bar.test.tsx"
+    ]
   },
   "viewports": [
     {

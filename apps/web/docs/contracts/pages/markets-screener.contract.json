@@ -13,7 +13,10 @@
     "featureModule": "src/features/screener",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/screener/components/screener-components.test.tsx"
+    ]
   },
   "viewports": [
     {

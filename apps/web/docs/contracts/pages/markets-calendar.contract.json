@@ -13,7 +13,10 @@
     "featureModule": "src/features/markets",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/markets/components/calendar-components.test.tsx"
+    ]
   },
   "viewports": [
     {

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
 	PAGE_CONTRACTS,
 	PAGE_PATTERNS,
+	type PageLandingVisualAuditStatus,
 	PROTOTYPE_SOURCES,
 	SHELL_FAMILIES,
 	SHELL_SLOT_MAP,
@@ -39,6 +42,17 @@ const IA_ROUTES = [
 ] as const;
 
 const UNIVERSAL_STATES = ["loading", "empty", "error", "stale"] as const;
+const VISUAL_AUDIT_STATUSES = [
+	"missing",
+	"queued",
+	"implemented",
+	"verified",
+] as const satisfies readonly PageLandingVisualAuditStatus[];
+
+const GENERATED_SOURCE = readFileSync(
+	resolve(process.cwd(), "src/features/shell/page-contracts.generated.ts"),
+	"utf-8",
+);
 
 describe("Generated page contracts", () => {
 	it("exports the generated contract dictionaries", () => {
@@ -90,6 +104,37 @@ describe("Generated page contracts", () => {
 					`${contract.route} missing universal state: ${state}`,
 				).toBe(true);
 			}
+		}
+	});
+
+	it("uses the React visual audit landing vocabulary", () => {
+		expect(GENERATED_SOURCE).toContain(
+			'export type PageLandingVisualAuditStatus = "missing" | "queued" | "implemented" | "verified";',
+		);
+		expect(GENERATED_SOURCE).not.toContain('"baseline" | "pass"');
+
+		for (const contract of PAGE_CONTRACTS) {
+			if (!contract.landing) continue;
+
+			expect(
+				VISUAL_AUDIT_STATUSES.includes(contract.landing.visualAuditStatus),
+				`${contract.route} has invalid visualAuditStatus: ${contract.landing.visualAuditStatus}`,
+			).toBe(true);
+		}
+	});
+
+	it("maps implemented React route contracts to feature tests", () => {
+		for (const contract of PAGE_CONTRACTS) {
+			if (contract.landing?.reactRouteStatus !== "implemented") continue;
+
+			expect(
+				contract.landing.featureModule,
+				`${contract.route} missing featureModule`,
+			).toMatch(/^src\/features\/[^/]+$/);
+			expect(
+				contract.landing.reactTestRefs,
+				`${contract.route} missing reactTestRefs`,
+			).toEqual(expect.arrayContaining([expect.stringMatching(/^src\/features\/.+\.test\.(ts|tsx)$/)]));
 		}
 	});
 });

@@ -9,11 +9,14 @@
   "shellFamily": "catalog",
   "prototypeRef": "docs/designs/specs/prototypes/page-universe-list.html",
   "landing": {
-    "reactRouteStatus": "missing",
+    "reactRouteStatus": "implemented",
     "featureModule": "src/features/research",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing"
+    "visualAuditStatus": "queued",
+    "reactTestRefs": [
+      "src/features/research/components/research-components.test.tsx"
+    ]
   },
   "viewports": [
     {
