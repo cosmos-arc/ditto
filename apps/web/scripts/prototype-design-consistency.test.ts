@@ -473,6 +473,32 @@ const requiredChartDataAttributes = [
 	"data-chart-linked-time-range",
 	"data-chart-selection-command",
 ] as const;
+const requiredChartSelectionCommandSchemaTerms = [
+	"chartId",
+	"rangeId",
+	"commandId",
+	"selection",
+	"kind",
+	"point",
+	"range",
+	"bar",
+	"series",
+	"timeRange",
+	"from",
+	"to",
+	"timestamp",
+	"seriesId",
+	"value",
+	"prototype:chart-selection-command",
+] as const;
+const requiredChartTestingExpectationTerms = [
+	"DOM contract",
+	"Interaction",
+	"Keyboard/a11y",
+	"Reduced motion",
+	"Linked range sync",
+	"Selection command payload",
+] as const;
 const chartInteractionPrototypeRequirements = [
 	{
 		pageId: "instrument-hub",
@@ -490,6 +516,12 @@ const chartInteractionPrototypeRequirements = [
 		pageId: "trading-overview",
 		contracts: ["trading-equity-pnl"],
 	},
+] as const;
+const requiredChartContractSectionHeadings = [
+	"## Required Affordances",
+	"## Required data-* Attributes",
+	"## Selection Command Schema",
+	"## Testing Expectations",
 ] as const;
 const approvedHeaderTitleTerms = ["Alpha"] as const;
 const homeTokenFocusSelectors = [
@@ -582,6 +614,36 @@ function activePageById(id: string): ManifestPage {
 	if (!page) throw new Error(`Active prototype not found: ${id}`);
 
 	return page;
+}
+
+function collectChartInteractionContractViolations(
+	document: Document,
+	pageId: string,
+	contractIds: readonly string[],
+): string[] {
+	const violations: string[] = [];
+	const expectedContractIds = new Set(contractIds);
+
+	for (const contractId of contractIds) {
+		const markers = document.querySelectorAll(
+			`[data-chart-interaction-contract="${contractId}"]`,
+		);
+		if (markers.length === 0) {
+			violations.push(`${pageId}:${contractId}:missing-marker`);
+		}
+		if (markers.length > 1) {
+			violations.push(`${pageId}:${contractId}:duplicate-marker:${markers.length}`);
+		}
+	}
+
+	for (const marker of document.querySelectorAll("[data-chart-interaction-contract]")) {
+		const contractId = marker.getAttribute("data-chart-interaction-contract")?.trim() ?? "";
+		if (!expectedContractIds.has(contractId)) {
+			violations.push(`${pageId}:unexpected-marker:${contractId || "empty"}`);
+		}
+	}
+
+	return violations;
 }
 
 function readTokenCssBundle(): string {
@@ -3142,8 +3204,12 @@ describe("prototype design consistency", () => {
 
 		const contract = readFileSync(chartInteractionContractPath, "utf8");
 		const requiredText = [
+			...requiredChartContractSectionHeadings,
 			...requiredChartAffordances,
 			...requiredChartDataAttributes,
+			...requiredChartSelectionCommandSchemaTerms,
+			...requiredChartTestingExpectationTerms,
+			...chartInteractionPrototypeRequirements.flatMap((requirement) => requirement.contracts),
 			"lightweight-charts",
 			"prefers-reduced-motion",
 			"aria-label",
@@ -3158,19 +3224,43 @@ describe("prototype design consistency", () => {
 		expect(missing).toEqual([]);
 	});
 
+	it("detects duplicate and unexpected chart interaction contract markers", () => {
+		const document = new JSDOM(`
+			<section>
+				<div data-chart-interaction-contract="expected-a"></div>
+				<div data-chart-interaction-contract="expected-a"></div>
+				<div data-chart-interaction-contract="unexpected-extra"></div>
+			</section>
+		`).window.document;
+
+		expect(
+			collectChartInteractionContractViolations(document, "fixture-page", ["expected-a"]),
+		).toEqual([
+			"fixture-page:expected-a:duplicate-marker:2",
+			"fixture-page:unexpected-marker:unexpected-extra",
+		]);
+	});
+
 	it("marks representative chart placeholders with the chart interaction contract", () => {
 		const violations: string[] = [];
 		const requiredAffordanceSet = new Set(requiredChartAffordances);
 
 		for (const requirement of chartInteractionPrototypeRequirements) {
 			const document = readPrototypeDocument(activePageById(requirement.pageId));
+			violations.push(
+				...collectChartInteractionContractViolations(
+					document,
+					requirement.pageId,
+					requirement.contracts,
+				),
+			);
 
 			for (const contractId of requirement.contracts) {
-				const marker = document.querySelector(
+				const markers = document.querySelectorAll(
 					`[data-chart-interaction-contract="${contractId}"]`,
 				);
-				if (!marker) {
-					violations.push(`${requirement.pageId}:${contractId}:missing-marker`);
+				const marker = markers[0];
+				if (markers.length !== 1 || !marker) {
 					continue;
 				}
 
