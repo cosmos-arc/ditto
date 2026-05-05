@@ -21,6 +21,13 @@ const prototypeLayoutModulePaths = [
 	"shared/layout-overlay.css",
 	"shared/layout-state.css",
 ] as const;
+const glowBudgetSharedCssResourcePaths = [
+	...prototypeLayoutModulePaths,
+	"shared/theme-switcher.css",
+	"shared/prototype-toggles.css",
+	"shared/prototype-interactions.css",
+] as const;
+const glowBudgetSharedTextResourcePaths = ["shared/prototype-interactions.js"] as const;
 function readAllLayoutCss(): string {
 	return prototypeLayoutModulePaths.map((p) => readFileSync(join(prototypesDir, p), "utf8")).join("\n");
 }
@@ -86,6 +93,11 @@ type CssSource = {
 type HtmlSource = {
 	label: string;
 	html: string;
+};
+
+type TextSource = {
+	label: string;
+	text: string;
 };
 
 type CssBlock = {
@@ -1003,14 +1015,23 @@ function splitCssList(value: string): string[] {
 
 function readGlowBudgetCssSources(): CssSource[] {
 	return [
-		{ label: "shared/layout-shell.css", css: readFileSync(prototypeLayoutCss, "utf8") },
-		{ label: "shared/layout-components.css", css: readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8") },
+		...glowBudgetSharedCssResourcePaths.map((path) => ({
+			label: path,
+			css: readFileSync(join(prototypesDir, path), "utf8"),
+		})),
 		{ label: "tokens-style.css", css: readFileSync(prototypeTokensStyleCss, "utf8") },
 		...activePages().map((page) => ({
 			label: page.file,
 			css: getStyleBlocks(readPrototypeHtml(page)),
 		})),
 	];
+}
+
+function readGlowBudgetSharedTextSources(): TextSource[] {
+	return glowBudgetSharedTextResourcePaths.map((path) => ({
+		label: path,
+		text: readFileSync(join(prototypesDir, path), "utf8"),
+	}));
 }
 
 function readGlowBudgetHtmlSources(): HtmlSource[] {
@@ -1343,6 +1364,26 @@ function collectGlowBudgetHtmlViolations(source: HtmlSource): string[] {
 
 	for (const match of source.html.matchAll(/url\(#([^"')]*glow[^"')]*)\)/gi)) {
 		violations.push(`${source.label}:${getLineNumber(source.html, match.index)}:svg-url-glow:${match[1]}`);
+	}
+
+	return [...new Set(violations)];
+}
+
+function collectGlowBudgetSharedTextViolations(source: TextSource): string[] {
+	const violations: string[] = [];
+	const markerPatterns: Array<{ pattern: RegExp; reason: string }> = [
+		{ pattern: /\bdata-mouse-glow(?:-[a-z0-9-]+)?\b/gi, reason: "data-mouse-glow-runtime" },
+		{ pattern: /\bMouseGlow\b/g, reason: "mouse-glow-module" },
+		{ pattern: /\b--_glow-[a-z0-9-]+\b/gi, reason: "mouse-glow-custom-property" },
+		{ pattern: /radial-gradient\s*\([\s\S]{0,320}?\bglow\b/gi, reason: "radial-gradient-glow-runtime" },
+		{ pattern: /\bfeGaussianBlur\b/gi, reason: "svg-feGaussianBlur-runtime" },
+		{ pattern: /\b(?:filter|url)\s*\([^)]*\bglow\b[^)]*\)/gi, reason: "glow-filter-runtime" },
+	];
+
+	for (const { pattern, reason } of markerPatterns) {
+		for (const match of source.text.matchAll(pattern)) {
+			violations.push(`${source.label}:${getLineNumber(source.text, match.index)}:${reason}:${match[0]}`);
+		}
 	}
 
 	return [...new Set(violations)];
@@ -3775,11 +3816,21 @@ describe("prototype design consistency", () => {
 
 	it("keeps glow budgeted active prototypes free of decorative glow", () => {
 		const violations: string[] = [];
+		const cssSourceLabels = readGlowBudgetCssSources().map((source) => source.label);
 
-		expect(readGlowBudgetCssSources().map((source) => source.label)).toContain("tokens-style.css");
+		expect(cssSourceLabels).toEqual(
+			expect.arrayContaining([...glowBudgetSharedCssResourcePaths, "tokens-style.css"]),
+		);
+		expect(readGlowBudgetSharedTextSources().map((source) => source.label)).toEqual([
+			"shared/prototype-interactions.js",
+		]);
 
 		for (const source of readGlowBudgetCssSources()) {
 			violations.push(...collectGlowBudgetCssViolations(source));
+		}
+
+		for (const source of readGlowBudgetSharedTextSources()) {
+			violations.push(...collectGlowBudgetSharedTextViolations(source));
 		}
 
 		for (const source of readGlowBudgetHtmlSources()) {

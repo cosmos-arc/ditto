@@ -830,111 +830,6 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 7. MouseGlow — data-mouse-glow="true"
-   * ══════════════════════════════════════════════ */
-  var MouseGlow = {
-    currentEl: null,
-    frame: 0,
-    lastEvent: null,
-
-    init: function () {
-      if (reducedMotion) return;
-
-      /* Apply initial glow tokens to all glow elements */
-      document.querySelectorAll('[data-mouse-glow]').forEach(function (el) {
-        MouseGlow._applyTokens(el);
-      });
-
-      /* Event delegation: single mousemove on document */
-      document.addEventListener('mousemove', function (e) {
-        var el = e.target.closest('[data-mouse-glow]');
-        if (!el) {
-          if (MouseGlow.currentEl) MouseGlow._clear(MouseGlow.currentEl);
-          MouseGlow.currentEl = null;
-          return;
-        }
-        if (el !== MouseGlow.currentEl) {
-          if (MouseGlow.currentEl) MouseGlow._clear(MouseGlow.currentEl);
-          MouseGlow.currentEl = el;
-        }
-        MouseGlow._update(el, e);
-      });
-
-      /* Clear glow when mouse leaves a glow element (delegated via mouseout) */
-      document.addEventListener('mouseout', function (e) {
-        if (!MouseGlow.currentEl) return;
-        var el = e.target.closest('[data-mouse-glow]');
-        if (!el || el !== MouseGlow.currentEl) return;
-        var related = e.relatedTarget;
-        if (related && el.contains(related)) return;
-        MouseGlow._clear(el);
-        MouseGlow.currentEl = null;
-      });
-
-      /* Clear glow when mouse leaves the document entirely */
-      document.addEventListener('mouseleave', function () {
-        if (MouseGlow.currentEl) {
-          MouseGlow._clear(MouseGlow.currentEl);
-          MouseGlow.currentEl = null;
-        }
-      });
-
-      /* Also listen for mouseleave on each glow element directly (non-bubbling) */
-      document.querySelectorAll('[data-mouse-glow]').forEach(function (el) {
-        el.addEventListener('mouseleave', function () {
-          MouseGlow._clear(el);
-          if (MouseGlow.currentEl === el) {
-            MouseGlow.currentEl = null;
-          }
-        });
-      });
-    },
-
-    _applyTokens: function (el) {
-      var color = el.getAttribute('data-mouse-glow-color') || cssVar('--brand-accent-subtle', 'oklch(from var(--brand-500) l c h / 0.06)');
-      var size = el.getAttribute('data-mouse-glow-size') || '200px';
-      el.style.setProperty('--_glow-size', size);
-      el.style.setProperty('--_glow-color', color);
-    },
-
-    _update: function (el, event) {
-      MouseGlow.lastEvent = event;
-      var background =
-        'radial-gradient(circle var(--_glow-size) at var(--_glow-x, 50%) var(--_glow-y, 50%), var(--_glow-color), transparent)';
-
-      if (!el.style.backgroundImage || !el.style.getPropertyValue('--_glow-size') || !el.style.getPropertyValue('--_glow-color')) {
-        MouseGlow._applyTokens(el);
-        el.style.backgroundImage = background;
-      }
-      if (MouseGlow.frame) return;
-
-      MouseGlow.frame = requestAnimationFrame(function () {
-        MouseGlow.frame = 0;
-        if (!MouseGlow.lastEvent) return;
-
-        var rect = el.getBoundingClientRect();
-        var x = MouseGlow.lastEvent.clientX - rect.left;
-        var y = MouseGlow.lastEvent.clientY - rect.top;
-        el.style.setProperty('--_glow-x', x + 'px');
-        el.style.setProperty('--_glow-y', y + 'px');
-      });
-    },
-
-    _clear: function (el) {
-      if (MouseGlow.frame) {
-        cancelAnimationFrame(MouseGlow.frame);
-      }
-      MouseGlow.frame = 0;
-      MouseGlow.lastEvent = null;
-      el.style.backgroundImage = '';
-      el.style.removeProperty('--_glow-x');
-      el.style.removeProperty('--_glow-y');
-      el.style.removeProperty('--_glow-size');
-      el.style.removeProperty('--_glow-color');
-    },
-  };
-
-  /* ══════════════════════════════════════════════
    * 8. ConfidenceBar — data-confidence="0.92"
    * ══════════════════════════════════════════════ */
   var ConfidenceBar = {
@@ -2296,7 +2191,6 @@
     HeatGrid.init();
     DataCounter.init();
     ScrollReveal.init();
-    MouseGlow.init();
     ConfidenceBar.init();
     FlowBar.init();
     TooltipSystem.init();

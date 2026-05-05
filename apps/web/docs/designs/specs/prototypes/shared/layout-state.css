@@ -136,6 +136,8 @@
 }
 
 .threshold-crossed {
+  outline: 1px solid transparent;
+  outline-offset: -1px;
   animation: threshold-crossed var(--motion-duration-slow) var(--motion-easing-emphasis) both;
 }
 
@@ -162,13 +164,16 @@
 
 @keyframes threshold-crossed {
   0% {
-    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--risk-critical-fg) 32%, transparent);
+    outline-color: color-mix(in oklch, var(--risk-critical-fg) 32%, transparent);
+    outline-width: 1px;
   }
   55% {
-    box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--risk-critical-fg) 46%, transparent);
+    outline-color: color-mix(in oklch, var(--risk-critical-fg) 46%, transparent);
+    outline-width: 2px;
   }
   100% {
-    box-shadow: inset 0 0 0 1px transparent;
+    outline-color: transparent;
+    outline-width: 1px;
   }
 }
 

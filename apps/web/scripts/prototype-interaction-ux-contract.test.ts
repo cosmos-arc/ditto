@@ -931,10 +931,10 @@ describe("prototype interaction UX contracts", () => {
 	it("caches shared CSS variable reads during interaction initialization", () => {
 		const dom = new JSDOM(
 			`<!doctype html>
-			<html>
+			<html style="--chart-series-up: contract-up; --sparkline-width: 48; --sparkline-height: 20; --sparkline-stroke-width: 1.5">
 				<body>
-					<div data-mouse-glow></div>
-					<div data-mouse-glow></div>
+					<svg data-sparkline='{"data":[1,2,3],"series":"up"}'></svg>
+					<svg data-sparkline='{"data":[1,3,2],"series":"up"}'></svg>
 				</body>
 			</html>`,
 			{
@@ -961,15 +961,15 @@ describe("prototype interaction UX contracts", () => {
 			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
 		}
 
-		expect(computedStyleReads).toBeLessThanOrEqual(1);
+		expect(computedStyleReads).toBe(1);
 	});
 
 	it("invalidates shared CSS variable cache when theme or density attributes change", async () => {
 		const dom = new JSDOM(
 			`<!doctype html>
-			<html style="--brand-accent-subtle: first-glow">
+			<html style="--chart-series-up: first-series; --sparkline-width: 48; --sparkline-height: 20; --sparkline-stroke-width: 1.5">
 				<body>
-					<div id="glow" data-mouse-glow></div>
+					<svg id="first-sparkline" data-sparkline='{"data":[1,2,3],"series":"up"}'></svg>
 				</body>
 			</html>`,
 			{
@@ -979,10 +979,6 @@ describe("prototype interaction UX contracts", () => {
 		);
 		let computedStyleReads = 0;
 		const originalGetComputedStyle = dom.window.getComputedStyle.bind(dom.window);
-		const glow = dom.window.document.getElementById("glow");
-
-		expect(glow).not.toBeNull();
-		if (!(glow instanceof dom.window.HTMLElement)) return;
 
 		Object.defineProperty(dom.window, "getComputedStyle", {
 			configurable: true,
@@ -1000,108 +996,21 @@ describe("prototype interaction UX contracts", () => {
 			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
 		}
 
-		expect(glow.style.getPropertyValue("--_glow-color")).toBe("first-glow");
+		expect(dom.window.document.querySelector("#first-sparkline path")?.getAttribute("stroke")).toBe("first-series");
 		expect(computedStyleReads).toBe(1);
 
-		dom.window.document.documentElement.style.setProperty("--brand-accent-subtle", "second-glow");
+		dom.window.document.documentElement.style.setProperty("--chart-series-up", "second-series");
 		dom.window.document.documentElement.setAttribute("data-theme", "light");
 		await Promise.resolve();
 
-		glow.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
-		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 12, clientY: 16, bubbles: true }));
+		const secondSparkline = dom.window.document.createElementNS("http://www.w3.org/2000/svg", "svg");
+		secondSparkline.id = "second-sparkline";
+		secondSparkline.setAttribute("data-sparkline", '{"data":[1,3,2],"series":"up"}');
+		dom.window.document.body.appendChild(secondSparkline);
+		dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
 
-		expect(glow.style.getPropertyValue("--_glow-color")).toBe("second-glow");
+		expect(dom.window.document.querySelector("#second-sparkline path")?.getAttribute("stroke")).toBe("second-series");
 		expect(computedStyleReads).toBe(2);
-	});
-
-	it("throttles mouse glow pointer updates through animation frames", () => {
-		const dom = new JSDOM(
-			`<!doctype html>
-			<html>
-				<body>
-					<div id="glow" data-mouse-glow></div>
-				</body>
-			</html>`,
-			{
-				pretendToBeVisual: true,
-				url: "https://prototype.local/mouse-glow-raf-contract.html",
-			},
-		);
-		const frames: FrameRequestCallback[] = [];
-		const glow = dom.window.document.getElementById("glow");
-		let rectReads = 0;
-
-		expect(glow).not.toBeNull();
-		if (!(glow instanceof dom.window.HTMLElement)) return;
-
-		Object.defineProperty(dom.window, "requestAnimationFrame", {
-			configurable: true,
-			value: (callback: FrameRequestCallback): number => {
-				frames.push(callback);
-				return frames.length;
-			},
-		});
-		Object.defineProperty(glow, "getBoundingClientRect", {
-			configurable: true,
-			value: (): DOMRect => {
-				rectReads += 1;
-				return new dom.window.DOMRect(8, 13, 100, 80);
-			},
-		});
-
-		installInteractiveWindowStubs(dom.window);
-		evaluateSharedInteractionsScript(dom.window);
-		if (dom.window.document.readyState === "loading") {
-			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
-		}
-
-		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 18, clientY: 28, bubbles: true }));
-		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 30, clientY: 43, bubbles: true }));
-
-		expect(frames).toHaveLength(1);
-		expect(rectReads).toBe(0);
-
-		frames[0](0);
-
-		expect(rectReads).toBe(1);
-		expect(glow.style.getPropertyValue("--_glow-x")).toBe("22px");
-		expect(glow.style.getPropertyValue("--_glow-y")).toBe("30px");
-	});
-
-	it("restores mouse glow variables after leave and re-enter", () => {
-		const dom = new JSDOM(
-			`<!doctype html>
-			<html>
-				<body>
-					<div id="glow" data-mouse-glow data-mouse-glow-color="contract-color" data-mouse-glow-size="160px"></div>
-				</body>
-			</html>`,
-			{
-				pretendToBeVisual: true,
-				url: "https://prototype.local/mouse-glow-reentry-contract.html",
-			},
-		);
-		const glow = dom.window.document.getElementById("glow");
-
-		expect(glow).not.toBeNull();
-		if (!(glow instanceof dom.window.HTMLElement)) return;
-
-		installInteractiveWindowStubs(dom.window);
-		evaluateSharedInteractionsScript(dom.window);
-		if (dom.window.document.readyState === "loading") {
-			dom.window.document.dispatchEvent(new dom.window.Event("DOMContentLoaded", { bubbles: true }));
-		}
-
-		glow.dispatchEvent(new dom.window.MouseEvent("mouseleave", { bubbles: true }));
-
-		expect(glow.style.getPropertyValue("--_glow-color")).toBe("");
-		expect(glow.style.getPropertyValue("--_glow-size")).toBe("");
-
-		glow.dispatchEvent(new dom.window.MouseEvent("mousemove", { clientX: 12, clientY: 16, bubbles: true }));
-
-		expect(glow.style.getPropertyValue("--_glow-color")).toBe("contract-color");
-		expect(glow.style.getPropertyValue("--_glow-size")).toBe("160px");
-		expect(glow.style.backgroundImage).not.toBe("");
 	});
 
 	it("builds compare basket additions without unsafe innerHTML strings", () => {
