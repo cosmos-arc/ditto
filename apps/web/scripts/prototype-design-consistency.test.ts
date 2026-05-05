@@ -894,27 +894,23 @@ function hasReadableText(element: Element | null): boolean {
 	return Boolean(getReadablePrimaryText(element));
 }
 
+function hasReadableAriaLabelledbyTarget(element: Element): boolean {
+	const value = element.getAttribute("aria-labelledby")?.trim();
+	if (!value) return false;
+
+	return value.split(/\s+/).every((id) => hasReadableText(element.ownerDocument.getElementById(id)));
+}
+
 function hasPrototypeAccessibleName(element: Element): boolean {
 	if (element.getAttribute("aria-label")?.trim()) return true;
-	if (hasExistingIdTarget(element, "aria-labelledby")) return true;
+	if (hasReadableAriaLabelledbyTarget(element)) return true;
 	if (element.querySelector("title")?.textContent?.trim()) return true;
 
 	return false;
 }
 
 function hasOverlaySurfaceAccessibleName(surface: Element): boolean {
-	return (
-		hasPrototypeAccessibleName(surface) ||
-		[
-			".overlay-title",
-			".drawer-title",
-			"h1",
-			"h2",
-			"h3",
-			"h4",
-			"[role='heading']",
-		].some((selector) => hasReadableText(surface.querySelector(selector)))
-	);
+	return Boolean(surface.getAttribute("aria-label")?.trim()) || hasReadableAriaLabelledbyTarget(surface);
 }
 
 function isApprovedOverlaySurfaceRole(surface: Element): boolean {
@@ -3649,6 +3645,48 @@ describe("prototype design consistency", () => {
 		expect(isSvgInMeaningfulVisualizationContext(donut)).toBe(true);
 		expect(isSvgInMeaningfulVisualizationContext(heatgrid)).toBe(true);
 		expect(isSvgInMeaningfulVisualizationContext(icon)).toBe(false);
+	});
+
+	it("requires dialog overlay surfaces to use explicit accessible names", () => {
+		const document = new JSDOM(`
+			<section data-overlay="detail-overlay">
+				<div id="dialog-title">订单详情</div>
+				<div class="overlay-surface" role="dialog" aria-labelledby="dialog-title"></div>
+				<div class="overlay-surface" role="dialog" aria-label="筛选器"></div>
+				<div class="overlay-surface" role="dialog">
+					<h2 class="overlay-title">视觉标题不能命名 dialog</h2>
+				</div>
+			</section>
+		`).window.document;
+
+		const [labelledbyDialog, labelledDialog, visualTitleDialog] = [
+			...document.querySelectorAll(".overlay-surface"),
+		];
+
+		expect(isApprovedOverlaySurfaceRole(labelledbyDialog)).toBe(true);
+		expect(isApprovedOverlaySurfaceRole(labelledDialog)).toBe(true);
+		expect(isApprovedOverlaySurfaceRole(visualTitleDialog)).toBe(false);
+	});
+
+	it("requires aria-labelledby targets to exist, be visible, and expose readable text", () => {
+		const document = new JSDOM(`
+			<section>
+				<div id="readable">可读标题</div>
+				<div id="empty"></div>
+				<div id="hidden" aria-hidden="true">隐藏标题</div>
+				<button id="labelled" aria-labelledby="readable"></button>
+				<button id="native-label" aria-label="显式名称"></button>
+				<button id="missing-ref" aria-labelledby="missing"></button>
+				<button id="empty-ref" aria-labelledby="empty"></button>
+				<button id="hidden-ref" aria-labelledby="hidden"></button>
+			</section>
+		`).window.document;
+
+		expect(hasPrototypeAccessibleName(document.querySelector("#labelled") as Element)).toBe(true);
+		expect(hasPrototypeAccessibleName(document.querySelector("#native-label") as Element)).toBe(true);
+		expect(hasPrototypeAccessibleName(document.querySelector("#missing-ref") as Element)).toBe(false);
+		expect(hasPrototypeAccessibleName(document.querySelector("#empty-ref") as Element)).toBe(false);
+		expect(hasPrototypeAccessibleName(document.querySelector("#hidden-ref") as Element)).toBe(false);
 	});
 
 	it("requires active prototype overlays, charts, matrix cells, and symbol controls to expose accessible semantics", () => {
