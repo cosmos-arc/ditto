@@ -56,7 +56,7 @@ All must pass before merge:
 
 ```
 python scripts/architecture/check_architecture_smells.py   # 0 issues
-pixi run -e dev lint-imports                                # 34 kept, 0 broken
+pixi run -e dev lint-imports                                # all pass
 pixi run -e dev type                                        # 0 errors, 0 warnings
 pixi run -e dev test --fast                                 # all pass
 pixi run -e dev arch-check                                  # passes

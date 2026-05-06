@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
@@ -19,7 +20,6 @@ from ditto_execution.storage.sqlite.trade import (
     PositionWriter,
 )
 from ditto_execution.storage.sqlite.trade.service import TradeService
-from ditto_execution.storage.sqlite_client import SQLiteClient
 
 __all__ = ["ExecutionStorageProvider"]
 
@@ -32,7 +32,8 @@ class ExecutionStorageProvider(Provider):
     # ── 审计服务 ──
 
     @provide
-    def execution_audit_service(self, sqlite_pool: SQLitePool) -> ExecutionAuditService:  # noqa: D102
+    def execution_audit_service(self, sqlite_pool: SQLitePool) -> ExecutionAuditService:
+        """创建 ExecutionAuditService 并初始化 schema."""
         service = ExecutionAuditService(sqlite_pool)
         service.init_schema()
         return service

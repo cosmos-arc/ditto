@@ -150,3 +150,4 @@ Thumbs.db
 desktop.ini
 .codex
 .worktrees/
+.merge-backups/

@@ -78,10 +78,10 @@ forbidden_modules =
     ditto_backtest.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Platform 层隔离：禁止依赖其他层
+# Platform 层隔离：禁止依赖业务层（允许依赖 kernel）
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:platform-isolation]
-name = Platform must not depend on other layers
+name = Platform must not depend on business layers (kernel allowed)
 type = forbidden
 source_modules =
     ditto_platform.**
@@ -122,10 +122,10 @@ forbidden_modules =
     ditto_apps.**
 
 # ═══════════════════════════════════════════════════════════════════
-# Data 层边界：禁止依赖 Engine/Apps/App
+# Data 层边界：禁止依赖上层/同级包
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:data-boundary]
-name = Data must not depend on Engine/Apps/App/Analytics/Features/Analysis/Strategy
+name = Data must not depend on Apps/Application/Analytics/Features/Analysis/Strategy
 type = forbidden
 source_modules =
     ditto_data.**
@@ -142,10 +142,10 @@ forbidden_modules =
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
-# Features 层隔离：禁止依赖 Data/Engine/Strategy 等
+# Features 层隔离：禁止依赖 Data/Strategy 等
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:features-boundary]
-name = Features must not depend on Data/Engine/Strategy/Apps/Application/Analysis/Portfolio
+name = Features must not depend on Data/Strategy/Apps/Application/Analysis/Portfolio
 type = forbidden
 source_modules =
     ditto_features.**
@@ -261,7 +261,7 @@ unmatched_ignore_imports_alerting = warn
 # Backtest 层隔离：禁止依赖 broker gateways / analysis / apps / application
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:backtest-boundary]
-name = Backtest must not depend on broker gateways/analysis/application/apps
+name = Backtest must not depend on broker gateways/analysis/application/apps/features/platform
 type = forbidden
 source_modules =
     ditto_backtest.**
@@ -270,6 +270,8 @@ forbidden_modules =
     ditto_apps.**
     ditto_application.**
     ditto_execution.broker.gateways.**
+    ditto_features.**
+    ditto_platform.**
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════

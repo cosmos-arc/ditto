@@ -15,8 +15,13 @@ def test_analysis_does_not_import_forbidden_packages() -> None:
     forbidden_prefixes = (
         "ditto_application",
         "ditto_apps",
-        "ditto_execution",
         "ditto_backtest",
+        "ditto_data",
+        "ditto_execution",
+        "ditto_features",
+        "ditto_portfolio",
+        "ditto_risk",
+        "ditto_strategy",
     )
     forbidden = {
         m

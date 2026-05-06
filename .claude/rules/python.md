@@ -601,21 +601,21 @@ tar -tzf dist/*.whl | grep py.typed
 | **Data Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
 | **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator（均属 Platform 层） | 包含业务逻辑 |
 | **Data Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
-| **Interfaces Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
- | **Interfaces Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
+| **Apps Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
+ | **Application Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
 
 ### 依赖方向规则
 
 **允许的单向依赖：**
 ```
-Interfaces Flow → Interfaces Service → App Service → Data Service → Data Store/Runtime → Platform
+Application Flow → Apps Service → Data Service → Data Store/Runtime → Platform
 ```
 
 **禁止的依赖模式：**
-- ❌ Interfaces → Data Store (跨层访问)
-- ❌ Interfaces → Data Runtime (跨层访问)
-- ❌ Interfaces 非 registry 模块 → Data Source(跨层访问)
-- ❌ Data → Interfaces (反向依赖)
+- ❌ Apps → Data Store (跨层访问)
+- ❌ Apps → Data Runtime (跨层访问)
+- ❌ Apps 非 registry 模块 → Data Source(跨层访问)
+- ❌ Data → Apps (反向依赖)
 - ❌ 同层组件间的循环依赖
 
 ### 跨层检测规则
@@ -623,14 +623,14 @@ Interfaces Flow → Interfaces Service → App Service → Data Service → Data
 **导入语句检查：**
 
 ```python
-# ❌ Interfaces 层禁止直接导入 Store
+# ❌ Apps 层禁止直接导入 Store
 from ditto_data.storage.metadata import MetadataReader
 
-# ❌ Interfaces 层禁止直接导入 Runtime
+# ❌ Apps 层禁止直接导入 Runtime
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_platform.foundation.db import SQLitePool  # SQLitePool 属于 Platform 层
 
-# ✅ Interfaces 层应该使用 Service（通过 DI 获取）
+# ✅ Apps 层应该使用 Service（通过 DI 获取）（通过 DI 获取）
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 
@@ -651,8 +651,8 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 | 是否需要分配/管理唯一标识符（如 instrument_id）？ | Data Service | 不应在此层 |
 | 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | Data Service | 不应在此层 |
 | 是否依赖外部数据源（API/爬虫）？ | Data Source/Adapter | 不应在此层 |
-| 是否是流程编排/任务协调？ | App 层 Service | 不应在此层 |
-| 是否是应用层用例组合？ | App 层 Flow | 不应在此层 |
+| 是否是流程编排/任务协调？ | Apps 层 Service | 不应在此层 |
+| 是否是应用层用例组合？ | Application 层 Flow | 不应在此层 |
 
 ### 代码重复检测
 
@@ -664,6 +664,6 @@ grep -r "def.*register" packages/data/src/ditto_data/services/metadata/
 ```
 
 **禁止重复实现：**
-- ❌ Interfaces 层重复实现 Service 已有的数据访问逻辑
+- ❌ Apps 层重复实现 Service 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则
 ```

@@ -312,7 +312,7 @@ volume = 1000  # 标准金融术语
 
 🔴 Top 5 Issues:
   1. [ARCH-001] BarsRepository 职责过重 (1081行)
-  2. [NAM-001] Interfaces层混用技术术语 `SQLBarLoader`
+  2. [NAM-001] Apps层混用技术术语 `SQLBarLoader`
   3. [ARCH-004] DQ Checkers hub: Any 类型污染
   4. [NAM-003] `BarData`/`KlineData`/`CandlestickData` 概念不统一
   5. [ENG-002] 5处异常处理缺失上下文

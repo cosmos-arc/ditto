@@ -59,7 +59,6 @@ ditto_execution/
 │   ├── models.py         # 审计模型
 │   └── execution_audit_service.py  # 审计服务
 ├── storage/              # 持久化
-│   ├── sqlite_client.py  # SQLite 客户端
 │   ├── deps.py           # 依赖注入
 │   └── sqlite/
 │       ├── trade/        # 交易数据存储

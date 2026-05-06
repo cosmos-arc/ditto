@@ -6,7 +6,7 @@ from typing import Any
 
 from ditto_execution.models import FillRecord
 from ditto_execution.storage.sqlite.trade._sql import build_where_clause
-from ditto_execution.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 __all__ = [
     "FILLS_DDL",
