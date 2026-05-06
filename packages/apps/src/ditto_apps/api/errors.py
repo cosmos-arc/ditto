@@ -6,16 +6,16 @@ from ditto_kernel.exceptions import DittoError
 
 
 def raise_business_error(
-    exc: ValueError,
+    exc: Exception,
     *,
     conflict_keywords: tuple[str, ...] = (),
     default_conflict: bool = False,
 ) -> Never:
     """
-    将业务 ValueError 映射为 APIError 并抛出.
+    将业务边界异常映射为 APIError 并抛出.
 
     Args:
-        exc: 原始 ValueError.
+        exc: 原始业务异常.
         conflict_keywords: 消息中匹配这些关键词时抛出 ConflictError.
         default_conflict: 为 True 时，兜底异常使用 ConflictError 而非 BadRequestError.
 

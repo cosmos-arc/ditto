@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import ditto_application.builders as strategy_services
 import pytest
+from ditto_application.exceptions import AppBuilderError
 from ditto_kernel.strategy import ImpactModel
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import (
@@ -106,5 +107,5 @@ class TestStrategyRuntimeBuilder:
         builder_cls = strategy_services.StrategyRuntimeBuilder
         builder = builder_cls(catalog_service=catalog_service)
 
-        with pytest.raises(ValueError, match="published"):
+        with pytest.raises(AppBuilderError, match="published"):
             builder.build_published_runtime("momentum-etf", 3)

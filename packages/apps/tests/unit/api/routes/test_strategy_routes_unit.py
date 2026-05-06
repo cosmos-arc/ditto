@@ -12,6 +12,7 @@ from ditto_application.commands.strategy import (
     PublishStrategyHandler,
     UpdateStrategyHandler,
 )
+from ditto_application.exceptions import AppCommandError
 from ditto_application.queries.strategy import StrategyQueryFacade
 from ditto_apps.api.errors import APIError
 from ditto_apps.api.routes.strategy import router
@@ -93,7 +94,7 @@ class TestUpdateStrategyErrorMapping:
         mock_update_handler: MagicMock,
     ) -> None:
         """策略不存在 -> 404."""
-        mock_update_handler.handle.side_effect = ValueError(
+        mock_update_handler.handle.side_effect = AppCommandError(
             "Strategy not found: missing"
         )
         resp = client.put(
@@ -109,7 +110,7 @@ class TestUpdateStrategyErrorMapping:
         mock_update_handler: MagicMock,
     ) -> None:
         """版本冲突 -> 409."""
-        mock_update_handler.handle.side_effect = ValueError(
+        mock_update_handler.handle.side_effect = AppCommandError(
             "Version conflict for strategy s1: expected 2, got 3"
         )
         resp = client.put(
@@ -129,7 +130,7 @@ class TestPublishStrategyErrorMapping:
         mock_publish_handler: MagicMock,
     ) -> None:
         """发布不存在的策略 → 404."""
-        mock_publish_handler.handle.side_effect = ValueError(
+        mock_publish_handler.handle.side_effect = AppCommandError(
             "Strategy not found: missing v1"
         )
         resp = client.post(

@@ -13,6 +13,12 @@ dependencies = [
     "ditto-execution",
     "ditto-backtest",
     "ditto-platform",
+    "dishka",
+    "httpx",
+    "loguru",
+    "orjson",
+    "polars",
+    "pydantic",
 ]
 
 [build-system]

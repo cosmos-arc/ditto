@@ -12,6 +12,7 @@ dependencies = [
     "polars",
     "numpy",
     "orjson",
+    "loguru",
 ]
 
 [build-system]

@@ -1,9 +1,9 @@
 """
-Experiments — 实验性分析。
+Experiments Reserved namespace.
 
-提供因子探索、参数敏感性分析、策略对比实验等研究工具。
-实验结果仅用于研究参考，不影响生产决策。
-
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
+This namespace is reserved for future analysis product work.
+No public runtime API is exported yet.
+Production code must not import this namespace for behavior.
 """
+
+__all__: list[str] = []

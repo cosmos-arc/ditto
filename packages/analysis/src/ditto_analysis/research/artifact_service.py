@@ -9,6 +9,8 @@ from typing import Literal, cast
 import orjson
 import polars as pl
 
+from ditto_analysis.errors import ResearchDatasetError
+
 __all__ = ["ResearchArtifactService"]
 
 ExportFormat = Literal["parquet", "csv", "feather"]
@@ -20,7 +22,7 @@ _EXPORT_WRITERS: dict[ExportFormat, str] = {
 
 
 class ResearchArtifactService:
-    """Encapsulates research artifact file I/O for the Data layer."""
+    """Encapsulates analysis-owned research artifact file I/O."""
 
     def __init__(self, *, artifact_root: Path) -> None:
         self._root = Path(artifact_root)
@@ -61,8 +63,12 @@ class ResearchArtifactService:
         writer_name = _EXPORT_WRITERS.get(fmt)
         if writer_name is None:
             supported = ", ".join(_EXPORT_WRITERS)
-            raise ValueError(
-                f"unsupported format: {fmt!r}. Expected one of: {supported}"
+            raise ResearchDatasetError(
+                f"unsupported format: {fmt!r}. Expected one of: {supported}",
+                relative_path=relative_path,
+                format=fmt,
+                supported=tuple(_EXPORT_WRITERS),
+                supported_formats=tuple(_EXPORT_WRITERS),
             )
         path = self._root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -77,7 +83,12 @@ class ResearchArtifactService:
             raise FileNotFoundError(f"research JSON not found: {relative_path}")
         payload = orjson.loads(path.read_bytes())
         if not isinstance(payload, dict):
-            raise ValueError(f"expected JSON object at {relative_path}")
+            raise ResearchDatasetError(
+                f"expected JSON object at {relative_path}",
+                relative_path=relative_path,
+                expected="object",
+                actual=type(payload).__name__,
+            )
         return cast(dict[str, object], payload)
 
     def write_json(

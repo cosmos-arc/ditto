@@ -36,6 +36,7 @@ from ditto_application.commands.backtest import (
     RetryRunCommand,
     RetryRunHandler,
 )
+from ditto_application.exceptions import AppError
 from ditto_application.processes.execution.replay_process import ReplayProcess
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.queries.backtest import BacktestQueryFacade, RunSummary
@@ -221,7 +222,7 @@ async def trigger_backtest(
 
     try:
         result = await asyncio.to_thread(handler.handle, command)
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc)
 
     # 后台提交 flow（不阻塞响应）
@@ -257,7 +258,7 @@ async def cancel_run(
     """取消回测运行 — 检查 status in {pending, running}，更新为 cancelled."""
     try:
         await asyncio.to_thread(handler.handle, CancelRunCommand(run_id=run_id))
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc, default_conflict=True)
 
     return APIResponse(
@@ -283,7 +284,7 @@ async def retry_run(
             handler.handle,
             RetryRunCommand(run_id=run_id),
         )
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc, default_conflict=True)
 
     # 获取 strategy_id + config_json 用于 flow 提交
@@ -448,7 +449,7 @@ async def replay_run(
         result = await asyncio.to_thread(replay_process.replay, run_id)
     except FileNotFoundError as exc:
         raise NotFoundError(str(exc)) from exc
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc)
 
     validation = result.validation

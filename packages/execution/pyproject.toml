@@ -6,6 +6,7 @@ dependencies = [
     "ditto-kernel",
     "ditto-portfolio",
     "ditto-platform",
+    "dishka",
     "orjson",
 ]
 

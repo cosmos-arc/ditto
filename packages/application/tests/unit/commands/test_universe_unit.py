@@ -13,6 +13,7 @@ from ditto_application.commands.universe import (
     UpdateCustomUniverseCommand,
     UpdateCustomUniverseHandler,
 )
+from ditto_application.exceptions import AppCommandError
 
 
 class TestCreateCustomUniverseHandler:
@@ -142,8 +143,17 @@ class TestUpdateCustomUniverseHandler:
             universe_id="csi300",
             name="修改名称",
         )
-        with pytest.raises(PermissionError, match="Preset universe cannot be modified"):
+        with pytest.raises(
+            AppCommandError,
+            match="Preset universe cannot be modified",
+        ) as exc_info:
             handler.handle(cmd)
+        assert exc_info.value.details == {
+            "universe_id": "csi300",
+            "reason": "non_custom_universe",
+            "universe_type": "preset",
+            "operation": "update",
+        }
         service.update_universe.assert_not_called()
 
     def test_update_nonexistent_raises(self) -> None:
@@ -155,8 +165,12 @@ class TestUpdateCustomUniverseHandler:
             universe_id="missing",
             name="x",
         )
-        with pytest.raises(ValueError, match="Universe not found"):
+        with pytest.raises(AppCommandError, match="Universe not found") as exc_info:
             handler.handle(cmd)
+        assert exc_info.value.details == {
+            "universe_id": "missing",
+            "reason": "not_found",
+        }
 
     def test_update_with_members_calls_replace_constituents(self) -> None:
         """更新时传入 members 应调用 replace_constituents."""
@@ -185,6 +199,33 @@ class TestUpdateCustomUniverseHandler:
         assert records[0]["instrument_id"] == 1
         assert records[0]["effective_from"] == "2026-04-14"
         assert call_args[0][2] == "2026-04-14"
+
+    def test_update_with_invalid_member_raises_app_command_error(self) -> None:
+        """Invalid member ids raise typed command errors."""
+        service = MagicMock()
+        service.get_universe_detail.return_value = {
+            "universe_id": "my-portfolio",
+            "name": "新名称",
+            "universe_type": "custom",
+        }
+        handler = UpdateCustomUniverseHandler(metadata_service=service)
+        cmd = UpdateCustomUniverseCommand(
+            universe_id="my-portfolio",
+            name="新名称",
+            members=["abc"],
+            effective_date="2026-04-14",
+        )
+
+        with pytest.raises(AppCommandError, match="members") as exc_info:
+            handler.handle(cmd)
+
+        assert exc_info.value.details == {
+            "universe_id": "my-portfolio",
+            "field": "members",
+            "index": 0,
+            "value": "abc",
+        }
+        service.replace_constituents.assert_not_called()
 
     def test_update_without_members_skips_replace(self) -> None:
         """未传 members 时不应调用 replace_constituents."""
@@ -230,8 +271,14 @@ class TestDeleteCustomUniverseHandler:
         }
         handler = DeleteCustomUniverseHandler(metadata_service=service)
         cmd = DeleteCustomUniverseCommand(universe_id="csi300")
-        with pytest.raises(ValueError, match="Cannot delete preset"):
+        with pytest.raises(AppCommandError, match="Cannot delete preset") as exc_info:
             handler.handle(cmd)
+        assert exc_info.value.details == {
+            "universe_id": "csi300",
+            "reason": "non_custom_universe",
+            "universe_type": "index",
+            "operation": "delete",
+        }
         service.delete_universe.assert_not_called()
 
     def test_delete_nonexistent_raises(self) -> None:
@@ -240,6 +287,10 @@ class TestDeleteCustomUniverseHandler:
         service.get_universe_detail.return_value = None
         handler = DeleteCustomUniverseHandler(metadata_service=service)
         cmd = DeleteCustomUniverseCommand(universe_id="missing")
-        with pytest.raises(ValueError, match="Universe not found"):
+        with pytest.raises(AppCommandError, match="Universe not found") as exc_info:
             handler.handle(cmd)
+        assert exc_info.value.details == {
+            "universe_id": "missing",
+            "reason": "not_found",
+        }
         service.delete_universe.assert_not_called()

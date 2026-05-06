@@ -6,7 +6,11 @@ import math
 
 import polars as pl
 
+from ditto_features.errors import EvaluationError
+
 __all__ = ["orthogonalize"]
+
+_SUPPORTED_METHODS = ("sequential", "symmetric")
 
 
 def orthogonalize(
@@ -73,8 +77,12 @@ def orthogonalize(
             value_col=value_col,
         )
 
-    msg = f"Unknown orthogonalization method: {method!r}"
-    raise ValueError(msg)
+    raise EvaluationError(
+        f"Unknown orthogonalization method: {method!r}",
+        field="method",
+        value=method,
+        supported=_SUPPORTED_METHODS,
+    )
 
 
 # ---------------------------------------------------------------------------

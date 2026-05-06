@@ -21,6 +21,7 @@ from ditto_kernel.publication_safety import (
 )
 
 from ditto_application.config import now_iso
+from ditto_application.exceptions import AppProcessError
 
 _VALUE_DIFF_TOLERANCE = 1e-12
 
@@ -248,7 +249,7 @@ def _optional_manifest_str(payload: JsonDict, key: str) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise TypeError(f"{key} must be a string or null")
+        raise AppProcessError(f"{key} must be a string or null")
     return value
 
 
@@ -258,10 +259,12 @@ def _optional_compile_flags(
     if value is None:
         return None
     if not isinstance(value, dict):
-        raise TypeError("global_compile_flags must be a JSON object or null")
+        raise AppProcessError("global_compile_flags must be a JSON object or null")
     compile_flags: dict[str, str | int | float | bool] = {}
     for key, item in value.items():
         if not isinstance(item, bool | int | float | str):
-            raise TypeError("global_compile_flags values must be primitive JSON values")
+            raise AppProcessError(
+                "global_compile_flags values must be primitive JSON values"
+            )
         compile_flags[key] = item
     return compile_flags

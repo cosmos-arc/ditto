@@ -25,6 +25,7 @@ DATA_FORBIDDEN_SEMANTIC_TERMS = _MOD.DATA_FORBIDDEN_SEMANTIC_TERMS  # type: igno
 PLATFORM_FORBIDDEN_DOMAIN_TERMS = _MOD.PLATFORM_FORBIDDEN_DOMAIN_TERMS  # type: ignore[attr-defined]
 check_data_no_derived_feature_ownership = _MOD.check_data_no_derived_feature_ownership  # type: ignore[attr-defined]
 check_platform_no_domain_semantics = _MOD.check_platform_no_domain_semantics  # type: ignore[attr-defined]
+check_production_no_analysis = _MOD.check_production_no_analysis  # type: ignore[attr-defined]
 _is_semantic_scan_target = _MOD._is_semantic_scan_target  # type: ignore[attr-defined]
 
 
@@ -98,3 +99,102 @@ def test_semantic_scan_target_uses_repo_relative_skip_parts():
     assert not _is_semantic_scan_target(
         "packages/platform/src/ditto_platform/archive/schema.py"
     )
+
+
+def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
+    allowances = _MOD.PRODUCTION_ANALYSIS_WIRING_ALLOWANCES  # type: ignore[attr-defined]
+
+    assert allowances
+    assert all(allowance.owner for allowance in allowances)
+    assert all(allowance.reason for allowance in allowances)
+    assert {
+        "packages/application/src/ditto_application/providers.py",
+        "packages/application/src/ditto_application/providers_market.py",
+        "packages/application/src/ditto_application/providers_portfolio.py",
+        "packages/application/src/ditto_application/providers_strategy.py",
+        "packages/application/src/ditto_application/queries/research.py",
+    } == {allowance.path for allowance in allowances}
+    assert not any(hasattr(allowance, "match") for allowance in allowances)
+
+
+def test_application_research_query_is_allowed_to_wire_analysis():
+    errors = check_production_no_analysis(
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService",
+        "packages/application/src/ditto_application/queries/research.py",
+    )
+
+    assert errors == []
+
+
+def test_application_provider_modules_are_allowed_to_wire_analysis():
+    source = (
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService"
+    )
+
+    for rel_path in (
+        "packages/application/src/ditto_application/providers.py",
+        "packages/application/src/ditto_application/providers_market.py",
+        "packages/application/src/ditto_application/providers_portfolio.py",
+        "packages/application/src/ditto_application/providers_strategy.py",
+    ):
+        assert check_production_no_analysis(source, rel_path) == []
+
+
+def test_application_provider_near_miss_cannot_import_analysis():
+    errors = check_production_no_analysis(
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService",
+        "packages/application/src/ditto_application/providers_extra.py",
+    )
+
+    assert errors == [
+        "packages/application/src/ditto_application/providers_extra.py: "
+        "production imports ditto_analysis (check import-linter)"
+    ]
+
+
+def test_application_provider_directory_near_miss_cannot_import_analysis():
+    errors = check_production_no_analysis(
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService",
+        "packages/application/src/ditto_application/providers/extra.py",
+    )
+
+    assert errors == [
+        "packages/application/src/ditto_application/providers/extra.py: "
+        "production imports ditto_analysis (check import-linter)"
+    ]
+
+
+def test_ordinary_application_query_cannot_import_analysis():
+    errors = check_production_no_analysis(
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService",
+        "packages/application/src/ditto_application/queries/market.py",
+    )
+
+    assert errors == [
+        "packages/application/src/ditto_application/queries/market.py: "
+        "production imports ditto_analysis (check import-linter)"
+    ]
+
+
+def test_research_query_near_miss_cannot_import_analysis():
+    errors = check_production_no_analysis(
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService",
+        "packages/application/src/ditto_application/queries/research_extra.py",
+    )
+
+    assert errors == [
+        "packages/application/src/ditto_application/queries/research_extra.py: "
+        "production imports ditto_analysis (check import-linter)"
+    ]
+
+
+def test_data_di_path_cannot_import_analysis():
+    errors = check_production_no_analysis(
+        "from ditto_analysis.research.catalog_service import ResearchCatalogService",
+        "packages/data/src/ditto_data/di/example.py",
+    )
+
+    assert errors == [
+        "packages/data/src/ditto_data/di/example.py: "
+        "production imports ditto_analysis (check import-linter)"
+    ]

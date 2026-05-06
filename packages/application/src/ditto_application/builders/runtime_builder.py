@@ -68,6 +68,7 @@ from ditto_application.builders._spec_deserializer import (
     read_required_str,
     read_str_value,
 )
+from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
@@ -98,7 +99,7 @@ def _normalize_impact_model(raw: str | None) -> ImpactModel:
     if raw in (ImpactModel.NONE, ImpactModel.VOLUME_SHARE):
         return ImpactModel(raw)
     msg = f"非法 impact_model 值: {raw!r}, 合法值: 'none', 'volume_share'"
-    raise ValueError(msg)
+    raise AppBuilderError(msg)
 
 
 # ===========================================================================
@@ -139,13 +140,13 @@ class StrategyRuntimeBuilder:
                 f"未找到策略定义: strategy_id={strategy_id}, "
                 f"version={version if version is not None else 'latest'}"
             )
-            raise LookupError(msg)
+            raise AppBuilderError(msg)
         if record.status != "published":
             msg = (
                 f"策略定义尚未发布为 published: strategy_id={strategy_id}, "
                 f"version={record.version}, status={record.status}"
             )
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
 
         spec = self._deserialize_strategy_spec(record)
         pipeline = self._build_pipeline(spec)
@@ -377,7 +378,7 @@ class StrategyRuntimeBuilder:
             return build_stock_sector_rotation_pipeline(config)
 
         msg = f"不支持的策略模板: {spec.template}"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
 
     def _build_portfolio_stages(self, spec: StrategySpec) -> list[DecisionStage]:
         """从 StrategySpec 构建 allocation + constraint stages。"""
@@ -612,7 +613,7 @@ class StrategyRuntimeBuilder:
             return ScoringMethod(method)
         except ValueError as exc:
             msg = f"不支持的 scoring_method: {method}"
-            raise ValueError(msg) from exc
+            raise AppBuilderError(msg) from exc
 
     @staticmethod
     def _resolve_rebalance_frequency(frequency: str) -> str:

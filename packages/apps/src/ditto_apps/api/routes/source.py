@@ -9,6 +9,7 @@ from typing import Annotated, Any
 import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.source import SourceQueryFacade
 from ditto_platform.foundation import logger
 from fastapi import APIRouter, Depends, Path
@@ -42,7 +43,7 @@ def _infer_asset_class(facade: SourceQueryFacade, dataset: str) -> str:
     """
     try:
         asset_class = facade.get_dataset_asset_class(dataset)
-    except ValueError as exc:
+    except (AppQueryError, ValueError) as exc:
         raise BadRequestError(str(exc)) from exc
 
     if asset_class is None:
@@ -190,7 +191,7 @@ async def get_source_data(
             params.start_date,
             params.end_date,
         )
-    except ValueError as exc:
+    except (AppQueryError, ValueError) as exc:
         raise BadRequestError(str(exc)) from exc
 
     query_time_ms = (time.monotonic() - start_time) * 1000

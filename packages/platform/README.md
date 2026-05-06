@@ -19,7 +19,7 @@
 │     (应用编排层)                     │
 ├─────────────────────────────────────┤
 │      packages/analysis              │
-│     (纯研究分析)                     │
+│     (research control-plane)         │
 ├─────────────────────────────────────┤
 │  packages/strategy/portfolio/risk/  │
 │  execution/backtest/features        │

@@ -54,7 +54,7 @@ paths:
 | **风控层** | `ditto_risk` | 盘前/盘后风控、约束、暴露、审计 | Domain Service |
 | **执行层** | `ditto_execution` | 订单、成交、OMS、券商网关、对账 | Domain Service |
 | **回测层** | `ditto_backtest` | 回测运行时、模拟 broker、绩效 | Domain Service |
-| **研究分析层** | `ditto_analysis` | 报告、诊断、实验、筛选（非生产路径） | Analysis Layer |
+| **研究分析层** | `ditto_analysis` | 研究数据集 control-plane；产品分析命名空间保留/未来 | Analysis Layer |
 | **数据服务层** | `ditto_data` | 市场事实数据：存储、数据源、质量 | DDD Rich Repository |
 | **应用编排层** | `ditto_application` | CQRS 编排（commands/queries/processes/builders） | Application Layer |
 | **应用入口层** | `ditto_apps` | HTTP API/CLI/Jobs/DI Composition Root | Application Boundary |
@@ -180,7 +180,7 @@ from ditto_kernel.instrument import AssetClass
 盘前/盘后风控、约束、暴露、审计？ → ditto_risk
 订单、成交、OMS、券商网关、对账？ → ditto_execution
 回测运行时、模拟 broker、绩效？ → ditto_backtest
-报告、诊断、实验、筛选？ → ditto_analysis
+研究数据集构建、导出、control-plane？ → ditto_analysis
 command/query/process 编排？ → ditto_application
 API/CLI/worker/web/DI composition root？ → ditto_apps
 配置、日志、metrics、trace、存储连接、锁、缓存？ → ditto_platform
@@ -290,14 +290,17 @@ API/CLI/worker/web/DI composition root？ → ditto_apps
 - 导入真实券商网关
 - I/O 操作（除回测结果持久化）
 
-#### ditto_analysis（研究分析层 — 非生产路径）
+#### ditto_analysis（研究 control-plane 层 — 非生产路径）
 
-**做什么**：研究报告、诊断工具、实验、筛选器。
+**做什么**：研究数据集 control-plane 与 analysis-owned artifact I/O。
 
 **可以做的**：
-- 研究报告生成
-- 诊断与可视化
-- 实验与筛选
+- 研究数据集构建元数据
+- 研究 artifact 读取与导出
+- analysis-owned storage wiring
+
+**保留/未来**：
+- 报告/诊断/实验/筛选产品命名空间当前不是 runtime API
 
 **不可以做的**：
 - 被生产包依赖
@@ -386,7 +389,7 @@ API/CLI/worker/web/DI composition root？ → ditto_apps
 8. 是回测运行时、模拟 broker、绩效？
    YES → ditto_backtest
 
-9. 是研究报告、诊断、实验、筛选？
+9. 是研究数据集构建、导出、control-plane？
    YES → ditto_analysis
 
 10. 是应用编排或工作流协调？
@@ -571,7 +574,7 @@ def get_source(name: str) -> DataSource:
 | 是风控/约束/暴露？ | ditto_risk | 继续下一个问题 |
 | 是订单/成交/网关？ | ditto_execution | 继续下一个问题 |
 | 是回测/模拟/绩效？ | ditto_backtest | 继续下一个问题 |
-| 是研究/报告/诊断？ | ditto_analysis | 继续下一个问题 |
+| 是研究数据集 control-plane？ | ditto_analysis | 继续下一个问题 |
 | 是应用编排或工作流？ | ditto_application | 继续下一个问题 |
 | 是应用入口（API/CLI/Jobs/DI）？ | ditto_apps | 继续下一个问题 |
 | 是技术基础设施？ | ditto_platform | 重新审视设计 |

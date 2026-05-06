@@ -13,6 +13,7 @@ import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_analysis.research.domain import DatasetSnapshot, KnownAtPolicy
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_data.di import (
@@ -820,9 +821,9 @@ class TestResearchDatasetFacadeExport:
         assert len(tables) == 0
 
     def test_export_unsupported_format(self, tmp_path: Path) -> None:
-        """export() 应该对不支持的格式抛出 ValueError."""
+        """export() 应该对不支持的格式抛出 AppQueryError."""
         facade, _artifact_service = self._make_facade()
         snapshot = self._make_snapshot()
 
-        with pytest.raises(ValueError, match="不支持的导出格式"):
+        with pytest.raises(AppQueryError, match="不支持的导出格式"):
             facade.export(snapshot, "xlsx", tmp_path / "output.xlsx")

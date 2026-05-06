@@ -26,6 +26,7 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
@@ -335,7 +336,7 @@ class StrategyFacade:
         """从 published catalog 自动组装单日 Slice 并执行 research/recommendation。"""
         if self._slice_builder is None:
             msg = "StrategySliceBuilder 未配置, 无法自动组装单日 Slice"
-            raise ValueError(msg)
+            raise AppProcessError(msg)
         slice_ = self._slice_builder.build_published_slice(
             config.strategy_id,
             trade_date=trade_date,

@@ -12,6 +12,7 @@ from ditto_application.commands.trade import (
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
 )
+from ditto_application.exceptions import AppCommandError
 from ditto_application.execution_dto import ActualPositionSnapshot, ManualExecutionFill
 from ditto_execution.models import (
     FillRecord,
@@ -207,7 +208,7 @@ class TestRecordFillHandler:
             fee=2.5,
         )
 
-        with pytest.raises(ValueError, match="Intent not found: intent-missing"):
+        with pytest.raises(AppCommandError, match="Intent not found: intent-missing"):
             handler.handle(cmd)
 
         # 验证无副作用
@@ -437,7 +438,7 @@ class TestUpdateIntentStatusHandler:
             status="cancelled",
         )
 
-        with pytest.raises(ValueError, match="Intent not found: intent-missing"):
+        with pytest.raises(AppCommandError, match="Intent not found: intent-missing"):
             handler.handle(cmd)
 
         service.update_intent_status.assert_not_called()
@@ -500,7 +501,7 @@ class TestRecordFillIdentityValidation:
             fill_price=4.15,
         )
 
-        with pytest.raises(ValueError, match="Strategy mismatch"):
+        with pytest.raises(AppCommandError, match="Strategy mismatch"):
             handler.handle(cmd)
 
     def test_instrument_id_mismatch_rejected(self) -> None:
@@ -518,7 +519,7 @@ class TestRecordFillIdentityValidation:
             fill_price=4.15,
         )
 
-        with pytest.raises(ValueError, match="Instrument mismatch"):
+        with pytest.raises(AppCommandError, match="Instrument mismatch"):
             handler.handle(cmd)
 
     def test_direction_mismatch_rejected(self) -> None:
@@ -536,7 +537,7 @@ class TestRecordFillIdentityValidation:
             fill_price=4.15,
         )
 
-        with pytest.raises(ValueError, match="Direction mismatch"):
+        with pytest.raises(AppCommandError, match="Direction mismatch"):
             handler.handle(cmd)
 
 
@@ -857,7 +858,7 @@ class TestRecordFillPartialFillDetection:
             )
 
             with pytest.raises(
-                ValueError, match="expected 'pending' or 'partially_filled'"
+                AppCommandError, match="expected 'pending' or 'partially_filled'"
             ):
                 handler.handle(cmd)
 
@@ -914,7 +915,10 @@ class TestUpdateIntentStatusTransitions:
         handler = UpdateIntentStatusHandler(trade_service=service)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="pending")
 
-        with pytest.raises(ValueError, match=r"Invalid transition.*filled.*pending"):
+        with pytest.raises(
+            AppCommandError,
+            match=r"Invalid transition.*filled.*pending",
+        ):
             handler.handle(cmd)
 
     def test_invalid_transition_cancelled_to_filled_rejected(self) -> None:
@@ -925,7 +929,7 @@ class TestUpdateIntentStatusTransitions:
         handler = UpdateIntentStatusHandler(trade_service=service)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="filled")
 
-        with pytest.raises(ValueError, match="Invalid transition"):
+        with pytest.raises(AppCommandError, match="Invalid transition"):
             handler.handle(cmd)
 
     def test_invalid_transition_expired_to_partially_filled_rejected(self) -> None:
@@ -939,7 +943,7 @@ class TestUpdateIntentStatusTransitions:
             status="partially_filled",
         )
 
-        with pytest.raises(ValueError, match="Invalid transition"):
+        with pytest.raises(AppCommandError, match="Invalid transition"):
             handler.handle(cmd)
 
     def test_same_status_idempotent(self) -> None:
@@ -963,7 +967,7 @@ class TestUpdateIntentStatusTransitions:
             status="invalid_status",
         )
 
-        with pytest.raises(ValueError, match="Invalid status"):
+        with pytest.raises(AppCommandError, match="Invalid status"):
             handler.handle(cmd)
 
         service.update_intent_status.assert_not_called()

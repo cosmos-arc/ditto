@@ -10,6 +10,7 @@ from ditto_kernel.quality import DQIssue, DQResult
 from ditto_platform.foundation import logger
 
 from ditto_application.contracts import CheckDataQualityCommand
+from ditto_application.exceptions import AppCommandError
 
 __all__ = [
     "CheckDataQualityHandler",
@@ -34,12 +35,19 @@ class CheckDataQualityHandler:
 
     def handle(self, cmd: CheckDataQualityCommand) -> tuple[pl.DataFrame, bool]:
         """执行 L1/L2 质量检查，必要时隔离不良数据."""
-        result = self._engine.check(
-            df=cmd.df,
-            dataset=cmd.dataset,
-            levels=["l1", "l2"],
-            context=cmd.context,
-        )
+        try:
+            result = self._engine.check(
+                df=cmd.df,
+                dataset=cmd.dataset,
+                levels=["l1", "l2"],
+                context=cmd.context,
+            )
+        except ValueError as exc:
+            raise AppCommandError(
+                str(exc),
+                command="check_data_quality",
+                dataset=cmd.dataset,
+            ) from exc
 
         self._log_check_result(result, cmd.dataset)
 
@@ -92,7 +100,7 @@ class CheckDataQualityHandler:
     def _save_quarantine_issue(self, dataset: str, issue: DQIssue) -> None:
         """保存单个 issue 的隔离数据."""
         if self._quarantine_writer is None:
-            raise RuntimeError("quarantine_writer 未初始化")
+            raise AppCommandError("quarantine_writer 未初始化")
         try:
             failed_df = pl.DataFrame(issue.sample_data)
             self._quarantine_writer.save_failed_data(

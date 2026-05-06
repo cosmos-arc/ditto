@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.coordinator_factory import (
     CoordinatorServices,
     create_coordinator,
@@ -80,13 +81,13 @@ class TestCreateCoordinatorEnumSource:
 
 
 class TestCreateCoordinatorInvalidSource:
-    """无效 source_name 抛出 ValueError."""
+    """无效 source_name 抛出 AppProcessError."""
 
-    def test_invalid_string_raises_value_error(self) -> None:
+    def test_invalid_string_raises_app_process_error(self) -> None:
         services = _make_services()
         with (
             _patch_coordinator_init() as (mock_cls, _),
-            pytest.raises(ValueError, match="Unknown source") as exc_info,
+            pytest.raises(AppProcessError, match="Unknown source") as exc_info,
         ):
             with create_coordinator(services, source_name="invalid_source"):
                 pass

@@ -7,11 +7,13 @@ import inspect
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.materialization.types import (
     DerivedInputProvider,
     InMemoryDerivedInputProvider,
     InputContext,
     UnavailableDerivedInputProvider,
+    hydrate_spec,
 )
 from ditto_features.materialization import (
     DerivedExecutionPlan,
@@ -19,6 +21,7 @@ from ditto_features.materialization import (
     DerivedRunMode,
     DerivedRunTrigger,
 )
+from ditto_features.models.derived import DerivedSpecRecord
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
@@ -81,6 +84,18 @@ def _make_context(**overrides: object) -> InputContext:
     return InputContext(**defaults)  # type: ignore[arg-type]
 
 
+def _make_spec_record(spec_json: dict[str, object]) -> DerivedSpecRecord:
+    return DerivedSpecRecord(
+        derived_id="test.derived",
+        version=1,
+        role="feature",
+        materialization_profile="derive",
+        spec_hash="hash",
+        spec_json=spec_json,
+        created_at="2026-03-14T12:00:00+08:00",
+    )
+
+
 # ---------------------------------------------------------------------------
 # InputContext
 # ---------------------------------------------------------------------------
@@ -134,6 +149,117 @@ class TestDerivedInputProviderProtocol:
 
 
 # ---------------------------------------------------------------------------
+# Spec hydration
+# ---------------------------------------------------------------------------
+
+
+class TestHydrateSpec:
+    def test_raises_app_process_error_for_missing_required_payload_key(self) -> None:
+        record = _make_spec_record(
+            {
+                "id": "test.derived",
+                "version": 1,
+                "role": "feature",
+                "expression": "close",
+            }
+        )
+
+        with pytest.raises(
+            AppProcessError, match="materialization_profile"
+        ) as exc_info:
+            hydrate_spec(record)
+
+        assert exc_info.value.details == {
+            "derived_id": "test.derived",
+            "field": "materialization_profile",
+        }
+
+    def test_raises_app_process_error_for_malformed_time_spec(self) -> None:
+        record = _make_spec_record(
+            {
+                "id": "test.derived",
+                "version": 1,
+                "role": "feature",
+                "materialization_profile": "DERIVE",
+                "expression": "close",
+                "time_spec": {},
+            }
+        )
+
+        with pytest.raises(AppProcessError, match="event_time_key") as exc_info:
+            hydrate_spec(record)
+
+        assert exc_info.value.details == {
+            "derived_id": "test.derived",
+            "field": "time_spec.event_time_key",
+        }
+
+    def test_raises_app_process_error_for_invalid_derived_role(self) -> None:
+        record = _make_spec_record(
+            {
+                "id": "test.derived",
+                "version": 1,
+                "role": "not-a-role",
+                "materialization_profile": "DERIVE",
+                "expression": "close",
+            }
+        )
+
+        with pytest.raises(AppProcessError, match="role") as exc_info:
+            hydrate_spec(record)
+
+        assert exc_info.value.details == {
+            "derived_id": "test.derived",
+            "field": "role",
+            "value": "not-a-role",
+        }
+
+    def test_raises_app_process_error_for_invalid_materialization_profile(
+        self,
+    ) -> None:
+        record = _make_spec_record(
+            {
+                "id": "test.derived",
+                "version": 1,
+                "role": "feature",
+                "materialization_profile": "not-a-profile",
+                "expression": "close",
+            }
+        )
+
+        with pytest.raises(
+            AppProcessError, match="materialization_profile"
+        ) as exc_info:
+            hydrate_spec(record)
+
+        assert exc_info.value.details == {
+            "derived_id": "test.derived",
+            "field": "materialization_profile",
+            "value": "not-a-profile",
+        }
+
+    def test_raises_app_process_error_for_malformed_version(self) -> None:
+        record = _make_spec_record(
+            {
+                "id": "test.derived",
+                "version": "1",
+                "role": "feature",
+                "materialization_profile": "DERIVE",
+                "expression": "close",
+            }
+        )
+
+        with pytest.raises(AppProcessError, match="version") as exc_info:
+            hydrate_spec(record)
+
+        assert exc_info.value.details == {
+            "derived_id": "test.derived",
+            "field": "version",
+            "value": "1",
+        }
+
+
+# ---------------------------------------------------------------------------
 # InMemoryDerivedInputProvider
 # ---------------------------------------------------------------------------
 
@@ -149,11 +275,11 @@ class TestInMemoryDerivedInputProvider:
         result = provider.load_input(ctx)
         assert result.equals(frame)
 
-    def test_raises_key_error_for_missing_spec_id(self) -> None:
-        """InMemoryDerivedInputProvider should raise KeyError when spec.id not found."""
+    def test_raises_app_process_error_for_missing_spec_id(self) -> None:
+        """Raises AppProcessError when spec.id is not found."""
         provider = InMemoryDerivedInputProvider(frames={})
         ctx = _make_context(spec=_make_spec(id="unknown.derived"))
-        with pytest.raises(KeyError, match=r"unknown\.derived"):
+        with pytest.raises(AppProcessError, match=r"unknown\.derived"):
             provider.load_input(ctx)
 
     def test_signature_accepts_input_context(self) -> None:

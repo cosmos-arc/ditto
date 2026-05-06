@@ -15,6 +15,8 @@ def test_features_error_hierarchy() -> None:
     assert issubclass(EvaluationError, FeaturesError)
     assert issubclass(FactorValidationError, FeaturesError)
     assert issubclass(FeatureStorageError, FeaturesError)
+    assert not issubclass(FactorValidationError, ValueError)
+    assert not issubclass(FeatureStorageError, ValueError)
 
 
 def test_features_error_is_ditto_error() -> None:

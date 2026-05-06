@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 from ditto_application.commands.backtest import BacktestRunCommand, BacktestRunResult
+from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_apps.api.errors import BadRequestError
 from ditto_apps.models.backtest import (
     BacktestRunTriggerResponse,
@@ -129,21 +130,23 @@ class TestErrorHandlerMapping:
 
     def test_strategy_not_found(self) -> None:
         """Strategy not found → 400."""
-        exc = ValueError("Strategy not found: missing")
+        exc = AppCommandError("Strategy not found: missing")
         api_exc = BadRequestError(str(exc))
         assert api_exc.status_code == 400
         assert "Strategy not found" in api_exc.message
 
     def test_invalid_dates(self) -> None:
         """Invalid dates → 400."""
-        exc = ValueError("日期范围无效: start_date=2025-06-30 > end_date=2025-01-01")
+        exc = AppCommandError(
+            "日期范围无效: start_date=2025-06-30 > end_date=2025-01-01"
+        )
         api_exc = BadRequestError(str(exc))
         assert api_exc.status_code == 400
         assert "日期范围无效" in api_exc.message
 
     def test_factor_compile_failure(self) -> None:
         """Factor compile failure → 400."""
-        exc = ValueError("编译失败 (signal_0): bad expr")
+        exc = AppProcessError("编译失败 (signal_0): bad expr")
         api_exc = BadRequestError(str(exc))
         assert api_exc.status_code == 400
         assert "编译失败" in api_exc.message
@@ -242,7 +245,7 @@ class TestRaiseBusinessErrorBacktest:
         """'not found' 错误映射为 404."""
         from ditto_apps.api.errors import NotFoundError, raise_business_error
 
-        exc = ValueError("Run not found: missing")
+        exc = AppCommandError("Run not found: missing")
         with pytest.raises(NotFoundError) as exc_info:
             raise_business_error(exc, default_conflict=True)
         assert exc_info.value.status_code == 404
@@ -251,7 +254,7 @@ class TestRaiseBusinessErrorBacktest:
         """非 not found 错误默认映射为 409（backtest 特有行为）。"""
         from ditto_apps.api.errors import ConflictError, raise_business_error
 
-        exc = ValueError("Some other error")
+        exc = AppCommandError("Some other error")
         with pytest.raises(ConflictError) as exc_info:
             raise_business_error(exc, default_conflict=True)
         assert exc_info.value.status_code == 409
@@ -260,7 +263,7 @@ class TestRaiseBusinessErrorBacktest:
         """大小写不敏感匹配 'Not Found'."""
         from ditto_apps.api.errors import NotFoundError, raise_business_error
 
-        exc = ValueError("Run Not Found: xyz")
+        exc = AppCommandError("Run Not Found: xyz")
         with pytest.raises(NotFoundError) as exc_info:
             raise_business_error(exc, default_conflict=True)
         assert exc_info.value.status_code == 404

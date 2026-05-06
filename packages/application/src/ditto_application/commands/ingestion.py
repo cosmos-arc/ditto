@@ -8,6 +8,7 @@ from datetime import date
 from ditto_data.models.ingestion import IngestionResult
 
 from ditto_application.contracts import IngestDateCommand
+from ditto_application.exceptions import AppCommandError, AppProcessError
 from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
 
 __all__ = [
@@ -51,8 +52,16 @@ class IngestDateHandler:
 
     def handle(self, command: IngestDateCommand) -> IngestionResult:
         """处理单日入库命令，委托给 IngestionCoordinator."""
-        return self._coordinator.ingest_date(
-            command.dataset,
-            command.trade_date.isoformat(),
-            force=command.force,
-        )
+        try:
+            return self._coordinator.ingest_date(
+                command.dataset,
+                command.trade_date.isoformat(),
+                force=command.force,
+            )
+        except (AppProcessError, ValueError) as exc:
+            raise AppCommandError(
+                str(exc),
+                command="ingest_date",
+                dataset=command.dataset,
+                trade_date=command.trade_date.isoformat(),
+            ) from exc

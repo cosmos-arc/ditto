@@ -21,6 +21,7 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.contracts import CostConfig
+from ditto_application.exceptions import AppCommandError
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 
@@ -102,12 +103,12 @@ class BacktestRunHandler:
         spec_record = self._catalog_service.get_spec(command.strategy_id)
         if spec_record is None:
             msg = f"Strategy not found: {command.strategy_id}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         # 3. 预编译因子表达式（如果策略包含 signal_expressions）
         spec_json = spec_record.spec_json if hasattr(spec_record, "spec_json") else {}
         signal_expressions = _extract_signal_expressions(spec_json)
-        signal_weights = _extract_signal_weights(spec_json)
+        signal_weights = _extract_signal_weights(spec_json, command.strategy_id)
 
         if signal_expressions:
             # 未指定权重时，自动生成等权
@@ -157,17 +158,17 @@ class BacktestRunHandler:
             start = date.fromisoformat(start_date)
         except ValueError:
             msg = f"日期格式无效: start_date='{start_date}', 期望 YYYY-MM-DD"
-            raise ValueError(msg) from None
+            raise AppCommandError(msg) from None
 
         try:
             end = date.fromisoformat(end_date)
         except ValueError:
             msg = f"日期格式无效: end_date='{end_date}', 期望 YYYY-MM-DD"
-            raise ValueError(msg) from None
+            raise AppCommandError(msg) from None
 
         if start > end:
             msg = f"日期范围无效: start_date={start_date} > end_date={end_date}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
 
 def _extract_signal_expressions(
@@ -182,12 +183,30 @@ def _extract_signal_expressions(
 
 def _extract_signal_weights(
     spec_json: dict[str, object],
+    strategy_id: str,
 ) -> tuple[float, ...]:
     """从 spec_json 提取 signal_weights."""
     raw = spec_json.get("signal_weights")
     if not isinstance(raw, list):
         return ()
-    return tuple(float(str(item)) for item in cast(list[object], raw))
+    weights: list[float] = []
+    for index, item in enumerate(cast(list[object], raw)):
+        value = str(item)
+        try:
+            weights.append(float(value))
+        except ValueError:
+            msg = (
+                f"invalid signal_weights[{index}] for strategy_id={strategy_id}: "
+                f"{value}"
+            )
+            raise AppCommandError(
+                msg,
+                strategy_id=strategy_id,
+                field="signal_weights",
+                index=index,
+                value=value,
+            ) from None
+    return tuple(weights)
 
 
 # ---------------------------------------------------------------------------
@@ -240,11 +259,11 @@ class CancelRunHandler:
         record = self._run_service.get_run(run_id)
         if record is None:
             msg = f"Run not found: {run_id}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         if record.status not in _CANCEL_ALLOWED:
             msg = f"Cannot cancel run in '{record.status}' status"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         self._run_service.mark_cancelled(run_id)
 
@@ -280,11 +299,11 @@ class RetryRunHandler:
         record = self._run_service.get_run(run_id)
         if record is None:
             msg = f"Run not found: {run_id}"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         if record.status not in _RETRY_ALLOWED:
             msg = f"Cannot retry run in '{record.status}' status"
-            raise ValueError(msg)
+            raise AppCommandError(msg)
 
         new_run_id = uuid.uuid4().hex[:8]
         self._run_service.create_run(

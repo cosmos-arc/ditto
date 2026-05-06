@@ -5,6 +5,8 @@ from __future__ import annotations
 import polars as pl
 from ditto_data.services.market_service import MarketService
 
+from ditto_application.exceptions import AppQueryError
+
 
 class InstrumentCodeQueryFacade:
     """
@@ -28,7 +30,14 @@ class InstrumentCodeQueryFacade:
 
     def code_to_instrument_id(self, code: str) -> int:
         """将品种代码转换为 instrument_id。"""
-        return self._code_to_instrument_id[code]
+        instrument_id = self._code_to_instrument_id.get(code)
+        if instrument_id is None:
+            raise AppQueryError(
+                f"unknown {self._asset_class} instrument code: {code}",
+                asset_class=self._asset_class,
+                code=code,
+            )
+        return instrument_id
 
     def instrument_id_to_code(self, instrument_id: int) -> str | None:
         """将 instrument_id 转换为品种代码，不存在返回 None。"""

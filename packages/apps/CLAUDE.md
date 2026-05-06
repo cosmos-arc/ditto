@@ -96,6 +96,7 @@ features → apps ❌
 **非 registry 代码禁止直接访问 Data services/models**。
 
 此外，非 registry 代码也禁止直接导入 strategy/portfolio/risk/execution/backtest/features/analysis/data 等能力包实现；普通入口应通过 `ditto_application` 的 commands、queries、processes 或显式 facade 访问。当前仅 `jobs/context.py` 保留 Data Quality 引擎查找的窄豁免，架构 smell guard 会检查这条规则。
+该豁免以 `APPS_HOST_COMPOSITION_ALLOWANCES` 作为唯一 enforcement source，必须带 owner/reason。
 
 ### 业务逻辑去向
 

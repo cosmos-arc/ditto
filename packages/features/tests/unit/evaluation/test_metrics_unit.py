@@ -8,6 +8,7 @@ from datetime import date, timedelta
 import numpy as np
 import polars as pl
 import pytest
+from ditto_features.errors import EvaluationError
 from ditto_features.evaluation.metrics import (
     ic_autocorrelation,
     ic_decay,
@@ -929,7 +930,7 @@ class TestOrthogonalize:
         assert result.height == n
 
     def test_unknown_method_raises(self) -> None:
-        """Unknown method should raise ValueError."""
+        """Unknown method should raise EvaluationError."""
         target_df = pl.DataFrame(
             {
                 "trade_date": [date(2024, 1, 1)],
@@ -945,8 +946,15 @@ class TestOrthogonalize:
                 "value": [2.0],
             },
         )
-        with pytest.raises(ValueError, match="Unknown orthogonalization method"):
+        with pytest.raises(
+            EvaluationError, match="Unknown orthogonalization method"
+        ) as exc_info:
             orthogonalize(target_df, factor_df, method="invalid")
+        assert exc_info.value.details == {
+            "field": "method",
+            "value": "invalid",
+            "supported": ("sequential", "symmetric"),
+        }
 
     def test_small_cross_section_skipped(self) -> None:
         """Dates with fewer entities than min_cross_section are skipped."""
@@ -1012,10 +1020,15 @@ class TestSubPeriodIC:
         assert "2024Q4" in result
 
     def test_unknown_freq_raises(self) -> None:
-        """Unknown frequency should raise ValueError."""
+        """Unknown frequency should raise EvaluationError."""
         df = _make_ic_df(n_dates=10)
-        with pytest.raises(ValueError, match="Unknown frequency"):
+        with pytest.raises(EvaluationError, match="Unknown frequency") as exc_info:
             sub_period_ic(df, freq="month")
+        assert exc_info.value.details == {
+            "field": "freq",
+            "value": "month",
+            "supported": ("year", "quarter"),
+        }
 
     def test_empty_dataframe(self) -> None:
         """Empty DataFrame should produce empty result."""

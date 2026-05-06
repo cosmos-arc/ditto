@@ -46,7 +46,7 @@
 ├──────────────┤ ├───────────┤ ├───────────┤ │             │
 │              │ │ ditto_    │ │ ditto_    │ │             │
 │              │ │ analysis  │ │ portfolio │ │             │
-│              │ │ 研究/评估  │ │ 组合构建   │ │             │
+│              │ │ research  │ │ 组合构建   │ │             │
 ├──────────────┤ │           │ ├───────────┤ │             │
 │              │ │           │ │ ditto_    │ │             │
 │              │ │           │ │ risk      │ │             │
@@ -136,10 +136,10 @@ ditto/
 │   │       ├── di/              # Features Provider 注册
 │   │       ├── publication_safety.py # 发布安全门禁模型
 │   │       └── compile_cache.py
-│   ├── analysis/                # 纯研究分析
+│   ├── analysis/                # research control-plane
 │   │   └── src/ditto_analysis/
-│   │       ├── evaluation/      # 因子评估（IC/FactorAnalysis/Portfolio/TailRisk）
-│   │       └── research/        # 研究
+│   │       ├── research/        # 研究数据集控制面
+│   │       └── reports/diagnostics/experiments/screeners/ # reserved/future
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
 │   │       ├── services/        # 域服务（market/metadata/fundamental/macro/capital/source）

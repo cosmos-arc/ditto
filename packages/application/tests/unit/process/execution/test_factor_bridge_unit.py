@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
     FactorBridge,
@@ -116,7 +117,7 @@ class TestCompileAndValidate:
     def test_syntax_error_raises_value_error(self) -> None:
         """语法错误的表达式抛出 ValueError."""
         bridge = FactorBridge()
-        with pytest.raises(ValueError, match="编译失败"):
+        with pytest.raises(AppProcessError, match="编译失败"):
             bridge.compile_and_validate(
                 expressions=("+++",),
                 weights=(1.0,),
@@ -125,7 +126,7 @@ class TestCompileAndValidate:
     def test_unknown_operator_raises_value_error(self) -> None:
         """未知运算符抛出 ValueError."""
         bridge = FactorBridge()
-        with pytest.raises(ValueError, match="编译失败"):
+        with pytest.raises(AppProcessError, match="编译失败"):
             bridge.compile_and_validate(
                 expressions=("nonexistent_op(close, 20)",),
                 weights=(1.0,),
@@ -134,7 +135,7 @@ class TestCompileAndValidate:
     def test_weight_length_mismatch_raises_value_error(self) -> None:
         """权重数量与表达式不匹配抛出 ValueError."""
         bridge = FactorBridge()
-        with pytest.raises(ValueError, match="权重数量"):
+        with pytest.raises(AppProcessError, match="权重数量"):
             bridge.compile_and_validate(
                 expressions=("close",),
                 weights=(0.5, 0.5),
@@ -143,7 +144,7 @@ class TestCompileAndValidate:
     def test_empty_expressions_raises_value_error(self) -> None:
         """空表达式元组抛出 ValueError."""
         bridge = FactorBridge()
-        with pytest.raises(ValueError, match="表达式不能为空"):
+        with pytest.raises(AppProcessError, match="表达式不能为空"):
             bridge.compile_and_validate(
                 expressions=(),
                 weights=(),
@@ -152,7 +153,7 @@ class TestCompileAndValidate:
     def test_negative_weight_raises_value_error(self) -> None:
         """负权重抛出 ValueError."""
         bridge = FactorBridge()
-        with pytest.raises(ValueError, match="权重不能为负"):
+        with pytest.raises(AppProcessError, match="权重不能为负"):
             bridge.compile_and_validate(
                 expressions=("close",),
                 weights=(-0.5,),

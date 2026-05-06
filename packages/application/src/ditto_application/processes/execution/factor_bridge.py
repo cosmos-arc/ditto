@@ -21,6 +21,8 @@ from ditto_kernel.strategy import (
     MaterializationProfile,
 )
 
+from ditto_application.exceptions import AppProcessError
+
 __all__ = [
     "CompiledExpressions",
     "FactorBridge",
@@ -91,16 +93,16 @@ class FactorBridge:
         """
         if not expressions:
             msg = "表达式不能为空"
-            raise ValueError(msg)
+            raise AppProcessError(msg)
 
         if len(expressions) != len(weights):
             msg = f"权重数量 ({len(weights)}) 与表达式数量 ({len(expressions)}) 不匹配"
-            raise ValueError(msg)
+            raise AppProcessError(msg)
 
         for i, w in enumerate(weights):
             if w < 0:
                 msg = f"权重不能为负: weights[{i}] = {w}"
-                raise ValueError(msg)
+                raise AppProcessError(msg)
 
         compiled: list[CompiledDerivedExpression] = []
         for i, expr_str in enumerate(expressions):
@@ -109,7 +111,7 @@ class FactorBridge:
                 result = self._compiler.compile(spec)
             except ExpressionCompileError as exc:
                 msg = f"编译失败 (signal_{i}): {exc}"
-                raise ValueError(msg) from exc
+                raise AppProcessError(msg) from exc
             compiled.append(result)
 
         return CompiledExpressions(

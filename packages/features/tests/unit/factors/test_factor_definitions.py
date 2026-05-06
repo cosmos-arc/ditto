@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from ditto_features.errors import FactorValidationError
 from ditto_features.expression.compiler import (
     ExpressionCompiler,
+    _measure_expression,
     detect_dependency_cycles,
 )
 from ditto_features.factors import ALL_FACTOR_SPECS
@@ -35,18 +37,18 @@ class TestDetectDependencyCycles:
         detect_dependency_cycles({"a": ("b",), "b": ("c",), "c": ()})
 
     def test_self_cycle_raises(self) -> None:
-        """A node depending on itself should raise ValueError."""
-        with pytest.raises(ValueError, match=r"cycle|circular"):
+        """A node depending on itself should raise FactorValidationError."""
+        with pytest.raises(FactorValidationError, match=r"cycle|circular"):
             detect_dependency_cycles({"a": ("a",)})
 
     def test_mutual_cycle_raises(self) -> None:
-        """A -> B and B -> A should raise ValueError."""
-        with pytest.raises(ValueError, match=r"cycle|circular"):
+        """A -> B and B -> A should raise FactorValidationError."""
+        with pytest.raises(FactorValidationError, match=r"cycle|circular"):
             detect_dependency_cycles({"a": ("b",), "b": ("a",)})
 
     def test_longer_cycle_raises(self) -> None:
-        """A -> B -> C -> A should raise ValueError."""
-        with pytest.raises(ValueError, match=r"cycle|circular"):
+        """A -> B -> C -> A should raise FactorValidationError."""
+        with pytest.raises(FactorValidationError, match=r"cycle|circular"):
             detect_dependency_cycles({"a": ("b",), "b": ("c",), "c": ("a",)})
 
     def test_diamond_dag_passes(self) -> None:
@@ -55,15 +57,30 @@ class TestDetectDependencyCycles:
 
     def test_cycle_with_independent_nodes_raises(self) -> None:
         """A graph with a cycle among a subset should still raise."""
-        with pytest.raises(ValueError, match=r"cycle|circular"):
+        with pytest.raises(FactorValidationError, match=r"cycle|circular"):
             detect_dependency_cycles({"a": ("b",), "b": ("a",), "c": ()})
 
     def test_error_message_contains_node_names(self) -> None:
-        """The ValueError message should contain cycle node names."""
-        with pytest.raises(ValueError) as exc_info:
+        """The error message and details should contain cycle node names."""
+        with pytest.raises(FactorValidationError) as exc_info:
             detect_dependency_cycles({"alpha": ("beta",), "beta": ("alpha",)})
         message = str(exc_info.value).lower()
         assert "alpha" in message or "beta" in message
+        assert exc_info.value.details["reason"] == "dependency_cycle"
+        assert exc_info.value.details["cycle_nodes"] == ("alpha", "beta")
+
+    def test_unsupported_expression_node_raises_factor_validation_error(self) -> None:
+        """Unsupported expression nodes should use factor validation taxonomy."""
+        expression = object()
+        with pytest.raises(
+            FactorValidationError, match="unsupported expression node"
+        ) as exc_info:
+            _measure_expression(expression)  # type: ignore[arg-type]
+
+        assert exc_info.value.details == {
+            "reason": "unsupported_expression_node",
+            "expression_node": "object",
+        }
 
 
 # ---------------------------------------------------------------------------

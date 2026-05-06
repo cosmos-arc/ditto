@@ -102,8 +102,10 @@ class TestCheckDataQualityHandler:
         assert has_errors is True
         assert result_df is df
 
-    def test_handle_propagates_engine_error(self) -> None:
-        """Handler 传播 engine 抛出的异常."""
+    def test_handle_maps_engine_error(self) -> None:
+        """Handler 将 engine 边界错误映射为 AppCommandError."""
+        from ditto_application.exceptions import AppCommandError
+
         mock_engine = MagicMock()
         mock_engine.check.side_effect = ValueError("engine error")
 
@@ -113,8 +115,13 @@ class TestCheckDataQualityHandler:
 
         cmd = CheckDataQualityCommand(df=pl.DataFrame(), dataset="bad")
 
-        with pytest.raises(ValueError, match="engine error"):
+        with pytest.raises(AppCommandError, match="engine error") as exc_info:
             handler.handle(cmd)
+
+        assert exc_info.value.details == {
+            "command": "check_data_quality",
+            "dataset": "bad",
+        }
 
     def test_quarantine_writer_called_on_issues(self) -> None:
         """有 issue 时 quarantine_writer.save_failed_data 被调用."""
@@ -304,7 +311,7 @@ class TestReconcileSourcesHandler:
 
         assert result.passed is False
         assert result.error is not None
-        assert "ValueError" in result.error
+        assert "AppCommandError" in result.error
 
     def test_handle_returns_reconciliation_with_issues(self) -> None:
         """当对账发现问题时返回 passed=False."""

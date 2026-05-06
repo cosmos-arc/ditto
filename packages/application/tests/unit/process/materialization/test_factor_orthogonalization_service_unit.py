@@ -10,6 +10,7 @@ import pytest
 from ditto_application.processes.materialization.orchestrator import (
     FactorOrthogonalizationService,
 )
+from ditto_features.errors import EvaluationError
 
 _EMPTY_FACTOR_SCHEMA = {
     "instrument_id": pl.Int64,
@@ -211,7 +212,7 @@ class TestFactorOrthogonalizationService:
         reader.read_frame.side_effect = mock_read
 
         svc = FactorOrthogonalizationService(reader)
-        with pytest.raises(ValueError, match="Unknown orthogonalization method"):
+        with pytest.raises(EvaluationError, match="Unknown orthogonalization method"):
             svc.load_and_orthogonalize(
                 "factor.target",
                 1,

@@ -13,6 +13,19 @@ dependencies = [
     "ditto-portfolio",
     "ditto-risk",
     "ditto-strategy",
+    "click",
+    "dishka",
+    "fastapi",
+    "granian",
+    "loguru",
+    "orjson",
+    "polars",
+    "prefect",
+    "pydantic",
+    "python-dotenv",
+    "rich",
+    "starlette",
+    "typer",
 ]
 
 [project.scripts]

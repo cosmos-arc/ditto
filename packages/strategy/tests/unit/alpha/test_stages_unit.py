@@ -19,6 +19,7 @@ from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.builtins.universe import UniverseStage
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -106,10 +107,10 @@ class TestUniverseStage:
         self,
         empty_context: StrategyContext,
     ) -> None:
-        """frame 中没有 instrument_id 列时应由 validate_frame 抛出 ValueError。"""
+        """缺少 instrument_id 时应由 validate_frame 抛出 StrategySpecError。"""
         stage = UniverseStage(instrument_ids=frozenset({1}))
         bad_frame = pl.DataFrame({"name": ["a", "b"]})
-        with pytest.raises(ValueError, match="missing required columns"):
+        with pytest.raises(StrategySpecError, match="missing required columns"):
             stage.process(bad_frame, empty_context)
 
 

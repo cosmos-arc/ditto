@@ -16,6 +16,7 @@ import dataclasses
 
 import pytest
 from ditto_application.commands.backtest import CostConfig
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.fee_override import (
     OverrideFeeModel,
     build_fee_model,
@@ -335,11 +336,16 @@ class TestBuildSlippageModel:
         assert model.base_bps == 3.0
 
     def test_unknown_impact_model_raises(self) -> None:
-        """未知 impact_model 抛出 ValueError."""
+        """未知 impact_model 抛出 AppProcessError."""
         cost_config = CostConfig(
             impact_model=ImpactModel.VOLUME_SHARE,
         )
         # Manually patch to simulate unknown value (bypass StrEnum constraint)
         patched = dataclasses.replace(cost_config, impact_model="unknown_model")  # type: ignore[arg-type]
-        with pytest.raises(ValueError, match="Unknown impact model"):
+        with pytest.raises(AppProcessError, match="Unknown impact model") as exc_info:
             build_slippage_model(patched)
+
+        assert exc_info.value.details == {
+            "field": "impact_model",
+            "value": "unknown_model",
+        }

@@ -292,7 +292,7 @@ ditto/
 │   ├── risk/         # 风险管理
 │   ├── execution/    # 交易执行
 │   ├── backtest/     # 回测引擎
-│   ├── analysis/     # 纯研究分析（报告、诊断、实验）
+│   ├── analysis/     # 研究 control-plane（product analysis namespaces reserved）
 │   ├── application/  # 应用编排层（CQRS: queries/commands/processes/builders）
 │   └── apps/         # 应用入口（API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）

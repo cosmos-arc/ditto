@@ -5,6 +5,7 @@ from __future__ import annotations
 from ditto_data.models.source_codes import FX_CODE_TO_INSTRUMENT_ID
 from ditto_data.services.market_service import MarketService
 
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries._instrument_code_facade import InstrumentCodeQueryFacade
 
 __all__ = ["FXQueryFacade"]
@@ -45,10 +46,17 @@ class FXQueryFacade(InstrumentCodeQueryFacade):
             instrument_id
 
         Raises:
-            KeyError: 品种代码不存在
+            AppQueryError: 品种代码不存在
 
         """
-        return FX_CODE_TO_INSTRUMENT_ID[pair]
+        instrument_id = FX_CODE_TO_INSTRUMENT_ID.get(pair)
+        if instrument_id is None:
+            raise AppQueryError(
+                f"unknown fx instrument pair: {pair}",
+                asset_class="fx",
+                pair=pair,
+            )
+        return instrument_id
 
     def instrument_id_to_pair(self, instrument_id: int) -> str | None:
         """

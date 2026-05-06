@@ -16,6 +16,8 @@ import polars as pl
 from ditto_data.services.market_service import MarketService
 from ditto_platform.foundation.config import get_environment
 
+from ditto_application.exceptions import AppQueryError
+
 __all__ = ["ForwardReturnService"]
 
 
@@ -74,7 +76,7 @@ class ForwardReturnService:
                 "forward_return_service.compute() not available in "
                 "production (uses look-ahead data)"
             )
-            raise RuntimeError(msg)
+            raise AppQueryError(msg)
         # Fetch a wider range so that close[t+T] is available for the
         # requested end date.  We add a generous calendar buffer.
         extended_end = _extend_end_date(end, holding_period)

@@ -1,9 +1,9 @@
 """
-Reports — 分析报告生成。
+Reports Reserved namespace.
 
-提供策略回测报告、绩效归因报告、风险报告等标准化报告模板。
-支持 HTML/PDF 输出和自定义报告扩展。
-
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
+This namespace is reserved for future analysis product work.
+No public runtime API is exported yet.
+Production code must not import this namespace for behavior.
 """
+
+__all__: list[str] = []

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from ditto_application.exceptions import AppProcessError
 from ditto_application.execution_dto import ManualExecutionFill
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 
@@ -267,7 +268,7 @@ class TestComputePositionsBuyAndSell:
         assert result[0].realized_pnl == pytest.approx(250.0)
 
     def test_sell_more_than_held_raises_error(self) -> None:
-        """卖出数量超过持仓时抛出 ValueError."""
+        """卖出数量超过持仓时抛出 AppProcessError."""
 
         tracker = ManualTracker(trading_calendar=_STANDARD_CALENDAR)
         fills = [
@@ -288,7 +289,7 @@ class TestComputePositionsBuyAndSell:
                 fee=3.0,
             ),
         ]
-        with pytest.raises(ValueError, match="oversold"):
+        with pytest.raises(AppProcessError, match="oversold"):
             tracker.compute_positions(
                 fills=fills,
                 strategy_id="strat-1",

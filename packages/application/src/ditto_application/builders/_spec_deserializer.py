@@ -13,6 +13,8 @@ from ditto_strategy.alpha.builtins.regime import (
     VolatilityIndicator,
 )
 
+from ditto_application.exceptions import AppBuilderError
+
 __all__ = [
     "_read_clamped_float",
     "as_float_tuple",
@@ -81,7 +83,7 @@ def deserialize_regime_config(
         cls = _INDICATOR_TYPES.get(ind_type)
         if cls is None:
             msg = f"Unknown regime indicator type: {ind_type}"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         # 构造指标实例（过滤掉 type 字段，其余作为 kwargs）
         kwargs = {k: v for k, v in ind_dict.items() if k != "type"}
         indicators.append(cls(**kwargs))
@@ -128,13 +130,13 @@ def as_object_dict(
         return {}
     if not isinstance(raw_value, dict):
         msg = f"{field_name} 必须是 object/dict"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     raw_dict = cast("dict[object, object]", raw_value)
     result: dict[str, object] = {}
     for key, value in raw_dict.items():
         if not isinstance(key, str):
             msg = f"{field_name} 的 key 必须是 str"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         result[key] = value
     return result
 
@@ -152,7 +154,7 @@ def as_sequence(
     if isinstance(raw_value, list):
         return tuple(cast("list[object]", raw_value))
     msg = f"{field_name} 必须是 list/tuple"
-    raise ValueError(msg)
+    raise AppBuilderError(msg)
 
 
 def as_str_tuple(
@@ -166,7 +168,7 @@ def as_str_tuple(
     for item in items:
         if not isinstance(item, str):
             msg = f"{field_name} 的元素必须是 str"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         result.append(item)
     return tuple(result)
 
@@ -182,7 +184,7 @@ def as_float_tuple(
     for item in items:
         if not isinstance(item, (int, float)) or isinstance(item, bool):
             msg = f"{field_name} 的元素必须是数字"
-            raise ValueError(msg)
+            raise AppBuilderError(msg)
         result.append(float(item))
     return tuple(result)
 
@@ -192,7 +194,7 @@ def read_required_str(payload: dict[str, object], field_name: str) -> str:
     value = payload.get(field_name)
     if not isinstance(value, str) or value == "":
         msg = f"{field_name} 必须是非空字符串"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     return value
 
 
@@ -202,7 +204,7 @@ def read_optional_str(raw_value: object, *, field_name: str = "字段") -> str |
         return None
     if not isinstance(raw_value, str):
         msg = f"{field_name} 必须是字符串"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     return raw_value
 
 
@@ -215,7 +217,7 @@ def read_int(raw_value: object, *, field_name: str) -> int:
     """读取整数值。"""
     if not isinstance(raw_value, int) or isinstance(raw_value, bool):
         msg = f"{field_name} 必须是 int"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     return raw_value
 
 
@@ -230,7 +232,7 @@ def read_float(raw_value: object, *, field_name: str) -> float:
     """读取浮点值，允许 int 自动提升。"""
     if not isinstance(raw_value, (int, float)) or isinstance(raw_value, bool):
         msg = f"{field_name} 必须是数字"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     return float(raw_value)
 
 
@@ -245,7 +247,7 @@ def _read_clamped_float(
     value = read_float(raw_value, field_name=field_name)
     if not lo <= value <= hi:
         msg = f"{field_name} 必须在 [{lo}, {hi}] 范围内, 实际值: {value}"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     return value
 
 
@@ -264,5 +266,5 @@ def read_bool(raw_value: object, *, field_name: str) -> bool:
     """读取布尔值。"""
     if not isinstance(raw_value, bool):
         msg = f"{field_name} 必须是 bool"
-        raise ValueError(msg)
+        raise AppBuilderError(msg)
     return raw_value

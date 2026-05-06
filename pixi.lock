@@ -2416,18 +2416,19 @@ packages:
 - pypi: ./packages/analysis
   name: ditto-analysis
   version: 0.1.0
-  sha256: 993f6b3d0dab9273bc43f7a4488b6933d4500971f206020b5005b9a7ba50cf72
+  sha256: 4e7606a07fcae42ab8fba1cd8c5f0430cc97529b65e298c2545ebbb8b941f6f5
   requires_dist:
   - ditto-kernel
   - ditto-platform
   - polars
   - numpy
   - orjson
+  - dishka
   requires_python: '>=3.13'
 - pypi: ./packages/application
   name: ditto-application
   version: 0.1.0
-  sha256: 3bbc831de794b5b03f673d6b8eaf3b7c44f5c8127ec8c35c4a47f11a8be1f447
+  sha256: 0707235df223e3ec68ef3f68462713b87bc2309eaf0e033df5cc2530829e03e5
   requires_dist:
   - ditto-kernel
   - ditto-data
@@ -2439,11 +2440,17 @@ packages:
   - ditto-execution
   - ditto-backtest
   - ditto-platform
+  - dishka
+  - httpx
+  - loguru
+  - orjson
+  - polars
+  - pydantic
   requires_python: '>=3.13'
 - pypi: ./packages/apps
   name: ditto-apps
   version: 0.1.0
-  sha256: 3f6d3b19291411a1c9e72797679ac1db1f14fa6fc1b40a439ecade20a3493f0a
+  sha256: 8f69b041a22dc50a8258fcc660d5e44762bf3c3d1fa5f69a5f9bbd2aeca234c0
   requires_dist:
   - ditto-analysis
   - ditto-application
@@ -2455,11 +2462,24 @@ packages:
   - ditto-portfolio
   - ditto-risk
   - ditto-strategy
+  - click
+  - dishka
+  - fastapi
+  - granian
+  - loguru
+  - orjson
+  - polars
+  - prefect
+  - pydantic
+  - python-dotenv
+  - rich
+  - starlette
+  - typer
   requires_python: '>=3.13'
 - pypi: ./packages/backtest
   name: ditto-backtest
   version: 0.1.0
-  sha256: 5a61a4a36809e6afa2ef5437aab20f27f8de4be02b3a127d45f37542c962bec7
+  sha256: 5608d29d98754ff88eb5fecda3d300253e2d0aae696f3bac0bde83a45592b270
   requires_dist:
   - ditto-kernel
   - ditto-data
@@ -2470,36 +2490,52 @@ packages:
   - polars
   - numpy
   - orjson
+  - loguru
   requires_python: '>=3.13'
 - pypi: ./packages/data
   name: ditto-data
   version: 0.1.0
-  sha256: 2b1bc416775052a8af328aa12983071d0a548ffc8c95fd70c81bd3085ab6c2f0
+  sha256: 4c6e20a7f779f5e2d602b297840773365695feb97c458ca03b605a121ee69d85
   requires_dist:
   - ditto-kernel
   - ditto-platform
+  - pyyaml
+  - dishka
+  - duckdb
+  - httpx
+  - limits
+  - loguru
+  - orjson
+  - polars
+  - pydantic
+  - tenacity
+  - xxhash
   requires_python: '>=3.13'
 - pypi: ./packages/execution
   name: ditto-execution
   version: 0.1.0
-  sha256: 9c3adea6a93fdb0d778c0f21d5b85abbc21486c21c7751d87ffe13b58e8f4f42
+  sha256: 845bc280f1854d2902d299b5e9488d9a9e3acb959e8b66ba4744df2867283d5a
   requires_dist:
   - ditto-kernel
   - ditto-portfolio
   - ditto-platform
+  - dishka
   - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/features
   name: ditto-features
   version: 0.1.0
-  sha256: 44657556b5eb69a30706c5dfc8eaaf48c6e714181460e10d24f7cb538ad67168
+  sha256: ad401c27b7ced448a51a7e081c282e6e468f9045a74639509b81e4dbfc29c97c
   requires_dist:
   - ditto-kernel
   - ditto-platform
   - polars
   - numpy
   - cachebox
+  - dishka
+  - loguru
   - orjson
+  - pydantic
   requires_python: '>=3.13'
 - pypi: ./packages/kernel
   name: ditto-kernel
@@ -2509,9 +2545,21 @@ packages:
 - pypi: ./packages/platform
   name: ditto-platform
   version: 0.1.0
-  sha256: 846f4693e45e985010e21e6d6bea3534f1c6a6f1397710d3dd2a95aa20e0d930
+  sha256: bd57410cc6ffe61a1189fc477c37e145b0ad61ba11cdda7c4f93e2fde296f2a2
   requires_dist:
   - ditto-kernel
+  - cachebox
+  - filelock
+  - httpx
+  - jinja2
+  - loguru
+  - opentelemetry-api
+  - opentelemetry-exporter-otlp-proto-http
+  - opentelemetry-sdk
+  - orjson
+  - polars
+  - pydantic
+  - xxhash
   requires_python: '>=3.13'
 - pypi: ./packages/portfolio
   name: ditto-portfolio
@@ -2534,10 +2582,11 @@ packages:
 - pypi: ./packages/strategy
   name: ditto-strategy
   version: 0.1.0
-  sha256: 463f7da69f54832aa21051eb0945bb97c998e921650503d108f617dc7fc3dd18
+  sha256: 2a88e864d8eca02b1a9da5a78f3d320a68bfcc6375dde8502b07d4a1740f5de6
   requires_dist:
   - ditto-kernel
   - ditto-platform
+  - dishka
   - polars
   - orjson
   requires_python: '>=3.13'

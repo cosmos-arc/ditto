@@ -25,6 +25,7 @@ from ditto_application.commands.universe import (
     UpdateCustomUniverseCommand,
     UpdateCustomUniverseHandler,
 )
+from ditto_application.exceptions import AppCommandError
 from ditto_application.queries.universe import UniverseQueryFacade
 from fastapi import APIRouter, Depends, Query
 
@@ -43,6 +44,22 @@ from ditto_apps.models.universe import (
 )
 
 router = APIRouter(prefix="/universes", tags=["universes"])
+
+
+def _is_not_found_command_error(exc: AppCommandError) -> bool:
+    """Return whether command failure represents a missing universe."""
+    if exc.details.get("reason") == "not_found":
+        return True
+    return "not found" in str(exc).lower()
+
+
+def _is_preset_command_error(exc: AppCommandError) -> bool:
+    """Return whether command failure represents a preset-universe guard."""
+    if exc.details.get("reason") == "non_custom_universe":
+        return True
+    if exc.details.get("universe_type") == "preset":
+        return True
+    return "preset" in str(exc).lower()
 
 
 @router.get("", response_model=APIResponse[list[UniverseResponse]])
@@ -96,7 +113,7 @@ async def create_universe(
     )
     try:
         row = await asyncio.to_thread(handler.handle, cmd)
-    except ValueError as exc:
+    except (AppCommandError, ValueError) as exc:
         raise BadRequestError(str(exc)) from exc
     return APIResponse(data=to_universe_response(row))
 
@@ -118,10 +135,19 @@ async def update_universe(
     )
     try:
         row = await asyncio.to_thread(handler.handle, cmd)
+    except AppCommandError as exc:
+        msg = str(exc)
+        if _is_preset_command_error(exc):
+            raise ForbiddenError(msg) from exc
+        if _is_not_found_command_error(exc):
+            raise NotFoundError(msg) from exc
+        if exc.details.get("field") is not None:
+            raise BadRequestError(msg) from exc
+        raise BadRequestError(msg) from exc
     except PermissionError as exc:
         raise ForbiddenError(str(exc)) from exc
     except ValueError as exc:
-        raise NotFoundError(str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
     return APIResponse(data=to_universe_response(row))
 
 
@@ -135,9 +161,13 @@ async def delete_universe(
     cmd = DeleteCustomUniverseCommand(universe_id=universe_id)
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
-    except ValueError as exc:
+    except AppCommandError as exc:
         msg = str(exc)
-        if "preset" in msg:
+        if _is_preset_command_error(exc):
             raise ForbiddenError(msg) from exc
-        raise NotFoundError(msg) from exc
+        if _is_not_found_command_error(exc):
+            raise NotFoundError(msg) from exc
+        raise BadRequestError(msg) from exc
+    except ValueError as exc:
+        raise BadRequestError(str(exc)) from exc
     return APIResponse(data=result)

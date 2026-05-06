@@ -17,6 +17,8 @@ from ditto_platform.foundation import logger
 from ditto_platform.foundation.storage.types import OnDuplicate, WriteResult
 from ditto_platform.foundation.util.checksum import ChecksumCompute
 
+from ditto_application.exceptions import AppProcessError
+
 
 def _enrich_with_instrument_id(
     df: pl.DataFrame,
@@ -143,13 +145,17 @@ class IngestionDataWriter:
             WriteResult: 写入结果
 
         Raises:
-            ValueError: 不支持的数据集
+            AppProcessError: 不支持的数据集
 
         """
         try:
             dataset_enum = Dataset(dataset)  # 转换为枚举进行比较
         except ValueError as e:
-            raise ValueError(f"不支持写入数据集: {dataset}") from e
+            raise AppProcessError(
+                f"不支持写入数据集: {dataset}",
+                field="dataset",
+                value=dataset,
+            ) from e
 
         # 元数据类型数据集不需要年份分区
         metadata_datasets = {
@@ -174,7 +180,11 @@ class IngestionDataWriter:
         )
 
         if dataset_enum not in handlers:
-            raise ValueError(f"不支持写入数据集: {dataset}")
+            raise AppProcessError(
+                f"不支持写入数据集: {dataset}",
+                field="dataset",
+                value=dataset,
+            )
 
         return handlers[dataset_enum]()
 
@@ -504,8 +514,11 @@ class IngestionDataWriter:
         save_method = capital_methods.get(capital_dataset)
         if save_method is None:
             valid = ", ".join(capital_methods)
-            raise ValueError(
-                f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}"
+            raise AppProcessError(
+                f"Unknown capital_dataset: {capital_dataset}. Expected: {valid}",
+                field="dataset",
+                value=capital_dataset,
+                expected=tuple(capital_methods),
             )
         records_written = save_method(enriched_df)
         return _to_write_result(

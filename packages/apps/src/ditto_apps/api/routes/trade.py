@@ -27,6 +27,7 @@ from ditto_application.commands.trade import (
     UpdateIntentStatusCommand,
     UpdateIntentStatusHandler,
 )
+from ditto_application.exceptions import AppError
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
     ManualExecutionFill,
@@ -185,7 +186,7 @@ async def update_intent_status(
     )
     try:
         result = await asyncio.to_thread(handler.handle, cmd)
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("transition",))
     return APIResponse(data=result)
 
@@ -217,7 +218,7 @@ async def record_fill(
     )
     try:
         fill = await asyncio.to_thread(handler.handle, cmd)
-    except ValueError as exc:
+    except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("transition",))
     return APIResponse(data=to_fill_response(fill))
 
