@@ -106,6 +106,7 @@ lerna-debug.log*
 .yarn/
 .pnp.*
 *.tgz
+bun-metadata.json
 
 # ──────────────────────────────────────────────
 # Deployment
