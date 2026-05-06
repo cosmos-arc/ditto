@@ -1,4 +1,5 @@
 def test_import_ditto_execution() -> None:
     import ditto_execution
 
-    assert ditto_execution.__version__ == "0.1.0"
+    assert ditto_execution.__name__ == "ditto_execution"
+    assert not hasattr(ditto_execution, "__version__")
