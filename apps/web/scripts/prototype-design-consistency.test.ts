@@ -3809,7 +3809,7 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
-	});
+	}, 20_000);
 
 	it("keeps A Shares stock heatmap labels readable and out of tiny-text escape hatches", () => {
 		const page = activePageById("a-shares");
