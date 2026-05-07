@@ -21,7 +21,7 @@ from ditto_apps.registry.container import make_app_container
 
 
 @contextmanager
-def create_prefect_host() -> Generator[Any, None, None]:
+def create_prefect_host() -> Generator[Any]:
     """
     Prefect Host - 任务级容器生命周期管理.
 
@@ -43,7 +43,7 @@ def create_prefect_host() -> Generator[Any, None, None]:
 
 @contextmanager
 def create_dq_and_metadata_context() -> Generator[
-    tuple[QualityEngineProtocol, MetadataQueryFacade, MarketQueryFacade], None, None
+    tuple[QualityEngineProtocol, MetadataQueryFacade, MarketQueryFacade],
 ]:
     """
     创建 DQ、MetadataQueryFacade 和 MarketQueryFacade 上下文，使用 dishka 容器管理依赖.

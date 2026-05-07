@@ -51,7 +51,6 @@ ditto_data/
 │   ├── golden.py        # 黄金标准参考
 │   ├── protocols.py     # 质量检查 Protocol
 │   ├── report.py        # 质量报告生成
-│   ├── severity.py      # 严重级别定义
 │   └── spec.py          # 质量规格定义
 ├── runtime/             # 运行时基础设施
 │   ├── freeze_manager.py         # 冻结管理器
@@ -94,11 +93,13 @@ ditto_data/
 │       │   └── mappings/  # 字段映射定义（basic/capital/common/macro）
 │       └── utils/       # 工具（HTTP/限流）
 ├── storage/             # 存储引擎（Reader/Writer CQRS；factors/features/execution 存储已迁移至各能力包）
-│   ├── sqlite_client.py # SQLite 客户端
-│   ├── base/            # 存储基类（Parquet/SQLite/分区策略）
-│   │   ├── parquet_store.py      # Parquet 存储基类
-│   │   ├── partition_strategy.py # 分区策略
-│   │   └── sqlite_store.py       # SQLite 存储基类
+│   ├── base/            # 存储基类（SQLite 数据集读写）
+│   │   ├── dataset_reader.py     # Parquet 数据集读取基类
+│   │   ├── dataset_writer.py     # Parquet 数据集写入基类
+│   │   ├── sqlite_store.py       # SQLite 存储基类
+│   │   ├── sqlite_table_reader.py  # SQLite 表读取基类
+│   │   ├── sqlite_table_spec.py    # SQLite 表规格定义
+│   │   └── sqlite_table_writer.py  # SQLite 表写入基类
 │   ├── capital/         # 资本数据（估值/融资融券/质押/指数成分）
 │   │   ├── valuation/   # 估值指标
 │   │   ├── margin/      # 融资融券
@@ -164,7 +165,7 @@ ditto_data/
 - 查询类：`*_reader.py`（如 `instrument_reader.py`）
 - 写入类：`*_writer.py`（如 `instrument_writer.py`）
 - 服务类：`*_service.py`（如 `metadata_service.py`）
-- 存储基础设施：`storage/base/` 保留 data-specific SQLiteStore / DatasetWriter；共享写入结果类型位于 `platform.foundation.storage.types`
+- 存储基础设施：`storage/base/` 保留 data-specific SQLiteStore / DatasetWriter / TableReader / TableWriter；ParquetStore / PartitionStrategy / SQLiteClient 等共享基类位于 `platform.foundation.storage`
 
 ## 层级访问规则（2026-02-10 更新）
 

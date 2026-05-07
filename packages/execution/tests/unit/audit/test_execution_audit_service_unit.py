@@ -25,7 +25,7 @@ from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture
-def audit_service(tmp_path: object) -> Generator[ExecutionAuditService, None, None]:
+def audit_service(tmp_path: object) -> Generator[ExecutionAuditService]:
     """Create an ExecutionAuditService with a temporary SQLite database."""
     pool = SQLitePool(str(tmp_path / "test_audit.db"))
     service = ExecutionAuditService(pool)

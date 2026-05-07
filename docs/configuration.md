@@ -274,7 +274,7 @@ Feature/Factor 产物路径由 Features 层 `FeatureArtifactStoreSettings` 管�
 | `RETRY_MULTIPLIER` | float | `1.0` | 重试间隔倍数 |
 | `RETRY_MIN_WAIT` | float | `1.0` | 最小等待时间（秒） |
 | `RETRY_MAX_WAIT` | float | `10.0` | 最大等待时间（秒） |
-| `RATE_LIMIT_PROFILE` | str | `free` | 限流配置（`free`/`paid`） |
+| `RATE_LIMIT_PROFILE` | str | `free` | 限流配置（`free`/`paid`/`conservative`）。**注意：当前为未生效的配置项（死代码），有效值预留但尚未接入运行时** |
 | `RATE_LIMIT_GLOBAL_RATE` | int | - | 全局速率限制 |
 | `RATE_LIMIT_DAILY_RATE` | int | - | 每日速率限制 |
 | `TDX_PATH` | str | `D:\new_tdx\vipdoc` | 通达信路径（质量对账用） |

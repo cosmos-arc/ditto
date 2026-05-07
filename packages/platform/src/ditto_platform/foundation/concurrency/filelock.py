@@ -80,7 +80,7 @@ class FileLockManager:
         )
 
     @contextmanager
-    def acquire(self, name: str, timeout: float = 30.0) -> Generator[None, None, None]:
+    def acquire(self, name: str, timeout: float = 30.0) -> Generator[None]:
         """
         获取文件锁的上下文管理器.
 

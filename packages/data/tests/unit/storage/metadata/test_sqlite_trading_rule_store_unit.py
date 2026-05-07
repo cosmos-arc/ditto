@@ -20,7 +20,7 @@ from ditto_platform.foundation import SQLitePool
 
 
 @pytest.fixture
-def pool(tmp_path: object) -> Generator[SQLitePool, None, None]:
+def pool(tmp_path: object) -> Generator[SQLitePool]:
     """Create a SQLitePool with trading_rule schema initialized."""
     p = SQLitePool(str(tmp_path / "test_trading_rule.db"))
     writer = SQLiteTradingRuleWriter(p)

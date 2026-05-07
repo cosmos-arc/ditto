@@ -50,21 +50,27 @@ ditto_execution/
 │   ├── store.py          # 成交存储接口
 │   └── outcomes.py       # 成交结果
 ├── reality/              # 执行现实模拟
-│   ├── brokerage.py      # 经纪商模拟
-│   ├── fee.py            # 费用计算
-│   ├── slippage.py       # 滑点模型
-│   ├── fill.py           # 成交模拟
-│   └── settlement.py     # 交收规则（T+1）
+│   ├── __init__.py       # re-export（AShareFeeModel / SimpleFeeModel）
+│   ├── fee.py            # 费用计算（AShareFeeModel / SimpleFeeModel）
+│   └── ...
 ├── audit/                # 交易审计
 │   ├── models.py         # 审计模型
 │   └── execution_audit_service.py  # 审计服务
 ├── storage/              # 持久化
-│   ├── deps.py           # 依赖注入
+│   ├── deps.py           # 依赖注入（ExecutionReaders / ExecutionWriters）
 │   └── sqlite/
-│       ├── trade/        # 交易数据存储
-│       │   └── service.py
-│       └── legacy/       # 遗留存储（fill/signal/position reader/writer）
+│       └── trade/        # 交易数据存储
+│           ├── service.py    # 读写服务
+│           ├── fills.py      # 成交存储
+│           ├── intents.py    # 意图存储
+│           ├── positions.py  # 持仓快照存储
+│           └── _sql.py       # SQL 工具（allowlists / WHERE 构建）
+├── di/                   # 依赖注入 Provider
+│   ├── _factory.py       # Execution Provider 工厂
+│   └── storage.py        # 存储层 DI Provider
 ├── reconciliation/       # 对账（待扩展）
+├── brokerage.py          # 券商模拟入口
+├── storage.py            # 存储入口
 ├── planner.py            # 执行计划器
 ├── trade_builder.py      # 交易构建器
 ├── targets.py            # 目标持仓计算

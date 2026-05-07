@@ -89,7 +89,7 @@ prefect.tasks.task = _mock_task_decorator
 
 
 @pytest.fixture(autouse=True)
-def disable_prefect_api_server() -> Generator[None, None, None]:
+def disable_prefect_api_server() -> Generator[None]:
     """禁用 Prefect API 服务器（单元测试不需要）."""
     import prefect.settings
 

@@ -17,7 +17,7 @@ from ditto_apps.registry.contexts.bundle import StrategyBundle
 
 
 @contextmanager
-def create_strategy_bundle() -> Generator[StrategyBundle, None, None]:
+def create_strategy_bundle() -> Generator[StrategyBundle]:
     """创建策略上下文组合包（单容器）。"""
     container = make_app_container()
     try:

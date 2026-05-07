@@ -27,7 +27,7 @@ console = Console()
 
 
 @contextmanager
-def _get_macro_facade() -> Generator[MacroQueryFacade, None, None]:
+def _get_macro_facade() -> Generator[MacroQueryFacade]:
     """获取 MacroQueryFacade 实例."""
     with create_query_context() as ctx:
         yield ctx.macro

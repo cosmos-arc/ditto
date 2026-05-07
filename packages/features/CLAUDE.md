@@ -77,8 +77,15 @@ ditto_features/
 │   ├── evaluator.py      # 评估执行器
 │   ├── report.py         # 评估报告
 │   └── metrics/          # 评估指标
+│       ├── _math.py         # 数学工具
+│       ├── attribution.py   # 归因分析
+│       ├── exposure.py      # 暴露分析
+│       ├── factor_analysis.py # 因子分析
 │       ├── fama_macbeth.py  # Fama-MacBeth 回归
-│       └── _math.py         # 数学工具
+│       ├── ic.py            # IC 指标
+│       ├── orthogonalization.py # 正交化
+│       ├── portfolio.py     # 组合指标
+│       └── tail_risk.py     # 尾部风险
 ├── models/               # 数据模型
 │   ├── features.py       # Feature 模型
 │   ├── factors.py        # Factor 模型
@@ -95,6 +102,10 @@ ditto_features/
 │       ├── concurrent_materializer.py
 │       ├── garbage_collector.py
 │       └── gc_models.py
+├── config/               # 配置
+│   └── artifact_store.py # Artifact 存储配置
+├── observability/        # 可观测性
+│   └── metrics.py        # 指标
 ├── storage/              # Feature-owned 存储适配
 │   ├── derived_artifact_writer.py
 │   ├── parquet/          # 因子/特征 Parquet 存储

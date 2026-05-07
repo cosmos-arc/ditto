@@ -50,7 +50,7 @@ def create_coordinator(
     ingestion_cursor_service: IngestionCursorService | None = None,
     quality_checker: QualityCheckerProtocol | None = None,
     freeze_service: FreezeService | None = None,
-) -> Generator[IngestionCoordinator, None, None]:
+) -> Generator[IngestionCoordinator]:
     """
     创建 IngestionCoordinator 实例.
 

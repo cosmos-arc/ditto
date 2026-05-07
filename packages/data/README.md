@@ -40,7 +40,7 @@ ditto_data/
 │   ├── data_store.py             # all_directories() 目录唯一真源
 │   ├── dataset_checksum.py
 │   └── storage.py
-├── di/                  # DI 注册（builders/sources/quality/runtime 等 Provider）
+├── di/                  # DI 注册（data 域 Provider；trade/strategy/execution/features/analysis DI 已迁移至各能力包）
 ├── errors.py            # DataError 异常层级
 ├── events.py            # 数据事件定义
 ├── helpers/             # 辅助工具（复权调整 / PIT 策略）
@@ -52,11 +52,12 @@ ditto_data/
 │   ├── ingestion_log_service.py
 │   ├── late_arrival.py
 │   └── quality_record_service.py
-├── models/              # 数据模型（8 文件）
+├── models/              # 数据模型（市场/元数据/宏观/摄入/存储等；策略/交易/衍生/发布安全模型已迁移至各能力包或 kernel）
 │   ├── common.py / market.py / metadata.py / macro.py
 │   ├── ingestion.py / storage.py / source_codes.py
 ├── provider.py          # DataProvider Protocol 定义
-├── providers/           # ServiceBackedDataProvider 实现
+├── providers/           # DataProvider 实现
+│   └── provider.py      # ServiceBackedDataProvider 实现
 ├── quality/             # 数据质量引擎（L1-L4 检查器）
 │   ├── checkers/        # 技术/业务/统计/跨源检查器
 │   ├── config.py / engine.py / golden.py / protocols.py
@@ -65,19 +66,18 @@ ditto_data/
 │   ├── freeze_manager.py
 │   ├── instrument_id_allocator.py
 │   └── sql_engine.py
-├── services/            # 域服务（market/metadata/fundamental/macro/capital/source）
-│   ├── deps.py          # 服务依赖聚合
+├── scripts/             # 工具脚本
+├── services/            # 域服务（market/metadata/fundamental/macro/capital/source + metadata 子目录）
+│   ├── deps.py          # 服务依赖聚合（DI 参数分组）
+│   ├── _enrichment.py   # 数据富化辅助
 │   ├── market_service.py / market_write_service.py
 │   ├── metadata_service.py / fundamental_service.py
 │   ├── macro_service.py / capital_service.py
-│   ├── source_service.py / derived_catalog_service.py
-│   ├── research_catalog_service.py / research_artifact_service.py
-│   ├── trade/           # TradeService 门面 + 3 Writer
-│   ├── audit/           # ExecutionAuditService
-│   ├── derived/         # 物化/查询/GC/并发
-│   ├── hot_layer/       # 热数据层（预留）
-│   ├── metadata/        # 日历/工具/Universe
-│   └── strategy/        # 策略目录/运行/产物/规则
+│   ├── source_service.py
+│   └── metadata/        # 日历/工具/Universe
+│       ├── calendar.py
+│       ├── instrument.py
+│       └── universe.py
 ├── sources/             # 外部数据源
 │   ├── base.py / source.py / source_schema.py
 │   ├── exchange_transformers.py / normalization.py
@@ -86,15 +86,14 @@ ditto_data/
 │   ├── tdx/             # 通达信数据源
 │   └── tushare/         # Tushare 数据源（适配器/处理器/映射）
 ├── storage/             # 存储引擎（Reader/Writer CQRS）
-│   ├── sqlite_client.py
-│   ├── base/            # ParquetStore / SQLiteStore / PartitionStrategy
+│   ├── base/            # 存储基类（Parquet/SQLite/分区策略）
 │   ├── capital/         # 估值/融资融券/质押/指数成分
 │   ├── fundamental/     # 财报/预测/公司行为
 │   ├── macro/           # 宏观指标
 │   ├── market/          # ETF/股票/指数/商品/外汇
 │   ├── metadata/        # 日历/工具/行业/Universe
 │   ├── runtime/         # 摄入游标/日志/质量
-│   └── schemas/
+│   └── schemas/         # 存储层 Schema（market/metadata/store）
 └── utils/               # 工具函数（时区等）
 ```
 
@@ -103,7 +102,7 @@ ditto_data/
 | 层级 | 职责 | 禁止 |
 |------|------|------|
 | storage (Reader/Writer) | 数据读写操作（CQRS 分离） | 包含业务逻辑 |
-| services | 域服务（13 Facade + 5 子目录） | 直接访问文件系统 |
+| services | 域服务（market/metadata/fundamental/macro/capital/source + metadata 子目录） | 直接访问文件系统 |
 | sources | 外部数据源接入 | 包含业务逻辑 |
 | providers | ServiceBackedDataProvider 实现 | 包含业务逻辑 |
 | ingestion | 数据摄入编排 | 绕过质量检查 |
@@ -199,6 +198,8 @@ pixi run -e dev pytest packages/data/tests/
 ### v0.19.0 (2026-04-27)
 - 文档同步更新：大幅精简 README，移除过时引用
 - 添加 FRED / TDX 数据源、ingestion/ 详细结构、storage 子域隔离
+- 移除已迁移服务的引用（trade/audit/derived/hot_layer/strategy/derived_catalog/research_catalog/research_artifact）
+- 同步 storage/base/ 结构（ParquetStore/PartitionStrategy 已迁移至 platform）
 
 ### v0.18.0 (2026-03-24)
 - Strategy 运行与审计支持（StrategyRunService / ExecutionAuditService）

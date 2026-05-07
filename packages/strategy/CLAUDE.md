@@ -60,6 +60,8 @@ ditto_strategy/
 │       └── services/   # 策略目录/运行/工件服务
 ├── runs/               # 策略运行模型
 │   └── models.py
+├── observability/      # 可观测性
+│   └── metrics.py      # 指标
 ├── audit/              # 审计追踪（待扩展）
 ├── di/                 # 依赖注入
 │   └── storage.py

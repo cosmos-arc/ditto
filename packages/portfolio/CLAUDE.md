@@ -53,6 +53,8 @@ ditto_portfolio/
 ├── positions/            # 持仓管理（待扩展）
 ├── target_portfolios/    # 目标组合（待扩展）
 ├── holdings/             # 持仓快照（待扩展）
+├── observability/        # 可观测性
+│   └── metrics.py        # 指标
 ├── contracts.py          # 组合领域契约
 ├── errors.py             # 错误定义
 └── events.py             # 领域事件

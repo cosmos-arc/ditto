@@ -321,17 +321,20 @@ except Exception as e:
 
 #### 6. 自定义异常设计
 
-**异常层次结构**：
+**异常层次结构**（以 kernel 为根）：
 ```python
-# 基础异常
-class DataError(Exception):
-    def __init__(self, message: str, details: dict[str, object] | None = None):
+# kernel 层基础异常（ditto_kernel/exceptions.py）
+class DittoError(Exception):
+    def __init__(self, message: str, details: Mapping[str, object] | None = None):
         self.details = details or {}
 
-# 领域异常
-class DataSourceError(DataError): ...
+class DataError(DittoError): ...    # 数据层基础异常
+class IdentifierError(DittoError): ...  # 标识符异常
+
+# 各包扩展（如 ditto_data/errors.py）
+class _DataError(DataError): ...  # data 包本地别名
+class DataSourceError(_DataError): ...
 class SourceFetchError(DataSourceError): ...
-class SourceAuthenticationError(DataSourceError): ...
 ```
 
 **设计原则**：

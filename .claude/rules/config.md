@@ -75,8 +75,12 @@ config/
 | 包 | 位置 | 包含配置 |
 |---|------|----------|
 | `ditto_platform` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
+| `ditto_platform` | `services/notification/config.py` | `NotificationSettings` |
 | `ditto_data` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
 | `ditto_data` | `config/data_source.py` | `DataSourceSettings` |
+| `ditto_data` | `config/data_source_validation.py` | 数据源校验 Provider |
+| `ditto_data` | `config/storage.py` | `FileStorageSettings` |
+| `ditto_data` | `config/dataset_checksum.py` | 数据集校验和配置 |
 | `ditto_data` | `quality/config.py` | `DQSettings` |
 
 ### 禁止事项
@@ -105,8 +109,8 @@ config/
 |------|------|------|
 | `get_environment()` | 获取运行时环境 | `platform/foundation/config/environment.py` |
 | `ConfigLoader` | 定位配置文件路径 | `platform/foundation/config/loader.py` |
-| `load_env_file()` | 加载 .env 文件 | `packages/apps/config/loader.py` |
-| `ConfigProvider` | DI 装配 | `packages/apps/registry/platform/config.py` |
+| `load_env_file()` | 加载 .env 文件 | `packages/apps/src/ditto_apps/config/loader.py` |
+| `ConfigProvider` | DI 装配 | `packages/apps/src/ditto_apps/registry/infra/config.py` |
 
 ### 配置加载位置约束
 
@@ -114,7 +118,7 @@ config/
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  packages/apps/registry/platform/config.py（唯一加载点）              │
+│  packages/apps/src/ditto_apps/registry/infra/config.py（唯一加载点）│
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │
@@ -218,7 +222,7 @@ class InitScope(str, Enum):
 | 提供者 | 作用域 | 职责 |
 |--------|--------|------|
 | `DataRootInitProvider` | STARTUP | 创建数据目录结构 |
-| `MetadataDbInitProvider` | STARTUP | 初始化元数据库 |
+| `MetadataDbInitProvider` | STARTUP | 初始化元数据库（位于 `packages/apps/src/ditto_apps/registry/init_providers.py`） |
 
 ### 初始化流程（main.py）
 

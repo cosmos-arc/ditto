@@ -108,7 +108,7 @@ def sqlite_client(sqlite_pool: SQLitePool) -> SQLiteClient:
 
 
 @pytest.fixture
-def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     """可控的时间 fixture，通过 monkeypatch 替换时间函数.
 
     使 time.sleep 立即完成，time.time 按预期前进，提高测试速度和确定性。

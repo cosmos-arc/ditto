@@ -69,7 +69,10 @@ ditto_analysis → ditto_apps ❌
 ```
 ditto_analysis/
 ├── contracts.py          # research catalog reader/writer protocols
+├── errors.py             # 分析层错误类型
 ├── di/                   # analysis DI providers
+│   ├── _factory.py       # DI 工厂
+│   └── storage.py        # 存储层 DI Provider
 ├── research/             # 研究 control-plane domain/services
 │   ├── domain.py         # 研究领域模型
 │   ├── catalog_service.py    # 研究目录服务

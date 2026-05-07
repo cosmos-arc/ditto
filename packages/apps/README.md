@@ -1,6 +1,6 @@
 # ditto-apps
 
-**版本**: v0.6.0 | **日期**: 2026-04-04 | **状态**: 稳定
+**版本**: v0.14.0 | **日期**: 2026-05-06 | **状态**: 稳定
 
 ## 概要
 
@@ -13,22 +13,21 @@ packages/apps/
 ├── src/ditto_apps/
 │   ├── api/                # FastAPI 路由
 │   │   ├── errors.py       # API 层错误处理
-│   │   └── routes/         # capital, commodity, debug, fundamental, fx, ingestion, macro, market, metadata, portfolio, source
+│   │   └── routes/         # backtest, capital, commodity, debug, fundamental, fx, ingestion, macro, market, metadata, shared_bars, source, strategy, trade, universe
 │   ├── cli/                # Typer CLI（main.py, context.py, executor.py）
-│   │   ├── commands/       # factory.py, init.py, strategy.py
+│   │   ├── commands/       # factory.py, init.py, ops.py, strategy.py
 │   │   │   ├── backfill/   # capital, fundamental, macro, market, metadata
 │   │   │   ├── ingest/     # capital, fundamental, macro, market, metadata
 │   │   │   └── query/      # capital, fundamental, macro, market, metadata
-│   │   ├── models/         # （预留）
 │   │   └── utils/          # identifier.py, output.py, params.py, validation.py
 │   ├── config/             # 配置加载（loader.py）
 │   ├── jobs/               # Prefect 任务（context.py）
-│   │   ├── flows/          # backfill, daily, deploy, materialization, repair, research
-│   │   └── tasks/          # dq_batch, monitoring, t0_meta
-│   ├── models/             # API Pydantic 模型（capital, commodity, common, fundamental, fx, identifier, macro, market, metadata）
+│   │   ├── flows/          # backfill, backtest, daily, deploy, eod, materialization, repair, research
+│   │   └── tasks/          # aliases, dq_batch, monitoring, t0_meta
+│   ├── models/             # API Pydantic 模型（backtest, capital, commodity, common, fundamental, fx, ingestion, lineage, macro, market, metadata, strategy, trade, universe）
 │   ├── registry/           # Dishka DI Composition Root（container.py, init_providers.py）
 │   │   ├── contexts/       # bundle, ingestion, materialization, query, strategy
-│   │   └── infra/          # config, notification, observability
+│   │   └── infra/          # config, notification, observability, signal_delivery
 │   ├── main.py             # FastAPI 入口
 │   ├── middleware.py
 │   ├── exceptions.py       # 自定义异常
@@ -98,6 +97,13 @@ ditto query market         # 数据查询
 - [Application 层规范](../application/CLAUDE.md)
 
 ## 变更记录
+
+### v0.14.0 (2026-05-06)
+- 文档同步：更新 routes/flows/tasks/models 列表，移除已废弃的 portfolio 路由和 identifier 模型
+- 新增 backtest/strategy/trade/universe 路由；shared_bars 辅助路由
+- 新增 backtest/eod flows；aliases task；ops CLI 命令
+- 新增 backtest/ingestion/lineage/strategy/trade/universe 模型
+- registry/infra 新增 signal_delivery
 
 ### v0.6.0 (2026-04-04)
 - 旧入口包重命名为 `ditto-apps`

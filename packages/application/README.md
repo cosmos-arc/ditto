@@ -26,7 +26,7 @@ ditto_application/
 │   ├── research.py    # 研究数据集查询
 │   ├── forward_return_service.py  # 前向收益率服务
 │   ├── _instrument_code_facade.py # 证券代码解析门面
-│   ├── _artifact_utils.py        # 共享 artifact 查找 + 回测指标计算
+│   ├── artifact_utils.py         # 共享 artifact 查找 + 回测指标计算
 │   ├── backtest.py     # 回测统一查询门面（结果/成交/审计）
 │   ├── backtest_trade.py # 回测成交明细查询
 │   ├── comparison.py   # 回测 vs 实际对比查询门面
@@ -64,9 +64,11 @@ ditto_application/
 ├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
 ├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
 ├── providers_portfolio.py  # 组合/交易查询 Provider（3 个 @provide）
+├── settings.py             # 应用层设置
 ├── config.py           # 数据集配置
 ├── contracts.py        # 跨 CQRS 子模块共享契约（Command DTO + ReadModel）
-└── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
+├── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
+└── exceptions.py       # 应用层自定义异常
 ```
 
 ## 架构定位

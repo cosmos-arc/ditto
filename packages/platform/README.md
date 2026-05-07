@@ -50,6 +50,12 @@ ditto_platform/
 │   │   └── providers/            # 配置提供者（校验、数据根路径）
 │   ├── db/                       # 数据库连接（SQLitePool）
 │   ├── observability/            # 可观测性（日志、追踪、指标、生命周期）
+│   ├── storage/                  # 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、存储类型）
+│   │   ├── parquet_store.py      # Parquet 存储基类
+│   │   ├── partition_strategy.py # 分区策略
+│   │   ├── protocols.py          # 存储 Protocol 定义
+│   │   ├── sqlite_client.py      # SQLite 客户端
+│   │   └── types.py              # 存储类型定义（OnDuplicate、WriteStoreResult）
 │   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
 └── services/                     # 基础服务
     └── notification/             # 通知服务（Telegram、Email、Webhook）

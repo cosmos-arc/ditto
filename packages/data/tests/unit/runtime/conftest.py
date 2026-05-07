@@ -12,7 +12,7 @@ import time_machine
 @pytest.fixture
 def frozen_time(
     time_machine: time_machine.TimeMachineFixture,
-) -> Generator[time_machine.TimeMachineFixture, None, None]:
+) -> Generator[time_machine.TimeMachineFixture]:
     """提供完全控制的虚拟时间(替代真实 sleep).
 
     使用方式:

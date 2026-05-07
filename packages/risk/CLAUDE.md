@@ -42,9 +42,17 @@ ditto_risk/
 ├── pre_trade.py          # 盘前风控检查
 ├── post_trade.py         # 盘后风控审计
 ├── _validation.py        # 校验工具
-├── constraints/          # 约束规则（待扩展）
-├── exposure/             # 暴露度管理（待扩展）
-├── drawdown/             # 回撤控制（待扩展）
+├── rules.py              # 风控规则类型
+├── constraints/          # 约束规则
+│   ├── checks.py         # 约束检查
+│   └── context.py        # 约束上下文
+├── exposure/             # 暴露度管理
+│   ├── checks.py         # 暴露度检查
+│   └── rules.py          # 暴露度规则
+├── drawdown/             # 回撤控制
+│   └── rules.py          # 回撤规则
+├── observability/        # 可观测性
+│   └── metrics.py        # 风控指标采集
 ├── models.py             # 风险模型
 ├── contracts.py          # 风控契约
 ├── errors.py             # 错误定义

@@ -348,7 +348,7 @@ def reporter(golden_spec: GoldenDatasetSpec) -> E2EReporter:
 @pytest.fixture(scope="session", autouse=True)
 def generate_report(
     request: pytest.FixtureRequest, reporter: E2EReporter
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """自动生成 E2E 验收报告。
 
     Session 级别自动 fixture，在所有测试结束后自动生成报告。

@@ -13,7 +13,7 @@ from prometheus_client import CollectorRegistry
 
 
 @pytest.fixture(autouse=True)
-def set_test_database_path(tmp_path: Path) -> Generator[None, None, None]:
+def set_test_database_path(tmp_path: Path) -> Generator[None]:
     """为每个测试设置独立的数据库路径，支持并行测试.
 
     使用 SQLITE_PATH 和 DATA_ROOT 环境变量覆盖默认路径，
@@ -76,7 +76,7 @@ def metrics_registry() -> CollectorRegistry:
 
 
 @pytest.fixture(autouse=True)
-def ensure_sqlite_cleanup() -> Generator[None, None, None]:
+def ensure_sqlite_cleanup() -> Generator[None]:
     """确保 SQLite 连接在测试后正确关闭（Windows 兼容）。
 
     Windows 文件锁机制更严格，SQLite 连接未正确关闭会导致临时文件无法删除。
@@ -89,7 +89,7 @@ def ensure_sqlite_cleanup() -> Generator[None, None, None]:
 
 
 @pytest.fixture(scope="session")
-def prefect_test_session() -> Generator[None, None, None]:
+def prefect_test_session() -> Generator[None]:
     """Session 级别的 Prefect test harness。
 
     禁用 Prefect 控制台日志，避免测试结束时 Rich Console I/O 错误：

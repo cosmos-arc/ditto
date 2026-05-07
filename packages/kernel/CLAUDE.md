@@ -58,18 +58,21 @@ frozen dataclass 可包含 `to_json_dict()` / `from_json_dict()` 类方法，前
 
 ```
 ditto_kernel/
-├── instrument.py      # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
-├── order.py           # Order 子域 — OrderSide
-├── market.py          # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py        # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
-├── identity.py        # 共享身份类型（NewType）
-├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
-├── research.py        # 研究数据集记录类型（frozen dataclass × 4）
-├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
+├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
+├── order.py               # Order 子域 — OrderSide
+├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
+├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
+├── identity.py            # 共享身份类型（NewType）
+├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
+├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus
+├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
+├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
+├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
+├── research.py            # 研究数据集记录类型（frozen dataclass × 4）
+├── quality.py             # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
 ├── publication_safety.py  # 发布安全运行时记录（frozen dataclass × 6，含结构转换方法）
-├── exceptions.py      # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
-└── math.py            # 共享数学工具（pearson_correlation 等纯计算函数）
+├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
+└── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
 
 ### 子域间依赖
@@ -101,6 +104,16 @@ instrument / order / market / identity: 无子域间依赖
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
 | `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, App |
+| `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
+| `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
+| `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
+| `MarketSnapshot` | trading.py | frozen dataclass | Execution, Backtest |
+| `InstrumentDefinition` | trading.py | frozen dataclass | Execution, Backtest |
+| `TradingRuleSet` | trading.py | frozen dataclass | Execution, Backtest |
+| `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
+| `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
+| `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
+| `default_price_limit_pct` | trading.py | 纯函数 | Execution |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |

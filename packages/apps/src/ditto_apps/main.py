@@ -118,7 +118,7 @@ class ORJSONResponse(JSONResponse):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """
     Application lifespan manager（使用 dishka 容器）.
 

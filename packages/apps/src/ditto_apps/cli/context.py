@@ -14,7 +14,7 @@ from ditto_apps.registry.contexts import create_ingestion_bundle
 def create_executor(
     source_name: str = "tushare",
     data_root: Path | None = None,
-) -> Generator[CLIExecutor, None, None]:
+) -> Generator[CLIExecutor]:
     """
     创建 CLI 执行器（使用 DI 和工厂模式）.
 

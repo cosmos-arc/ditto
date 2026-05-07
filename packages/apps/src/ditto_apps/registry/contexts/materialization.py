@@ -19,7 +19,7 @@ from ditto_apps.registry.contexts.bundle import MaterializationBundle
 
 
 @contextmanager
-def create_materialization_bundle() -> Generator[MaterializationBundle, None, None]:
+def create_materialization_bundle() -> Generator[MaterializationBundle]:
     """创建物化上下文组合包（单容器）。"""
     container = make_app_container()
     try:

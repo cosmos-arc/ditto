@@ -36,7 +36,7 @@ class _TestingObservabilityConfigProvider(Provider):
 
 
 @pytest.fixture(autouse=True)
-def _clean_observability() -> Generator[None, None, None]:
+def _clean_observability() -> Generator[None]:
     """隔离 infra observability 与 kernel trace handler 的进程级状态。"""
     reset_trace_handler()
     reset_for_testing()

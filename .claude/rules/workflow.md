@@ -55,6 +55,7 @@ paths:
 | 测试覆盖率 | ≥ 80%             | pytest-cov   |
 | 类型检查   | 0 errors          | basedpyright |
 | Lint 检查  | All checks passed | ruff         |
+| 架构边界   | 36 contracts kept | import-linter |
 
 ## 快速参考
 
@@ -71,13 +72,20 @@ Grep "<pattern>"
 # 调试
 # 调用 systematic-debugging Skill
 
+# 架构检查
+pixi run -e dev arch-check
+
 # 完成前
 # 调用 verification-before-completion Skill
-pixi run -e dev ci
+pixi run -e dev check     # lint + fmt + type + test --fast
+pixi run -e dev ci        # 完整 CI
 ```
 
 ## 相关规范
 
 - **SKILLS 规则**: [`CLAUDE.md`](../../CLAUDE.md)
 - **工具使用标准**: [`CLAUDE.md`](../../CLAUDE.md)
-- **检查清单**: [`.claude/checklists/`](../checklists/)
+- **代码变更检查清单**: [`.claude/checklists/code-change.md`](../checklists/code-change.md)
+- **调试检查清单**: [`.claude/checklists/debug.md`](../checklists/debug.md)
+- **架构规范**: [`.claude/rules/architecture.md`](architecture.md)
+- **测试规范**: [`.claude/rules/python-test.md`](python-test.md)

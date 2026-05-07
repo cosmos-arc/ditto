@@ -95,6 +95,9 @@ ditto_application/
 │   │   ├── publication_facade.py    # 发布门面
 │   │   ├── types.py                 # 物化类型定义
 │   │   ├── dependencies.py          # 物化依赖
+│   │   ├── dependency_refs.py       # 依赖引用解析
+│   │   ├── manifest_builder.py      # 物化清单构建器
+│   │   ├── minimal_dq.py            # 最小数据质量检查
 │   │   ├── helpers.py               # 物化辅助函数
 │   │   ├── certification_rules.py   # 认证规则
 │   │   ├── factor_orthogonalization.py # 因子正交化
@@ -128,9 +131,11 @@ ditto_application/
 ├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
 ├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
 ├── providers_portfolio.py  # 组合/交易查询 Provider（3 个 @provide）
+├── settings.py             # 应用层设置
 ├── config.py           # 数据集配置
 ├── contracts.py        # 跨 CQRS 子模块共享契约（Command DTO + ReadModel）
-└── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
+├── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
+└── exceptions.py       # 应用层自定义异常
 ```
 
 ## DI Provider（6 个）

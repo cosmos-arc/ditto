@@ -10,7 +10,7 @@ required-version = ">=0.6.0"
 # 设置与 Black 兼容的行长。
 line-length = 88
 # 指定你的项目支持的最低 Python 版本。
-target-version = "py312"
+target-version = "py313"
 
 # 指定 Ruff 需要检查的源代码和测试目录。
 src = ["packages", "packages/apps", "scripts"]

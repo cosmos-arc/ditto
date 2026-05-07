@@ -23,7 +23,7 @@ console = Console()
 
 
 @contextmanager
-def _get_metadata_facade() -> Generator[MetadataQueryFacade, None, None]:
+def _get_metadata_facade() -> Generator[MetadataQueryFacade]:
     """获取 MetadataQueryFacade 实例."""
     with create_query_context() as ctx:
         yield ctx.metadata

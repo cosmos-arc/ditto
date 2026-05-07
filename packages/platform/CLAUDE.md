@@ -78,6 +78,11 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 │  platform → strategy/backtest ❌      │
 │  platform → analysis ❌               │
 │  platform → data ❌                   │
+│  platform → kernel ⚠️ 仅异常继承     │
+└─────────────────────────────────────┘
+```
+
+**kernel 依赖豁免**：platform 禁止对 kernel 的业务性依赖；仅允许 `ditto_platform.exceptions` 继承 `ditto_kernel.exceptions.DittoError`（全局异常根）。此豁免已在 `.importlinter` 中精确声明，实际代码中仅 `exceptions.py` 一处导入。
 └─────────────────────────────────────┘
 ```
 

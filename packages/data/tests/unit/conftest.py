@@ -12,7 +12,7 @@ from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
-def sqlite_memory_pool() -> Generator[SQLitePool, None, None]:
+def sqlite_memory_pool() -> Generator[SQLitePool]:
     """提供内存 SQLite 数据库池。
 
     每个测试函数使用独立的内存数据库，测试结束后自动清理。

@@ -27,9 +27,7 @@ console = Console()
 
 
 @contextmanager
-def _get_facades() -> Generator[
-    tuple[CapitalQueryFacade, MetadataQueryFacade], None, None
-]:
+def _get_facades() -> Generator[tuple[CapitalQueryFacade, MetadataQueryFacade]]:
     """获取 CapitalQueryFacade 和 MetadataQueryFacade 实例."""
     with create_query_context() as ctx:
         yield (ctx.capital, ctx.metadata)

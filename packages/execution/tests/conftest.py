@@ -39,7 +39,7 @@ def init_observability() -> None:
 
 
 @pytest.fixture
-def sqlite_pool() -> Generator[SQLitePool, None, None]:
+def sqlite_pool() -> Generator[SQLitePool]:
     """Create an in-memory SQLite pool for testing."""
     pool = SQLitePool(":memory:")
     yield pool

@@ -18,6 +18,7 @@ Apps 层是 **Application Boundary Layer（应用边界层）**，负责：
 ```
 ditto_apps/
 ├── api/               # API 路由
+│   └── utils/         # API 工具（identifier）
 ├── cli/               # CLI 命令
 │   ├── main.py        # CLI 入口
 │   ├── context.py     # CLI 上下文
@@ -42,6 +43,8 @@ ditto_apps/
 │   ├── init_providers.py  # Provider 初始化
 │   ├── contexts/      # DI 上下文（bundle/ingestion/materialization/query/strategy）
 │   └── infra/         # 基础设施配置（config/notification/observability/signal_delivery）
+│       ├── _factory.py                # Provider 工厂
+│       └── notification_templates/    # 通知模板（dq_failure/signal_trading × email/telegram/webhook）
 ├── config/            # 配置加载
 │   └── loader.py      # 环境配置加载器
 ├── middleware.py       # ASGI 中间件

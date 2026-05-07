@@ -133,8 +133,8 @@ bars = facade.get_bars(query)
 from ditto_data.di import get_data_providers
 
 # ❌ 错误: 直接访问 store（即使技术上可行）
-from ditto_data.storage.bars_store import BarsStore  # ❌
-store = BarsStore(...)  # ❌
+from ditto_data.storage.market.stock.bars import StockBarsReader  # ❌
+store = StockBarsReader(...)  # ❌
 ```
 
 ### 跨包 Re-export 禁止
@@ -596,7 +596,8 @@ ditto_application/
 ├── queries/     # 只读查询（零写入）
 ├── processes/   # Process Manager（有状态长流程，按能力域分 ingestion/materialization/execution/quality 子包）
 ├── commands/    # Command DTO + Handler（原子写操作）
-└── builders/    # 运行时装配（DI 构造）
+├── builders/    # 运行时装配（DI 构造）
+└── runtime/     # 运行时基础设施（空包，预留）
 ```
 
 ### 互斥规则

@@ -147,15 +147,15 @@ def is_valid_config(obj: Any) -> TypeGuard[ValidConfig]:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_data.storage.bars_store import BarsStore
+    from ditto_data.storage.market.stock.bars import StockBarsReader
 
 class BarsRepository:
-    def __init__(self, store: Any):
-        self._store = store
+    def __init__(self, reader: Any):
+        self._reader = reader
 
     @property
-    def store(self) -> "BarsStore":
-        return self._store  # type: ignore[no-any-return]
+    def reader(self) -> "StockBarsReader":
+        return self._reader  # type: ignore[no-any-return]
 ```
 
 ### 禁止使用

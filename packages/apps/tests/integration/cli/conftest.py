@@ -18,7 +18,7 @@ def reset_observability() -> None:
 
 
 @pytest.fixture(autouse=True)
-def isolate_loguru_for_cli() -> Generator[None, None, None]:
+def isolate_loguru_for_cli() -> Generator[None]:
     """CLI 测试中隔离 loguru，使用公共 API 避免私有依赖.
 
     根因：loguru 的 stdout handler 与 CliRunner 的 I/O 捕获冲突，

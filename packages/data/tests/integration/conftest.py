@@ -9,7 +9,7 @@ from prometheus_client import CollectorRegistry
 
 
 @pytest.fixture
-def metrics_registry() -> Generator[CollectorRegistry, None, None]:
+def metrics_registry() -> Generator[CollectorRegistry]:
     """提供内存 Registry（不依赖外部服务）。
 
     使用方式:
@@ -29,7 +29,7 @@ def metrics_registry() -> Generator[CollectorRegistry, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def ensure_sqlite_cleanup() -> Generator[None, None, None]:
+def ensure_sqlite_cleanup() -> Generator[None]:
     """确保 SQLite 连接在测试后正确关闭（Windows 兼容）。
 
     Windows 文件锁机制更严格，SQLite 连接未正确关闭会导致临时文件无法删除。
@@ -66,7 +66,7 @@ def sqlite_schema_path() -> Path:
 @pytest.fixture
 def sqlite_pool_with_schema(
     sqlite_schema_path: Path, tmp_path: Path
-) -> Generator[SQLitePool, None, None]:
+) -> Generator[SQLitePool]:
     """创建已初始化 schema 的 SQLite 连接池。
 
     使用临时文件数据库（而非内存数据库），更适合集成测试场景。

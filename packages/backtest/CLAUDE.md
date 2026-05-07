@@ -60,14 +60,22 @@ ditto_backtest/
 ├── audit/                # 审计子系统
 │   ├── collector.py      # 审计收集器
 │   └── records.py        # 审计记录
+├── simulation/           # 模拟模型子包
+│   ├── brokerage.py      # 券商模拟（BrokerageModel）
+│   ├── fill.py           # 成交模拟（FillModel / AShareFillModel / SimpleFillModel / ClosingAuctionFillModel）
+│   ├── settlement.py     # 交收规则（SettlementModel / AShareSettlementModel / SimpleSettlementModel）
+│   └── slippage.py       # 滑点模型（SlippageModel / FixedBpsSlippage / VolumeShareSlippage）
 ├── data_feed.py          # 数据回放接口
 ├── replay.py             # 回放控制器
 ├── statistics.py         # 绩效统计计算
 ├── _statistics_types.py  # 统计类型定义
 ├── report_renderer.py    # 报告渲染器
-├── manifest.py           # 回测清单
+├── manifest.py           # 回测清单（RunManifest）
+├── result.py             # 引擎运行结果（EngineResult）
+├── brokerage.py          # 回测层 brokerage 入口
+├── errors.py             # 回测领域错误（BacktestError / EngineConfigError / ReplayError / SimulationError）
 ├── config.py             # 回测配置
-└── protocol.py           # 回测协议定义
+└── contracts.py          # 回测契约（TradingLoop Protocol）
 ```
 
 ## 测试位置

@@ -97,7 +97,7 @@ def test_settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def db_manager(tmp_path: Path) -> Generator[DatabaseManager, None, None]:
+def db_manager(tmp_path: Path) -> Generator[DatabaseManager]:
     """每个测试独立的数据库管理器.
 
     使用 pytest 内置 tmp_path，每个测试获得独立的数据库实例。
@@ -124,7 +124,7 @@ def clean_duckdb(db_manager: DatabaseManager) -> duckdb.DuckDBPyConnection:
 @pytest.fixture
 def sqlite_conn(
     tmp_path: Path,
-) -> Generator[sqlite3.Connection, None, None]:
+) -> Generator[sqlite3.Connection]:
     """SQLite 连接 fixture.
 
     使用 pytest 内置 tmp_path，每个测试获得独立的 SQLite 数据库。
@@ -204,7 +204,7 @@ def sample_daily_data() -> list[dict[str, Any]]:
 
 
 @pytest.fixture  # 移除 autouse=True，避免与 CliRunner I/O 冲突
-def reset_observability() -> Generator[None, None, None]:
+def reset_observability() -> Generator[None]:
     """仅在显式请求时重置可观测性状态.
 
     注意：此 fixture 不再自动应用，需要显式请求。

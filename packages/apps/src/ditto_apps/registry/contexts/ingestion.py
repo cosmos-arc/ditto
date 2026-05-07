@@ -30,7 +30,7 @@ from ditto_apps.registry.contexts.bundle import IngestionBundle
 @contextmanager
 def create_ingestion_bundle(
     source: str = "tushare",
-) -> Generator[IngestionBundle, None, None]:
+) -> Generator[IngestionBundle]:
     """
     创建摄入上下文组合包（单容器）.
 

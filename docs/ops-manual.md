@@ -36,7 +36,7 @@
 | 组件 | 最低要求 | 推荐配置 |
 |------|----------|----------|
 | 操作系统 | Windows 10/11, Linux | Windows 11 / Ubuntu 22.04 |
-| Python | 3.12+ | 3.12.x |
+| Python | 3.13+ | 3.13.x |
 | 内存 | 4GB | 8GB+ |
 | 磁盘 | 10GB | 50GB+ SSD |
 
@@ -484,7 +484,7 @@ config/
 | `HTTP_BASE_URL` | Tushare API 地址 | `http://api.tushare.pro` |
 | `HTTP_TIMEOUT` | 请求超时（秒） | `30.0` |
 | `RETRY_MAX_ATTEMPTS` | 重试次数 | `3` |
-| `RATE_LIMIT_PROFILE` | 限流配置 | `paid` |
+| `RATE_LIMIT_PROFILE` | 限流配置（`free`/`paid`）。**注意：当前为未生效的配置项（死代码），有效值预留但尚未接入运行时** | `paid` |
 
 **数据质量** (`dq.env`):
 

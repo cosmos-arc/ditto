@@ -4,7 +4,7 @@
 
 ## 概要
 
-面向 A 股 ETF 的全栈量化投资平台，对标 QuantConnect LEAN 架构。6 包 + 1 接口层分层设计，追求长期稳定 Alpha。
+面向 A 股 ETF 的全栈量化投资平台，对标 QuantConnect LEAN 架构。12 包模块化分层设计，追求长期稳定 Alpha。
 
 ## 核心功能
 
@@ -79,7 +79,7 @@ apps → features → kernel
 apps → data → kernel, platform
 application → data, strategy, portfolio, risk, execution, backtest, features, kernel, platform
 strategy → kernel
-features → kernel, platform (logger)
+features → kernel, platform
 data → kernel, platform
 ```
 
@@ -99,28 +99,40 @@ ditto/
 │   │       └── main.py              # 启动入口
 │   ├── application/             # 应用编排层（CQRS）
 │   │   └── src/ditto_application/
-│   │       ├── query/           # 查询编排（26 Facade）
-│   │       ├── process/         # 流程编排（ingestion/execution/materialization/quality）
-│   │       ├── command/         # 命令编排（8 Handler）
+│   │       ├── queries/         # 查询编排（27 Facade）
+│   │       ├── processes/       # 流程编排（ingestion/execution/materialization/quality/strategy）
+│   │       ├── commands/        # 命令编排（9 Handler）
 │   │       ├── builders/        # DI builders
-│   │       ├── providers.py     # Provider 注册
+│   │       ├── providers.py     # Provider 注册（基础）
+│   │       ├── providers_market.py    # 行情 Provider
+│   │       ├── providers_strategy.py # 策略 Provider
+│   │       ├── providers_portfolio.py # 组合 Provider
+│   │       ├── settings.py     # 交易配置
 │   │       ├── contracts.py     # 共享契约类型
 │   │       ├── execution_dto.py # 执行层 DTO
 │   │       └── config.py
 │   ├── strategy/                # 策略定义与信号生成
 │   │   └── src/ditto_strategy/
 │   │       ├── alpha/           # Alpha 信号（Pipeline + 8 Stage + 4 模板）
+│   │       ├── signals/         # 信号存储
+│   │       ├── storage/         # 策略 artifact/run/spec 存储
 │   │       └── events.py
 │   ├── portfolio/               # 组合构建与管理
 │   │   └── src/ditto_portfolio/
-│   │       └── ...
+│   │       ├── accounting/      # 会计核算（Account/BuyingPower/Cash/Position）
+│   │       └── rebalancing/     # 调仓（Allocation/Constraints/Comparison）
 │   ├── risk/                    # 风险管理
 │   │   └── src/ditto_risk/
-│   │       └── ...
+│   │       ├── constraints/     # 预交易约束
+│   │       ├── drawdown/        # 回撤规则
+│   │       └── exposure/        # 暴露分析
 │   ├── execution/               # 交易执行
 │   │   └── src/ditto_execution/
-│   │       ├── brokerage/       # 执行层（Brokerage/TradeBuilder/Reality Model）
-│   │       └── accounting/      # 账户核算
+│   │       ├── audit/           # 执行审计
+│   │       ├── fills/           # 成交管理
+│   │       ├── orders/          # 订单管理
+│   │       ├── reality/         # 费用模型
+│   │       └── storage/         # 交易 SQLite 存储
 │   ├── backtest/                # 回测引擎
 │   │   └── src/ditto_backtest/
 │   │       ├── engine.py        # EngineLoop + Steps + Audit
@@ -136,21 +148,25 @@ ditto/
 │   │       ├── di/              # Features Provider 注册
 │   │       ├── publication_safety.py # 发布安全门禁模型
 │   │       └── compile_cache.py
-│   ├── analysis/                # research control-plane
+│   ├── analysis/                # research control-plane（非生产路径）
 │   │   └── src/ditto_analysis/
 │   │       ├── research/        # 研究数据集控制面
-│   │       └── reports/diagnostics/experiments/screeners/ # reserved/future
+│   │       └── storage/         # 研究 SQLite 存储
+│   │       # reports/diagnostics/experiments/screeners/ — reserved/future
 │   ├── data/                    # 数据访问层
 │   │   └── src/ditto_data/
 │   │       ├── services/        # 域服务（market/metadata/fundamental/macro/capital/source）
-│   │       ├── sources/         # 数据源（Tushare/FRED/TDX）
+│   │       ├── sources/         # 数据源（Tushare/FRED/TDX + adapters/schemas）
 │   │       ├── models/          # 数据模型（市场/元数据/宏观/摄入/存储）
-│   │       ├── storage/         # 存储引擎（Reader/Writer CQRS）
+│   │       ├── storage/         # 存储引擎（Reader/Writer CQRS，按域分目录）
 │   │       ├── runtime/         # 运行时（SQL/Freeze/ID 分配）
-│   │       ├── quality/         # 数据质量（L1-L4 检查器）
+│   │       ├── quality/         # 数据质量（L1-L4 检查器 + golden specs）
 │   │       ├── helpers/         # 辅助工具（PIT/复权调整）
 │   │       ├── ingestion/       # 摄取服务（游标/冻结/晚到数据/质量记录）
 │   │       ├── providers/       # DataProvider 实现
+│   │       ├── catalog/         # 数据目录契约
+│   │       ├── lineage/         # 数据血缘契约
+│   │       ├── observability/   # 数据可观测性指标
 │   │       ├── config/          # 数据层配置
 │   │       └── di/              # DI 注册
 │   ├── kernel/                  # 共享内核（零依赖）
@@ -164,6 +180,10 @@ ditto/
 │   │       ├── events.py        # 事件
 │   │       ├── quality.py       # 数据质量值对象
 │   │       ├── research.py      # 研究数据集类型
+│   │       ├── publication_safety.py  # 发布安全类型
+│   │       ├── json_types.py    # JSON 序列化类型
+│   │       ├── tracing.py       # 追踪类型
+│   │       ├── trading.py       # 交易类型
 │   │       ├── exceptions.py    # 共享异常
 │   │       └── math.py          # 数学工具函数
 │   └── platform/                # 基础设施
@@ -177,11 +197,14 @@ ditto/
 │   └── production/
 ├── docs/                        # 项目文档
 │   ├── adr/                     # 架构决策记录
+│   ├── architecture/            # 架构规范文档
 │   ├── design/                  # 设计文档
 │   ├── plans/                   # 实施计划
 │   ├── reviews/                 # 评审文档
 │   ├── research/                # 研究文档
-│   └── sprints/                 # Sprint 计划
+│   ├── sprints/                 # Sprint 计划
+│   ├── openapi/                 # OpenAPI 规范
+│   └── operations/              # 运维手册
 ├── scripts/                     # 工具脚本
 └── (测试在各包内: packages/*/tests/)
 ```

@@ -23,7 +23,7 @@ console = Console()
 
 
 @contextmanager
-def _get_market_facade() -> Generator[MarketQueryFacade, None, None]:
+def _get_market_facade() -> Generator[MarketQueryFacade]:
     """获取 MarketQueryFacade 实例."""
     with create_query_context() as ctx:
         yield ctx.market
