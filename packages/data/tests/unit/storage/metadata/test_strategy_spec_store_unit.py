@@ -5,12 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ditto_data.models.strategy import StrategySpecRecord
-from ditto_data.storage.metadata.strategy_spec_store import (
+from ditto_platform.foundation import SQLitePool
+from ditto_strategy.models import StrategySpecRecord
+from ditto_strategy.storage.sqlite.strategy_spec_store import (
     SQLiteStrategySpecReader,
     SQLiteStrategySpecWriter,
 )
-from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture

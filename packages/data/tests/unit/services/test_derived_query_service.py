@@ -9,14 +9,14 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_analytics.materialization.models import DerivedVersionStatus
-from ditto_data.errors import DerivedNotFoundError
-from ditto_data.models.derived import (
+from ditto_features.errors import FactorValidationError
+from ditto_features.materialization.models import DerivedVersionStatus
+from ditto_features.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_data.services.derived import (
+from ditto_features.services.derived import (
     COMPARE_RESULT_COLUMNS,
     LATEST_RESULT_COLUMNS,
     SERIES_RESULT_COLUMNS,
@@ -30,11 +30,12 @@ from ditto_data.services.derived import (
     empty_latest_result,
     empty_series_result,
 )
-from ditto_data.services.derived_catalog_service import DerivedCatalogService
-from ditto_data.storage.runtime.derived_sqlite import (
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
+from ditto_kernel.exceptions import DerivedNotFoundError
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
@@ -134,12 +135,14 @@ class TestDerivedQueryService:
 
     def test_latest_query_rejects_empty_derived_ids(self) -> None:
         """Derived latest queries should reject empty ids."""
-        with pytest.raises(ValueError, match="derived_ids must not be empty"):
+        with pytest.raises(
+            FactorValidationError, match="derived_ids must not be empty"
+        ):
             DerivedLatestQuery(derived_ids=(), instrument_ids=(1,))
 
     def test_series_query_rejects_non_positive_limit(self) -> None:
         """Derived series queries should validate positive limits."""
-        with pytest.raises(ValueError, match="limit must be greater than 0"):
+        with pytest.raises(FactorValidationError, match="limit must be greater than 0"):
             DerivedSeriesQuery(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
@@ -148,7 +151,7 @@ class TestDerivedQueryService:
 
     def test_latest_query_rejects_unsupported_source_scope(self) -> None:
         """Derived latest queries should reject unsupported source scopes."""
-        with pytest.raises(ValueError, match="unsupported source_scope"):
+        with pytest.raises(FactorValidationError, match="unsupported source_scope"):
             DerivedLatestQuery(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
@@ -261,7 +264,7 @@ class TestDerivedQueryService:
 
     def test_compare_query_rejects_duplicate_sources(self) -> None:
         """Compare queries should require two distinct source scopes."""
-        with pytest.raises(ValueError, match="two distinct scopes"):
+        with pytest.raises(FactorValidationError, match="two distinct scopes"):
             DerivedCompareQuery(
                 derived_ids=("factor.momentum_20d",),
                 instrument_ids=(1,),
@@ -943,10 +946,11 @@ class TestStreamingMemoryManagement:
         assert collected.height == 2
 
 
-def test_services_exports_switch_to_derived_query_contract() -> None:
-    """Top-level exports should no longer expose feature/factor query services."""
+def test_services_exports_no_cross_package_re_exports() -> None:
+    """data.services should not re-export features/analysis services."""
     from ditto_data import services
 
-    assert "DerivedQueryService" in services.__all__
-    assert "FeatureService" not in services.__all__
-    assert "FactorService" not in services.__all__
+    assert "DerivedQueryService" not in services.__all__
+    assert "DerivedCatalogService" not in services.__all__
+    assert "DerivedShadowSlotService" not in services.__all__
+    assert "DerivedArtifactReader" not in services.__all__

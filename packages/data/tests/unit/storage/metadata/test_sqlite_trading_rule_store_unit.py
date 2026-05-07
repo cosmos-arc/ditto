@@ -12,7 +12,7 @@ from ditto_data.storage.metadata.trading_rule_reader import (
 from ditto_data.storage.metadata.trading_rule_writer import (
     SQLiteTradingRuleWriter,
 )
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -20,11 +20,11 @@ from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture
-def pool(tmp_path: object) -> Generator[SQLitePool, None, None]:
+def pool(tmp_path: object) -> Generator[SQLitePool]:
     """Create a SQLitePool with trading_rule schema initialized."""
     p = SQLitePool(str(tmp_path / "test_trading_rule.db"))
-    reader = SQLiteTradingRuleReader(p)
-    reader.init_schema()
+    writer = SQLiteTradingRuleWriter(p)
+    writer.init_schema()
     yield p
     p.close()
 
@@ -68,19 +68,19 @@ def _make(**overrides: object) -> TradingRuleRecord:
 
 
 class TestInitSchema:
-    def test_init_schema_creates_table(self, pool: SQLitePool) -> None:
+    def test_init_schema_creates_table(self, writer: SQLiteTradingRuleWriter) -> None:
         """init_schema should create trading_rule table."""
+        pool = writer._pool
         conn = pool.get_connection()
         result = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='trading_rule'"
         ).fetchone()
         assert result is not None
 
-    def test_init_schema_idempotent(self, pool: SQLitePool) -> None:
+    def test_init_schema_idempotent(self, writer: SQLiteTradingRuleWriter) -> None:
         """Calling init_schema twice should not raise."""
-        reader = SQLiteTradingRuleReader(pool)
-        reader.init_schema()
-        reader.init_schema()  # second call should be fine
+        writer.init_schema()
+        writer.init_schema()  # second call should be fine
 
 
 # ---------------------------------------------------------------------------
@@ -89,19 +89,23 @@ class TestInitSchema:
 
 
 class TestSQLiteTradingRuleWriter:
-    def test_write_single_record(self, writer: SQLiteTradingRuleWriter) -> None:
+    def test_write_single_record(
+        self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
+    ) -> None:
         """write() should persist a single record."""
         record = _make()
         writer.write(record)
-        records = writer.get_records()
+        records = reader.list_all()
         assert len(records) == 1
         assert records[0].instrument_id == 1
 
-    def test_write_multiple_records(self, writer: SQLiteTradingRuleWriter) -> None:
+    def test_write_multiple_records(
+        self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
+    ) -> None:
         """write() should accumulate records."""
         writer.write(_make(instrument_id=1))
         writer.write(_make(instrument_id=2))
-        assert len(writer.get_records()) == 2
+        assert len(reader.list_all()) == 2
 
     def test_write_upserts_on_conflict(
         self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
@@ -112,7 +116,7 @@ class TestSQLiteTradingRuleWriter:
         writer.write(record_v1)
         writer.write(record_v2)
         # Only one record should exist
-        records = writer.get_records()
+        records = reader.list_all()
         assert len(records) == 1
         assert records[0].price_limit_pct == pytest.approx(0.20)
 
@@ -267,24 +271,16 @@ class TestSQLiteTradingRuleReader:
 
 
 # ---------------------------------------------------------------------------
-# Tests: load + read integration
+# Tests: write + read integration (load was moved to writer)
 # ---------------------------------------------------------------------------
 
 
-class TestLoadAndRead:
-    def test_load_persists_records(self, reader: SQLiteTradingRuleReader) -> None:
-        """load() should persist records via INSERT OR REPLACE."""
-        records = [
-            _make(instrument_id=1),
-            _make(instrument_id=2),
-        ]
-        reader.load(records)
+class TestWriteAndRead:
+    def test_write_persists_records(
+        self, writer: SQLiteTradingRuleWriter, reader: SQLiteTradingRuleReader
+    ) -> None:
+        """write() should persist records."""
+        writer.write(_make(instrument_id=1))
+        writer.write(_make(instrument_id=2))
         assert reader.get(1, "2026-03-01") is not None
         assert reader.get(2, "2026-03-01") is not None
-
-    def test_load_replaces_existing(self, reader: SQLiteTradingRuleReader) -> None:
-        """load() with same PK should replace existing records."""
-        reader.load([_make(price_limit_pct=0.10)])
-        assert reader.get(1, "2026-03-01").price_limit_pct == pytest.approx(0.10)
-        reader.load([_make(price_limit_pct=0.30)])
-        assert reader.get(1, "2026-03-01").price_limit_pct == pytest.approx(0.30)

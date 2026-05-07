@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 
 class TestSQLitePool:

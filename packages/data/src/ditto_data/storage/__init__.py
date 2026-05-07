@@ -14,7 +14,7 @@ Data stores module - CQRS Reader/Writer 模式.
   - stock/: 股票数据 (StockBarsReader/StockBarsWriter, etc.)
   - etf/: ETF 数据 (EtfBarsReader/EtfBarsWriter, etc.)
   - index/: 指数数据 (IndexBarsReader/IndexBarsWriter, etc.)
-- sqlite_client.py: SQLite 客户端封装
+- SQLite 客户端由 ditto_platform.foundation.storage 提供
 
 CQRS 迁移历史：
 - CalendarStore → CalendarReader/CalendarWriter
@@ -27,14 +27,4 @@ CQRS 迁移历史：
 - 各种 AdjFactorStore → AdjFactorReader/AdjFactorWriter
 """
 
-# 基础抽象
-from ditto_data.storage.base import MergeResult, ParquetStore
-
-# 仍在使用的核心组件
-from ditto_data.storage.sqlite_client import SQLiteClient
-
-__all__ = [
-    "MergeResult",
-    "ParquetStore",
-    "SQLiteClient",
-]
+__all__: list[str] = []

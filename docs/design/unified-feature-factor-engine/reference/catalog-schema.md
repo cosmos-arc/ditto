@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Catalog 表结构参考
 
 > **注意**: 本文档是**参考资料**，规范定义以 [ADR-010: Catalog 完整表结构与存储架构](../decisions/adr-010-catalog-schema.md) 为准。

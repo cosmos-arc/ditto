@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.sources.base import (
     SourceAuthenticationError,
@@ -18,7 +18,7 @@ from ditto_data.sources.base import (
 def tushare_fetch_error_handler(
     dataset: str,
     api_name: str,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """
     统一的 Tushare fetch 错误处理上下文管理器。
 

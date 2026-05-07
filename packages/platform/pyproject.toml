@@ -1,0 +1,30 @@
+# packages/platform/pyproject.toml
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ditto-platform"
+requires-python = ">= 3.13"
+version = "0.1.0"
+dependencies = [
+    "ditto-kernel",
+    "cachebox",
+    "filelock",
+    "httpx",
+    "jinja2",
+    "loguru",
+    "opentelemetry-api",
+    "opentelemetry-exporter-otlp-proto-http",
+    "opentelemetry-sdk",
+    "orjson",
+    "polars",
+    "pydantic",
+    "xxhash",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

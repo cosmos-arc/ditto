@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-import sqlite3
-
-from ditto_infra.foundation import SQLitePool, logger, traced
-from ditto_kernel.identity import InstrumentId as _InstrumentId
+from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_data.storage.metadata._pit_base import PITRecordWriter
 from ditto_data.storage.metadata.fee_schedule_reader import FeeScheduleRecord
-
-InstrumentId = _InstrumentId
 
 __all__ = ["FeeScheduleWriter", "SQLiteFeeScheduleWriter"]
 
@@ -37,12 +32,6 @@ INSERT OR REPLACE INTO fee_schedule (
     instrument_id, as_of_date, commission_rate, min_commission,
     stamp_duty_rate, transfer_fee_rate, effective_from, effective_to
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-"""
-
-_SELECT_ALL = """
-SELECT instrument_id, as_of_date, commission_rate, min_commission,
-       stamp_duty_rate, transfer_fee_rate, effective_from, effective_to
-FROM fee_schedule
 """
 
 
@@ -85,21 +74,23 @@ class SQLiteFeeScheduleWriter(PITRecordWriter[FeeScheduleRecord]):
         )
         self._pool.commit()
 
-    def get_records(self) -> list[FeeScheduleRecord]:
-        """获取所有已写入的记录。"""
+    def load(self, records: list[FeeScheduleRecord]) -> None:
+        """批量加载记录到 SQLite（INSERT OR REPLACE）。"""
+        if not records:
+            return
         conn = self._pool.get_connection()
-        rows = conn.execute(_SELECT_ALL).fetchall()
-        return [self._row_to_record(row) for row in rows]
-
-    def _row_to_record(self, row: sqlite3.Row) -> FeeScheduleRecord:
-        """将数据库行转换为 FeeScheduleRecord."""
-        return FeeScheduleRecord(
-            instrument_id=InstrumentId(row["instrument_id"]),
-            as_of_date=row["as_of_date"],
-            commission_rate=row["commission_rate"],
-            min_commission=row["min_commission"],
-            stamp_duty_rate=row["stamp_duty_rate"],
-            transfer_fee_rate=row["transfer_fee_rate"],
-            effective_from=row["effective_from"],
-            effective_to=row["effective_to"],
-        )
+        for rec in records:
+            conn.execute(
+                _INSERT_OR_REPLACE,
+                (
+                    rec.instrument_id,
+                    rec.as_of_date,
+                    rec.commission_rate,
+                    rec.min_commission,
+                    rec.stamp_duty_rate,
+                    rec.transfer_fee_rate,
+                    rec.effective_from,
+                    rec.effective_to,
+                ),
+            )
+        self._pool.commit()

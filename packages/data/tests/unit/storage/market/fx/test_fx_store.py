@@ -4,8 +4,22 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
-from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
+from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
+
+MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
+MARKET_DATE_COLUMN = "trade_date"
+MARKET_INSTRUMENT_COLUMN = "instrument_id"
+
+
+def _market_store(root: Path) -> ParquetStore:
+    return ParquetStore(
+        root,
+        YearlyPartition(),
+        key_columns=MARKET_KEY_COLUMNS,
+        date_column=MARKET_DATE_COLUMN,
+        instrument_column=MARKET_INSTRUMENT_COLUMN,
+    )
 
 
 class TestFxStore:
@@ -13,7 +27,7 @@ class TestFxStore:
 
     def test_write_and_read_fx_bars(self, tmp_path: Path) -> None:
         """测试写入和读取汇率数据."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = FxBarsWriter(store)
         reader = FxBarsReader(store)
 
@@ -41,7 +55,7 @@ class TestFxStore:
 
     def test_read_by_instrument_id(self, tmp_path: Path) -> None:
         """测试按 instrument_id 过滤读取."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = FxBarsWriter(store)
         reader = FxBarsReader(store)
 

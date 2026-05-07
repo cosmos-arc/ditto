@@ -149,7 +149,7 @@ class MLTrainingService:
 
 **问题：这个组件属于哪一层？**
 
-1. ✅ 是否是**业务逻辑/规则**？ → **Domain Layer** (`packages/engine/`, `packages/kernel/`)
+1. ✅ 是否是**业务逻辑/规则**？ → **Domain Layer** (`packages/strategy/`, `packages/portfolio/`, `packages/risk/`, `packages/execution/`, `packages/backtest/`, `packages/kernel/`)
 2. ✅ 是否是**用例编排**？ → **Application Layer** (`interfaces/services/`)
 3. ✅ 是否是**数据访问**？ → **Infrastructure Layer** (`packages/data/`)
 
@@ -201,11 +201,11 @@ class MLTrainingService:
 ```
 Application Layer
     ↓ 依赖
-Domain Layer (packages/engine/, packages/kernel/)
+Domain Layer (packages/{strategy,portfolio,risk,execution,backtest}/, packages/kernel/)
     ↓ 依赖
 Infrastructure Layer (packages/data/)
     ↓ 依赖
-Foundation Layer (packages/infra/)
+Foundation Layer (packages/platform/)
 ```
 
 **允许的依赖**：

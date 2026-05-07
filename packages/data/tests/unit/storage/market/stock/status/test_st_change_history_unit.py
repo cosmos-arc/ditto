@@ -11,7 +11,7 @@ from ditto_data.storage.market.stock.status.st_change_history_reader import (
 from ditto_data.storage.market.stock.status.st_change_history_writer import (
     StChangeHistoryWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 def _mock_cache() -> MagicMock:

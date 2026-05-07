@@ -7,10 +7,12 @@ from typing import Any
 
 import polars as pl
 import pytest
-from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool, init
-from ditto_infra.foundation.config.environment import Environment
-from ditto_infra.foundation.observability.config import ObservabilityConfig
+from ditto_data.observability.metrics import register_metrics
+from ditto_platform.foundation import SQLitePool, init
+from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation.observability.testing import reset_for_testing
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -41,6 +43,8 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture(autouse=True)
 def init_observability() -> None:
     """Initialize observability in testing mode for all tests."""
+    reset_for_testing()
+    register_metrics()
     config = ObservabilityConfig(
         environment=Environment.TESTING,
         pytest_running=True,
@@ -104,7 +108,7 @@ def sqlite_client(sqlite_pool: SQLitePool) -> SQLiteClient:
 
 
 @pytest.fixture
-def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+def fake_time(monkeypatch: pytest.MonkeyPatch) -> Generator[None]:
     """可控的时间 fixture，通过 monkeypatch 替换时间函数.
 
     使 time.sleep 立即完成，time.time 按预期前进，提高测试速度和确定性。

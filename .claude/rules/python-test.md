@@ -27,12 +27,17 @@ paths:
 packages/*/tests/
 ├── conftest.py
 ├── unit/           # 80% - 每次提交，完全 Mock，测原子功能
-└── integration/    # 20% - CI运行，测"接缝"处（DAO、HTTP Client）
+├── integration/    # 20% - CI运行，测"接缝"处（DAO、HTTP Client）
+└── e2e/            # 端到端测试（仅 apps 包，验证完整管线）
 ```
+
+**e2e 测试**仅存在于 `packages/apps/tests/e2e/`，验证完整数据管线（摄取→存储→查询→质量）。
+命名约定：`test_*.py`（与单元测试相同，通过目录区分）。
 
 **测试分类原则**：
 - **单元测试**：完全 Mock，测试单个类的自身逻辑
 - **集成测试**：真实组件，测试系统与外部的"接缝"处（DAO 写入数据库、HTTP Client 解析 API 响应）
+- **Snapshot 测试**：验证策略输出与历史基线一致，命名 `test_*_snapshot.py`（位于 `integration/` 下，如 `packages/strategy/tests/integration/alpha/`）
 
 ### 🔴 强制要求：测试目录必须镜像源码目录结构
 
@@ -41,7 +46,7 @@ packages/*/tests/
 #### 目录映射规则
 
 ```
-src/ditto_infra/                         packages/infra/tests/unit/
+src/ditto_platform/                         packages/platform/tests/unit/
 ├── foundation/               →          ├── foundation/
 │   ├── cache/                →          │   ├── cache/
 │   ├── config/               →          │   ├── config/
@@ -55,7 +60,7 @@ src/ditto_data/                       packages/data/tests/unit/
 ├── models/                  →          ├── models/
 └── runtime/                 →          └── runtime/
 
-src/ditto_interfaces/                   interfaces/tests/unit/
+src/ditto_apps/                   packages/apps/tests/unit/
 ├── cli/                      →          ├── cli/
 ├── jobs/                     →          ├── jobs/
 ├── models/                   →          ├── models/
@@ -98,8 +103,8 @@ from pathlib import Path
 def get_dirs(path):
     return {d.name for d in Path(path).rglob('*') if d.is_dir() and '__pycache__' not in str(d)}
 
-src_dirs = get_dirs('packages/infra/src')
-test_dirs = get_dirs('packages/infra/tests/unit')
+src_dirs = get_dirs('packages/platform/src')
+test_dirs = get_dirs('packages/platform/tests/unit')
 
 missing = src_dirs - test_dirs
 extra = test_dirs - src_dirs
@@ -119,7 +124,7 @@ if not missing and not extra:
 # 场景：重命名源码目录 cache/ → caching/
 
 # 1. 重命名源码目录
-git mv src/ditto_infra/foundation/cache/ src/ditto_infra/foundation/caching/
+git mv src/ditto_platform/foundation/cache/ src/ditto_platform/foundation/caching/
 
 # 2. 同步重命名测试目录（强制要求）
 git mv tests/unit/foundation/cache/ tests/unit/foundation/caching/
@@ -323,7 +328,7 @@ def test_facade_delegates_correctly(mocker):
 def test_cli_stock_daily_calls_ingest_function(mocker, tmp_path: Path):
     """测试 CLI 命令调用了正确的摄入函数"""
     # Mock 内部函数（验证调用，不关心结果）
-    mock_ingest = mocker.patch("ditto_interfaces.cli.ingest.ingest_stock_daily")
+    mock_ingest = mocker.patch("ditto_apps.cli.ingest.ingest_stock_daily")
 
     # 执行 CLI 命令
     result = runner.invoke(
@@ -354,7 +359,7 @@ def test_cli_validates_date_format():
 @pytest.mark.integration
 def test_cli_stock_daily_result(mocker, tmp_path: Path):
     """错误：测试函数执行结果（应该是单元测试）"""
-    mock_ingest = mocker.patch("ditto_interfaces.cli.ingest.ingest_stock_daily")
+    mock_ingest = mocker.patch("ditto_apps.cli.ingest.ingest_stock_daily")
     mock_ingest.return_value = 100  # ← 不要在集成测试中验证返回值
 
     result = runner.invoke(app, ["stock", "daily", "2024-01-02"])
@@ -392,7 +397,7 @@ packages/data/tests/unit/stores/test_pipeline_store.py
 packages/data/tests/integration/stores/test_pipeline_store.py
 
 # ❌ 错误：跨包同名也会冲突
-packages/infra/tests/unit/observability/test_observability_unit.py
+packages/platform/tests/unit/observability/test_observability_unit.py
 packages/data/tests/unit/stores/test_observability_unit.py
 
 # ✅ 正确：添加层级后缀区分
@@ -400,7 +405,7 @@ packages/data/tests/unit/stores/test_pipeline_store_unit.py
 packages/data/tests/integration/stores/test_pipeline_store_integration.py
 
 # ✅ 正确：添加模块前缀避免跨包冲突
-packages/infra/tests/unit/observability/test_observability_unit.py
+packages/platform/tests/unit/observability/test_observability_unit.py
 packages/data/tests/unit/stores/test_stores_observability_unit.py
 ```
 
@@ -539,15 +544,13 @@ def test_calculation_properties(df: pl.DataFrame):
 
 ### Schema验证
 
+> **注意**：`pandera` 当前未安装。如需 Schema 验证，使用 polars 原生 `DataFrame.schema` 断言或 pydantic 模型校验。
+
 ```python
-import pandera.polars as pa
-
-class QuoteSchema(pa.DataFrameModel):
-    date: pl.Date
-    symbol: str
-    price: float = pa.Field(gt=0)
-
-QuoteSchema.validate(df)
+# 使用 polars 原生 schema 断言
+expected_schema = {"date": pl.Date, "symbol": pl.Utf8, "price": pl.Float64}
+assert set(df.schema.names()) == set(expected_schema.keys())
+assert all(df.schema[col] == expected_schema[col] for col in expected_schema)
 ```
 
 ---
@@ -775,7 +778,7 @@ def test_partitioned_write(store, sample_quotes):
 - 使用 `pytest_collection_modifyitems` hook 在测试收集时自动标记
 - 配置文件位置：
   - Data: `packages/data/tests/conftest.py`
-  - Infra: `packages/infra/tests/unit/conftest.py`
+  - Platform: `packages/platform/tests/unit/conftest.py`
 
 **手动标记需求**：
 - ✅ `@pytest.mark.slow` - 耗时测试（需要手动标记）
@@ -793,12 +796,14 @@ def test_partitioned_write(store, sample_quotes):
 | `@pytest.mark.snapshot` | inline-snapshot 测试 | Snapshot 更新时 | ✅ 需要手动标记 |
 | `@pytest.mark.smoke` | 冒烟测试，核心功能 | 每次提交 | ✅ 需要手动标记 |
 | `@pytest.mark.benchmark` | 性能基准测试 | 定期运行 | ✅ 需要手动标记 |
+| `@pytest.mark.pit` | PIT（Point-in-Time）安全测试 | CI | ✅ 需要手动标记 |
 
 ### 使用示例
 
+> **注意**：`unit` 和 `integration` 标记由 `conftest.py` 根据目录自动添加（`tests/unit/` → `@pytest.mark.unit`，`tests/integration/` → `@pytest.mark.integration`）。以下示例中的标记仅为文档说明目的，实际代码中**不需要手动添加**。
+
 ```python
-# 单元测试 - 完全 Mock
-@pytest.mark.unit
+# 单元测试 - 完全 Mock（放在 tests/unit/ 下，自动标记为 unit）
 def test_data_delegates_to_calendar(mocker):
     """测试 Data 的委托逻辑"""
     mock_calendar = mocker.Mock()
@@ -810,8 +815,7 @@ def test_data_delegates_to_calendar(mocker):
     mock_calendar.is_trading_day.assert_called_once_with("2024-01-02")
     assert result is True
 
-# 集成测试 - 测试"接缝"处
-@pytest.mark.integration
+# 集成测试 - 测试"接缝"处（放在 tests/integration/ 下，自动标记为 integration）
 def test_security_store_can_write_sqlite():
     """测试 SecurityStore 能否写入 SQLite"""
     pool = SQLitePool(":memory:", schema_path=_SCHEMA_PATH)
@@ -1008,9 +1012,9 @@ def check_structure(src_path, test_path, name):
     return True
 
 all_ok = True
-all_ok &= check_structure('packages/infra/src', 'packages/infra/tests/unit', 'Infra')
+all_ok &= check_structure('packages/platform/src', 'packages/platform/tests/unit', 'Platform')
 all_ok &= check_structure('packages/data/src', 'packages/data/tests/unit', 'Data')
-all_ok &= check_structure('interfaces/src', 'interfaces/tests/unit', 'Interfaces')
+all_ok &= check_structure('packages/apps/src', 'packages/apps/tests/unit', 'Apps')
 
 if all_ok:
     print('✅ 所有包目录结构一致')
@@ -1078,13 +1082,11 @@ pixi run -e dev pytest --durations=20 --tb=no -q
 4. 修复并验证
 ```
 
-#### 2. pytest-benchmark（性能回归检测）
+#### 2. pytest-benchmark（性能回归检测 — 当前未安装）
 
-**用途**: 为关键函数建立性能基准，防止性能退化
+> **注意**：`pytest-benchmark` 当前未安装在项目中。以下为预留指南，安装后再启用。
 
 **安装**: `pixi add pytest-benchmark`
-
-**使用示例**:
 ```python
 import pytest
 
@@ -1165,7 +1167,7 @@ pixi run -e dev pytest tests/integration -n 1
 **修复**: 在 `conftest.py` 中添加装饰器 mock
 
 ```python
-# interfaces/tests/unit/conftest.py
+# packages/apps/tests/unit/conftest.py
 import prefect.tasks
 
 @pytest.fixture(autouse=True, scope="session")

@@ -1,8 +1,9 @@
 """Margin trading reader for CQRS pattern."""
 
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+
 from ditto_data.storage.base.sqlite_table_reader import SqliteTableReader
 from ditto_data.storage.base.sqlite_table_spec import SqliteTableSpec
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 
 class MarginTradingReader(SqliteTableReader):

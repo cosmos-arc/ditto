@@ -6,7 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import polars as pl
-from ditto_data.services.derived._pruning import prune_parquet_paths
+from ditto_features.services.derived._pruning import prune_parquet_paths
 
 # ---------------------------------------------------------------------------
 # Partition pruning tests
@@ -108,7 +108,7 @@ class TestSchemaEvolution:
 
     def test_schema_evolution_new_column_in_later_year(self, tmp_path: Path) -> None:
         """2024 lacks extra_col, 2025 has it → merge succeeds."""
-        from ditto_data.services.derived.artifact_reader import (
+        from ditto_features.services.derived.artifact_reader import (
             _scan_with_schema_evolution,
         )
 
@@ -144,7 +144,7 @@ class TestSchemaEvolution:
 
     def test_schema_evolution_type_widen(self, tmp_path: Path) -> None:
         """int in 2023 → float in 2025 → diagonal_relaxed handles widening."""
-        from ditto_data.services.derived.artifact_reader import (
+        from ditto_features.services.derived.artifact_reader import (
             _scan_with_schema_evolution,
         )
 
@@ -181,7 +181,7 @@ class TestSchemaEvolution:
 
     def test_scan_with_schema_evolution_single_file(self, tmp_path: Path) -> None:
         """Single parquet file is scanned directly without concat."""
-        from ditto_data.services.derived.artifact_reader import (
+        from ditto_features.services.derived.artifact_reader import (
             _scan_with_schema_evolution,
         )
 
@@ -197,8 +197,8 @@ class TestSchemaEvolution:
 
 def _make_catalog_service(sqlite_client):
     """Create a real DerivedCatalogService backed by in-memory SQLite."""
-    from ditto_data.services.derived_catalog_service import DerivedCatalogService
-    from ditto_data.storage.runtime.derived_sqlite import (
+    from ditto_features.services.derived_catalog_service import DerivedCatalogService
+    from ditto_features.storage.sqlite.derived import (
         SQLiteDerivedCatalogReader,
         SQLiteDerivedCatalogWriter,
     )
@@ -216,7 +216,7 @@ def _seed_reader_catalog(
     version: int = 1,
 ) -> None:
     """Seed catalog with a minimal spec + version record for read_frame tests."""
-    from ditto_data.models.derived import DerivedSpecRecord, DerivedVersionRecord
+    from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
     from ditto_kernel.strategy import (
         DerivedRole,
         DerivedSpec,
@@ -260,7 +260,7 @@ def _make_reader(
     catalog_service,
     artifact_root: Path,
 ):
-    from ditto_data.services.derived import DerivedArtifactReader
+    from ditto_features.services.derived import DerivedArtifactReader
 
     return DerivedArtifactReader(
         catalog_service=catalog_service,

@@ -16,8 +16,8 @@ import pytest
 SCANNED_DIRS: list[str] = [
     "packages/data/src/ditto_data/services/",
     "packages/data/src/ditto_data/models/",
-    "interfaces/src/ditto_interfaces/api/",
-    "interfaces/src/ditto_interfaces/models/",
+    "packages/apps/src/ditto_apps/api/",
+    "packages/apps/src/ditto_apps/models/",
 ]
 
 # Regex: instrument_id annotated as str type (not return types, not docstrings)

@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本目录为历史设计文档（旧 engine/analytics/infra/interfaces 架构时期）。
+> 当前架构请参阅各包的 `CLAUDE.md` 和 `docs/architecture/`。
 # Ditto 设计文档索引
 
 **版本**: v1.1.0

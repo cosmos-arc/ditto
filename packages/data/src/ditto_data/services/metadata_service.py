@@ -13,8 +13,8 @@ from datetime import date
 from typing import Any, Literal
 
 import polars as pl
-from ditto_infra.foundation import logger
 from ditto_kernel.identity import InstrumentId as _InstrumentId
+from ditto_platform.foundation import logger
 
 from ditto_data.models.metadata import InstrumentRegistration
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
@@ -48,8 +48,6 @@ from ditto_data.storage.metadata.universe import (
     UniverseReader,
     UniverseWriter,
 )
-
-InstrumentId = _InstrumentId
 
 __all__ = ["MetadataService"]
 
@@ -475,7 +473,7 @@ class MetadataService:
         asset_class: str | None = None,
         source: str,
         asof: str | None = None,
-    ) -> InstrumentId | None:
+    ) -> _InstrumentId | None:
         """统一标识符解析入口。委托到 InstrumentService。"""
         return self._instrument.resolve_instrument_identifier(
             instrument_id=instrument_id,

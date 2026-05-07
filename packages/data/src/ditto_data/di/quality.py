@@ -5,11 +5,11 @@ from pathlib import Path
 
 import yaml
 from dishka import Provider, Scope, provide
-from ditto_infra.foundation import logger
-from ditto_infra.foundation.config import get_default_dq_rules_dir
+from ditto_platform.foundation import logger
 from pydantic import ValidationError
 
 from ditto_data.quality import QualityEngine
+from ditto_data.quality.config_paths import get_default_dq_rules_dir
 from ditto_data.quality.spec import DatasetRules, DQSpec
 
 __all__ = ["QualityProvider"]
@@ -20,7 +20,7 @@ class QualityProvider(Provider):
     Engine 层 DQ 组件 Provider.
 
     仅注册 Engine 层服务（DQSpec、QualityEngine），
-    App 层 QualityService 已迁入 ditto_app.providers。
+    App 层 QualityService 已迁入 ditto_application.providers。
     """
 
     scope = Scope.APP

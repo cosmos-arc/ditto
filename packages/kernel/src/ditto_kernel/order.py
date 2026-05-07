@@ -1,8 +1,8 @@
-"""Order subdomain — 订单方向。"""
+"""Order subdomain — 订单方向、订单类型。"""
 
 from enum import StrEnum
 
-__all__ = ["OrderSide"]
+__all__ = ["OrderSide", "OrderType"]
 
 
 class OrderSide(StrEnum):
@@ -10,3 +10,12 @@ class OrderSide(StrEnum):
 
     BUY = "buy"
     SELL = "sell"
+
+
+class OrderType(StrEnum):
+    """订单类型枚举。"""
+
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP_MARKET = "stop_market"
+    MARKET_ON_CLOSE = "market_on_close"

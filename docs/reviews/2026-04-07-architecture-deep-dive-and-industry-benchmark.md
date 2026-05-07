@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Ditto 系统架构深度审计：业界最佳对标与架构演进建议
 
 > 日期：2026-04-07
@@ -115,12 +117,12 @@ Ditto 当前处于**范式 B（声明式驱动）** 的成熟阶段，同时具�
 | 层级 | LEAN | NautilusTrader | Ditto | 评价 |
 |------|------|---------------|-------|------|
 | 数据层 | `IDataFeed` + `Subscription` | `DataEngine` (Actor) | `ditto_data` (CQRS Reader/Writer) | Ditto 的 CQRS 存储最精细 |
-| 因子层 | 无内建因子系统 | 无内建因子系统 | `ditto_analytics` (编译器+评估) | **Ditto 独有优势** |
+| 因子层 | 无内建因子系统 | 无内建因子系统 | `ditto_features` (编译器) + `ditto_analysis` (评估) | **Ditto 独有优势** |
 | 策略层 | `IAlgorithm` (Universe+Alpha) | `Strategy` (Actor) | `StrategyPipeline` (8 Stage) | 三者模式不同，各有优势 |
 | 组合层 | `IPortfolioConstruction` | Portfolio Manager | `AllocationStage` + `ConstraintStage` | Ditto 偏基础 |
 | 风控层 | `IRiskManagement` (全局) | `RiskEngine` (独立 Actor) | PreTrade + PostTrade (步骤内) | Ditto 缺独立风控服务 |
 | 执行层 | `IBrokerage` (40+ 券商) | `ExecClient` (统一接口) | `BacktestBrokerage` (唯一实现) | Ditto 缺实盘路径 |
-| 基础设施 | 自建 | 自建 (Rust) | `ditto_infra` + `ditto_kernel` | Ditto 的 kernel 零依赖设计最干净 |
+| 基础设施 | 自建 | 自建 (Rust) | `ditto_platform` + `ditto_kernel` | Ditto 的 kernel 零依赖设计最干净 |
 
 ### 2.2 Ditto 分层架构的优势
 
@@ -129,7 +131,7 @@ Ditto 在架构清晰度方面有几个超越业界平均水平的亮点：
 1. **importlinter 强制依赖方向**：大多数开源项目（包括 LEAN）仅靠代码审查保证依赖规则，Ditto 将其机器化
 2. **CQRS 四象限互斥规则**（R8）：query/process/command/builders 的严格互斥在业界量化框架中没有先例
 3. **Kernel 零依赖设计**：`ditto_kernel` 无任何外部依赖，仅包含值对象和 Protocol——比 LEAN 的 `QuantConnect.Common` 更纯粹
-4. **Analytics 层纯计算隔离**：`ditto_analytics` 不依赖 `ditto_data`（仅 `data.errors`），实现了真正的纯计算层
+4. **Analysis 层纯计算隔离**：`ditto_analysis` 不依赖 `ditto_data`（仅 `data.errors`），实现了真正的纯计算层
 
 ### 2.3 Ditto 分层架构的局限
 
@@ -764,7 +766,7 @@ class AttributionAnalyzer(Protocol):
 
 ### 8.1 EngineLoop God Class（~630 行）
 
-**位置**：`packages/engine/src/ditto_engine/backtest/engine.py`
+**位置**：`packages/backtest/src/ditto_backtest/engine.py`
 
 **问题**：`EngineLoop` 承担了过多职责：
 - 日历步进调度
@@ -809,7 +811,7 @@ class EngineLoop:
 
 ### 8.2 DecisionFrame 无 Schema 保护
 
-**位置**：`packages/engine/src/ditto_engine/alpha/models.py`
+**位置**：`packages/strategy/src/ditto_strategy/alpha/models.py`
 
 ```python
 # 当前: 纯类型别名，无运行时保护
@@ -859,7 +861,7 @@ close_to_close_return = (close / close.shift(1)) - 1
 
 ### 8.4 MaxDrawdownRule 状态泄漏
 
-**位置**：`packages/engine/src/ditto_engine/risk/post_trade.py`
+**位置**：`packages/risk/src/ditto_risk/post_trade.py`
 
 **问题**：`MaxDrawdownRule` 内部维护 `peak_nav` 状态，但无 `reset()` 方法。如果同一实例在多次回测中复用，峰值 NAV 会泄漏。
 
@@ -867,7 +869,7 @@ close_to_close_return = (close / close.shift(1)) - 1
 
 ### 8.5 StrategySpec 使用 dict[str, object]
 
-**位置**：`packages/engine/src/ditto_engine/alpha/specs.py`
+**位置**：`packages/strategy/src/ditto_strategy/alpha/specs.py`
 
 ```python
 @dataclass(frozen=True)
@@ -883,7 +885,7 @@ class StrategySpec:
 
 ### 8.6 Orchestrator 模块缺失
 
-**位置**：`packages/engine/CLAUDE.md` 引用 `orchestrator/` 目录
+**位置**：`packages/strategy/CLAUDE.md` 引用 `orchestrator/` 目录
 
 **问题**：文档中描述了 `TradingOrchestrator Protocol` 和 `BacktestTradingOrchestrator` alias，但源码中不存在。这是文档与实现的不一致。
 

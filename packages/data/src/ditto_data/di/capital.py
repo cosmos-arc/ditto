@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_data.services.capital_service import CapitalService
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
@@ -36,7 +37,6 @@ from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
 from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["CapitalProvider"]
 

@@ -1,5 +1,7 @@
 # ADR 0008: 策略产物 I/O 分层
 
+> **[历史参考]** 本文档记录架构演进过程中的决策，包名引用可能已过时。当前包名请参考 CLAUDE.md。
+
 **状态**: 已接受
 **日期**: 2026-04-13
 **决策者**: 架构团队
@@ -12,7 +14,7 @@
 App 层 `BacktestQueryFacade` 负责回测结果的查询编排。当前实现中，`get_report()` 和 `get_nav_series()` 方法包含直接文件 I/O：
 
 ```python
-# packages/app/src/ditto_app/query/backtest.py
+# packages/application/src/ditto_application/query/backtest.py
 
 def get_report(self, run_id: str) -> dict[str, Any] | None:
     record = find_artifact(self._artifact_service, run_id)
@@ -103,14 +105,14 @@ class BacktestArtifactReader:
 ### App 层：通过 Protocol + find_artifact 编排调用
 
 ```python
-# packages/app/src/ditto_app/query/backtest.py
+# packages/application/src/ditto_application/query/backtest.py
 
 from pathlib import Path
 
 from ditto_data.services.strategy.backtest_artifact_reader import (
     BacktestArtifactReaderProtocol,
 )
-from ditto_app.query._artifact_utils import find_artifact
+from ditto_application.query._artifact_utils import find_artifact
 
 _REPORT_FILENAME = "backtest_report.json"
 

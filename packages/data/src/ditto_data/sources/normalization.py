@@ -9,17 +9,17 @@ from enum import StrEnum
 
 __all__ = [
     "Currency",
-    "Exchange",
     "InstrumentType",
     "NormalizationConfig",
+    "SourceExchangeCode",
 ]
 
 
-class Exchange(StrEnum):
+class SourceExchangeCode(StrEnum):
     """
-    交易所代码（ISO 10383 标准）.
+    Source-facing exchange code used during data normalization.
 
-    定义中国各大交易所的标准代码，遵循 ISO 10383 MIC (Market Identifier Code) 标准。
+    Not the same as ditto_kernel.instrument.Exchange (domain exchange).
     """
 
     SSE = "SSE"  # 上海证券交易所
@@ -71,14 +71,14 @@ class NormalizationConfig:
         amount_multiplier: 金额倍数，如元→万元使用 10000.0
         volume_multiplier: 数量倍数，如手→股使用 100.0
         percentage_as_decimal: 百分比转换，True 表示 0.03，False 表示 3.0
-        exchange_map: 交易所代码映射字典，将数据源代码映射到标准 Exchange 枚举
+        exchange_map: 交易所代码映射字典，将数据源代码映射到标准 SourceExchangeCode 枚举
         asset_class_map: 资产类别映射字典，将数据源代码映射到标准 InstrumentType 枚举
         default_currency: 默认货币
 
     Examples:
         >>> config = NormalizationConfig()
         >>> config.exchange_map["SH"]
-        <Exchange.SSE: 'SSE'>
+        <SourceExchangeCode.SSE: 'SSE'>
         >>> config.asset_class_map["E"]
         <InstrumentType.STOCK: 'stock'>
 
@@ -87,11 +87,11 @@ class NormalizationConfig:
     amount_multiplier: float = 1.0
     volume_multiplier: float = 1.0
     percentage_as_decimal: bool = True
-    exchange_map: dict[str, Exchange] = field(
+    exchange_map: dict[str, SourceExchangeCode] = field(
         default_factory=lambda: {
-            "SH": Exchange.SSE,
-            "SZ": Exchange.SZSE,
-            "BJ": Exchange.BSE,
+            "SH": SourceExchangeCode.SSE,
+            "SZ": SourceExchangeCode.SZSE,
+            "BJ": SourceExchangeCode.BSE,
         }
     )
     asset_class_map: dict[str, InstrumentType] = field(

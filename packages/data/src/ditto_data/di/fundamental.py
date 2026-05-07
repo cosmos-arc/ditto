@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 from ditto_data.services.fundamental_service import FundamentalService
@@ -57,7 +58,6 @@ from ditto_data.storage.fundamental.specs import (
     FORECAST_SPEC,
     INCOME_STATEMENT_SPEC,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["FundamentalProvider"]
 

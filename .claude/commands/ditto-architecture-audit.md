@@ -8,9 +8,8 @@ implementation: .claude/commands/architecture-audit.py
 
 ## 审计范围
 
-- `packages/` - infra、kernel、data、analytics、engine、app
-- `interfaces/` - api、cli、jobs、registry、config
-- `packages/*/tests` + `interfaces/tests` - 单元测试、集成测试、fixtures
+- `packages/` - kernel、platform、data、features、strategy、portfolio、risk、execution、backtest、analysis、application、apps
+- `packages/*/tests` - 单元测试、集成测试、fixtures
 
 ## 执行步骤
 
@@ -37,13 +36,13 @@ pixi run -e dev test --integration
 - 使用 `Grep` 检测死代码和未引用导出
 - 使用 `Grep` 追踪依赖链，检测循环依赖
 - 使用 `Read` 分析类/函数规模和结构
-- 从 interfaces 层出发，检查是否存在**真正的层级穿透**：
+- 从 apps 层出发，检查是否存在**真正的层级穿透**：
 
-**层级穿透定义**（注意：Foundation 是横切层，可跨层访问）：
-- ❌ interfaces → data.storage / data.runtime（应通过 data.services）
-- ❌ interfaces → data.sources（应通过 data.services，registry 例外）
-- ✅ interfaces → infra.foundation（**允许**，横切层）
-- ✅ interfaces → data → infra（正常依赖链）
+**层级穿透定义**（注意：Platform 是横切层，可跨层访问）：
+- ❌ apps → data.storage / data.runtime（应通过 application → data.services）
+- ❌ apps → data.sources（应通过 application → data.services，registry 例外）
+- ✅ apps → ditto_platform（**允许**，横切层）
+- ✅ apps → data → platform（正常依赖链）
 
 **工程实践检查**：
 - 使用 `Grep` 识别类规模（>300行）、方法数量（>15个）
@@ -54,7 +53,7 @@ pixi run -e dev test --integration
 - 使用 `Grep` 搜索命名模式
 - 使用 `Grep` 追踪命名使用情况，检测孤立命名
 - 对比类名与其方法/属性命名，检测职责一致性
-- 分析 Interfaces 层命名是否混用技术术语（如 `SQLBarLoader`）
+- 分析 Apps 层命名是否混用技术术语（如 `SQLBarLoader`）
 - 检测同一概念的不同表述（如 `Bar`/`Kline`/`Candlestick`）
 
 ### 4. 代码质量工具
@@ -72,25 +71,25 @@ from pathlib import Path
 "
 
 # 搜索 TYPE_CHECKING 使用
-grep -r "TYPE_CHECKING" packages/ interfaces/ --include="*.py"
+grep -r "TYPE_CHECKING" packages/ --include="*.py"
 
 # 搜索空 TYPE_CHECKING 块
-grep -r "if TYPE_CHECKING:\s*pass" packages/ interfaces/ --include="*.py"
+grep -r "if TYPE_CHECKING:\s*pass" packages/ --include="*.py"
 
 # 搜索禁止的导入
-grep -r "import pandas\|import sqlalchemy" packages/ interfaces/ --include="*.py"
+grep -r "import pandas\|import sqlalchemy" packages/ --include="*.py"
 
 # 搜索 type:ignore 使用
-grep -r "# type: ignore" packages/ interfaces/ --include="*.py" | wc -l
+grep -r "# type: ignore" packages/ --include="*.py" | wc -l
 
 # 缩写使用规范检查
 # 检测非标准缩写和领域术语不一致
-grep -rE "\b(qty|vol|ohlcv|ticker)\b" packages/ interfaces/ --include="*.py" | \
+grep -rE "\b(qty|vol|ohlcv|ticker)\b" packages/ --include="*.py" | \
   grep -v "qty.*=.*quantity\|#.*qty\|\"qty\"\|'qty'"
 
 # 业务术语与技术术语混用检测
 # 检测类名中同时包含业务和技术术语的模式
-grep -rE "class.*Database.*Manager|class.*SQL.*Service|class.*Parquet.*Writer" packages/ interfaces/ --include="*.py"
+grep -rE "class.*Database.*Manager|class.*SQL.*Service|class.*Parquet.*Writer" packages/ --include="*.py"
 ```
 
 ### 5. 生成架构图
@@ -257,12 +256,12 @@ class DataCalculator: ...
 **检查清单**：
 - [ ] 业务层出现技术术语（如 `SQLManager` / `DatabaseProcessor`）
 - [ ] 领域层包含框架概念（如 `RequestHandler` / `ResponseBuilder`）
-- [ ] 跨层概念泄漏（如 Interfaces 层直接使用 `SQLite` / `Parquet`）
+- [ ] 跨层概念泄漏（如 Apps 层直接使用 `SQLite` / `Parquet`）
 
 **典型问题示例**：
 ```python
 # ❌ 业务层混用技术术语
-class SQLBarLoader: ...  # Interfaces 层不应知道 SQL
+class SQLBarLoader: ...  # Apps 层不应知道 SQL
 class ParquetDataWriter: ...  # 应为 BarDataWriter
 
 # ✅ 使用业务术语
@@ -313,7 +312,7 @@ volume = 1000  # 标准金融术语
 
 🔴 Top 5 Issues:
   1. [ARCH-001] BarsRepository 职责过重 (1081行)
-  2. [NAM-001] Interfaces层混用技术术语 `SQLBarLoader`
+  2. [NAM-001] Apps层混用技术术语 `SQLBarLoader`
   3. [ARCH-004] DQ Checkers hub: Any 类型污染
   4. [NAM-003] `BarData`/`KlineData`/`CandlestickData` 概念不统一
   5. [ENG-002] 5处异常处理缺失上下文

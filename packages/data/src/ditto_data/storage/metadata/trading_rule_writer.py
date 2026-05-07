@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import sqlite3
-
 import orjson
-from ditto_infra.foundation import SQLitePool, logger, traced
-from ditto_kernel.identity import InstrumentId as _InstrumentId
+from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_data.storage.metadata._pit_base import PITRecordWriter
 from ditto_data.storage.metadata.trading_rule_reader import TradingRuleRecord
-
-InstrumentId = _InstrumentId
 
 __all__ = ["SQLiteTradingRuleWriter", "TradingRuleWriter"]
 
@@ -40,13 +35,6 @@ INSERT OR REPLACE INTO trading_rule (
     price_limit_pct, order_types_supported, call_auction_sessions,
     effective_from, effective_to
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-"""
-
-_SELECT_ALL = """
-SELECT instrument_id, as_of_date, settlement_cycle, fund_settlement_cycle,
-       price_limit_pct, order_types_supported, call_auction_sessions,
-       effective_from, effective_to
-FROM trading_rule
 """
 
 
@@ -90,22 +78,24 @@ class SQLiteTradingRuleWriter(PITRecordWriter[TradingRuleRecord]):
         )
         self._pool.commit()
 
-    def get_records(self) -> list[TradingRuleRecord]:
-        """获取所有已写入的记录。"""
+    def load(self, records: list[TradingRuleRecord]) -> None:
+        """批量加载记录到 SQLite（INSERT OR REPLACE）。"""
+        if not records:
+            return
         conn = self._pool.get_connection()
-        rows = conn.execute(_SELECT_ALL).fetchall()
-        return [self._row_to_record(row) for row in rows]
-
-    def _row_to_record(self, row: sqlite3.Row) -> TradingRuleRecord:
-        """将数据库行转换为 TradingRuleRecord."""
-        return TradingRuleRecord(
-            instrument_id=InstrumentId(row["instrument_id"]),
-            as_of_date=row["as_of_date"],
-            settlement_cycle=row["settlement_cycle"],
-            fund_settlement_cycle=row["fund_settlement_cycle"],
-            price_limit_pct=row["price_limit_pct"],
-            order_types_supported=tuple(orjson.loads(row["order_types_supported"])),
-            call_auction_sessions=tuple(orjson.loads(row["call_auction_sessions"])),
-            effective_from=row["effective_from"],
-            effective_to=row["effective_to"],
-        )
+        for rec in records:
+            conn.execute(
+                _INSERT_OR_REPLACE,
+                (
+                    rec.instrument_id,
+                    rec.as_of_date,
+                    rec.settlement_cycle,
+                    rec.fund_settlement_cycle,
+                    rec.price_limit_pct,
+                    orjson.dumps(rec.order_types_supported).decode("utf-8"),
+                    orjson.dumps(rec.call_auction_sessions).decode("utf-8"),
+                    rec.effective_from,
+                    rec.effective_to,
+                ),
+            )
+        self._pool.commit()

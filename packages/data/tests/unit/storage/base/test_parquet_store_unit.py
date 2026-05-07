@@ -7,13 +7,26 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_data.storage.base import ParquetStore
+from ditto_platform.foundation.storage import ParquetStore
+
+MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
+MARKET_DATE_COLUMN = "trade_date"
+MARKET_INSTRUMENT_COLUMN = "instrument_id"
+
+
+def _market_parquet_store(data_root: Path) -> ParquetStore:
+    return ParquetStore(
+        data_root,
+        key_columns=MARKET_KEY_COLUMNS,
+        date_column=MARKET_DATE_COLUMN,
+        instrument_column=MARKET_INSTRUMENT_COLUMN,
+    )
 
 
 def test_parquet_store_write_and_read(tmp_path: Path) -> None:
     """测试 ParquetStore 的基本读写功能."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 写入测试数据
     test_df = pl.DataFrame(
@@ -42,9 +55,9 @@ def test_parquet_store_write_and_read(tmp_path: Path) -> None:
     # 读取数据
     read_df = store.read(
         dataset="test_dataset",
-        instrument_ids=[1],
         start_date="2024-01-01",
         end_date="2024-01-02",
+        filters=pl.col("instrument_id").is_in([1]),
     )
 
     assert len(read_df) == 2
@@ -54,7 +67,7 @@ def test_parquet_store_write_and_read(tmp_path: Path) -> None:
 def test_parquet_store_write_with_keep_last(tmp_path: Path) -> None:
     """测试 ParquetStore 的 KEEP_LAST 去重策略."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 第一次写入
     df1 = pl.DataFrame(
@@ -102,9 +115,9 @@ def test_parquet_store_write_with_keep_last(tmp_path: Path) -> None:
     # 验证 instrument_id=1 的值被更新
     read_df = store.read(
         dataset="test_dataset",
-        instrument_ids=[1],
         start_date="2024-01-01",
         end_date="2024-01-01",
+        filters=pl.col("instrument_id").is_in([1]),
     )
 
     assert len(read_df) == 1
@@ -114,7 +127,7 @@ def test_parquet_store_write_with_keep_last(tmp_path: Path) -> None:
 def test_parquet_store_write_with_keep_first(tmp_path: Path) -> None:
     """测试 ParquetStore 的 KEEP_FIRST 去重策略."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 第一次写入
     df1 = pl.DataFrame(
@@ -161,9 +174,9 @@ def test_parquet_store_write_with_keep_first(tmp_path: Path) -> None:
     # 验证 instrument_id=1 的值保持不变
     read_df = store.read(
         dataset="test_dataset",
-        instrument_ids=[1],
         start_date="2024-01-01",
         end_date="2024-01-01",
+        filters=pl.col("instrument_id").is_in([1]),
     )
 
     assert len(read_df) == 1
@@ -173,7 +186,7 @@ def test_parquet_store_write_with_keep_first(tmp_path: Path) -> None:
 def test_parquet_store_write_with_error(tmp_path: Path) -> None:
     """测试 ParquetStore 的 ERROR 去重策略（默认）."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 第一次写入
     df1 = pl.DataFrame(
@@ -217,7 +230,7 @@ def test_parquet_store_write_with_error(tmp_path: Path) -> None:
 def test_parquet_store_delete_by_sid(tmp_path: Path) -> None:
     """测试 ParquetStore 按 instrument_id 删除数据."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 写入测试数据
     df = pl.DataFrame(
@@ -242,7 +255,7 @@ def test_parquet_store_delete_by_sid(tmp_path: Path) -> None:
     # 删除 instrument_id=1 的数据
     deleted_count = store.delete(
         dataset="test_dataset",
-        instrument_ids=[1],
+        filters=pl.col("instrument_id").is_in([1]),
     )
 
     assert deleted_count == 2
@@ -257,7 +270,7 @@ def test_parquet_store_delete_by_sid(tmp_path: Path) -> None:
 def test_parquet_store_delete_by_date_range(tmp_path: Path) -> None:
     """测试 ParquetStore 按日期范围删除数据."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 写入测试数据
     df = pl.DataFrame(
@@ -297,7 +310,7 @@ def test_parquet_store_delete_by_date_range(tmp_path: Path) -> None:
 def test_parquet_store_read_filters(tmp_path: Path) -> None:
     """测试 ParquetStore 的各种过滤条件."""
     data_root = tmp_path / "data"
-    store = ParquetStore(data_root)
+    store = _market_parquet_store(data_root)
 
     # 写入测试数据
     df = pl.DataFrame(
@@ -323,7 +336,7 @@ def test_parquet_store_read_filters(tmp_path: Path) -> None:
     # 测试按 instrument_id 过滤
     result = store.read(
         dataset="test_dataset",
-        instrument_ids=[1, 2],
+        filters=pl.col("instrument_id").is_in([1, 2]),
     )
     assert len(result) == 4
     assert set(result["instrument_id"].to_list()) == {1, 2}
@@ -340,9 +353,9 @@ def test_parquet_store_read_filters(tmp_path: Path) -> None:
     # 测试组合过滤
     result = store.read(
         dataset="test_dataset",
-        instrument_ids=[1],
         start_date="2024-01-02",
         end_date="2024-01-02",
+        filters=pl.col("instrument_id").is_in([1]),
     )
     assert len(result) == 1
     assert result["instrument_id"][0] == 1

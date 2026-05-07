@@ -63,17 +63,38 @@
 
 ### 架构原则
 ```
-依赖层级（从高到低）:
-  ditto_interfaces → ditto_app → ditto_engine → ditto_data → ditto_infra
-  ditto_interfaces → ditto_analytics → ditto_kernel
-  ditto_interfaces → ditto_data → ditto_kernel, ditto_infra
-  ditto_app → ditto_analytics → ditto_kernel
+依赖层级:
+  ditto_apps → ditto_application → {data, features, strategy, portfolio, risk, execution, backtest, analysis} → kernel
+  ditto_apps → ditto_platform
+  platform 是横向技术基础设施
+
+实际依赖图（源码为准）:
+  kernel → 无依赖
+  platform → kernel
+  data → kernel, platform
+  features → kernel, platform（不直接依赖 data；市场输入由 application/backtest 注入）
+  strategy → kernel, platform（不依赖 data/features；信号存储通过 Protocol 注入）
+  portfolio → kernel
+  risk → kernel, portfolio
+  execution → kernel, platform, portfolio（不依赖 risk；使用自有 audit DTO）
+  backtest → kernel, data, strategy, portfolio, risk, execution
+  analysis → kernel, platform（不直接依赖生产包；研究通过 application query 边界读取）
+  application → 所有能力包 + data + platform
+  apps → application + platform + composition root wiring
 
 允许的跨层依赖:
-  - interfaces 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
-  - interfaces 可以直接依赖 infra.foundation
-  - interfaces 禁止直接依赖 data.storage/runtime（仅 registry 例外）
-  - interfaces.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
+  - apps 可以直接依赖 data.sources（仅 registry 例外范围可依赖 data.services/models）
+  - apps 可以直接依赖 platform.foundation
+  - apps 禁止直接依赖 data.storage/runtime（仅 registry 例外）
+  - apps 禁止直接依赖 data.models（通过 application.config 路由）
+  - apps.jobs.context 可依赖 data.quality（最小豁免，用于 Context Bundle 构建）
+
+硬性约束:
+  - 生产包禁止依赖 ditto_analysis
+  - ditto_strategy 禁止依赖 ditto_execution
+  - ditto_execution 禁止依赖 ditto_backtest
+  - ditto_backtest 禁止导入真实券商网关
+  - 禁止跨包 re-export（消费者必须直接引用源头包）
 
 详细约束见 .importlinter 配置
 ```
@@ -84,13 +105,25 @@
 
 详细分层规范：
 - 总体架构边界、命名与抽象层级 → [docs/architecture/boundaries-and-abstraction-standards.md](docs/architecture/boundaries-and-abstraction-standards.md)
-- Infra → [packages/infra/CLAUDE.md](packages/infra/CLAUDE.md)
+- Agent 快速参考 → [docs/architecture/agent-context-pack.md](docs/architecture/agent-context-pack.md)
+- Platform → [packages/platform/CLAUDE.md](packages/platform/CLAUDE.md)
 - Data → [packages/data/CLAUDE.md](packages/data/CLAUDE.md) | [pit.md](.claude/rules/pit.md)
 - Kernel → [packages/kernel/CLAUDE.md](packages/kernel/CLAUDE.md)
-- Engine → [packages/engine/CLAUDE.md](packages/engine/CLAUDE.md)
-- Analytics → [packages/analytics/CLAUDE.md](packages/analytics/CLAUDE.md)
-- App → [packages/app/CLAUDE.md](packages/app/CLAUDE.md)
-- Interfaces → [interfaces/CLAUDE.md](interfaces/CLAUDE.md)
+- Features → [packages/features/CLAUDE.md](packages/features/CLAUDE.md)
+- Strategy → [packages/strategy/CLAUDE.md](packages/strategy/CLAUDE.md)
+- Portfolio → [packages/portfolio/CLAUDE.md](packages/portfolio/CLAUDE.md)
+- Risk → [packages/risk/CLAUDE.md](packages/risk/CLAUDE.md)
+- Execution → [packages/execution/CLAUDE.md](packages/execution/CLAUDE.md)
+- Backtest → [packages/backtest/CLAUDE.md](packages/backtest/CLAUDE.md)
+- Analysis → [packages/analysis/CLAUDE.md](packages/analysis/CLAUDE.md)
+- Application → [packages/application/CLAUDE.md](packages/application/CLAUDE.md)
+- Apps → [packages/apps/CLAUDE.md](packages/apps/CLAUDE.md)
+
+架构心智模型以能力包为准：`data`、`features`、`analysis` 是数据/计算平面，
+capability packages（strategy/portfolio/risk/execution/backtest）是并列领域能力平面；
+`application` 编排所有能力包；`apps` 作为入口和 composition root。
+`.importlinter` 中的 layers 顺序是工具表达限制，不代表业务层级高低。
+平面互斥由 explicit forbidden contracts 固化。
 
 ### 允许的依赖（严格限制）
 
@@ -250,13 +283,18 @@ pixi run -e dev check    # lint + fmt + type + test --fast
 ```
 ditto/
 ├── packages/           # 核心包
-│   ├── infra/        # 基础设施
+│   ├── platform/        # 基础设施（横向技术能力）
 │   ├── kernel/       # 共享内核（零业务行为类型）
-│   ├── data/          # 数据访问层
-│   ├── analytics/     # 表达式编译 + 物化 + 因子 + 研究
-│   ├── app/           # 应用编排层（CQRS: query/process/command/builders）
-│   └── engine/        # 核心引擎（alpha/portfolio/execution/accounting/backtest/orchestrator）
-├── interfaces/            # 唯一应用入口（API/CLI/Jobs + DI Composition Root）
+│   ├── data/          # 数据平台（数据源、存储、质量、摄取）
+│   ├── features/     # 因子与表达式计算（编译、物化、评估）
+│   ├── strategy/     # 策略定义与信号生成
+│   ├── portfolio/    # 组合构建与管理
+│   ├── risk/         # 风险管理
+│   ├── execution/    # 交易执行
+│   ├── backtest/     # 回测引擎
+│   ├── analysis/     # 研究 control-plane（product analysis namespaces reserved）
+│   ├── application/  # 应用编排层（CQRS: queries/commands/processes/builders）
+│   └── apps/         # 应用入口（API/CLI/Jobs + DI Composition Root）
 ├── config/            # 环境配置（按环境分组）
 │   ├── development/
 │   ├── testing/

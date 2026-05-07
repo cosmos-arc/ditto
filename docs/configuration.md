@@ -50,11 +50,12 @@ Ditto 配置系统采用**分层架构**设计，支持多环境配置、路径�
 
 | 模块 | 包路径 | 说明 |
 |------|--------|------|
-| 环境管理 | `ditto_infra.foundation.config` | 环境检测、配置加载 |
-| 系统配置 | `ditto_infra.foundation.config.settings` | SystemSettings, ObservabilitySettings |
+| 环境管理 | `ditto_platform.foundation.config` | 环境检测、配置加载 |
+| 系统配置 | `ditto_platform.foundation.config.settings` | SystemSettings, ObservabilitySettings |
 | 存储配置 | `ditto_data.config.data_store` | DataStoreSettings |
 | 数据源配置 | `ditto_data.config.data_source` | DataSourceSettings |
-| 通知配置 | `ditto_infra.services.notification.config` | NotificationSettings |
+| 特征产物配置 | `ditto_features.config.artifact_store` | FeatureArtifactStoreSettings |
+| 通知配置 | `ditto_platform.services.notification.config` | NotificationSettings |
 | 质量配置 | `ditto_data.quality.config` | DQSettings |
 
 ---
@@ -113,14 +114,14 @@ TUSHARE_TOKEN=your_token pixi run -e dev test
 ```bash
 # 查看环境
 pixi run -e dev python -c "
-from ditto_infra.foundation.config import get_environment
+from ditto_platform.foundation.config import get_environment
 print(f'当前环境: {get_environment().value}')
 "
 
 # 查看数据目录
 pixi run -e dev python -c "
 from dishka import make_container
-from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
@@ -245,14 +246,21 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 | `fundamental_forecast_path` | `{DATA_ROOT}/fundamental/forecast` | 业绩预告 |
 | `fundamental_holding_path` | `{DATA_ROOT}/fundamental/holding` | 持股数据 |
 | `macro_indicators_path` | `{DATA_ROOT}/macro/indicators` | 宏观指标 |
+| `logs_path` | `{DATA_ROOT}/logs` | 日志存储 |
+| `backups_path` | `{DATA_ROOT}/backups` | 备份存储 |
+| `temp_path` | `{DATA_ROOT}/temp` | 临时文件 |
+
+Feature/Factor 产物路径由 Features 层 `FeatureArtifactStoreSettings` 管理，保持相同的磁盘布局：
+
+| 派生路径 | 计算规则 | 说明 |
+|----------|----------|------|
 | `features_technical_price_path` | `{DATA_ROOT}/features/technical/price` | 技术特征（价格） |
 | `features_technical_indicators_narrow_path` | `{DATA_ROOT}/features/technical/indicators_narrow` | 技术指标窄表 |
 | `features_technical_indicators_wide_path` | `{DATA_ROOT}/features/technical/indicators_wide` | 技术指标宽表 |
 | `factors_narrow_style_path` | `{DATA_ROOT}/factors/narrow/style` | 窄风格因子 |
 | `factors_wide_style_path` | `{DATA_ROOT}/factors/wide/style` | 宽风格因子 |
-| `logs_path` | `{DATA_ROOT}/logs` | 日志存储 |
-| `backups_path` | `{DATA_ROOT}/backups` | 备份存储 |
-| `temp_path` | `{DATA_ROOT}/temp` | 临时文件 |
+| `factors_narrow_path` | `{DATA_ROOT}/factors/factors_narrow` | 因子窄表 |
+| `factors_wide_path` | `{DATA_ROOT}/factors/factors_wide` | 因子宽表 |
 
 ### 3. data_source.env - 数据源配置
 
@@ -266,7 +274,7 @@ SQL_ENGINE__PLAN_CACHE_SIZE=1000
 | `RETRY_MULTIPLIER` | float | `1.0` | 重试间隔倍数 |
 | `RETRY_MIN_WAIT` | float | `1.0` | 最小等待时间（秒） |
 | `RETRY_MAX_WAIT` | float | `10.0` | 最大等待时间（秒） |
-| `RATE_LIMIT_PROFILE` | str | `free` | 限流配置（`free`/`paid`） |
+| `RATE_LIMIT_PROFILE` | str | `free` | 限流配置（`free`/`paid`/`conservative`）。**注意：当前为未生效的配置项（死代码），有效值预留但尚未接入运行时** |
 | `RATE_LIMIT_GLOBAL_RATE` | int | - | 全局速率限制 |
 | `RATE_LIMIT_DAILY_RATE` | int | - | 每日速率限制 |
 | `TDX_PATH` | str | `D:\new_tdx\vipdoc` | 通达信路径（质量对账用） |
@@ -347,7 +355,7 @@ NEW_OPTION=my_value
 3. **在 ConfigProvider 中加载**（如果需要新配置文件）
 
 ```python
-# interfaces/src/ditto_interfaces/registry/infra/config.py
+# packages/apps/src/ditto_apps/registry/infra/config.py
 @provide
 def new_settings(self, config_loader: ConfigLoader) -> NewSettings:
     values = load_env_file(config_loader, "new_config")
@@ -402,14 +410,14 @@ export ENVIRONMENT=production
 ```bash
 # 查看环境
 pixi run -e dev python -c "
-from ditto_infra.foundation.config import get_environment
+from ditto_platform.foundation.config import get_environment
 print(get_environment())
 "
 
 # 查看完整配置（需要 DI 容器）
 pixi run -e dev python -c "
 from dishka import make_container
-from ditto_interfaces.registry.infra.config import ConfigProvider
+from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
 import os
 os.environ['ENVIRONMENT'] = 'development'
@@ -463,7 +471,7 @@ ls -la config/$ENVIRONMENT/
 
 # 3. 检查配置加载
 pixi run -e dev python -c "
-from ditto_infra.foundation.config import get_environment, ConfigLoader
+from ditto_platform.foundation.config import get_environment, ConfigLoader
 env = get_environment()
 loader = ConfigLoader(env)
 print(f'环境: {env.value}')
@@ -546,8 +554,8 @@ pixi run -e dev python -c "
 import os
 os.environ['ENVIRONMENT'] = 'development'
 from dishka import make_container
-from ditto_interfaces.registry.infra.config import ConfigProvider
-from ditto_infra.foundation.config.settings import Settings
+from ditto_apps.registry.infra.config import ConfigProvider
+from ditto_platform.foundation.config.settings import Settings
 
 c = make_container(ConfigProvider())
 s = c.get(Settings)
@@ -576,13 +584,14 @@ c.close()
 
 | 模型 | 位置 | 配置文件 |
 |------|------|---------|
-| `SystemSettings` | `ditto_infra/foundation/config/settings.py` | `system.env` |
-| `ObservabilitySettings` | `ditto_infra/foundation/config/settings.py` | `observability.env` |
+| `SystemSettings` | `ditto_platform/foundation/config/settings.py` | `system.env` |
+| `ObservabilitySettings` | `ditto_platform/foundation/config/settings.py` | `observability.env` |
 | `DataStoreSettings` | `ditto_data/config/data_store.py` | `data_store.env` |
 | `DataSourceSettings` | `ditto_data/config/data_source.py` | `data_source.env` |
+| `FeatureArtifactStoreSettings` | `ditto_features/config/artifact_store.py` | 派生自 `DATA_ROOT` |
 | `FileStorageSettings` | `ditto_data/config/` | 派生自 `DataStoreSettings` |
 | `DQSettings` | `ditto_data/quality/config/` | `dq.env` |
-| `NotificationSettings` | `ditto_infra/services/notification/config.py` | `notification.env` |
+| `NotificationSettings` | `ditto_platform/services/notification/config.py` | `notification.env` |
 
 ### 相关文档
 

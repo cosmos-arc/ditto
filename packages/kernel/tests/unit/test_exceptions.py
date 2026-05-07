@@ -18,8 +18,20 @@ class TestDittoErrorRoot:
     def test_ditto_error_inherits_exception(self) -> None:
         assert issubclass(DittoError, Exception)
 
+    def test_ditto_error_carries_empty_details_by_default(self) -> None:
+        err = DittoError("test")
+        assert err.details == {}
+
+    def test_ditto_error_merges_details_and_kwargs(self) -> None:
+        err = DittoError("test", details={"source": "catalog"}, operation="read")
+        assert err.details == {"source": "catalog", "operation": "read"}
+
     def test_data_error_inherits_ditto_error(self) -> None:
         assert issubclass(DataError, DittoError)
+
+    def test_data_error_accepts_structured_details(self) -> None:
+        err = DataError("test", details={"dataset": "stock_daily"})
+        assert err.details == {"dataset": "stock_daily"}
 
     def test_catch_ditto_error_catches_data_error(self) -> None:
         with pytest.raises(DittoError):
@@ -32,7 +44,7 @@ class TestDittoErrorRoot:
             raise IdentifierError("test")
 
     def test_ditto_error_catches_derived_error(self) -> None:
-        from ditto_data.errors import DerivedError
+        from ditto_kernel.exceptions import DerivedError
 
         with pytest.raises(DittoError):
             raise DerivedError("test")
@@ -44,7 +56,7 @@ class TestDittoErrorRoot:
             raise DataSourceError("test", source="tushare")
 
     def test_ditto_error_catches_api_error(self) -> None:
-        from ditto_interfaces.api.errors import APIError
+        from ditto_apps.api.errors import APIError
 
         with pytest.raises(DittoError):
             raise APIError("test")
@@ -99,12 +111,12 @@ class TestDerivedErrorHierarchy:
     """DerivedError 层级验证."""
 
     def test_derived_error_inherits_ditto_error(self) -> None:
-        from ditto_data.errors import DerivedError
+        from ditto_kernel.exceptions import DerivedError
 
         assert issubclass(DerivedError, DittoError)
 
     def test_derived_not_found_inherits_derived_error(self) -> None:
-        from ditto_data.errors import DerivedError, DerivedNotFoundError
+        from ditto_kernel.exceptions import DerivedError, DerivedNotFoundError
 
         assert issubclass(DerivedNotFoundError, DerivedError)
 
@@ -153,12 +165,12 @@ class TestInterfacesMerge:
     """Interfaces 层异常清理验证."""
 
     def test_ditto_exception_removed(self) -> None:
-        import ditto_interfaces.exceptions as m
+        import ditto_apps.exceptions as m
 
         assert not hasattr(m, "DittoException")
 
     def test_dead_subclasses_removed(self) -> None:
-        import ditto_interfaces.exceptions as m
+        import ditto_apps.exceptions as m
 
         for name in (
             "DataNotFoundError",
@@ -169,18 +181,18 @@ class TestInterfacesMerge:
             assert not hasattr(m, name), f"{name} should be removed"
 
     def test_route_validation_error_inherits_ditto_error(self) -> None:
-        from ditto_interfaces.exceptions import RouteValidationError
+        from ditto_apps.exceptions import RouteValidationError
 
         assert issubclass(RouteValidationError, DittoError)
 
     def test_api_error_inherits_ditto_error(self) -> None:
-        from ditto_interfaces.api.errors import APIError
+        from ditto_apps.api.errors import APIError
 
         assert issubclass(APIError, DittoError)
         assert not issubclass(APIError, DataError)
 
     def test_api_subclasses_inherit_ditto_error(self) -> None:
-        from ditto_interfaces.api.errors import (
+        from ditto_apps.api.errors import (
             BadRequestError,
             ConflictError,
             DateRangeError,
@@ -205,57 +217,60 @@ class TestInterfacesMerge:
 class TestPerPackageDomainRoots:
     """各包域根验证."""
 
-    def test_engine_error_exists(self) -> None:
-        from ditto_engine.exceptions import EngineError
+    def test_execution_error_exists(self) -> None:
+        from ditto_execution.errors import ExecutionError
 
-        assert issubclass(EngineError, DittoError)
+        assert issubclass(ExecutionError, DittoError)
 
-    def test_analytics_error_exists(self) -> None:
-        from ditto_analytics.exceptions import AnalyticsError
+    def test_features_error_exists(self) -> None:
+        from ditto_features.errors import FeaturesError
 
-        assert issubclass(AnalyticsError, DittoError)
+        assert issubclass(FeaturesError, DittoError)
 
     def test_app_error_exists(self) -> None:
-        from ditto_app.exceptions import AppError
+        from ditto_application.exceptions import AppError
 
         assert issubclass(AppError, DittoError)
 
-    def test_infra_error_exists(self) -> None:
-        from ditto_infra.exceptions import InfraError
+    def test_platform_error_exists(self) -> None:
+        from ditto_platform.exceptions import PlatformError
 
-        assert issubclass(InfraError, DittoError)
+        assert issubclass(PlatformError, DittoError)
 
-    def test_engine_orphan_uses_domain_root(self) -> None:
-        from ditto_engine.accounting.order_book import StateTransitionError
-        from ditto_engine.exceptions import EngineError
+    def test_portfolio_orphan_uses_domain_root(self) -> None:
+        from ditto_portfolio.accounting.order_book import StateTransitionError
 
-        assert issubclass(StateTransitionError, EngineError)
+        assert issubclass(StateTransitionError, DittoError)
 
     def test_analytics_orphans_use_domain_root(self) -> None:
-        from ditto_analytics.exceptions import AnalyticsError
-        from ditto_analytics.expression.diagnostics import ExpressionCompileError
-        from ditto_analytics.research.domain import LateArrivalError
+        from ditto_analysis.errors import AnalysisError
+        from ditto_analysis.research.domain import LateArrivalError
+        from ditto_features.errors import FeaturesError
+        from ditto_features.expression.diagnostics import ExpressionCompileError
 
-        assert issubclass(ExpressionCompileError, AnalyticsError)
-        assert issubclass(LateArrivalError, AnalyticsError)
+        assert issubclass(ExpressionCompileError, FeaturesError)
+        assert issubclass(AnalysisError, DittoError)
+        assert issubclass(LateArrivalError, AnalysisError)
 
     def test_app_orphans_use_domain_root(self) -> None:
-        from ditto_app.exceptions import AppError
-        from ditto_app.process.materialization.cascade_orchestrator import (
+        from ditto_application.exceptions import AppError
+        from ditto_application.processes.materialization.cascade_orchestrator import (
             CascadeDepthExceededError,
         )
-        from ditto_app.process.materialization.types import MissingDependencyError
+        from ditto_application.processes.materialization.types import (
+            MissingDependencyError,
+        )
 
         assert issubclass(CascadeDepthExceededError, AppError)
         assert issubclass(MissingDependencyError, AppError)
 
     def test_infra_orphans_use_domain_root(self) -> None:
-        from ditto_infra.exceptions import InfraError
-        from ditto_infra.foundation.concurrency.filelock import LockAcquisitionError
-        from ditto_infra.foundation.config.errors import ConfigInitError
+        from ditto_platform.exceptions import PlatformError
+        from ditto_platform.foundation.concurrency.filelock import LockAcquisitionError
+        from ditto_platform.foundation.config.errors import ConfigInitError
 
-        assert issubclass(ConfigInitError, InfraError)
-        assert issubclass(LockAcquisitionError, InfraError)
+        assert issubclass(ConfigInitError, PlatformError)
+        assert issubclass(LockAcquisitionError, PlatformError)
 
 
 class TestNoBareExceptionInheritance:
@@ -263,7 +278,7 @@ class TestNoBareExceptionInheritance:
 
     def test_ditto_error_only_bare_exception_root(self) -> None:
         """DittoError 是唯一允许直接继承 Exception 的类."""
-        from ditto_data.errors import DerivedError
+        from ditto_kernel.exceptions import DerivedError
 
         assert DittoError.__bases__ == (Exception,)
         assert DataError.__bases__ == (DittoError,)

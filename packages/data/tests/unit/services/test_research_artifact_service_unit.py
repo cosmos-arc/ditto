@@ -8,7 +8,8 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from ditto_data.services.research_artifact_service import ResearchArtifactService
+from ditto_analysis.errors import ResearchDatasetError
+from ditto_analysis.research.artifact_service import ResearchArtifactService
 from polars.testing import assert_frame_equal
 
 
@@ -70,7 +71,7 @@ class TestReadJson:
         (tmp_path / "list.json").write_bytes(orjson.dumps([1, 2, 3]))
 
         service = ResearchArtifactService(artifact_root=tmp_path)
-        with pytest.raises(ValueError, match="expected JSON object"):
+        with pytest.raises(ResearchDatasetError, match="expected JSON object"):
             service.read_json("list.json")
 
 
@@ -139,11 +140,11 @@ class TestExportDataset:
         assert path.exists()
 
     def test_export_raises_for_unsupported_format(self, tmp_path: Path) -> None:
-        """Unsupported format raises ValueError."""
+        """Unsupported format raises ResearchDatasetError."""
         frame = pl.DataFrame({"x": [1]})
 
         service = ResearchArtifactService(artifact_root=tmp_path)
-        with pytest.raises(ValueError, match="unsupported format"):
+        with pytest.raises(ResearchDatasetError, match="unsupported format"):
             service.export_dataset("data.xlsx", frame, fmt="xlsx")
 
     def test_export_overwrites_existing_file(self, tmp_path: Path) -> None:

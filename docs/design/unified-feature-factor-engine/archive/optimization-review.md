@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Unified Feature/Factor Engine - 优化与改进建议
 
 > **状态**: 历史评审，仅供参考。

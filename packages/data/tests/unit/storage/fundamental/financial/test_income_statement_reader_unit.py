@@ -11,8 +11,8 @@ from ditto_data.storage.fundamental.financial.income_statement_reader import (
     IncomeStatementReader,
 )
 from ditto_data.storage.fundamental.specs import INCOME_STATEMENT_SPEC
-from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 SPEC = INCOME_STATEMENT_SPEC
 

@@ -1,0 +1,21 @@
+[project]
+name = "ditto-strategy"
+requires-python = ">= 3.13"
+version = "0.1.0"
+dependencies = [
+    "ditto-kernel",
+    "ditto-platform",
+    "dishka",
+    "polars",
+    "orjson",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

@@ -1,6 +1,7 @@
 """Data 层 - Macro Domain Provider。"""
 
 from dishka import Provider, Scope, provide
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 from ditto_data.services.macro_service import MacroService
 from ditto_data.storage.macro.indicator.indicator_reader import (
@@ -15,7 +16,6 @@ from ditto_data.storage.macro.indicator.metadata_reader import (
 from ditto_data.storage.macro.indicator.metadata_writer import (
     IndicatorMetadataWriter as MacroIndicatorMetadataWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
 
 __all__ = ["MacroProvider"]
 

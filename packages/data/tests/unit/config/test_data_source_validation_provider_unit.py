@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
-from ditto_infra.foundation.config.initializer import InitScope
+from ditto_platform.foundation.config.initializer import InitScope
 
 
 class TestDataSourceValidationProviderConstruction:

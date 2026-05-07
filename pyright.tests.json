@@ -1,0 +1,31 @@
+{
+  "include": ["packages/*/tests"],
+  "exclude": ["**/__pycache__", ".pixi", ".venv"],
+  "pythonVersion": "3.13",
+  "pythonPlatform": "All",
+  "stubPath": "typings",
+  "venvPath": ".pixi/envs",
+  "venv": "dev",
+  "typeCheckingMode": "basic",
+  "extraPaths": [
+    "packages/kernel/src",
+    "packages/platform/src",
+    "packages/data/src",
+    "packages/features/src",
+    "packages/strategy/src",
+    "packages/portfolio/src",
+    "packages/risk/src",
+    "packages/execution/src",
+    "packages/backtest/src",
+    "packages/analysis/src",
+    "packages/application/src",
+    "packages/apps/src"
+  ],
+  "reportMissingTypeStubs": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "reportPrivateUsage": "none",
+  "reportUnnecessaryTypeIgnoreComment": "none"
+}

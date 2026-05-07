@@ -321,17 +321,20 @@ except Exception as e:
 
 #### 6. 自定义异常设计
 
-**异常层次结构**：
+**异常层次结构**（以 kernel 为根）：
 ```python
-# 基础异常
-class DataError(Exception):
-    def __init__(self, message: str, details: dict[str, object] | None = None):
+# kernel 层基础异常（ditto_kernel/exceptions.py）
+class DittoError(Exception):
+    def __init__(self, message: str, details: Mapping[str, object] | None = None):
         self.details = details or {}
 
-# 领域异常
-class DataSourceError(DataError): ...
+class DataError(DittoError): ...    # 数据层基础异常
+class IdentifierError(DittoError): ...  # 标识符异常
+
+# 各包扩展（如 ditto_data/errors.py）
+class _DataError(DataError): ...  # data 包本地别名
+class DataSourceError(_DataError): ...
 class SourceFetchError(DataSourceError): ...
-class SourceAuthenticationError(DataSourceError): ...
 ```
 
 **设计原则**：
@@ -343,15 +346,15 @@ class SourceAuthenticationError(DataSourceError): ...
 
 **禁止行内导入！！破例需要注释说明具体原因**
 
-### Infra 层导入
+### Platform 层导入
 
 ```python
 # ✅ 正确
-from ditto_infra.foundation import logger, span, traced, init, SQLitePool
-from ditto_infra.foundation.config import get_environment, Settings
+from ditto_platform.foundation import logger, span, traced, init, SQLitePool
+from ditto_platform.foundation.config import get_environment, Settings
 
 # ❌ 错误
-from ditto_infra.config import get_settings  # 应为 ditto_infra.foundation.config
+from ditto_platform.config import get_settings  # 应为 ditto_platform.foundation.config
 直接访问 os.environ
 使用 open() 写文件
 ```
@@ -367,15 +370,15 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.storage.market import MarketReader  # 直接访问存储层
 ```
 
-### Interfaces 层导入
+### Apps 层导入
 
 ```python
 # ✅ 正确
-from ditto_interfaces.api.errors import error_handler
-from ditto_interfaces.exceptions import DittoError
+from ditto_apps.api.errors import error_handler
+from ditto_apps.exceptions import DittoError
 
 # ❌ 错误
-from ditto_interfaces.api.dependencies import get_hub  # 直接导入内部实现
+from ditto_apps.api.dependencies import get_hub  # 直接导入内部实现
 ```
 
 ## Re-export 规范
@@ -501,7 +504,7 @@ def process_data(data):
 
 #### 目录示例
 - `packages/foo/src/foo/py.typed`
-- `interfaces/src/ditto_interfaces/py.typed`（interfaces 也会作为库被引用）
+- `packages/apps/src/ditto_apps/py.typed`（apps 也会作为库被引用）
 
 #### 实施检查清单
 
@@ -526,13 +529,18 @@ tar -tzf dist/*.whl | grep py.typed
 
 | 包 | py.typed 状态 | 路径 |
 |---|--------------|------|
-| ditto_engine | ✅ | `packages/engine/src/ditto_engine/py.typed` |
-| ditto_data | ✅ | `packages/data/src/ditto_data/py.typed` |
-| ditto_infra | ✅ | `packages/infra/src/ditto_infra/py.typed` |
 | ditto_kernel | ✅ | `packages/kernel/src/ditto_kernel/py.typed` |
-| ditto_analytics | ✅ | `packages/analytics/src/ditto_analytics/py.typed` |
-| ditto_app | ✅ | `packages/app/src/ditto_app/py.typed` |
-| ditto_interfaces | ✅ | `interfaces/src/ditto_interfaces/py.typed` |
+| ditto_platform | ✅ | `packages/platform/src/ditto_platform/py.typed` |
+| ditto_data | ✅ | `packages/data/src/ditto_data/py.typed` |
+| ditto_features | ✅ | `packages/features/src/ditto_features/py.typed` |
+| ditto_strategy | ✅ | `packages/strategy/src/ditto_strategy/py.typed` |
+| ditto_portfolio | ✅ | `packages/portfolio/src/ditto_portfolio/py.typed` |
+| ditto_risk | ✅ | `packages/risk/src/ditto_risk/py.typed` |
+| ditto_execution | ✅ | `packages/execution/src/ditto_execution/py.typed` |
+| ditto_backtest | ✅ | `packages/backtest/src/ditto_backtest/py.typed` |
+| ditto_analysis | ✅ | `packages/analysis/src/ditto_analysis/py.typed` |
+| ditto_application | ✅ | `packages/application/src/ditto_application/py.typed` |
+| ditto_apps | ✅ | `packages/apps/src/ditto_apps/py.typed` |
 
 ---
 
@@ -594,23 +602,23 @@ tar -tzf dist/*.whl | grep py.typed
 |------|------|----------|------|
 | **Data Store** | 数据持久化、基础查询 | Reader/Writer CQRS（如 `MarketReader`, `MetadataWriter`） | 包含业务逻辑 |
 | **Data Service** | 领域封装、查询/写入契约 | MarketService, MetadataService | 直接暴露存储实现细节 |
-| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator（均属 Infra 层） | 包含业务逻辑 |
+| **Data Runtime** | 基础设施（连接池、锁、分配器) | SQLitePool, FileLockManager, InstrumentIdAllocator（均属 Platform 层） | 包含业务逻辑 |
 | **Data Source/Adapter** | 外部数据源适配与字段规范化 | TushareSource, CapitalAdapter | 包含业务编排逻辑 |
-| **Interfaces Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
- | **Interfaces Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
+| **Apps Service** | 流程编排、任务协调 | IngestionCoordinator, RetryManager | 直接数据访问 |
+ | **Application Flow** | 应用层用例组合 | DailyFlow, BackfillFlow | - |
 
 ### 依赖方向规则
 
 **允许的单向依赖：**
 ```
-Interfaces Flow → Interfaces Service → App Service → Data Service → Data Store/Runtime → Infra
+Application Flow → Apps Service → Data Service → Data Store/Runtime → Platform
 ```
 
 **禁止的依赖模式：**
-- ❌ Interfaces → Data Store (跨层访问)
-- ❌ Interfaces → Data Runtime (跨层访问)
-- ❌ Interfaces 非 registry 模块 → Data Source(跨层访问)
-- ❌ Data → Interfaces (反向依赖)
+- ❌ Apps → Data Store (跨层访问)
+- ❌ Apps → Data Runtime (跨层访问)
+- ❌ Apps 非 registry 模块 → Data Source(跨层访问)
+- ❌ Data → Apps (反向依赖)
 - ❌ 同层组件间的循环依赖
 
 ### 跨层检测规则
@@ -618,14 +626,14 @@ Interfaces Flow → Interfaces Service → App Service → Data Service → Data
 **导入语句检查：**
 
 ```python
-# ❌ Interfaces 层禁止直接导入 Store
+# ❌ Apps 层禁止直接导入 Store
 from ditto_data.storage.metadata import MetadataReader
 
-# ❌ Interfaces 层禁止直接导入 Runtime
+# ❌ Apps 层禁止直接导入 Runtime
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
-from ditto_infra.foundation.db import SQLitePool  # SQLitePool 属于 Infra 层
+from ditto_platform.foundation.db import SQLitePool  # SQLitePool 属于 Platform 层
 
-# ✅ Interfaces 层应该使用 Service（通过 DI 获取）
+# ✅ Apps 层应该使用 Service（通过 DI 获取）（通过 DI 获取）
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 
@@ -646,8 +654,8 @@ from ditto_data.storage.sqlite_client import SQLiteClient
 | 是否需要分配/管理唯一标识符（如 instrument_id）？ | Data Service | 不应在此层 |
 | 是否包含数据映射/转换逻辑（如 source_ticker → instrument_id）？ | Data Service | 不应在此层 |
 | 是否依赖外部数据源（API/爬虫）？ | Data Source/Adapter | 不应在此层 |
-| 是否是流程编排/任务协调？ | App 层 Service | 不应在此层 |
-| 是否是应用层用例组合？ | App 层 Flow | 不应在此层 |
+| 是否是流程编排/任务协调？ | Apps 层 Service | 不应在此层 |
+| 是否是应用层用例组合？ | Application 层 Flow | 不应在此层 |
 
 ### 代码重复检测
 
@@ -659,6 +667,6 @@ grep -r "def.*register" packages/data/src/ditto_data/services/metadata/
 ```
 
 **禁止重复实现：**
-- ❌ Interfaces 层重复实现 Service 已有的数据访问逻辑
+- ❌ Apps 层重复实现 Service 已有的数据访问逻辑
 - ❌ 多个地方重复实现相同的映射/转换规则
 ```

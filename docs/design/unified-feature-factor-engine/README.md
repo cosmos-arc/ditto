@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Ditto Unified Derived Engine 文档索引
 
 本目录保存 unified-feature-factor-engine 的当前主设计、ADR 决策、参考资料与历史归档文档。

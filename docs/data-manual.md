@@ -917,6 +917,9 @@ reader = InstrumentReader(...)  # ❌
 ### B. 枚举类型
 
 **交易所 (Exchange)**:
+
+> **注**：此处的 `SSE`/`SZSE` 等为文档层面的交易所简称，与 kernel 的 `InstrumentId` 前缀（`XSHE`/`XSHG`）属不同抽象层级。
+
 | 值 | 说明 |
 |----|------|
 | `SSE` | 上海证券交易所 |

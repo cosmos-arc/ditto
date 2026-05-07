@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Unified Feature/Factor Engine 技术债务记录
 
 **Review 日期**: 2026-03-14（初版） / 2026-03-16（深度代码审查更新）

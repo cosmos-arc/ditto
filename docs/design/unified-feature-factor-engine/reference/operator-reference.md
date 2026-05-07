@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # 算子参考手册
 
 本文档详细定义了 Ditto 因子引擎支持的所有算子，包括语法、语义、属性和实现说明。

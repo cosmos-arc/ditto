@@ -29,14 +29,6 @@ from ditto_data.storage.capital.valuation.valuation_metrics_reader import (
 from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
-from ditto_data.storage.execution import (
-    FillReader,
-    FillWriter,
-    PositionReader,
-    PositionWriter,
-    SignalReader,
-    SignalWriter,
-)
 from ditto_data.storage.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,
 )
@@ -263,29 +255,9 @@ class CapitalWriters:
     index_composition: IndexCompositionWriter
 
 
-@dataclass(frozen=True)
-class ExecutionReaders:
-    """Execution 域读取依赖."""
-
-    signal: SignalReader
-    fill: FillReader
-    position: PositionReader
-
-
-@dataclass(frozen=True)
-class ExecutionWriters:
-    """Execution 域写入依赖."""
-
-    signal: SignalWriter
-    fill: FillWriter
-    position: PositionWriter
-
-
 __all__ = [
     "CapitalReaders",
     "CapitalWriters",
-    "ExecutionReaders",
-    "ExecutionWriters",
     "FundamentalReaders",
     "FundamentalWriters",
     "MarketReaders",

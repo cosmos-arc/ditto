@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 __all__ = [
     "parquet_store_pair",

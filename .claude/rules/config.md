@@ -74,9 +74,13 @@ config/
 
 | 包 | 位置 | 包含配置 |
 |---|------|----------|
-| `ditto_infra` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
+| `ditto_platform` | `foundation/config/settings.py` | `Settings`, `SystemSettings`, `ObservabilitySettings` |
+| `ditto_platform` | `services/notification/config.py` | `NotificationSettings` |
 | `ditto_data` | `config/data_store.py` | `DataStoreSettings`, `FileStorageSettings` |
 | `ditto_data` | `config/data_source.py` | `DataSourceSettings` |
+| `ditto_data` | `config/data_source_validation.py` | 数据源校验 Provider |
+| `ditto_data` | `config/storage.py` | `FileStorageSettings` |
+| `ditto_data` | `config/dataset_checksum.py` | 数据集校验和配置 |
 | `ditto_data` | `quality/config.py` | `DQSettings` |
 
 ### 禁止事项
@@ -103,18 +107,18 @@ config/
 
 | 组件 | 职责 | 位置 |
 |------|------|------|
-| `get_environment()` | 获取运行时环境 | `infra/foundation/config/environment.py` |
-| `ConfigLoader` | 定位配置文件路径 | `infra/foundation/config/loader.py` |
-| `load_env_file()` | 加载 .env 文件 | `interfaces/config/loader.py` |
-| `ConfigProvider` | DI 装配 | `interfaces/registry/infra/config.py` |
+| `get_environment()` | 获取运行时环境 | `platform/foundation/config/environment.py` |
+| `ConfigLoader` | 定位配置文件路径 | `platform/foundation/config/loader.py` |
+| `load_env_file()` | 加载 .env 文件 | `packages/apps/src/ditto_apps/config/loader.py` |
+| `ConfigProvider` | DI 装配 | `packages/apps/src/ditto_apps/registry/infra/config.py` |
 
 ### 配置加载位置约束
 
-**核心原则**：配置仅在 **Interfaces 层** 加载，其他层通过 DI 获取。
+**核心原则**：配置仅在 **Apps 层** 加载，其他层通过 DI 获取。
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  interfaces/registry/infra/config.py（唯一加载点）              │
+│  packages/apps/src/ditto_apps/registry/infra/config.py（唯一加载点）│
 │                                                            │
 │  @provide                                                  │
 │  def settings(self, loader: ConfigLoader) -> Settings:    │
@@ -125,7 +129,7 @@ config/
           │ DI 注入
           ▼
 ┌────────────────────────────────────────────────────────────┐
-│  packages/data/   packages/engine/   packages/infra/      │
+│  packages/data/   packages/strategy/   packages/platform/      │
 │  （通过构造函数/方法参数获取配置，禁止自己加载）           │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -218,7 +222,7 @@ class InitScope(str, Enum):
 | 提供者 | 作用域 | 职责 |
 |--------|--------|------|
 | `DataRootInitProvider` | STARTUP | 创建数据目录结构 |
-| `MetadataDbInitProvider` | STARTUP | 初始化元数据库 |
+| `MetadataDbInitProvider` | STARTUP | 初始化元数据库（位于 `packages/apps/src/ditto_apps/registry/init_providers.py`） |
 
 ### 初始化流程（main.py）
 
@@ -282,7 +286,7 @@ settings.data_root = Path("/other")  # frozen dataclass 也不允许
 
 | ❌ 禁止 | ✅ 正确 | 原因 |
 |---------|---------|------|
-| 非 Interfaces 层加载配置 | Interfaces 层加载 + DI 注入 | 单一职责、可测试性 |
+| 非 Apps 层加载配置 | Apps 层加载 + DI 注入 | 单一职责、可测试性 |
 | 模型内读取 `os.environ` | 通过 `load_env_file()` 传入 | 配置来源可追溯 |
 | 使用 `BaseSettings` | 使用纯 `BaseModel` | 显式加载、可控 |
 | 硬编码路径 | 使用 `DataStoreSettings` 属性 | 唯一真源 |
@@ -296,7 +300,7 @@ settings.data_root = Path("/other")  # frozen dataclass 也不允许
 
 ```bash
 # 验证配置加载
-pixi run -e dev python -c "from ditto_infra.foundation.config import get_environment; print(get_environment())"
+pixi run -e dev python -c "from ditto_platform.foundation.config import get_environment; print(get_environment())"
 
 # 检查配置文件语法
 cat config/development/system.env

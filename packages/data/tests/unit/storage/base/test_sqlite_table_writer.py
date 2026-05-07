@@ -154,7 +154,7 @@ class TestSqliteTableWriterWrite:
     def test_satisfies_sqlite_writer_protocol(
         self, balance_sheet_spec: SqliteTableSpec, mock_client: MagicMock
     ) -> None:
-        from ditto_data.storage.base.protocols import SqliteWriter
+        from ditto_platform.foundation.storage.protocols import SqliteWriter
 
         writer = SqliteTableWriter(balance_sheet_spec, mock_client)
         _: SqliteWriter = writer

@@ -1,17 +1,17 @@
-"""StrategyRunService 单元测试 — 策略运行生命周期管理。"""
+"""StrategyRunLifecycleStore 单元测试 — 策略运行生命周期管理。"""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_data.models.strategy_run import StrategyRunRecord
-from ditto_data.services.strategy.strategy_run_service import (
+from ditto_kernel.strategy import RunStatus
+from ditto_strategy.runs.models import StrategyRunRecord
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunLifecycleStore,
     StrategyRunReaderProtocol,
-    StrategyRunService,
     StrategyRunWriterProtocol,
 )
-from ditto_kernel.strategy import RunStatus
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -40,9 +40,9 @@ def _make_record(
 def _make_service(
     reader: MagicMock | None = None,
     writer: MagicMock | None = None,
-) -> StrategyRunService:
-    """创建 StrategyRunService 实例。"""
-    return StrategyRunService(
+) -> StrategyRunLifecycleStore:
+    """创建 StrategyRunLifecycleStore 实例。"""
+    return StrategyRunLifecycleStore(
         reader=reader or MagicMock(spec=StrategyRunReaderProtocol),
         writer=writer or MagicMock(spec=StrategyRunWriterProtocol),
     )

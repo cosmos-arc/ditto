@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from ditto_data.models.derived import (
+from ditto_features.models.derived import (
     DerivedPartitionRecord,
     DerivedRunRecord,
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_data.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from pytest_mock import MockerFixture
 
 

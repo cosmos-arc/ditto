@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from enum import Enum, StrEnum
-from typing import Literal, NamedTuple, cast
+from typing import Literal, NamedTuple
 
 from ditto_kernel.instrument import AssetClass
 
@@ -19,7 +18,6 @@ __all__ = [
     "DateScheduleType",
     "Domain",
     "InstrumentIdRange",
-    "OnDuplicate",
     "Source",
 ]
 
@@ -259,15 +257,6 @@ class Source(StrEnum):
     FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
 
 
-# ============ Store 枚举 ============
-class OnDuplicate(Enum):
-    """策略：处理写入时的重复数据."""
-
-    ERROR = "error"  # 遇到重复时报错（默认，最安全）
-    KEEP_FIRST = "keep_first"  # 保留现有数据，忽略新数据
-    KEEP_LAST = "keep_last"  # 使用新数据覆盖现有数据（Last-Write-Wins）
-
-
 class InstrumentIdRange(NamedTuple):
     """
     Instrument ID range definition.
@@ -405,49 +394,3 @@ class InstrumentIdRange(NamedTuple):
             raise ValueError("无法确定资产类别")
 
         return detected[0]
-
-
-# ---------------------------------------------------------------------------
-# JSON type aliases (shared across models)
-# ---------------------------------------------------------------------------
-
-type JsonPrimitive = None | bool | int | float | str
-type JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
-type JsonDict = dict[str, JsonValue]
-
-
-# ---------------------------------------------------------------------------
-# JSON record field validators
-# ---------------------------------------------------------------------------
-
-
-def require_str(data: Mapping[str, JsonValue], key: str) -> str:
-    """Extract a required string field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, str):
-        raise TypeError(f"{key} must be a string")
-    return value
-
-
-def require_int(data: Mapping[str, JsonValue], key: str) -> int:
-    """Extract a required int field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise TypeError(f"{key} must be an int")
-    return value
-
-
-def require_bool(data: Mapping[str, JsonValue], key: str) -> bool:
-    """Extract a required bool field from JSON payload."""
-    value = data[key]
-    if not isinstance(value, bool):
-        raise TypeError(f"{key} must be a bool")
-    return value
-
-
-def require_payload(data: Mapping[str, JsonValue], key: str) -> JsonDict:
-    """Extract a required JSON object field from payload."""
-    value = data[key]
-    if not isinstance(value, dict):
-        raise TypeError(f"{key} must be a JSON object")
-    return cast(JsonDict, value)

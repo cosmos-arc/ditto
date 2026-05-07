@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 from pytest_mock import MockerFixture
 
 
@@ -315,7 +315,7 @@ class TestCalendarReader:
 
     def test_get_range_returns_immutable_copy(self) -> None:
         """Test that get_range returns a copy to prevent cache pollution."""
-        from ditto_infra.foundation.cache import DataCache
+        from ditto_platform.foundation.cache import DataCache
 
         # Create reader with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)

@@ -7,8 +7,8 @@ from ditto_data.storage.metadata.instrument import (
     InstrumentRegistration,
     InstrumentWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 @pytest.mark.integration
@@ -31,12 +31,17 @@ class TestInstrumentReaderWriterIntegration:
             CREATE TABLE instrument (
                 instrument_id INTEGER PRIMARY KEY,
                 ticker TEXT NOT NULL,
-                name TEXT NOT NULL,
+                name TEXT,
+                display_name TEXT,
                 exchange TEXT NOT NULL,
                 board TEXT,
                 asset_class TEXT NOT NULL,
-                list_date TEXT NOT NULL,
-                is_active BOOLEAN DEFAULT TRUE
+                list_date DATE,
+                delist_date DATE,
+                is_st BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP
             );
 
             CREATE TABLE instrument_mapping (

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 import polars as pl
-from ditto_infra.foundation import logger, traced
+from ditto_platform.foundation import logger, traced
 
 from ditto_data.sources.schemas.macro_schemas import empty_macro_dataframe
 from ditto_data.sources.tushare.adapters.base import BaseTushareAdapter

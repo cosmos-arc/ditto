@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # Ditto 架构深度分析 — 模块层级、依赖清晰度与抽象恰当性
 
 > **视角**: Clean Architecture + Hexagonal Architecture + DDD + Python 最佳实践

@@ -12,7 +12,7 @@ from ditto_data.storage.metadata.fee_schedule_reader import (
 from ditto_data.storage.metadata.fee_schedule_writer import (
     SQLiteFeeScheduleWriter,
 )
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -20,11 +20,11 @@ from ditto_infra.foundation import SQLitePool
 
 
 @pytest.fixture
-def pool(tmp_path: object) -> Generator[SQLitePool, None, None]:
+def pool(tmp_path: object) -> Generator[SQLitePool]:
     """Create a SQLitePool with fee_schedule schema initialized."""
     p = SQLitePool(str(tmp_path / "test_fee_schedule.db"))
-    reader = SQLiteFeeScheduleReader(p)
-    reader.init_schema()
+    writer = SQLiteFeeScheduleWriter(p)
+    writer.init_schema()
     yield p
     p.close()
 
@@ -67,19 +67,19 @@ def _make(**overrides: object) -> FeeScheduleRecord:
 
 
 class TestInitSchema:
-    def test_init_schema_creates_table(self, pool: SQLitePool) -> None:
+    def test_init_schema_creates_table(self, writer: SQLiteFeeScheduleWriter) -> None:
         """init_schema should create fee_schedule table."""
+        pool = writer._pool
         conn = pool.get_connection()
         result = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='fee_schedule'"
         ).fetchone()
         assert result is not None
 
-    def test_init_schema_idempotent(self, pool: SQLitePool) -> None:
+    def test_init_schema_idempotent(self, writer: SQLiteFeeScheduleWriter) -> None:
         """Calling init_schema twice should not raise."""
-        reader = SQLiteFeeScheduleReader(pool)
-        reader.init_schema()
-        reader.init_schema()  # second call should be fine
+        writer.init_schema()
+        writer.init_schema()  # second call should be fine
 
 
 # ---------------------------------------------------------------------------
@@ -88,19 +88,23 @@ class TestInitSchema:
 
 
 class TestSQLiteFeeScheduleWriter:
-    def test_write_single_record(self, writer: SQLiteFeeScheduleWriter) -> None:
+    def test_write_single_record(
+        self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
+    ) -> None:
         """write() should persist a single record."""
         record = _make()
         writer.write(record)
-        records = writer.get_records()
+        records = reader.list_all()
         assert len(records) == 1
         assert records[0].instrument_id == 1
 
-    def test_write_multiple_records(self, writer: SQLiteFeeScheduleWriter) -> None:
+    def test_write_multiple_records(
+        self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
+    ) -> None:
         """write() should accumulate records."""
         writer.write(_make(instrument_id=1))
         writer.write(_make(instrument_id=2))
-        assert len(writer.get_records()) == 2
+        assert len(reader.list_all()) == 2
 
     def test_write_upserts_on_conflict(
         self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
@@ -110,7 +114,7 @@ class TestSQLiteFeeScheduleWriter:
         record_v2 = _make(commission_rate=0.0005)
         writer.write(record_v1)
         writer.write(record_v2)
-        records = writer.get_records()
+        records = reader.list_all()
         assert len(records) == 1
         assert records[0].commission_rate == pytest.approx(0.0005)
 
@@ -257,19 +261,23 @@ class TestSQLiteFeeScheduleReader:
 
 
 class TestLoadAndRead:
-    def test_load_persists_records(self, reader: SQLiteFeeScheduleReader) -> None:
+    def test_load_persists_records(
+        self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
+    ) -> None:
         """load() should persist records via INSERT OR REPLACE."""
         records = [
             _make(instrument_id=1),
             _make(instrument_id=2),
         ]
-        reader.load(records)
+        writer.load(records)
         assert reader.get(1, "2026-03-01") is not None
         assert reader.get(2, "2026-03-01") is not None
 
-    def test_load_replaces_existing(self, reader: SQLiteFeeScheduleReader) -> None:
+    def test_load_replaces_existing(
+        self, writer: SQLiteFeeScheduleWriter, reader: SQLiteFeeScheduleReader
+    ) -> None:
         """load() with same PK should replace existing records."""
-        reader.load([_make(commission_rate=0.0003)])
+        writer.load([_make(commission_rate=0.0003)])
         assert reader.get(1, "2026-03-01").commission_rate == pytest.approx(0.0003)
-        reader.load([_make(commission_rate=0.0008)])
+        writer.load([_make(commission_rate=0.0008)])
         assert reader.get(1, "2026-03-01").commission_rate == pytest.approx(0.0008)

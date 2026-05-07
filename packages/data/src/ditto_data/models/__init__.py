@@ -10,7 +10,6 @@ from ditto_data.models.common import (
     DateScheduleType,
     Domain,
     InstrumentIdRange,
-    OnDuplicate,
     Source,
 )
 from ditto_data.models.source_codes import (
@@ -27,6 +26,5 @@ __all__ = [
     "DateScheduleType",
     "Domain",
     "InstrumentIdRange",
-    "OnDuplicate",
     "Source",
 ]

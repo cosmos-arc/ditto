@@ -9,7 +9,7 @@
 数据层领域特定运行时组件 — Instrument ID 分配、数据版本管理、SQL 引擎。
 
 > **注意**: 通用基础设施组件（SQLite 连接池 `SQLitePool`、文件锁 `FileLockManager`）已迁移至
-> `ditto_infra.foundation`（`db` 和 `concurrency` 子模块）。本模块仅保留数据层特有的运行时辅助组件。
+> `ditto_platform.foundation`（`db` 和 `concurrency` 子模块）。本模块仅保留数据层特有的运行时辅助组件。
 
 ## 核心功能
 
@@ -26,7 +26,7 @@
 ## 使用示例
 
 ```python
-from ditto_infra.foundation.db import SQLitePool  # 连接池来自 infra
+from ditto_platform.foundation.db import SQLitePool  # 连接池来自 infra
 from ditto_data.runtime import InstrumentIdAllocator, FreezeManager
 
 # Instrument ID 分配（依赖 infra 层的 SQLitePool）

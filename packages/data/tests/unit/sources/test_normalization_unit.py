@@ -3,34 +3,34 @@
 import pytest
 from ditto_data.sources.normalization import (
     Currency,
-    Exchange,
     InstrumentType,
     NormalizationConfig,
+    SourceExchangeCode,
 )
 
 
 @pytest.mark.unit
-class TestExchange:
-    """测试 Exchange 枚举."""
+class TestSourceExchangeCode:
+    """测试 SourceExchangeCode 枚举."""
 
     def test_should_have_all_exchanges(self) -> None:
         """应该包含所有中国交易所."""
-        assert Exchange.SSE.value == "SSE"
-        assert Exchange.SZSE.value == "SZSE"
-        assert Exchange.BSE.value == "BSE"
-        assert Exchange.CFFEX.value == "CFFEX"
-        assert Exchange.SHFE.value == "SHFE"
-        assert Exchange.DCE.value == "DCE"
-        assert Exchange.CZCE.value == "CZCE"
+        assert SourceExchangeCode.SSE.value == "SSE"
+        assert SourceExchangeCode.SZSE.value == "SZSE"
+        assert SourceExchangeCode.BSE.value == "BSE"
+        assert SourceExchangeCode.CFFEX.value == "CFFEX"
+        assert SourceExchangeCode.SHFE.value == "SHFE"
+        assert SourceExchangeCode.DCE.value == "DCE"
+        assert SourceExchangeCode.CZCE.value == "CZCE"
 
     def test_should_be_string_enum(self) -> None:
         """应该是字符串枚举."""
-        assert isinstance(Exchange.SSE.value, str)
-        assert Exchange.SSE == "SSE"
+        assert isinstance(SourceExchangeCode.SSE.value, str)
+        assert SourceExchangeCode.SSE == "SSE"
 
     def test_should_have_seven_members(self) -> None:
         """应该有七个交易所成员."""
-        assert len(Exchange) == 7
+        assert len(SourceExchangeCode) == 7
 
 
 @pytest.mark.unit
@@ -95,9 +95,9 @@ class TestNormalizationConfig:
         """应该有默认的交易所映射."""
         config = NormalizationConfig()
 
-        assert config.exchange_map["SH"] == Exchange.SSE
-        assert config.exchange_map["SZ"] == Exchange.SZSE
-        assert config.exchange_map["BJ"] == Exchange.BSE
+        assert config.exchange_map["SH"] == SourceExchangeCode.SSE
+        assert config.exchange_map["SZ"] == SourceExchangeCode.SZSE
+        assert config.exchange_map["BJ"] == SourceExchangeCode.BSE
 
     def test_should_have_default_asset_class_map(self) -> None:
         """应该有默认的资产类别映射."""
@@ -138,11 +138,11 @@ class TestNormalizationConfig:
 
     def test_should_support_custom_exchange_map(self) -> None:
         """应该支持自定义交易所映射."""
-        custom_map = {"CN": Exchange.SSE, "US": Exchange.SZSE}
+        custom_map = {"CN": SourceExchangeCode.SSE, "US": SourceExchangeCode.SZSE}
         config = NormalizationConfig(exchange_map=custom_map)
 
-        assert config.exchange_map["CN"] == Exchange.SSE
-        assert config.exchange_map["US"] == Exchange.SZSE
+        assert config.exchange_map["CN"] == SourceExchangeCode.SSE
+        assert config.exchange_map["US"] == SourceExchangeCode.SZSE
 
     def test_should_support_custom_asset_class_map(self) -> None:
         """应该支持自定义资产类别映射."""

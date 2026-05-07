@@ -3,100 +3,31 @@ Data layer exception classes.
 
 Following design document at docs/design/02_data_design.md
 
-Note: DataError, DittoError, IdentifierError are defined in ditto_kernel.exceptions
-and imported here because Data-layer subclasses inherit from them.
+Note: DataError and IdentifierError are defined in ditto_kernel.exceptions
+and imported privately here because Data-layer subclasses inherit from them.
 """
 
-from ditto_kernel.exceptions import DataError, DittoError, IdentifierError
-
 # ---------------------------------------------------------------------------
-# Derived* error hierarchy — canonical definition (Data layer owns these
-# because Data services raise them without depending on Engine).
+# Base error classes — imported from kernel for subclassing.
+# Data-layer errors inherit from DataError / IdentifierError.
 # ---------------------------------------------------------------------------
-
-
-class DerivedError(DittoError):
-    """衍生数据域基础异常."""
-
-    def __init__(self, message: str, *, derived_id: str | None = None) -> None:
-        self.derived_id = derived_id
-        super().__init__(message)
-
-
-class DerivedNotFoundError(DerivedError):
-    """Raised when a derived entity is not found."""
-
-    def __init__(self, *, derived_id: str, version: int | None = None) -> None:
-        self.version = version
-        msg = f"Derived not found: derived_id={derived_id}"
-        if version is not None:
-            msg += f" version={version}"
-        super().__init__(msg, derived_id=derived_id)
-
-
-class DerivedVersionError(DerivedError):
-    """Raised when version resolution fails."""
-
-    def __init__(self, *, derived_id: str, reason: str) -> None:
-        self.reason = reason
-        super().__init__(
-            f"Version resolution failed for derived_id={derived_id}: {reason}",
-            derived_id=derived_id,
-        )
-
-
-class DerivedNotImplementedError(DerivedError):
-    """Raised when a feature is not yet implemented."""
-
-    def __init__(self, *, feature: str, derived_id: str | None = None) -> None:
-        self.feature = feature
-        super().__init__(
-            f"Feature not implemented: {feature}",
-            derived_id=derived_id,
-        )
-
-
-class DerivedValidationError(DerivedError):
-    """Raised when validation fails."""
-
-    def __init__(
-        self,
-        message: str | None = None,
-        *,
-        derived_id: str | None = None,
-        field: str | None = None,
-        value: str | None = None,
-        reason: str | None = None,
-    ) -> None:
-        self.field = field
-        self.value = value
-        self.reason = reason
-        if message is not None:
-            super().__init__(message, derived_id=derived_id)
-        elif field is not None and value is not None and reason is not None:
-            super().__init__(
-                f"Validation failed for field={field} value={value}: {reason}",
-                derived_id=derived_id,
-            )
-        else:
-            raise TypeError(
-                (
-                    "DerivedValidationError requires either a positional message "
-                    "or all of field, value, reason keyword arguments"
-                ),
-            )
-
+from ditto_kernel.exceptions import (
+    DataError as _DataError,
+)
+from ditto_kernel.exceptions import (
+    IdentifierError as _IdentifierError,
+)
 
 # ---------------------------------------------------------------------------
 # Calendar / Identifier hierarchy
 # ---------------------------------------------------------------------------
 
 
-class CalendarError(DataError):
+class CalendarError(_DataError):
     """Calendar-related error base class."""
 
 
-class InstrumentIdNotFoundError(IdentifierError):
+class InstrumentIdNotFoundError(_IdentifierError):
     """证券标识符（Instrument ID）未找到。"""
 
     def __init__(
@@ -122,7 +53,7 @@ class InstrumentIdNotFoundError(IdentifierError):
         super().__init__(message, details if details else None)
 
 
-class IdentifierNotFoundError(IdentifierError):
+class IdentifierNotFoundError(_IdentifierError):
     """
     标识符未找到异常.
 
@@ -155,8 +86,8 @@ class IdentifierNotFoundError(IdentifierError):
         super().__init__(message, details)
 
 
-# NoIdentifierProvidedError and AmbiguousTickerError are now in ditto_kernel.exceptions
-# and re-exported via the top-level import.
+# Identifier selection errors live in ditto_kernel.exceptions; metadata services
+# raise those kernel errors directly.
 
 
 class TradingDateNotFoundError(CalendarError):
@@ -193,7 +124,7 @@ class NotTradingDayError(CalendarError):
         super().__init__(f"{trade_date} is not a trading day")
 
 
-class DataChangedError(DataError):
+class DataChangedError(_DataError):
     """数据已变更异常（checksum 变更，force=False 时抛出）。"""
 
     def __init__(
@@ -211,7 +142,7 @@ class DataChangedError(DataError):
         )
 
 
-class LateArrivalRejectedError(DataError):
+class LateArrivalRejectedError(_DataError):
     """延迟到达数据被拒绝异常。"""
 
     def __init__(
@@ -232,13 +163,13 @@ class LateArrivalRejectedError(DataError):
         )
 
 
-class ValidationError(DataError):
+class ValidationError(_DataError):
     """DataFrame schema validation failed."""
 
     pass
 
 
-class DatasetNotFoundError(DataError):
+class DatasetNotFoundError(_DataError):
     """Dataset directory or files do not exist."""
 
     def __init__(
@@ -260,7 +191,7 @@ class DatasetNotFoundError(DataError):
         super().__init__(message, details if details else None)
 
 
-class PartitionNotFoundError(DataError):
+class PartitionNotFoundError(_DataError):
     """Year partition file does not exist."""
 
     def __init__(
@@ -297,7 +228,7 @@ class SchemaValidationError(ValidationError):
 # ---------------------------------------------------------------------------
 
 
-class DataSourceError(DataError):
+class DataSourceError(_DataError):
     """
     数据源错误基类。
 
@@ -534,7 +465,7 @@ class SourceTransformationError(DataSourceError):
         super().__init__(message, source or "unknown", details if details else None)
 
 
-class PersistenceError(DataError):
+class PersistenceError(_DataError):
     """
     持久化错误基类。
 
@@ -652,16 +583,9 @@ __all__ = [
     "AuthError",
     "CalendarError",
     "DataChangedError",
-    "DataError",
     "DataSourceError",
     "DataValidationError",
     "DatasetNotFoundError",
-    "DerivedError",
-    "DerivedNotFoundError",
-    "DerivedNotImplementedError",
-    "DerivedValidationError",
-    "DerivedVersionError",
-    "IdentifierError",
     "IdentifierNotFoundError",
     "InstrumentIdNotFoundError",
     "LateArrivalRejectedError",

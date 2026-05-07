@@ -5,14 +5,15 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from ditto_data.models.derived import (
+from ditto_features.errors import FeatureStorageError
+from ditto_features.models.derived import (
     DerivedRunRecord,
     DerivedVersionRecord,
 )
-from ditto_data.storage.runtime.derived_sqlite.writer import (
+from ditto_features.storage.sqlite.derived.writer import (
     SQLiteDerivedCatalogWriter,
 )
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 def _make_writer() -> SQLiteDerivedCatalogWriter:
@@ -41,7 +42,7 @@ class TestWriteVersionStatusGuard:
             writer.write_version(record)  # should not raise
 
     def test_rejects_invalid_status(self) -> None:
-        """Invalid status string should raise ValueError."""
+        """Invalid status string should raise FeatureStorageError."""
         writer = _make_writer()
         record = DerivedVersionRecord(
             derived_id="factor.test",
@@ -53,7 +54,7 @@ class TestWriteVersionStatusGuard:
             created_at="2026-03-18T00:00:00+08:00",
             updated_at="2026-03-18T00:00:00+08:00",
         )
-        with pytest.raises(ValueError, match=r"invalid.*version.*status"):
+        with pytest.raises(FeatureStorageError, match=r"invalid.*version.*status"):
             writer.write_version(record)
 
 
@@ -86,7 +87,7 @@ class TestWriteRunStatusGuard:
             writer.write_run(record)  # should not raise
 
     def test_rejects_invalid_status(self) -> None:
-        """Invalid status string should raise ValueError."""
+        """Invalid status string should raise FeatureStorageError."""
         writer = _make_writer()
         record = DerivedRunRecord(
             run_id="run-001",
@@ -107,7 +108,7 @@ class TestWriteRunStatusGuard:
             started_at="2026-03-18T00:00:00+08:00",
             finished_at=None,
         )
-        with pytest.raises(ValueError, match=r"invalid.*run.*status"):
+        with pytest.raises(FeatureStorageError, match=r"invalid.*run.*status"):
             writer.write_run(record)
 
 
@@ -121,9 +122,9 @@ class TestMarkInvalidationStatusGuard:
             writer.mark_invalidation_status("inval-001", status)  # should not raise
 
     def test_rejects_invalid_status(self) -> None:
-        """Invalid status string should raise ValueError."""
+        """Invalid status string should raise FeatureStorageError."""
         writer = _make_writer()
-        with pytest.raises(ValueError, match=r"invalid.*invalidation.*status"):
+        with pytest.raises(FeatureStorageError, match=r"invalid.*invalidation.*status"):
             writer.mark_invalidation_status("inval-001", "BOGUS")
 
 

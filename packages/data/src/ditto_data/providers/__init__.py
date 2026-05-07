@@ -1,12 +1,8 @@
 """
-Data Provider 实现 — ServiceBackedDataProvider.
+Data Provider 实现.
 
-Engine DataProvider Protocol 的实现层，组合 Domain Services
-提供统一数据访问接口。
+ServiceBackedDataProvider 已迁移至 ditto_application.builders.data_provider，
+本模块保留空壳以避免破坏性变更。
 """
 
-from ditto_data.providers.provider import ServiceBackedDataProvider
-
-__all__ = [
-    "ServiceBackedDataProvider",
-]
+__all__: list[str] = []

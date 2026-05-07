@@ -4,11 +4,25 @@ from datetime import date
 from pathlib import Path
 
 import polars as pl
-from ditto_data.storage.base import ParquetStore, YearlyPartition
 from ditto_data.storage.market.commodity.bars import (
     CommodityBarsReader,
     CommodityBarsWriter,
 )
+from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
+
+MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
+MARKET_DATE_COLUMN = "trade_date"
+MARKET_INSTRUMENT_COLUMN = "instrument_id"
+
+
+def _market_store(root: Path) -> ParquetStore:
+    return ParquetStore(
+        root,
+        YearlyPartition(),
+        key_columns=MARKET_KEY_COLUMNS,
+        date_column=MARKET_DATE_COLUMN,
+        instrument_column=MARKET_INSTRUMENT_COLUMN,
+    )
 
 
 class TestCommodityBarsStore:
@@ -16,7 +30,7 @@ class TestCommodityBarsStore:
 
     def test_write_and_read_commodity_bars(self, tmp_path: Path) -> None:
         """测试写入和读取商品行情数据."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 
@@ -44,7 +58,7 @@ class TestCommodityBarsStore:
 
     def test_read_by_instrument_id(self, tmp_path: Path) -> None:
         """测试按 instrument_id 过滤读取."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 
@@ -69,7 +83,7 @@ class TestCommodityBarsStore:
 
     def test_count_records(self, tmp_path: Path) -> None:
         """测试计数功能."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 
@@ -97,7 +111,7 @@ class TestCommodityBarsStore:
 
     def test_get_years(self, tmp_path: Path) -> None:
         """测试获取可用年份."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 
@@ -132,7 +146,7 @@ class TestCommodityBarsStore:
 
     def test_delete_records(self, tmp_path: Path) -> None:
         """测试删除记录."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 
@@ -160,7 +174,7 @@ class TestCommodityBarsStore:
 
     def test_list_instrument_ids(self, tmp_path: Path) -> None:
         """测试列出所有 instrument_id."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 
@@ -182,7 +196,7 @@ class TestCommodityBarsStore:
 
     def test_get_date_range(self, tmp_path: Path) -> None:
         """测试获取日期范围."""
-        store = ParquetStore(tmp_path, YearlyPartition())
+        store = _market_store(tmp_path)
         writer = CommodityBarsWriter(store)
         reader = CommodityBarsReader(store)
 

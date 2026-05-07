@@ -7,7 +7,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from ditto_data.services.strategy.backtest_artifact_reader import (
+from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
     BacktestArtifactReader,
     BacktestArtifactReaderProtocol,
 )

@@ -12,17 +12,21 @@
 
 ```
 ditto_kernel/
-├── instrument.py      # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
-├── order.py           # Order 子域 — OrderSide
-├── market.py          # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py        # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
-├── identity.py        # 共享身份类型（NewType）
-├── clock.py           # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── events.py          # DomainEvent + EventBus Protocol + SimpleEventBus
-├── research.py        # 研究数据集记录类型（frozen dataclass x 4）
-├── quality.py         # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
-├── exceptions.py      # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
-└── math.py            # 共享数学工具（pearson_correlation 等纯计算函数）
+├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
+├── order.py               # Order 子域 — OrderSide
+├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
+├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
+├── identity.py            # 共享身份类型（NewType）
+├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
+├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus
+├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
+├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
+├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
+├── research.py            # 研究数据集记录类型（frozen dataclass x 4）
+├── quality.py             # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
+├── publication_safety.py  # 发布安全运行时记录（frozen dataclass x 6，含结构转换方法）
+├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
+└── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
 
 ### 子域间依赖
@@ -36,35 +40,51 @@ instrument / order / market / identity: 无子域间依赖
 
 | 类型 | 模块 | 格式 | 消费者 |
 |------|------|------|--------|
-| `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Interfaces |
+| `AssetClass` | instrument.py | `StrEnum`（6 成员） | Data, Apps |
 | `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
-| `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Engine |
-| `CalendarId` | market.py | `Literal["cn_stock"]` | Analytics |
-| `GrainId` | market.py | `Literal["1d", "1m"]` | Analytics |
-| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
-| `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, App, Interfaces |
-| `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, App, Interfaces |
+| `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
+| `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
+| `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
+| `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
+| `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
+| `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
 | `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analytics, Engine |
-| `DerivedSpec` | strategy.py | frozen dataclass | Analytics, Engine |
-| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analytics, Engine |
-| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analytics, Engine |
-| `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Engine |
-| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Engine, Data, Interfaces, App |
+| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analysis, Strategy |
+| `DerivedSpec` | strategy.py | frozen dataclass | Analysis, Strategy |
+| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analysis, Strategy |
+| `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
+| `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution |
+| `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Engine, App |
+| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, Application |
+| `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
+| `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
+| `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
+| `MarketSnapshot` | trading.py | frozen dataclass | Execution, Backtest |
+| `InstrumentDefinition` | trading.py | frozen dataclass | Execution, Backtest |
+| `TradingRuleSet` | trading.py | frozen dataclass | Execution, Backtest |
+| `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
+| `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
+| `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
+| `default_price_limit_pct` | trading.py | 纯函数 | Execution |
+| `CompatibilityManifestRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
+| `DerivedMinimalDQSummaryRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
+| `ShadowDiffReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
+| `ShadowTraceRecordRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
+| `CertificationReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
+| `DerivedShadowSlotRecord` | publication_safety.py | frozen dataclass | Data, Features, Application |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
 | `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
-| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, App, Interfaces |
-| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, App, Interfaces |
-| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
-| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, App, Interfaces |
+| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, Apps, Application |
+| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, Apps, Application |
+| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
+| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
-| `DataError` | exceptions.py | `DittoError`（数据域根） | Data, App, Interfaces |
+| `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
 | `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
 | `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
@@ -73,9 +93,9 @@ instrument / order / market / identity: 无子域间依赖
 ## 架构定位
 
 ```
-interfaces → kernel ✅     app → kernel ✅
-engine → kernel ✅         analytics → kernel ✅
-data → kernel ✅           infra → kernel ❌（importlinter 禁止）
+apps → kernel ✅           application → kernel ✅
+strategy/backtest → kernel ✅  analysis → kernel ✅
+data → kernel ✅           platform → kernel ❌（importlinter 禁止）
 
 kernel → any_other_ditto_package ❌
 ```

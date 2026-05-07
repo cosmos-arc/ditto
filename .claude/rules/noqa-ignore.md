@@ -7,7 +7,7 @@ paths:
 
 ## 核心原则
 
-**核心源码零容忍**：`packages/**/src` 和 `interfaces/**/src` 中不应有任何 `# noqa` 或 `# type: ignore`。
+**核心源码零容忍**：`packages/**/src` 中不应有任何 `# noqa` 或 `# type: ignore`。
 
 **测试代码适度豁免**：测试文件可使用合理豁免（已在 `pyproject.toml` 配置）。
 
@@ -147,15 +147,15 @@ def is_valid_config(obj: Any) -> TypeGuard[ValidConfig]:
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ditto_data.storage.bars_store import BarsStore
+    from ditto_data.storage.market.stock.bars import StockBarsReader
 
 class BarsRepository:
-    def __init__(self, store: Any):
-        self._store = store
+    def __init__(self, reader: Any):
+        self._reader = reader
 
     @property
-    def store(self) -> "BarsStore":
-        return self._store  # type: ignore[no-any-return]
+    def reader(self) -> "StockBarsReader":
+        return self._reader  # type: ignore[no-any-return]
 ```
 
 ### 禁止使用
@@ -210,13 +210,13 @@ class ClassB:
 
 ```bash
 # 检查 noqa（除 S608/S108/S110）
-git grep "# noqa" packages/*/src interfaces/*/src | grep -v "S608\|S108\|S110"
+git grep "# noqa" packages/*/src | grep -v "S608\|S108\|S110"
 
 # 检查 type: ignore
-git grep "# type: ignore" packages/*/src interfaces/*/src
+git grep "# type: ignore" packages/*/src
 
 # 检查 global 语句
-git grep "^global " packages/*/src interfaces/*/src
+git grep "^global " packages/*/src
 ```
 
 ### 验证标准

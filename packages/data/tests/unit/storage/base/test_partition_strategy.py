@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from ditto_data.storage.base import PartitionStrategy, YearlyPartition
+from ditto_platform.foundation.storage import PartitionStrategy, YearlyPartition
 
 
 class TestPartitionStrategy:

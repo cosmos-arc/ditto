@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 from ditto_data.errors import (
     AuthError,
-    DataError,
     DataSourceError,
     DataValidationError,
     NetworkError,
@@ -14,6 +13,7 @@ from ditto_data.errors import (
     WriteError,
     convert_httpx_to_network_error,
 )
+from ditto_kernel.exceptions import DataError
 
 # ---------------------------------------------------------------------------
 # DataSourceError

@@ -1,5 +1,7 @@
 # ADR 0009: 影响模型 ImpactModel 治理
 
+> **[历史参考]** 本文档记录架构演进过程中的决策，包名引用可能已过时。当前包名请参考 CLAUDE.md。
+
 **状态**: 已接受
 **日期**: 2026-04-13
 **决策者**: 架构团队
@@ -11,8 +13,8 @@
 
 `ImpactModel` 定义回测中冲击成本模型的合法值，涉及两层契约：
 
-1. **Engine 层**：`ditto_engine.alpha.specs.ImpactModel = Literal["none", "volume_share"]`
-2. **Interfaces 层**：`ditto_interfaces.models.backtest.CostConfigRequest.impact_model`
+1. **Strategy 层**：`ditto_strategy.alpha.specs.ImpactModel = Literal["none", "volume_share"]`
+2. **Apps 层**：`ditto_apps.models.backtest.CostConfigRequest.impact_model`
 
 在 App 层反序列化时，`_normalize_impact_model()` 负责将 API 输入规范化为 Engine 层合法值。
 
@@ -32,7 +34,7 @@
 `_normalize_impact_model()` 对非 `None` 且不在白名单中的值，统一抛出 `ValueError`：
 
 ```python
-# packages/app/src/ditto_app/builders/runtime_builder.py
+# packages/application/src/ditto_application/builders/runtime_builder.py
 
 def _normalize_impact_model(raw: str | None) -> ImpactModel:
     """将 impact_model 字符串规范化为 ImpactModel 合法值."""
@@ -59,7 +61,7 @@ def _normalize_impact_model(raw: str | None) -> ImpactModel:
 `ImpactModel` 类型定义收窄为 `Literal["none", "volume_share"]`，同时在 Interfaces 层 `CostConfigRequest` 的 Pydantic 模型中通过 `Literal` 类型约束确保 API 层即拒绝非法值：
 
 ```python
-# interfaces/src/ditto_interfaces/models/backtest.py
+# packages/apps/src/ditto_apps/models/backtest.py
 
 class CostConfigRequest(BaseModel):
     impact_model: ImpactModel = Field(

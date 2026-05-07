@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from ditto_infra.foundation import logger
+from ditto_platform.foundation import logger
 
 from ditto_data.models.ingestion import IngestionCursor
 from ditto_data.storage.runtime.ingestion.ingestion_cursor_reader import (

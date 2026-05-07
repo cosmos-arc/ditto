@@ -1,3 +1,5 @@
+> **⚠️ Historical Document**: 本文档撰写于旧架构（engine/analytics/infra/interfaces）时期。
+> 当前架构请参考 `CLAUDE.md` 和 `docs/architecture/` 下的活跃文档。
 # 统一特征/因子引擎 - 缺口清单
 
 > **状态**: 历史参考，不再作为当前事实基础。

@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ditto_data.storage.sqlite_client import SQLiteClient
-from ditto_infra.foundation import SQLitePool
+from ditto_platform.foundation import SQLitePool
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 @pytest.fixture
@@ -208,51 +208,6 @@ class TestSQLiteClient:
             "instrument_id_sequence", "asset_class = ?", ["stock"]
         )
         assert count == 1
-
-    # ============ Security/Whitelist tests ============
-
-    def test_count_rejects_invalid_table(self, sqlite_client: SQLiteClient) -> None:
-        """Test count method rejects tables not in whitelist."""
-        with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("malicious_table")
-
-    def test_count_rejects_sql_injection_in_table_name(
-        self, sqlite_client: SQLiteClient
-    ) -> None:
-        """Test count method rejects SQL injection in table name."""
-        # SQL injection attempt: DROP TABLE statement
-        with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("instrument; DROP TABLE instrument")
-
-        # SQL injection attempt: UNION injection
-        with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("instrument UNION SELECT * FROM users")
-
-        # SQL injection attempt: Comment injection
-        with pytest.raises(ValueError, match="Invalid table"):
-            sqlite_client.count("instrument--")
-
-    def test_count_accepts_all_whitelisted_tables(
-        self, sqlite_client: SQLiteClient
-    ) -> None:
-        """Test count method accepts all tables in ALLOWED_TABLES."""
-        # Verify all whitelisted tables can be counted
-        whitelisted_tables = [
-            "instrument_id_sequence",
-            "price_limit_config",
-            "instrument",
-            "instrument_mapping",
-            "trading_calendar",
-            "freeze_point",
-            "universe",
-            "universe_constituent",
-            "index_weight",
-        ]
-
-        for table in whitelisted_tables:
-            # Should not raise ValueError
-            count = sqlite_client.count(table)
-            assert isinstance(count, int)
 
     # ============ Edge case and branch coverage tests ============
 

@@ -2,8 +2,9 @@
 
 import pytest
 from ditto_data.models import Dataset, Domain
-from ditto_data.models.common import InstrumentIdRange, OnDuplicate
+from ditto_data.models.common import InstrumentIdRange
 from ditto_kernel.quality import DQSeverity
+from ditto_platform.foundation.storage.types import OnDuplicate
 
 
 @pytest.mark.unit

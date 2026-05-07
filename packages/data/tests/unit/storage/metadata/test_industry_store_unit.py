@@ -14,7 +14,7 @@ from ditto_data.storage.metadata.industry.industry_mapping_writer import (
 )
 from ditto_data.storage.metadata.industry.industry_reader import IndustryReader
 from ditto_data.storage.metadata.industry.industry_writer import IndustryWriter
-from ditto_data.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
 
 
 def _mock_cache() -> MagicMock:
