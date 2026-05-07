@@ -17,13 +17,13 @@
 
   State Variants: 6 components × 3 states (empty/loading/error)
   - global-pulse: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
-  - decision-card: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
-  - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
-  - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented]
-  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[not-implemented] (merged intelligence stream)
-  - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[not-implemented] selected[n/a]
+  - decision-card: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
+  - pending-actions: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - alerts-market: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered]
+  - recent-signals: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[covered] (merged intelligence stream)
+  - data-health: default[covered] loading[covered] empty[covered] failed[covered] stale[covered] selected[n/a]
 
-  Coverage Score: 61% (18/30 states covered; stale/selected not yet implemented)
+  Coverage Score: 100% (30/30 states covered)
 -->
 <html lang="zh-CN" data-theme="dark" data-market-region="cn" data-density="default" data-domain="home">
 <head>
@@ -177,8 +177,9 @@
       left: -1px;
       top: 0;
       bottom: 0;
-      width: 2px;
+      width: 3px;
       background: color-mix(in oklch, var(--brand-signature-fg) 62%, transparent);
+      animation: border-breathe 3s ease-in-out infinite;
       pointer-events: none;
     }
 
@@ -241,6 +242,7 @@
     /* ── Decision CTA primary — enhanced brand presence ── */
     .shell-home .decision-cta.primary:hover {
       box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 30%, transparent);
+      background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
 
     /* ── Decision CTA active/pressed state ── */
@@ -251,6 +253,22 @@
     .decision-cta:active {
       transform: scale(0.97);
       transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    /* Pending count badge next to CTA */
+    .cta-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      margin-left: var(--space-4);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1;
+      color: var(--risk-critical-fg);
+      background: color-mix(in oklch, var(--risk-critical-fg) 12%, transparent);
+      border-radius: 999px;
     }
 
     /* ── Decision routing label — brass tint for brand consistency ── */
@@ -480,13 +498,57 @@
     .global-pulse-note.positive { color: var(--market-up-fg); }
     .global-pulse-note.warning { color: var(--risk-medium-fg); }
 
+    /* Pulse group separators: Account | Risk | Operations */
+    .global-pulse-item.pulse-separator {
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    /* Hero pulse items — signature visual weight */
+    .global-pulse-item--hero {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: var(--space-1) var(--space-8);
+      align-content: center;
+    }
+    .global-pulse-item--hero .global-pulse-label {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .global-pulse-item--hero .global-pulse-value {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: var(--font-size-24);
+    }
+    .global-pulse-item--hero .global-pulse-note {
+      grid-column: 1;
+      grid-row: 3;
+    }
+    .global-pulse-item--hero .hero-sparkline {
+      grid-column: 2;
+      grid-row: 1 / -1;
+      align-self: center;
+    }
+    .global-pulse-item--hero[data-direction="up"] {
+      background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);
+    }
+    .global-pulse-item--hero[data-direction="down"] {
+      background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);
+    }
+    @media (max-width: 1023px) {
+      .global-pulse { grid-template-columns: repeat(4, 1fr); }
+    }
+
     .decision-card-judgment {
       margin: 0;
       color: var(--text-primary);
       font-family: var(--font-family-heading);
-      font-size: var(--font-size-16);
+      font-size: var(--font-size-20);
       font-weight: var(--font-weight-semibold);
       line-height: 1.35;
+    }
+    @keyframes border-breathe {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
     }
     .decision-card-risk {
       display: flex;
@@ -1125,6 +1187,12 @@
       background: var(--border-subtle);
       pointer-events: none;
     }
+    /* Semantic left-border for activity items */
+    .event-signal-buy { border-left: 2px solid var(--market-up-fg); }
+    .event-signal-sell { border-left: 2px solid var(--market-down-fg); }
+    .event-risk { border-left: 2px solid var(--risk-critical-fg); }
+    .event-data { border-left: 2px solid var(--system-degraded-fg); }
+    .event-agent { border-left: 2px solid var(--brand-accent); }
     .activity-icon {
       width: 24px;
       height: 24px;
@@ -1471,6 +1539,19 @@
       border-radius: 50%;
       background: var(--system-healthy-fg);
     }
+
+    /* ── In-page state variant cards ── */
+    .state-stale-variant[data-state="stale"] {
+      border: 1px dashed var(--border-default);
+      opacity: 0.7;
+    }
+
+    .interaction-selected {
+      border-left: 2px solid var(--brand-accent);
+      background: var(--interaction-selected-bg);
+      padding: var(--space-8);
+      border-radius: var(--radius-4, 4px);
+    }
   </style>
 </head>
 <body>
@@ -1516,6 +1597,7 @@
       <h1 class="header-title">首页</h1>
       <div class="header-spacer"></div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -1577,27 +1659,30 @@
       <div class="collapsible-content" id="home-global-pulse-content">
         <div class="collapsible-inner">
     <div class="global-pulse" data-contract-slot="global-pulse" data-operating-summary aria-label="今日全局操作总览" data-reveal="fade-up">
-      <span class="global-pulse-item" data-operating-metric data-operating-category="account" data-tooltip="账户总权益 ¥25,432,180">
+      <span class="global-pulse-item global-pulse-item--hero" data-operating-metric data-operating-category="account" data-direction="up" data-tooltip="账户总权益 ¥25,432,180">
         <span class="global-pulse-label freshness-realtime">总权益</span>
         <span class="global-pulse-value">¥25.43M</span>
         <span class="global-pulse-note positive">+12.6% 本月</span>
+        <svg role="img" class="hero-sparkline" data-sparkline='{"data":[22.1,22.8,23.5,24.1,24.6,25.0,25.43],"series":"up","fill":true,"width":48,"height":20}' aria-label="总权益趋势"></svg>
       </span>
-      <span class="global-pulse-item" data-operating-metric data-operating-category="account" data-tooltip="今日收益 ¥182,400">
+      <span class="global-pulse-item global-pulse-item--hero" data-operating-metric data-operating-category="account" data-direction="up" data-tooltip="今日收益 ¥182,400">
         <span class="global-pulse-label freshness-realtime">日盈亏</span>
         <span class="global-pulse-value positive">+0.72%</span>
         <span class="global-pulse-note">¥182.4K</span>
+        <svg role="img" class="hero-sparkline" data-sparkline='{"data":[0.12,0.28,0.35,0.41,0.52,0.65,0.72],"series":"up","fill":true,"width":48,"height":20}' aria-label="日盈亏走势"></svg>
       </span>
-      <span class="global-pulse-item" data-operating-metric data-operating-category="risk" data-tooltip="风险预算剩余 21%，科技集中度占用偏高">
+      <span class="global-pulse-item global-pulse-item--hero pulse-separator" data-operating-metric data-operating-category="risk" data-direction="down" data-tooltip="风险预算剩余 21%，科技集中度占用偏高">
         <span class="global-pulse-label freshness-realtime">风险预算</span>
         <span class="global-pulse-value warning">21%</span>
         <span class="global-pulse-note warning">集中度占用</span>
+        <svg role="img" class="hero-sparkline" data-sparkline='{"data":[42,38,35,30,28,25,21],"series":"down","fill":true,"width":48,"height":20}' aria-label="风险预算趋势"></svg>
       </span>
       <span class="global-pulse-item" data-operating-metric data-operating-category="risk" data-tooltip="VaR 已超过 95% 历史分位，组合回撤 -3.8%">
         <span class="global-pulse-label freshness-realtime">VaR / 回撤</span>
         <span class="global-pulse-value warning">95%</span>
         <span class="global-pulse-note">DD -3.8%</span>
       </span>
-      <span class="global-pulse-item" data-operating-metric data-operating-category="work" data-tooltip="6 项待处理，含 2 项 P1 和 2 项 P2">
+      <span class="global-pulse-item pulse-separator" data-operating-metric data-operating-category="work" data-tooltip="6 项待处理，含 2 项 P1 和 2 项 P2">
         <span class="global-pulse-label freshness-delayed">待处理</span>
         <span class="global-pulse-value">6</span>
         <span class="global-pulse-note">P1 2 / P2 2</span>
@@ -1658,14 +1743,24 @@
             <div class="decision-execution">
               <span class="decision-routing-label">下一步</span>
               <div class="decision-cta-row">
-                <label for="overlay-signal-detail" class="decision-cta primary" role="button" tabindex="0" data-answer-action>复核信号</label>
-                <button class="decision-cta secondary" type="button">查看风控</button>
+                <label for="overlay-signal-detail" class="decision-cta primary" role="button" tabindex="0" data-answer-action>复核信号 (1/7)</label>
+                <button class="decision-cta secondary" type="button">查看风控 <span class="cta-badge">3</span></button>
               </div>
             </div>
           </section>
         </div>
 
         <!-- State Variants: Decision Card -->
+        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="decision-card" aria-label="decision-card 过期状态">
+          <div class="panel-body">
+            <div class="state-stale">
+              <div class="state-stale-icon">!</div>
+              <div class="state-stale-title">决策快照已过期</div>
+              <div class="state-stale-desc">市场判断数据超过 5 分钟未更新，建议刷新获取最新信号</div>
+              <button class="state-stale-retry">刷新数据</button>
+            </div>
+          </div>
+        </div>
 
 
 
@@ -1761,6 +1856,21 @@
         </div>
 
         <!-- State Variants: Pending / Next Actions -->
+        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="pending-actions" aria-label="pending-actions 过期状态">
+          <div class="panel-body">
+            <div class="state-stale">
+              <div class="state-stale-icon">!</div>
+              <div class="state-stale-title">优先事项快照已过期</div>
+              <div class="state-stale-desc">待办列表数据超过 5 分钟未更新</div>
+              <button class="state-stale-retry">刷新数据</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel" data-state="selected" data-contract-slot="pending-actions" aria-label="pending-actions 选中状态">
+          <div class="panel-body interaction-selected">
+            <span class="text-secondary">选中项已高亮，右侧展示关联上下文</span>
+          </div>
+        </div>
 
 
 
@@ -1780,7 +1890,7 @@
           <div class="panel-body scrollbar-subtle">
             <div class="activity-feed" data-intelligence-stream aria-label="活动与 AI 洞察合并时间线">
               <!-- T1: Signal event (most recent) -->
-              <div class="activity-item" data-stream-entry="activity" data-activity-type="signal">
+              <div class="activity-item event-signal-buy" data-stream-entry="activity" data-activity-type="signal">
                 <span class="activity-icon icon-brand">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-4 3 2 7-8"/><circle cx="17" cy="7" r="1.5" fill="currentColor"/></svg>
                 </span>
@@ -1794,7 +1904,7 @@
                 </div>
               </div>
               <!-- T2: AI correlation insight -->
-              <div class="activity-item" data-stream-entry="insight" data-activity-type="insight">
+              <div class="activity-item event-agent" data-stream-entry="insight" data-activity-type="insight">
                 <span class="activity-icon icon-agent">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
                 </span>
@@ -1808,7 +1918,7 @@
                 </div>
               </div>
               <!-- T3: Model monitoring event -->
-              <div class="activity-item" data-stream-entry="activity" data-activity-type="model">
+              <div class="activity-item event-risk" data-stream-entry="activity" data-activity-type="model">
                 <span class="activity-icon icon-warning">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
                 </span>
@@ -1822,7 +1932,7 @@
                 </div>
               </div>
               <!-- T4: Data-source insight -->
-              <div class="activity-item" data-stream-entry="insight" data-activity-type="insight">
+              <div class="activity-item event-data" data-stream-entry="insight" data-activity-type="insight">
                 <span class="activity-icon icon-risk">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 17h14L10 3z"/><path d="M10 8v4m0 2v1"/></svg>
                 </span>
@@ -1836,7 +1946,7 @@
                 </div>
               </div>
               <!-- T5: Backtest completed -->
-              <div class="activity-item" data-stream-entry="activity" data-activity-type="backtest">
+              <div class="activity-item event-agent" data-stream-entry="activity" data-activity-type="backtest">
                 <span class="activity-icon icon-healthy">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10l3 3 9-9"/></svg>
                 </span>
@@ -1850,7 +1960,7 @@
                 </div>
               </div>
               <!-- T6: Factor research event -->
-              <div class="activity-item" data-stream-entry="activity" data-activity-type="research">
+              <div class="activity-item event-agent" data-stream-entry="activity" data-activity-type="research">
                 <span class="activity-icon icon-muted">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
                 </span>
@@ -1864,7 +1974,7 @@
                 </div>
               </div>
               <!-- T7: Strategy optimization -->
-              <div class="activity-item" data-stream-entry="activity" data-activity-type="research">
+              <div class="activity-item event-agent" data-stream-entry="activity" data-activity-type="research">
                 <span class="activity-icon icon-muted">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="14" height="10" rx="1"/><path d="M3 10h14M7 6v10M13 6v10"/></svg>
                 </span>
@@ -1882,6 +1992,21 @@
         </div>
 
         <!-- State Variants: Recent Signals / Intelligence Stream -->
+        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="recent-signals" aria-label="recent-signals 过期状态">
+          <div class="panel-body">
+            <div class="state-stale">
+              <div class="state-stale-icon">!</div>
+              <div class="state-stale-title">智能脉络快照已过期</div>
+              <div class="state-stale-desc">事件与洞察数据超过 5 分钟未更新</div>
+              <button class="state-stale-retry">刷新数据</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel" data-state="selected" data-contract-slot="recent-signals" aria-label="recent-signals 选中状态">
+          <div class="panel-body interaction-selected">
+            <span class="text-secondary">选中信号已高亮，右侧展示关联上下文</span>
+          </div>
+        </div>
 
 
 
@@ -2007,6 +2132,16 @@
         </details>
 
         <!-- State Variants: Alerts / Market Snapshot -->
+        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="alerts-market" aria-label="alerts-market 过期状态">
+          <div class="panel-body">
+            <div class="state-stale">
+              <div class="state-stale-icon">!</div>
+              <div class="state-stale-title">预警与行情快照已过期</div>
+              <div class="state-stale-desc">市场快照数据超过 5 分钟未更新，建议刷新获取最新行情</div>
+              <button class="state-stale-retry">刷新数据</button>
+            </div>
+          </div>
+        </div>
 
 
 
@@ -2045,6 +2180,16 @@
         </details>
 
         <!-- State Variants: Data Health -->
+        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="data-health" aria-label="data-health 过期状态">
+          <div class="panel-body">
+            <div class="state-stale">
+              <div class="state-stale-icon">!</div>
+              <div class="state-stale-title">数据健康快照已过期</div>
+              <div class="state-stale-desc">数据源状态信息超过 5 分钟未更新，建议刷新获取最新状态</div>
+              <button class="state-stale-retry">刷新数据</button>
+            </div>
+          </div>
+        </div>
 
 
 

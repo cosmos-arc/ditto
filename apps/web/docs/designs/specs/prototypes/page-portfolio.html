@@ -9,10 +9,15 @@
   - tab-trades (交易) [covered]
   - tab-attribution (归因) [covered]
 
-  Overlays: 3
+  Overlays: 8
   - overlay-position-detail (Drawer: 持仓详情) [covered]
   - overlay-trade-detail (Drawer: 成交详情) [covered]
   - overlay-confirm-close-all (Modal: 确认全部平仓) [covered]
+  - exposure-consumer (Drawer: 消费行业持仓) [covered]
+  - exposure-energy (Drawer: 新能源行业持仓) [covered]
+  - exposure-tech (Drawer: 科技行业持仓) [covered]
+  - exposure-finance (Drawer: 金融行业持仓) [covered]
+  - exposure-pharma (Drawer: 医药行业持仓) [covered]
 
   State Variants: 4 components × multi-state
   - portfolio-summary: default[covered] loading[covered] empty[covered] failed[covered] stale[covered]
@@ -266,6 +271,7 @@
     .activity-header { padding: var(--space-10) var(--space-12); border-bottom: 1px solid var(--border-subtle); }
     .activity-header-title { font-size: var(--font-size-13); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
     .activity-header-subtitle { font-size: var(--font-size-12); color: var(--text-tertiary); margin-top: var(--space-2); }
+    .benchmark-selector { margin-left: auto; font-size: var(--font-size-11); color: var(--text-secondary); background: var(--surface-strip); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); padding: var(--space-2) var(--space-6); cursor: pointer; font-family: var(--font-family-ui); }
     .activity-body { flex: 1; min-height: 0; padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-8); }
     .pnl-chart {
       flex: 1;
@@ -505,6 +511,50 @@
     .bar-w-18 { width: 18%; }
     .bar-w-13 { width: 13%; }
     .mt-12 { margin-top: var(--space-12); }
+
+    /* ═══ Task 4.6: Mini Donut (行业分布) ═══ */
+    .mini-donut { position: relative; width: 64px; height: 64px; border-radius: 50%; }
+    .mini-donut-ring { width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(var(--brand-accent) 0% 35%, var(--market-up-fg) 35% 60%, var(--market-down-fg) 60% 80%, var(--text-tertiary) 80% 100%); mask: radial-gradient(circle at center, transparent 55%, black 55%); -webkit-mask: radial-gradient(circle at center, transparent 55%, black 55%); }
+    .mini-donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: var(--font-size-12); font-weight: var(--font-weight-semibold); color: var(--text-secondary); font-family: var(--font-family-numeric); }
+    .mini-donut-row { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-4) 0; }
+    .mini-donut-label { font-size: var(--font-size-11); color: var(--text-tertiary); }
+    .mini-donut-legend { display: flex; flex-direction: column; gap: var(--space-2); }
+    .mini-donut-legend-item { display: flex; align-items: center; gap: var(--space-4); font-size: var(--font-size-10); color: var(--text-tertiary); }
+    .mini-donut-legend-dot { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+    .mini-donut-legend-dot.c1 { background: var(--brand-accent); }
+    .mini-donut-legend-dot.c2 { background: var(--market-up-fg); }
+    .mini-donut-legend-dot.c3 { background: var(--market-down-fg); }
+    .mini-donut-legend-dot.c4 { background: var(--text-tertiary); }
+
+    /* ═══ Task 4.7: Benchmark line + legend + drawdown zone ═══ */
+    .benchmark-line { stroke: var(--chart-grid-major); stroke-dasharray: 4 2; stroke-width: 1.5; fill: none; }
+    .drawdown-zone { fill: color-mix(in oklch, var(--market-down-fg) 10%, transparent); }
+    .chart-legend { display: flex; gap: var(--space-16); font-size: var(--font-size-11); color: var(--text-tertiary); margin-top: var(--space-4); }
+    .chart-legend-item { display: flex; align-items: center; gap: var(--space-4); }
+    .chart-legend-line { width: 16px; height: 2px; }
+    .chart-legend-line.portfolio { background: var(--brand-accent); }
+    .chart-legend-line.benchmark { background: var(--chart-grid-major); background: repeating-linear-gradient(90deg, var(--chart-grid-major) 0 4px, transparent 4px 6px); }
+
+    /* ═══ Task 4.8: Exposure tile clickable + drawer ═══ */
+    .exposure-tile { cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+    .exposure-tile:hover { border-color: var(--brand-accent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-accent) 25%, transparent); }
+    .exposure-drawer-overlay { display: none; position: fixed; inset: 0; z-index: 1100; }
+    .exposure-drawer-backdrop { position: absolute; inset: 0; cursor: pointer; background: var(--surface-overlay); }
+    .exposure-drawer-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 380px; background: var(--surface-elevated); border-left: 1px solid var(--border-subtle); overflow-y: auto; padding: var(--space-16); box-shadow: -8px 0 32px color-mix(in oklch, var(--neutral-0) 30%, transparent); }
+    .exposure-drawer-title { font-size: var(--font-size-14); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-12); }
+    .exposure-drawer-close { min-height: 24px; cursor: pointer; font-size: var(--font-size-14); color: var(--text-tertiary); background: none; border: none; padding: var(--space-4); border-radius: var(--radius-4); }
+    .exposure-drawer-close:hover { color: var(--text-secondary); }
+    .exposure-holding-row { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-8); padding: var(--space-8) 0; border-bottom: 1px solid var(--border-subtle); font-size: var(--font-size-12); align-items: center; }
+    .exposure-holding-ticker { color: var(--text-primary); font-weight: var(--font-weight-medium); }
+    .exposure-holding-weight { color: var(--text-secondary); font-family: var(--font-family-numeric); }
+    .exposure-holding-pnl { font-family: var(--font-family-numeric); }
+    :root:has(#exposure-consumer:checked) [data-exposure-drawer="consumer"],
+    :root:has(#exposure-energy:checked) [data-exposure-drawer="energy"],
+    :root:has(#exposure-tech:checked) [data-exposure-drawer="tech"],
+    :root:has(#exposure-finance:checked) [data-exposure-drawer="finance"],
+    :root:has(#exposure-pharma:checked) [data-exposure-drawer="pharma"] {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -515,6 +565,12 @@
   <input type="checkbox" id="overlay-position-detail" class="sr-only">
   <input type="checkbox" id="overlay-trade-detail" class="sr-only">
   <input type="checkbox" id="overlay-confirm-close-all" class="sr-only">
+  <input type="radio" name="exposure-drawer" id="exposure-none" checked class="sr-only">
+  <input type="radio" name="exposure-drawer" id="exposure-consumer" class="sr-only">
+  <input type="radio" name="exposure-drawer" id="exposure-energy" class="sr-only">
+  <input type="radio" name="exposure-drawer" id="exposure-tech" class="sr-only">
+  <input type="radio" name="exposure-drawer" id="exposure-finance" class="sr-only">
+  <input type="radio" name="exposure-drawer" id="exposure-pharma" class="sr-only">
 
   <nav class="proto-nav" aria-label="原型视图切换">
     <label for="view-default" class="proto-nav__tab">页面设计</label>
@@ -560,6 +616,7 @@
 
           </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -1000,6 +1057,12 @@
           <div class="activity-header">
             <div class="activity-header-title">PnL 曲线</div>
             <div class="activity-header-subtitle">近 30 日 · 累计收益率</div>
+            <select class="benchmark-selector" aria-label="选择对比基准">
+              <option value="none">无基准</option>
+              <option value="hs300" selected>沪深 300</option>
+              <option value="zz500">中证 500</option>
+              <option value="cyb">创业板指</option>
+            </select>
           </div>
           <div class="activity-body">
             <div class="pnl-chart" aria-label="近 30 日组合 PnL 曲线">
@@ -1009,11 +1072,21 @@
                 <line class="pnl-grid-line" x1="0" y1="172" x2="260" y2="172"></line>
                 <line class="pnl-grid-line" x1="0" y1="236" x2="260" y2="236"></line>
                 <line class="pnl-baseline" x1="0" y1="208" x2="260" y2="208"></line>
+                <!-- Task 4.7: Drawdown zone highlight -->
+                <rect class="drawdown-zone" x="102" y="174" width="80" height="48" rx="2"></rect>
+                <!-- Area + Portfolio line -->
                 <path class="pnl-area" d="M0 226 C20 218 32 230 48 214 C70 190 84 198 102 174 C122 146 142 158 162 122 C184 94 204 118 222 78 C238 58 248 66 260 48 L260 300 L0 300 Z"></path>
                 <path class="pnl-line" d="M0 226 C20 218 32 230 48 214 C70 190 84 198 102 174 C122 146 142 158 162 122 C184 94 204 118 222 78 C238 58 248 66 260 48"></path>
+                <!-- Task 4.7: Benchmark line (沪深 300) -->
+                <polyline class="benchmark-line" points="0,220 30,216 60,210 90,204 120,198 150,188 180,180 210,172 240,164 260,158"></polyline>
                 <path class="pnl-drawdown" d="M0 252 C24 248 42 258 58 242 C78 230 92 236 110 218 C134 205 152 212 170 192 C196 182 214 196 232 176 C246 166 254 170 260 164"></path>
                 <circle class="pnl-point" cx="260" cy="48" r="4"></circle>
               </svg>
+              <!-- Task 4.7: Chart legend -->
+              <div class="chart-legend">
+                <div class="chart-legend-item"><span class="chart-legend-line portfolio"></span>组合</div>
+                <div class="chart-legend-item"><span class="chart-legend-line benchmark"></span>沪深 300</div>
+              </div>
               <div class="pnl-axis-labels">
                 <span>03-22</span>
                 <span>04-05</span>
@@ -1032,6 +1105,19 @@
               <div class="pnl-stat">
                 <div class="pnl-stat-label">回撤</div>
                 <div class="pnl-stat-value text-down dir-down">-3.24%</div>
+              </div>
+            </div>
+            <!-- Task 4.6: Mini donut — 行业分布概览 -->
+            <div class="mini-donut-row">
+              <div class="mini-donut" aria-label="行业分布">
+                <div class="mini-donut-ring"></div>
+                <span class="mini-donut-center">4</span>
+              </div>
+              <div class="mini-donut-legend">
+                <div class="mini-donut-legend-item"><span class="mini-donut-legend-dot c1"></span>消费 35%</div>
+                <div class="mini-donut-legend-item"><span class="mini-donut-legend-dot c2"></span>新能源 25%</div>
+                <div class="mini-donut-legend-item"><span class="mini-donut-legend-dot c3"></span>医药 20%</div>
+                <div class="mini-donut-legend-item"><span class="mini-donut-legend-dot c4"></span>金融/科技 20%</div>
               </div>
             </div>
           </div>
@@ -1063,26 +1149,26 @@
             <div class="analysis-panel">
               <div class="analysis-panel-title">集中度热区 <span class="analysis-panel-note">行业权重 / 今日贡献</span></div>
               <div class="exposure-heat" aria-label="行业集中度热区">
-                <div class="exposure-tile positive">
+                <label for="exposure-consumer" class="exposure-tile positive">
                   <span class="exposure-name">消费</span>
                   <span class="exposure-value">28% · +0.12</span>
-                </div>
-                <div class="exposure-tile positive">
+                </label>
+                <label for="exposure-energy" class="exposure-tile positive">
                   <span class="exposure-name">新能源</span>
                   <span class="exposure-value">20% · +0.09</span>
-                </div>
-                <div class="exposure-tile">
+                </label>
+                <label for="exposure-tech" class="exposure-tile">
                   <span class="exposure-name">科技</span>
                   <span class="exposure-value">16% · +0.05</span>
-                </div>
-                <div class="exposure-tile positive">
+                </label>
+                <label for="exposure-finance" class="exposure-tile positive">
                   <span class="exposure-name">金融</span>
                   <span class="exposure-value">14% · +0.06</span>
-                </div>
-                <div class="exposure-tile negative">
+                </label>
+                <label for="exposure-pharma" class="exposure-tile negative">
                   <span class="exposure-name">医药</span>
                   <span class="exposure-value">10% · -0.04</span>
-                </div>
+                </label>
               </div>
             </div>
             <div class="analysis-panel">
@@ -1188,6 +1274,72 @@
             <label for="overlay-confirm-close-all" class="overlay-btn overlay-btn-danger">确认平仓</label>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ═══ Task 4.8: Exposure Drawers (CSS-only radio toggle) ═══ -->
+    <!-- Consumer -->
+    <div class="exposure-drawer-overlay" data-exposure-drawer="consumer" role="dialog" aria-modal="true" aria-label="消费行业持仓">
+      <label class="exposure-drawer-backdrop" for="exposure-none" aria-label="关闭"></label>
+      <div class="exposure-drawer-panel">
+        <div class="drawer-header">
+          <span class="exposure-drawer-title">消费 · 行业持仓</span>
+          <label for="exposure-none" class="exposure-drawer-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">贵州茅台 600519.SH</span><span class="exposure-holding-weight">13.1%</span><span class="exposure-holding-pnl text-up dir-up">+15,360</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">五粮液 000858.SZ</span><span class="exposure-holding-weight">8.5%</span><span class="exposure-holding-pnl text-up dir-up">+4,200</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">泸州老窖 000568.SZ</span><span class="exposure-holding-weight">6.4%</span><span class="exposure-holding-pnl text-down dir-down">-1,320</span></div>
+      </div>
+    </div>
+    <!-- Energy -->
+    <div class="exposure-drawer-overlay" data-exposure-drawer="energy" role="dialog" aria-modal="true" aria-label="新能源行业持仓">
+      <label class="exposure-drawer-backdrop" for="exposure-none" aria-label="关闭"></label>
+      <div class="exposure-drawer-panel">
+        <div class="drawer-header">
+          <span class="exposure-drawer-title">新能源 · 行业持仓</span>
+          <label for="exposure-none" class="exposure-drawer-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">宁德时代 300750.SZ</span><span class="exposure-holding-weight">7.4%</span><span class="exposure-holding-pnl text-up dir-up">+5,900</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">比亚迪 002594.SZ</span><span class="exposure-holding-weight">5.5%</span><span class="exposure-holding-pnl text-down dir-down">-1,980</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">隆基绿能 601012.SH</span><span class="exposure-holding-weight">4.2%</span><span class="exposure-holding-pnl text-up dir-up">+890</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">阳光电源 300274.SZ</span><span class="exposure-holding-weight">2.9%</span><span class="exposure-holding-pnl text-down dir-down">-460</span></div>
+      </div>
+    </div>
+    <!-- Tech -->
+    <div class="exposure-drawer-overlay" data-exposure-drawer="tech" role="dialog" aria-modal="true" aria-label="科技行业持仓">
+      <label class="exposure-drawer-backdrop" for="exposure-none" aria-label="关闭"></label>
+      <div class="exposure-drawer-panel">
+        <div class="drawer-header">
+          <span class="exposure-drawer-title">科技 · 行业持仓</span>
+          <label for="exposure-none" class="exposure-drawer-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">中芯国际 688981.SH</span><span class="exposure-holding-weight">5.9%</span><span class="exposure-holding-pnl text-down dir-down">-2,160</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">腾讯控股 00700.HK</span><span class="exposure-holding-weight">10.1%</span><span class="exposure-holding-pnl text-up dir-up">+3,480</span></div>
+      </div>
+    </div>
+    <!-- Finance -->
+    <div class="exposure-drawer-overlay" data-exposure-drawer="finance" role="dialog" aria-modal="true" aria-label="金融行业持仓">
+      <label class="exposure-drawer-backdrop" for="exposure-none" aria-label="关闭"></label>
+      <div class="exposure-drawer-panel">
+        <div class="drawer-header">
+          <span class="exposure-drawer-title">金融 · 行业持仓</span>
+          <label for="exposure-none" class="exposure-drawer-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">招商银行 600036.SH</span><span class="exposure-holding-weight">5.2%</span><span class="exposure-holding-pnl text-up dir-up">+1,650</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">中国平安 601318.SH</span><span class="exposure-holding-weight">5.6%</span><span class="exposure-holding-pnl text-up dir-up">+976</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">中信证券 600030.SH</span><span class="exposure-holding-weight">3.2%</span><span class="exposure-holding-pnl text-down dir-down">-340</span></div>
+      </div>
+    </div>
+    <!-- Pharma -->
+    <div class="exposure-drawer-overlay" data-exposure-drawer="pharma" role="dialog" aria-modal="true" aria-label="医药行业持仓">
+      <label class="exposure-drawer-backdrop" for="exposure-none" aria-label="关闭"></label>
+      <div class="exposure-drawer-panel">
+        <div class="drawer-header">
+          <span class="exposure-drawer-title">医药 · 行业持仓</span>
+          <label for="exposure-none" class="exposure-drawer-close" aria-label="关闭">✕</label>
+        </div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">药明康德 603259.SH</span><span class="exposure-holding-weight">5.6%</span><span class="exposure-holding-pnl text-down dir-down">-1,080</span></div>
+        <div class="exposure-holding-row"><span class="exposure-holding-ticker">恒瑞医药 600276.SH</span><span class="exposure-holding-weight">4.4%</span><span class="exposure-holding-pnl text-up dir-up">+620</span></div>
       </div>
     </div>
   </section>

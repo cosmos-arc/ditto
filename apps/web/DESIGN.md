@@ -57,12 +57,12 @@ colors:
   # ── L2 Semantic: Text Hierarchy ──
   text:
     primary:    "oklch(0.940 0.004 253)"
-    secondary:  "oklch(0.655 0.007 253)"
-    tertiary:   "oklch(0.480 0.007 253)"
-    quaternary: "oklch(0.490 0.006 253)"
+    secondary:  "oklch(0.660 0.007 253)"
+    tertiary:   "oklch(0.605 0.007 253)"
+    quaternary: "oklch(0.580 0.006 253)"
     disabled:   "oklch(0.415 0.005 253)"
     inverse:    "{colors.neutral.0}"
-    data-stale: "oklch(0.490 0.006 253)"
+    data-stale: "oklch(0.660 0.020 55)"
     link:       "{colors.brand.500}"
     link-hover: "{colors.brand.400}"
     error:      "{colors.functional.red.500}"

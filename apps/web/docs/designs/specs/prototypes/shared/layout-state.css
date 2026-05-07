@@ -122,6 +122,60 @@
   100% { background-position: -200% 0; }
 }
 
+/* ── Data Tick — numeric value update micro-animation ── */
+@keyframes data-tick {
+  0%   { opacity: 0.85; transform: translateX(2px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.data-updated {
+  animation: data-tick var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
+/* ── Sparkline Pulse — trailing dot indicator on sparklines ── */
+@keyframes sparkline-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.sparkline-dot {
+  animation: sparkline-pulse 3s ease-in-out infinite;
+}
+
+/* ── Alert Stream Animations ── */
+@keyframes alert-slide-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes alert-flash-border {
+  0%, 100% { border-top-color: transparent; }
+  50%      { border-top-color: var(--risk-critical-fg); }
+}
+
+.alert-item--new {
+  animation: alert-slide-in var(--motion-duration-normal) var(--motion-easing-emphasis) both;
+}
+
+.alert-item--critical {
+  border-top: 2px solid transparent;
+  animation: alert-flash-border 200ms ease-in-out 2;
+}
+
+.alert-dismissing {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
+              max-height var(--motion-duration-normal) var(--motion-easing-standard),
+              padding var(--motion-duration-normal) var(--motion-easing-standard),
+              margin var(--motion-duration-normal) var(--motion-easing-standard);
+}
+
 /* ── Semantic Feedback Motion ── */
 .semantic-value-flash {
   animation: semantic-value-flash var(--motion-duration-normal) var(--motion-easing-emphasis) both;
@@ -203,6 +257,7 @@
   .all-clear-icon,
   .alert-dot.critical,
   .alert-dot.critical::after,
+  .alert-slide-in,
   .badge-dot,
   .breach-dot.critical,
   .breach-dot.warn,
@@ -231,7 +286,9 @@
   .topo-node.topo-warn,
   [class*="breathe"],
   [class*="pulse"],
-  [class*="spin"] {
+  [class*="spin"],
+  .data-updated,
+  .sparkline-dot {
     animation: none !important;
   }
 

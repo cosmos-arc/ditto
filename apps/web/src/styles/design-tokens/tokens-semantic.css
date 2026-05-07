@@ -25,11 +25,22 @@
   /* Elevated: raised interactive — buttons, gallery headers, overlay cards */
   --surface-elevated:          var(--neutral-75);
 
-  /* ── Text Hierarchy (5 levels) ── */
+  /* ── Text Hierarchy (5 levels) ──
+   * Usage rules:
+   *   primary   — headings, key data, interactive labels
+   *   secondary — body text, descriptions, secondary data
+   *   tertiary  — metadata, timestamps, helper text, table headers
+   *   quaternary — decorative only (section dividers, watermarks, placeholders)
+   *               NOT for business-critical or operational text
+   *   disabled  — non-interactive, low-contrast (WCAG exempt per 1.4.3)
+   *
+   * Surface restrictions:
+   *   tertiary/quaternary on surface-modal/overlay: use secondary instead
+   *   disabled: acceptable at any contrast level per WCAG */
   --text-primary:              oklch(0.940 0.004 253);
   --text-secondary:            oklch(0.660 0.007 253);
-  --text-tertiary:             oklch(0.580 0.007 253);
-  --text-quaternary:           oklch(0.560 0.006 253);
+  --text-tertiary:             oklch(0.605 0.007 253);
+  --text-quaternary:           oklch(0.580 0.006 253);
   --text-disabled:             oklch(0.415 0.005 253);
   --text-inverse:              var(--neutral-0);
   --text-data-stale:           oklch(0.660 0.020 55);
@@ -157,11 +168,11 @@
   --surface-muted:             var(--neutral-50);
   --surface-elevated:          var(--neutral-75);
 
-  /* Text Hierarchy — dark on light */
+  /* Text Hierarchy — dark on light (usage rules mirror dark mode) */
   --text-primary:              oklch(0.140 0.015 253);
   --text-secondary:            oklch(0.400 0.015 253);
-  --text-tertiary:             oklch(0.490 0.010 253);
-  --text-quaternary:           oklch(0.620 0.008 253);
+  --text-tertiary:             oklch(0.465 0.010 253);
+  --text-quaternary:           oklch(0.600 0.008 253);
   --text-disabled:             oklch(0.750 0.006 253);
   --text-inverse:              oklch(0.99 0.002 253);
   --text-data-stale:           oklch(0.500 0.018 55);

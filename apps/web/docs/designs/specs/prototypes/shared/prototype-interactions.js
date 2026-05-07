@@ -471,6 +471,16 @@
         area.setAttribute('fill', fillColor);
         svg.appendChild(area);
       }
+
+      /* trailing pulse dot */
+      var lastPt = pts[pts.length - 1];
+      var dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', String(lastPt.x));
+      dot.setAttribute('cy', String(lastPt.y));
+      dot.setAttribute('r', '2');
+      dot.setAttribute('fill', stroke);
+      dot.setAttribute('class', 'sparkline-dot');
+      svg.appendChild(dot);
     },
 
     /* Catmull-Rom → Cubic Bezier */
@@ -737,6 +747,9 @@
             if (isNaN(newTarget)) return;
             state.from = state.current;
             DataCounter._animate(el, state, newTarget);
+            /* data-tick micro-animation on value change */
+            el.classList.add('data-updated');
+            setTimeout(function () { el.classList.remove('data-updated'); }, 300);
           }
         });
       });
@@ -3807,6 +3820,7 @@
     BulletGraph.init();
     PrototypeChartInteractions.init();
     StripCollapse.init();
+    AlertStream.init();
   }
 
   /* ══════════════════════════════════════════════
@@ -3896,7 +3910,39 @@
   };
 
   /* ══════════════════════════════════════════════
-   * 20. Atmosphere — data-atmosphere-intensity
+   * 20. AlertStream — alert slide-in + dismiss
+   * ══════════════════════════════════════════════ */
+  var AlertStream = {
+    init: function () {
+      /* Bind dismiss buttons */
+      document.querySelectorAll('[data-answer-action="dismiss-alert"]').forEach(function (btn) {
+        if (btn.getAttribute('data-alert-stream-ready')) return;
+        btn.setAttribute('data-alert-stream-ready', 'true');
+        btn.addEventListener('click', function () {
+          var alertItem = btn.closest('.alert-row') || btn.closest('[data-alert-item]');
+          if (!alertItem) return;
+          alertItem.classList.add('alert-dismissing');
+          setTimeout(function () { alertItem.style.display = 'none'; }, 300);
+          AlertStream._updateBadge();
+        });
+      });
+
+      /* Mark existing critical alerts */
+      document.querySelectorAll('.alert-dot.critical').forEach(function (dot) {
+        var row = dot.closest('.alert-row') || dot.closest('[data-alert-item]');
+        if (row) row.classList.add('alert-item--critical');
+      });
+    },
+
+    _updateBadge: function () {
+      var visible = document.querySelectorAll('.alert-row:not([style*="display: none"]):not(.alert-dismissing)');
+      var badge = document.querySelector('.alert-count-badge');
+      if (badge) badge.textContent = visible.length;
+    },
+  };
+
+  /* ══════════════════════════════════════════════
+   * 21. Atmosphere — data-atmosphere-intensity
    *     API for manual/future perceptible chromatic mode.
    *     Not part of the init chain.
    * ══════════════════════════════════════════════ */

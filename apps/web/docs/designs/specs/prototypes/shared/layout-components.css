@@ -1496,6 +1496,13 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .data-table tr.row:hover,
 .data-table tbody tr:hover {
   background: var(--interaction-hover-subtle-bg);
+  box-shadow: inset 2px 0 0 var(--brand-accent);
+}
+
+.data-table tr.row:hover td,
+.data-table tbody tr:hover td {
+  border-top-color: var(--border-default);
+  border-bottom-color: var(--border-default);
 }
 
 .data-table tr.row.selected {
@@ -1552,6 +1559,13 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
   color: var(--text-tertiary);
 }
 
+/* Heat-bg — table cell background tinting */
+.heat-bg-1 { background: var(--heatmap-1-bg); }
+.heat-bg-2 { background: var(--heatmap-2-bg); }
+.heat-bg-3 { background: var(--heatmap-3-bg); }
+.heat-bg-4 { background: var(--heatmap-4-bg); }
+.heat-bg-5 { background: var(--heatmap-5-bg); }
+
 .cell-volume {
   font-family: var(--font-family-numeric);
   color: var(--text-secondary);
@@ -1591,11 +1605,42 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .cell-badge.risk-med    { background: var(--risk-medium-bg); color: var(--risk-medium-fg); }
 .cell-badge.risk-high   { background: var(--risk-high-bg); color: var(--risk-high-fg); }
 
+/* ── Cell Sparkline (SVG mini line chart) ── */
 .cell-sparkline {
   width: 60px;
   height: 20px;
   display: inline-block;
   vertical-align: middle;
+}
+.cell-sparkline svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.cell-sparkline .spark-line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cell-sparkline .spark-area {
+  stroke: none;
+}
+.cell-sparkline.up { color: var(--market-up-fg); }
+.cell-sparkline.up .spark-line { stroke: currentColor; }
+.cell-sparkline.up .spark-area { fill: color-mix(in oklch, var(--market-up-fg) 12%, transparent); }
+.cell-sparkline.down { color: var(--market-down-fg); }
+.cell-sparkline.down .spark-line { stroke: currentColor; }
+.cell-sparkline.down .spark-area { fill: color-mix(in oklch, var(--market-down-fg) 12%, transparent); }
+.cell-sparkline.accent { color: var(--brand-accent); }
+.cell-sparkline.accent .spark-line { stroke: currentColor; }
+.cell-sparkline.accent .spark-area { fill: color-mix(in oklch, var(--brand-accent) 12%, transparent); }
+
+/* ── Data Row Stale — unified stale row visual treatment ── */
+.data-table tr.row.data-row-stale,
+.data-table tr.row[data-stale="true"] {
+  opacity: 0.6;
+  filter: saturate(0.4);
 }
 
 /* ── Table Footer ── */
@@ -1940,6 +1985,27 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .confidence-bar-fill.medium { background: var(--text-secondary); }
 .confidence-bar-fill.low    { background: var(--text-tertiary); }
 
+/* ── Inline Micro-bar — compact proportional indicator ── */
+.micro-bar {
+  display: inline-block;
+  width: 48px;
+  height: 4px;
+  background: var(--neutral-200);
+  border-radius: var(--radius-2);
+  vertical-align: middle;
+  margin-left: var(--space-4);
+}
+.micro-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.micro-bar-fill.up { background: var(--market-up-fg); }
+.micro-bar-fill.down { background: var(--market-down-fg); }
+.micro-bar-fill.accent { background: var(--brand-accent); }
+.micro-bar-fill.risk { background: var(--risk-critical-fg); }
+.micro-bar-fill.neutral { background: var(--text-tertiary); }
+
 /* ── Mini Chart (CSS-only sparkline placeholder) ── */
 .sparkline-up {
   width: 60px;
@@ -1979,7 +2045,33 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
   border-color: var(--brand-accent);
 }
 
-/* ── Tab Bar ── */
+/* ── Tab System ──────────────────────────────────
+ *
+ * Three canonical variants — all prototype page tabs
+ * should map to one of these:
+ *
+ * 1. Underline Tab  (.tab-bar + .tab-item)
+ *    Primary page-level navigation with bottom indicator.
+ *    Use for: hub pages, main panel tabs, regime tabs.
+ *    Active: brand-accent underline + text-primary.
+ *
+ * 2. Pill Tab  (.tab-button)
+ *    Compact toggle for mode/feature switches.
+ *    Use for: portfolio tabs, mode tabs, research tabs.
+ *    Active: brand-accent text + subtle background.
+ *
+ * 3. Status Tab  (.tab-bar + .tab-item.status-tab)
+ *    Underline tab + count badge + status dot.
+ *    Use for: order status, signal status filtering.
+ *    Active: underline + badge highlight.
+ *
+ * React implementation note:
+ *   - Underline Tab → <Tabs variant="underline">
+ *   - Pill Tab → <Tabs variant="pill">
+ *   - Status Tab → <Tabs variant="status">
+ * ─────────────────────────────────────────────────── */
+
+/* ── 1. Underline Tab (default) ── */
 .tab-bar {
   grid-area: tabs;
   background: var(--surface-strip);
@@ -2798,7 +2890,7 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 .grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-8); }
 .grid-sidebar { display: grid; grid-template-columns: 320px 1fr; gap: var(--density-gutter); }
 
-/* ── Tab button ── */
+/* ── 2. Pill Tab ── */
 .tab-button {
   border: none; border-radius: var(--radius-4); background: transparent;
   font-family: var(--font-family-ui); font-size: var(--font-size-12);
@@ -2806,7 +2898,14 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   padding: var(--space-4) var(--space-8); cursor: pointer;
   transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
 }
-.tab-button.active { color: var(--brand-accent); }
+.tab-button:hover {
+  color: var(--text-secondary);
+  background: var(--interaction-hover-subtle-bg);
+}
+.tab-button.active {
+  color: var(--brand-accent);
+  background: var(--brand-accent-subtle);
+}
 
 /* ── Skeleton sizes ── */
 .skeleton--block {
@@ -3179,4 +3278,128 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   border-radius: var(--radius-6);
   padding: var(--space-8) var(--space-10);
   background: var(--danger-subtle-bg);
+}
+
+/* ── Breadcrumb Navigation ──────────────────────
+ * Usage:
+ *   <nav class="breadcrumb" aria-label="面包屑">
+ *     <a class="breadcrumb-link" href="/">首页</a>
+ *     <span class="breadcrumb-sep" aria-hidden="true">/</span>
+ *     <a class="breadcrumb-link" href="/research">研究</a>
+ *     <span class="breadcrumb-sep" aria-hidden="true">/</span>
+ *     <span class="breadcrumb-current" aria-current="page">动量 20D</span>
+ *   </nav>
+ *
+ * Can be placed inside .header-subtitle or as a standalone
+ * element below the header title.
+ * ─────────────────────────────────────────────────── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-11);
+  color: var(--text-tertiary);
+  min-height: 24px;
+}
+
+.breadcrumb-sep {
+  color: var(--text-quaternary);
+  user-select: none;
+}
+
+.breadcrumb-link {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.breadcrumb-link:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.breadcrumb-link:focus-visible {
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-2);
+}
+
+.breadcrumb-current {
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── Pagination (unified) ────────────────────────
+ * Standard pagination component for all catalog pages.
+ * Usage:
+ *   <nav class="pagination-bar" aria-label="分页导航">
+ *     <button class="pagination-btn" aria-label="上一页">‹</button>
+ *     <button class="pagination-btn active" aria-current="page">1</button>
+ *     <button class="pagination-btn">2</button>
+ *     <span class="pagination-ellipsis">...</span>
+ *     <button class="pagination-btn">5</button>
+ *     <button class="pagination-btn" aria-label="下一页">›</button>
+ *   </nav>
+ * ─────────────────────────────────────────────────── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--density-gutter);
+}
+
+.pagination-btn {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-4);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  cursor: pointer;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+              color var(--motion-duration-fast) var(--motion-easing-standard),
+              border-color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.pagination-btn:hover {
+  background: var(--interaction-hover-subtle-bg);
+  color: var(--text-primary);
+}
+
+.pagination-btn:focus-visible {
+  outline: 2px solid var(--interaction-focus-ring);
+  outline-offset: 2px;
+}
+
+.pagination-btn.active {
+  background: var(--brand-accent-subtle);
+  color: var(--brand-accent);
+  border-color: var(--brand-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.pagination-ellipsis {
+  color: var(--text-quaternary);
+  font-size: var(--font-size-12);
+  padding: 0 var(--space-2);
+  user-select: none;
+}
+
+/* ── Header Subtitle Format (unified convention) ──
+ * Pattern: Domain · Entity · Context
+ * e.g. "研究 · 因子分析 · 动量 20D"
+ * e.g. "交易 · 执行账本"
+ * e.g. "市场 · A股全景"
+ *
+ * Use middle dot (·) as separator, not slash (/) or dot (.)
+ * First segment = Rail domain name
+ * Second segment = Page entity name
+ * Optional third = Object-specific context
+ * ─────────────────────────────────────────────────── */
 }

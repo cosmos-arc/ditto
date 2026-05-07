@@ -19,7 +19,7 @@
   --panel-header-height:    38px;
   --tab-bar-height:         42px;
   --progress-bar-height:    6px;
-  --surface-noise-opacity:  0.018;
+  --surface-noise-opacity:  0;
 
   /* ── Instrument Hub — Domain-specific structural tokens ── */
   --sparkline-width:        48px;    /* metric-card inline sparkline */
@@ -43,6 +43,13 @@
   --timeline-marker-offset-top: 3px;
   --timeline-line-left:      5px;
   --timeline-line-top:       18px;
+
+  /* ── Shadow Tokens ── */
+  --shadow-sm:  0 2px 4px oklch(0 0 0 / 0.12);
+  --shadow-md:  0 4px 12px oklch(0 0 0 / 0.18);
+  --shadow-lg:  0 8px 24px oklch(0 0 0 / 0.24);
+  --shadow-xl:  0 12px 32px oklch(0 0 0 / 0.28);
+  --shadow-focus: 0 0 0 2px var(--interaction-focus-ring);
 }
 
 /* ─────────────────────────────────────────────

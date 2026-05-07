@@ -597,6 +597,27 @@
       }
     }
 
+    /* ── Micro-bar width helpers (count / max-count * 100%) ── */
+    .bar-w-8   { width: 8%; }
+    .bar-w-10  { width: 10%; }
+    .bar-w-12  { width: 12%; }
+    .bar-w-15  { width: 15%; }
+    .bar-w-17  { width: 17%; }
+    .bar-w-20  { width: 20%; }
+    .bar-w-24  { width: 24%; }
+    .bar-w-31  { width: 31%; }
+    .bar-w-60  { width: 60%; }
+    .bar-w-80  { width: 80%; }
+    .bar-w-100 { width: 100%; }
+
+    .count-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-6);
+      white-space: nowrap;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .btn,
       .row-action,
@@ -644,6 +665,7 @@
           <button class="btn btn-ghost">导入名单</button>
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -724,7 +746,7 @@
                       <span class="universe-meta">指数同步 · 每日 09:30 更新</span>
                     </div>
                   </td>
-                  <td class="right numeric">300</td>
+                  <td class="right numeric"><span class="count-cell">300<span class="micro-bar bar-w-60"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill index">指数成分</span></td>
                   <td class="right numeric">3</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -734,7 +756,7 @@
                 <tr class="row" data-universe-id="zz500">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">中证500成分股</span><span class="universe-meta">指数同步 · 中盘覆盖</span></div></td>
-                  <td class="right numeric">500</td>
+                  <td class="right numeric"><span class="count-cell">500<span class="micro-bar bar-w-100"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill index">指数成分</span></td>
                   <td class="right numeric">2</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -744,7 +766,7 @@
                 <tr class="row" data-universe-id="roe">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">高ROE精选</span><span class="universe-meta">ROE TTM &gt; 18% · PE 分位过滤</span></div></td>
-                  <td class="right numeric">85</td>
+                  <td class="right numeric"><span class="count-cell">85<span class="micro-bar bar-w-17"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill screen">筛选结果</span></td>
                   <td class="right numeric">1</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -754,7 +776,7 @@
                 <tr class="row" data-universe-id="tech-leaders">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">科技龙头组合</span><span class="universe-meta">人工维护 · 芯片 / 软件 / 设备</span></div></td>
-                  <td class="right numeric">42</td>
+                  <td class="right numeric"><span class="count-cell">42<span class="micro-bar bar-w-8"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill custom">自定义</span></td>
                   <td class="right numeric">2</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -764,7 +786,7 @@
                 <tr class="row" data-universe-id="low-vol">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">低波动率组合</span><span class="universe-meta">近 60 日波动率后 20%</span></div></td>
-                  <td class="right numeric">60</td>
+                  <td class="right numeric"><span class="count-cell">60<span class="micro-bar bar-w-12"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill screen">筛选结果</span></td>
                   <td class="right numeric">1</td>
                   <td><span class="freshness-badge" data-freshness="stale">需刷新</span></td>
@@ -774,7 +796,7 @@
                 <tr class="row" data-universe-id="cyb50">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">创业板50</span><span class="universe-meta">指数同步 · 成长风格</span></div></td>
-                  <td class="right numeric">50</td>
+                  <td class="right numeric"><span class="count-cell">50<span class="micro-bar bar-w-10"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill index">指数成分</span></td>
                   <td class="right numeric">0</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -784,7 +806,7 @@
                 <tr class="row" data-universe-id="cashflow">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">自由现金流稳定</span><span class="universe-meta">FCF 连续 8 季为正</span></div></td>
-                  <td class="right numeric">118</td>
+                  <td class="right numeric"><span class="count-cell">118<span class="micro-bar bar-w-24"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill screen">筛选结果</span></td>
                   <td class="right numeric">2</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -794,7 +816,7 @@
                 <tr class="row" data-universe-id="dividend">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">高股息防御</span><span class="universe-meta">股息率 &gt; 4% · Beta &lt; 0.9</span></div></td>
-                  <td class="right numeric">73</td>
+                  <td class="right numeric"><span class="count-cell">73<span class="micro-bar bar-w-15"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill screen">筛选结果</span></td>
                   <td class="right numeric">2</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -804,7 +826,7 @@
                 <tr class="row" data-universe-id="northbound">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">北向增持观察</span><span class="universe-meta">20 日净买入 Top 100</span></div></td>
-                  <td class="right numeric">100</td>
+                  <td class="right numeric"><span class="count-cell">100<span class="micro-bar bar-w-20"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill screen">筛选结果</span></td>
                   <td class="right numeric">1</td>
                   <td><span class="freshness-badge" data-freshness="stale">需刷新</span></td>
@@ -814,7 +836,7 @@
                 <tr class="row" data-universe-id="kcb50">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">科创50</span><span class="universe-meta">指数同步 · 硬科技样本</span></div></td>
-                  <td class="right numeric">50</td>
+                  <td class="right numeric"><span class="count-cell">50<span class="micro-bar bar-w-10"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill index">指数成分</span></td>
                   <td class="right numeric">1</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -824,7 +846,7 @@
                 <tr class="row" data-universe-id="quality-growth">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">质量成长混合</span><span class="universe-meta">ROIC / 增速 / 盈利稳定性</span></div></td>
-                  <td class="right numeric">154</td>
+                  <td class="right numeric"><span class="count-cell">154<span class="micro-bar bar-w-31"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill custom">自定义</span></td>
                   <td class="right numeric">2</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>
@@ -834,7 +856,7 @@
                 <tr class="row" data-universe-id="liquidity">
                   <td class="col-select"><span class="selection-mark" aria-hidden="true">✓</span></td>
                   <td class="col-name"><div class="universe-name-stack"><span class="universe-name">高流动性备选池</span><span class="universe-meta">20 日成交额 &gt; 5 亿</span></div></td>
-                  <td class="right numeric">400</td>
+                  <td class="right numeric"><span class="count-cell">400<span class="micro-bar bar-w-80"><span class="micro-bar-fill accent"></span></span></span></td>
                   <td><span class="source-pill screen">筛选结果</span></td>
                   <td class="right numeric">1</td>
                   <td><span class="freshness-badge" data-freshness="live">已同步</span></td>

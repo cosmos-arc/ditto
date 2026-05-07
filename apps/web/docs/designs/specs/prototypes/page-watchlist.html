@@ -696,6 +696,7 @@
           <button class="btn btn-primary">同步信号</button>
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -752,7 +753,7 @@
         <div class="watchlist-summary-item" data-answer-evidence>
           <span class="summary-label">信号结构</span>
           <span class="summary-value" data-answer-metric>4 买 / 2 卖 / 2 观望</span>
-          <span class="signal-mix" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="signal-mix" role="img" aria-label="信号构成: 买入50%, 卖出25%, 观望25%"><span></span><span></span><span></span></span>
         </div>
         <div class="watchlist-summary-item" data-answer-evidence>
           <span class="summary-label">数据状态</span>
@@ -795,7 +796,7 @@
                       <span class="watchlist-row-kicker">白酒 · 核心持仓</span>
                     </div>
                   </td>
-                  <td class="right numeric">1,856.00</td>
+                  <td class="right numeric">1,856.00<br><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 16 L6 14 L12 15 L18 11 L24 12 L30 9 L36 10 L42 6 L48 7 L54 3 L60 2 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 16 L6 14 L12 15 L18 11 L24 12 L30 9 L36 10 L42 6 L48 7 L54 3 L60 2"></path></svg></span></td>
                   <td class="right numeric cell-change-up"><span class="direction-symbol">▲</span>+3.10%</td>
                   <td><span class="signal-pill buy">买入 0.92</span></td>
                   <td class="cell-note">白酒龙头，业绩稳健</td>
@@ -811,7 +812,7 @@
                       <span class="watchlist-row-kicker">白酒 · 核心持仓</span>
                     </div>
                   </td>
-                  <td class="right numeric">168.50</td>
+                  <td class="right numeric">168.50<br><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 15 L6 16 L12 13 L18 14 L24 10 L30 11 L36 8 L42 9 L48 5 L54 4 L60 3 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 15 L6 16 L12 13 L18 14 L24 10 L30 11 L36 8 L42 9 L48 5 L54 4 L60 3"></path></svg></span></td>
                   <td class="right numeric cell-change-up"><span class="direction-symbol">▲</span>+1.85%</td>
                   <td><span class="signal-pill buy">买入 0.85</span></td>
                   <td class="cell-note">次高端放量</td>
@@ -827,7 +828,7 @@
                       <span class="watchlist-row-kicker">新能源 · 风险观察</span>
                     </div>
                   </td>
-                  <td class="right numeric">218.30</td>
+                  <td class="right numeric">218.30<br><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 4 L6 5 L12 3 L18 6 L24 8 L30 7 L36 10 L42 12 L48 14 L54 16 L60 17 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 4 L6 5 L12 3 L18 6 L24 8 L30 7 L36 10 L42 12 L48 14 L54 16 L60 17"></path></svg></span></td>
                   <td class="right numeric cell-change-down"><span class="direction-symbol">▼</span>-2.14%</td>
                   <td><span class="signal-pill sell">卖出 0.78</span></td>
                   <td class="cell-note">新能源回调观望</td>
@@ -843,7 +844,7 @@
                       <span class="watchlist-row-kicker">金融 · 轮动池</span>
                     </div>
                   </td>
-                  <td class="right numeric">48.62</td>
+                  <td class="right numeric">48.62<br><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 13 L6 12 L12 14 L18 11 L24 13 L30 10 L36 9 L42 11 L48 7 L54 8 L60 5 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 13 L6 12 L12 14 L18 11 L24 13 L30 10 L36 9 L42 11 L48 7 L54 8 L60 5"></path></svg></span></td>
                   <td class="right numeric cell-change-up"><span class="direction-symbol">▲</span>+0.83%</td>
                   <td><span class="signal-pill hold">观望</span></td>
                   <td class="cell-note">金融板块轮动</td>
@@ -859,7 +860,7 @@
                       <span class="watchlist-row-kicker">新能源车 · 机会池</span>
                     </div>
                   </td>
-                  <td class="right numeric">265.80</td>
+                  <td class="right numeric">265.80<br><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 18 L6 16 L12 17 L18 13 L24 11 L30 12 L36 8 L42 5 L48 6 L54 3 L60 1 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 18 L6 16 L12 17 L18 13 L24 11 L30 12 L36 8 L42 5 L48 6 L54 3 L60 1"></path></svg></span></td>
                   <td class="right numeric cell-change-up"><span class="direction-symbol">▲</span>+4.26%</td>
                   <td><span class="signal-pill buy">买入 0.88</span></td>
                   <td class="cell-note">智能驾驶利好</td>
@@ -875,7 +876,7 @@
                       <span class="watchlist-row-kicker">银行 · 股息跟踪</span>
                     </div>
                   </td>
-                  <td class="right numeric">35.20</td>
+                  <td class="right numeric">35.20<br><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 6 L6 5 L12 7 L18 8 L24 6 L30 9 L36 11 L42 10 L48 13 L54 15 L60 14 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 6 L6 5 L12 7 L18 8 L24 6 L30 9 L36 11 L42 10 L48 13 L54 15 L60 14"></path></svg></span></td>
                   <td class="right numeric cell-change-down"><span class="direction-symbol">▼</span>-0.56%</td>
                   <td><span class="signal-pill hold">观望</span></td>
                   <td class="cell-note">银行股息率关注</td>
@@ -891,14 +892,14 @@
                       <span class="watchlist-row-kicker">银行 · 机会池</span>
                     </div>
                   </td>
-                  <td class="right numeric">11.85</td>
+                  <td class="right numeric">11.85<br><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 14 L6 15 L12 12 L18 13 L24 10 L30 11 L36 8 L42 9 L48 6 L54 5 L60 4 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 14 L6 15 L12 12 L18 13 L24 10 L30 11 L36 8 L42 9 L48 6 L54 5 L60 4"></path></svg></span></td>
                   <td class="right numeric cell-change-up"><span class="direction-symbol">▲</span>+1.28%</td>
                   <td><span class="signal-pill buy">买入 0.72</span></td>
                   <td class="cell-note">零售转型跟踪</td>
                   <td class="right"><span class="row-actions"><span class="row-action">Hub</span><label for="overlay-bulk-delete" class="row-action danger">移除</label></span></td>
                 </tr>
                 <!-- 601012 隆基绿能 -->
-                <tr class="row" data-direction="down" data-stale="true">
+                <tr class="row" data-direction="down" data-stale="true" aria-label="数据已过期">
                   <td class="col-select"><span class="checkbox" aria-label="选择隆基绿能"></span></td>
                   <td class="cell-ticker numeric">601012</td>
                   <td>
@@ -907,7 +908,7 @@
                       <span class="watchlist-row-kicker">光伏 · 数据延迟</span>
                     </div>
                   </td>
-                  <td class="right numeric">22.40</td>
+                  <td class="right numeric">22.40<br><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 3 L6 4 L12 2 L18 5 L24 7 L30 9 L36 8 L42 11 L48 13 L54 15 L60 18 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 3 L6 4 L12 2 L18 5 L24 7 L30 9 L36 8 L42 11 L48 13 L54 15 L60 18"></path></svg></span></td>
                   <td class="right numeric cell-change-down"><span class="direction-symbol">▼</span>-3.56%</td>
                   <td><span class="signal-pill sell stale">卖出 0.81</span></td>
                   <td class="cell-note">光伏产能过剩</td>

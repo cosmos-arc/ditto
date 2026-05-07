@@ -380,6 +380,13 @@
       min-width: 0;
     }
 
+    @media (max-width: 1023px) {
+      .market-card-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 767px) {
+      .market-card-grid { grid-template-columns: 1fr; }
+    }
+
     .market-card {
       background: var(--surface-panel-base);
       border: 1px solid var(--border-subtle);
@@ -1546,6 +1553,180 @@
       border-top: none;
     }
 
+    /* ══════════════════════════════════════════════
+     * Task 4.1: Correlation Matrix — pair-chart overlay + pill tabs
+     * ══════════════════════════════════════════════ */
+    .correlation-toolbar-augmented {
+      display: flex;
+      align-items: center;
+      gap: var(--space-12);
+      margin-bottom: var(--space-8);
+    }
+
+    .pill-tab-group {
+      display: inline-flex;
+      gap: var(--space-2);
+      background: var(--surface-strip);
+      border-radius: var(--radius-6);
+      padding: var(--space-2);
+    }
+    .pill-tab-group label {
+      font-size: var(--font-size-11);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-tertiary);
+      padding: var(--space-2) var(--space-8);
+      border-radius: var(--radius-4);
+      cursor: pointer;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      min-height: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+    }
+    .pill-tab-group label:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+
+    /* Pill tab activation via :has() */
+    :root:has(#corr-range-1d:checked) label[for="corr-range-1d"],
+    :root:has(#corr-range-5d:checked) label[for="corr-range-5d"],
+    :root:has(#corr-range-1m:checked) label[for="corr-range-1m"],
+    :root:has(#corr-range-3m:checked) label[for="corr-range-3m"],
+    :root:has(#corr-range-1y:checked) label[for="corr-range-1y"] {
+      background: var(--brand-accent-subtle);
+      color: var(--brand-accent);
+    }
+
+    /* Pair-chart overlay panel (inline, within correlation section) */
+    .pair-chart-panel {
+      display: none;
+      margin-top: var(--space-8);
+      padding: var(--space-12);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-elevated);
+    }
+    :root:has(#pair-chart:checked) .pair-chart-panel {
+      display: block;
+      animation: tab-reveal 0.2s ease-out forwards;
+    }
+    .pair-chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-8);
+    }
+    .pair-chart-title {
+      font-size: var(--font-size-12);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-primary);
+    }
+    .pair-chart-close {
+      font-size: var(--font-size-12);
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: var(--space-2) var(--space-6);
+      border-radius: var(--radius-4);
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+    .pair-chart-close:hover {
+      color: var(--text-secondary);
+      background: var(--interaction-hover-subtle-bg);
+    }
+    .pair-chart-placeholder {
+      height: 10rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-4);
+      color: var(--text-tertiary);
+      font-size: var(--font-size-12);
+    }
+
+    /* ══════════════════════════════════════════════
+     * Task 4.2: Macro Drivers — direction arrows + impact panel
+     * ══════════════════════════════════════════════ */
+    .drivers-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+    .drivers-section-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .direction-up::before {
+      content: "\25B2";
+      color: var(--market-up-fg);
+      font-size: var(--font-size-10);
+      margin-left: var(--space-4);
+    }
+    .direction-down::before {
+      content: "\25BC";
+      color: var(--market-down-fg);
+      font-size: var(--font-size-10);
+      margin-left: var(--space-4);
+    }
+    .direction-flat::before {
+      content: "\2014";
+      color: var(--text-tertiary);
+      font-size: var(--font-size-10);
+      margin-left: var(--space-4);
+    }
+
+    .drivers-with-impact {
+      display: flex;
+      gap: var(--space-16);
+      align-items: flex-start;
+    }
+    .drivers-strip-wrapper {
+      flex: 1;
+      min-width: 0;
+    }
+    .impact-panel {
+      flex-shrink: 0;
+      width: 12rem;
+      padding: var(--space-10) var(--space-12);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-6);
+      background: var(--surface-panel-elevated);
+    }
+    .impact-panel-title {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: var(--space-8);
+    }
+    .impact-panel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) 0;
+      font-size: var(--font-size-12);
+    }
+    .impact-panel-label {
+      color: var(--text-secondary);
+    }
+    .impact-panel-value {
+      font-family: var(--font-family-numeric);
+      font-weight: var(--font-weight-medium);
+      color: var(--text-primary);
+      font-feature-settings: 'tnum' 1;
+    }
+    .impact-panel-value.up { color: var(--market-up-fg); }
+    .impact-panel-value.down { color: var(--market-down-fg); }
+
   </style>
 </head>
 <body>
@@ -1588,6 +1769,7 @@
 
       <!-- Header (sticky top) -->
       <header class="shell-header">
+        <nav class="header-breadcrumb" aria-label="面包屑导航"><a class="breadcrumb-item" href="page-home.html">Home</a><span class="breadcrumb-sep">/</span><a class="breadcrumb-item" href="#">Markets</a><span class="breadcrumb-sep">/</span><span class="breadcrumb-item breadcrumb-item--current">Cross-Market</span></nav>
         <h1 class="header-title">市场</h1>
         <span class="header-subtitle">全市场总览</span>
         <div class="universe-selector">
@@ -1606,6 +1788,7 @@
 
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -1878,8 +2061,15 @@
             </div>
             <!-- Correlation Matrix Heatmap — CSS grid + color scale -->
             <div class="correlation-section" data-reveal="fade-up" data-reveal-delay="200">
-              <div class="correlation-title">跨市场相关性 · 30D</div>
-              <div class="correlation-toolbar">
+              <div class="correlation-title">跨市场相关性</div>
+              <div class="correlation-toolbar-augmented">
+                <div class="pill-tab-group">
+                  <label for="corr-range-1d">1D</label>
+                  <label for="corr-range-5d">5D</label>
+                  <label for="corr-range-1m">1M</label>
+                  <label for="corr-range-3m">3M</label>
+                  <label for="corr-range-1y">1Y</label>
+                </div>
                 <div class="correlation-focus">强相关焦点 <strong>黄金 / 美元 -0.84</strong></div>
                 <div class="correlation-scale" data-viz-legend aria-label="相关系数色阶">
                   <span class="viz-sign-marker" data-viz-sign="negative">− 负相关</span>
@@ -1900,41 +2090,54 @@
                 <div class="corr-header">美元</div>
                 <!-- A股 row -->
                 <div class="corr-label">A股</div>
-                <div class="corr-cell corr-cell--self" data-tooltip="A股 vs A股 — 自相关">1.00</div>
-                <div class="corr-cell" role="gridcell" aria-label="A股 vs 港股 · 相关系数 +0.82 · 高度正相关" data-corr="2" data-tooltip="A股 vs 港股 · 相关系数 +0.82 · 高度正相关">+0.82</div>
-                <div class="corr-cell" role="gridcell" aria-label="A股 vs 美股 · 相关系数 +0.54 · 中度正相关" data-corr="3" data-tooltip="A股 vs 美股 · 相关系数 +0.54 · 中度正相关">+0.54</div>
-                <div class="corr-cell" role="gridcell" aria-label="A股 vs 黄金 · 相关系数 +0.08 · 弱相关" data-corr="4" data-tooltip="A股 vs 黄金 · 相关系数 +0.08 · 弱相关">+0.08</div>
-                <div class="corr-cell" role="gridcell" aria-label="A股 vs 美元 · 相关系数 -0.31 · 弱负相关" data-corr="5" data-tooltip="A股 vs 美元 · 相关系数 -0.31 · 弱负相关">-0.31</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="相关性: 1.00 · 自相关">1.00</div>
+                <div class="corr-cell" role="gridcell" aria-label="A股 vs 港股 · 相关系数 +0.82 · 高度正相关" data-corr="2" data-tooltip="相关性: 0.82 · A股 vs 港股 · 高度正相关">+0.82</div>
+                <div class="corr-cell" role="gridcell" aria-label="A股 vs 美股 · 相关系数 +0.54 · 中度正相关" data-corr="3" data-tooltip="相关性: 0.54 · A股 vs 美股 · 中度正相关">+0.54</div>
+                <div class="corr-cell" role="gridcell" aria-label="A股 vs 黄金 · 相关系数 +0.08 · 弱相关" data-corr="4" data-tooltip="相关性: 0.08 · A股 vs 黄金 · 弱相关">+0.08</div>
+                <div class="corr-cell" role="gridcell" aria-label="A股 vs 美元 · 相关系数 -0.31 · 弱负相关" data-corr="5" data-tooltip="相关性: -0.31 · A股 vs 美元 · 弱负相关">-0.31</div>
                 <!-- 港股 row -->
                 <div class="corr-label">港股</div>
-                <div class="corr-cell" role="gridcell" aria-label="港股 vs A股 · 相关系数 +0.82 · 高度正相关" data-corr="2" data-tooltip="港股 vs A股 · 相关系数 +0.82 · 高度正相关">+0.82</div>
-                <div class="corr-cell corr-cell--self" data-tooltip="港股 vs 港股 — 自相关">1.00</div>
-                <div class="corr-cell" role="gridcell" aria-label="港股 vs 美股 · 相关系数 +0.61 · 中度正相关" data-corr="3" data-tooltip="港股 vs 美股 · 相关系数 +0.61 · 中度正相关">+0.61</div>
-                <div class="corr-cell" role="gridcell" aria-label="港股 vs 黄金 · 相关系数 +0.73 · 较高正相关" data-corr="2" data-tooltip="港股 vs 黄金 · 相关系数 +0.73 · 较高正相关">+0.73</div>
-                <div class="corr-cell" role="gridcell" aria-label="港股 vs 美元 · 相关系数 -0.58 · 中度负相关" data-corr="6" data-tooltip="港股 vs 美元 · 相关系数 -0.58 · 中度负相关">-0.58</div>
+                <div class="corr-cell" role="gridcell" aria-label="港股 vs A股 · 相关系数 +0.82 · 高度正相关" data-corr="2" data-tooltip="相关性: 0.82 · 港股 vs A股 · 高度正相关">+0.82</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="相关性: 1.00 · 自相关">1.00</div>
+                <div class="corr-cell" role="gridcell" aria-label="港股 vs 美股 · 相关系数 +0.61 · 中度正相关" data-corr="3" data-tooltip="相关性: 0.61 · 港股 vs 美股 · 中度正相关">+0.61</div>
+                <div class="corr-cell" role="gridcell" aria-label="港股 vs 黄金 · 相关系数 +0.73 · 较高正相关" data-corr="2" data-tooltip="相关性: 0.73 · 港股 vs 黄金 · 较高正相关">+0.73</div>
+                <div class="corr-cell" role="gridcell" aria-label="港股 vs 美元 · 相关系数 -0.58 · 中度负相关" data-corr="6" data-tooltip="相关性: -0.58 · 港股 vs 美元 · 中度负相关">-0.58</div>
                 <!-- 美股 row -->
                 <div class="corr-label">美股</div>
-                <div class="corr-cell" role="gridcell" aria-label="美股 vs A股 · 相关系数 +0.54 · 中度正相关" data-corr="3" data-tooltip="美股 vs A股 · 相关系数 +0.54 · 中度正相关">+0.54</div>
-                <div class="corr-cell" role="gridcell" aria-label="美股 vs 港股 · 相关系数 +0.61 · 中度正相关" data-corr="3" data-tooltip="美股 vs 港股 · 相关系数 +0.61 · 中度正相关">+0.61</div>
-                <div class="corr-cell corr-cell--self" data-tooltip="美股 vs 美股 — 自相关">1.00</div>
-                <div class="corr-cell" role="gridcell" aria-label="美股 vs 黄金 · 相关系数 +0.12 · 弱相关" data-corr="4" data-tooltip="美股 vs 黄金 · 相关系数 +0.12 · 弱相关">+0.12</div>
-                <div class="corr-cell" role="gridcell" aria-label="美股 vs 美元 · 相关系数 -0.22 · 弱负相关" data-corr="5" data-tooltip="美股 vs 美元 · 相关系数 -0.22 · 弱负相关">-0.22</div>
+                <div class="corr-cell" role="gridcell" aria-label="美股 vs A股 · 相关系数 +0.54 · 中度正相关" data-corr="3" data-tooltip="相关性: 0.54 · 美股 vs A股 · 中度正相关">+0.54</div>
+                <div class="corr-cell" role="gridcell" aria-label="美股 vs 港股 · 相关系数 +0.61 · 中度正相关" data-corr="3" data-tooltip="相关性: 0.61 · 美股 vs 港股 · 中度正相关">+0.61</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="相关性: 1.00 · 自相关">1.00</div>
+                <div class="corr-cell" role="gridcell" aria-label="美股 vs 黄金 · 相关系数 +0.12 · 弱相关" data-corr="4" data-tooltip="相关性: 0.12 · 美股 vs 黄金 · 弱相关">+0.12</div>
+                <div class="corr-cell" role="gridcell" aria-label="美股 vs 美元 · 相关系数 -0.22 · 弱负相关" data-corr="5" data-tooltip="相关性: -0.22 · 美股 vs 美元 · 弱负相关">-0.22</div>
                 <!-- 黄金 row -->
                 <div class="corr-label">黄金</div>
-                <div class="corr-cell" role="gridcell" aria-label="黄金 vs A股 · 相关系数 +0.08 · 弱相关" data-corr="4" data-tooltip="黄金 vs A股 · 相关系数 +0.08 · 弱相关">+0.08</div>
-                <div class="corr-cell" role="gridcell" aria-label="黄金 vs 港股 · 相关系数 +0.73 · 较高正相关" data-corr="2" data-tooltip="黄金 vs 港股 · 相关系数 +0.73 · 较高正相关">+0.73</div>
-                <div class="corr-cell" role="gridcell" aria-label="黄金 vs 美股 · 相关系数 +0.12 · 弱相关" data-corr="4" data-tooltip="黄金 vs 美股 · 相关系数 +0.12 · 弱相关">+0.12</div>
-                <div class="corr-cell corr-cell--self" data-tooltip="黄金 vs 黄金 — 自相关">1.00</div>
-                <div class="corr-cell" role="gridcell" aria-label="黄金 vs 美元 · 相关系数 -0.84 · 强负相关" data-corr="7" data-tooltip="黄金 vs 美元 · 相关系数 -0.84 · 强负相关">-0.84</div>
+                <div class="corr-cell" role="gridcell" aria-label="黄金 vs A股 · 相关系数 +0.08 · 弱相关" data-corr="4" data-tooltip="相关性: 0.08 · 黄金 vs A股 · 弱相关">+0.08</div>
+                <div class="corr-cell" role="gridcell" aria-label="黄金 vs 港股 · 相关系数 +0.73 · 较高正相关" data-corr="2" data-tooltip="相关性: 0.73 · 黄金 vs 港股 · 较高正相关">+0.73</div>
+                <div class="corr-cell" role="gridcell" aria-label="黄金 vs 美股 · 相关系数 +0.12 · 弱相关" data-corr="4" data-tooltip="相关性: 0.12 · 黄金 vs 美股 · 弱相关">+0.12</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="相关性: 1.00 · 自相关">1.00</div>
+                <div class="corr-cell" role="gridcell" aria-label="黄金 vs 美元 · 相关系数 -0.84 · 强负相关" data-corr="7" data-tooltip="相关性: -0.84 · 黄金 vs 美元 · 强负相关">-0.84</div>
                 <!-- 美元 row -->
                 <div class="corr-label">美元</div>
-                <div class="corr-cell" role="gridcell" aria-label="美元 vs A股 · 相关系数 -0.31 · 弱负相关" data-corr="5" data-tooltip="美元 vs A股 · 相关系数 -0.31 · 弱负相关">-0.31</div>
-                <div class="corr-cell" role="gridcell" aria-label="美元 vs 港股 · 相关系数 -0.58 · 中度负相关" data-corr="6" data-tooltip="美元 vs 港股 · 相关系数 -0.58 · 中度负相关">-0.58</div>
-                <div class="corr-cell" role="gridcell" aria-label="美元 vs 美股 · 相关系数 -0.22 · 弱负相关" data-corr="5" data-tooltip="美元 vs 美股 · 相关系数 -0.22 · 弱负相关">-0.22</div>
-                <div class="corr-cell" role="gridcell" aria-label="美元 vs 黄金 · 相关系数 -0.84 · 强负相关" data-corr="7" data-tooltip="美元 vs 黄金 · 相关系数 -0.84 · 强负相关">-0.84</div>
-                <div class="corr-cell corr-cell--self" data-tooltip="美元 vs 美元 — 自相关">1.00</div>
+                <div class="corr-cell" role="gridcell" aria-label="美元 vs A股 · 相关系数 -0.31 · 弱负相关" data-corr="5" data-tooltip="相关性: -0.31 · 美元 vs A股 · 弱负相关">-0.31</div>
+                <div class="corr-cell" role="gridcell" aria-label="美元 vs 港股 · 相关系数 -0.58 · 中度负相关" data-corr="6" data-tooltip="相关性: -0.58 · 美元 vs 港股 · 中度负相关">-0.58</div>
+                <div class="corr-cell" role="gridcell" aria-label="美元 vs 美股 · 相关系数 -0.22 · 弱负相关" data-corr="5" data-tooltip="相关性: -0.22 · 美元 vs 美股 · 弱负相关">-0.22</div>
+                <div class="corr-cell" role="gridcell" aria-label="美元 vs 黄金 · 相关系数 -0.84 · 强负相关" data-corr="7" data-tooltip="相关性: -0.84 · 美元 vs 黄金 · 强负相关">-0.84</div>
+                <div class="corr-cell corr-cell--self" data-tooltip="相关性: 1.00 · 自相关">1.00</div>
               </div>
               <!-- /correlation-grid -->
+              <!-- Pair Chart overlay panel (inline toggle via checkbox) -->
+              <label for="pair-chart" class="corr-cell" role="button" tabindex="0" aria-label="查看市场对走势图" data-tooltip="点击查看市场对走势对比图" data-tooltip-pos="bottom" data-corr="4" data-tooltip-delay="150">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14l4-4 3 2 5-6"/><path d="M11 4h4v4"/></svg>
+              </label>
+              <div class="pair-chart-panel">
+                <div class="pair-chart-header">
+                  <span class="pair-chart-title">市场对走势对比 · 黄金 vs 美元</span>
+                  <label for="pair-chart" class="pair-chart-close" aria-label="关闭走势对比">关闭</label>
+                </div>
+                <div class="pair-chart-placeholder" role="img" aria-label="黄金 vs 美元走势对比图（占位）">
+                  走势对比图 · 黄金(金) vs 美元(蓝) · 30D
+                </div>
+              </div>
             </div>
             <!-- /correlation-section -->
           </div>
@@ -1942,59 +2145,81 @@
 
           <!-- Macro Drivers Bar (standalone section per Blueprint) -->
           <div class="drivers-section mt-12" data-contract-slot="macro-drivers">
-            <div class="drivers-strip">
-              <span class="drivers-strip-label">宏观驱动</span>
-              <div class="driver-item" data-tooltip="美元指数 DXY · 日跌幅 -0.4% · 走弱趋势">
-                <span class="driver-item-name">DXY</span>
-                <span class="driver-item-val">102.4</span>
-                <span class="driver-item-change down dir-down">-0.4%</span>
-                <span class="driver-mini-bar down"></span>
-                <svg role="img" data-sparkline='{"data":[18,16,15,13,12,10,9,8],"series":"down","width":28,"height":10}' aria-label="DXY走势"></svg>
+            <div class="drivers-section-header">
+              <span class="drivers-section-title">宏观驱动因子</span>
+            </div>
+            <div class="drivers-with-impact">
+              <div class="drivers-strip-wrapper">
+                <div class="drivers-strip">
+                  <div class="driver-item" data-tooltip="美元指数 DXY · 日跌幅 -0.4% · 走弱趋势">
+                    <span class="driver-item-name">DXY</span>
+                    <span class="driver-item-val direction-down">102.4</span>
+                    <span class="driver-item-change down dir-down">-0.4%</span>
+                    <span class="driver-mini-bar down"></span>
+                    <svg role="img" data-sparkline='{"data":[18,16,15,13,12,10,9,8],"series":"down","width":28,"height":10}' aria-label="DXY走势"></svg>
+                  </div>
+                  <div class="driver-sep"></div>
+                  <div class="driver-item" data-tooltip="美债10Y收益率 · 日涨 +7bp · 利率上行">
+                    <span class="driver-item-name">US10Y</span>
+                    <span class="driver-item-val direction-up">4.41%</span>
+                    <span class="driver-item-change up dir-up">+7bp</span>
+                    <span class="driver-mini-bar up"></span>
+                    <svg role="img" data-sparkline='{"data":[8,9,8,10,11,12,13,15],"series":"up","width":28,"height":10}' aria-label="US10Y走势"></svg>
+                  </div>
+                  <div class="driver-sep"></div>
+                  <div class="driver-item" data-tooltip="中债10Y收益率 · 日涨 +2bp · 小幅上行">
+                    <span class="driver-item-name">CN10Y</span>
+                    <span class="driver-item-val direction-up">2.32%</span>
+                    <span class="driver-item-change up dir-up">+2bp</span>
+                    <span class="driver-mini-bar up"></span>
+                  </div>
+                  <div class="driver-sep"></div>
+                  <div class="driver-item" data-tooltip="VIX 恐慌指数 · 日跌幅 -5.2% · 波动回落">
+                    <span class="driver-item-name">VIX</span>
+                    <span class="driver-item-val direction-down">16.8</span>
+                    <span class="driver-item-change down dir-down">-5.2%</span>
+                    <span class="driver-mini-bar down"></span>
+                    <svg role="img" data-sparkline='{"data":[16,15,14,12,11,10,9,8],"series":"down","width":28,"height":10}' aria-label="VIX走势"></svg>
+                  </div>
+                  <div class="driver-sep"></div>
+                  <div class="driver-item" data-tooltip="黄金现货 · 日涨幅 +1.2% · 避险推升">
+                    <span class="driver-item-name">XAUUSD</span>
+                    <span class="driver-item-val direction-up">2,648</span>
+                    <span class="driver-item-change up dir-up">+1.2%</span>
+                    <span class="driver-mini-bar up"></span>
+                    <svg role="img" data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
+                  </div>
+                  <div class="driver-sep"></div>
+                  <div class="driver-item" data-tooltip="WTI 原油 · 日跌幅 -0.8% · OPEC 观望">
+                    <span class="driver-item-name">WTI</span>
+                    <span class="driver-item-val direction-down">71.3</span>
+                    <span class="driver-item-change down dir-down">-0.8%</span>
+                    <span class="driver-mini-bar down"></span>
+                  </div>
+                  <div class="driver-sep"></div>
+                  <div class="driver-item" data-tooltip="美元/离岸人民币 · 日跌幅 -0.3% · 人民币偏强">
+                    <span class="driver-item-name">USD/CNH</span>
+                    <span class="driver-item-val direction-down">7.24</span>
+                    <span class="driver-item-change down dir-down">-0.3%</span>
+                    <span class="driver-mini-bar down"></span>
+                  </div>
+                </div>
               </div>
-              <div class="driver-sep"></div>
-              <div class="driver-item" data-tooltip="美债10Y收益率 · 日涨 +7bp · 利率上行">
-                <span class="driver-item-name">US10Y</span>
-                <span class="driver-item-val">4.41%</span>
-                <span class="driver-item-change up dir-up">+7bp</span>
-                <span class="driver-mini-bar up"></span>
-                <svg role="img" data-sparkline='{"data":[8,9,8,10,11,12,13,15],"series":"up","width":28,"height":10}' aria-label="US10Y走势"></svg>
-              </div>
-              <div class="driver-sep"></div>
-              <div class="driver-item" data-tooltip="中债10Y收益率 · 日涨 +2bp · 小幅上行">
-                <span class="driver-item-name">CN10Y</span>
-                <span class="driver-item-val">2.32%</span>
-                <span class="driver-item-change up dir-up">+2bp</span>
-                <span class="driver-mini-bar up"></span>
-              </div>
-              <div class="driver-sep"></div>
-              <div class="driver-item" data-tooltip="VIX 恐慌指数 · 日跌幅 -5.2% · 波动回落">
-                <span class="driver-item-name">VIX</span>
-                <span class="driver-item-val">16.8</span>
-                <span class="driver-item-change down dir-down">-5.2%</span>
-                <span class="driver-mini-bar down"></span>
-                <svg role="img" data-sparkline='{"data":[16,15,14,12,11,10,9,8],"series":"down","width":28,"height":10}' aria-label="VIX走势"></svg>
-              </div>
-              <div class="driver-sep"></div>
-              <div class="driver-item" data-tooltip="黄金现货 · 日涨幅 +1.2% · 避险推升">
-                <span class="driver-item-name">XAUUSD</span>
-                <span class="driver-item-val">2,648</span>
-                <span class="driver-item-change up dir-up">+1.2%</span>
-                <span class="driver-mini-bar up"></span>
-                <svg role="img" data-sparkline='{"data":[10,12,11,14,13,16,15,18],"series":"up","width":28,"height":10}' aria-label="XAUUSD走势"></svg>
-              </div>
-              <div class="driver-sep"></div>
-              <div class="driver-item" data-tooltip="WTI 原油 · 日跌幅 -0.8% · OPEC 观望">
-                <span class="driver-item-name">WTI</span>
-                <span class="driver-item-val">71.3</span>
-                <span class="driver-item-change down dir-down">-0.8%</span>
-                <span class="driver-mini-bar down"></span>
-              </div>
-              <div class="driver-sep"></div>
-              <div class="driver-item" data-tooltip="美元/离岸人民币 · 日跌幅 -0.3% · 人民币偏强">
-                <span class="driver-item-name">USD/CNH</span>
-                <span class="driver-item-val">7.24</span>
-                <span class="driver-item-change down dir-down">-0.3%</span>
-                <span class="driver-mini-bar down"></span>
+              <!-- Impact on portfolio panel -->
+              <div class="impact-panel">
+                <div class="impact-panel-title">对组合影响</div>
+                <div class="impact-panel-row">
+                  <span class="impact-panel-label">成长</span>
+                  <span class="impact-panel-value up">偏正面</span>
+                </div>
+                <div class="impact-panel-row">
+                  <span class="impact-panel-label">防御</span>
+                  <span class="impact-panel-value up">利好</span>
+                </div>
+                <div class="impact-panel-row">
+                  <span class="impact-panel-label">利率敏感</span>
+                  <span class="impact-panel-value down">承压</span>
+                </div>
               </div>
             </div>
           </div>
@@ -3121,5 +3346,13 @@
   <input type="checkbox" id="overlay-filter-panel" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-event-detail" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-pin-viewpoint" class="overlay-radio sr-only">
+
+  <!-- Task 4.1: Correlation range radio + pair-chart toggle -->
+  <input type="radio" name="corr-range" id="corr-range-1d" checked class="sr-only">
+  <input type="radio" name="corr-range" id="corr-range-5d" class="sr-only">
+  <input type="radio" name="corr-range" id="corr-range-1m" class="sr-only">
+  <input type="radio" name="corr-range" id="corr-range-3m" class="sr-only">
+  <input type="radio" name="corr-range" id="corr-range-1y" class="sr-only">
+  <input type="checkbox" id="pair-chart" class="sr-only">
 </body>
 </html>

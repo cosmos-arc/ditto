@@ -2128,7 +2128,8 @@
     <!-- ══════════════════════════════════════════════
          Object Header
          ══════════════════════════════════════════════ -->
-    <header class="shell-header">
+    <header class="shell-header shell-header--solid">
+      <nav class="header-breadcrumb" aria-label="面包屑导航"><a class="breadcrumb-item" href="page-home.html">Home</a><span class="breadcrumb-sep">/</span><a class="breadcrumb-item" href="#">Markets</a><span class="breadcrumb-sep">/</span><span class="breadcrumb-item breadcrumb-item--current">贵州茅台</span></nav>
       <div class="object-header" data-primary-answer-equivalent role="banner" aria-label="影响范围：贵州茅台 600519.SH 对象状态">
         <!-- Identity -->
         <div class="object-identity">
@@ -2194,6 +2195,7 @@
         </div>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -2947,11 +2949,11 @@
       <input type="radio" id="bottom-tab-filings" name="bottom-tab" class="sr-only">
       <input type="radio" id="bottom-tab-research" name="bottom-tab" class="sr-only">
       <div class="bottom-tabs" role="tablist">
-        <label for="bottom-tab-events" class="bottom-tab">最近事件</label>
-        <label for="bottom-tab-filings" class="bottom-tab">公告</label>
-        <label for="bottom-tab-research" class="bottom-tab">关联研究</label>
+        <label for="bottom-tab-events" class="bottom-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="bottom-events">最近事件</label>
+        <label for="bottom-tab-filings" class="bottom-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="bottom-filings">公告</label>
+        <label for="bottom-tab-research" class="bottom-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="bottom-research">关联研究</label>
       </div>
-      <div class="bottom-content" data-panel="bottom-events">
+      <div class="bottom-content" data-panel="bottom-events" id="bottom-events" role="tabpanel">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>
@@ -2987,7 +2989,7 @@
           </div>
         </div>
       </div>
-      <div class="bottom-content" data-panel="bottom-filings">
+      <div class="bottom-content" data-panel="bottom-filings" id="bottom-filings" role="tabpanel">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker filing" aria-hidden="true"></div>
@@ -3015,7 +3017,7 @@
           </div>
         </div>
       </div>
-      <div class="bottom-content" data-panel="bottom-research">
+      <div class="bottom-content" data-panel="bottom-research" id="bottom-research" role="tabpanel">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>

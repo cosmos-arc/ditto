@@ -213,6 +213,7 @@
     .chart-key::before { content: ''; width: 7px; height: 2px; border-radius: 2px; background: var(--text-tertiary); }
     .chart-key.accent::before { background: var(--brand-accent); }
     .chart-key.down::before { background: var(--market-down-fg); }
+    .benchmark-selector { margin-left: auto; font-size: var(--font-size-11); color: var(--text-secondary); background: var(--surface-strip); border: 1px solid var(--border-subtle); border-radius: var(--radius-4); padding: var(--space-2) var(--space-6); cursor: pointer; font-family: var(--font-family-ui); }
     .numeric-secondary { font-family: var(--font-family-numeric); color: var(--text-secondary); }
     .fs-10 { font-size: var(--font-size-10); }
     .fs-11 { font-size: var(--font-size-11); }
@@ -304,6 +305,7 @@
         animation: none !important;
       }
     }
+
   </style>
 </head>
 <body>
@@ -337,7 +339,7 @@
     </nav>
 
     <!-- ═══ Header ═══ -->
-    <header class="shell-header">
+    <header class="shell-header shell-header--solid">
       <div class="object-header" data-primary-answer-equivalent role="banner" aria-label="影响范围：动量增强优化回测结果">
         <div class="object-identity">
           <div class="object-name-row">
@@ -370,6 +372,7 @@
         </div>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -455,6 +458,12 @@
                     <span class="chart-key">沪深300</span>
                     <span class="chart-key down">回撤</span>
                   </span>
+                  <select class="benchmark-selector" aria-label="选择对比基准">
+                    <option value="none">无基准</option>
+                    <option value="hs300" selected>沪深 300</option>
+                    <option value="zz500">中证 500</option>
+                    <option value="cyb">创业板指</option>
+                  </select>
                 </div>
                 <div class="panel-body flex-center">
                   <div class="chart-interaction-frame" role="img" aria-label="回测净值曲线与回撤，策略对比沪深300"

@@ -938,6 +938,35 @@
     .conf-med .finding-conf { color: var(--risk-warning-fg); font-weight: var(--font-weight-medium); }
     .conf-low .finding-conf { color: var(--risk-critical-fg); font-weight: var(--font-weight-semibold); }
 
+    /* Finding source tags */
+    .finding-source {
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-medium);
+      padding: 1px var(--space-6);
+      border-radius: var(--radius-4);
+      white-space: nowrap;
+    }
+    .finding-source.wind { background: color-mix(in oklch, var(--brand-accent) 12%, transparent); color: var(--brand-accent); }
+    .finding-source.tushare { background: color-mix(in oklch, var(--cyan-500, oklch(0.7 0.12 200)) 12%, transparent); color: var(--cyan-500, oklch(0.7 0.12 200)); }
+    .finding-source.internal { background: color-mix(in oklch, var(--purple-500, oklch(0.6 0.14 300)) 12%, transparent); color: var(--purple-500, oklch(0.6 0.14 300)); }
+
+    /* Finding checkbox + batch action bar */
+    .finding-row .finding-checkbox { width: 16px; height: 16px; accent-color: var(--brand-accent); cursor: pointer; flex-shrink: 0; }
+    .finding-row .batch-actions { display: none; }
+    .finding-row:has(.finding-checkbox:checked) ~ .batch-actions { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-8); background: var(--surface-strip); border-top: 1px solid var(--border-subtle); font-size: var(--font-size-12); color: var(--text-secondary); }
+    .batch-btn { font-size: var(--font-size-11); font-weight: var(--font-weight-medium); padding: var(--space-2) var(--space-8); border: 1px solid var(--border-default); border-radius: var(--radius-4); cursor: pointer; color: var(--text-secondary); }
+    .batch-btn:hover { background: var(--interaction-hover-subtle-bg); }
+    .batch-btn.primary { border-color: var(--brand-accent); color: var(--brand-accent); }
+    .batch-btn.primary:hover { background: var(--brand-accent-subtle); }
+    .batch-btn.danger { border-color: var(--risk-critical-fg); color: var(--risk-critical-fg); }
+    .exposure-impact { font-size: var(--font-size-10); color: var(--text-tertiary); margin-left: auto; }
+
+    /* bar width utility classes for micro-bar */
+    .bar-w-69 .micro-bar-fill { width: 69%; }
+    .bar-w-78 .micro-bar-fill { width: 78%; }
+    .bar-w-86 .micro-bar-fill { width: 86%; }
+    .bar-w-91 .micro-bar-fill { width: 91%; }
+
     /* ── P0: Score direction indicators ── */
     .card-value[data-delta="up"] { color: var(--system-healthy-fg); }
     .card-value[data-delta="down"] { color: var(--risk-critical-fg); }
@@ -1106,6 +1135,7 @@
         </label>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" aria-haspopup="dialog" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -1241,11 +1271,12 @@
             <div class="panel-kicker">已选 · 候选因子</div>
           </div>
           <div class="findings-body">
-            <div class="finding-row header"><span>发现</span><span>置信</span><span>级别</span><span>状态</span></div>
-            <div class="finding-row conf-high" tabindex="0"><span>流动性调整反转 12D</span><span class="finding-conf">86</span><span>信息</span><span class="status-pill warn">待处理</span></div>
-            <div class="finding-row conf-high" tabindex="0"><span>公告漂移残差</span><span class="finding-conf">91</span><span>警告</span><span class="status-pill blocked">已阻断</span></div>
-            <div class="finding-row conf-med" tabindex="0"><span>晨间信号批次风控复核</span><span class="finding-conf">78</span><span>警告</span><span class="status-pill warn">待审批</span></div>
-            <div class="finding-row conf-low" tabindex="0"><span>北向资金数据新鲜度缺口</span><span class="finding-conf">69</span><span>严重</span><span class="status-pill blocked">已阻断</span></div>
+            <div class="finding-row header"><span></span><span>发现</span><span>置信</span><span>来源</span><span>级别</span><span>状态</span></div>
+            <div class="finding-row conf-high" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>流动性调整反转 12D</span><span class="finding-conf">86<span class="micro-bar bar-w-86"><span class="micro-bar-fill up"></span></span></span><span><span class="finding-source internal">内部模型</span></span><span>信息</span><span class="status-pill warn">待处理</span></div>
+            <div class="finding-row conf-high" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>公告漂移残差</span><span class="finding-conf">91<span class="micro-bar bar-w-91"><span class="micro-bar-fill up"></span></span></span><span><span class="finding-source wind">Wind</span></span><span>警告</span><span class="status-pill blocked">已阻断</span></div>
+            <div class="finding-row conf-med" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>晨间信号批次风控复核</span><span class="finding-conf">78<span class="micro-bar bar-w-78"><span class="micro-bar-fill accent"></span></span></span><span><span class="finding-source tushare">Tushare</span></span><span>警告</span><span class="status-pill warn">待审批</span></div>
+            <div class="finding-row conf-low" tabindex="0"><input type="checkbox" class="finding-checkbox" aria-label="选择此发现"><span>北向资金数据新鲜度缺口</span><span class="finding-conf">69<span class="micro-bar bar-w-69"><span class="micro-bar-fill risk"></span></span></span><span><span class="finding-source wind">Wind</span></span><span>严重</span><span class="status-pill blocked">已阻断</span></div>
+            <div class="batch-actions" aria-label="批量操作"><span>已选 N 项</span><button class="batch-btn primary">批量审批</button><button class="batch-btn danger">批量拒绝</button><button class="batch-btn">添加标签</button><span class="exposure-impact">预计敞口影响: ±0.8%</span></div>
           </div>
         </div>
       </section>

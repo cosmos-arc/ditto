@@ -363,7 +363,25 @@
       padding: var(--space-1) var(--space-4);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-3);
+      cursor: pointer;
+      transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard);
     }
+    .pipeline-stage:hover { border-color: var(--brand-accent); background: var(--brand-accent-subtle); }
+    .pipeline-stage.active { border-color: var(--brand-accent); background: var(--brand-accent-subtle); }
+    .pipeline-arrow { animation: flow-pulse 2s ease-in-out infinite; }
+    @keyframes flow-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    /* Pipeline overlay drawers */
+    .pipeline-drawer { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 360px; max-height: 400px; background: var(--surface-panel-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-8); box-shadow: var(--shadow-overlay); z-index: 100; overflow: hidden; }
+    #pipeline-signal-pool:checked ~ .pipeline-drawer:nth-of-type(1),
+    #pipeline-pending:checked ~ .pipeline-drawer:nth-of-type(2),
+    #pipeline-ordered:checked ~ .pipeline-drawer:nth-of-type(3),
+    #pipeline-filled:checked ~ .pipeline-drawer:nth-of-type(4) { display: flex; flex-direction: column; }
+    .pipeline-drawer-close { position: absolute; top: var(--space-8); right: var(--space-8); cursor: pointer; font-size: var(--font-size-16); color: var(--text-tertiary); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-4); }
+    .pipeline-drawer-close:hover { background: var(--interaction-hover-subtle-bg); color: var(--text-secondary); }
+    .pipeline-drawer-body { padding: var(--space-8); overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-4); }
+    .pipeline-drawer-item { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-4) var(--space-8); border-radius: var(--radius-4); font-size: var(--font-size-12); }
+    .pipeline-drawer-item:hover { background: var(--interaction-hover-subtle-bg); }
+    .pipeline-drawer-item .cell-ticker { min-width: 60px; }
     .pipeline-stage-label {
       color: var(--text-tertiary);
     }
@@ -1572,6 +1590,13 @@
     .panel-positions .data-table tbody tr.row-positive td {
       background: color-mix(in oklch, var(--market-up-fg) 4%, transparent);
     }
+    /* Enhanced PnL column tinting — stronger highlight on 盈亏/盈亏% cells */
+    .panel-positions .data-table tbody tr.row-positive td.cell-change-up {
+      background: color-mix(in oklch, var(--market-up-fg) 10%, transparent);
+    }
+    .panel-positions .data-table tbody tr.row-negative td.cell-change-down {
+      background: color-mix(in oklch, var(--market-down-fg) 10%, transparent);
+    }
 
     /* Sorting indicator */
     .data-table thead th.sortable {
@@ -1991,6 +2016,7 @@
 
     <!-- ═══ Header (68px) ═══ -->
     <header class="shell-header">
+      <nav class="header-breadcrumb" aria-label="面包屑导航"><a class="breadcrumb-item" href="page-home.html">Home</a><span class="breadcrumb-sep">/</span><span class="breadcrumb-item breadcrumb-item--current">Trading Overview</span></nav>
       <h1 class="header-title">交易总览</h1>
       <span class="header-subtitle">实盘控制中心</span>
 
@@ -2025,6 +2051,7 @@
 
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -2128,25 +2155,25 @@
               </div>
             </div>
             <div class="decision-pipeline" data-pipeline-context role="group" aria-label="信号到订单流转状态">
-              <div class="pipeline-stage" data-tooltip="信号池中的待处理信号">
+              <label class="pipeline-stage" for="pipeline-signal-pool" data-tooltip="信号池中的待处理信号 · 点击展开">
                 <span class="pipeline-stage-label">信号池</span>
                 <span class="pipeline-stage-count">4</span>
-              </div>
+              </label>
               <div class="pipeline-arrow" aria-hidden="true">→</div>
-              <div class="pipeline-stage" data-tooltip="等待人工复核的信号">
+              <label class="pipeline-stage" for="pipeline-pending" data-tooltip="等待人工复核的信号 · 点击展开">
                 <span class="pipeline-stage-label">待复核</span>
                 <span class="pipeline-stage-count warning">2</span>
-              </div>
+              </label>
               <div class="pipeline-arrow" aria-hidden="true">→</div>
-              <div class="pipeline-stage" data-tooltip="已提交但未完全成交的订单">
+              <label class="pipeline-stage" for="pipeline-ordered" data-tooltip="已提交但未完全成交的订单 · 点击展开">
                 <span class="pipeline-stage-label">已下单</span>
                 <span class="pipeline-stage-count">3</span>
-              </div>
+              </label>
               <div class="pipeline-arrow" aria-hidden="true">→</div>
-              <div class="pipeline-stage" data-tooltip="今日已完全成交的订单">
+              <label class="pipeline-stage" for="pipeline-filled" data-tooltip="今日已完全成交的订单 · 点击展开">
                 <span class="pipeline-stage-label">已成交</span>
                 <span class="pipeline-stage-count ok">47</span>
-              </div>
+              </label>
             </div>
           </div>
           <!-- Right: Routing CTAs (~25%) -->
@@ -2287,7 +2314,7 @@
                   <td class="cell-name">贵州茅台</td>
                   <td class="numeric right">200</td>
                   <td class="numeric right">1,785.00</td>
-                  <td class="numeric right">1,856.00</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up" data-tooltip="实时价格 · 原型静态展示，React 实现由 price update event 触发">1,856.00</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,8 5,7 10,9 15,6 20,5 25,3 30,4 32,2" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+14,200</td>
                   <td class="numeric right cell-change-up">+3.98%</td>
@@ -2297,7 +2324,7 @@
                   <td class="cell-name">宁德时代</td>
                   <td class="numeric right">500</td>
                   <td class="numeric right">215.00</td>
-                  <td class="numeric right">218.00</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up">218.00</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,6 5,7 10,5 15,6 20,4 25,5 30,3 32,4" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+1,500</td>
                   <td class="numeric right cell-change-up">+1.40%</td>
@@ -2307,7 +2334,7 @@
                   <td class="cell-name">比亚迪</td>
                   <td class="numeric right">300</td>
                   <td class="numeric right">285.00</td>
-                  <td class="numeric right">291.00</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up">291.00</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,9 5,8 10,7 15,6 20,5 25,4 30,3 32,3" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+1,800</td>
                   <td class="numeric right cell-change-up">+2.11%</td>
@@ -2317,7 +2344,7 @@
                   <td class="cell-name">中国平安</td>
                   <td class="numeric right">1000</td>
                   <td class="numeric right">52.00</td>
-                  <td class="numeric right">53.80</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up">53.80</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,7 5,8 10,6 15,5 20,7 25,4 30,3 32,2" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+1,800</td>
                   <td class="numeric right cell-change-up">+3.46%</td>
@@ -2327,7 +2354,7 @@
                   <td class="cell-name">美的集团</td>
                   <td class="numeric right">600</td>
                   <td class="numeric right">68.00</td>
-                  <td class="numeric right">66.50</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="down">66.50</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,4 5,5 10,6 15,5 20,7 25,8 30,9 32,9" stroke="var(--market-down-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-down">-900</td>
                   <td class="numeric right cell-change-down">-2.21%</td>
@@ -2338,7 +2365,7 @@
                   <td class="cell-name">紫金矿业 <span class="t1-lock-badge">T+1 锁定</span></td>
                   <td class="numeric right">1000 <span class="t1-qty-muted">/ 可卖 0</span></td>
                   <td class="numeric right">15.20</td>
-                  <td class="numeric right">15.65</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up">15.65</td>
                   <td class="right"><span class="cell-sparkline t1-sparkline-muted"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,6 5,5 10,7 15,4 20,5 25,3 30,4 32,2" stroke="var(--text-tertiary)" stroke-width="1" fill="none" stroke-dasharray="2 2"/></svg></span></td>
                   <td class="numeric right cell-change-up">+450</td>
                   <td class="numeric right cell-change-up">+2.96%</td>
@@ -2348,7 +2375,7 @@
                   <td class="cell-name">长江电力</td>
                   <td class="numeric right">800</td>
                   <td class="numeric right">28.00</td>
-                  <td class="numeric right">28.90</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up">28.90</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,6 5,5 10,7 15,4 20,5 25,3 30,2 32,3" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+720</td>
                   <td class="numeric right cell-change-up">+3.21%</td>
@@ -2358,7 +2385,7 @@
                   <td class="cell-name">立讯精密</td>
                   <td class="numeric right">400</td>
                   <td class="numeric right">38.00</td>
-                  <td class="numeric right">35.60</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="down">35.60</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,3 5,4 10,5 15,7 20,8 25,9 30,10 32,10" stroke="var(--market-down-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-down">-960</td>
                   <td class="numeric right cell-change-down">-6.32%</td>
@@ -2368,7 +2395,7 @@
                   <td class="cell-name">中芯国际</td>
                   <td class="numeric right">300</td>
                   <td class="numeric right">48.00</td>
-                  <td class="numeric right">51.00</td>
+                  <td class="numeric right semantic-value-flash" data-flash-dir="up">51.00</td>
                   <td class="right"><span class="cell-sparkline"><svg width="32" height="12" viewBox="0 0 32 12" aria-hidden="true"><polyline points="0,9 5,8 10,6 15,7 20,4 25,3 30,2 32,1" stroke="var(--market-up-fg)" stroke-width="1" fill="none"/></svg></span></td>
                   <td class="numeric right cell-change-up">+900</td>
                   <td class="numeric right cell-change-up">+6.25%</td>
@@ -3729,5 +3756,21 @@
   <input type="checkbox" id="overlay-position-detail" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-risk-alert-detail" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-limit-status" class="overlay-radio sr-only">
+  <!-- Pipeline overlay drawers -->
+  <input type="radio" id="pipeline-signal-pool" name="pipeline-view" class="sr-only">
+  <input type="radio" id="pipeline-pending" name="pipeline-view" class="sr-only">
+  <input type="radio" id="pipeline-ordered" name="pipeline-view" class="sr-only">
+  <input type="radio" id="pipeline-filled" name="pipeline-view" class="sr-only">
+  <!-- Pipeline drawer panels -->
+  <div class="pipeline-drawer" aria-label="信号池详情">
+    <label for="pipeline-signal-pool" class="pipeline-drawer-close" aria-label="关闭">×</label>
+    <div class="panel-header"><span class="panel-title">信号池 (4)</span></div>
+    <div class="pipeline-drawer-body">
+      <div class="pipeline-drawer-item"><span class="cell-ticker">600519</span><span>动量买入 · 强度 0.82</span><span class="cell-change-up">+2.4%</span></div>
+      <div class="pipeline-drawer-item"><span class="cell-ticker">300750</span><span>突破信号 · 强度 0.75</span><span class="cell-change-up">+1.8%</span></div>
+      <div class="pipeline-drawer-item"><span class="cell-ticker">000858</span><span>均值回归 · 强度 0.68</span><span class="cell-change-down">-0.9%</span></div>
+      <div class="pipeline-drawer-item"><span class="cell-ticker">601318</span><span>量价背离 · 强度 0.61</span><span class="cell-change-up">+1.2%</span></div>
+    </div>
+  </div>
 </body>
 </html>

@@ -144,6 +144,19 @@
     .row-action[aria-disabled="true"] { cursor: default; pointer-events: none; color: var(--text-tertiary); }
     .row-action[aria-disabled="true"]:hover { background: transparent; color: var(--text-tertiary); }
     .row-action.primary { color: var(--brand-accent); }
+    /* bar width utility classes for micro-bar */
+    .bar-w-18 .micro-bar-fill { width: 18%; }
+    .bar-w-23 .micro-bar-fill { width: 23%; }
+    .bar-w-26 .micro-bar-fill { width: 26%; }
+    .bar-w-27 .micro-bar-fill { width: 27%; }
+    .bar-w-31 .micro-bar-fill { width: 31%; }
+    .bar-w-38 .micro-bar-fill { width: 38%; }
+    .bar-w-65 .micro-bar-fill { width: 65%; }
+    .bar-w-74 .micro-bar-fill { width: 74%; }
+    .bar-w-95 .micro-bar-fill { width: 95%; }
+    /* best sharpe highlight */
+    .best-sharpe { position: relative; }
+    .best-sharpe::after { content: "★"; font-size: var(--font-size-10); color: var(--brand-accent); margin-left: var(--space-4); }
 
     .catalog-detail .context-section { flex: 0 0 auto; }
     .catalog-detail .context-section-body { flex: 0 0 auto; overflow: visible; }
@@ -381,9 +394,9 @@
                   </td>
                   <td>Alpha-Momentum-v3</td>
                   <td>2024Q1</td>
-                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>2.12</td>
+                  <td class="right numeric cell-change-up heat-bg-5 best-sharpe"><span class="metric-delta">▲</span>2.12</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>32.5%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-6.8%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-23"><span class="metric-delta">▼</span>-6.8%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status completed">已完成</span></td>
                   <td class="right numeric">04-20 15:32</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action primary">对比</label><span class="row-action">查看</span></span></td>
@@ -397,9 +410,9 @@
                   </td>
                   <td>Multi-Factor-Enhanced</td>
                   <td>2025 全年</td>
-                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>1.85</td>
+                  <td class="right numeric cell-change-up heat-bg-5"><span class="metric-delta">▲</span>1.85</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>24.3%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-9.2%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-31"><span class="metric-delta">▼</span>-9.2%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status completed">已完成</span></td>
                   <td class="right numeric">04-19 10:15</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action primary">对比</label><span class="row-action">查看</span></span></td>
@@ -413,9 +426,9 @@
                   </td>
                   <td>Sector-Rotation</td>
                   <td>2026H1</td>
-                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>1.42</td>
+                  <td class="right numeric cell-change-up heat-bg-3"><span class="metric-delta">▲</span>1.42</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>16.2%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-11.5%</td>
+                  <td class="right numeric cell-change-down heat-bg-3 bar-w-38"><span class="metric-delta">▼</span>-11.5%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status running">运行中</span></td>
                   <td class="right numeric">--</td>
                   <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">等待完成</span><span class="row-action">查看</span></span></td>
@@ -429,9 +442,9 @@
                   </td>
                   <td>Alpha-Momentum-v3</td>
                   <td>2020-22</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>0.68</td>
+                  <td class="right numeric cell-change-down heat-bg-2"><span class="metric-delta">▼</span>0.68</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>5.2%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-22.3%</td>
+                  <td class="right numeric cell-change-down heat-bg-1 bar-w-74"><span class="metric-delta">▼</span>-22.3%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status completed">已完成</span></td>
                   <td class="right numeric">04-18 08:45</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
@@ -445,9 +458,9 @@
                   </td>
                   <td>Multi-Factor-Enhanced</td>
                   <td>2025H2</td>
-                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>1.28</td>
+                  <td class="right numeric cell-change-up heat-bg-3"><span class="metric-delta">▲</span>1.28</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>18.6%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-8.1%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-27"><span class="metric-delta">▼</span>-8.1%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status completed">已完成</span></td>
                   <td class="right numeric">04-17 16:20</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
@@ -461,9 +474,9 @@
                   </td>
                   <td>Timing-Macro</td>
                   <td>2018H1-19H1</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>0.35</td>
+                  <td class="right numeric cell-change-down heat-bg-1"><span class="metric-delta">▼</span>0.35</td>
                   <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-2.1%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-28.6%</td>
+                  <td class="right numeric cell-change-down heat-bg-1 bar-w-95"><span class="metric-delta">▼</span>-28.6%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status failed">失败</span></td>
                   <td class="right numeric">04-16 11:05</td>
                   <td class="right"><span class="row-actions"><span class="row-action muted" aria-disabled="true">失败诊断</span><span class="row-action">查看</span></span></td>
@@ -477,9 +490,9 @@
                   </td>
                   <td>Alpha-Momentum-v3</td>
                   <td>2025Q4</td>
-                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>1.55</td>
+                  <td class="right numeric cell-change-up heat-bg-4"><span class="metric-delta">▲</span>1.55</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>20.1%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-5.4%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-18"><span class="metric-delta">▼</span>-5.4%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status completed">已完成</span></td>
                   <td class="right numeric">04-15 14:30</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
@@ -493,9 +506,9 @@
                   </td>
                   <td>Value-Reversal</td>
                   <td>2025Q2</td>
-                  <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>1.34</td>
+                  <td class="right numeric cell-change-up heat-bg-3"><span class="metric-delta">▲</span>1.34</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>15.8%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-7.9%</td>
+                  <td class="right numeric cell-change-down heat-bg-4 bar-w-26"><span class="metric-delta">▼</span>-7.9%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status completed">已完成</span></td>
                   <td class="right numeric">04-14 17:05</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>
@@ -509,9 +522,9 @@
                   </td>
                   <td>Sentiment-Alpha-v2</td>
                   <td>24H2-25H1</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>0.42</td>
+                  <td class="right numeric cell-change-down heat-bg-1"><span class="metric-delta">▼</span>0.42</td>
                   <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-4.8%</td>
-                  <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-19.6%</td>
+                  <td class="right numeric cell-change-down heat-bg-2 bar-w-65"><span class="metric-delta">▼</span>-19.6%<span class="micro-bar"><span class="micro-bar-fill down"></span></span></td>
                   <td><span class="bt-status stale">需复核</span></td>
                   <td class="right numeric">04-13 09:18</td>
                   <td class="right"><span class="row-actions"><label for="overlay-backtest-compare" class="row-action">对比</label><span class="row-action">查看</span></span></td>

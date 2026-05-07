@@ -624,8 +624,9 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--surface-muted);
-  border: 1px solid var(--brand-signature-muted);
+  background: color-mix(in oklch, var(--brand-signature-fg) 8%, var(--surface-muted));
+  border: 1px solid color-mix(in oklch, var(--brand-signature-fg) 20%, var(--border-subtle));
+  color: var(--brand-signature-fg);
   display: flex;
   align-items: center;
   justify-content: center;

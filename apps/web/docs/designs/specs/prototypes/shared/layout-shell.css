@@ -627,7 +627,11 @@ body {
   .hub-tab,
   .meta-chip,
   .data-table tr.row,
-  .worklist-row[role="row"]
+  .worklist-row[role="row"],
+  .breadcrumb-link,
+  .breadcrumb-item,
+  .pagination-btn,
+  .prototype-chart-surface[data-chart-prototype-ready="true"]
 ):focus-visible {
   outline: 2px solid var(--interaction-focus-ring);
   outline-offset: 2px;
@@ -685,6 +689,17 @@ body {
   position: relative;
   flex-shrink: 0;
   z-index: 120;
+}
+
+/* Hub-style header: solid background + domain signature gradient */
+.shell-header--solid {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: linear-gradient(
+    to right,
+    var(--surface-panel-base),
+    color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base))
+  );
 }
 
 /* Override any page-level header ::after decoration */
@@ -774,6 +789,60 @@ h1.header-title {
   display: flex;
   align-items: center;
   gap: var(--space-8);
+}
+
+/* ── Data Connection LED ── */
+.header-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--system-healthy-fg);
+  flex-shrink: 0;
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+.header-led[aria-label*="降级"] {
+  background: var(--amber-500);
+  animation: none;
+}
+
+.header-led[aria-label*="断开"] {
+  background: var(--red-500);
+  animation: dot-pulse 1s ease-in-out infinite;
+}
+
+/* ── Breadcrumb ── */
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-12);
+  flex-shrink: 0;
+}
+
+.breadcrumb-item {
+  color: var(--text-tertiary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.breadcrumb-item:hover {
+  color: var(--text-secondary);
+}
+
+.breadcrumb-item--current {
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.breadcrumb-item--current:hover {
+  color: var(--text-primary);
+}
+
+.breadcrumb-sep {
+  color: var(--text-quaternary);
+  user-select: none;
 }
 
 .shell-header [data-header-utility-bar] {
@@ -1300,6 +1369,7 @@ h1.header-title {
   border-left: 1px solid var(--border-subtle);
   overflow: hidden;
   display: flex;
+  position: relative;
   flex-direction: column;
   align-items: center;
   padding: var(--space-8) 0;
@@ -1348,4 +1418,29 @@ h1.header-title {
 .sidebar-collapsed-icon svg {
   width: var(--icon-size-lg);
   height: var(--icon-size-lg);
+}
+
+/* ── Sidebar Hover Peek Overlay ── */
+@keyframes sidebar-peek-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.shell-sidebar-collapsed .sidebar-peek-overlay {
+  display: none;
+  position: absolute;
+  left: var(--shell-rail-width);
+  top: var(--shell-header-height);
+  bottom: 0;
+  width: var(--shell-sidebar-width);
+  background: var(--surface-overlay);
+  box-shadow: 4px 0 12px oklch(0 0 0 / 0.15);
+  z-index: 50;
+  overflow-y: auto;
+  padding: var(--space-8);
+}
+
+.shell-sidebar-collapsed:hover .sidebar-peek-overlay {
+  display: block;
+  animation: sidebar-peek-in var(--motion-duration-fast) var(--motion-easing-standard);
 }

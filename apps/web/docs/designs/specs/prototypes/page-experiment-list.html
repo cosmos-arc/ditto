@@ -297,6 +297,13 @@
       .detail-actions .row-action { width: auto; }
     }
 
+    /* ── Confidence micro-bar width utilities ── */
+    .bar-w-68 .micro-bar-fill { width: 68%; }
+    .bar-w-79 .micro-bar-fill { width: 79%; }
+    .bar-w-96 .micro-bar-fill { width: 96%; }
+    .bar-w-99 .micro-bar-fill { width: 99%; }
+    .bar-w-100 .micro-bar-fill { width: 100%; }
+
     @media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } }
   </style>
 </head>
@@ -340,6 +347,7 @@
           <button class="btn btn-primary">新建实验</button>
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
+        <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
@@ -466,7 +474,7 @@
                   <td>MOM_20D · 当前</td>
                   <td>MOM_20D_v2 · 加权</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.018</td>
-                  <td><span class="sig-indicator high">p=0.003</span></td>
+                  <td><span class="sig-indicator high">p=0.003</span><span class="micro-bar bar-w-100"><span class="micro-bar-fill up"></span></span></td>
                   <td class="right numeric">2026-04-20</td>
                   <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action primary">详情</label></span></td>
                 </tr>
@@ -481,7 +489,7 @@
                   <td>ROE_STABLE · 多头</td>
                   <td>ROE_STABLE · 多空</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.024</td>
-                  <td><span class="sig-indicator high">p=0.001</span></td>
+                  <td><span class="sig-indicator high">p=0.001</span><span class="micro-bar bar-w-100"><span class="micro-bar-fill up"></span></span></td>
                   <td class="right numeric">2026-04-19</td>
                   <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action primary">详情</label></span></td>
                 </tr>
@@ -496,7 +504,7 @@
                   <td>EP_TTM · 原始</td>
                   <td>EP_TTM · 3-sigma</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.012</td>
-                  <td><span class="sig-indicator high">p=0.008</span></td>
+                  <td><span class="sig-indicator high">p=0.008</span><span class="micro-bar bar-w-99"><span class="micro-bar-fill up"></span></span></td>
                   <td class="right numeric">2026-04-18</td>
                   <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action primary">详情</label></span></td>
                 </tr>
@@ -511,7 +519,7 @@
                   <td>VOL_FILTER · 30%</td>
                   <td>VOL_FILTER · 20%</td>
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>+0.009</td>
-                  <td><span class="sig-indicator medium">p=0.041</span></td>
+                  <td><span class="sig-indicator medium">p=0.041</span><span class="micro-bar bar-w-96"><span class="micro-bar-fill up"></span></span></td>
                   <td class="right numeric">2026-04-18</td>
                   <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
                 </tr>
@@ -541,7 +549,7 @@
                   <td>VOL_20D</td>
                   <td>GVOL_60D</td>
                   <td class="right numeric"><span class="metric-delta">▲</span>+0.005</td>
-                  <td><span class="sig-indicator low">p=0.32</span></td>
+                  <td><span class="sig-indicator low">p=0.32</span><span class="micro-bar bar-w-68"><span class="micro-bar-fill neutral"></span></span></td>
                   <td class="right numeric">2026-04-16</td>
                   <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
                 </tr>
@@ -601,7 +609,7 @@
                   <td>DIV_YIELD · T+0</td>
                   <td>DIV_YIELD · T+2</td>
                   <td class="right numeric cell-change-down"><span class="metric-delta">▼</span>-0.002</td>
-                  <td><span class="sig-indicator low">p=0.21</span></td>
+                  <td><span class="sig-indicator low">p=0.21</span><span class="micro-bar bar-w-79"><span class="micro-bar-fill neutral"></span></span></td>
                   <td class="right numeric">2026-04-12</td>
                   <td class="right"><span class="row-actions"><label for="overlay-experiment-detail" class="row-action">详情</label></span></td>
                 </tr>
