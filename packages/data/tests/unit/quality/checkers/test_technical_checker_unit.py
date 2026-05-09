@@ -3,7 +3,7 @@
 import polars as pl
 import pytest
 from ditto_data.quality.checkers.technical import TechnicalChecker
-from ditto_kernel.quality import DQLevel, DQSeverity
+from ditto_data.quality.kernel_types import DQLevel, DQSeverity
 
 
 class TestTechnicalChecker:

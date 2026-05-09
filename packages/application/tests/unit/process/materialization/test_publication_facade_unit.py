@@ -23,6 +23,10 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.publication_safety import CertificationStage
+from ditto_features.publication_safety_records import (
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
+)
 from ditto_features.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -47,10 +51,6 @@ from ditto_features.storage.runtime.publication_shadow_sqlite import (
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
-)
-from ditto_kernel.publication_safety import (
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
 )
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_platform.foundation import SQLiteClient, SQLitePool

@@ -194,6 +194,25 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             "composition instead of direct capability imports."
         ),
     ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py",
+        allowed_modules=frozenset({"ditto_data.quality.kernel_types"}),
+        owner="apps DQ batch task",
+        reason=(
+            "DQ batch task uses DQIssue type annotations for task signatures; "
+            "types are frozen dataclasses from the quality migration (B8.1)."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/jobs/tasks/monitoring.py",
+        allowed_modules=frozenset({"ditto_data.quality.kernel_types"}),
+        owner="apps ingestion monitoring task",
+        reason=(
+            "Ingestion monitoring task uses DQResult type annotations for "
+            "task signatures; types are frozen dataclasses from the quality "
+            "migration (B8.1)."
+        ),
+    ),
 )
 
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {

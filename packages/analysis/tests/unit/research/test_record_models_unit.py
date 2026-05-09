@@ -1,9 +1,9 @@
-"""ditto_kernel.research 单元测试."""
+"""Tests for runtime record models (migrated from ditto_kernel.research)."""
 
 from __future__ import annotations
 
 import pytest
-from ditto_kernel.research import (
+from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,

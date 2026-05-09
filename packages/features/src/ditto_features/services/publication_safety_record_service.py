@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ditto_kernel.publication_safety import (
+from ditto_features.publication_safety_records import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,

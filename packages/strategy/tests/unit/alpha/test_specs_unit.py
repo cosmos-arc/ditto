@@ -55,11 +55,17 @@ class TestExecutionSpec:
             method="calendar",
             cost_model=CostModelSpec(
                 commission_rate=0.0003,
-                slippage_bps=5.0,
+                slippage_bps=3.0,
             ),
         )
         assert spec.cost_model.commission_rate == 0.0003
-        assert spec.cost_model.slippage_bps == 5.0
+        assert spec.cost_model.slippage_bps == 3.0
+
+    def test_cost_model_default_slippage_is_1_bps(self) -> None:
+        from ditto_strategy.alpha.specs import CostModelSpec
+
+        spec = CostModelSpec()
+        assert spec.slippage_bps == 1.0
 
     def test_is_frozen(self) -> None:
         from ditto_strategy.alpha.specs import ExecutionSpec

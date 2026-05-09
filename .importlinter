@@ -357,6 +357,8 @@ ignore_imports =
     ditto_apps.registry.** -> ditto_data.config.**
     ditto_apps.jobs.context -> ditto_data.quality
     ditto_apps.jobs.context -> ditto_data.quality.protocols
+    ditto_apps.jobs.tasks.dq_batch -> ditto_data.quality.kernel_types
+    ditto_apps.jobs.tasks.monitoring -> ditto_data.quality.kernel_types
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 

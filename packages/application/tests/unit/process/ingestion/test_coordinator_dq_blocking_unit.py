@@ -28,7 +28,7 @@ class TestDQBlockingBehavior:
             MarketServices,
             SourceFetchers,
         )
-        from ditto_kernel.quality import DQResult
+        from ditto_data.quality.kernel_types import DQResult
         from ditto_platform.foundation import WriteResult
 
         # Mock services
@@ -115,7 +115,7 @@ class TestDQBlockingBehavior:
             SourceFetchers,
         )
         from ditto_data.models.ingestion import IngestionLog, IngestionStatus
-        from ditto_kernel.quality import DQResult
+        from ditto_data.quality.kernel_types import DQResult
         from ditto_platform.foundation import WriteResult
 
         # Mock services

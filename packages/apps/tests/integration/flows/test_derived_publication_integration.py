@@ -37,13 +37,13 @@ from ditto_features.publication_safety import (
     CertificationStage,
     CompatibilityManifest,
 )
+from ditto_features.publication_safety_records import CompatibilityManifestRecord
 from ditto_features.services import (
     DerivedCatalogService,
     DerivedLatestQuery,
     DerivedQueryService,
     PublicationSafetyRecordService,
 )
-from ditto_kernel.publication_safety import CompatibilityManifestRecord
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial

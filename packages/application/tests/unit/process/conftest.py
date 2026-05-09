@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_kernel.quality import DQResult
+from ditto_data.quality.kernel_types import DQResult
 
 
 @pytest.fixture

@@ -1,10 +1,10 @@
-"""Tests for publication safety records in kernel."""
+"""Tests for publication safety records (migrated from kernel)."""
 
 from __future__ import annotations
 
 import dataclasses
 
-from ditto_kernel.publication_safety import (
+from ditto_features.publication_safety_records import (
     CertificationReportRecord,
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,

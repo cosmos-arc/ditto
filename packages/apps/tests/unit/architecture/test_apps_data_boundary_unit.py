@@ -21,7 +21,9 @@ def test_apps_non_registry_code_does_not_import_forbidden_data_barrels() -> None
     offenders: list[str] = []
     for path in Path("packages/apps/src/ditto_apps").rglob("*.py"):
         rel = path.as_posix()
-        if "/registry/" in rel or rel.endswith("/jobs/context.py"):
+        if "/registry/" in rel or rel.endswith(
+            ("/jobs/context.py", "/jobs/tasks/dq_batch.py", "/jobs/tasks/monitoring.py")
+        ):
             continue
         source = path.read_text(encoding="utf-8")
         if any(pattern in source for pattern in FORBIDDEN_NON_REGISTRY_IMPORTS):

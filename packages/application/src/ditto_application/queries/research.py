@@ -20,7 +20,11 @@ from ditto_analysis.research.domain import (
     DatasetSnapshot,
     KnownAtPolicy,
     LateArrivalPolicy,
+    ResearchDatasetSnapshotRecord,
     ResearchDatasetSpec,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
     SpineSnapshot,
     SpineSpec,
 )
@@ -31,12 +35,6 @@ from ditto_features.services import (
 )
 from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
 from ditto_kernel.market import CalendarId, GrainId
-from ditto_kernel.research import (
-    ResearchDatasetSnapshotRecord,
-    ResearchDatasetSpecRecord,
-    ResearchSpineSnapshotRecord,
-    ResearchSpineSpecRecord,
-)
 
 from ditto_application.config import now_iso
 from ditto_application.exceptions import AppQueryError

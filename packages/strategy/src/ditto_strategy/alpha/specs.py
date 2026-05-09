@@ -80,7 +80,7 @@ class CostModelSpec:
     """
 
     commission_rate: float = DEFAULT_COMMISSION_RATE
-    slippage_bps: float = 5.0
+    slippage_bps: float = 1.0
     impact_model: ImpactModel = ImpactModel.NONE
 
 

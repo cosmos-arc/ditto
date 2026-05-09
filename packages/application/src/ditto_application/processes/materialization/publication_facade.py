@@ -23,6 +23,11 @@ from ditto_features.publication_safety import (
     CertificationStage,
     ShadowDiffReport,
 )
+from ditto_features.publication_safety_records import (
+    CertificationReportRecord,
+    CompatibilityManifestRecord,
+    DerivedShadowSlotRecord,
+)
 from ditto_features.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -30,11 +35,6 @@ from ditto_features.services import (
     PublicationSafetyRecordService,
 )
 from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
-from ditto_kernel.publication_safety import (
-    CertificationReportRecord,
-    CompatibilityManifestRecord,
-    DerivedShadowSlotRecord,
-)
 from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 from ditto_application.config import now_iso

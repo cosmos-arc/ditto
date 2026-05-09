@@ -15,7 +15,7 @@ from ditto_features.publication_safety import (
     CompatibilityManifest,
     PublicationSafetySeverity,
 )
-from ditto_kernel.publication_safety import (
+from ditto_features.publication_safety_records import (
     DerivedMinimalDQSummaryRecord,
     ShadowDiffReportRecord,
 )

@@ -13,7 +13,8 @@ __all__ = [
 from typing import Any, Literal, Protocol
 
 import polars as pl
-from ditto_kernel.quality import DQResult
+
+from ditto_data.quality.kernel_types import DQResult
 
 
 class QualityEngineProtocol(Protocol):

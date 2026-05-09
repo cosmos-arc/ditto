@@ -5,7 +5,11 @@ from .domain import (
     KnownAtPolicy,
     LateArrivalError,
     LateArrivalPolicy,
+    ResearchDatasetSnapshotRecord,
     ResearchDatasetSpec,
+    ResearchDatasetSpecRecord,
+    ResearchSpineSnapshotRecord,
+    ResearchSpineSpecRecord,
     SpineSnapshot,
     SpineSpec,
 )
@@ -15,7 +19,11 @@ __all__ = [
     "KnownAtPolicy",
     "LateArrivalError",
     "LateArrivalPolicy",
+    "ResearchDatasetSnapshotRecord",
     "ResearchDatasetSpec",
+    "ResearchDatasetSpecRecord",
+    "ResearchSpineSnapshotRecord",
+    "ResearchSpineSpecRecord",
     "SpineSnapshot",
     "SpineSpec",
 ]

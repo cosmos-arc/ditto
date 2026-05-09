@@ -1,9 +1,9 @@
-"""ditto_kernel.quality 单元测试."""
+"""ditto_data.quality.kernel_types 单元测试."""
 
 from __future__ import annotations
 
 import pytest
-from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQResult, DQSeverity
 
 # ---------------------------------------------------------------------------
 # DQLevel

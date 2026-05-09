@@ -1,6 +1,6 @@
 """Tests for DQ result models."""
 
-from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class TestDQLevel:

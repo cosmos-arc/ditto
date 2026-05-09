@@ -1,14 +1,14 @@
 """Tests for SQLite-backed research catalog stores."""
 
-from ditto_analysis.storage.sqlite.research import (
-    SQLiteResearchCatalogReader,
-    SQLiteResearchCatalogWriter,
-)
-from ditto_kernel.research import (
+from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
+)
+from ditto_analysis.storage.sqlite.research import (
+    SQLiteResearchCatalogReader,
+    SQLiteResearchCatalogWriter,
 )
 
 

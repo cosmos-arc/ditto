@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_kernel.quality import DQResult
+from ditto_data.quality.kernel_types import DQResult
 
 # ---------------------------------------------------------------------------
 # CheckDataQualityHandler
@@ -74,7 +74,7 @@ class TestCheckDataQualityHandler:
 
     def test_handle_returns_has_errors_true(self) -> None:
         """当有 L1 错误时，返回 (df, True)."""
-        from ditto_kernel.quality import DQIssue, DQLevel, DQSeverity
+        from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQSeverity
 
         mock_engine = MagicMock()
         mock_engine.check.return_value = DQResult(
@@ -125,7 +125,7 @@ class TestCheckDataQualityHandler:
 
     def test_quarantine_writer_called_on_issues(self) -> None:
         """有 issue 时 quarantine_writer.save_failed_data 被调用."""
-        from ditto_kernel.quality import DQIssue, DQLevel, DQSeverity
+        from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQSeverity
 
         mock_engine = MagicMock()
         mock_engine.check.return_value = DQResult(
@@ -159,7 +159,7 @@ class TestCheckDataQualityHandler:
 
     def test_no_quarantine_writer_skips_gracefully(self) -> None:
         """无 quarantine_writer 时不报错."""
-        from ditto_kernel.quality import DQIssue, DQLevel, DQSeverity
+        from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQSeverity
 
         mock_engine = MagicMock()
         mock_engine.check.return_value = DQResult(
@@ -231,7 +231,7 @@ class TestReconcileSourcesHandler:
 
     def test_full_reconciliation_pass(self) -> None:
         """完整对账流程成功."""
-        from ditto_kernel.quality import DQResult
+        from ditto_data.quality.kernel_types import DQResult
 
         handler, mock_engine, mock_tdx, _mock_cmp, mock_instrument = _make_handler()
 
@@ -315,7 +315,12 @@ class TestReconcileSourcesHandler:
 
     def test_handle_returns_reconciliation_with_issues(self) -> None:
         """当对账发现问题时返回 passed=False."""
-        from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
+        from ditto_data.quality.kernel_types import (
+            DQIssue,
+            DQLevel,
+            DQResult,
+            DQSeverity,
+        )
 
         handler, mock_engine, mock_tdx, mock_comparison, mock_instrument = (
             _make_handler()

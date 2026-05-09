@@ -12,6 +12,10 @@ import polars as pl
 import pytest
 from dishka import Provider, Scope, make_container, provide
 from ditto_analysis.research.catalog_service import ResearchCatalogService
+from ditto_analysis.research.domain import (
+    ResearchDatasetSpecRecord,
+    ResearchSpineSpecRecord,
+)
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -27,10 +31,6 @@ from ditto_data.sources.source import DataSources
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
-from ditto_kernel.research import (
-    ResearchDatasetSpecRecord,
-    ResearchSpineSpecRecord,
-)
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_platform.foundation import SQLiteClient
 

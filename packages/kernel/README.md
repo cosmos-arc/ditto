@@ -22,9 +22,6 @@ ditto_kernel/
 ├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
 ├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
-├── research.py            # 研究数据集记录类型（frozen dataclass x 4）
-├── quality.py             # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
-├── publication_safety.py  # 发布安全运行时记录（frozen dataclass x 6，含结构转换方法）
 ├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
@@ -68,21 +65,7 @@ instrument / order / market / identity: 无子域间依赖
 | `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
 | `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
 | `default_price_limit_pct` | trading.py | 纯函数 | Execution |
-| `CompatibilityManifestRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
-| `DerivedMinimalDQSummaryRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
-| `ShadowDiffReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
-| `ShadowTraceRecordRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
-| `CertificationReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
-| `DerivedShadowSlotRecord` | publication_safety.py | frozen dataclass | Data, Features, Application |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
-| `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
-| `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
-| `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
-| `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
-| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, Apps, Application |
-| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, Apps, Application |
-| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
-| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
 | `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
@@ -120,7 +103,6 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
 from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy, DecisionFrame
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 
 # StrEnum 直接支持字符串比较
 assert AssetClass.STOCK == "stock"
@@ -140,6 +122,11 @@ pixi run -e dev pytest packages/kernel/tests/
 - [Kernel 层规范](CLAUDE.md)
 
 ## 变更记录
+
+### v0.3.1 (2026-05-10)
+- 迁移 `quality.py` → `ditto_data.quality.kernel_types`（DQLevel / DQSeverity / DQIssue / DQResult）
+- 迁移 `research.py` → `ditto_analysis.research.domain`（4 frozen dataclass）
+- 迁移 `publication_safety.py` → `ditto_features.publication_safety_records`（6 frozen dataclass）
 
 ### v0.3.0 (2026-04-27)
 - Phase 1 子域重组：`enums.py` / `specs.py` 拆分为 11 个子域文件

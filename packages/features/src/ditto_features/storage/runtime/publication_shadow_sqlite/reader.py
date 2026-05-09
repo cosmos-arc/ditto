@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from ditto_kernel.publication_safety import DerivedShadowSlotRecord
 from ditto_platform.foundation import SQLiteClient
+
+from ditto_features.publication_safety_records import DerivedShadowSlotRecord
 
 __all__ = ["SQLiteDerivedShadowSlotReader"]
 

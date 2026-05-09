@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from ditto_kernel.research import (
+from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
-
-from ditto_analysis.contracts import (
+from ditto_analysis.research.protocols import (
     ResearchCatalogReaderProtocol,
     ResearchCatalogWriterProtocol,
 )
