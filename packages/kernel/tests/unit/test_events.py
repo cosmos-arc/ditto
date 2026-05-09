@@ -3,7 +3,7 @@
 from datetime import datetime
 
 import pytest
-from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
+from ditto_kernel.events import DomainEvent, EventBus, EventName, SimpleEventBus
 
 
 class TestDomainEvent:
@@ -112,3 +112,25 @@ class TestEventBusProtocol:
         bus: EventBus = SimpleEventBus()
         assert hasattr(bus, "publish")
         assert hasattr(bus, "subscribe")
+
+
+class TestEventName:
+    """EventName 事件名称常量 catalog 测试."""
+
+    def test_all_known_event_names(self) -> None:
+        """应包含所有已知事件名称常量."""
+        expected = {
+            "ORDER_SUBMITTED": "order_submitted",
+            "ORDER_FILLED": "order_filled",
+            "ORDER_CANCELED": "order_canceled",
+            "RISK_GUARD_TRIGGERED": "risk_guard_triggered",
+            "POSITION_CHANGED": "position_changed",
+        }
+        for attr, value in expected.items():
+            assert getattr(EventName, attr) == value, f"EventName.{attr} 应为 {value!r}"
+
+    def test_constants_are_strings(self) -> None:
+        """所有常量应为 str 类型."""
+        for attr in dir(EventName):
+            if attr.isupper():
+                assert isinstance(getattr(EventName, attr), str)

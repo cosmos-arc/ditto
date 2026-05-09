@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from ditto_risk.contracts import RiskSlice
 from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
 from ditto_risk.models import DrawdownStats, ExposureData, RiskMetrics
@@ -50,6 +49,5 @@ __all__ = [
     "RiskActionType",
     "RiskMetrics",
     "RiskSeverity",
-    "RiskSlice",
     "SingleLossLimitRule",
 ]

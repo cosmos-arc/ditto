@@ -1,5 +1,5 @@
 """
-DomainEvent + EventBus Protocol + SimpleEventBus.
+DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog.
 
 满足 kernel Protocol/薄实现准入标准：
 1. 预期跨层使用：core + data + port
@@ -17,10 +17,25 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol
 
-__all__ = ["DomainEvent", "EventBus", "SimpleEventBus"]
+__all__ = ["DomainEvent", "EventBus", "EventName", "SimpleEventBus"]
 
 # Handler 类型：接收 DomainEvent 的回调
 EventHandler = Callable[["DomainEvent"], None]
+
+
+class EventName:
+    """
+    事件名称常量 — runtime spine 的事件名 catalog.
+
+    所有领域事件的 event_type 值均在此定义，确保跨包引用的类型安全。
+    消费者通过 ``from ditto_kernel.events import EventName`` 引用。
+    """
+
+    ORDER_SUBMITTED: str = "order_submitted"
+    ORDER_FILLED: str = "order_filled"
+    ORDER_CANCELED: str = "order_canceled"
+    RISK_GUARD_TRIGGERED: str = "risk_guard_triggered"
+    POSITION_CHANGED: str = "position_changed"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -29,7 +44,7 @@ class DomainEvent:
     领域事件.
 
     Attributes:
-        event_type: 事件类型标识（如 "order_filled", "risk_alert"）
+        event_type: 事件类型标识（如 EventName.ORDER_FILLED）
         timestamp: 事件发生时刻
         payload: 事件载荷（默认空字典）
 

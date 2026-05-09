@@ -8,6 +8,7 @@ from typing import Protocol, runtime_checkable
 from ditto_execution.audit.models import (
     PreTradeDecisionPayload,
     RiskScanPayload,
+    TradeFillPayload,
 )
 from ditto_execution.models import FillRecord, SignalRecord
 
@@ -46,4 +47,12 @@ class TradeAuditor(Protocol):
         records: Sequence[PreTradeDecisionPayload],
     ) -> int:
         """保存盘前决策审计日志."""
+        ...
+
+    def save_trade_fill_log(
+        self,
+        run_id: str,
+        records: Sequence[TradeFillPayload],
+    ) -> int:
+        """保存成交审计日志."""
         ...

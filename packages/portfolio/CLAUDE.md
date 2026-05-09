@@ -50,14 +50,15 @@ ditto_portfolio/
 │   ├── constraints.py    # 约束检查
 │   ├── comparison.py     # 组合对比（实际 vs 目标）
 │   └── report_views.py   # 报告视图
-├── positions/            # 持仓管理（待扩展）
-├── target_portfolios/    # 目标组合（待扩展）
-├── holdings/             # 持仓快照（待扩展）
+├── positions/            # 持仓管理（PositionReader/PositionSnapshot）
+├── projection.py         # 状态投影（PortfolioStateSnapshot + FillProjector + AccountProjector）
+├── target_portfolios/    # reserved — 未来持久化层，使用 TargetWeightRecord/TargetWeightStore 命名
+├── holdings/             # 持仓快照（HoldingReader/HoldingSnapshot）
 ├── observability/        # 可观测性
 │   └── metrics.py        # 指标
 ├── contracts.py          # 组合领域契约
 ├── errors.py             # 错误定义
-└── events.py             # 领域事件
+└── events.py             # 领域事件（PositionChanged — reserved，待 B5 状态恢复有消费者时发布）
 ```
 
 ## 测试位置
@@ -101,3 +102,11 @@ pixi run -e dev pytest packages/portfolio/tests/unit -q
 pixi run -e dev type packages/portfolio/src
 pixi run -e dev arch-check
 ```
+
+## 已知差距 / 计划工作
+
+| ID | 差距 | 现状 | 目标 |
+|----|------|------|------|
+| PORT-P1-01 | ~~状态投影~~ **已修复 (B5)** | `PortfolioStateSnapshot` + `FillProjector` Protocol + `AccountProjector` 已实现 | ✅ 完成 |
+| PORT-P1-02 | **target_portfolios 成熟度** | target_portfolios/ 目录为 reserved 命名空间 | 成熟度标注为 experimental，CLAUDE.md 已同步 |
+| PORT-P1-03 | **PositionChanged 事件** | `PositionChanged` 已定义但未发布（reserved） | 待状态恢复消费者实际消费后从 `apply_fill` 发布 |

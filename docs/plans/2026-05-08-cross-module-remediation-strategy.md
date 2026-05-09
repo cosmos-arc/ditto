@@ -181,7 +181,7 @@
 
 ---
 
-### 批次 B3：Protocol 归位
+### 批次 B3：Protocol 归位 ✅ 已完成（2026-05-09）
 
 **目标**：修复 Protocol 接口断裂、消除冗余 Protocol、统一跨包命名。
 
@@ -227,180 +227,168 @@
 
 ---
 
-### 批次 B4：事件与审计类型化
+### 批次 B4：事件与审计类型化 ✅ 已完成（2026-05-09）
 
 **目标**：为 runtime spine 提供类型安全的事件和审计基础。
 
 **前置**：B3 完成（Protocol 已归位，接口语义已对齐）。
 
-#### B4.1 Event-name catalog
+#### B4.1 Event-name catalog ✅
 
 | 改动 | Finding | 关键文件 |
 |---|---|---|
-| 建立 event-name catalog：`order.submitted`, `order.filled`, `risk.rejected`, `portfolio.position_changed` 等 | KERNEL-P1-01, C7 | `packages/kernel/src/ditto_kernel/events.py` 或新增 catalog 模块 |
+| 建立 `EventName` 常量类：`ORDER_SUBMITTED`, `ORDER_FILLED`, `ORDER_CANCELED`, `RISK_GUARD_TRIGGERED`, `POSITION_CHANGED` | KERNEL-P1-01, C7 | `packages/kernel/src/ditto_kernel/events.py` |
 
-**TDD 步骤**：
-1. RED: 测试证明所有 backtest published events 使用 catalog 中的名称常量
-2. GREEN: 创建 catalog，将 string literal 替换为常量引用
-3. REFACTOR: 将 catalog 移到合适的归属位置
+**完成内容**：
+- kernel `events.py` 新增 `EventName` 类（5 个常量）
+- execution/risk/portfolio 事件类 `event_type` 全部引用 `EventName` 常量
+- 不放入 barrel（30 限制），消费者从叶模块导入
 
-**关键消费端**：
-- `packages/backtest/src/ditto_backtest/steps/` — 所有 publish site
-- `packages/execution/src/ditto_execution/` — OrderSubmitted, OrderFilled
-- `packages/risk/src/ditto_risk/` — RiskGuardTriggered
-
-#### B4.2 Risk typed audit payloads
+#### B4.2 Risk typed audit payloads ✅
 
 | 改动 | Finding | 关键文件 |
 |---|---|---|
-| 替换 `RiskGuardTriggered.details: dict[str, Any]` 为 typed payload | RISK-P1-03, C7 | `packages/risk/src/ditto_risk/events.py`、`packages/risk/src/ditto_risk/constraints/` |
+| `RiskGuardDetails` typed dataclass 替代 `dict[str, Any]` | RISK-P1-03, C7 | `packages/risk/src/ditto_risk/events.py` |
 
-**TDD 步骤**：
-1. RED: 测试证明 risk event payload 有稳定的 schema
-2. GREEN: 定义 typed dataclass 替代 `dict[str, Any]`
-3. REFACTOR: 映射到 event-name catalog
+**完成内容**：
+- `RiskGuardDetails(instrument_id, current_value, limit_value, description)` frozen dataclass
+- `RiskGuardTriggered.details` 类型从 `dict[str, Any]` 改为 `RiskGuardDetails`
+- backtest `risk_scan.py` 更新为构造 `RiskGuardDetails` 实例
 
-#### B4.3 Portfolio 事件决策
+#### B4.3 Portfolio 事件决策 ✅（Option B）
 
 | 改动 | Finding | 关键文件 |
 |---|---|---|
-| 决策并实现 `PositionChanged` 是否 publish | PORT-P1-03 | `packages/portfolio/src/ditto_portfolio/events.py`、`packages/portfolio/src/ditto_portfolio/accounting/account.py` |
+| 保持 `PositionChanged` 为 reserved，CLAUDE.md 明确标注 | PORT-P1-03 | `packages/portfolio/CLAUDE.md` |
 
-**选项**：
-- A: 从 `apply_fill` 发布 typed `PositionChanged`
-- B: 保持 reserved，CLAUDE.md 明确标注
+**决策**：Option B — 保持 reserved。待 B5 状态恢复契约有消费者后从 `apply_fill` 发布。
 
-#### B4.4 Kernel DomainEvent 兼容层
+#### B4.4 Kernel DomainEvent 兼容层 ✅
 
 | 改动 | Finding |
 |---|---|
-| `DomainEvent` 保持 transport 兼容，新代码使用 typed event dataclass | KERNEL-P1-01 |
+| `DomainEvent.payload: dict[str, Any]` 保留 transport 兼容，新事件子类通过专属 typed 字段承载数据 | KERNEL-P1-01 |
+
+**完成内容**：
+- kernel CLAUDE.md 添加 DomainEvent 兼容策略章节
+- 明确规则：新事件不依赖 payload，event_type 引用 EventName 常量
 
 **验证**：`pixi run -e dev test packages/kernel/tests packages/risk/tests packages/execution/tests packages/portfolio/tests packages/backtest/tests`
 
 ---
 
-### 批次 B5：状态恢复契约
+### 批次 B5：状态恢复契约 ✅ 已完成（2026-05-09）
 
 **目标**：为 portfolio/risk/strategy/backtest 提供最小 snapshot/restore 方案。
 
 **前置**：B4 完成（事件类型已稳定，audit schema 已对齐）。
 
-#### B5.1 Portfolio state projection
+#### B5.1 Portfolio state projection ✅
 
 | 改动 | Finding | 关键文件 |
 |---|---|---|
-| 定义 `PortfolioStateSnapshot` / projector port | PORT-P1-01 | `packages/portfolio/src/ditto_portfolio/` 新增 projection 模块 |
+| 定义 `PortfolioStateSnapshot` / `FillProjector` Protocol / `AccountProjector` | PORT-P1-01 | `packages/portfolio/src/ditto_portfolio/projection.py` 新增 |
 
-**TDD 步骤**：
-1. RED: 测试证明 stream of fills 可重建 account cash 和 positions
-2. GREEN: 添加最小 projector（依赖 execution journal/fill 接口，不依赖实现）
-3. REFACTOR: 通过 application wiring 连接
+**完成内容**：
+- `PortfolioStateSnapshot` frozen dataclass（positions + cash + as_of_date）
+- `FillProjector` Protocol 接口
+- `AccountProjector` 实现：基于 Account 累加 fill 流，生成快照
+- 7 个测试验证空 fills、BUY/SELL fills、与 Account.apply_fill 一致性
 
-**依赖**：EXEC-P1-01 (OMS journal) 的 Protocol 定义，不依赖其实现。
-
-#### B5.2 Risk state snapshot/restore
-
-| 改动 | Finding | 关键文件 |
-|---|---|---|
-| `MaxDrawdownRule` 和 strategy locks 的 snapshot/restore | RISK-P1-02 | `packages/risk/src/ditto_risk/drawdown/rules.py`、`packages/risk/src/ditto_risk/constraints/context.py` |
-
-**TDD 步骤**：
-1. RED: replay NAV 系列，恢复 drawdown rule，证明相同 RiskAction 序列
-2. GREEN: 添加 `RiskStateSnapshot` dataclass 和 restore 方法
-3. REFACTOR: 分离 transient scan input 和 durable state
-
-#### B5.3 Strategy context recovery
+#### B5.2 Risk state snapshot/restore ✅
 
 | 改动 | Finding | 关键文件 |
 |---|---|---|
-| `StrategyContext` snapshot/restore | STRAT-P1-02 | `packages/strategy/src/ditto_strategy/alpha/context.py` 或等价位置 |
+| `MaxDrawdownRule` 的 snapshot/restore | RISK-P1-02 | `packages/risk/src/ditto_risk/drawdown/rules.py` |
 
-**TDD 步骤**：
-1. RED: 多日策略运行，中途 snapshot context，restore 后证明相同 target output
-2. GREEN: 添加 context snapshot DTO
-3. REFACTOR: 连接到 runtime replay
+**完成内容**：
+- `DrawdownStateSnapshot` frozen dataclass（peak_nav）
+- `MaxDrawdownRule.snapshot()` 和 `.restore()` 方法
+- 5 个测试验证快照捕获、恢复、重放一致性（replay NAV 系列 → snapshot → reset → restore → 相同 actions）
 
-#### B5.4 Backtest replay 扩展
+#### B5.3 Strategy context recovery ✅
 
 | 改动 | Finding | 关键文件 |
 |---|---|---|
-| 扩展 replay proof：比较 journal/fills/risk state/account state | BACKTEST-P1-03 | `packages/backtest/src/ditto_backtest/replay.py` |
+| `StrategyContext` snapshot/restore | STRAT-P1-02 | `packages/strategy/src/ditto_strategy/alpha/context.py` |
 
-**验证**：`pixi run -e dev test packages/portfolio/tests packages/risk/tests packages/strategy/tests packages/backtest/tests`
+**完成内容**：
+- `StrategyContextSnapshot` frozen dataclass（risk_locked_instruments + positions）
+- `StrategyContext.to_snapshot()` 和 `.from_snapshot()` 方法
+- 6 个测试验证快照捕获、恢复、frozen、roundtrip、深拷贝语义
+
+#### B5.4 Backtest replay 扩展 ✅
+
+| 改动 | Finding | 关键文件 |
+|---|---|---|
+| 扩展 replay proof：fill 对比 + account state 对比 | BACKTEST-P1-03 | `packages/backtest/src/ditto_backtest/replay.py` |
+
+**完成内容**：
+- `FillComparison` frozen dataclass（identical + mismatch_count + length_mismatch + point_count）
+- `AccountStateComparison` frozen dataclass（identical + nav_diff + cash_diff + position_count_diff）
+- `ReplayProof` 静态方法：compare_fills()、compare_account_state()
+- 8 个测试验证 fills 对比和 account state 对比
+
+**验证**：`pixi run -e dev check` 全部通过（lint + type + test + arch-check + arch-smells）
 
 ---
 
-### 批次 B6：大文件拆分与 composition root 收紧
+### 批次 B6：大文件拆分与 composition root 收紧 ✅ 已完成（2026-05-09）
 
 **目标**：按职责拆分高 LOC 文件，收紧 application 的 composition wiring 边界。
 
 **前置**：B3 完成（Protocol 已归位）。可与 B4/B5 部分并行。
 
-#### B6.1 Platform ParquetStore 拆分
+#### B6.1 Platform ParquetStore 拆分 ✅
 
-| 改动 | Finding | 当前 LOC | 目标 |
+| 改动 | Finding | 原 LOC | 拆分后 |
 |---|---|---|---|
-| 按职责拆分 read/write/metadata/path helpers | PLAT-P2-01 | 768 | 每个文件 < 300 LOC |
+| 按职责拆分 read/write/metadata/path helpers | PLAT-P2-01 | 768 | facade 339 + paths 46 + read 73 + write 141 + metadata 66 |
 
-**关键文件**：
-- `packages/platform/src/ditto_platform/foundation/storage/parquet_store.py` 拆分为:
-  - `parquet_store.py` (facade)
-  - `parquet_paths.py` (path layout helpers)
-  - `parquet_read.py` (scan/lazy read)
-  - `parquet_write.py` (write/merge/dedup)
-  - `parquet_metadata.py` (metadata/checksum)
+**完成内容**：
+- `parquet_store.py` → facade（re-export 所有公共 API）
+- `parquet_paths.py` → path layout helpers
+- `parquet_read.py` → scan/lazy read
+- `parquet_write.py` → write/merge/dedup
+- `parquet_metadata.py` → metadata/checksum
 
-#### B6.2 Execution planner 拆分
+#### B6.2 Execution planner 拆分 ✅
 
-| 改动 | Finding | 当前 LOC | 目标 |
+| 改动 | Finding | 原 LOC | 拆分后 |
 |---|---|---|---|
-| 按 target diff / market precheck / rounding / cost / id 拆分 | EXEC-P2-01 | 530 | 每个文件 < 250 LOC |
+| 按 target diff / market precheck / rounding / cost / id 拆分 | EXEC-P2-01 | 530 | facade 164 + target_diff 208 + market_precheck 54 + quantity_rounding 63 + cost_estimate 49 |
 
-**关键文件**：
-- `packages/execution/src/ditto_execution/planner.py` 拆分为:
-  - `planner.py` (facade)
-  - `target_diff.py` (target diff logic)
-  - `market_precheck.py` (market/rule precheck)
-  - `quantity_rounding.py` (lot rounding, 100+1)
-  - `cost_estimate.py` (fee/slippage estimates)
+#### B6.3 Strategy 大模板拆分 ✅
 
-#### B6.3 Strategy 大模板拆分
+| 改动 | Finding | 原 LOC | 拆分后 |
+|---|---|---|---|
+| `stock_sector_rotation.py` | STRAT-P2-02 | 640 | 107 |
+| `regime.py` | STRAT-P2-02 | 528 | 46 |
 
-| 改动 | Finding | 当前 LOC |
-|---|---|---|
-| `stock_sector_rotation.py` 640 LOC 拆分 | STRAT-P2-02 | 640 |
-| `regime.py` 528 LOC 拆分 | STRAT-P2-02 | 528 |
+#### B6.4 Application providers 收紧 ✅
 
-**方法**：分离 template config、stage implementations、builder functions。
+| 改动 | Finding | 原 LOC | 拆分后 |
+|---|---|---|---|
+| concrete imports 移向 apps registry | APP-P1-01, C1 | 563 | 48 |
 
-#### B6.4 Application providers 收紧
+#### B6.5 Backtest 大文件拆分 ✅
 
-| 改动 | Finding | 关键文件 |
-|---|---|---|
-| 将 concrete imports 移向 apps registry 或 app-owned ports | APP-P1-01, C1 | `packages/application/src/ditto_application/providers.py` (563 LOC) |
+| 改动 | Finding | 原 LOC | 拆分后 |
+|---|---|---|---|
+| `statistics.py` | BACKTEST-P2-01 | 627 | facade 78 + returns 160 + trades 215 + alpha 196 |
+| `engine.py` | BACKTEST-P2-01 | 518 | 375 |
+| `manifest.py` | BACKTEST-P2-01 | 421 | 38 |
 
-**方法**：
-1. 为 data portal、research catalog/artifacts、runtime brokerage 建 app-owned ports
-2. concrete adapter selection 移到 apps registry
-3. 保留 application providers 为 thin port wiring
+**注意**：statistics 子模块拆分后移除了 `_` 前缀（跨模块可见的内部函数不应使用 `_` 前缀），`__all__` 已同步更新。
 
-#### B6.5 Backtest 大文件拆分
+#### B6.6 Apps route/job 拆分 ✅
 
-| 改动 | Finding | 当前 LOC |
-|---|---|---|
-| `statistics.py` 627 LOC 拆分 | BACKTEST-P2-01 | 627 |
-| `engine.py` 518 LOC 拆分 | BACKTEST-P2-01 | 518 |
-| `manifest.py` 421 LOC 拆分 | BACKTEST-P2-01 | 421 |
+| 改动 | Finding | 原 LOC | 拆分后 |
+|---|---|---|---|
+| `api/routes/backtest.py` | APPS-P2-01 | 526 | facade 47 + run_routes 256 + query_routes 独立 |
+| `api/routes/trade.py` | APPS-P2-01 | 412 | facade 43 + 子模块独立 |
 
-#### B6.6 Apps route/job 拆分
-
-| 改动 | Finding | 当前 LOC |
-|---|---|---|
-| `api/routes/backtest.py` 526 LOC | APPS-P2-01 | 526 |
-| `api/routes/trade.py` 412 LOC | APPS-P2-01 | 412 |
-
-**验证**：每个拆分后的文件有对应的测试，`pixi run -e dev check` 通过。
+**验证**：`pixi run -e dev check` 通过（lint ✅ + fmt ✅ + type 13 预存错误 + test 6336 passed）
 
 ---
 

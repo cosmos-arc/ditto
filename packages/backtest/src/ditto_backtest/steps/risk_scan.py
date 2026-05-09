@@ -13,7 +13,7 @@ from __future__ import annotations
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.strategy import RiskScope
-from ditto_risk.events import RiskGuardTriggered
+from ditto_risk.events import RiskGuardDetails, RiskGuardTriggered
 from ditto_risk.post_trade import (
     PostTradeRiskGuard,
     RiskActionType,
@@ -94,7 +94,7 @@ class RiskScanStep:
                     RiskGuardTriggered(
                         rule_name=action.rule_id,
                         severity=action.severity.value,
-                        details={"instrument_id": action.instrument_id},
+                        details=RiskGuardDetails(instrument_id=action.instrument_id),
                         timestamp=self._clock.now(),
                     ),
                 )

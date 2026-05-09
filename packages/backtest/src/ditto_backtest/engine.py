@@ -1,5 +1,5 @@
 """
-EngineLoop -- 回测引擎主循环 + 配置/结果模型.
+EngineLoop -- 回测引擎主循环.
 
 V1 每日循环 (通过 TradingStep chain 编排):
   1. DataFetchStep: 获取 Slice + 账户快照 + 清除锁定
@@ -9,15 +9,14 @@ V1 每日循环 (通过 TradingStep chain 编排):
   5. PreTradeStep: PreTrade 校验 + 订单提交 (仅调仓日)
   6. ExecutionStep: 订单成交处理
   7. AuditStep: 审计记录 (账户快照 + 成交 + 已平仓交易)
+
+EngineOptions / assemble_engine_result 已拆至 engine_steps.py。
 """
 
 from __future__ import annotations
 
 import uuid
 from collections import deque
-from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import datetime
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
@@ -28,12 +27,8 @@ from ditto_execution.trade_builder import (
     TradeMatchingMethod,
 )
 from ditto_kernel import traced
-from ditto_kernel.clock import Clock
-from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
-from ditto_portfolio.accounting import AccountView, FillEvent, Order
-from ditto_risk.post_trade import PostTradeRiskGuard
+from ditto_portfolio.accounting import FillEvent, Order
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
@@ -41,20 +36,23 @@ from loguru import logger
 
 from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed, Slice
-from ditto_backtest.errors import SimulationError
+
+# Re-export from extracted module
+from ditto_backtest.engine_steps import (
+    EngineOptions,
+    StepDeps,
+    assemble_engine_result,
+    build_steps,
+    is_rebalance_day,
+)
 from ditto_backtest.manifest import (
     RuleRefCollector,
-    RunManifest,
     build_run_manifest,
 )
 from ditto_backtest.result import EngineResult
-from ditto_backtest.statistics import ExecutionAuditCollector
 from ditto_backtest.steps import (
-    AuditStep,
     DataFetchStep,
-    ExecutionStep,
     PlanningStep,
-    PreTradeStep,
     RiskScanStep,
     StepContext,
     StrategyStep,
@@ -69,83 +67,6 @@ __all__ = [
     "EngineOptions",
     "EngineResult",
 ]
-
-
-# ---------------------------------------------------------------------------
-# EngineOptions
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class EngineOptions:
-    """
-    引擎可选组件 -- 将可选依赖打包以减少构造参数数量。
-
-    Attributes:
-        clock: 统一时间抽象 (必需, 用于事件时间戳和步进推进)
-        fee_model: 手续费模型 (用于 PreTrade 估算, None = 不使用独立费率)
-        rule_provider: 三层规则提供者 (None = 不传规则给 Planner)
-        post_trade_guard: PostTrade 风控扫描器 (None = 跳过 PostTrade)
-        audit_collector: 审计收集器 (None = 不记录审计日志)
-        event_bus: 事件总线 (None = 不发布域事件)
-        input_bundle_builder: 自定义 input bundle 构建器
-            (None = 使用默认构建器)
-        random_seed: 随机种子（用于可复现性，默认 42）
-        should_stop: 协作式取消回调 (None = 不支持取消)
-        on_progress: 进度回调 (completed_days, total_days)
-
-    """
-
-    clock: Clock
-    fee_model: FeeModel | None = None
-    rule_provider: InstrumentRuleProvider | None = None
-    post_trade_guard: PostTradeRiskGuard | None = None
-    audit_collector: ExecutionAuditCollector | None = None
-    event_bus: EventBus | None = None
-    input_bundle_builder: Callable[[StepContext], StrategyInputBundle] | None = None
-    random_seed: int = 42
-    should_stop: Callable[[], bool] | None = None
-    on_progress: Callable[[int, int], None] | None = None
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _require_slice(slice_: Slice | None) -> Slice:
-    """断言 slice_ 非 None — 用于 lambda 中类型收窄."""
-    if slice_ is None:
-        msg = "slice_ required"
-        raise SimulationError(msg, step="engine")
-    return slice_
-
-
-def assemble_engine_result(
-    *,
-    run_id: str,
-    start: str,
-    end: str,
-    account_view: AccountView,
-    manifest: RunManifest,
-    fills: list[FillEvent],
-    orders: list[Order],
-    skipped: list[str],
-    cancelled: bool,
-) -> EngineResult:
-    """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
-    return EngineResult(
-        run_id=run_id,
-        period=(start, end),
-        final_nav=account_view.nav,
-        total_trades=len(fills),
-        orders=list(orders),
-        fills=list(fills),
-        account_view=account_view,
-        manifest=manifest,
-        skipped_dates=tuple(skipped),
-        cancelled=cancelled,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -226,58 +147,29 @@ class EngineLoop:
         self._steps = self._build_steps()
 
     def _build_steps(self) -> tuple[TradingStep, ...]:
-        """构建 TradingStep chain。"""
-        return (
-            DataFetchStep(
+        """构建 TradingStep chain — 委托给 engine_steps.build_steps。"""
+        return build_steps(
+            StepDeps(
+                config=self._config,
+                pipeline=self._pipeline,
+                planner=self._planner,
+                brokerage=self._brokerage,
+                pre_trade_check=self._pre_trade_check,
                 data_feed=self._data_feed,
                 clock=self._clock,
-                brokerage=self._brokerage,
-                strategy_context=self._strategy_context,
-                input_instruments=self._input_instruments,
-                bar_fingerprints=self._bar_fingerprints,
-            ),
-            RiskScanStep(
+                fee_model=self._fee_model,
+                rule_provider=self._rule_provider,
                 post_trade_guard=self._post_trade_guard,
                 audit_collector=self._audit_collector,
                 event_bus=self._event_bus,
+                input_bundle_builder=self._input_bundle_builder,
                 strategy_context=self._strategy_context,
-                clock=self._clock,
-            ),
-            StrategyStep(
-                pipeline=self._pipeline,
-                strategy_context=self._strategy_context,
-                strategy_id=self._config.strategy_id,
-                strategy_run_id=self._config.strategy_run_id,
-                input_bundle_builder=self._input_bundle_builder
-                if self._input_bundle_builder is not None
-                else lambda ctx: self._build_input_bundle(
-                    ctx.date,
-                    _require_slice(ctx.slice_),
-                ),
-            ),
-            PlanningStep(
-                planner=self._planner,
-                rule_provider=self._rule_provider,
+                input_instruments=self._input_instruments,
+                bar_fingerprints=self._bar_fingerprints,
                 rule_ref_collector=self._rule_ref_collector,
-                strategy_context=self._strategy_context,
-            ),
-            PreTradeStep(
-                pre_trade_check=self._pre_trade_check,
-                brokerage=self._brokerage,
-                fee_model=self._fee_model,
-                event_bus=self._event_bus,
-                clock=self._clock,
-            ),
-            ExecutionStep(
-                brokerage=self._brokerage,
-                event_bus=self._event_bus,
-                clock=self._clock,
-            ),
-            AuditStep(
-                audit_collector=self._audit_collector,
-                brokerage=self._brokerage,
                 trade_builder=self._trade_builder,
                 recorded_trade_ids=self._recorded_trade_ids,
+                build_input_bundle_fn=self._build_input_bundle,
             ),
         )
 
@@ -474,43 +366,10 @@ class EngineLoop:
         return True
 
     def _is_rebalance_day(self, date: str) -> bool:
-        """
-        根据配置判断是否为调仓日.
-
-        daily: 每日
-        weekly: 每自然周第一个交易日（基于 trading_days 判断 ISO week 跨越）
-        monthly: 每月第一个交易日
-
-        date 不在 trading_days 中时，fallback 为 daily（return True），
-        避免抛出 ValueError。
-        """
-        freq = self._config.rebalance_freq
-        if freq == "daily":
-            return True
-
-        idx = self._trading_day_index.get(date)
-        if idx is None:
-            logger.warning(
-                (
-                    "_is_rebalance_day: date={!r} 不在"
-                    " trading_days index 中, fallback 为 daily"
-                ),
-                date,
-            )
-            return True
-
-        # 首个交易日始终为调仓日（weekly / monthly 共享逻辑）
-        if idx == 0:
-            return True
-
-        prev_date = self._trading_days[idx - 1]
-
-        if freq == "weekly":
-            curr = datetime.strptime(date, "%Y-%m-%d")
-            prev = datetime.strptime(prev_date, "%Y-%m-%d")
-            return curr.isocalendar()[1] != prev.isocalendar()[1]
-
-        if freq == "monthly":
-            return not prev_date.startswith(date[:7])
-
-        return True
+        """根据配置判断是否为调仓日 — 委托给 engine_steps.is_rebalance_day。"""
+        return is_rebalance_day(
+            date,
+            self._config.rebalance_freq,
+            self._trading_days,
+            self._trading_day_index,
+        )

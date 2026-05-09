@@ -1,0 +1,199 @@
+"""Process 层 DI Provider — 编排/物化/质量服务注册。"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from dishka import Provider, Scope, provide
+from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.quality import QualityEngine
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
+from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.services import (
+    ArtifactPersistenceService,
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    DerivedShadowSlotService,
+    PublicationSafetyRecordService,
+    PublicationSafetyRuntimeStores,
+)
+from ditto_features.storage.runtime.publication_safety import (
+    CertificationReader,
+    CertificationWriter,
+    ManifestReader,
+    ManifestWriter,
+    MinimalDQReader,
+    MinimalDQWriter,
+    ShadowReportReader,
+    ShadowReportWriter,
+)
+from ditto_platform.foundation import SQLiteClient
+from ditto_platform.services import AlertManager
+from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
+    StrategyArtifactService,
+)
+
+from ditto_application.processes.execution.factor_bridge import FactorBridge
+from ditto_application.processes.execution.manual_tracker import ManualTracker
+from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.processes.materialization.cascade_orchestrator import (
+    InvalidationCascadeOrchestrator,
+)
+from ditto_application.processes.materialization.orchestrator import (
+    DerivedMaterializationOrchestrator,
+    RuntimeDerivedInputProvider,
+)
+from ditto_application.processes.materialization.publication_facade import (
+    DerivedPublicationFacade,
+)
+from ditto_application.processes.quality import QualityPatrolService
+from ditto_application.providers_command import get_trading_calendar_range
+from ditto_application.queries.market import MarketQueryFacade
+from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.settings import TradingSettings
+
+
+class AppProcessProvider(Provider):
+    """App Process 层 DI Provider — 编排/物化/质量服务注册。"""
+
+    scope = Scope.APP
+
+    @provide
+    def compile_cache_service(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCompileCache:
+        """编译缓存服务."""
+        return SQLiteCompileCache(sqlite_client)
+
+    @provide
+    def derived_input_provider(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        market_service: MarketService,
+        settings: DataStoreSettings,
+    ) -> RuntimeDerivedInputProvider:
+        """衍生因子运行时输入提供器."""
+        return RuntimeDerivedInputProvider(
+            catalog_service=derived_catalog_service,
+            market_service=market_service,
+            artifact_root=Path(settings.data_root),
+        )
+
+    @provide
+    def publication_safety_record_service(
+        self,
+        settings: DataStoreSettings,
+    ) -> PublicationSafetyRecordService:
+        """发布安全记录服务."""
+        data_root = settings.data_root
+        stores = PublicationSafetyRuntimeStores(
+            manifest_reader=ManifestReader(base_path=data_root),
+            manifest_writer=ManifestWriter(base_path=data_root),
+            minimal_dq_reader=MinimalDQReader(base_path=data_root),
+            minimal_dq_writer=MinimalDQWriter(base_path=data_root),
+            shadow_report_reader=ShadowReportReader(base_path=data_root),
+            shadow_report_writer=ShadowReportWriter(base_path=data_root),
+            certification_reader=CertificationReader(base_path=data_root),
+            certification_writer=CertificationWriter(base_path=data_root),
+        )
+        return PublicationSafetyRecordService(stores)
+
+    @provide
+    def derived_materialization_orchestrator(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        compile_cache_service: SQLiteCompileCache,
+        derived_input_provider: RuntimeDerivedInputProvider,
+        publication_record_service: PublicationSafetyRecordService,
+        metadata_service: MetadataService,
+        settings: DataStoreSettings,
+    ) -> DerivedMaterializationOrchestrator:
+        """衍生因子物化编排器."""
+        return DerivedMaterializationOrchestrator(
+            catalog_service=derived_catalog_service,
+            compile_cache_service=compile_cache_service,
+            artifact_writer=ArtifactPersistenceService(
+                artifact_root=Path(settings.data_root),
+            ),
+            input_provider=derived_input_provider,
+            universe_provider=metadata_service,
+            publication_record_service=publication_record_service,
+        )
+
+    @provide
+    def derived_invalidation_orchestrator(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        derived_materialization_orchestrator: DerivedMaterializationOrchestrator,
+    ) -> InvalidationCascadeOrchestrator:
+        """衍生因子失效级联编排器."""
+        return InvalidationCascadeOrchestrator(
+            catalog_service=derived_catalog_service,
+            materialization_service=derived_materialization_orchestrator,
+        )
+
+    @provide
+    def derived_publication_facade(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        publication_record_service: PublicationSafetyRecordService,
+        shadow_slot_service: DerivedShadowSlotService,
+        settings: DataStoreSettings,
+    ) -> DerivedPublicationFacade:
+        """衍生因子发布门面."""
+        return DerivedPublicationFacade(
+            catalog_service=derived_catalog_service,
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=derived_catalog_service,
+                artifact_root=Path(settings.data_root),
+            ),
+            publication_record_service=publication_record_service,
+            shadow_slot_service=shadow_slot_service,
+        )
+
+    @provide
+    def quality_patrol_service(
+        self,
+        dq_engine: QualityEngine,
+        market_facade: MarketQueryFacade,
+        metadata_facade: MetadataQueryFacade,
+        alert_manager: AlertManager,
+    ) -> QualityPatrolService:
+        """质量巡检服务."""
+        return QualityPatrolService(
+            engine=dq_engine,
+            market_facade=market_facade,
+            metadata_facade=metadata_facade,
+            alert_manager=alert_manager,
+        )
+
+    @provide
+    def manual_tracker(
+        self,
+        metadata_service: MetadataService,
+        trading_settings: TradingSettings,
+    ) -> ManualTracker:
+        """人工持仓追踪器."""
+        start_date, end_date = get_trading_calendar_range(trading_settings)
+        trading_days = metadata_service.list_trading_days(start_date, end_date)
+        return ManualTracker(trading_calendar=tuple(trading_days))
+
+    @provide
+    def replay_process(
+        self,
+        strategy_facade: StrategyFacade,
+        artifact_service: StrategyArtifactService,
+    ) -> ReplayProcess:
+        """回测重放流程."""
+        return ReplayProcess(
+            strategy_facade=strategy_facade,
+            artifact_service=artifact_service,
+        )
+
+    @provide
+    def factor_bridge(self) -> FactorBridge:
+        """因子桥接服务."""
+        return FactorBridge()

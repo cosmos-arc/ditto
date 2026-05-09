@@ -6,7 +6,15 @@ from dataclasses import dataclass, field
 
 from ditto_kernel.identity import InstrumentId
 
-__all__ = ["StrategyContext"]
+__all__ = ["StrategyContext", "StrategyContextSnapshot"]
+
+
+@dataclass(frozen=True)
+class StrategyContextSnapshot:
+    """StrategyContext 的可恢复状态快照。"""
+
+    risk_locked_instruments: dict[InstrumentId, tuple[str, str | None]]
+    positions: dict[InstrumentId, float]
 
 
 @dataclass
@@ -59,3 +67,18 @@ class StrategyContext:
             for iid, info in self.risk_locked_instruments.items()
             if info[1] is not None and info[1] >= today
         }
+
+    def to_snapshot(self) -> StrategyContextSnapshot:
+        """捕获当前上下文状态快照。"""
+        return StrategyContextSnapshot(
+            risk_locked_instruments=dict(self.risk_locked_instruments),
+            positions=dict(self.positions),
+        )
+
+    @classmethod
+    def from_snapshot(cls, snapshot: StrategyContextSnapshot) -> StrategyContext:
+        """从快照恢复上下文。"""
+        return cls(
+            risk_locked_instruments=dict(snapshot.risk_locked_instruments),
+            positions=dict(snapshot.positions),
+        )

@@ -8,6 +8,10 @@ Risk drawdown — 回撤分析与控制。
 
 from __future__ import annotations
 
-from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
+from ditto_risk.drawdown.rules import (
+    DrawdownStateSnapshot,
+    MaxDrawdownRule,
+    SingleLossLimitRule,
+)
 
-__all__ = ["MaxDrawdownRule", "SingleLossLimitRule"]
+__all__ = ["DrawdownStateSnapshot", "MaxDrawdownRule", "SingleLossLimitRule"]

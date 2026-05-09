@@ -64,7 +64,7 @@ ditto_kernel/
 ├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
 ├── identity.py            # 共享身份类型（NewType）
 ├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus
+├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
 ├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
 ├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
@@ -167,6 +167,7 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 | `market` | `CalendarId`, `GrainId` |
 | `quality` | `DQIssue`, `DQLevel`, `DQResult`, `DQSeverity` |
 | `research` | `ResearchDatasetSnapshotRecord`, `ResearchDatasetSpecRecord`, `ResearchSpineSnapshotRecord`, `ResearchSpineSpecRecord` |
+| `events` | `EventName` |
 
 ## Barrel 公共 API 分级
 
@@ -196,6 +197,20 @@ Barrel `__all__` 包含 30 个符号，按稳定性分为两层：
 > 但 `strategy.py` 中的 `Derived*` 类型具有策略领域特有语义，虽然当前通过 barrel 共享以方便消费者，
 > 随着策略领域的演进，这些类型可能需要重新评估是否应转为叶模块直导。
 > 特别是 `DecisionFrame` 作为 Protocol，其消费模式更接近策略子域内部契约。
+
+## DomainEvent 兼容策略
+
+`DomainEvent.payload: dict[str, Any]` 保留用于 transport 兼容（序列化/反序列化边界）。
+
+**新事件子类的规则**：
+1. 通过专属 typed 字段承载业务数据，不依赖 `payload` 字段
+2. `event_type` 必须引用 `EventName` 常量，禁止硬编码字符串
+3. `payload` 保持默认空字典（继承自基类）
+
+**EventName catalog 规则**：
+- 所有领域事件的 `event_type` 值统一定义在 `EventName` 类中
+- 消费者通过 `from ditto_kernel.events import EventName` 引用常量
+- 新增事件必须同步更新 `EventName`
 
 ## 依赖规则
 

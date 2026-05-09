@@ -104,14 +104,13 @@ packages/risk/tests/
 ```python
 # 风控检查
 from ditto_risk.pre_trade import CompositePreTradeCheck, BuyingPowerCheck, LotSizeCheck
-from ditto_risk.post_trade import CompositePostTradeGuard, RiskAction
+from ditto_risk.post_trade import CompositePostTradeGuard, PostTradeRiskGuard, RiskAction
 
 # 契约与模型
-from ditto_risk.contracts import PostTradeGuard, RiskSlice
 from ditto_risk.models import DrawdownStats, ExposureData, RiskMetrics
 
 # 事件
-from ditto_risk.events import RiskGuardTriggered
+from ditto_risk.events import RiskGuardDetails, RiskGuardTriggered
 ```
 
 ## 常用验证命令
@@ -127,6 +126,6 @@ pixi run -e dev arch-check
 | ID | 差距 | 现状 | 目标 |
 |----|------|------|------|
 | RISK-P1-01 | **RiskGate 统一运行时契约** | Pre-trade / Post-trade 检查已实现，但回测与模拟盘各自内嵌风控门控逻辑，缺乏共享的 `RiskGate` 运行时契约 | 统一 `RiskGate` protocol，backtest 与 paper trading 共用同一门控抽象 |
-| RISK-P1-02 | **有状态规则的无损恢复** | `MaxDrawdownRule._peak_nav`、`StrategyContext` 中的锁/冷却等有状态字段无持久化快照/重放契约，进程重启后状态丢失 | 引入 durable snapshot + replay 机制，状态可跨进程恢复 |
-| RISK-P1-03 | **审计载荷类型化** | `RiskGuardTriggered.details` 仍为 `dict[str, Any]`，缺乏编译期保障 | 替换为 typed dataclass，消除 `Any` |
+| RISK-P1-02 | ~~有状态规则的无损恢复~~ **已修复 (B5)** | `DrawdownStateSnapshot` + `MaxDrawdownRule.snapshot()/restore()` 已实现，重放一致性已验证 | ✅ 完成 |
+| RISK-P1-03 | ~~审计载荷类型化~~ **已修复 (B4)** | `RiskGuardDetails` typed dataclass 替代 `dict[str, Any]`，`event_type` 引用 `EventName` 常量 | ✅ 完成 |
 | RISK-P2-01 | **审计血缘跨包断裂** | `RiskAction` 经本地映射转为 backtest `RiskScanRecord` 再到 execution audit，审计血缘分散在多个包中 | 建立跨包审计 lineage protocol，统一 trace id |
