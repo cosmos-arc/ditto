@@ -392,46 +392,68 @@
 
 ---
 
-### 批次 B7：成熟度标注统一
+### 批次 B7：成熟度标注统一 ✅ 已完成（2026-05-10）
 
 **目标**：确保所有包的成熟度标注与实际能力一致，API/CLI 不暗示超出实际的能力。
 
 **前置**：B1 完成（文档已更新）。可与 B2-B6 并行。
 
-#### B7.1 Strategy 模板成熟度
+#### B7.1 Strategy 模板成熟度 ✅
 
 | 改动 | Finding |
 |---|---|
 | ETF templates 标注 initial-focus，stock/sector templates 标注 experimental | STRAT-P1-03 |
 
+**完成内容**：
+- strategy CLAUDE.md 新增模板成熟度表（etf_rotation/etf_trend_swing = initial-focus，stock_selection_trend/stock_sector_rotation = experimental）
+- capability-maturity.md 更新 Strategy alpha templates 行，列出具体模板名和成熟度
+
 **关键文件**：
 - `packages/strategy/CLAUDE.md`
 - `docs/architecture/capability-maturity.md`
 
-#### B7.2 Analysis reserved namespace 强化
+#### B7.2 Analysis reserved namespace 强化 ✅
 
 | 改动 | Finding |
 |---|---|
 | 将 reserved namespace 列表移入 maturity manifest 作为 enforcement source | ANALYSIS-P2-01 |
 | SHIFT_TO_NEXT_SNAPSHOT 标注 reserved/unsupported 或实现实际语义 | ANALYSIS-P1-02 |
 
+**完成内容**：
+- `LateArrivalPolicy` docstring 添加 reserved 声明，`SHIFT_TO_NEXT_SNAPSHOT` 行注释标注 `reserved: not implemented`
+- 警告消息更新为 "SHIFT_TO_NEXT_SNAPSHOT is reserved (not implemented)"
+- capability-maturity.md 新增 Reserved API Surface 章节，列出 SHIFT_TO_NEXT_SNAPSHOT
+- 新增测试验证 docstring 包含 "reserved"、警告消息包含 "reserved"
+
 **关键文件**：
 - `packages/analysis/src/ditto_analysis/research/`
 - `docs/architecture/capability-maturity.md`
 
-#### B7.3 Apps maturity-aware API
+#### B7.3 Apps maturity-aware API ✅
 
 | 改动 | Finding |
 |---|---|
 | API route/help text 添加 maturity 元数据 | APPS-P1-02 |
 | 非 initial-focus 的 route 标注 experimental/reserved | APPS-P1-02 |
 
-#### B7.4 Data 成熟度标注
+**完成内容**：
+- 9 个非 initial-focus 路由模块 docstring 添加 `maturity:` 标注
+- apps CLAUDE.md 路由表新增成熟度列
+- capability-maturity.md 新增 API Route Maturity 章节
+- arch-smell checker 新增 `check_route_maturity_annotations()` 检查
+
+#### B7.4 Data 成熟度标注 ✅
 
 | 改动 | Finding |
 |---|---|
 | DataCatalog runtime 标注 experimental 直到 store 实现完成 | DATA-P1-01 |
 | FX/commodity/macro dataset families 标注 experimental | DATA-P1-02 |
+
+**完成内容**：
+- data CLAUDE.md 新增数据集成熟度表（10 个数据集族的成熟度标注）
+- 明确 DataCatalog runtime = experimental（Protocol only），Lineage = reserved
+
+**验证**：`pixi run -e dev check` 通过（lint + fmt + type + 6319 tests passed + arch-check 36/36 + arch-smells passed）
 
 ---
 

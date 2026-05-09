@@ -1918,6 +1918,45 @@ def _collect(errors: list[str], new: list[str], ok_msg: str, verbose: bool) -> N
         print(ok_msg)
 
 
+# ============ Route Maturity Annotations ============
+
+# Non-initial-focus routes must declare maturity in their module docstring.
+_ROUTE_MATURITY_EXPECTED: dict[str, str] = {
+    "capital.py": "experimental",
+    "commodity.py": "experimental",
+    "fundamental.py": "experimental",
+    "fx.py": "experimental",
+    "macro.py": "experimental",
+    "trade.py": "experimental",
+    "ingestion.py": "infrastructure",
+    "source.py": "infrastructure",
+    "debug.py": "debug",
+}
+
+_ROUTES_DIR = "packages/apps/src/ditto_apps/api/routes"
+
+
+def check_route_maturity_annotations(root: Path = ROOT) -> list[str]:
+    """Check non-initial-focus route modules declare maturity in docstring."""
+    errors: list[str] = []
+    for filename, expected_level in _ROUTE_MATURITY_EXPECTED.items():
+        path = root / _ROUTES_DIR / filename
+        if not path.exists():
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+            errors.append(f"{_ROUTES_DIR}/{filename}: cannot parse ({exc})")
+            continue
+        docstring = ast.get_docstring(tree, clean=False) or ""
+        if f"maturity: {expected_level}" not in docstring:
+            errors.append(
+                f"{_ROUTES_DIR}/{filename}: module docstring must declare "
+                + f"'maturity: {expected_level}' (capability-maturity.md)",
+            )
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Architecture smell checks for Ditto")
     parser.add_argument(
@@ -2000,6 +2039,14 @@ def main() -> int:
         errors,
         check_external_package_metadata(ROOT),
         "[OK] Package metadata declares external runtime imports",
+        args.verbose,
+    )
+
+    # Check: Route maturity annotations
+    _collect(
+        errors,
+        check_route_maturity_annotations(ROOT),
+        "[OK] API route maturity annotations are present and consistent",
         args.verbose,
     )
 

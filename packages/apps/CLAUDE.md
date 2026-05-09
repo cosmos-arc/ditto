@@ -134,22 +134,24 @@ features → apps ❌
 
 ### API 路由分组
 
-| Prefix | Tag | 模块 | 说明 |
-|--------|-----|------|------|
-| `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 |
-| `/capital` | capital | `api/routes/capital.py` | Capital 域查询 |
-| `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询（POST 复用 `shared_bars.py`） |
-| `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询 |
-| `/fx` | fx | `api/routes/fx.py` | 外汇数据查询（POST 复用 `shared_bars.py`） |
-| `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 |
-| `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询 |
-| `/market` | market | `api/routes/market.py` | 行情数据查询 |
-| `/metadata` | metadata | `api/routes/metadata.py` | 元数据查询 |
-| `/source` | source | `api/routes/source.py` | Source 数据查询 |
-| `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 |
-| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） |
-| `/universes` | universes | `api/routes/universe.py` | Universe 管理 |
-| `/api/v1` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） |
+| Prefix | Tag | 模块 | 说明 | 成熟度 |
+|--------|-----|------|------|--------|
+| `/backtests` | backtests | `api/routes/backtest.py` | 回测运行/报告/重放 | initial-focus |
+| `/capital` | capital | `api/routes/capital.py` | Capital 域查询 | experimental |
+| `/commodity` | commodity | `api/routes/commodity.py` | 商品数据查询（POST 复用 `shared_bars.py`） | experimental |
+| `/fundamental` | fundamental | `api/routes/fundamental.py` | 基本面数据查询 | experimental |
+| `/fx` | fx | `api/routes/fx.py` | 外汇数据查询（POST 复用 `shared_bars.py`） | experimental |
+| `/ingestion` | ingestion | `api/routes/ingestion.py` | 数据摄取状态 | infrastructure |
+| `/macro` | macro | `api/routes/macro.py` | 宏观经济数据查询 | experimental |
+| `/market` | market | `api/routes/market.py` | 行情数据查询 | initial-focus |
+| `/metadata` | metadata | `api/routes/metadata.py` | 元数据查询 | initial-focus |
+| `/source` | source | `api/routes/source.py` | Source 数据查询 | infrastructure |
+| `/strategies` | strategies | `api/routes/strategy.py` | 策略 CRUD + 发布 | initial-focus |
+| `/trade` | trade | `api/routes/trade.py` | 交易闭环（意图/成交/持仓/盈亏/对比） | experimental |
+| `/universes` | universes | `api/routes/universe.py` | Universe 管理 | initial-focus |
+| `/api/v1` | debug | `api/routes/debug.py` | 调试端点（仅非生产环境） | debug |
+
+成熟度定义见 `docs/architecture/capability-maturity.md`。非 initial-focus 路由的模块 docstring 必须包含 `maturity:` 标注。
 
 ## Prefect 规范
 

@@ -327,6 +327,13 @@ class TestLateArrivalPolicy:
     def test_require_rebuild_value(self) -> None:
         assert LateArrivalPolicy.REQUIRE_REBUILD == "require_rebuild"
 
+    def test_shift_to_next_snapshot_is_reserved(self) -> None:
+        """SHIFT_TO_NEXT_SNAPSHOT must document its reserved status."""
+        doc = LateArrivalPolicy.__doc__
+        assert doc is not None
+        assert "reserved" in doc.lower()
+        assert "SHIFT_TO_NEXT_SNAPSHOT" in doc
+
 
 # ============ Late Arrival Detection & Policy Tests ============
 
@@ -457,7 +464,7 @@ class TestApplyLateArrivalPolicy:
     def test_apply_late_arrival_policy_shift_logs_warning(
         self,
     ) -> None:
-        """SHIFT 策略应记录日志并原样返回（v1 暂不实现位移）."""
+        """SHIFT 策略（reserved）应警告并原样返回."""
 
         frame = pl.DataFrame(
             {
@@ -479,7 +486,7 @@ class TestApplyLateArrivalPolicy:
         assert result.height == 2
         assert result.equals(frame)
         assert len(caught) == 1
-        assert "SHIFT" in str(caught[0].message)
+        assert "reserved" in str(caught[0].message).lower()
 
     def test_apply_late_arrival_policy_rebuild_raises(
         self,

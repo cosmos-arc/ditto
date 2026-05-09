@@ -1,4 +1,8 @@
-"""Commodity (商品) 域 API 路由."""
+"""
+Commodity (商品) 域 API 路由.
+
+maturity: experimental
+"""
 
 from __future__ import annotations
 

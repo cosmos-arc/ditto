@@ -1,4 +1,8 @@
-"""调试路由模块（仅非生产环境可用）"""
+"""
+调试路由模块（仅非生产环境可用）.
+
+maturity: debug — 不得在生产环境暴露。
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""FX (外汇) 模 API 路由."""
+"""
+FX (外汇) 模 API 路由.
+
+maturity: experimental
+"""
 
 from __future__ import annotations
 

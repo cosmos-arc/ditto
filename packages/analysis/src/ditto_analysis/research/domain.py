@@ -39,10 +39,15 @@ class KnownAtPolicy(StrEnum):
 
 
 class LateArrivalPolicy(StrEnum):
-    """Late-arrival normalization policy for research inputs."""
+    """
+    Late-arrival normalization policy for research inputs.
+
+    SHIFT_TO_NEXT_SNAPSHOT is reserved: not implemented in v1.
+    Consumers must not rely on shift semantics until promoted.
+    """
 
     EXCLUDE_FROM_CURRENT_SNAPSHOT = "exclude_from_current_snapshot"
-    SHIFT_TO_NEXT_SNAPSHOT = "shift_to_next_snapshot"
+    SHIFT_TO_NEXT_SNAPSHOT = "shift_to_next_snapshot"  # reserved: not implemented
     REQUIRE_REBUILD = "require_rebuild"
 
 
@@ -204,8 +209,8 @@ def _apply_late_arrival_policy(
     if policy == LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT:
         warnings.warn(
             (
-                "Late arrival detected but SHIFT policy is not "
-                "implemented in v1, returning frame unchanged"
+                "SHIFT_TO_NEXT_SNAPSHOT is reserved (not implemented). "
+                "Late arrival detected but frame returned unchanged."
             ),
             stacklevel=2,
         )

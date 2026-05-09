@@ -70,6 +70,17 @@ ditto_strategy/
 └── models.py           # 策略域模型
 ```
 
+## 模板成熟度
+
+| 模板 | 成熟度 | 说明 |
+|------|--------|------|
+| `etf_rotation` | initial-focus | ETF 轮动，有完整测试和 seed spec |
+| `etf_trend_swing` | initial-focus | ETF 趋势摆动，含 TrailingStopStage |
+| `stock_selection_trend` | experimental | 多因子选股，无独立测试 |
+| `stock_sector_rotation` | experimental | 行业轮动，5 自定义 stage，无独立测试 |
+
+成熟度定义见 `docs/architecture/capability-maturity.md`。stock/sector 模板在通过独立测试审查前不得标注为 initial-focus。
+
 ## 测试位置
 
 ```

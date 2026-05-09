@@ -1,4 +1,8 @@
-"""Source 数据查询 API 路由."""
+"""
+Source 数据查询 API 路由.
+
+maturity: infrastructure
+"""
 
 from __future__ import annotations
 
