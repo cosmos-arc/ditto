@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_data.storage.base.dataset_writer import ParquetDatasetWriter
-from ditto_platform.foundation.storage.types import OnDuplicate, WriteStoreResult
+from ditto_platform.foundation import OnDuplicate, WriteStoreResult
 
 
 @pytest.fixture
@@ -102,6 +102,6 @@ class TestParquetDatasetWriterProtocol:
     def test_satisfies_dataset_writer_protocol(
         self, writer: ParquetDatasetWriter
     ) -> None:
-        from ditto_platform.foundation.storage.protocols import DatasetWriter
+        from ditto_platform.foundation import DatasetWriter
 
         _: DatasetWriter = writer

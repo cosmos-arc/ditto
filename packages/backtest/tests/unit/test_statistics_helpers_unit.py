@@ -28,11 +28,13 @@ from ditto_backtest.statistics import (
     compute_portfolio_statistics,
 )
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import OrderBookReadOnly
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    FillEvent,
+    OrderBookReadOnly,
+    Position,
+)
 
 # ---------------------------------------------------------------------------
 # _daily_returns_from_navs

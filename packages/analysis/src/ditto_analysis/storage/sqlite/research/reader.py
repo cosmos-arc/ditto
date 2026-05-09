@@ -9,7 +9,7 @@ from ditto_kernel.research import (
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_platform.foundation.storage import SQLiteClient
+from ditto_platform.foundation import SQLiteClient
 
 __all__ = ["SQLiteResearchCatalogReader"]
 

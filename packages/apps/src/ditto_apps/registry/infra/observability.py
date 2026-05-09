@@ -16,7 +16,7 @@ from ditto_platform.foundation.observability import init, shutdown
 from ditto_platform.foundation.observability.config import ObservabilityConfig
 from ditto_platform.foundation.observability.metrics import register_metric_definitions
 from ditto_platform.foundation.observability.tracing import traced as infra_traced
-from ditto_portfolio.observability.metrics import (
+from ditto_portfolio.observability import (
     METRIC_DEFINITIONS as PORTFOLIO_METRICS,
 )
 from ditto_risk.observability.metrics import METRIC_DEFINITIONS as RISK_METRICS

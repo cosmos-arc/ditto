@@ -7,8 +7,7 @@ Provides write access to ingestion log data.
 from datetime import datetime
 from typing import Any
 
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, logger
 
 from ditto_data.models.ingestion import IngestionLog
 

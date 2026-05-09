@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import Order
 
 from ditto_risk._validation import validate_weight
 from ditto_risk.constraints.context import (

@@ -29,8 +29,7 @@ from ditto_backtest.statistics import (
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from ditto_risk.drawdown.rules import SingleLossLimitRule
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
 from ditto_risk.post_trade import CompositePostTradeGuard

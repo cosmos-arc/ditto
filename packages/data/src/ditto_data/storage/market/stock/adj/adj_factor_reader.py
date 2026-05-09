@@ -1,7 +1,7 @@
 """Stock adjustment factor reader."""
 
 from ditto_data.storage.base.dataset_reader import ParquetDatasetReader
-from ditto_platform.foundation.storage import ParquetStore
+from ditto_platform.foundation import ParquetStore
 
 
 class StockAdjFactorReader(ParquetDatasetReader):

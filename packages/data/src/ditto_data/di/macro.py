@@ -1,7 +1,7 @@
 """Data 层 - Macro Domain Provider。"""
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient
 
 from ditto_data.services.macro_service import MacroService
 from ditto_data.storage.macro.indicator.indicator_reader import (

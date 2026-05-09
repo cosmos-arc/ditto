@@ -5,7 +5,13 @@ from __future__ import annotations
 from ._lifecycle import init, shutdown
 from .config import EffectiveConfig, ObservabilityConfig
 from .logging import logger
-from .metrics import Metrics
+from .metrics import (
+    Metrics,
+    SafeCounter,
+    SafeGauge,
+    SafeHistogram,
+    register_metric_definitions,
+)
 from .tracing import (
     get_span_id,
     get_trace_id,
@@ -17,10 +23,14 @@ __all__ = [
     "EffectiveConfig",
     "Metrics",
     "ObservabilityConfig",
+    "SafeCounter",
+    "SafeGauge",
+    "SafeHistogram",
     "get_span_id",
     "get_trace_id",
     "init",
     "logger",
+    "register_metric_definitions",
     "shutdown",
     "span",
     "traced",

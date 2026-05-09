@@ -7,10 +7,12 @@ import pytest
 from ditto_apps.jobs.tasks.monitoring import monitor_ingestion_quality
 from ditto_apps.registry.infra.observability import register_app_metric_definitions
 from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
-from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.observability import init
-from ditto_platform.foundation.observability.config import ObservabilityConfig
-from ditto_platform.foundation.observability.testing import reset_for_testing
+from ditto_platform.foundation import (
+    Environment,
+    ObservabilityConfig,
+    init,
+    reset_for_testing,
+)
 
 
 def _prefect_runner(entrypoint: Any) -> Callable[..., Any]:

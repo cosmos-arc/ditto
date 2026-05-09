@@ -51,8 +51,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
-from ditto_platform.foundation.cache import DataCache
-from ditto_platform.foundation.config.environment import Environment
+from ditto_platform.foundation import DataCache, Environment
 from ditto_platform.services.notification import AlertManager
 
 _tdx_mock = MagicMock(spec=TdxSource)

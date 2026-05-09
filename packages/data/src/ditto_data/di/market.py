@@ -1,8 +1,7 @@
 """Data 层 - Market Domain Provider。"""
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation.concurrency import FileLockManager
-from ditto_platform.foundation.storage import ParquetStore
+from ditto_platform.foundation import FileLockManager, ParquetStore
 
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.services.deps import MarketReaders, MarketWriters

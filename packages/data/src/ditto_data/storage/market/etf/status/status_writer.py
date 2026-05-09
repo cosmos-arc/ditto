@@ -1,6 +1,6 @@
 """ETF status writer."""
 
-from ditto_platform.foundation.storage import ParquetStore
+from ditto_platform.foundation import ParquetStore
 
 from ditto_data.storage.base.dataset_writer import ParquetDatasetWriter
 

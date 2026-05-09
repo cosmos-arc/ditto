@@ -13,12 +13,12 @@ from ditto_kernel.publication_safety import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.util.io import (
-    ParquetCompression,
+from ditto_platform.foundation import (
     atomic_bytes_write,
     atomic_write,
+    logger,
 )
+from ditto_platform.foundation.util import ParquetCompression
 
 from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
 

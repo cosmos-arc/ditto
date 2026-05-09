@@ -238,7 +238,7 @@ class TestPerPackageDomainRoots:
         assert issubclass(PlatformError, DittoError)
 
     def test_portfolio_orphan_uses_domain_root(self) -> None:
-        from ditto_portfolio.accounting.order_book import StateTransitionError
+        from ditto_portfolio.accounting import StateTransitionError
 
         assert issubclass(StateTransitionError, DittoError)
 
@@ -266,8 +266,7 @@ class TestPerPackageDomainRoots:
 
     def test_infra_orphans_use_domain_root(self) -> None:
         from ditto_platform.exceptions import PlatformError
-        from ditto_platform.foundation.concurrency.filelock import LockAcquisitionError
-        from ditto_platform.foundation.config.errors import ConfigInitError
+        from ditto_platform.foundation import ConfigInitError, LockAcquisitionError
 
         assert issubclass(ConfigInitError, PlatformError)
         assert issubclass(LockAcquisitionError, PlatformError)

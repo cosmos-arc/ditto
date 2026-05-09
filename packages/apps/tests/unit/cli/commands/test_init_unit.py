@@ -25,7 +25,7 @@ class TestInitConfigCommand:
     def test_init_config_uses_default_data_root(self, mocker: MockerFixture, mock_ctx):
         """测试使用默认数据根目录。"""
         # Arrange
-        from ditto_platform.foundation.config.initializer import InitScope
+        from ditto_platform.foundation import InitScope
 
         mocker.patch(
             "ditto_apps.cli.commands.init._load_data_root",
@@ -80,7 +80,7 @@ class TestInitConfigCommand:
     def test_init_config_with_force_flag(self, mocker: MockerFixture, mock_ctx):
         """测试强制重新初始化。"""
         # Arrange
-        from ditto_platform.foundation.config.initializer import InitScope
+        from ditto_platform.foundation import InitScope
 
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {}
@@ -125,7 +125,7 @@ class TestInitConfigCommand:
     ) -> None:
         """CLI 初始化协调器包含 features-owned artifact 目录。"""
         from ditto_data.config.data_store import DataStoreSettings
-        from ditto_platform.foundation.config.initializer import InitScope
+        from ditto_platform.foundation import InitScope
 
         data_root = tmp_path / "data"
         mocker.patch(
@@ -148,7 +148,7 @@ class TestInitDQCommand:
     def test_init_dq_filters_results(self, mocker: MockerFixture, mock_ctx):
         """测试只显示 DQ 相关结果。"""
         # Arrange
-        from ditto_platform.foundation.config.initializer import InitScope
+        from ditto_platform.foundation import InitScope
 
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {
@@ -180,7 +180,7 @@ class TestInitDBCommand:
     def test_init_db_filters_results(self, mocker: MockerFixture, mock_ctx):
         """测试只显示数据库相关结果。"""
         # Arrange
-        from ditto_platform.foundation.config.initializer import InitScope
+        from ditto_platform.foundation import InitScope
 
         mock_coordinator = mocker.Mock()
         mock_coordinator.initialize.return_value = {

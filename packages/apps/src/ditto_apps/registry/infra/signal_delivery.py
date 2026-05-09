@@ -10,7 +10,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 from ditto_application.processes.execution.delivery import DeliveryRouter
 from ditto_application.processes.execution.ports import SignalDeliveryProtocol
-from ditto_platform.services.notification.manager import AlertManager
+from ditto_platform.services import AlertManager
 
 __all__ = ["SignalDeliveryProvider"]
 

@@ -15,9 +15,7 @@ from ditto_execution.planner import ExecutionPlan
 from ditto_execution.targets import TargetPortfolioLike
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import AccountView, FillEvent, Order
 
 from ditto_backtest.audit.records import PreTradeDecisionRecord
 from ditto_backtest.data_feed import Slice

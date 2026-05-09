@@ -19,15 +19,15 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
     Order,
     OrderBookReadOnly,
     OrderStatus,
     OrderTicket,
+    Position,
 )
-from ditto_portfolio.accounting.position import Position
 from ditto_strategy.alpha.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------

@@ -12,8 +12,7 @@ from typing import Any, Literal
 
 import polars as pl
 from ditto_kernel.identity import InstrumentId
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.util.checksum import ChecksumCompute
+from ditto_platform.foundation import ChecksumCompute, logger, traced
 
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models.metadata import (

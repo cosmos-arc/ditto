@@ -9,7 +9,7 @@ from ditto_features.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services import DerivedCatalogService
 from pytest_mock import MockerFixture
 
 

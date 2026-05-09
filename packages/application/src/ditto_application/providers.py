@@ -31,16 +31,12 @@ from ditto_execution.storage.sqlite.trade.service import TradeService
 # Data 层依赖（由更底层的 Provider 注册，此处仅声明类型）
 # ---------------------------------------------------------------------------
 from ditto_features.compile_cache import SQLiteCompileCache
-from ditto_features.services.derived import DerivedArtifactReader
-from ditto_features.services.derived.artifact_persistence_service import (
+from ditto_features.services import (
     ArtifactPersistenceService,
-)
-from ditto_features.services.derived.query_service import DerivedQueryService
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.derived_shadow_slot_service import (
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    DerivedQueryService,
     DerivedShadowSlotService,
-)
-from ditto_features.services.publication_safety_record_service import (
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
@@ -54,8 +50,8 @@ from ditto_features.storage.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
-from ditto_platform.services.notification import AlertManager
+from ditto_platform.foundation import SQLiteClient
+from ditto_platform.services import AlertManager
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )

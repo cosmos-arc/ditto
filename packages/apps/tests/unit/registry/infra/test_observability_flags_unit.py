@@ -5,16 +5,16 @@ from pathlib import Path
 
 import pytest
 from ditto_apps.registry.infra.observability import register_app_metric_definitions
-from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.observability import init
-from ditto_platform.foundation.observability.config import ObservabilityConfig
-from ditto_platform.foundation.observability.metrics import (
+from ditto_platform.foundation import (
+    Environment,
     Metrics,
+    ObservabilityConfig,
     SafeCounter,
     SafeGauge,
     SafeHistogram,
+    init,
+    reset_for_testing,
 )
-from ditto_platform.foundation.observability.testing import reset_for_testing
 
 
 class TestObservabilityUsesInjectedFlags:

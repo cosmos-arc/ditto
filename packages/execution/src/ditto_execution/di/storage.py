@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters

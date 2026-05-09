@@ -4,10 +4,13 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from ditto_platform.foundation import SQLitePool, init
-from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.observability.config import ObservabilityConfig
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import (
+    Environment,
+    ObservabilityConfig,
+    SQLiteClient,
+    SQLitePool,
+    init,
+)
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:

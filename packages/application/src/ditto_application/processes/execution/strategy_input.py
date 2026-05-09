@@ -22,7 +22,7 @@ from ditto_backtest.statistics import (
     RiskScanRecord,
 )
 from ditto_kernel.identity import InstrumentId
-from ditto_platform.foundation.util.io import atomic_bytes_write, atomic_write
+from ditto_platform.foundation import atomic_bytes_write, atomic_write
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
 from ditto_application.processes.execution.backtest_serialization import (

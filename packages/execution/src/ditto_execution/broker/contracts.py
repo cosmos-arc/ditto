@@ -11,9 +11,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import Order, OrderTicket
+from ditto_portfolio.accounting import AccountView, FillEvent, Order, OrderTicket
 
 __all__ = ["BrokerGateway"]
 

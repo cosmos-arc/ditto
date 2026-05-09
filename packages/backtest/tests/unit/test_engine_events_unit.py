@@ -19,10 +19,10 @@ from ditto_kernel.events import DomainEvent
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import RiskScope
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import (
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    FillEvent,
     Order,
     OrderBookReadOnly,
 )

@@ -27,7 +27,7 @@ from ditto_execution.storage.sqlite.trade import (
 from ditto_execution.storage.sqlite.trade.service import (
     TradeService,
 )
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient
 
 
 def _init_db(client: SQLiteClient) -> None:

@@ -27,7 +27,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import FeeSchedule
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import Order
 
 # ---------------------------------------------------------------------------
 # Fixtures

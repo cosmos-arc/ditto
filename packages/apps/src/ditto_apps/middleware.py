@@ -6,7 +6,7 @@ import time
 from typing import Any
 
 from ditto_kernel.exceptions import DataError, DittoError, IdentifierError
-from ditto_platform.foundation.observability import logger
+from ditto_platform.foundation import logger
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse

@@ -20,8 +20,8 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.tracing import traced
 from ditto_kernel.trading import DEFAULT_LOT_SIZE, InstrumentRules, MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.order_book import (
+from ditto_portfolio.accounting import (
+    AccountView,
     Order,
     OrderBookReadOnly,
 )

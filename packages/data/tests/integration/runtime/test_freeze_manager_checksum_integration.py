@@ -52,7 +52,7 @@ class TestFreezeManagerChecksum:
         test_file.write_text("test data")
 
         # Test current SHA-256 implementation (using foundation version)
-        from ditto_platform.foundation.checksum import compute_checksum
+        from ditto_platform.foundation import compute_checksum
 
         sha256_checksum = compute_checksum(test_file)
 
@@ -121,7 +121,7 @@ class TestFreezeManagerChecksum:
         test_file.write_text("test data")
 
         # Call compute_checksum from foundation
-        from ditto_platform.foundation.checksum import compute_checksum
+        from ditto_platform.foundation import compute_checksum
 
         result = compute_checksum(test_file)
 

@@ -28,10 +28,11 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account, AccountView
-from ditto_portfolio.accounting.buying_power import CashAccountBuyingPower
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
+from ditto_portfolio.accounting import (
+    Account,
+    AccountView,
+    CashAccountBuyingPower,
+    CashBook,
     Order,
     OrderBook,
     OrderBookReadOnly,
@@ -180,7 +181,7 @@ class TestFrozenImmutability:
 
     def test_account_view_positions_readonly(self) -> None:
         """AccountView.positions 是 MappingProxyType — 不可通过 view 修改。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -391,7 +392,7 @@ class TestPendingAwarePlanner:
 
     def test_no_duplicate_sell_with_pending(self) -> None:
         """已有 pending sell → planner 不再生成同标的 sell。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -606,7 +607,7 @@ class TestCashConservation:
 
     def test_sell_fill_cash_conservation(self) -> None:
         """卖出 fill 后: cash 增加 = price * qty - fee。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -668,7 +669,7 @@ class TestNoOversell:
 
     def test_sell_does_not_exceed_position(self) -> None:
         """卖出不超过持仓。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -714,7 +715,7 @@ class TestNoOversell:
 
     def test_pre_trade_context_prevents_oversell_in_batch(self) -> None:
         """PreTradeContext.with_order_accepted 防止批内超卖。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -887,7 +888,7 @@ class TestPriceLimitInvariants:
     def test_limit_down_blocks_sell(self) -> None:
         """跌停卖出不成交 — close <= limit_down。"""
         from ditto_backtest.simulation import AShareFillModel
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -935,7 +936,7 @@ class TestPriceLimitInvariants:
     def test_limit_up_allows_sell(self) -> None:
         """涨停可以卖出 — close >= limit_up + SELL → 正常成交。"""
         from ditto_backtest.simulation import AShareFillModel
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -1019,7 +1020,7 @@ class TestPriceLimitInvariants:
     def test_no_limit_allows_both_directions(self) -> None:
         """无涨跌停限制 — 买卖均可成交。"""
         from ditto_backtest.simulation import AShareFillModel
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -1154,7 +1155,7 @@ class TestLotSizeRounding:
 
     def test_sell_not_affected_by_lot_size(self) -> None:
         """卖出不受 lot_size 限制（零股可卖）。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -1339,7 +1340,7 @@ class TestExitOrderRules:
             EngineOptions,
         )
         from ditto_execution.rules import InMemoryRuleProvider
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
         from ditto_strategy.alpha.templates.etf_rotation import (
             ETFRotationConfig,
             build_etf_rotation_pipeline,

@@ -10,14 +10,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.storage import (
+from ditto_platform.foundation import (
     MergeResult,
     OnDuplicate,
     ParquetStore,
     YearlyPartition,
+    logger,
+    traced,
 )
-from ditto_platform.foundation.storage import (
+from ditto_platform.foundation import (
     WriteStoreResult as WriteResult,
 )
 

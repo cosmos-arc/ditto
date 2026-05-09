@@ -16,11 +16,12 @@ from ditto_features.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_features.services.derived import (
+from ditto_features.services import (
     COMPARE_RESULT_COLUMNS,
     LATEST_RESULT_COLUMNS,
     SERIES_RESULT_COLUMNS,
     DerivedArtifactReader,
+    DerivedCatalogService,
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedQueryService,
@@ -30,7 +31,6 @@ from ditto_features.services.derived import (
     empty_latest_result,
     empty_series_result,
 )
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,

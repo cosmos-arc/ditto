@@ -16,7 +16,7 @@ from ditto_backtest.simulation.slippage import (
 )
 from ditto_execution.reality.fee import AShareFeeModel
 from ditto_kernel.trading import FeeModel, FeeSchedule
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import Order
 
 from ditto_application.contracts import CostConfig
 from ditto_application.exceptions import AppProcessError

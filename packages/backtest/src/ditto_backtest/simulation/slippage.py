@@ -13,7 +13,7 @@ from typing import Protocol
 from ditto_kernel.order import OrderSide as _OrderSide
 from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
 from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
-from ditto_portfolio.accounting.order_book import Order as _Order
+from ditto_portfolio.accounting import Order as _Order
 
 __all__ = ["FixedBpsSlippage", "SlippageModel", "VolumeShareSlippage"]
 

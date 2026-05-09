@@ -32,9 +32,7 @@ from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import AccountView, FillEvent, Order
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.context import StrategyContext

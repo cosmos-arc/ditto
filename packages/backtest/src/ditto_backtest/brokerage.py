@@ -26,16 +26,17 @@ from ditto_kernel.trading import (
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account, AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import (
+from ditto_portfolio.accounting import (
+    Account,
+    AccountView,
+    FillEvent,
     Order,
     OrderEvent,
     OrderStatus,
     OrderTicket,
+    Position,
     StateTransitionError,
 )
-from ditto_portfolio.accounting.position import Position
 
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.settlement import SettlementModel

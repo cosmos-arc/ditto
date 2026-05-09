@@ -13,15 +13,15 @@ from urllib.parse import urlparse
 
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import logger
-from ditto_platform.services.notification import NotificationSettings
-from ditto_platform.services.notification.channels import (
+from ditto_platform.services import (
+    AlertManager,
     EmailSender,
+    NotificationSender,
+    NotificationSettings,
     TelegramSender,
+    TemplateEngine,
     WebhookSender,
 )
-from ditto_platform.services.notification.manager import AlertManager
-from ditto_platform.services.notification.sender import NotificationSender
-from ditto_platform.services.notification.template import TemplateEngine
 
 __all__ = ["NotificationProvider"]
 

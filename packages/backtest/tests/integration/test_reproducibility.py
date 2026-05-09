@@ -48,9 +48,7 @@ from ditto_kernel.trading import (
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting import Account, CashBook, FillEvent
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,

@@ -25,7 +25,7 @@ from ditto_analysis.research.domain import (
     SpineSpec,
 )
 from ditto_data.services.metadata_service import MetadataService
-from ditto_features.services.derived import (
+from ditto_features.services import (
     DerivedArtifactReader,
     VersionResolutionStrategy,
 )

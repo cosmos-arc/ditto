@@ -9,7 +9,7 @@ from ditto_backtest.simulation.slippage import (
 )
 from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import Order
 
 # ---------------------------------------------------------------------------
 # Test helpers

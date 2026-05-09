@@ -23,10 +23,10 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.publication_safety import CertificationStage
-from ditto_features.services.derived import DerivedArtifactReader
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_features.services.publication_safety_record_service import (
+from ditto_features.services import (
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    DerivedShadowSlotService,
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
@@ -53,8 +53,7 @@ from ditto_kernel.publication_safety import (
     DerivedMinimalDQSummaryRecord,
 )
 from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.fixture

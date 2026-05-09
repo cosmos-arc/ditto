@@ -14,10 +14,7 @@ from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import OrderBook
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import AccountView, CashBook, OrderBook, Position
 from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
 from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule

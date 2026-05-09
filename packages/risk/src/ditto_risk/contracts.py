@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Protocol, runtime_checkable
 
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting import AccountView
 
 from ditto_risk.post_trade import RiskAction
 

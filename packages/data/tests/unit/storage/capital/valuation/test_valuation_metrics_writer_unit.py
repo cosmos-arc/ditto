@@ -11,8 +11,7 @@ from ditto_data.storage.capital.specs import VALUATION_METRICS_SPEC
 from ditto_data.storage.capital.valuation.valuation_metrics_writer import (
     ValuationMetricsWriter,
 )
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.fixture

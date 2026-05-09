@@ -9,8 +9,7 @@ import polars as pl
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MarketFetcher
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.storage.types import OnDuplicate
+from ditto_platform.foundation import OnDuplicate, logger
 
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 

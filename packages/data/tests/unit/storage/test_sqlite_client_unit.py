@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.fixture

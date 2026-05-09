@@ -37,10 +37,10 @@ from ditto_features.publication_safety import (
     CertificationStage,
     CompatibilityManifest,
 )
-from ditto_features.services.derived import DerivedLatestQuery
-from ditto_features.services.derived.query_service import DerivedQueryService
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.publication_safety_record_service import (
+from ditto_features.services import (
+    DerivedCatalogService,
+    DerivedLatestQuery,
+    DerivedQueryService,
     PublicationSafetyRecordService,
 )
 from ditto_kernel.publication_safety import CompatibilityManifestRecord

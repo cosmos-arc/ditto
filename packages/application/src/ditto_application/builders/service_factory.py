@@ -20,8 +20,7 @@ from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import FeeModel
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,

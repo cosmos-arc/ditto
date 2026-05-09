@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import get_args
 
 import pytest
-from ditto_platform.foundation.util.dates import DateInput, normalize_date
+from ditto_platform.foundation import DateInput, normalize_date
 
 
 class TestNormalizeDate:

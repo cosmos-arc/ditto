@@ -13,9 +13,9 @@ from ditto_apps.main import (
     root,
 )
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.config.initializer import ConfigInitCoordinator
-from ditto_platform.foundation.config.settings import (
+from ditto_platform.foundation import (
+    ConfigInitCoordinator,
+    Environment,
     ObservabilitySettings,
     Settings,
     SystemSettings,

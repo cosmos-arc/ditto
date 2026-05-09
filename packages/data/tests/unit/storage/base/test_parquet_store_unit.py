@@ -7,7 +7,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from ditto_platform.foundation.storage import ParquetStore
+from ditto_platform.foundation import ParquetStore
 
 MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
 MARKET_DATE_COLUMN = "trade_date"

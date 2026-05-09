@@ -10,7 +10,7 @@ from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_kernel.quality import DQIssue
 from ditto_platform.foundation import Metrics, logger
-from ditto_platform.services.notification import AlertManager, NotificationLevel
+from ditto_platform.services import AlertManager, NotificationLevel
 from prefect import task
 
 from ditto_apps.jobs.context import create_prefect_host

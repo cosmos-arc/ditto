@@ -16,8 +16,8 @@ from ditto_kernel.order import OrderType as _OrderType
 from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
 from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 from ditto_kernel.trading import TradingRuleSet as _TradingRuleSet
-from ditto_portfolio.accounting.fills import FillEvent as _FillEvent
-from ditto_portfolio.accounting.order_book import Order as _Order
+from ditto_portfolio.accounting import FillEvent as _FillEvent
+from ditto_portfolio.accounting import Order as _Order
 
 __all__ = [
     "AShareFillModel",

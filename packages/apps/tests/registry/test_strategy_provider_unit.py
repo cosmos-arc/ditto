@@ -31,7 +31,7 @@ from ditto_data.sources.source import DataSources
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
-from ditto_features.services.derived.query_service import DerivedQueryService
+from ditto_features.services import DerivedQueryService
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.specs import StrategySpec

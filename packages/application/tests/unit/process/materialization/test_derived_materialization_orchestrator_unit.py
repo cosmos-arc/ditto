@@ -30,11 +30,9 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.publication_safety import CompatibilityManifest
-from ditto_features.services.derived.artifact_persistence_service import (
+from ditto_features.services import (
     ArtifactPersistenceService,
-)
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.publication_safety_record_service import (
+    DerivedCatalogService,
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )

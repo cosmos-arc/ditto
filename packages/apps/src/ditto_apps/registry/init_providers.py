@@ -5,13 +5,13 @@ from __future__ import annotations
 from importlib.resources import files
 from pathlib import Path
 
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.config.initializer import (
+from ditto_platform.foundation import (
     ConfigInitProvider,
     InitResult,
     InitScope,
+    SQLitePool,
+    logger,
 )
-from ditto_platform.foundation.db.sqlite_pool import SQLitePool
 
 
 class MetadataDbInitProvider(ConfigInitProvider):

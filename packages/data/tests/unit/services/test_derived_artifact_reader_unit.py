@@ -197,7 +197,7 @@ class TestSchemaEvolution:
 
 def _make_catalog_service(sqlite_client):
     """Create a real DerivedCatalogService backed by in-memory SQLite."""
-    from ditto_features.services.derived_catalog_service import DerivedCatalogService
+    from ditto_features.services import DerivedCatalogService
     from ditto_features.storage.sqlite.derived import (
         SQLiteDerivedCatalogReader,
         SQLiteDerivedCatalogWriter,
@@ -260,7 +260,7 @@ def _make_reader(
     catalog_service,
     artifact_root: Path,
 ):
-    from ditto_features.services.derived import DerivedArtifactReader
+    from ditto_features.services import DerivedArtifactReader
 
     return DerivedArtifactReader(
         catalog_service=catalog_service,

@@ -33,12 +33,10 @@ from ditto_features.models.derived import (
     DerivedStateRecord,
     PartitionInfo,
 )
-from ditto_features.services.derived.artifact_persistence_service import (
+from ditto_features.services import (
     ArtifactMetadataParams,
     ArtifactPersistenceService,
-)
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.publication_safety_record_service import (
+    DerivedCatalogService,
     PublicationSafetyRecordService,
 )
 from ditto_kernel.publication_safety import DerivedMinimalDQSummaryRecord

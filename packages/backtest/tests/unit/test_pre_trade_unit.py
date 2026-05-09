@@ -12,10 +12,10 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.buying_power import CashAccountBuyingPower
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashAccountBuyingPower,
+    CashBook,
     Order,
     OrderBookReadOnly,
     OrderStatus,
@@ -304,7 +304,7 @@ class TestPreTradeContext:
         empty_context: PreTradeContext,
     ) -> None:
         """B3: sell order decreases available_quantity。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -343,7 +343,7 @@ class TestPreTradeContext:
         empty_context: PreTradeContext,
     ) -> None:
         """B3: sell available_quantity cannot go below 0。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -434,7 +434,7 @@ class TestNoShortSellCheck:
 
     def test_sell_with_position_accepts(self, empty_context: PreTradeContext) -> None:
         """有充足持仓时卖出通过。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -482,7 +482,7 @@ class TestNoShortSellCheck:
         empty_context: PreTradeContext,
     ) -> None:
         """持仓数量不足时卖出拒绝。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -786,7 +786,7 @@ class TestConcentrationPreCheck:
 
     def test_with_existing_position(self, empty_context: PreTradeContext) -> None:
         """已有持仓 150k + 新买 60k = 210k > 200k (20%)。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,

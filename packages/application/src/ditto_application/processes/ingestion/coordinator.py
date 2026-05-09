@@ -21,8 +21,7 @@ from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.storage.types import OnDuplicate, WriteResult
+from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
 from ditto_application.contracts import CheckDataQualityCommand
 from ditto_application.exceptions import AppProcessError

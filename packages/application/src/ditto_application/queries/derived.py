@@ -7,13 +7,13 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 import polars as pl
-from ditto_features.services.derived import (
+from ditto_features.services import (
     DerivedCompareQuery,
     DerivedLatestQuery,
+    DerivedQueryService,
     DerivedSeriesQuery,
     DerivedSourceScope,
 )
-from ditto_features.services.derived.query_service import DerivedQueryService
 
 from ditto_application.exceptions import AppQueryError
 

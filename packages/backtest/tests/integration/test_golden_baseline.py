@@ -29,8 +29,7 @@ from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import build_report
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_kernel.clock import SimulatedClock
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from inline_snapshot import snapshot
 
 _conftest_path = Path(__file__).parent / "conftest.py"

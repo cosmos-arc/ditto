@@ -3,8 +3,7 @@
 from datetime import date
 
 import polars as pl
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, logger, traced
 
 from ditto_data.storage.base.sqlite_table_reader import SqliteTableReader
 from ditto_data.storage.base.sqlite_table_spec import SqliteTableSpec

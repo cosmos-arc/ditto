@@ -12,7 +12,7 @@ from ditto_backtest.simulation.fill import (
 from ditto_execution.fills import Filled, FillOutcome, NoFill
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot, TradingRuleSet
-from ditto_portfolio.accounting.order_book import Order
+from ditto_portfolio.accounting import Order
 
 # ---------------------------------------------------------------------------
 # Test helpers

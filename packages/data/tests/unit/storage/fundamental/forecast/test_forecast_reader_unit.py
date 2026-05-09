@@ -11,8 +11,7 @@ from ditto_data.storage.fundamental.forecast.forecast_reader import (
     ForecastReader,
 )
 from ditto_data.storage.fundamental.specs import FORECAST_SPEC
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 SPEC = FORECAST_SPEC
 

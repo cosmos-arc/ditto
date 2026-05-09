@@ -311,7 +311,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.config.data_store",
                 "ditto_data.observability.metrics",
                 "ditto_features.observability.metrics",
-                "ditto_portfolio.observability.metrics",
+                "ditto_portfolio.observability",
                 "ditto_risk.observability.metrics",
                 "ditto_strategy.observability.metrics",
             }

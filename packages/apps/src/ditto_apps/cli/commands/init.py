@@ -5,9 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
-from ditto_platform.foundation.config import ConfigInitCoordinator
-from ditto_platform.foundation.config.initializer import InitScope
-from ditto_platform.foundation.config.providers import DataRootInitProvider
+from ditto_platform.foundation import (
+    ConfigInitCoordinator,
+    DataRootInitProvider,
+    InitScope,
+)
 
 from ditto_apps.registry.infra.config import (
     data_root_init_directories_from_data_store,

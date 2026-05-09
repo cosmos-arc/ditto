@@ -9,7 +9,7 @@ from ditto_features.evaluation.evaluator import (
     FactorEvaluator,
 )
 from ditto_features.evaluation.report import FactorEvaluationReport
-from ditto_features.services.derived import DerivedArtifactReader
+from ditto_features.services import DerivedArtifactReader
 
 from ditto_application.queries.forward_return_service import ForwardReturnService
 

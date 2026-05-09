@@ -11,11 +11,11 @@ from ditto_features.models.derived import (
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_features.services.derived import (
+from ditto_features.services import (
     DerivedArtifactReader,
+    DerivedCatalogService,
     VersionResolutionStrategy,
 )
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,

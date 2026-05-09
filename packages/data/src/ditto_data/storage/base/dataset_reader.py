@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_platform.foundation.storage import ParquetStore
+from ditto_platform.foundation import ParquetStore
 
 INSTRUMENT_ID_COLUMN = "instrument_id"
 

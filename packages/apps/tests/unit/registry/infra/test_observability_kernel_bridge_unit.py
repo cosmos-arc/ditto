@@ -9,11 +9,11 @@ from dishka import Provider, Scope, make_container, provide
 from ditto_apps.registry.infra.observability import ObservabilityProvider
 from ditto_kernel.tracing import reset_trace_handler, traced
 from ditto_platform.foundation import (
+    Environment,
     ObservabilityConfig,
     get_recorded_spans,
     reset_for_testing,
 )
-from ditto_platform.foundation.config.environment import Environment
 
 
 class _TestingObservabilityConfigProvider(Provider):

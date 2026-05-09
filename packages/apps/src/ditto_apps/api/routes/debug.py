@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ditto_platform.foundation.observability import logger
+from ditto_platform.foundation import logger
 from fastapi import APIRouter
 
 debug_router = APIRouter()

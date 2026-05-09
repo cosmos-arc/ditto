@@ -14,21 +14,19 @@ from ditto_data.config.data_source_validation import DataSourceValidationProvide
 from ditto_data.config.data_store import DataStoreSettings as _DataStoreSettings
 from ditto_data.quality.config import DQSettings
 from ditto_features.config import FeatureArtifactStoreSettings
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.cache import DataCache
-from ditto_platform.foundation.config import (
+from ditto_platform.foundation import (
     ConfigInitCoordinator,
     ConfigLoader,
+    DataCache,
+    DataRootInitProvider,
     Environment,
-    get_environment,
-)
-from ditto_platform.foundation.config.providers import DataRootInitProvider
-from ditto_platform.foundation.config.settings import (
     ObservabilitySettings,
     Settings,
     SystemSettings,
+    get_environment,
+    logger,
 )
-from ditto_platform.services.notification import NotificationSettings
+from ditto_platform.services import NotificationSettings
 
 from ditto_apps.config import load_env_file
 from ditto_apps.registry.init_providers import MetadataDbInitProvider

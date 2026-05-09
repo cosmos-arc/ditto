@@ -36,8 +36,7 @@ from ditto_backtest.statistics import BacktestReport, build_report
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -380,15 +379,12 @@ class TestE2ESmoke:
 
         使用自定义 Pipeline 验证 signal_value 注入后排序和权重分配正确。
         """
-        from ditto_portfolio.rebalancing.allocation import (
-            AllocationStage,
-            EqualWeightAllocator,
-        )
-
         # 构建自定义 Pipeline: Signal → Score → Selection → Allocation → Constraint
-        from ditto_portfolio.rebalancing.constraints import (
+        from ditto_portfolio.rebalancing import (
+            AllocationStage,
             ConstraintChecker,
             ConstraintStage,
+            EqualWeightAllocator,
             MaxWeightConstraint,
         )
         from ditto_strategy.alpha.builtins import (

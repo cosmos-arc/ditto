@@ -31,7 +31,7 @@ def test_detector_finds_imported_symbol_exported_in_all(tmp_path: Path) -> None:
     src = tmp_path / "packages" / "data" / "src" / "ditto_data" / "shim.py"
     src.parent.mkdir(parents=True)
     src.write_text(
-        "from ditto_platform.foundation.storage.sqlite_client import SQLiteClient\n"
+        "from ditto_platform.foundation import SQLiteClient\n"
         "__all__ = ['SQLiteClient']\n",
         encoding="utf-8",
     )
@@ -40,7 +40,7 @@ def test_detector_finds_imported_symbol_exported_in_all(tmp_path: Path) -> None:
         CrossPackageExport(
             path=src.relative_to(tmp_path).as_posix(),
             exported_name="SQLiteClient",
-            imported_from="ditto_platform.foundation.storage.sqlite_client",
+            imported_from="ditto_platform.foundation",
             owner_package="data",
             source_package="platform",
         )

@@ -6,9 +6,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import polars as pl
-from ditto_platform.foundation import logger
-from ditto_platform.foundation.cache import DataCache
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import DataCache, SQLiteClient, logger
 
 
 @dataclass(frozen=True)

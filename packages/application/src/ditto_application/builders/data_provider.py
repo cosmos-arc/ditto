@@ -11,7 +11,7 @@ import polars as pl
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_features.services.derived.query_service import DerivedQueryService
+from ditto_features.services import DerivedQueryService
 
 __all__ = ["ServiceBackedDataProvider"]
 

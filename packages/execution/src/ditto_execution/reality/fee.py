@@ -12,7 +12,7 @@ from ditto_kernel.trading import (
 from ditto_kernel.trading import (
     FeeSchedule as _FeeSchedule,
 )
-from ditto_portfolio.accounting.order_book import Order as _Order
+from ditto_portfolio.accounting import Order as _Order
 
 __all__ = ["AShareFeeModel", "SimpleFeeModel"]
 

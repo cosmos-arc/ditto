@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from ditto_execution.trade_builder import TradeRecord
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting import FillEvent
 
 from ditto_backtest.audit import (
     PreTradeDecisionRecord,

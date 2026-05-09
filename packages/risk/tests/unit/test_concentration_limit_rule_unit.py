@@ -7,9 +7,7 @@ from unittest.mock import MagicMock
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import AccountView, CashBook, Position
 from ditto_risk.exposure.rules import ConcentrationLimitRule
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ditto_platform.foundation.storage import ParquetStore
+from ditto_platform.foundation import ParquetStore
 
 MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
 MARKET_DATE_COLUMN = "trade_date"

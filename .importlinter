@@ -382,9 +382,6 @@ source_modules =
     ditto_application.**
 forbidden_modules =
     ditto_platform.config.**
-ignore_imports =
-    ditto_application.** -> ditto_platform.foundation.**
-    ditto_application.** -> ditto_platform.services.**
 
 # ═══════════════════════════════════════════════════════════════════
 # R8 — Application 内部互斥规则（Use Case 间职责隔离）

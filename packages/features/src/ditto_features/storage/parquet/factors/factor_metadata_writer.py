@@ -9,8 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.storage import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, logger, traced
 
 
 class FactorMetadataWriter:

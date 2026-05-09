@@ -19,7 +19,7 @@ from typing import Any, Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope as _RiskScope
-from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting import AccountView
 
 __all__ = [
     "CompositePostTradeGuard",

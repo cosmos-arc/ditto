@@ -11,9 +11,7 @@ import duckdb
 import polars as pl
 import pytest
 from ditto_apps.testing import DatabaseManager
-from ditto_platform.foundation.config import Settings
-from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.observability.config import ObservabilityConfig
+from ditto_platform.foundation import Environment, ObservabilityConfig, Settings
 
 
 def pytest_configure(config) -> None:
@@ -84,7 +82,7 @@ def test_settings(tmp_path: Path) -> Settings:
     Returns:
         Settings: 测试配置对象
     """
-    from ditto_platform.foundation.config.settings import (
+    from ditto_platform.foundation import (
         ObservabilitySettings,
         SystemSettings,
     )
@@ -210,7 +208,7 @@ def reset_observability() -> Generator[None]:
     注意：此 fixture 不再自动应用，需要显式请求。
     CLI 测试目录有独立的空 override 以避免 I/O 冲突。
     """
-    from ditto_platform.foundation.observability.testing import reset_for_testing
+    from ditto_platform.foundation import reset_for_testing
 
     reset_for_testing()
     yield
@@ -221,8 +219,7 @@ def reset_observability() -> Generator[None]:
 def obs_noop() -> None:
     """静默模式 - 最快, 不输出日志."""
     from ditto_apps.registry.infra.observability import register_app_metric_definitions
-    from ditto_platform.foundation import init
-    from ditto_platform.foundation.observability.testing import reset_for_testing
+    from ditto_platform.foundation import init, reset_for_testing
 
     reset_for_testing()
     register_app_metric_definitions()
@@ -241,8 +238,7 @@ def obs_noop() -> None:
 def obs_assertions() -> None:
     """断言模式 - 可验证, 内存记录."""
     from ditto_apps.registry.infra.observability import register_app_metric_definitions
-    from ditto_platform.foundation import init
-    from ditto_platform.foundation.observability.testing import reset_for_testing
+    from ditto_platform.foundation import init, reset_for_testing
 
     reset_for_testing()
     register_app_metric_definitions()

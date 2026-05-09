@@ -6,17 +6,15 @@ from dataclasses import dataclass, replace
 
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
-from ditto_portfolio.rebalancing.allocation import (
+from ditto_portfolio.rebalancing import (
     AllocationStage,
-    EqualWeightAllocator,
-    InverseVolAllocator,
-    ScoreWeightAllocator,
-)
-from ditto_portfolio.rebalancing.constraints import (
     ConstraintChecker,
     ConstraintStage,
+    EqualWeightAllocator,
+    InverseVolAllocator,
     MaxPositionsConstraint,
     MaxWeightConstraint,
+    ScoreWeightAllocator,
 )
 from ditto_strategy.alpha.builtins.scoring import ScoringMethod
 from ditto_strategy.alpha.pipeline import StrategyPipeline

@@ -15,9 +15,7 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import Order, OrderTicket
+from ditto_portfolio.accounting import AccountView, FillEvent, Order, OrderTicket
 
 __all__ = ["Brokerage", "ProcessInput"]
 

@@ -14,7 +14,7 @@ import polars.exceptions as pl_exceptions
 from ditto_data.quality.protocols import QualityEngineProtocol
 from ditto_kernel.quality import DQIssue, DQResult
 from ditto_platform.foundation import logger
-from ditto_platform.services.notification import AlertManager, NotificationLevel
+from ditto_platform.services import AlertManager, NotificationLevel
 
 from ditto_application.processes.quality.types import L3CheckResult
 from ditto_application.queries.market import MarketQueryFacade

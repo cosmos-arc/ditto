@@ -11,10 +11,12 @@ from ditto_execution.trade_builder import (
     TradeRecord,
 )
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import OrderBookReadOnly
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    FillEvent,
+    OrderBookReadOnly,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

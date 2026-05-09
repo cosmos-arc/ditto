@@ -23,10 +23,10 @@ from ditto_features.publication_safety import (
     CertificationStage,
     ShadowDiffReport,
 )
-from ditto_features.services.derived import DerivedArtifactReader
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_features.services.publication_safety_record_service import (
+from ditto_features.services import (
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    DerivedShadowSlotService,
     PublicationSafetyRecordService,
 )
 from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
