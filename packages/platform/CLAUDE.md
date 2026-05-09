@@ -52,9 +52,9 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 | `checksum` | 文件/数据校验和（纯工具，sort_keys 由调用方提供） | 领域知识（如数据集排序键映射） |
 | `concurrency` | 文件锁、并发控制 | - |
 | `config` | 配置加载、环境管理、XDG 路径 | 读取业务配置或数据源特定校验 |
-| `db` | SQLite 连接池 | 包含 SQL 业务逻辑 |
+| `db` | SQLite 连接池、查询构建辅助（含 `validate_identifier()` 标识符校验） | 包含 SQL 业务逻辑 |
 | `observability` | 日志、追踪、指标 | - |
-| `storage` | 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、OnDuplicate、WriteStoreResult） | 包含业务逻辑或领域概念 |
+| `storage` | 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、OnDuplicate、WriteStoreResult）；`SQLiteClient.count` 内置 `validate_identifier()` 标识符校验 | 包含业务逻辑或领域概念 |
 | `util` | 通用工具函数 | 领域特定工具 |
 | `notification` | 通知发送 | 包含业务逻辑 |
 
@@ -83,8 +83,6 @@ from ditto_platform.config import ...  # 应为 ditto_platform.foundation.config
 ```
 
 **kernel 依赖豁免**：platform 禁止对 kernel 的业务性依赖；仅允许 `ditto_platform.exceptions` 继承 `ditto_kernel.exceptions.DittoError`（全局异常根）。此豁免已在 `.importlinter` 中精确声明，实际代码中仅 `exceptions.py` 一处导入。
-└─────────────────────────────────────┘
-```
 
 ## 各层 Platform Scope 限制
 

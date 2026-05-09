@@ -59,7 +59,7 @@ frozen dataclass 可包含 `to_json_dict()` / `from_json_dict()` 类方法，前
 ```
 ditto_kernel/
 ├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
-├── order.py               # Order 子域 — OrderSide
+├── order.py               # Order 子域 — OrderSide / OrderType
 ├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
 ├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
 ├── identity.py            # 共享身份类型（NewType）
@@ -90,6 +90,7 @@ instrument / order / market / identity: 无子域间依赖
 | `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
 | `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
+| `OrderType` | order.py | `StrEnum`（MARKET/LIMIT/STOP_MARKET/MARKET_ON_CLOSE） | Execution, Risk, Portfolio, Backtest |
 | `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
 | `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
 | `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
@@ -166,6 +167,35 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 | `market` | `CalendarId`, `GrainId` |
 | `quality` | `DQIssue`, `DQLevel`, `DQResult`, `DQSeverity` |
 | `research` | `ResearchDatasetSnapshotRecord`, `ResearchDatasetSpecRecord`, `ResearchSpineSnapshotRecord`, `ResearchSpineSpecRecord` |
+
+## Barrel 公共 API 分级
+
+Barrel `__all__` 包含 30 个符号，按稳定性分为两层：
+
+### Stable — 核心类型（2+ 跨包消费者，接口稳定）
+
+| 来源模块 | 符号 |
+|----------|------|
+| `trading.py` | `DEFAULT_COMMISSION_RATE`, `DEFAULT_LOT_SIZE`, `DEFAULT_MIN_COMMISSION` |
+| `exceptions.py` | `AmbiguousTickerError`, `DittoError`, `IdentifierError`, `NoIdentifierProvidedError` |
+| `instrument.py` | `AssetClass`, `Exchange`, `InstrumentIngestParams` |
+| `market.py` | `MacroCategory`, `MacroFrequency`, `TimeSpec` |
+| `order.py` | `OrderSide`, `OrderType` |
+| `identity.py` | `InstrumentId` |
+| `clock.py` | `Clock`, `RealtimeClock`, `SimulatedClock` |
+
+### Candidate — 候选类型（1-2 包消费，接口可能演进）
+
+| 来源模块 | 符号 | 备注 |
+|----------|------|------|
+| `strategy.py` | `DecisionFrame`, `DerivedRole`, `DerivedSpec`, `ExecutionPolicy`, `ImpactModel`, `MaterializationProfile`, `RiskScope` | 7/30 符号来自 strategy.py，为 barrel 最大贡献者；最可能在未来需要改为叶模块直导 |
+| `events.py` | `DomainEvent`, `EventBus`, `SimpleEventBus` | |
+| `tracing.py` | `traced` | |
+
+> **注意**：`DittoError` 作为跨包异常基类放在 kernel 是合理的——它是异常层级的根。
+> 但 `strategy.py` 中的 `Derived*` 类型具有策略领域特有语义，虽然当前通过 barrel 共享以方便消费者，
+> 随着策略领域的演进，这些类型可能需要重新评估是否应转为叶模块直导。
+> 特别是 `DecisionFrame` 作为 Protocol，其消费模式更接近策略子域内部契约。
 
 ## 依赖规则
 

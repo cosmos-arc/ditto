@@ -20,7 +20,7 @@ ditto_risk → ditto_kernel ✅
 ditto_risk → ditto_portfolio ✅
 ```
 
-外部依赖：polars, orjson
+无外部依赖（kernel / portfolio 纯领域逻辑）
 
 ## 禁止依赖
 
@@ -74,9 +74,29 @@ Risk 的正常业务结果通过返回值表达，不通过异常表达：
 
 ```
 packages/risk/tests/
-├── unit/
-│   ├── test_import_boundary_unit.py
-│   └── test_risk_events_unit.py
+└── unit/
+    ├── test_buying_power_check_unit.py
+    ├── test_composite_post_trade_guard_unit.py
+    ├── test_composite_pre_trade_check_unit.py
+    ├── test_concentration_limit_rule_unit.py
+    ├── test_concentration_pre_check_unit.py
+    ├── test_contracts_typed_unit.py
+    ├── test_daily_turnover_pre_check_unit.py
+    ├── test_import_risk_unit.py
+    ├── test_lot_size_check_unit.py
+    ├── test_market_anomaly_rule_unit.py
+    ├── test_max_drawdown_rule_unit.py
+    ├── test_models_unit.py
+    ├── test_no_short_sell_check_unit.py
+    ├── test_pre_trade_context_unit.py
+    ├── test_price_validity_check_unit.py
+    ├── test_risk_contracts_unit.py
+    ├── test_risk_errors_unit.py
+    ├── test_risk_events_unit.py
+    ├── test_risk_import_boundary_unit.py
+    ├── test_single_loss_limit_rule_unit.py
+    ├── test_subdomain_facade_unit.py
+    └── test_validation_unit.py
 ```
 
 ## 典型导入示例
@@ -101,3 +121,12 @@ pixi run -e dev pytest packages/risk/tests/unit -q
 pixi run -e dev type packages/risk/src
 pixi run -e dev arch-check
 ```
+
+## 已知差距 / 计划工作
+
+| ID | 差距 | 现状 | 目标 |
+|----|------|------|------|
+| RISK-P1-01 | **RiskGate 统一运行时契约** | Pre-trade / Post-trade 检查已实现，但回测与模拟盘各自内嵌风控门控逻辑，缺乏共享的 `RiskGate` 运行时契约 | 统一 `RiskGate` protocol，backtest 与 paper trading 共用同一门控抽象 |
+| RISK-P1-02 | **有状态规则的无损恢复** | `MaxDrawdownRule._peak_nav`、`StrategyContext` 中的锁/冷却等有状态字段无持久化快照/重放契约，进程重启后状态丢失 | 引入 durable snapshot + replay 机制，状态可跨进程恢复 |
+| RISK-P1-03 | **审计载荷类型化** | `RiskGuardTriggered.details` 仍为 `dict[str, Any]`，缺乏编译期保障 | 替换为 typed dataclass，消除 `Any` |
+| RISK-P2-01 | **审计血缘跨包断裂** | `RiskAction` 经本地映射转为 backtest `RiskScanRecord` 再到 execution audit，审计血缘分散在多个包中 | 建立跨包审计 lineage protocol，统一 trace id |

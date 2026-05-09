@@ -2416,12 +2416,11 @@ packages:
 - pypi: ./packages/analysis
   name: ditto-analysis
   version: 0.1.0
-  sha256: 4e7606a07fcae42ab8fba1cd8c5f0430cc97529b65e298c2545ebbb8b941f6f5
+  sha256: 553c8eafeededb61e1701d674f17062f395576f7ecd340c163320797b3a67783
   requires_dist:
   - ditto-kernel
   - ditto-platform
   - polars
-  - numpy
   - orjson
   - dishka
   requires_python: '>=3.13'
@@ -2572,12 +2571,10 @@ packages:
 - pypi: ./packages/risk
   name: ditto-risk
   version: 0.1.0
-  sha256: d291182a9faaf89ff62615f785834549836530ddb16f1d979024b6efe1943eef
+  sha256: 9d15e9c49f5a3ee1ba5c97ed4a7dfc4d15b404ccdf29e20a75965aa290c9ad33
   requires_dist:
   - ditto-kernel
   - ditto-portfolio
-  - polars
-  - orjson
   requires_python: '>=3.13'
 - pypi: ./packages/strategy
   name: ditto-strategy

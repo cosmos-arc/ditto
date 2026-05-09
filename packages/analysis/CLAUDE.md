@@ -32,7 +32,7 @@ ditto_analysis → ditto_kernel ✅
 ditto_analysis → ditto_platform ✅
 ```
 
-外部依赖：polars, numpy, orjson
+外部依赖：polars, orjson
 
 ## 禁止依赖
 
