@@ -57,4 +57,3 @@ No P0 finding was confirmed. Data is functional but its governance/control-plane
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-data-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/data/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-

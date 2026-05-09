@@ -55,4 +55,3 @@ No P0 finding was confirmed. Risk has useful primitives; it needs runtime spine 
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-risk-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/risk/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-

@@ -56,4 +56,3 @@ No P0 finding was confirmed. The backtest path is usable, but not sufficient pro
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-backtest-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/backtest/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-

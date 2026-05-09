@@ -37,4 +37,3 @@ Reopen this backlog before any change that:
 - Adds a SQL `S608` suppression or string-built SQL helper.
 - Adds application or apps imports of concrete capability/data/research services outside an existing owner/reason allowance.
 - Claims paper/live/global-market capability readiness in public docs, API text, or CLI help.
-

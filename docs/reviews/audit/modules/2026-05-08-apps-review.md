@@ -56,4 +56,3 @@ No P0 finding was confirmed. The boundary is guarded; E2E evidence and maturity-
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-apps-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/apps/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-

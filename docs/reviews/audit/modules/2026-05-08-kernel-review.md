@@ -110,4 +110,3 @@ pixi run -e dev check
 | Implementing `TimeContext` immediately | Current review is deciding ownership; implementing before execution/backtest/data consumers agree would churn APIs. | Start of W1 runtime implementation or W2 DataCatalog/PIT work. |
 | Moving `trading.py` now | Execution/backtest/risk currently depend on these DTOs; moving before reference domain design would create churn. | Execution review defines OMS/rules provider and Data review defines reference/catalog boundary. |
 | Replacing `DomainEvent` now | Backtest event tests and application process use it as transport; typed events need event catalog first. | Execution/backtest runtime seam implementation. |
-

@@ -55,4 +55,3 @@ No P0 finding was confirmed. Analysis is intentionally narrow and guarded; the m
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-analysis-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/analysis/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-

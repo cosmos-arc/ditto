@@ -57,4 +57,3 @@ No P0 finding was confirmed. The allowed dependency direction is intact; the iss
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-application-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/application/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-

@@ -56,4 +56,3 @@ No P0 finding was confirmed. Strategy source is well isolated; maturity and stag
 Review artifact validation: `awk 'BEGIN{f=0} /^```/{f++} END{if (f % 2 != 0) exit 1}' docs/reviews/audit/modules/2026-05-08-strategy-review.md`
 
 Remediation validation: `pixi run -e dev pytest -v --import-mode=importlib -m 'not snapshot' -n auto --no-cov packages/strategy/tests && pixi run -e dev arch-check && pixi run -e dev check`.
-
