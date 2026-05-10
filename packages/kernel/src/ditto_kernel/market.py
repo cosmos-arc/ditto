@@ -1,10 +1,10 @@
-"""Market subdomain — 时间语义、日历、粒度、宏观枚举、宏观数据接口。"""
+"""Market subdomain — 时间语义、日历、粒度、宏观枚举。"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Literal, Protocol
+from typing import Literal
 
 __all__ = [
     "CALENDAR_TO_TIMEZONE",
@@ -12,7 +12,6 @@ __all__ = [
     "CalendarId",
     "GrainId",
     "MacroCategory",
-    "MacroDataProvider",
     "MacroFrequency",
     "TimeSpec",
 ]
@@ -60,22 +59,3 @@ class TimeSpec:
     def has_availability_time(self) -> bool:
         """是否指定可用时间键。"""
         return self.availability_time_key is not None
-
-
-class MacroDataProvider(Protocol):
-    """
-    宏观指标数据提供者接口。
-
-    零外部依赖签名 — 返回标准库类型。
-    polars DataFrame 的组装由 data 层实现方负责。
-    """
-
-    def fetch_indicator(
-        self, code: str, start: str, end: str
-    ) -> list[dict[str, str | float]]:
-        """获取指定宏观指标的时间序列。"""
-        ...
-
-    def list_indicators(self, category: str | None = None) -> list[dict[str, str]]:
-        """列出可用的宏观指标。"""
-        ...

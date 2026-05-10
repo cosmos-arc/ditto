@@ -12,6 +12,7 @@ from ditto_application.processes.materialization.cascade_orchestrator import (
     CascadeStatus,
     InvalidationCascadeOrchestrator,
 )
+from ditto_features.derived_types import MaterializationProfile
 from ditto_features.materialization import (
     DerivedInvalidationEvent,
     DerivedMaterializationResult,
@@ -23,7 +24,6 @@ from ditto_features.models.derived import (
     DerivedDependencyRecord,
     DerivedInvalidationRecord,
 )
-from ditto_kernel.strategy import MaterializationProfile
 
 
 def _make_event(

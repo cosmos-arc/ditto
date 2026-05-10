@@ -12,6 +12,7 @@ from ditto_strategy.models import StrategySpecRecord
 __all__ = [
     "SignalProvider",
     "StrategyCatalogReader",
+    "StrategyCatalogWriter",
     "StrategyRunStatusWriter",
 ]
 
@@ -45,6 +46,19 @@ class StrategyCatalogReader(Protocol):
 
     def list_versions(self, strategy_id: str) -> list[StrategySpecRecord]:
         """列出策略的所有版本."""
+        ...
+
+
+@runtime_checkable
+class StrategyCatalogWriter(Protocol):
+    """Stable strategy catalog write contract for application composition."""
+
+    def save(self, record: StrategySpecRecord) -> None:
+        """保存策略 Spec 记录."""
+        ...
+
+    def update_status(self, strategy_id: str, version: int, status: str) -> bool:
+        """更新策略 Spec 状态，成功返回 True."""
         ...
 
 

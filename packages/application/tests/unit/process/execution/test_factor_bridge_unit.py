@@ -12,7 +12,7 @@ from ditto_application.processes.execution.factor_bridge import (
     FactorBridge,
     build_signal_spec,
 )
-from ditto_kernel.strategy import (
+from ditto_features.derived_types import (
     DerivedRole,
     MaterializationProfile,
 )

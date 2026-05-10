@@ -303,6 +303,7 @@ def create_t1_config(
 
 
 # ============ Ingestion Specs ============
+# 当前固定摄取配置。DataCatalog runtime 实现后将成为唯一真相源。
 
 INGESTION_SPECS: dict[_Dataset, DatasetSpec] = {
     # T0: Meta datasets

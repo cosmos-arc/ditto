@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from ditto_kernel import DomainEvent
 from ditto_kernel.events import EventName
 
+from ditto_risk.post_trade import RiskSeverity
+
 __all__ = [
     "RiskGuardDetails",
     "RiskGuardTriggered",
@@ -29,5 +31,5 @@ class RiskGuardTriggered(DomainEvent):
 
     event_type: str = field(default=EventName.RISK_GUARD_TRIGGERED, init=False)
     rule_name: str
-    severity: str
+    severity: RiskSeverity
     details: RiskGuardDetails = field(default_factory=RiskGuardDetails)

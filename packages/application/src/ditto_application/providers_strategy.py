@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from dishka import Provider, Scope, provide
 from ditto_execution.audit import ExecutionAuditService
+from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
     BacktestArtifactReader,
 )
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
-)
-from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
-    StrategyCatalogService,
 )
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
@@ -60,9 +58,9 @@ class AppStrategyQueryProvider(Provider):
     @provide
     def strategy_query_facade(
         self,
-        catalog_service: StrategyCatalogService,
+        catalog_service: StrategyCatalogReader,
     ) -> StrategyQueryFacade:
-        """策略只读查询 facade — 封装 StrategyCatalogService."""
+        """策略只读查询 facade — 封装 StrategyCatalogReader."""
         return StrategyQueryFacade(catalog_service=catalog_service)
 
     @provide

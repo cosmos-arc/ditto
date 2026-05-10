@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_execution.storage.sqlite.trade.service import TradeService
+from ditto_execution.contracts import TradeDataPort
 
 from ditto_application.queries.portfolio_actual import PortfolioActualQueryFacade
 from ditto_application.queries.signal import SignalQueryFacade
@@ -20,7 +20,7 @@ class AppPortfolioQueryProvider(Provider):
     @provide
     def trade_query_facade(
         self,
-        trade_service: TradeService,
+        trade_service: TradeDataPort,
     ) -> TradeQueryFacade:
         """交易意图查询 facade — 封装 TradeService."""
         return TradeQueryFacade(trade_service=trade_service)
@@ -28,7 +28,7 @@ class AppPortfolioQueryProvider(Provider):
     @provide
     def portfolio_actual_query_facade(
         self,
-        trade_service: TradeService,
+        trade_service: TradeDataPort,
     ) -> PortfolioActualQueryFacade:
         """实际组合查询 facade — 封装 TradeService 的持仓/成交/P&L 查询."""
         return PortfolioActualQueryFacade(trade_service=trade_service)
@@ -36,7 +36,7 @@ class AppPortfolioQueryProvider(Provider):
     @provide
     def signal_query_facade(
         self,
-        trade_service: TradeService,
+        trade_service: TradeDataPort,
     ) -> SignalQueryFacade:
         """信号查询 facade — 封装 TradeService 的意图查询."""
         return SignalQueryFacade(trade_service=trade_service)

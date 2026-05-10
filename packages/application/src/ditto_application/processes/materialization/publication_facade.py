@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from ditto_features.derived_types import DerivedRole, MaterializationProfile
+from ditto_features.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_features.materialization import DerivedRunStatus, DerivedVersionStatus
 from ditto_features.models.derived import (
     DerivedSpecRecord,
@@ -34,8 +36,6 @@ from ditto_features.services import (
     DerivedShadowSlotService,
     PublicationSafetyRecordService,
 )
-from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
-from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 from ditto_application.config import now_iso
 from ditto_application.processes.materialization.certification_rules import (

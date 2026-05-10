@@ -11,11 +11,16 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.observability.metrics import METRIC_DEFINITIONS as DATA_METRICS
 from ditto_features.observability.metrics import METRIC_DEFINITIONS as FEATURE_METRICS
 from ditto_kernel.tracing import install_trace_handler, reset_trace_handler
-from ditto_platform.foundation.config.settings import Settings
-from ditto_platform.foundation.observability import init, shutdown
-from ditto_platform.foundation.observability.config import ObservabilityConfig
-from ditto_platform.foundation.observability.metrics import register_metric_definitions
-from ditto_platform.foundation.observability.tracing import traced as infra_traced
+from ditto_platform.foundation import (
+    ObservabilityConfig,
+    Settings,
+    init,
+    register_metric_definitions,
+    shutdown,
+)
+from ditto_platform.foundation import (
+    traced as infra_traced,
+)
 from ditto_portfolio.observability import (
     METRIC_DEFINITIONS as PORTFOLIO_METRICS,
 )

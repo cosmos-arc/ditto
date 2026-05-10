@@ -106,9 +106,6 @@ packages/risk/tests/
 from ditto_risk.pre_trade import CompositePreTradeCheck, BuyingPowerCheck, LotSizeCheck
 from ditto_risk.post_trade import CompositePostTradeGuard, PostTradeRiskGuard, RiskAction
 
-# 契约与模型
-from ditto_risk.models import DrawdownStats, ExposureData, RiskMetrics
-
 # 事件
 from ditto_risk.events import RiskGuardDetails, RiskGuardTriggered
 ```

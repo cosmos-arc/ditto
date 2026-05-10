@@ -19,6 +19,7 @@ from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
     DEFAULT_MIN_COMMISSION,
+    DEFAULT_SLIPPAGE_BPS,
 )
 from ditto_strategy.models import StrategySpecRecord
 
@@ -51,23 +52,20 @@ class CheckDataQualityCommand:
 _DEFAULT_STAMP_DUTY_RATE: float = 0.001
 """默认印花税税率(卖出千一) — A 股股票标准."""
 
-_DEFAULT_SLIPPAGE_BPS: float = 1.0
-"""默认滑点(bps)."""
-
 
 @dataclass(frozen=True)
 class CostConfig:
     """
     成本模型配置 — A 股标准费率默认值.
 
-    默认值来源于 ditto_kernel.trading 常量（commission_rate, commission_min）
-    及 A 股标准费率（stamp_duty_rate, slippage_bps）。
+    默认值来源于 ditto_kernel.trading 常量（commission_rate, commission_min,
+    slippage_bps）及 A 股标准费率（stamp_duty_rate）。
     """
 
     commission_rate: float = DEFAULT_COMMISSION_RATE
     commission_min: float = DEFAULT_MIN_COMMISSION
     stamp_duty_rate: float = _DEFAULT_STAMP_DUTY_RATE
-    slippage_bps: float = _DEFAULT_SLIPPAGE_BPS
+    slippage_bps: float = DEFAULT_SLIPPAGE_BPS
     impact_model: ImpactModel = ImpactModel.NONE
 
 

@@ -46,10 +46,8 @@ from ditto_strategy.alpha.templates import (
 from ditto_strategy.alpha.templates import (
     validate_config as validate_stock_selection_config,
 )
+from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.models import StrategySpecRecord
-from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
-    StrategyCatalogService,
-)
 
 from ditto_application.builders._spec_deserializer import (
     as_float_tuple,
@@ -78,6 +76,11 @@ __all__ = [
 ]
 
 
+# Local defaults for Pydantic/dataclass field defaults used under
+# ``from __future__ import annotations``.  The deferred-annotation mode
+# causes unused-import linters to strip kernel-level imports referenced
+# only in default expressions, so these are kept as module-level constants.
+# Values mirror ditto_kernel.trading.DEFAULT_SLIPPAGE_BPS.
 _DEFAULT_SLIPPAGE_BPS = 1.0
 _DEFAULT_TRAILING_STOP_PCT = 0.08
 _DEFAULT_MAX_WEIGHT = 0.15
@@ -123,7 +126,7 @@ class PublishedStrategyRuntime:
 class StrategyRuntimeBuilder:
     """从 published StrategySpecRecord 组装 Core runtime 对象。"""
 
-    def __init__(self, *, catalog_service: StrategyCatalogService) -> None:
+    def __init__(self, *, catalog_service: StrategyCatalogReader) -> None:
         self._catalog_service = catalog_service
 
     def build_published_runtime(

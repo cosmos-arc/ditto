@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ditto_kernel.strategy import (
+from ditto_features.derived_types import (
     DerivedRole as _DerivedRole,
 )
-from ditto_kernel.strategy import (
+from ditto_features.derived_types import (
     MaterializationProfile as _MaterializationProfile,
 )
 

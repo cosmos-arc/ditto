@@ -22,7 +22,6 @@ class EngineMode(StrEnum):
     """引擎运行模式。"""
 
     BACKTEST = "backtest"
-    LIVE = "live"
 
 
 @dataclass(frozen=True)

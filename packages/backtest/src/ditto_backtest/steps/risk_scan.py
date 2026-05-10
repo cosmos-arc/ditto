@@ -93,7 +93,7 @@ class RiskScanStep:
                 self._event_bus.publish(
                     RiskGuardTriggered(
                         rule_name=action.rule_id,
-                        severity=action.severity.value,
+                        severity=action.severity,
                         details=RiskGuardDetails(instrument_id=action.instrument_id),
                         timestamp=self._clock.now(),
                     ),

@@ -28,6 +28,15 @@ from ditto_platform.foundation.config.providers import (
     DataRootInitProvider,
 )
 from ditto_platform.foundation.db import SQLitePool
+from ditto_platform.foundation.json_types import (
+    JsonDict,
+    JsonPrimitive,
+    JsonValue,
+    require_bool,
+    require_int,
+    require_payload,
+    require_str,
+)
 from ditto_platform.foundation.observability import (
     EffectiveConfig,
     Metrics,
@@ -88,6 +97,9 @@ __all__ = [
     "FileLockManager",
     "InitResult",
     "InitScope",
+    "JsonDict",
+    "JsonPrimitive",
+    "JsonValue",
     "LockAcquisitionError",
     "MergeResult",
     "Metrics",
@@ -124,6 +136,10 @@ __all__ = [
     "logger",
     "normalize_date",
     "register_metric_definitions",
+    "require_bool",
+    "require_int",
+    "require_payload",
+    "require_str",
     "reset_for_testing",
     "shutdown",
     "span",

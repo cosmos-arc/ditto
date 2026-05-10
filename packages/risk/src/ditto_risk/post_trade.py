@@ -71,7 +71,6 @@ class RiskAction:
         current_value: 当前实际值
         threshold: 触发阈值
         cooldown_until_date: 冷却截止日期 (None = 无冷却)
-        target_quantity: 目标数量 (None = 未指定)
 
     """
 
@@ -84,7 +83,6 @@ class RiskAction:
     current_value: float
     threshold: float
     cooldown_until_date: str | None = None
-    target_quantity: int | None = None
 
 
 # ---------------------------------------------------------------------------

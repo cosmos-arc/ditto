@@ -31,10 +31,14 @@ from ditto_data.di import (
 )
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_platform.foundation import SQLiteClient
 
 # CapitalProvider is used in _make_container to satisfy MetadataService deps

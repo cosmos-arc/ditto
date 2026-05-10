@@ -12,6 +12,7 @@ __all__ = [
     "DEFAULT_COMMISSION_RATE",
     "DEFAULT_LOT_SIZE",
     "DEFAULT_MIN_COMMISSION",
+    "DEFAULT_SLIPPAGE_BPS",
     "FeeModel",
     "FeeSchedule",
     "InstrumentDefinition",
@@ -33,6 +34,9 @@ DEFAULT_MIN_COMMISSION: float = 5.0
 
 DEFAULT_LOT_SIZE: int = 100
 """默认最小交易单位(A股一手 = 100 股)。"""
+
+DEFAULT_SLIPPAGE_BPS: float = 1.0
+"""默认滑点成本(基点)。"""
 
 # ── 市场快照 ──────────────────────────────────────────────────
 

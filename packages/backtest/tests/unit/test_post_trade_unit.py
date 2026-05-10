@@ -128,7 +128,6 @@ class TestRiskAction:
             threshold=0.1,
         )
         assert action.cooldown_until_date is None
-        assert action.target_quantity is None
 
     def test_portfolio_wide_action_has_none_instrument_id(self) -> None:
         """Portfolio-wide actions use instrument_id=None, scope='portfolio'."""

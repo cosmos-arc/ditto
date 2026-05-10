@@ -285,7 +285,7 @@ class TestEngineLoopEvents:
         risk_events = [e for e in collected if isinstance(e, RiskGuardTriggered)]
         assert len(risk_events) >= 1
         assert risk_events[0].rule_name == "max_drawdown"
-        assert risk_events[0].severity == "critical"
+        assert risk_events[0].severity == RiskSeverity.CRITICAL
 
     def test_no_events_when_event_bus_none(self) -> None:
         """event_bus=None 时零副作用 — 不抛异常."""

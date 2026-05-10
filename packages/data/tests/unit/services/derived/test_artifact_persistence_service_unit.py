@@ -7,6 +7,11 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import polars as pl
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression import Analysis, CompileIdentity
 from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_features.publication_safety_records import (
@@ -16,7 +21,6 @@ from ditto_features.publication_safety_records import (
 from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _make_spec_record(

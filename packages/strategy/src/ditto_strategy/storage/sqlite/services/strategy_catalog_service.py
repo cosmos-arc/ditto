@@ -1,4 +1,8 @@
-"""StrategyCatalogService -- 策略 Spec CRUD 与状态治理."""
+"""
+StrategyCatalogService -- 策略 Spec CRUD 与状态治理.
+
+Protocol 方法名与 contracts.py 对齐：get_spec / list_specs / list_versions。
+"""
 
 from __future__ import annotations
 
@@ -15,15 +19,15 @@ __all__ = [
 
 @runtime_checkable
 class StrategySpecReaderProtocol(Protocol):
-    """策略 Spec 读取协议."""
+    """策略 Spec 读取协议 — 方法名与 contracts.StrategyCatalogReader 对齐."""
 
-    def get(
+    def get_spec(
         self, strategy_id: str, version: int | None = None
     ) -> StrategySpecRecord | None:
         """获取策略 Spec，version=None 返回最新版本."""
         ...
 
-    def list_all(self) -> list[StrategySpecRecord]:
+    def list_specs(self) -> list[StrategySpecRecord]:
         """列出所有策略 Spec（最新版本）."""
         ...
 
@@ -64,11 +68,11 @@ class StrategyCatalogService:
         self, strategy_id: str, version: int | None = None
     ) -> StrategySpecRecord | None:
         """获取策略 Spec，version=None 返回最新版本."""
-        return self._reader.get(strategy_id, version)
+        return self._reader.get_spec(strategy_id, version)
 
     def list_specs(self) -> list[StrategySpecRecord]:
         """列出所有策略 Spec（最新版本）."""
-        return self._reader.list_all()
+        return self._reader.list_specs()
 
     def list_versions(self, strategy_id: str) -> list[StrategySpecRecord]:
         """列出策略的所有版本."""

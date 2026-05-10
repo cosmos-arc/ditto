@@ -8,11 +8,11 @@ SQLitePool for direct SQL access.
 from __future__ import annotations
 
 import sqlite3
-from datetime import UTC, datetime
 from typing import Any
 
 from ditto_platform.foundation import SQLitePool, logger, traced
 
+from ditto_strategy._internal import utc_now
 from ditto_strategy.runs.models import StrategyRunRecord
 
 __all__ = [
@@ -271,12 +271,12 @@ class SQLiteStrategyRunWriter:
         if status == "cancelled":
             cursor = conn.execute(
                 _UPDATE_CANCELLED_SQL,
-                (_utc_now(), run_id),
+                (utc_now(), run_id),
             )
         elif status in ("completed", "failed"):
             cursor = conn.execute(
                 _UPDATE_TERMINAL_SQL,
-                (status, _utc_now(), error_message, run_id),
+                (status, utc_now(), error_message, run_id),
             )
         else:
             cursor = conn.execute(
@@ -399,8 +399,3 @@ class SQLiteStrategyRunReader:
         conn = self._pool.get_connection()
         rows = conn.execute(_LIST_BY_PARENT_SQL, (parent_run_id,)).fetchall()
         return [_row_to_record(row) for row in rows]
-
-
-def _utc_now() -> str:
-    """Return RFC3339 UTC timestamp."""
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

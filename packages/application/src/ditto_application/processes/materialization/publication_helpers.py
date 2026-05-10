@@ -18,7 +18,7 @@ from ditto_features.publication_safety_records import (
     ShadowDiffReportRecord,
     ShadowTraceRecordRecord,
 )
-from ditto_kernel.json_types import JsonDict, JsonValue
+from ditto_platform.foundation.json_types import JsonDict, JsonValue
 
 from ditto_application.config import now_iso
 from ditto_application.exceptions import AppProcessError

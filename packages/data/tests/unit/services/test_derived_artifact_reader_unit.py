@@ -216,12 +216,12 @@ def _seed_reader_catalog(
     version: int = 1,
 ) -> None:
     """Seed catalog with a minimal spec + version record for read_frame tests."""
-    from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
-    from ditto_kernel.strategy import (
+    from ditto_features.derived_types import (
         DerivedRole,
         DerivedSpec,
         MaterializationProfile,
     )
+    from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 
     spec = DerivedSpec(
         id=derived_id,

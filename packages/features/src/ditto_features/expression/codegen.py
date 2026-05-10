@@ -8,8 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import polars as pl
-from ditto_kernel.strategy import DerivedSpec
 
+from ditto_features.derived_types import DerivedSpec
 from ditto_features.expression.ast import (
     BinaryOpNode,
     CallNode,

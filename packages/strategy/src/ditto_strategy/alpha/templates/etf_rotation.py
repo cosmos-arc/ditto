@@ -4,6 +4,12 @@ etf_rotation 策略模板 -- ETF 动量轮动的 alpha stages.
 标准流程:
   Signal -> Score -> RiskLockFilter -> Select
   (可选: RegimeScoringStep -> RegimeAwareAllocationStage)
+
+提供:
+- ETFRotationConfig: 策略模板运行时配置
+- validate_config: 配置校验
+- get_param_constraints: 参数扫描元数据
+- build_etf_rotation_pipeline: 组装 alpha stages
 """
 
 from __future__ import annotations
@@ -20,8 +26,34 @@ from ditto_strategy.alpha.builtins.scoring import ScoringMethod, ScoringStage
 from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.protocols import DecisionStage
+from ditto_strategy.alpha.specs import ParamConstraint
+from ditto_strategy.alpha.templates._common import raise_config_error
 
-__all__ = ["ETFRotationConfig", "build_etf_rotation_pipeline"]
+__all__ = [
+    "ETFRotationConfig",
+    "build_etf_rotation_pipeline",
+    "get_param_constraints",
+    "validate_config",
+]
+
+
+def _raise_config_error(
+    message: str,
+    *,
+    field_name: str,
+    reason: str,
+    actual_value: object,
+    **details: object,
+) -> None:
+    """Raise a template config error with consistent metadata."""
+    raise_config_error(
+        message,
+        template="etf_rotation",
+        field_name=field_name,
+        reason=reason,
+        actual_value=actual_value,
+        **details,
+    )
 
 
 @dataclass(frozen=True)
@@ -51,6 +83,109 @@ class ETFRotationConfig:
     max_weight: float | None = None
     max_positions: int | None = None
     regime_config: RegimeConfig | None = None
+
+
+# ---------------------------------------------------------------------------
+# validate_config
+# ---------------------------------------------------------------------------
+
+
+def validate_config(config: ETFRotationConfig) -> None:
+    """
+    校验 ETFRotationConfig 合法性.
+
+    Raises:
+        StrategySpecError: 配置不合法时抛出描述性异常。
+
+    """
+    if config.top_k < 1:
+        msg = f"top_k must be >= 1, got {config.top_k}"
+        _raise_config_error(
+            msg,
+            field_name="top_k",
+            reason="below_min",
+            actual_value=config.top_k,
+            min_value=1,
+        )
+
+    if config.max_weight is not None and (
+        config.max_weight <= 0 or config.max_weight > 1
+    ):
+        msg = f"max_weight must be > 0 and <= 1, got {config.max_weight}"
+        _raise_config_error(
+            msg,
+            field_name="max_weight",
+            reason="out_of_range",
+            actual_value=config.max_weight,
+            min_value=0,
+            max_value=1,
+        )
+
+    valid_methods = ("equal_weight", "score_weight")
+    if config.allocation_method not in valid_methods:
+        msg = (
+            f"allocation_method must be one of {valid_methods}, "
+            f"got '{config.allocation_method}'"
+        )
+        _raise_config_error(
+            msg,
+            field_name="allocation_method",
+            reason="invalid_enum",
+            actual_value=config.allocation_method,
+            allowed_values=valid_methods,
+        )
+
+    if config.cash_target < 0 or config.cash_target >= 1:
+        msg = f"cash_target must be >= 0 and < 1, got {config.cash_target}"
+        _raise_config_error(
+            msg,
+            field_name="cash_target",
+            reason="out_of_range",
+            actual_value=config.cash_target,
+            min_value=0,
+            max_value=1,
+        )
+
+
+# ---------------------------------------------------------------------------
+# get_param_constraints
+# ---------------------------------------------------------------------------
+
+
+def get_param_constraints() -> tuple[ParamConstraint, ...]:
+    """
+    返回 etf_rotation 模板的参数扫描元数据.
+
+    Returns:
+        ParamConstraint 元组，描述可调参数的范围和可选值。
+
+    """
+    return (
+        ParamConstraint(
+            name="top_k",
+            dtype="int",
+            min_value=1,
+            max_value=100,
+            step=1,
+        ),
+        ParamConstraint(
+            name="cash_target",
+            dtype="float",
+            min_value=0.0,
+            max_value=0.5,
+            step=0.05,
+        ),
+        ParamConstraint(
+            name="allocation_method",
+            dtype="str",
+            allowed_values=("equal_weight", "score_weight"),
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# build_etf_rotation_pipeline
+# ---------------------------------------------------------------------------
 
 
 def build_etf_rotation_pipeline(

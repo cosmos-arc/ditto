@@ -39,8 +39,8 @@ from ditto_portfolio.accounting import (
     OrderEvent,
     OrderStatus,
     OrderTicket,
-    StateTransitionError,
 )
+from ditto_portfolio.errors import StateTransitionError
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,

@@ -10,11 +10,10 @@ stock_sector_rotation 配置、校验与参数约束.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import NoReturn
 
 from ditto_strategy.alpha.builtins.regime import RegimeConfig
 from ditto_strategy.alpha.specs import ParamConstraint
-from ditto_strategy.errors import StrategySpecError
+from ditto_strategy.alpha.templates._common import raise_config_error
 
 __all__ = [
     "StockSectorRotationConfig",
@@ -30,16 +29,16 @@ def _raise_config_error(
     reason: str,
     actual_value: object,
     **details: object,
-) -> NoReturn:
+) -> None:
     """Raise a template config error with consistent metadata."""
-    payload: dict[str, object] = {
-        "template": "stock_sector_rotation",
-        "field_name": field_name,
-        "reason": reason,
-        "actual_value": actual_value,
-    }
-    payload.update(details)
-    raise StrategySpecError(message, details=payload)
+    raise_config_error(
+        message,
+        template="stock_sector_rotation",
+        field_name=field_name,
+        reason=reason,
+        actual_value=actual_value,
+        **details,
+    )
 
 
 # ---------------------------------------------------------------------------

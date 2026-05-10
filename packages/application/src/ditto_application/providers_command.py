@@ -10,7 +10,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
-from ditto_execution.storage.sqlite.trade.service import TradeService
+from ditto_execution.contracts import TradeDataPort
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
@@ -117,7 +117,7 @@ class AppCommandProvider(Provider):
     @provide
     def record_fill_handler(
         self,
-        trade_service: TradeService,
+        trade_service: TradeDataPort,
         manual_tracker: ManualTracker,
     ) -> RecordFillHandler:
         """成交录入 Handler."""
@@ -129,7 +129,7 @@ class AppCommandProvider(Provider):
     @provide
     def update_intent_status_handler(
         self,
-        trade_service: TradeService,
+        trade_service: TradeDataPort,
     ) -> UpdateIntentStatusHandler:
         """交易意图状态更新 Handler."""
         return UpdateIntentStatusHandler(trade_service=trade_service)

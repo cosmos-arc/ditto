@@ -7,6 +7,11 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression.ast import (
     BinaryOpNode,
     CallNode,
@@ -19,7 +24,6 @@ from ditto_features.expression.diagnostics import (
     SourcePosition,
     Span,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 _ZERO_POS = SourcePosition(offset=0, line=1, column=1)
 _ZERO_SPAN: Span = Span(start=_ZERO_POS, end=_ZERO_POS)

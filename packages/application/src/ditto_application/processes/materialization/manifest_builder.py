@@ -8,12 +8,12 @@ from hashlib import sha256
 from typing import cast
 
 import orjson
+from ditto_features.derived_types import DerivedSpec
 from ditto_features.expression.contracts import CompileIdentity
 from ditto_features.publication_safety import CompatibilityManifest
 from ditto_features.publication_safety_records import CompatibilityManifestRecord
 from ditto_features.services import DerivedCatalogService
-from ditto_kernel.json_types import JsonDict
-from ditto_kernel.strategy import DerivedSpec
+from ditto_platform.foundation.json_types import JsonDict
 
 from ditto_application.config import now_iso
 

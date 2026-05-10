@@ -4,10 +4,22 @@ from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
 )
+from ditto_strategy.alpha.templates.etf_rotation import (
+    get_param_constraints as get_etf_rotation_param_constraints,
+)
+from ditto_strategy.alpha.templates.etf_rotation import (
+    validate_config as validate_etf_rotation_config,
+)
 from ditto_strategy.alpha.templates.etf_trend_swing import (
     ETFTrendSwingConfig,
     TrailingStopStage,
     build_etf_trend_swing_pipeline,
+)
+from ditto_strategy.alpha.templates.etf_trend_swing import (
+    get_param_constraints as get_etf_trend_swing_param_constraints,
+)
+from ditto_strategy.alpha.templates.etf_trend_swing import (
+    validate_config as validate_etf_trend_swing_config,
 )
 from ditto_strategy.alpha.templates.stock_sector_rotation import (
     FinalStockFilterStage,
@@ -48,8 +60,12 @@ __all__ = [
     "build_etf_trend_swing_pipeline",
     "build_stock_sector_rotation_pipeline",
     "build_stock_selection_trend_pipeline",
+    "get_etf_rotation_param_constraints",
+    "get_etf_trend_swing_param_constraints",
     "get_param_constraints",
     "get_sector_rotation_param_constraints",
     "validate_config",
+    "validate_etf_rotation_config",
+    "validate_etf_trend_swing_config",
     "validate_sector_rotation_config",
 ]

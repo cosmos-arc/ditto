@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     JsonDict,
     JsonValue,
     require_bool,

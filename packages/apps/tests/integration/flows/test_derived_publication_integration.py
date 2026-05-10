@@ -26,6 +26,11 @@ from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization import DerivedMaterializationRequest
 from ditto_features.materialization.models import (
     DerivedRunMode,
@@ -44,7 +49,6 @@ from ditto_features.services import (
     DerivedQueryService,
     PublicationSafetyRecordService,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 pytestmark = pytest.mark.serial
 

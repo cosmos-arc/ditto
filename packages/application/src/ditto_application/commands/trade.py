@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from ditto_execution.contracts import TradeDataPort
 from ditto_execution.models import SignalRecord
-from ditto_execution.storage.sqlite.trade.service import TradeService
 
 from ditto_application.exceptions import AppCommandError
 from ditto_application.execution_dto import (
@@ -71,7 +71,7 @@ class RecordFillHandler:
 
     def __init__(
         self,
-        trade_service: TradeService,
+        trade_service: TradeDataPort,
         manual_tracker: ManualTracker,
     ) -> None:
         self._service = trade_service
@@ -221,7 +221,7 @@ class RecordFillHandler:
 class UpdateIntentStatusHandler:
     """更新意图状态 — Command Handler."""
 
-    def __init__(self, trade_service: TradeService) -> None:
+    def __init__(self, trade_service: TradeDataPort) -> None:
         self._service = trade_service
 
     def handle(self, command: UpdateIntentStatusCommand) -> bool:

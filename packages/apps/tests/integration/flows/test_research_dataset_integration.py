@@ -28,10 +28,14 @@ from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.contexts.bundle import MaterializationBundle
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services import DerivedCatalogService
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from ditto_platform.foundation import SQLiteClient
 
 pytestmark = pytest.mark.serial

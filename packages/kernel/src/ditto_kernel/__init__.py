@@ -23,11 +23,8 @@ from ditto_kernel.market import (
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import (
     DecisionFrame,
-    DerivedRole,
-    DerivedSpec,
     ExecutionPolicy,
     ImpactModel,
-    MaterializationProfile,
     RiskScope,
 )
 from ditto_kernel.tracing import traced
@@ -45,8 +42,6 @@ __all__ = [
     "AssetClass",
     "Clock",
     "DecisionFrame",
-    "DerivedRole",
-    "DerivedSpec",
     "DittoError",
     "DomainEvent",
     "EventBus",
@@ -58,7 +53,6 @@ __all__ = [
     "InstrumentIngestParams",
     "MacroCategory",
     "MacroFrequency",
-    "MaterializationProfile",
     "NoIdentifierProvidedError",
     "OrderSide",
     "OrderType",

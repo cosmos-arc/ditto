@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import pytest
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression import ExpressionCompiler
 from ditto_features.expression.diagnostics import ExpressionCompileError
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _make_spec(expression: str) -> DerivedSpec:

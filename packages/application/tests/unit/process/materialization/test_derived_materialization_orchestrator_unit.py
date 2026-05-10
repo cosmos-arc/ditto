@@ -17,6 +17,11 @@ from ditto_application.processes.materialization.types import (
     InMemoryDerivedInputProvider,
 )
 from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization import DerivedMaterializationRequest
 from ditto_features.materialization.models import (
     DerivedRunMode,
@@ -50,7 +55,6 @@ from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _spec(profile: MaterializationProfile) -> DerivedSpec:

@@ -8,7 +8,7 @@ from ditto_application.processes.materialization.publication_helpers import (
     hydrate_manifest,
 )
 from ditto_features.publication_safety_records import CompatibilityManifestRecord
-from ditto_kernel.json_types import JsonDict
+from ditto_platform.foundation.json_types import JsonDict
 
 
 def _manifest_record(payload: JsonDict) -> CompatibilityManifestRecord:

@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.errors import FactorValidationError
 from ditto_features.expression.compiler import (
     ExpressionCompiler,
@@ -10,7 +15,6 @@ from ditto_features.expression.compiler import (
     detect_dependency_cycles,
 )
 from ditto_features.factors import ALL_FACTOR_SPECS
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Task 3A: detect_dependency_cycles

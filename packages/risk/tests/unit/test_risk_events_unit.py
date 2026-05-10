@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pytest
 from ditto_risk.events import RiskGuardDetails, RiskGuardTriggered
+from ditto_risk.post_trade import RiskSeverity
 
 
 class TestRiskGuardTriggered:
@@ -11,17 +12,17 @@ class TestRiskGuardTriggered:
         event = RiskGuardTriggered(
             timestamp=datetime(2024, 1, 15, 14, 0),
             rule_name="max_drawdown",
-            severity="critical",
+            severity=RiskSeverity.CRITICAL,
         )
         assert event.event_type == "risk_guard_triggered"
-        assert event.severity == "critical"
+        assert event.severity == RiskSeverity.CRITICAL
         assert event.details.instrument_id is None
 
     def test_with_details(self) -> None:
         event = RiskGuardTriggered(
             timestamp=datetime(2024, 1, 15),
             rule_name="concentration_limit",
-            severity="warning",
+            severity=RiskSeverity.WARNING,
             details=RiskGuardDetails(
                 instrument_id=600000,
                 current_value=0.35,
@@ -36,7 +37,7 @@ class TestRiskGuardTriggered:
         event = RiskGuardTriggered(
             timestamp=datetime(2024, 1, 15),
             rule_name="max_drawdown",
-            severity="critical",
+            severity=RiskSeverity.CRITICAL,
         )
         assert event.details.instrument_id is None
         assert event.details.current_value is None

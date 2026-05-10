@@ -212,7 +212,7 @@ class TestAccountProjectorParity:
         assert set(snapshot.positions.keys()) == set(account.positions.keys())
         for iid in snapshot.positions:
             snap_pos = snapshot.positions[iid]
-            acct_pos = account.positions[iid]
+            acct_pos = dict(account.positions)[iid]
             assert snap_pos.quantity == acct_pos.quantity
             assert snap_pos.average_cost == pytest.approx(acct_pos.average_cost)
             assert snap_pos.market_value == pytest.approx(acct_pos.market_value)

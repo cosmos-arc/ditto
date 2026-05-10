@@ -375,12 +375,13 @@ class TestProcessSingleTicket:
         """
         account = Account(
             cash=CashBook(available=100_000.0, settled=100_000.0, frozen=0.0),
-        )
-        # 为账户添加可用数量不足的持仓
-        account.positions[InstrumentId(1)] = _position(
-            instrument_id=1,
-            quantity=1000,
-            available_quantity=100,
+            positions={
+                InstrumentId(1): _position(
+                    instrument_id=1,
+                    quantity=1000,
+                    available_quantity=100,
+                ),
+            },
         )
 
         brokerage = _make_brokerage(account=account)

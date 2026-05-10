@@ -6,6 +6,7 @@ from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
+from ditto_execution.contracts import TradeDataPort
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
 from ditto_execution.storage.sqlite.trade import (
     FILLS_DDL,
@@ -74,6 +75,6 @@ class ExecutionStorageProvider(Provider):
         readers: ExecutionReaders,
         writers: ExecutionWriters,
         _schema_initialized: None,
-    ) -> TradeService:
+    ) -> TradeDataPort:
         """交易信号/成交/持仓 CRUD 服务."""
         return TradeService(readers=readers, writers=writers)

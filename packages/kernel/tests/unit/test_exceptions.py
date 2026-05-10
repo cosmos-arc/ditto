@@ -2,7 +2,7 @@
 
 验证 Phase 0.1 异常体系统一：
 - DittoError 为全局根
-- DataError/DerivedError 继承 DittoError
+- DataError 继承 DittoError
 - 消除双重定义（DataSourceError/SourceFetchError）
 - 各包域根存在且继承 DittoError
 - 无异常直接继承 Exception（除 DittoError 自身）
@@ -44,7 +44,7 @@ class TestDittoErrorRoot:
             raise IdentifierError("test")
 
     def test_ditto_error_catches_derived_error(self) -> None:
-        from ditto_kernel.exceptions import DerivedError
+        from ditto_features.errors import DerivedError
 
         with pytest.raises(DittoError):
             raise DerivedError("test")
@@ -111,12 +111,12 @@ class TestDerivedErrorHierarchy:
     """DerivedError 层级验证."""
 
     def test_derived_error_inherits_ditto_error(self) -> None:
-        from ditto_kernel.exceptions import DerivedError
+        from ditto_features.errors import DerivedError
 
         assert issubclass(DerivedError, DittoError)
 
     def test_derived_not_found_inherits_derived_error(self) -> None:
-        from ditto_kernel.exceptions import DerivedError, DerivedNotFoundError
+        from ditto_features.errors import DerivedError, DerivedNotFoundError
 
         assert issubclass(DerivedNotFoundError, DerivedError)
 
@@ -133,18 +133,21 @@ class TestNoDuplicateDefinitions:
     def test_data_source_error_single_definition(self) -> None:
         from ditto_data.errors import DataSourceError
 
-        assert DataSourceError.__module__ == "ditto_data.errors"
+        assert DataSourceError.__module__ == "ditto_data.errors.network"
 
     def test_source_fetch_error_single_definition(self) -> None:
         from ditto_data.errors import SourceFetchError
 
-        assert SourceFetchError.__module__ == "ditto_data.errors"
+        assert SourceFetchError.__module__ == "ditto_data.errors.network"
 
     def test_sources_base_no_own_definitions(self) -> None:
         from ditto_data.sources import base
 
         has_own = hasattr(base, "DataSourceError")
-        assert not has_own or base.DataSourceError.__module__ == "ditto_data.errors"
+        assert not has_own or base.DataSourceError.__module__ in (
+            "ditto_data.errors",
+            "ditto_data.errors.network",
+        )
 
     def test_base_subclasses_merged(self) -> None:
         from ditto_data.errors import (
@@ -238,7 +241,7 @@ class TestPerPackageDomainRoots:
         assert issubclass(PlatformError, DittoError)
 
     def test_portfolio_orphan_uses_domain_root(self) -> None:
-        from ditto_portfolio.accounting import StateTransitionError
+        from ditto_portfolio.errors import StateTransitionError
 
         assert issubclass(StateTransitionError, DittoError)
 
@@ -277,7 +280,7 @@ class TestNoBareExceptionInheritance:
 
     def test_ditto_error_only_bare_exception_root(self) -> None:
         """DittoError 是唯一允许直接继承 Exception 的类."""
-        from ditto_kernel.exceptions import DerivedError
+        from ditto_features.errors import DerivedError
 
         assert DittoError.__bases__ == (Exception,)
         assert DataError.__bases__ == (DittoError,)

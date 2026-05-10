@@ -7,7 +7,7 @@ TradeQueryFacade — 交易意图查询门面.
 
 from __future__ import annotations
 
-from ditto_execution.storage.sqlite.trade.service import TradeService
+from ditto_execution.contracts import TradeDataPort
 
 from ditto_application.execution_dto import TradeIntent, record_to_intent
 
@@ -21,7 +21,7 @@ class TradeQueryFacade:
     封装 TradeService 的意图查询操作，对外暴露 DTO。
     """
 
-    def __init__(self, trade_service: TradeService) -> None:
+    def __init__(self, trade_service: TradeDataPort) -> None:
         self._service = trade_service
 
     def list_intents(

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
 from ditto_kernel.strategy import RunStatus
 
+from ditto_strategy._internal import utc_now
 from ditto_strategy.runs.models import StrategyRunRecord
 
 __all__ = [
@@ -107,7 +107,7 @@ class StrategyRunLifecycleStore:
             strategy_version=strategy_version,
             mode=mode,
             status=RunStatus.PENDING,
-            started_at=_utc_now(),
+            started_at=utc_now(),
             parent_run_id=parent_run_id,
             config_json=config_json,
         )
@@ -203,8 +203,3 @@ class StrategyRunLifecycleStore:
     def list_replays(self, run_id: str) -> list[StrategyRunRecord]:
         """列出指定运行的所有直接重放记录."""
         return self._reader.list_by_parent(run_id)
-
-
-def _utc_now() -> str:
-    """返回 RFC3339 UTC 时间戳。"""
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ditto_kernel.exceptions import DerivedNotImplementedError
-from ditto_kernel.strategy import DerivedSpec
+from ditto_features.derived_types import DerivedSpec
+from ditto_features.errors import DerivedNotImplementedError
 
 __all__ = ["validate_derived_spec"]
 

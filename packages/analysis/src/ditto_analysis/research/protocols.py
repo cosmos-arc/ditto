@@ -5,9 +5,7 @@ Protocols 引用 research.domain 的 Record 类型，放在 research/ 包内
 避免 contracts.py → research.domain → research.catalog_service → contracts.py 循环。
 """
 
-from __future__ import annotations
-
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
@@ -22,6 +20,7 @@ __all__ = [
 ]
 
 
+@runtime_checkable
 class ResearchCatalogReaderProtocol(Protocol):
     """Reader protocol for research specs and snapshots."""
 
@@ -65,6 +64,7 @@ class ResearchCatalogReaderProtocol(Protocol):
         ...
 
 
+@runtime_checkable
 class ResearchCatalogWriterProtocol(Protocol):
     """
     Writer protocol for research catalog persistence.

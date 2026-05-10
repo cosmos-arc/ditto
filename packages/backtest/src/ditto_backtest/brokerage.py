@@ -7,7 +7,6 @@ BacktestBrokerage 是 state owner, 持有可变 Account 实例,
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import datetime
 
 from ditto_execution.brokerage import ProcessInput
@@ -35,8 +34,8 @@ from ditto_portfolio.accounting import (
     OrderStatus,
     OrderTicket,
     Position,
-    StateTransitionError,
 )
+from ditto_portfolio.errors import StateTransitionError
 
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.settlement import SettlementModel
@@ -382,12 +381,7 @@ class BacktestBrokerage:
         """
         if settle_date <= self._current_trade_date:
             # T+0 交收: 当日即解冻, 直接增加 available_quantity
-            pos = self._account.positions.get(instrument_id)
-            if pos is not None:
-                self._account.positions[instrument_id] = replace(
-                    pos,
-                    available_quantity=pos.available_quantity + quantity,
-                )
+            self._account.thaw_position(instrument_id, quantity)
             return
 
         frozen_for_iid = self._frozen_quantities.setdefault(instrument_id, {})
@@ -414,7 +408,4 @@ class BacktestBrokerage:
                     del date_qty_map[d]
                 if not date_qty_map:
                     del self._frozen_quantities[iid]
-                self._account.positions[iid] = replace(
-                    pos,
-                    available_quantity=pos.available_quantity + thaw_total,
-                )
+                self._account.thaw_position(iid, thaw_total)

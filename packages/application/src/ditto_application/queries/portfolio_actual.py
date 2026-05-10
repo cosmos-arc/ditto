@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_execution.storage.sqlite.trade.service import TradeService
+from ditto_execution.contracts import TradeDataPort
 
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
@@ -48,7 +48,7 @@ class PortfolioActualQueryFacade:
     将 Record 映射为 App 层 DTO 后返回。
     """
 
-    def __init__(self, trade_service: TradeService) -> None:
+    def __init__(self, trade_service: TradeDataPort) -> None:
         self._trade_service = trade_service
 
     def get_latest_positions(

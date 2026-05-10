@@ -233,7 +233,7 @@ class StrategySpec:
                 actual_value=self.template,
             )
 
-        # benchmark 格式
+        # benchmark 格式验证（格式合法即通过，不再限制为已知指数白名单）
         if self.benchmark is not None and not self._BENCHMARK_RE.match(self.benchmark):
             _raise_spec_error(
                 "StrategySpec.benchmark must match 'NNNNNN.SH|SZ', "
@@ -241,21 +241,6 @@ class StrategySpec:
                 field_name="benchmark",
                 reason="invalid_format",
                 pattern=self._BENCHMARK_RE.pattern,
-                actual_value=self.benchmark,
-            )
-
-        # benchmark 白名单
-        if self.benchmark is not None and self.benchmark not in self._KNOWN_BENCHMARKS:
-            known = sorted(self._KNOWN_BENCHMARKS)
-            msg = (
-                f"StrategySpec.benchmark '{self.benchmark}' "
-                f"is not a known index; known: {known}"
-            )
-            _raise_spec_error(
-                msg,
-                field_name="benchmark",
-                reason="unknown_benchmark",
-                known_values=known,
                 actual_value=self.benchmark,
             )
 

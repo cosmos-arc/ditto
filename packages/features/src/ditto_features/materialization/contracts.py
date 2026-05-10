@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_kernel.strategy import MaterializationProfile
-
+from ditto_features.derived_types import MaterializationProfile
 from ditto_features.expression.contracts import (
     Analysis,
     AnalysisWarning,

@@ -1,7 +1,7 @@
 """Tests for etf_trend_swing template: TrailingStopStage, Config, pipeline.
 
-Covers TrailingStopStage, ETFTrendSwingConfig, and
-build_etf_trend_swing_pipeline.
+Covers TrailingStopStage, ETFTrendSwingConfig, validate_config,
+get_param_constraints, and build_etf_trend_swing_pipeline.
 """
 
 from __future__ import annotations
@@ -20,11 +20,15 @@ from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.specs import ParamConstraint
 from ditto_strategy.alpha.templates.etf_trend_swing import (
     ETFTrendSwingConfig,
     TrailingStopStage,
     build_etf_trend_swing_pipeline,
+    get_param_constraints,
+    validate_config,
 )
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -359,3 +363,76 @@ class TestBuildETFTrendSwingPipeline:
             i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx
+
+
+# ---------------------------------------------------------------------------
+# validate_config
+# ---------------------------------------------------------------------------
+
+
+class TestETFTrendSwingValidateConfig:
+    def test_valid_config_passes(self) -> None:
+        """合法配置不抛异常。"""
+        config = ETFTrendSwingConfig()
+        validate_config(config)  # Should not raise
+
+    def test_invalid_lookback_window_raises(self) -> None:
+        """lookback_window < 1 时抛异常。"""
+        config = ETFTrendSwingConfig(lookback_window=0)
+        with pytest.raises(StrategySpecError, match="lookback_window"):
+            validate_config(config)
+
+    def test_invalid_max_positions_raises(self) -> None:
+        """max_positions < 1 时抛异常。"""
+        config = ETFTrendSwingConfig(max_positions=0)
+        with pytest.raises(StrategySpecError, match="max_positions"):
+            validate_config(config)
+
+    def test_invalid_trailing_stop_pct_negative_raises(self) -> None:
+        """trailing_stop_pct < 0 时抛异常。"""
+        config = ETFTrendSwingConfig(trailing_stop_pct=-0.01)
+        with pytest.raises(StrategySpecError, match="trailing_stop_pct"):
+            validate_config(config)
+
+    def test_invalid_trailing_stop_pct_over_one_raises(self) -> None:
+        """trailing_stop_pct >= 1 时抛异常。"""
+        config = ETFTrendSwingConfig(trailing_stop_pct=1.0)
+        with pytest.raises(StrategySpecError, match="trailing_stop_pct"):
+            validate_config(config)
+
+    def test_invalid_allocation_method_raises(self) -> None:
+        """非法 allocation_method 抛异常。"""
+        config = ETFTrendSwingConfig(allocation_method="invalid")
+        with pytest.raises(StrategySpecError, match="allocation_method"):
+            validate_config(config)
+
+    def test_invalid_cash_target_raises(self) -> None:
+        """cash_target < 0 或 >= 1 时抛异常。"""
+        config = ETFTrendSwingConfig(cash_target=-0.1)
+        with pytest.raises(StrategySpecError, match="cash_target"):
+            validate_config(config)
+
+        config2 = ETFTrendSwingConfig(cash_target=1.0)
+        with pytest.raises(StrategySpecError, match="cash_target"):
+            validate_config(config2)
+
+
+# ---------------------------------------------------------------------------
+# get_param_constraints
+# ---------------------------------------------------------------------------
+
+
+class TestETFTrendSwingGetParamConstraints:
+    def test_returns_constraints(self) -> None:
+        """返回非空的 ParamConstraint 元组。"""
+        constraints = get_param_constraints()
+        assert isinstance(constraints, tuple)
+        assert len(constraints) > 0
+        for c in constraints:
+            assert isinstance(c, ParamConstraint)
+
+    def test_contains_trailing_stop_pct(self) -> None:
+        """包含 trailing_stop_pct 约束。"""
+        constraints = get_param_constraints()
+        names = [c.name for c in constraints]
+        assert "trailing_stop_pct" in names

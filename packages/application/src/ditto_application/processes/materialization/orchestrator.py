@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import polars as pl
 from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.derived_types import DerivedSpec, MaterializationProfile
 from ditto_features.expression import CompiledDerivedExpression, CompileIdentity
 from ditto_features.materialization import (
     DerivedExecutionPlan,
@@ -40,7 +41,6 @@ from ditto_features.services import (
     DerivedCatalogService,
     PublicationSafetyRecordService,
 )
-from ditto_kernel.strategy import DerivedSpec, MaterializationProfile
 
 from ditto_application.config import now_iso
 from ditto_application.exceptions import AppProcessError
