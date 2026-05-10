@@ -16,6 +16,9 @@ from ditto_backtest.simulation import (
     BrokerageModel,
 )
 from ditto_backtest.statistics import ExecutionAuditCollector
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
 from ditto_execution.brokerage import ProcessInput
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
@@ -1294,6 +1297,12 @@ class TestSuspendedE2E:
         )
         collector = ExecutionAuditCollector()
 
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+        synchronizer = BacktestSynchronizer(
+            data_feed=data_feed,
+            clock=clock,
+            start_date="2026-01-05",
+        )
         engine = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1301,8 +1310,8 @@ class TestSuspendedE2E:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=synchronizer,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 audit_collector=collector,
             ),
@@ -1437,6 +1446,12 @@ class TestExitOrderRules:
             strategy_run_id="run-exit",
         )
 
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+        synchronizer = BacktestSynchronizer(
+            data_feed=data_feed,
+            clock=clock,
+            start_date="2026-01-05",
+        )
         engine = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1444,8 +1459,8 @@ class TestExitOrderRules:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=synchronizer,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
                 audit_collector=collector,
@@ -1584,6 +1599,12 @@ class TestRuleRefsPreserved:
             strategy_run_id="run-rule-refs",
         )
 
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+        synchronizer = BacktestSynchronizer(
+            data_feed=data_feed,
+            clock=clock,
+            start_date="2026-01-05",
+        )
         engine = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1591,8 +1612,8 @@ class TestRuleRefsPreserved:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=synchronizer,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
             ),

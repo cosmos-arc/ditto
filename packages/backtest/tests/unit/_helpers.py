@@ -6,16 +6,18 @@ Pytest conftest for backtest unit tests -- shared helpers.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
 from ditto_backtest.data_feed import Slice
+from ditto_backtest.steps import StepContext
 from ditto_execution.planner import ExecutionPlan
 from ditto_kernel.clock import Clock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import RiskScope
+from ditto_kernel.time_context import TimeContext
 from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting import (
     AccountView,
@@ -147,4 +149,24 @@ def _make_execution_plan(orders: tuple[Order, ...] | None = None) -> ExecutionPl
         estimated_turnover=10_000.0,
         estimated_cost=5.0,
         blocked_orders=(),
+    )
+
+
+def _make_ctx(
+    trade_date: str = "2026-03-01",
+    is_rebalance_day: bool = True,
+    bars: dict[InstrumentId, MarketSnapshot] | None = None,
+) -> StepContext:
+    """构建标准 StepContext，使用 PIT 语义的 TimeContext。"""
+    year = int(trade_date[:4])
+    month = int(trade_date[5:7])
+    day = int(trade_date[8:10])
+    return StepContext(
+        time_context=TimeContext(
+            decision_time=datetime(year, month, day, 15, 0, tzinfo=UTC),
+            knowledge_date=date(year, month, day) - timedelta(days=1),
+            trade_date=trade_date,
+        ),
+        is_rebalance_day=is_rebalance_day,
+        bars=bars or {},
     )

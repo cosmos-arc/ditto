@@ -38,6 +38,9 @@ from ditto_backtest.statistics import (
     PreTradeDecisionRecord,
     build_report,
 )
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -182,6 +185,12 @@ def _build_engine_loop(
         rules_getter=rules_getter,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=config.start_date,
+    )
 
     return EngineLoop(
         config=config,
@@ -190,8 +199,8 @@ def _build_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
         ),
     )
@@ -230,6 +239,12 @@ def _build_audited_engine_loop(
         rules_getter=rules_getter,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=config.start_date,
+    )
 
     return _AuditedEngineLoop(
         config=config,
@@ -238,8 +253,8 @@ def _build_audited_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
             audit_collector=collector,
         ),

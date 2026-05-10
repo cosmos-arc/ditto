@@ -21,10 +21,37 @@ from ditto_execution.quantity_rounding import (
 from ditto_execution.targets import TargetPortfolioLike
 
 __all__ = [
+    "DiffContext",
     "DiffResult",
     "compute_diff",
     "compute_pending_delta",
 ]
+
+
+type _MakeOrderFn = Callable[[InstrumentId, OrderSide, int], Order]
+
+type _PreCheckFn = Callable[
+    [InstrumentId, int, dict[InstrumentId, MarketSnapshot]],
+    BlockedOrder | None,
+]
+
+
+@dataclass(frozen=True, slots=True)
+class DiffContext:
+    """compute_diff 的参数上下文 — 将 10 参数收束为结构化对象。"""
+
+    # Portfolio state
+    target: TargetPortfolioLike
+    account_view: AccountView
+    pending_delta: dict[InstrumentId, int]
+    # Scope + Market data
+    all_instruments: set[InstrumentId]
+    instrument_rules: dict[InstrumentId, InstrumentRules]
+    market_snapshots: dict[InstrumentId, MarketSnapshot]
+    default_lot_size: int
+    # Policy
+    locked_instruments: set[InstrumentId]
+    pre_check_fn: _PreCheckFn
 
 
 @dataclass(frozen=True)
@@ -53,27 +80,22 @@ def compute_pending_delta(
 
 def _instrument_diff(
     iid: InstrumentId,
-    target: TargetPortfolioLike,
-    account_view: AccountView,
-    pending_delta: dict[InstrumentId, int],
-    instrument_rules: dict[InstrumentId, InstrumentRules],
-    market_snapshots: dict[InstrumentId, MarketSnapshot],
-    default_lot_size: int,
+    ctx: DiffContext,
 ) -> DiffResult | None:
     """计算单个标的的 diff。返回 None 表示无需调仓。"""
-    weight = target.positions.get(iid, 0.0)
-    lot_size = get_lot_size(instrument_rules, iid, default_lot_size)
-    price = get_estimated_price(market_snapshots, iid)
+    weight = ctx.target.positions.get(iid, 0.0)
+    lot_size = get_lot_size(ctx.instrument_rules, iid, ctx.default_lot_size)
+    price = get_estimated_price(ctx.market_snapshots, iid)
     target_qty = target_quantity(
         weight,
-        account_view.nav,
+        ctx.account_view.nav,
         lot_size,
         price,
     )
 
-    position = account_view.positions.get(iid)
+    position = ctx.account_view.positions.get(iid)
     current_qty = position.quantity if position else 0
-    effective_qty = current_qty + pending_delta.get(iid, 0)
+    effective_qty = current_qty + ctx.pending_delta.get(iid, 0)
     diff_qty = target_qty - effective_qty
 
     if diff_qty == 0:
@@ -84,7 +106,7 @@ def _instrument_diff(
 def _handle_buy(
     dr: DiffResult,
     iid: InstrumentId,
-    locked_instruments: set[InstrumentId],
+    ctx: DiffContext,
     orders: list[Order],
     blocked: list[BlockedOrder],
     make_order: _MakeOrderFn,
@@ -94,7 +116,7 @@ def _handle_buy(
         return
 
     rounded = round_buy_qty(dr.diff_qty, dr.lot_size)
-    if iid in locked_instruments:
+    if iid in ctx.locked_instruments:
         blocked.append(
             BlockedOrder(
                 instrument_id=iid,
@@ -108,12 +130,10 @@ def _handle_buy(
         orders.append(make_order(iid, OrderSide.BUY, rounded))
 
 
-def _handle_sell(  # noqa: PLR0913
+def _handle_sell(
     dr: DiffResult,
     iid: InstrumentId,
-    account_view: AccountView,
-    pending_delta: dict[InstrumentId, int],
-    instrument_rules: dict[InstrumentId, InstrumentRules],
+    ctx: DiffContext,
     orders: list[Order],
     blocked: list[BlockedOrder],
     make_order: _MakeOrderFn,
@@ -126,12 +146,12 @@ def _handle_sell(  # noqa: PLR0913
     actual_sell = min(sell_qty, dr.effective_qty)
 
     # T+1 卖出上限
-    position = account_view.positions.get(iid)
-    if position and iid in instrument_rules:
-        cycle = instrument_rules[iid][1].settlement_cycle
+    position = ctx.account_view.positions.get(iid)
+    if position and iid in ctx.instrument_rules:
+        cycle = ctx.instrument_rules[iid][1].settlement_cycle
         if cycle > 0:
             sellable = position.available_quantity
-            pending_sell = pending_delta.get(iid, 0)
+            pending_sell = ctx.pending_delta.get(iid, 0)
             if pending_sell < 0:
                 sellable = max(0, sellable + pending_sell)
             actual_sell = min(actual_sell, sellable)
@@ -151,58 +171,27 @@ def _handle_sell(  # noqa: PLR0913
             orders.append(make_order(iid, OrderSide.SELL, qty))
 
 
-_MakeOrderFn = Callable[[InstrumentId, OrderSide, int], Order]
-
-
-def compute_diff(  # noqa: PLR0913
-    target: TargetPortfolioLike,
-    account_view: AccountView,
-    pending_delta: dict[InstrumentId, int],
-    locked_instruments: set[InstrumentId],
-    all_instruments: set[InstrumentId],
-    instrument_rules: dict[InstrumentId, InstrumentRules],
-    market_snapshots: dict[InstrumentId, MarketSnapshot],
-    default_lot_size: int,
+def compute_diff(
+    ctx: DiffContext,
     make_order: _MakeOrderFn,
-    pre_check_fn: Callable[
-        [InstrumentId, int, dict[InstrumentId, MarketSnapshot]],
-        BlockedOrder | None,
-    ],
 ) -> tuple[list[Order], list[BlockedOrder]]:
     """计算目标与实际持仓的差异，生成 orders + blocked_orders。"""
     orders: list[Order] = []
     blocked: list[BlockedOrder] = []
 
-    for iid in all_instruments:
-        dr = _instrument_diff(
-            iid,
-            target,
-            account_view,
-            pending_delta,
-            instrument_rules,
-            market_snapshots,
-            default_lot_size,
-        )
+    for iid in ctx.all_instruments:
+        dr = _instrument_diff(iid, ctx)
         if dr is None:
             continue
 
-        pre = pre_check_fn(iid, dr.diff_qty, market_snapshots)
+        pre = ctx.pre_check_fn(iid, dr.diff_qty, ctx.market_snapshots)
         if pre is not None:
             blocked.append(pre)
             continue
 
         if dr.diff_qty > 0:
-            _handle_buy(dr, iid, locked_instruments, orders, blocked, make_order)
+            _handle_buy(dr, iid, ctx, orders, blocked, make_order)
         elif dr.diff_qty < 0:
-            _handle_sell(
-                dr,
-                iid,
-                account_view,
-                pending_delta,
-                instrument_rules,
-                orders,
-                blocked,
-                make_order,
-            )
+            _handle_sell(dr, iid, ctx, orders, blocked, make_order)
 
     return orders, blocked

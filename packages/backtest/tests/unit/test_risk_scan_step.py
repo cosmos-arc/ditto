@@ -15,6 +15,7 @@ from packages.backtest.tests.unit._helpers import (
     IID_1,
     _make_account_view,
     _make_clock,
+    _make_ctx,
     _make_risk_action,
     _make_slice,
 )
@@ -25,7 +26,7 @@ class TestRiskScanStep:
 
     def _make_ctx_with_data(self) -> StepContext:
         """构建包含 slice_ 和 account_view 的 StepContext。"""
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.slice_ = _make_slice()
         ctx.account_view = _make_account_view()
         return ctx

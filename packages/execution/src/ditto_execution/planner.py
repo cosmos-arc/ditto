@@ -30,7 +30,7 @@ from ditto_execution._planner_types import (
 )
 from ditto_execution.cost_estimate import calc_cost, calc_turnover
 from ditto_execution.market_precheck import pre_check
-from ditto_execution.target_diff import compute_diff, compute_pending_delta
+from ditto_execution.target_diff import DiffContext, compute_diff, compute_pending_delta
 from ditto_execution.targets import TargetPortfolioLike
 
 __all__ = [
@@ -113,18 +113,18 @@ class SimpleExecutionPlanner:
         all_instruments |= set(account_view.positions.keys())
         all_instruments |= set(pending_delta.keys())
 
-        orders, blocked_orders = compute_diff(
+        ctx = DiffContext(
             target=target,
             account_view=account_view,
             pending_delta=pending_delta,
-            locked_instruments=locked,
             all_instruments=all_instruments,
             instrument_rules=instrument_rules,
             market_snapshots=market,
             default_lot_size=self._default_lot_size,
-            make_order=self._make_order,
+            locked_instruments=locked,
             pre_check_fn=pre_check,
         )
+        orders, blocked_orders = compute_diff(ctx, self._make_order)
 
         turnover = calc_turnover(orders, market)
         cost = calc_cost(turnover, instrument_rules)

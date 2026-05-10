@@ -1,124 +1,43 @@
 """
-MarketService - Market 域统一查询入口。
+MarketService - Market 域统一查询入口（Facade）.
 
-提供市场行情数据的统一查询接口，整合 Stock/ETF/Index 的 K线数据访问。
-支持复权处理、状态关联等高级功能。
-
-替换旧的 BarsAccessor 功能。
+薄委托层：公开方法保留 @traced 装饰器，
+核心查询逻辑委托到 market_queries 模块级函数。
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
-from enum import Enum
-
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
-from ditto_data.helpers.adjustment import apply_hfq_adj, apply_qfq_adj
-from ditto_data.models import InstrumentIdRange
-from ditto_data.services._enrichment import enrich_with_status, enrich_with_ticker
 from ditto_data.services.deps import MarketReaders
-from ditto_data.storage.market.commodity.bars import CommodityBarsReader
-from ditto_data.storage.market.etf.bars import EtfBarsReader
-from ditto_data.storage.market.fx.bars import FxBarsReader
-from ditto_data.storage.market.index.bars import IndexBarsReader
-from ditto_data.storage.market.stock.bars import StockBarsReader
-
-type _BarsReader = (
-    StockBarsReader
-    | EtfBarsReader
-    | IndexBarsReader
-    | FxBarsReader
-    | CommodityBarsReader
+from ditto_data.services.market_adjustment import apply_etf_adjustment
+from ditto_data.services.market_queries import (
+    MarketBarsQuery,  # re-export: backward compat
+    MarketConstituentsQuery,
+    MarketQuery,
+    query_bars,
+    query_constituents,
+)
+from ditto_data.services.market_types import (
+    AdjType,  # re-export: 消费者 from ditto_data.services.market_service import AdjType
 )
 
-
-class AdjType(Enum):
-    """复权类型."""
-
-    NONE = "none"  # 不复权
-    QFQ = "qfq"  # 前复权
-    HFQ = "hfq"  # 后复权
-
-    @classmethod
-    def from_string(cls, value: str) -> AdjType:
-        """
-        从字符串解析复权类型.
-
-        Args:
-            value: 字符串值 ("none", "qfq", "hfq")
-
-        Returns:
-            对应的 AdjType 枚举值，默认返回 NONE
-
-        """
-        return {"none": cls.NONE, "qfq": cls.QFQ, "hfq": cls.HFQ}.get(
-            value.lower(), cls.NONE
-        )
-
-
-@dataclass(frozen=True)
-class MarketBarsQuery:
-    """
-    Market K线查询参数.
-
-    Attributes:
-        instrument_ids: Instrument ID 列表（为 None 时配合 market_wide=True
-            获取全市场数据）.
-        start: 开始日期 (YYYY-MM-DD).
-        end: 结束日期 (YYYY-MM-DD).
-        adj: 复权类型（仅对 stock 数据有效，etf/index 数据不支持复权）.
-        asof: 时间点查询日期 (PIT-safe).
-        asset_class: 资产类别过滤.
-        with_ticker: 是否在结果中添加 ticker 列.
-        with_status: 是否添加股票状态信息（仅对股票数据有效）.
-        raw: 是否跳过复权和状态增强.
-        market_wide: 全市场查询模式。为 True 且 instrument_ids 为空时获取所有活跃证券.
-        limit: 返回数量限制（在 DataFrame 层应用）.
-
-    Note:
-        - 复权功能 (adj) 仅支持股票数据，对 ETF 和 Index 数据无效
-        - 状态增强 (with_status) 仅支持股票数据
-
-    Examples:
-        >>> query = MarketBarsQuery(instrument_ids=[1, 2, 3], start="2024-01-01")
-        >>> service.get_bars(query)
-        >>> query = MarketBarsQuery(market_wide=True, asset_class="stock")
-        >>> service.get_bars(query)
-
-    """
-
-    instrument_ids: list[int] | None = None
-    start: str | None = None
-    end: str | None = None
-    adj: AdjType = AdjType.NONE
-    asof: str | None = None
-    asset_class: str | None = None
-    with_ticker: bool = False
-    with_status: bool = False
-    raw: bool = False
-    market_wide: bool = False
-    limit: int | None = None
-
-
-@dataclass(frozen=True)
-class MarketConstituentsQuery:
-    """指数成分股查询参数."""
-
-    index_instrument_id: int
-    asof: str | None = None
-
-
-type MarketQuery = MarketBarsQuery | MarketConstituentsQuery
+__all__ = [
+    "AdjType",
+    "MarketBarsQuery",
+    "MarketConstituentsQuery",
+    "MarketQuery",
+    "MarketService",
+]
 
 
 class MarketService:
     """
-    Market 域统一查询服务.
+    Market 域统一查询服务（Facade）.
 
     整合 Market 域所有 Store 的查询功能，提供统一的 K线查询接口。
+    核心查询逻辑委托到 market_queries 模块级函数。
 
     替代: BarsAccessor
 
@@ -140,7 +59,7 @@ class MarketService:
     @traced("market.find_bars")
     def find_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
         """K线查询入口."""
-        return self._query_bars(query)
+        return query_bars(query, self._read_ports)
 
     @traced("market.list_bars")
     def list_bars(
@@ -181,74 +100,7 @@ class MarketService:
             asset_class=asset_class,
             limit=limit,
         )
-        return self._query_bars(query)
-
-    def _query_bars(self, query: MarketBarsQuery) -> pl.DataFrame:
-        """执行 K线查询."""
-        logger.debug(
-            "Fetching market bars data",
-            event="market_bars_get_start",
-            start=query.start,
-            end=query.end,
-            adj=query.adj.value,
-            with_status=query.with_status,
-        )
-
-        # 1. 解析 Instrument ID 列表和资产类别
-        instrument_ids, asset_class = self._resolve_instrument_ids_and_asset_class(
-            query
-        )
-
-        # 空 Instrument ID 列表返回空 DataFrame（非 market_wide 模式）
-        if not query.market_wide and not instrument_ids:
-            return pl.DataFrame()
-
-        # 2. 解析日期参数（字符串 -> date 对象）
-        start_date, end_date, asof_date = self._parse_dates(query)
-
-        # 3. 加载核心数据
-        df = self._load_bars_core(
-            instrument_ids=instrument_ids,
-            start=start_date,
-            end=end_date,
-            asset_class=asset_class,
-        )
-
-        if df.is_empty():
-            return pl.DataFrame()
-
-        # 4. 添加 ticker 列（如果需要）
-        if query.with_ticker and not query.raw:
-            df = self._enrich_with_ticker(df)
-
-        # 5. 应用复权（如果需要且不是 raw 模式）
-        if not query.raw and query.adj != AdjType.NONE and asset_class == "stock":
-            df = self._apply_adjustment(
-                df, query.adj, instrument_ids, start_date, end_date, asof_date
-            )
-
-        # 6. 添加状态列（如果需要且不是 raw 模式）
-        if query.with_status and not query.raw and asset_class == "stock":
-            df = self._enrich_with_status(df, instrument_ids, start_date, end_date)
-
-        logger.debug(
-            "Market bars data fetched",
-            event="market_bars_get_complete",
-            row_count=len(df),
-            adj=query.adj.value,
-        )
-
-        # 记录指标
-        Metrics.data_records.add(
-            len(df),
-            {"dataset": "market_bars", "operation": "get", "adj": query.adj.value},
-        )
-
-        # P1-2: 在 DataFrame 层应用 limit
-        if query.limit is not None:
-            df = df.head(query.limit)
-
-        return df
+        return query_bars(query, self._read_ports)
 
     @traced("market.get_constituents")
     def get_constituents(
@@ -257,332 +109,10 @@ class MarketService:
         asof: str | None = None,
     ) -> pl.DataFrame:
         """指数成分股查询入口."""
-        return self._query_constituents(
-            MarketConstituentsQuery(index_instrument_id=index_instrument_id, asof=asof)
+        return query_constituents(
+            MarketConstituentsQuery(index_instrument_id=index_instrument_id, asof=asof),
+            self._read_ports,
         )
-
-    def _query_constituents(self, query: MarketConstituentsQuery) -> pl.DataFrame:
-        """执行指数成分股查询."""
-        if self._read_ports.index_constituent is None:
-            msg = (
-                "IndexConstituentReader not configured. "
-                "Please provide index_constituent when "
-                "initializing MarketReaders."
-            )
-            raise NotImplementedError(msg)
-
-        # 使用当前日期（如果未指定 asof）
-        asof_date = query.asof or date.today().isoformat()
-
-        logger.debug(
-            "Fetching index constituents",
-            event="market_constituents_get_start",
-            index_instrument_id=query.index_instrument_id,
-            asof=asof_date,
-        )
-
-        df = self._read_ports.index_constituent.get(
-            query.index_instrument_id, asof_date
-        )
-
-        logger.debug(
-            "Index constituents fetched",
-            event="market_constituents_get_complete",
-            index_instrument_id=query.index_instrument_id,
-            asof=asof_date,
-            row_count=len(df),
-        )
-
-        # 记录指标
-        Metrics.data_records.add(
-            len(df),
-            {"dataset": "market_constituents", "operation": "get"},
-        )
-
-        return df
-
-    def _load_bars_core(
-        self,
-        instrument_ids: list[int],
-        start: date | None,
-        end: date | None,
-        asset_class: str,
-    ) -> pl.DataFrame:
-        """
-        加载核心行情数据（不含复权和增强）.
-
-        Args:
-            instrument_ids: Instrument ID 列表.
-            start: 开始日期.
-            end: 结束日期.
-            asset_class: 资产类别.
-
-        Returns:
-            原始行情数据 DataFrame.
-
-        """
-        start_str = start.isoformat() if start else None
-        end_str = end.isoformat() if end else None
-
-        reader = self._get_bars_reader(asset_class)
-        if reader is None:
-            return pl.DataFrame()
-
-        return reader.read(
-            instrument_ids=instrument_ids,
-            start_date=start_str,
-            end_date=end_str,
-        )
-
-    def _get_bars_reader(
-        self,
-        asset_class: str,
-    ) -> _BarsReader | None:
-        """
-        获取指定资产类别的 K线读取器.
-
-        Args:
-            asset_class: 资产类别 ("stock", "etf", "index", "fx", "commodity").
-
-        Returns:
-            对应的 Reader 实例，如果未配置则返回 None.
-
-        """
-        # 必需依赖：stock 和 etf 始终可用
-        if asset_class == "stock":
-            return self._read_ports.stock_bars
-        if asset_class == "etf":
-            return self._read_ports.etf_bars
-
-        # 可选依赖：index / fx / commodity 可能未配置
-        optional_readers = {
-            "index": self._read_ports.index_bars,
-            "fx": self._read_ports.fx_bars,
-            "commodity": self._read_ports.commodity_bars,
-        }
-        return optional_readers.get(asset_class)
-
-    def _resolve_instrument_ids_and_asset_class(
-        self, query: MarketBarsQuery
-    ) -> tuple[list[int], str]:
-        """
-        解析 Instrument ID 列表和资产类别.
-
-        Args:
-            query: MarketBarsQuery 查询对象.
-
-        Returns:
-            (Instrument ID 列表, 资产类别).
-
-        Raises:
-            ValueError: 如果显式指定的 asset_class 与从 Instrument ID 检测出的不一致.
-
-        """
-        if query.market_wide:
-            # 全市场模式：获取所有活跃 Instrument ID
-            asset_class = query.asset_class
-            instrument_ids = sorted(
-                self._read_ports.instrument.list_instrument_ids(asset_class=asset_class)
-            )
-            if not asset_class:
-                asset_class = (
-                    InstrumentIdRange.detect_asset_class(instrument_ids)
-                    if instrument_ids
-                    else "stock"
-                )
-            return instrument_ids, asset_class
-        elif not query.instrument_ids:
-            # 空 Instrument ID 列表时，使用显式 asset_class（如果有）
-            # 否则默认为 "stock"
-            return [], query.asset_class or "stock"
-
-        # 普通模式：使用指定的 Instrument ID
-        instrument_ids = sorted(set(query.instrument_ids))
-        asset_class = query.asset_class
-
-        if asset_class:
-            # 验证显式 asset_class 与从 Instrument ID 检测出的类别是否一致
-            detected = InstrumentIdRange.detect_asset_class(instrument_ids)
-            if detected != asset_class:
-                msg = (
-                    f"显式指定的资产类别 '{asset_class}' 与从 Instrument ID "
-                    f"检测出的类别 '{detected}' 不一致"
-                )
-                raise ValueError(msg)
-        else:
-            asset_class = InstrumentIdRange.detect_asset_class(instrument_ids)
-
-        return instrument_ids, asset_class
-
-    def _parse_dates(
-        self, query: MarketBarsQuery
-    ) -> tuple[date | None, date | None, date | None]:
-        """
-        解析日期参数.
-
-        Args:
-            query: MarketBarsQuery 查询对象.
-
-        Returns:
-            (start_date, end_date, asof_date).
-
-        """
-        start_date: date | None = None
-        if query.start:
-            start_date = date.fromisoformat(query.start)
-
-        end_date: date | None = None
-        if query.end:
-            end_date = date.fromisoformat(query.end)
-
-        asof_date: date | None = None
-        if query.asof:
-            asof_date = date.fromisoformat(query.asof)
-
-        return start_date, end_date, asof_date
-
-    def _apply_adjustment(
-        self,
-        df: pl.DataFrame,
-        adj: AdjType,
-        instrument_ids: list[int],
-        start: date | None,
-        end: date | None,
-        asof: date | None,
-    ) -> pl.DataFrame:
-        """
-        应用价格调整.
-
-        Args:
-            df: K线数据 DataFrame.
-            adj: 调整类型.
-            instrument_ids: Instrument ID 列表.
-            start: 开始日期.
-            end: 结束日期.
-            asof: Point-in-Time 查询日期.
-
-        Returns:
-            调整后的 DataFrame.
-
-        """
-        # 读取调整因子
-        start_str = start.isoformat() if start else None
-        end_str = end.isoformat() if end else None
-
-        adj_df = self._read_ports.stock_adj.read(
-            instrument_ids=instrument_ids,
-            start_date=start_str,
-            end_date=end_str,
-        )
-
-        if adj_df.is_empty():
-            # 对于 ETF 和 Index，没有复权因子是正常情况
-            logger.info(
-                "No adjustment factor data available (normal for ETF/Index)",
-                event="market_bars_adj_not_available",
-                adj_type=adj.value,
-            )
-            return df
-
-        # 确保排序以正确处理 last() 聚合
-        adj_df = adj_df.sort(["instrument_id", "trade_date"])
-
-        # PIT 安全：如果提供了 asof，可能需要过滤
-        join_adj_df = adj_df
-        if asof is not None and "knowledge_date" in adj_df.columns:
-            # 只保留在 asof 日期前已知的因子
-            join_adj_df = adj_df.filter(pl.col("knowledge_date") <= asof)
-
-        # 关联调整因子
-        cols = ["instrument_id", "trade_date", "adj_factor"]
-        if "knowledge_date" in adj_df.columns:
-            cols.append("knowledge_date")
-        df = df.join(
-            join_adj_df.select(cols),
-            on=["instrument_id", "trade_date"],
-            how="left",
-        )
-
-        # 根据调整类型调用相应方法
-        if adj == AdjType.QFQ:
-            return apply_qfq_adj(df, adj_df, asof)
-        else:  # HFQ
-            return apply_hfq_adj(df, adj_df)
-
-    def _apply_etf_adjustment(
-        self,
-        df: pl.DataFrame,
-        adj: AdjType,
-        start: str,
-        end: str,
-    ) -> pl.DataFrame:
-        """
-        应用 ETF 价格调整.
-
-        与 _apply_adjustment() 类似，但使用 etf_adj 依赖读取复权因子。
-        当 adj_df 为空时，优雅回退返回原始数据。
-
-        Args:
-            df: ETF K线数据 DataFrame.
-            adj: 调整类型.
-            start: 开始日期 (YYYY-MM-DD).
-            end: 结束日期 (YYYY-MM-DD).
-
-        Returns:
-            调整后的 DataFrame（无复权因子时返回原始数据）.
-
-        """
-        etf_adj = self._read_ports.etf_adj
-        if etf_adj is None:
-            logger.warning(
-                "etf_adj port not configured, returning raw data",
-                event="market_etf_bars_adj_not_available",
-                adj_type=adj.value,
-            )
-            return df
-
-        adj_df = etf_adj.read(start_date=start, end_date=end)
-
-        if adj_df.is_empty():
-            logger.warning(
-                "No ETF adjustment factor data available, returning raw data",
-                event="market_etf_bars_adj_not_available",
-                adj_type=adj.value,
-            )
-            return df
-
-        # 确保排序以正确处理 last() 聚合
-        adj_df = adj_df.sort(["instrument_id", "trade_date"])
-
-        # 关联调整因子
-        cols = ["instrument_id", "trade_date", "adj_factor"]
-        if "knowledge_date" in adj_df.columns:
-            cols.append("knowledge_date")
-        df = df.join(
-            adj_df.select(cols),
-            on=["instrument_id", "trade_date"],
-            how="left",
-        )
-
-        # 根据调整类型调用相应方法
-        if adj == AdjType.QFQ:
-            return apply_qfq_adj(df, adj_df)
-        else:  # HFQ
-            return apply_hfq_adj(df, adj_df)
-
-    def _enrich_with_status(
-        self,
-        df: pl.DataFrame,
-        instrument_ids: list[int],
-        start: date | str | None = None,
-        end: date | str | None = None,
-    ) -> pl.DataFrame:
-        """使用股票状态信息增强行情数据（委托给 _enrichment 模块）."""
-        return enrich_with_status(df, instrument_ids, self._read_ports, start, end)
-
-    def _enrich_with_ticker(self, df: pl.DataFrame) -> pl.DataFrame:
-        """使用 ticker 信息增强 DataFrame（委托给 _enrichment 模块）."""
-        return enrich_with_ticker(df, self._read_ports)
 
     @traced("market.get_stock_bars")
     def get_stock_bars(self, start: str, end: str) -> pl.DataFrame:
@@ -655,7 +185,7 @@ class MarketService:
         # 应用复权（如果需要且 etf_adj 依赖可用）
         adj_type = AdjType.from_string(adj)
         if adj_type != AdjType.NONE and self._read_ports.etf_adj is not None:
-            df = self._apply_etf_adjustment(df, adj_type, start, end)
+            df = apply_etf_adjustment(df, adj_type, start, end, self._read_ports)
 
         logger.debug(
             "ETF daily bars fetched",

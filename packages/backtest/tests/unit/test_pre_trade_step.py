@@ -11,6 +11,7 @@ from ditto_risk.pre_trade import Decision
 from packages.backtest.tests.unit._helpers import (
     _make_account_view,
     _make_clock,
+    _make_ctx,
     _make_execution_plan,
     _make_order,
     _make_slice,
@@ -22,7 +23,7 @@ class TestPreTradeStep:
 
     def _make_ctx_with_plan(self) -> StepContext:
         """构建包含 execution_plan 的 StepContext。"""
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.slice_ = _make_slice()
         ctx.account_view = _make_account_view()
         ctx.target_portfolio = Mock(name="target_portfolio")
@@ -40,7 +41,7 @@ class TestPreTradeStep:
             clock=_make_clock(),
         )
 
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=False)
+        ctx = _make_ctx(is_rebalance_day=False)
         result = step.execute(ctx)
 
         assert result.success is True
@@ -55,7 +56,7 @@ class TestPreTradeStep:
             clock=_make_clock(),
         )
 
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.execution_plan = None
         result = step.execute(ctx)
 

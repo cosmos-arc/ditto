@@ -61,9 +61,11 @@ ditto_kernel/
 ├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
 ├── order.py               # Order 子域 — OrderSide / OrderType
 ├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
+├── strategy.py            # Strategy 子域 — ExecutionPolicy / ImpactModel / RiskScope / RunStatus
 ├── identity.py            # 共享身份类型（NewType）
 ├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
+├── time_context.py        # TimeContext 值对象 — PIT 语义统一入口（decision_time / knowledge_date / trade_date）
+├── synchronizer.py        # Synchronizer Protocol + TimeSlice 值对象 — 回测/实盘切换 seam
 ├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
 ├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
@@ -101,17 +103,18 @@ instrument / order / market / identity: 无子域间依赖
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution, App |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, App |
 | `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
 | `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
 | `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
+| `TimeContext` | time_context.py | frozen dataclass（含 `pit_cutoff` property） | Backtest, Application |
+| `TimeSlice` | synchronizer.py | frozen dataclass | Backtest, Application |
+| `Synchronizer` | synchronizer.py | `Protocol`（回测/实盘切换 seam） | Backtest, Application |
 | `MarketSnapshot` | trading.py | frozen dataclass | Execution, Backtest |
 | `InstrumentDefinition` | trading.py | frozen dataclass | Execution, Backtest |
 | `TradingRuleSet` | trading.py | frozen dataclass | Execution, Backtest |
 | `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
 | `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
 | `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
-| `default_price_limit_pct` | trading.py | 纯函数 | Execution |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
 | `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
@@ -132,7 +135,7 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
 from ditto_kernel.order import OrderSide
 from ditto_kernel.market import CalendarId, GrainId, TimeSpec, MacroCategory, MacroFrequency
-from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy, DecisionFrame
+from ditto_kernel.strategy import ExecutionPolicy, ImpactModel, RiskScope, RunStatus
 from ditto_kernel.identity import InstrumentId
 
 # ❌ 禁止：kernel 导入任何其他 ditto 包
@@ -147,6 +150,8 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 |------|-------------------|
 | `market` | `CalendarId`, `GrainId` |
 | `events` | `EventName` |
+| `time_context` | `TimeContext` |
+| `synchronizer` | `Synchronizer`, `TimeSlice` |
 
 ## Barrel 公共 API 分级
 
@@ -168,14 +173,13 @@ Barrel `__all__` 包含 30 个符号，按稳定性分为两层：
 
 | 来源模块 | 符号 | 备注 |
 |----------|------|------|
-| `strategy.py` | `DecisionFrame`, `DerivedRole`, `DerivedSpec`, `ExecutionPolicy`, `ImpactModel`, `MaterializationProfile`, `RiskScope` | 7/30 符号来自 strategy.py，为 barrel 最大贡献者；最可能在未来需要改为叶模块直导 |
+| `strategy.py` | `DerivedRole`, `DerivedSpec`, `ExecutionPolicy`, `ImpactModel`, `MaterializationProfile`, `RiskScope` | 6/30 符号来自 strategy.py；最可能在未来需要改为叶模块直导 |
 | `events.py` | `DomainEvent`, `EventBus`, `SimpleEventBus` | |
 | `tracing.py` | `traced` | |
 
 > **注意**：`DittoError` 作为跨包异常基类放在 kernel 是合理的——它是异常层级的根。
-> 但 `strategy.py` 中的 `Derived*` 类型具有策略领域特有语义，虽然当前通过 barrel 共享以方便消费者，
+> 但 `strategy.py` 中的部分类型具有策略领域特有语义，虽然当前通过 barrel 共享以方便消费者，
 > 随着策略领域的演进，这些类型可能需要重新评估是否应转为叶模块直导。
-> 特别是 `DecisionFrame` 作为 Protocol，其消费模式更接近策略子域内部契约。
 
 ## DomainEvent 兼容策略
 
@@ -235,7 +239,7 @@ Barrel `__all__` 包含 30 个符号，按稳定性分为两层：
 | 允许 | 条件 | 示例 |
 |------|------|------|
 | frozen dataclass `@property` | 纯计算：无副作用、无 I/O、仅基于自身字段 | `InstrumentIngestParams.has_identifier` |
-| Protocol 定义 | 零依赖签名，使用 `Sequence` 等标准库类型 | `DecisionFrame`, `MacroDataProvider` |
+| Protocol 定义 | 零依赖签名，使用 `Sequence` 等标准库类型 | `MacroDataProvider` |
 
 ## 测试规范
 

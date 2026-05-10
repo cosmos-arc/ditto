@@ -25,7 +25,7 @@ from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from loguru import logger
 
 from ditto_backtest.config import EngineConfig
-from ditto_backtest.data_feed import DataFeed, Slice
+from ditto_backtest.data_feed import Slice
 from ditto_backtest.errors import SimulationError
 from ditto_backtest.manifest import RuleRefCollector, RunManifest
 from ditto_backtest.result import EngineResult
@@ -57,8 +57,9 @@ class EngineOptions:
     """
     引擎可选组件 — 将可选依赖打包以减少构造参数数量。
 
+    时钟由 Synchronizer 提供（options 不再持有 clock）。
+
     Attributes:
-        clock: 统一时间抽象 (必需, 用于事件时间戳和步进推进)
         fee_model: 手续费模型 (用于 PreTrade 估算, None = 不使用独立费率)
         rule_provider: 三层规则提供者 (None = 不传规则给 Planner)
         post_trade_guard: PostTrade 风控扫描器 (None = 跳过 PostTrade)
@@ -72,7 +73,6 @@ class EngineOptions:
 
     """
 
-    clock: Clock
     fee_model: FeeModel | None = None
     rule_provider: InstrumentRuleProvider | None = None
     post_trade_guard: PostTradeRiskGuard | None = None
@@ -93,7 +93,6 @@ class StepDeps:
     planner: ExecutionPlanner
     brokerage: Brokerage
     pre_trade_check: CompositePreTradeCheck
-    data_feed: DataFeed
     clock: Clock
     fee_model: FeeModel | None
     rule_provider: InstrumentRuleProvider | None
@@ -197,7 +196,7 @@ def build_steps(deps: StepDeps) -> tuple[TradingStep, ...]:
 
     def _default_bundle_builder(ctx: StepContext) -> StrategyInputBundle:
         return deps.build_input_bundle_fn(
-            ctx.date,
+            ctx.time_context.trade_date,
             require_slice(ctx.slice_),
         )
 
@@ -207,8 +206,6 @@ def build_steps(deps: StepDeps) -> tuple[TradingStep, ...]:
 
     return (
         DataFetchStep(
-            data_feed=deps.data_feed,
-            clock=deps.clock,
             brokerage=deps.brokerage,
             strategy_context=deps.strategy_context,
             input_instruments=deps.input_instruments,

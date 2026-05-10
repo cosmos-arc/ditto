@@ -11,7 +11,7 @@
 | instrument.py | AssetClass / Exchange / InstrumentIngestParams |
 | order.py | OrderSide |
 | market.py | CalendarId / GrainId / TimeSpec / MacroCategory |
-| strategy.py | DerivedRole / DerivedSpec / RunStatus / DecisionFrame Protocol |
+| strategy.py | DerivedRole / DerivedSpec / RunStatus |
 | identity.py | InstrumentId (NewType) |
 | clock.py | Clock Protocol + SimulatedClock/RealtimeClock |
 | events.py | DomainEvent + EventBus Protocol + SimpleEventBus |

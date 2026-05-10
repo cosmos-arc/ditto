@@ -70,9 +70,9 @@ class StrategyStep:
             raise SimulationError(msg, step="strategy")
 
         return build_input_bundle(
-            trade_date=ctx.date,
+            trade_date=ctx.time_context.trade_date,
             strategy_id=self._strategy_id,
             run_id=self._strategy_run_id,
-            bars=slice_.bars,
+            bars=ctx.bars,
             benchmark_close=slice_.benchmark_close,
         )

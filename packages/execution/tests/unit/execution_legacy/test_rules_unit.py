@@ -1,7 +1,7 @@
 """Tests for InstrumentDefinition / TradingRuleSet / FeeSchedule (R6 三层分离).
 
 Part 07: InstrumentRuleProvider Protocol + InMemoryRuleProvider.
-Part 08: default_price_limit_pct lifecycle mapping.
+Part 08: _default_price_limit_pct lifecycle mapping.
 """
 
 from dataclasses import FrozenInstanceError, dataclass
@@ -14,7 +14,6 @@ from ditto_kernel.trading import (
     InstrumentDefinition,
     InstrumentRuleProvider,
     TradingRuleSet,
-    default_price_limit_pct,
 )
 
 # ---------------------------------------------------------------------------
@@ -486,8 +485,25 @@ class TestFindPitEffectiveTo:
 
 
 # ---------------------------------------------------------------------------
-# default_price_limit_pct — Lifecycle → Price Limit Mapping
+# _default_price_limit_pct — Lifecycle → Price Limit Mapping
 # ---------------------------------------------------------------------------
+
+
+def _default_price_limit_pct(lifecycle_state: str, board_segment: str) -> float | None:
+    """根据 lifecycle_state 和 board_segment 计算默认涨跌停幅度。
+
+    从 ditto_kernel.trading 迁移而来（kernel 零生产消费者，仅此测试使用）。
+    值必须与 kernel 定义保持同步。
+    """
+    if lifecycle_state in ("st", "st_star"):
+        return 0.05
+    if lifecycle_state == "delisting":
+        return 0.10
+    if lifecycle_state == "ipo":
+        return None
+    if board_segment in ("gem", "star"):
+        return 0.20
+    return 0.10
 
 
 class TestDefaultPriceLimitPct:
@@ -495,48 +511,48 @@ class TestDefaultPriceLimitPct:
 
     def test_normal_main_board(self) -> None:
         """主板正常股票涨跌停 10%。"""
-        assert default_price_limit_pct("normal", "main") == 0.10
+        assert _default_price_limit_pct("normal", "main") == 0.10
 
     def test_normal_bse(self) -> None:
         """北交所正常股票涨跌停 10%。"""
-        assert default_price_limit_pct("normal", "bse") == 0.10
+        assert _default_price_limit_pct("normal", "bse") == 0.10
 
     def test_st_five_pct(self) -> None:
         """ST 股票涨跌停 5%。"""
-        assert default_price_limit_pct("st", "main") == 0.05
+        assert _default_price_limit_pct("st", "main") == 0.05
 
     def test_st_star_five_pct(self) -> None:
         """*ST 股票涨跌停 5%。"""
-        assert default_price_limit_pct("st_star", "main") == 0.05
+        assert _default_price_limit_pct("st_star", "main") == 0.05
 
     def test_gem_twenty_pct(self) -> None:
         """创业板涨跌停 20%。"""
-        assert default_price_limit_pct("normal", "gem") == 0.20
+        assert _default_price_limit_pct("normal", "gem") == 0.20
 
     def test_star_twenty_pct(self) -> None:
         """科创板涨跌停 20%。"""
-        assert default_price_limit_pct("normal", "star") == 0.20
+        assert _default_price_limit_pct("normal", "star") == 0.20
 
     def test_st_gem_five_pct(self) -> None:
         """创业板 ST 仍为 5%（lifecycle 优先于 board_segment）。"""
-        assert default_price_limit_pct("st", "gem") == 0.05
+        assert _default_price_limit_pct("st", "gem") == 0.05
 
     def test_ipo_no_limit(self) -> None:
         """IPO 前五日无涨跌停限制。"""
-        assert default_price_limit_pct("ipo", "main") is None
+        assert _default_price_limit_pct("ipo", "main") is None
 
     def test_delisting_main_board(self) -> None:
         """退市整理期主板仍为 10%。"""
-        assert default_price_limit_pct("delisting", "main") == 0.10
+        assert _default_price_limit_pct("delisting", "main") == 0.10
 
     def test_delisting_gem_ten_pct(self) -> None:
         """退市整理期创业板统一为 10%（lifecycle 优先于 board_segment）。"""
-        assert default_price_limit_pct("delisting", "gem") == 0.10
+        assert _default_price_limit_pct("delisting", "gem") == 0.10
 
     def test_delisting_star_ten_pct(self) -> None:
         """退市整理期科创板统一为 10%（lifecycle 优先于 board_segment）。"""
-        assert default_price_limit_pct("delisting", "star") == 0.10
+        assert _default_price_limit_pct("delisting", "star") == 0.10
 
     def test_ipo_no_limit_on_gem(self) -> None:
         """创业板 IPO 前五日同样无涨跌停限制。"""
-        assert default_price_limit_pct("ipo", "gem") is None
+        assert _default_price_limit_pct("ipo", "gem") is None

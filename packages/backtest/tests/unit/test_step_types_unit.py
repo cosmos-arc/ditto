@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pytest
 from ditto_backtest.steps import StepContext, StepResult, TradingStep
+from packages.backtest.tests.unit._helpers import _make_ctx
 
 
 class TestStepResult:
@@ -43,12 +44,12 @@ class TestStepContext:
     """StepContext 可变共享状态测试。"""
 
     def test_basic_fields(self) -> None:
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
-        assert ctx.date == "2025-01-15"
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
+        assert ctx.time_context.trade_date == "2025-01-15"
         assert ctx.is_rebalance_day is True
 
     def test_default_none_fields(self) -> None:
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
         assert ctx.slice_ is None
         assert ctx.account_view is None
         assert ctx.target_portfolio is None
@@ -56,20 +57,20 @@ class TestStepContext:
         assert ctx.rules is None
 
     def test_default_list_fields_empty(self) -> None:
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
         assert ctx.step_orders == []
         assert ctx.step_fills == []
         assert ctx.pre_trade_decisions == []
 
     def test_mutable_step_outputs(self) -> None:
         """StepContext 是可变的 -- Steps 会写入结果字段。"""
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
         ctx.slice_ = "fake_slice"  # type: ignore[assignment]
         assert ctx.slice_ == "fake_slice"
 
     def test_mutable_step_orders(self) -> None:
         """step_orders 可以被 Steps 追加。"""
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
         ctx.step_orders.append("order1")  # type: ignore[arg-type]
         assert len(ctx.step_orders) == 1
 
@@ -85,7 +86,7 @@ class TestTradingStepProtocol:
                 return StepResult.ok()
 
         step: TradingStep = FakeStep()  # type: ignore[assignment]
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
         result = step.execute(ctx)
         assert result.success is True
 
@@ -97,7 +98,7 @@ class TestTradingStepProtocol:
                 return StepResult.skipped()
 
         step: TradingStep = SkipStep()  # type: ignore[assignment]
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=False)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=False)
         result = step.execute(ctx)
         assert result.success is True
 
@@ -109,7 +110,7 @@ class TestTradingStepProtocol:
                 return StepResult.fail("something went wrong")
 
         step: TradingStep = FailStep()  # type: ignore[assignment]
-        ctx = StepContext(date="2025-01-15", is_rebalance_day=True)
+        ctx = _make_ctx(trade_date="2025-01-15", is_rebalance_day=True)
         result = step.execute(ctx)
         assert result.success is False
         assert "something went wrong" in result.errors

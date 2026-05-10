@@ -1,17 +1,11 @@
-"""摄取协调器 — IngestionCoordinator."""
+"""摄取协调器 — IngestionCoordinator (facade)."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import date, timedelta
-from typing import Literal, NamedTuple, cast
+from typing import NamedTuple
 
-import httpx
 import polars as pl
-from ditto_data.errors import (
-    NetworkError,
-    SourceFetchError,
-)
 from ditto_data.models import Dataset, DateScheduleType
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.services.capital_service import CapitalService
@@ -23,15 +17,7 @@ from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
-from ditto_application.contracts import CheckDataQualityCommand
 from ditto_application.exceptions import AppProcessError
-from ditto_application.processes.ingestion.auto_init import (
-    resolve_identifier_with_auto_init,
-)
-from ditto_application.processes.ingestion.backfill_handler import BackfillContext
-from ditto_application.processes.ingestion.backfill_handler import (
-    backfill_adj_factor as _backfill_adj_factor,
-)
 from ditto_application.processes.ingestion.commodity_fetcher import (
     CommoditySource,
 )
@@ -40,18 +26,31 @@ from ditto_application.processes.ingestion.commodity_fetcher import (
 )
 from ditto_application.processes.ingestion.config import IngestionCoordinatorConfig
 from ditto_application.processes.ingestion.coordinator_constants import (
-    SUPPORTED_INSTRUMENT_DATASETS,
     get_all_index_codes,
 )
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.fetch_handlers import (
     build_daily_fetch_handlers,
-    build_instrument_fetch_handlers,
+)
+from ditto_application.processes.ingestion.instrument_ingestion import (
+    backfill_adj_factor as _backfill_adj_factor_impl,
+)
+from ditto_application.processes.ingestion.instrument_ingestion import (
+    ingest_by_instrument as _ingest_by_instrument_impl,
 )
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
 from ditto_application.processes.ingestion.metadata_manager import MetadataManager
+from ditto_application.processes.ingestion.post_ingest import (
+    handle_fetch_error as _handle_fetch_error,
+)
+from ditto_application.processes.ingestion.post_ingest import (
+    process_fetched_data as _process_fetched_data,
+)
+from ditto_application.processes.ingestion.post_ingest import (
+    write_data_safe as _write_data_safe,
+)
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 from ditto_application.processes.ingestion.types import SourceFetchers
 
@@ -61,11 +60,6 @@ __all__ = [
     "MarketServices",
     "SourceFetchers",
 ]
-
-
-def _is_source_fetch_error(error: Exception) -> bool:
-    """Check whether exception should be treated as source fetch failure."""
-    return isinstance(error, SourceFetchError)
 
 
 def _validate_dataset(dataset: str) -> Dataset:
@@ -78,12 +72,6 @@ def _validate_dataset(dataset: str) -> Dataset:
             field="dataset",
             value=dataset,
         ) from e
-
-
-def _normalize_source_fetch_error(error: Exception) -> SourceFetchError:
-    """Normalize external fetch error into app-level SourceFetchError."""
-    source_name = getattr(error, "source", "unknown")
-    return SourceFetchError(message=str(error), source=str(source_name))
 
 
 def _list_natural_days(start_date: str, end_date: str) -> list[str]:
@@ -176,63 +164,6 @@ class IngestionCoordinator:
     # list_date 推断 + 指数代码缓存
     # ------------------------------------------------------------------
 
-    def _run_list_date_inference(self, dataset: str) -> None:
-        """
-        在 basic 数据摄取后执行 list_date 推断补偿。
-
-        针对 list_date 为 NULL 的证券，从历史行情数据推断上市日期。
-        """
-        asset_class_map = {
-            "stock_basic": "stock",
-            "etf_basic": "etf",
-            "index_basic": "index",
-        }
-
-        asset_class = asset_class_map.get(dataset)
-        if asset_class is None:
-            return
-
-        try:
-            logger.info(
-                "Running list_date inference after basic ingestion",
-                event="list_date_inference_start",
-                dataset=dataset,
-                asset_class=asset_class,
-            )
-            count = self._list_date_inference.infer_for_asset_class(
-                cast('Literal["stock", "etf", "index"]', asset_class)
-            )
-            logger.info(
-                "Completed list_date inference",
-                event="list_date_inference_complete",
-                dataset=dataset,
-                asset_class=asset_class,
-                inferred_count=count,
-            )
-        except (
-            pl.exceptions.ComputeError,
-            pl.exceptions.SchemaError,
-            ValueError,
-            KeyError,
-            TypeError,
-            httpx.NetworkError,
-            httpx.TimeoutException,
-        ) as e:
-            logger.warning(
-                f"list_date inference failed for {asset_class}",
-                event="list_date_inference_error",
-                dataset=dataset,
-                asset_class=asset_class,
-                error=str(e),
-            )
-        except Exception:
-            logger.exception(
-                "Unexpected error in list_date inference",
-                event="list_date_inference_error",
-                dataset=dataset,
-                asset_class=asset_class,
-            )
-
     def _get_cached_index_codes(self) -> list[str]:
         """获取缓存的指数代码列表。"""
         if self._index_codes_cache is None:
@@ -246,6 +177,10 @@ class IngestionCoordinator:
             )
 
         return self._index_codes_cache
+
+    # ------------------------------------------------------------------
+    # 日期级摄取
+    # ------------------------------------------------------------------
 
     def ingest_date(
         self,
@@ -331,7 +266,19 @@ class IngestionCoordinator:
         if isinstance(df_or_result, IngestionResult):
             return df_or_result
 
-        return self._process_fetched_data(df_or_result, dataset, trade_date, force)
+        return _process_fetched_data(
+            df_or_result,
+            dataset,
+            trade_date,
+            force,
+            result_handler=self._result_handler,
+            data_writer=self._data_writer,
+            quality_checker=self._quality_checker,
+            list_date_inference=self._list_date_inference,
+            cursor_service=self._ingestion_cursor_service,
+            freeze_service=self._freeze_service,
+            source_name=self._source_name,
+        )
 
     def _try_fetch_data(
         self, dataset: str, trade_date: str
@@ -340,58 +287,15 @@ class IngestionCoordinator:
         try:
             return self._fetch_data(dataset, trade_date)
         except Exception as e:
-            return self._handle_fetch_error(
+            return _handle_fetch_error(
                 e,
                 dataset=dataset,
                 date_identifier=trade_date,
                 context=f"fetching {dataset}",
                 log_tag="during_fetch",
+                source_name=self._source_name,
+                result_handler=self._result_handler,
             )
-
-    def _handle_fetch_error(
-        self,
-        error: Exception,
-        *,
-        dataset: str,
-        date_identifier: str,
-        context: str,
-        log_tag: str,
-    ) -> IngestionResult:
-        """统一的 fetch 错误处理。"""
-        if isinstance(error, (httpx.NetworkError, httpx.TimeoutException)):
-            logger.exception(
-                f"network_error_{log_tag}",
-                dataset=dataset,
-                error_type=type(error).__name__,
-            )
-            network_error = NetworkError.from_httpx(
-                error=error,
-                source=self._source_name,
-                context=context,
-            )
-            fetch_error = SourceFetchError(
-                message=str(network_error),
-                source=self._source_name,
-                cause=network_error,
-            )
-            return self._result_handler.handle_fetch_error(
-                dataset, date_identifier, fetch_error
-            )
-
-        if _is_source_fetch_error(error):
-            fetch_error = _normalize_source_fetch_error(error)
-            return self._result_handler.handle_fetch_error(
-                dataset, date_identifier, fetch_error
-            )
-
-        logger.exception(
-            f"unexpected_error_{log_tag}",
-            dataset=dataset,
-            error_type=type(error).__name__,
-        )
-        return self._result_handler.handle_unknown_error(
-            dataset, date_identifier, error
-        )
 
     def _write_data_safe(
         self,
@@ -403,153 +307,41 @@ class IngestionCoordinator:
         source_ticker: str | None = None,
         event_suffix: str = "",
     ) -> WriteResult | IngestionResult:
-        """安全写入数据，统一异常处理。"""
-        try:
-            return self._data_writer.write_data(dataset, df, trade_date, on_duplicate)
-        except (
-            pl.exceptions.ComputeError,
-            pl.exceptions.SchemaError,
-            ValueError,
-            KeyError,
-            TypeError,
-            OSError,
-        ) as e:
-            logger.warning(
-                f"write_data_failed{event_suffix}",
-                event="write_data_error",
-                dataset=dataset,
-                trade_date=trade_date,
-                **({"source_ticker": source_ticker} if source_ticker else {}),
-                error_type=type(e).__name__,
-                error=str(e),
-            )
-            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
-        except Exception as e:
-            logger.exception(
-                f"write_data_failed{event_suffix}_unexpected",
-                event="write_data_error",
-                dataset=dataset,
-                trade_date=trade_date,
-                **({"source_ticker": source_ticker} if source_ticker else {}),
-                error_type=type(e).__name__,
-            )
-            return self._result_handler.handle_unknown_error(dataset, trade_date, e)
-
-    def _process_fetched_data(
-        self, df: pl.DataFrame, dataset: str, trade_date: str, force: bool
-    ) -> IngestionResult:
-        """处理获取的数据：DQ 检查 + 写入。"""
-        if df.is_empty():
-            return self._result_handler.handle_empty_data(dataset, trade_date)
-
-        if self._quality_checker is not None:
-            checked_df, should_block = self._quality_checker.handle(
-                CheckDataQualityCommand(
-                    df=df,
-                    dataset=dataset,
-                    context={"trade_date": trade_date},
-                ),
-            )
-            if should_block:
-                return self._result_handler.handle_dq_blocked(
-                    dataset,
-                    trade_date,
-                    WriteResult(
-                        file_path="",
-                        checksum="",
-                        rows_written=0,
-                        rows_total=df.height,
-                        blocked=True,
-                    ),
-                )
-            df = checked_df
-
-        on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
-
-        write_result = self._write_data_safe(dataset, df, trade_date, on_duplicate)
-        if isinstance(write_result, IngestionResult):
-            return write_result
-
-        if write_result.blocked:
-            return self._result_handler.handle_dq_blocked(
-                dataset, trade_date, write_result
-            )
-
-        self._run_list_date_inference(dataset)
-        self._run_post_ingest_hooks(dataset, trade_date)
-
-        return self._result_handler.handle_success(
-            dataset, trade_date, df, write_result
+        """安全写入数据，统一异常处理。委托至 post_ingest.write_data_safe。"""
+        return _write_data_safe(
+            dataset,
+            df,
+            trade_date,
+            on_duplicate,
+            result_handler=self._result_handler,
+            data_writer=self._data_writer,
+            source_ticker=source_ticker,
+            event_suffix=event_suffix,
         )
 
-    def _run_post_ingest_hooks(self, dataset: str, trade_date: str) -> None:
-        """执行摄取后的副作用：游标更新、冻结点创建。"""
-        self._update_ingestion_cursor(dataset, trade_date)
-        self._create_freeze_point(dataset, trade_date)
-
-    @staticmethod
-    def _safe_side_effect(
-        action: Callable[[], object],
+    def _handle_fetch_error(
+        self,
+        error: Exception,
         *,
-        log_tag: str,
-        event: str,
         dataset: str,
-        trade_date: str,
-    ) -> None:
-        """执行副作用操作，失败仅记录警告，不影响主流程。"""
-        try:
-            action()
-        except (ValueError, KeyError, TypeError, OSError) as e:
-            logger.warning(
-                log_tag,
-                event=event,
-                dataset=dataset,
-                trade_date=trade_date,
-                error_type=type(e).__name__,
-                error=str(e),
-            )
-        except Exception:
-            logger.exception(
-                f"{log_tag}_unexpected",
-                event=event,
-                dataset=dataset,
-                trade_date=trade_date,
-            )
-
-    def _update_ingestion_cursor(self, dataset: str, trade_date: str) -> None:
-        """更新摄入游标（失败仅记录警告，不影响主流程）。"""
-        if self._ingestion_cursor_service is None:
-            return
-        svc = self._ingestion_cursor_service
-        self._safe_side_effect(
-            lambda: svc.update_cursor(
-                dataset=dataset,
-                source=self._source_name,
-                last_success=trade_date,
-                last_attempted=trade_date,
-            ),
-            log_tag="cursor_update_failed",
-            event="cursor_update_error",
+        date_identifier: str,
+        context: str,
+        log_tag: str,
+    ) -> IngestionResult:
+        """统一的 fetch 错误处理。委托至 post_ingest.handle_fetch_error。"""
+        return _handle_fetch_error(
+            error,
             dataset=dataset,
-            trade_date=trade_date,
+            date_identifier=date_identifier,
+            context=context,
+            log_tag=log_tag,
+            source_name=self._source_name,
+            result_handler=self._result_handler,
         )
 
-    def _create_freeze_point(self, dataset: str, trade_date: str) -> None:
-        """创建冻结点 — 轻量级版本追踪（失败仅记录警告，不影响主流程）。"""
-        if self._freeze_service is None:
-            return
-        svc = self._freeze_service
-        self._safe_side_effect(
-            lambda: svc.create_freeze(
-                freeze_id=f"{dataset}_{trade_date}",
-                description=f"Auto-freeze: {dataset} @ {trade_date}",
-                datasets=[dataset],
-            ),
-            log_tag="freeze_create_failed",
-            event="freeze_create_error",
-            dataset=dataset,
-            trade_date=trade_date,
-        )
+    # ------------------------------------------------------------------
+    # 日期范围摄取
+    # ------------------------------------------------------------------
 
     def ingest_range(
         self,
@@ -582,145 +374,27 @@ class IngestionCoordinator:
             results.append(result)
         return results
 
+    # ------------------------------------------------------------------
+    # 按标的摄取（委托至 instrument_ingestion）
+    # ------------------------------------------------------------------
+
     def ingest_by_instrument(
         self,
         dataset: str,
         params: InstrumentIngestParams,
         force: bool = False,
     ) -> IngestionResult:
-        """按标的 + 日期范围摄取数据。"""
-        dataset_enum = _validate_dataset(dataset)
-
-        if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
-            raise AppProcessError(
-                f"数据集 {dataset} 不支持按标的摄取",
-                field="dataset",
-                value=dataset,
-            )
-
-        asset_class = dataset_enum.asset_class
-        if asset_class is None:
-            raise AppProcessError(
-                f"数据集 {dataset} 缺少 asset_class 定义",
-                field="dataset",
-                value=dataset,
-            )
-
-        source_ticker = resolve_identifier_with_auto_init(
-            params,
-            asset_class,
+        """按标的 + 日期范围摄取数据。委托至 instrument_ingestion 模块。"""
+        return _ingest_by_instrument_impl(
             dataset,
+            params,
+            force,
+            fetchers=self._fetchers,
             metadata_service=self._metadata_service,
-            source=self._fetchers.metadata,
             source_name=self._source_name,
+            result_handler=self._result_handler,
+            data_writer=self._data_writer,
         )
-
-        logger.info(
-            "开始按标的摄取数据",
-            event="ingestion_by_instrument_start",
-            dataset=dataset,
-            source_ticker=source_ticker,
-            asset_class=asset_class,
-            start_date=params.start_date,
-            end_date=params.end_date,
-            force=force,
-        )
-
-        return self._fetch_and_ingest_by_instrument(
-            dataset, dataset_enum, source_ticker, params
-        )
-
-    def _fetch_and_ingest_by_instrument(
-        self,
-        dataset: str,
-        dataset_enum: Dataset,
-        source_ticker: str,
-        params: InstrumentIngestParams,
-    ) -> IngestionResult:
-        """按标的获取数据并执行摄取（统一错误处理）。"""
-        df_or_result = self._try_fetch_data_by_instrument(
-            dataset, dataset_enum, source_ticker, params
-        )
-
-        if isinstance(df_or_result, IngestionResult):
-            return df_or_result
-
-        return self._process_fetched_data_by_instrument(
-            df_or_result, dataset, source_ticker, params
-        )
-
-    def _try_fetch_data_by_instrument(
-        self,
-        dataset: str,
-        dataset_enum: Dataset,
-        source_ticker: str,
-        params: InstrumentIngestParams,
-    ) -> pl.DataFrame | IngestionResult:
-        """按标的尝试获取数据，失败时返回 IngestionResult。"""
-        try:
-            return self._fetch_by_dataset(dataset_enum, source_ticker, params)
-        except Exception as e:
-            return self._handle_fetch_error(
-                e,
-                dataset=dataset,
-                date_identifier=params.start_date,
-                context=f"fetching {dataset} for {source_ticker}",
-                log_tag="during_fetch_by_instrument",
-            )
-
-    def _process_fetched_data_by_instrument(
-        self,
-        df: pl.DataFrame,
-        dataset: str,
-        source_ticker: str,
-        params: InstrumentIngestParams,
-    ) -> IngestionResult:
-        """按标的处理获取的数据：写入。"""
-        if df.is_empty():
-            return self._result_handler.handle_empty_data(dataset, params.start_date)
-
-        on_duplicate = OnDuplicate.KEEP_LAST
-
-        write_result = self._write_data_safe(
-            dataset,
-            df,
-            params.start_date,
-            on_duplicate,
-            source_ticker=source_ticker,
-            event_suffix="_by_instrument",
-        )
-        if isinstance(write_result, IngestionResult):
-            return write_result
-
-        if write_result.blocked:
-            return self._result_handler.handle_dq_blocked(
-                dataset, params.start_date, write_result
-            )
-        return self._result_handler.handle_success(
-            dataset, params.start_date, df, write_result
-        )
-
-    def _fetch_by_dataset(
-        self,
-        dataset_enum: Dataset,
-        source_ticker: str,
-        params: InstrumentIngestParams,
-    ) -> pl.DataFrame:
-        """根据数据集类型调用对应的 fetch 方法（按标的）。"""
-        handlers = build_instrument_fetch_handlers(
-            self._fetchers,
-            source_ticker,
-            params,
-        )
-
-        if dataset_enum not in handlers:
-            raise AppProcessError(
-                f"不支持按标的摄取的数据集: {dataset_enum.value}",
-                field="dataset",
-                value=dataset_enum.value,
-            )
-
-        return handlers[dataset_enum]()
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
         """根据数据集类型调用对应的 Source 方法获取数据（日期级）。"""
@@ -748,16 +422,14 @@ class IngestionCoordinator:
         start: str,
         end: str,
     ) -> dict[str, object]:
-        """按标的智能回补复权因子空洞，委托至 backfill_handler。"""
-        return _backfill_adj_factor(
+        """按标的智能回补复权因子空洞。委托至 instrument_ingestion 模块。"""
+        return _backfill_adj_factor_impl(
             instrument_id=instrument_id,
             start=start,
             end=end,
-            ctx=BackfillContext(
-                metadata_service=self._metadata_service,
-                market_service=self._market_service,
-                source=self._fetchers.market,
-                source_name=self._source_name,
-                data_writer=self._data_writer,
-            ),
+            metadata_service=self._metadata_service,
+            market_service=self._market_service,
+            fetchers=self._fetchers,
+            source_name=self._source_name,
+            data_writer=self._data_writer,
         )

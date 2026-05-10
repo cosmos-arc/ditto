@@ -2,7 +2,7 @@
 EngineLoop -- 回测引擎主循环.
 
 V1 每日循环 (通过 TradingStep chain 编排):
-  1. DataFetchStep: 获取 Slice + 账户快照 + 清除锁定
+  1. DataFetchStep: 账户快照 + 数据指纹 + 清除锁定
   2. RiskScanStep: PostTrade 风控扫描 + 锁管理
   3. StrategyStep: 策略 Pipeline -> TargetPortfolio (仅调仓日)
   4. PlanningStep: ExecutionPlanner -> ExecutionPlan (仅调仓日)
@@ -10,6 +10,7 @@ V1 每日循环 (通过 TradingStep chain 编排):
   6. ExecutionStep: 订单成交处理
   7. AuditStep: 审计记录 (账户快照 + 成交 + 已平仓交易)
 
+Synchronizer 驱动主循环 — EngineLoop 不知道自己的模式（回测/实盘）。
 EngineOptions / assemble_engine_result 已拆至 engine_steps.py。
 """
 
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import uuid
 from collections import deque
+from datetime import timedelta
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
@@ -28,6 +30,8 @@ from ditto_execution.trade_builder import (
 )
 from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.synchronizer import Synchronizer, TimeSlice
+from ditto_kernel.time_context import TimeContext
 from ditto_portfolio.accounting import FillEvent, Order
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.context import StrategyContext
@@ -91,7 +95,8 @@ class EngineLoop:
         planner: 执行计划器
         brokerage: 经纪商 (构造时传入 rules_getter)
         pre_trade_check: 组合 PreTrade 校验
-        data_feed: 市场数据源
+        data_feed: 市场数据源（保留：用于 get_slice 获取 benchmark_close 等）
+        synchronizer: 时间同步器（Synchronizer 驱动主循环）
         options: 可选组件 (费率模型、规则提供者、风控、审计、事件总线)
 
     """
@@ -104,6 +109,7 @@ class EngineLoop:
         brokerage: Brokerage,
         pre_trade_check: CompositePreTradeCheck,
         data_feed: DataFeed,
+        synchronizer: Synchronizer,
         options: EngineOptions,
     ) -> None:
         self._config = config
@@ -112,7 +118,7 @@ class EngineLoop:
         self._brokerage = brokerage
         self._pre_trade_check = pre_trade_check
         self._data_feed = data_feed
-        self._clock = options.clock
+        self._synchronizer = synchronizer
         self._fee_model = options.fee_model
         self._rule_provider = options.rule_provider
         self._post_trade_guard = options.post_trade_guard
@@ -155,8 +161,7 @@ class EngineLoop:
                 planner=self._planner,
                 brokerage=self._brokerage,
                 pre_trade_check=self._pre_trade_check,
-                data_feed=self._data_feed,
-                clock=self._clock,
+                clock=self._synchronizer.clock(),
                 fee_model=self._fee_model,
                 rule_provider=self._rule_provider,
                 post_trade_guard=self._post_trade_guard,
@@ -180,11 +185,14 @@ class EngineLoop:
         """
         执行完整回测.
 
-        遍历交易日历, 逐日执行策略决策和订单处理.
+        通过 Synchronizer 驱动主循环，逐日执行策略决策和订单处理.
         """
         run_id = self._config.strategy_run_id or uuid.uuid4().hex[:8]
+        # 构建 trading_days 索引 — 用于 is_rebalance_day() 计算
+        # 注: BacktestSynchronizer 也按 start_date 过滤（控制迭代范围），
+        # 此处过滤是为 is_rebalance_day 提供日期索引
+        # （首个交易日 idx=0 触发调仓）
         days = self._data_feed.trading_days()
-        # 过滤到配置区间：DataFeed 可能加载了 start_date 之前的额外数据（lookback）
         trading_days = [d for d in days if d >= self._config.start_date]
         self._trading_days = tuple(trading_days)
         self._trading_day_index = {d: i for i, d in enumerate(self._trading_days)}
@@ -195,12 +203,17 @@ class EngineLoop:
         cancelled = False
         completed_days = 0
         total_days = len(trading_days)
-        for date in trading_days:
+
+        for time_slice in self._synchronizer.stream():
+            self._synchronizer.clock().advance_to(
+                time_slice.time_context.decision_time,
+            )
             if self._should_stop is not None and self._should_stop():
                 cancelled = True
                 break
-            if not self._step(date):
-                skipped.append(date)
+            trade_date = time_slice.time_context.trade_date
+            if not self._step(time_slice):
+                skipped.append(trade_date)
             else:
                 completed_days += 1
                 if self._on_progress is not None:
@@ -285,15 +298,27 @@ class EngineLoop:
             "Flush: delayed signal on last_date={} (best-effort execution)",
             last_date,
         )
-        ctx = StepContext(date=last_date, is_rebalance_day=True)
-        ctx.target_portfolio = signal
 
-        # 预填 PlanningStep 所需的 slice_ 和 account_view
+        # 构造 StepContext — 从 data_feed 获取 Slice
+        slice_: Slice | None = None
         try:
-            ctx.slice_ = self._data_feed.get_slice(last_date)
+            slice_ = self._data_feed.get_slice(last_date)
         except Exception:
             logger.exception("Flush: unexpected error getting slice for {}", last_date)
             raise
+
+        tc = TimeContext(
+            decision_time=slice_.step_time,
+            knowledge_date=slice_.step_time.date() - timedelta(days=1),
+            trade_date=slice_.trade_date,
+        )
+        ctx = StepContext(
+            time_context=tc,
+            is_rebalance_day=True,
+            bars=slice_.bars,
+            slice_=slice_,
+        )
+        ctx.target_portfolio = signal
         ctx.account_view = self._brokerage.get_account()
 
         for step in self._steps:
@@ -311,10 +336,19 @@ class EngineLoop:
         self._fills.extend(ctx.step_fills)
         self._orders.extend(ctx.step_orders)
 
-    def _step(self, date: str) -> bool:
+    def _step(self, time_slice: TimeSlice) -> bool:
         """执行单日步骤 -- 通过 Step chain 编排。返回 False 表示某 step 失败。"""
-        is_rebalance = self._is_rebalance_day(date)
-        ctx = StepContext(date=date, is_rebalance_day=is_rebalance)
+        trade_date = time_slice.time_context.trade_date
+        is_rebalance = self._is_rebalance_day(trade_date)
+
+        # 从 data_feed 获取完整 Slice（benchmark_close 等）
+        slice_ = self._data_feed.get_slice(trade_date)
+        ctx = StepContext(
+            time_context=time_slice.time_context,
+            is_rebalance_day=is_rebalance,
+            bars=time_slice.bars,
+            slice_=slice_,
+        )
         delay = self._execution_delay
         deferred_signal = self._dequeue_delayed_signal()
 
@@ -341,7 +375,7 @@ class EngineLoop:
                 logger.warning(
                     "Step {} failed on {}: {}",
                     step_name,
-                    date,
+                    trade_date,
                     errors,
                 )
                 return False
@@ -359,7 +393,7 @@ class EngineLoop:
         # 审计日志: 批量记录 PreTrade 决策
         if self._audit_collector is not None and ctx.pre_trade_decisions:
             self._audit_collector.record_pre_trade_decisions(
-                date,
+                trade_date,
                 tuple(ctx.pre_trade_decisions),
             )
 

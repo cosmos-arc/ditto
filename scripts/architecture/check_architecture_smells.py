@@ -394,6 +394,14 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "instead of importing analysis directly."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/queries/research_helpers.py",
+        owner="application research query facade (extracted helpers)",
+        reason=(
+            "Extracted helper functions for the research query facade; same "
+            "analysis import allowance as the parent facade module."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (

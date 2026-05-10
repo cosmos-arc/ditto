@@ -57,10 +57,10 @@ class RiskScanStep:
         # 审计日志: 记录风控扫描结果
         if risk_actions and self._audit_collector is not None:
             self._audit_collector.record_risk_scan(
-                ctx.date,
+                ctx.time_context.trade_date,
                 tuple(
                     RiskScanRecord(
-                        trade_date=ctx.date,
+                        trade_date=ctx.time_context.trade_date,
                         rule_id=action.rule_id,
                         instrument_id=action.instrument_id,
                         scope=action.scope,

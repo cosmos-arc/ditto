@@ -22,7 +22,6 @@ from ditto_kernel.market import (
 )
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import (
-    DecisionFrame,
     ExecutionPolicy,
     ImpactModel,
     RiskScope,
@@ -41,7 +40,6 @@ __all__ = [
     "AmbiguousTickerError",
     "AssetClass",
     "Clock",
-    "DecisionFrame",
     "DittoError",
     "DomainEvent",
     "EventBus",

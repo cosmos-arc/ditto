@@ -113,6 +113,7 @@ def test_production_analysis_wiring_allowances_are_owned_and_reasoned():
         "packages/application/src/ditto_application/providers_portfolio.py",
         "packages/application/src/ditto_application/providers_strategy.py",
         "packages/application/src/ditto_application/queries/research.py",
+        "packages/application/src/ditto_application/queries/research_helpers.py",
     } == {allowance.path for allowance in allowances}
     assert not any(hasattr(allowance, "match") for allowance in allowances)
 

@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
+from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
@@ -16,6 +17,7 @@ from ditto_portfolio.accounting.order_book import (
     OrderBookReadOnly,
 )
 from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.events import PositionChanged
 
 __all__ = ["Account", "AccountView"]
 
@@ -74,6 +76,7 @@ class Account:
         positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
         order_book: OrderBook | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         """
         初始化账户。
@@ -82,6 +85,7 @@ class Account:
             positions: 持仓映射
             cash: 现金账本
             order_book: 订单簿
+            event_bus: 事件总线（可选，用于发布 PositionChanged 事件）
 
         """
         # 绕过 dataclass 自动生成的 __init__，直接设置属性
@@ -106,6 +110,7 @@ class Account:
             "order_book",
             order_book if order_book is not None else OrderBook(),
         )
+        self._event_bus = event_bus
 
     @property
     def positions(self) -> MappingProxyType[InstrumentId, Position]:
@@ -183,6 +188,25 @@ class Account:
         # Fire callback after state is committed
         if fill.direction == OrderSide.BUY and on_frozen is not None:
             on_frozen(fill.instrument_id, settle_date, fill.filled_quantity)
+        if self._event_bus is not None and position_updates:
+            if "upsert" in position_updates:
+                new_pos = position_updates["upsert"][1]
+                new_quantity = new_pos.quantity if new_pos is not None else 0
+            else:
+                new_quantity = 0
+            quantity_change = (
+                fill.filled_quantity
+                if fill.direction == OrderSide.BUY
+                else -fill.filled_quantity
+            )
+            self._event_bus.publish(
+                PositionChanged(
+                    timestamp=fill.event_time,
+                    instrument_id=fill.instrument_id,
+                    quantity_change=quantity_change,
+                    new_quantity=new_quantity,
+                ),
+            )
 
     # -- calculation helpers (pure, no mutation) -----------------------------
 

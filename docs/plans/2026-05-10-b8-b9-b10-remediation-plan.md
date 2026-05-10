@@ -590,19 +590,93 @@ B8 (P0 紧急修复，2 项)
 
 ---
 
-## 未覆盖项（延后至架构级整改）
+## B9 执行记录
 
-| 项 | 原因 | 触发条件 |
-|----|------|---------|
-| Runtime Spine（事件/时间/状态统一） | 需要独立 ADR | B8-B10 完成后启动 |
-| OMS Lite（身份/journal/状态机） | 需要独立实施计划 | Runtime Spine 设计后 |
-| Consumer-Owned Ports | 依赖 Runtime Spine | OMS Lite 方向后 |
-| DataCatalog Runtime Store | 依赖 Consumer-Owned Ports | Ports 完成后 |
-| 市场参考 Provider ADR | 依赖 OMS Lite | OMS Lite 方向后 |
-| Portfolio PositionChanged 事件发射 | 依赖 OMS journal | 状态快照完整化后 |
-| DataProvider 跨包导入 | 依赖 Consumer-Owned Ports | Ports 完成后 |
-| Dataset enum 降权 | 依赖 DataCatalog Runtime | Catalog 实现后 |
-| backtest/paper 共享 runtime seam | 依赖 Runtime Spine + OMS | Runtime Spine 设计后 |
+**执行日期**：2026-05-10
+**分支**：`remediation/cross-module-b1-b7`
+**提交**：`874308d7`
+
+### 实际完成 vs 计划
+
+| 批次 | 计划项 | 实际完成 | 备注 |
+|------|--------|---------|------|
+| B9-K.1 | DerivedSpec/DerivedRole/MaterializationProfile 迁移 | ✅ 完成 | → ditto_features.derived_types |
+| B9-K.2 | DEFAULT_COMMISSION_RATE/default_price_limit_pct 迁移 | ⏸ 延后 | 5 包消费，移入任何单一包违反架构禁令 |
+| B9-K.3 | json_types 迁移到 platform | ✅ 完成 | 7 文件 import 更新 |
+| B9-K.4 | Derived 异常迁移 | ✅ 完成 | → ditto_features.errors |
+| B9-K.5 | MacroDataProvider 删除 | ✅ 完成 | 零消费者 |
+| B9-K.6 | DecisionFrame 校验 | ⏸ 延后 | 与 strategy pipeline 重构耦合 |
+| B9-K.7 | BrokerProtocol 清理 | ✅ 跳过 | 不存在（B7 已清理） |
+| B9-P.1 | 深层引用 3 处 | ✅ 完成 | |
+| B9-PF.1 | Account.positions 保护 | ✅ 完成 | MappingProxyType + thaw_position |
+| B9-PF.2 | apply_fill 原子性 | ✅ 完成 | 先计算后赋值 |
+| B9-PF.3 | PortfolioStateReader 清理 | ✅ 完成 | 标注 reserved |
+| B9-PF.4 | StateTransitionError 归位 | ✅ 完成 | 统一到 errors.py |
+| B9-PF.5 | Constraint priority 移除 | ⏸ 延后 | P2 |
+| B9-PF.6 | report_views @runtime_checkable | ✅ 跳过 | 已存在 |
+| B9-RK.1 | 死代码删除 | ✅ 完成 | |
+| B9-RK.2 | checks.py 拆分 | ⏸ 延后 | 319 LOC 分区清晰，拆分收益有限 |
+| B9-RK.3 | severity 类型化 | ✅ 完成 | str → RiskSeverity |
+| B9-RK.4 | RiskAction 字段清理 | ✅ 完成 | 删除 target_quantity |
+| B9-EX.1 | FillReceiver 合并 | ✅ 完成 | |
+| B9-EX.2 | TradeAuditor 签名 | ✅ 完成 | Sequence → tuple |
+| B9-EX.3 | TradeDataPort Protocol | ✅ 完成 | 6 处跨层穿透收敛 |
+| B9-EX.4 | compute_diff 参数对象 | ⏸ 延后 | P2 |
+| B9-ST.1 | Protocol 方法名对齐 | ✅ 完成 | |
+| B9-ST.2 | 跨层穿透收敛 | ✅ 完成 | 6→3 文件具体类导入 |
+| B9-ST.3 | Benchmark 可配置化 | ✅ 完成 | 白名单→格式校验 |
+| B9-ST.4 | 辅助函数去重 | ✅ 完成 | _internal.py + _common.py |
+| B9-ST.5 | stock_selection_trend 拆分 | ✅ 完成 | stages+config+入口 |
+| B9-ST.6 | ETF 模板补全 | ✅ 完成 | validate_config + get_param_constraints |
+| B9-AN.1 | @runtime_checkable | ✅ 完成 | |
+| B9-AN.2 | barrel 扩展 | ✅ 完成 | 3→6 符号 |
+| B9-FEAT.1 | evaluator Protocol 提取 | ✅ 完成 | → evaluation/contracts.py |
+| B9-FEAT.2 | codegen 评估 | ✅ 跳过 | 分区清晰无需拆分 |
+| B9-FEAT.3 | services 命名空间 | ✅ 完成 | 分组注释 |
+| B9-BT.1 | EngineMode.LIVE 清理 | ✅ 完成 | |
+| B9-DATA.1 | Protocol mock 验证 | ✅ 完成 | 已有测试覆盖 |
+| B9-DATA.2 | errors.py 拆分 | ✅ 完成 | 606 LOC → 4 域文件 + facade |
+| B9-DATA.3 | apps 层 DI 注入 | ⏸ 延后 | P2，影响范围大 |
+| B9-DATA.4 | 大文件拆分 | ⏸ 延后 | P2，需行为快照测试 |
+| B9-APP.1 | runtime builder 默认值 | ✅ 部分 | kernel 已有常量，注释说明 from __future__ 限制 |
+| B9-APP.2 | INGESTION_SPECS 标注 | ✅ 完成 | docstring + ADR |
+| B9-APP.3 | research 路径隔离 | ✅ 完成 | ADR narrow allowance |
+| B9-APP.4 | 异常审计 | ✅ 完成 | ValueError 在 Pydantic validator 中合理 |
+| B9-APP.5 | 大文件拆分 | ⏸ 延后 | P2，需行为快照测试 |
+| B9-APPS.1 | registry config 审计 | ✅ 完成 | 无业务事实泄漏 |
+
+### 验收
+
+- ✅ `pixi run -e dev check`：lint + fmt + type + test 全通过
+- ✅ 6339 passed, 0 failed, 25 skipped
+- ✅ 36/36 arch contracts kept
+- ✅ architecture smells passed
+
+### 延后项清单 → 已决策（2026-05-10）
+
+详见 `docs/plans/2026-05-10-deferred-items-design.md`
+
+| 项 | 决策 | 动作 |
+|----|------|------|
+| B9-K.2 `DEFAULT_COMMISSION_RATE` | ✅ 接受 kernel 归属 | 清理 `default_price_limit_pct` 死代码 + 解决 apps 副本同步 |
+| B9-K.6 DecisionFrame | ✅ 删除 kernel 死 Protocol | strategy `pl.DataFrame` + `validate_frame()` 是实际契约 |
+| B9-EX.4 compute_diff | ✅ 引入 DiffContext | 10 参数 → frozen dataclass + make_order |
+| B9-DATA.4 + B9-APP.5 | ✅ Facade 模式拆分 | 7 个大文件按难度递增执行 |
+| B9-PF.5 Constraint priority | ⏸ 延后 | P2，待触发动机 |
+| B9-RK.2 checks.py 拆分 | ⏸ 延后 | 319 LOC 内聚性高，拆分收益有限 |
+| B9-DATA.3 apps DI | ✅ 接受现状 | registry/contexts 是 Composition Root，直接引用是标准做法 |
+
+---
+
+## 未覆盖项 → 已决策 3 Phase 依赖链（2026-05-10）
+
+详见 `docs/plans/2026-05-10-deferred-items-design.md`
+
+| Phase | 项 | 业界对标 | 触发条件 |
+|-------|-----|---------|---------|
+| **Phase 1: Runtime Spine** | ISynchronizer 等效物 + TimeContext + 类型化事件 | LEAN `AlgorithmManager` + `ISynchronizer` | B8-B10 完成后 |
+| **Phase 2: OMS Lite** | Order FSM + OrderEvent journal + Backtest/Paper seam | LEAN `OrderTicket` + `OrderEvent` | Phase 1 完成后 |
+| **Phase 3: Consumer-Owned Ports** | DataProvider → 消费端窄 Port + DataCatalog + Dataset 降权 | NautilusTrader hexagonal | Phase 2 完成后 |
 
 ---
 

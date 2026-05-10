@@ -30,6 +30,7 @@ from ditto_backtest.statistics import (
     build_report,
 )
 from ditto_backtest.steps import StepContext
+from ditto_backtest.synchronizer import BacktestSynchronizer
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.audit.models import (
     PreTradeDecisionPayload,
@@ -239,7 +240,13 @@ class BacktestService:
         engine_config = self._build_engine_config(run_id)
         options = self._build_engine_options(run_id, collector)
 
-        # 构造并运行 EngineLoop
+        # 构造 Synchronizer + EngineLoop
+        clock = self._build_clock()
+        synchronizer = BacktestSynchronizer(
+            data_feed=self._data_feed,
+            clock=clock,
+            start_date=self._config.start_date,
+        )
         engine_loop = EngineLoop(
             config=engine_config,
             pipeline=self._pipeline,
@@ -247,6 +254,7 @@ class BacktestService:
             brokerage=self._brokerage,
             pre_trade_check=self._pre_trade_check,
             data_feed=self._data_feed,
+            synchronizer=synchronizer,
             options=options,
         )
         engine_result = engine_loop.run()
@@ -258,6 +266,13 @@ class BacktestService:
         self._post_process(run_id, report, engine_result)
 
         return report
+
+    def _build_clock(self) -> SimulatedClock:
+        """构造回测模拟时钟。"""
+        _start = date.fromisoformat(self._config.start_date)
+        return SimulatedClock(
+            initial=datetime(_start.year, _start.month, _start.day, tzinfo=UTC),
+        )
 
     def _build_engine_config(self, run_id: str) -> EngineConfig:
         """从服务配置构建 EngineConfig。"""
@@ -281,13 +296,7 @@ class BacktestService:
         run_id: str,
         collector: ExecutionAuditCollector,
     ) -> EngineOptions:
-        """构建 EngineOptions — 含 clock/event_bus/cancel/progress 回调。"""
-        # 构造 SimulatedClock — 以回测起始日期为初始时刻
-        _start = date.fromisoformat(self._config.start_date)
-        clock = SimulatedClock(
-            initial=datetime(_start.year, _start.month, _start.day, tzinfo=UTC),
-        )
-
+        """构建 EngineOptions — 含 event_bus/cancel/progress 回调。"""
         # 构建自定义 input_bundle_builder (含因子信号注入)
         compiled = self._options.compiled_expressions
         input_bundle_builder = (
@@ -324,7 +333,6 @@ class BacktestService:
             on_progress = _report_progress
 
         return EngineOptions(
-            clock=clock,
             event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
             rule_provider=self._options.rule_provider,
@@ -437,12 +445,16 @@ class BacktestService:
                     "low": bar.low,
                     "close": bar.close,
                     "volume": bar.volume,
-                    "trade_date": ctx.date,
+                    "trade_date": ctx.time_context.trade_date,
                 },
             )
 
         # 追加历史窗口 — 支持 ts_* 时间序列表达式
-        history_df = data_feed.get_history(instrument_ids, ctx.date, lookback_days)
+        history_df = data_feed.get_history(
+            instrument_ids,
+            ctx.time_context.trade_date,
+            lookback_days,
+        )
         if not history_df.is_empty():
             hist_rows = history_df.select(
                 "instrument_id",
@@ -463,7 +475,7 @@ class BacktestService:
         signal_values = bridge.compute_signals(market_data, compiled)
 
         return StrategyInputBundle(
-            trade_date=ctx.date,
+            trade_date=ctx.time_context.trade_date,
             strategy_id=strategy_id,
             run_id=run_id,
             instruments=instruments,

@@ -31,6 +31,9 @@ from ditto_backtest.simulation import (
     BrokerageModel,
     FixedBpsSlippage,
 )
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
@@ -463,6 +466,12 @@ def assembled_engine_loop(
         model=BrokerageModel(fee_model=fee_model),
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=three_day_data_feed,
+        clock=clock,
+        start_date=three_day_engine_config.start_date,
+    )
 
     return EngineLoop(
         config=three_day_engine_config,
@@ -471,8 +480,8 @@ def assembled_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=three_day_data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
         ),
     )
@@ -538,6 +547,12 @@ def five_day_engine_loop(
         model=BrokerageModel(fee_model=fee_model),
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=five_day_data_feed,
+        clock=clock,
+        start_date=five_day_engine_config.start_date,
+    )
 
     return EngineLoop(
         config=five_day_engine_config,
@@ -546,8 +561,8 @@ def five_day_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=five_day_data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
         ),
     )
@@ -618,6 +633,12 @@ def limit_up_engine_loop(
         model=ashare_brokerage_model,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=limit_up_data_feed,
+        clock=clock,
+        start_date=three_day_engine_config.start_date,
+    )
 
     return EngineLoop(
         config=three_day_engine_config,
@@ -626,8 +647,8 @@ def limit_up_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=limit_up_data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=ashare_fee_model,
         ),
     )
@@ -676,6 +697,12 @@ def limit_down_engine_loop(
         model=ashare_brokerage_model,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=limit_down_data_feed,
+        clock=clock,
+        start_date=three_day_engine_config.start_date,
+    )
 
     return EngineLoop(
         config=three_day_engine_config,
@@ -684,8 +711,8 @@ def limit_down_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=limit_down_data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=ashare_fee_model,
         ),
     )
@@ -734,6 +761,12 @@ def st_engine_loop(
         model=ashare_brokerage_model,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=st_data_feed,
+        clock=clock,
+        start_date=three_day_engine_config.start_date,
+    )
 
     return EngineLoop(
         config=three_day_engine_config,
@@ -742,8 +775,8 @@ def st_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=st_data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=ashare_fee_model,
         ),
     )

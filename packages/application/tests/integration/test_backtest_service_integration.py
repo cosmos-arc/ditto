@@ -120,29 +120,24 @@ class TestEventBusCreation:
 class TestEngineOptionsAssembly:
     """验证 EngineOptions 正确组装 Clock 和 EventBus。"""
 
-    def test_engine_options_accepts_clock_and_event_bus(self) -> None:
-        """EngineOptions 应接受 SimulatedClock 和 SimpleEventBus 参数。"""
+    def test_engine_options_accepts_event_bus(self) -> None:
+        """EngineOptions 应接受 EventBus 参数。"""
         from ditto_backtest.engine import EngineOptions
 
-        clock = SimulatedClock(initial=datetime(2024, 1, 2, tzinfo=UTC))
         event_bus = SimpleEventBus()
 
         options = EngineOptions(
-            clock=clock,
             event_bus=event_bus,
         )
-        assert options.clock is clock
         assert options.event_bus is event_bus
 
-    def test_engine_options_clock_only(self) -> None:
-        """EngineOptions 应支持只传入 clock（event_bus 可选）。"""
+    def test_engine_options_defaults(self) -> None:
+        """EngineOptions 默认值全部为 None。"""
         from ditto_backtest.engine import EngineOptions
 
-        clock = SimulatedClock(initial=datetime(2024, 1, 2, tzinfo=UTC))
-
-        options = EngineOptions(clock=clock)
-        assert options.clock is clock
+        options = EngineOptions()
         assert options.event_bus is None
+        assert options.fee_model is None
 
     def test_engine_options_frozen(self) -> None:
         """EngineOptions 是 frozen dataclass，创建后不可变。"""
@@ -150,8 +145,7 @@ class TestEngineOptionsAssembly:
 
         from ditto_backtest.engine import EngineOptions
 
-        clock = SimulatedClock(initial=datetime(2024, 1, 2, tzinfo=UTC))
-        options = EngineOptions(clock=clock)
+        options = EngineOptions()
         with pytest.raises(FrozenInstanceError):
             options.event_bus = SimpleEventBus()  # type: ignore[misc]
 

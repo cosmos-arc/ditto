@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,6 +19,7 @@ from ditto_backtest.engine import EngineConfig, EngineLoop, EngineResult
 from ditto_backtest.manifest import RunManifest, RunMode
 from ditto_backtest.statistics import BacktestReport
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_context import TimeContext
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -816,7 +818,7 @@ class TestBuildFactorAwareBundleBuilder:
 
     def _make_step_context(
         self,
-        date: str = "2026-04-10",
+        td: str = "2026-04-10",
     ) -> MagicMock:
         """构建 StepContext mock (含 bars slice)."""
         from ditto_backtest.data_feed import Slice
@@ -843,7 +845,18 @@ class TestBuildFactorAwareBundleBuilder:
 
         from ditto_backtest.steps import StepContext
 
-        ctx = StepContext(date=date, is_rebalance_day=True)
+        ctx = StepContext(
+            time_context=TimeContext(
+                decision_time=datetime(
+                    int(td[:4]), int(td[5:7]), int(td[8:10]), 15, 0, tzinfo=UTC
+                ),
+                knowledge_date=date(int(td[:4]), int(td[5:7]), int(td[8:10]))
+                - timedelta(days=1),
+                trade_date=td,
+            ),
+            is_rebalance_day=True,
+            bars={},
+        )
         ctx.slice_ = mock_slice
         return ctx
 
@@ -1070,7 +1083,15 @@ class TestBuildFactorAwareBundleBuilder:
         # 构建 slice_ 为 None 的 StepContext
         from ditto_backtest.steps import StepContext
 
-        ctx = StepContext(date="2026-04-10", is_rebalance_day=True)
+        ctx = StepContext(
+            time_context=TimeContext(
+                decision_time=datetime(2026, 4, 10, 15, 0, tzinfo=UTC),
+                knowledge_date=date(2026, 4, 9),
+                trade_date="2026-04-10",
+            ),
+            is_rebalance_day=True,
+            bars={},
+        )
         ctx.slice_ = None
 
         with pytest.raises(AppProcessError, match="slice_ required"):

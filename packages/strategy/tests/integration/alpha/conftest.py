@@ -24,6 +24,7 @@ from ditto_backtest.engine import (
 from ditto_backtest.simulation import (
     BrokerageModel,
 )
+from ditto_backtest.synchronizer import BacktestSynchronizer
 from ditto_data.provider import BarQuery, InstrumentQuery
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
@@ -427,6 +428,20 @@ def build_snapshot_engine(
 
     planner = SimpleExecutionPlanner()
 
+    clock = SimulatedClock(
+        initial=datetime(
+            int(config.start_date[:4]),
+            int(config.start_date[5:7]),
+            int(config.start_date[8:10]),
+            tzinfo=UTC,
+        ),
+    )
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=config.start_date,
+    )
+
     return EngineLoop(
         config=config,
         pipeline=pipeline,
@@ -434,15 +449,8 @@ def build_snapshot_engine(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(
-                initial=datetime(
-                    int(start_date[:4]),
-                    int(start_date[5:7]),
-                    int(start_date[8:10]),
-                    tzinfo=UTC,
-                ),
-            ),
             fee_model=_fee_model,
         ),
     )

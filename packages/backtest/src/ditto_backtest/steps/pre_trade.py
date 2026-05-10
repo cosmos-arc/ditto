@@ -88,7 +88,7 @@ class PreTradeStep:
             # 审计记录
             decisions.append(
                 PreTradeDecisionRecord(
-                    trade_date=ctx.date,
+                    trade_date=ctx.time_context.trade_date,
                     order_id=order.order_id,
                     instrument_id=order.instrument_id,
                     direction=order.direction.value,
@@ -142,7 +142,7 @@ class PreTradeStep:
         return PreTradeContext(
             account_view=account_view,
             rules=ctx.rules or {},
-            market_snapshots=slice_.bars,
+            market_snapshots=ctx.bars,
             fee_model=self._fee_model,
             buying_power_model=CashAccountBuyingPower(),
             pending_tickets=account_view.order_book.get_pending(),

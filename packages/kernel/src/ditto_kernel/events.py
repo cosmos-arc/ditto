@@ -36,6 +36,8 @@ class EventName:
     ORDER_CANCELED: str = "order_canceled"
     RISK_GUARD_TRIGGERED: str = "risk_guard_triggered"
     POSITION_CHANGED: str = "position_changed"
+    ACCOUNT_UPDATED: str = "account_updated"
+    STRATEGY_SIGNAL_GENERATED: str = "strategy_signal_generated"
 
 
 @dataclass(frozen=True, kw_only=True)

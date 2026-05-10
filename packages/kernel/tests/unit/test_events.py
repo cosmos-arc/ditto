@@ -125,6 +125,8 @@ class TestEventName:
             "ORDER_CANCELED": "order_canceled",
             "RISK_GUARD_TRIGGERED": "risk_guard_triggered",
             "POSITION_CHANGED": "position_changed",
+            "ACCOUNT_UPDATED": "account_updated",
+            "STRATEGY_SIGNAL_GENERATED": "strategy_signal_generated",
         }
         for attr, value in expected.items():
             assert getattr(EventName, attr) == value, f"EventName.{attr} 应为 {value!r}"

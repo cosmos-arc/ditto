@@ -15,7 +15,7 @@ ditto_kernel/
 ├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
 ├── order.py               # Order 子域 — OrderSide
 ├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
+├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus
 ├── identity.py            # 共享身份类型（NewType）
 ├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus
@@ -54,7 +54,6 @@ instrument / order / market / identity: 无子域间依赖
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, Application |
 | `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
 | `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
 | `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
@@ -64,7 +63,6 @@ instrument / order / market / identity: 无子域间依赖
 | `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
 | `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
 | `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
-| `default_price_limit_pct` | trading.py | 纯函数 | Execution |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
 | `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
@@ -101,7 +99,7 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
 
 # 从叶模块导入（低频或子域内聚符号）
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
-from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy, DecisionFrame
+from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy
 from ditto_kernel.identity import InstrumentId
 
 # StrEnum 直接支持字符串比较
@@ -134,7 +132,7 @@ pixi run -e dev pytest packages/kernel/tests/
 - 新增 `research.py`（4 frozen dataclass）
 - 新增 `exceptions.py`（5 异常类）
 - 新增 `math.py`（pearson_correlation）
-- 新增 `DerivedSpec` / `ExecutionPolicy` / `ImpactModel` / `RiskScope` / `DecisionFrame` Protocol
+- 新增 `DerivedSpec` / `ExecutionPolicy` / `ImpactModel` / `RiskScope`
 - `RunStatus` 新增 `CANCELLED` 成员
 - `DerivedRole` 更新为 `FEATURE/FACTOR/SIGNAL/LABEL`
 - `MaterializationProfile` 更新为 `SERIES/STATE/DERIVE/OFFLINE`

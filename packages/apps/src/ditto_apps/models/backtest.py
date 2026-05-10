@@ -20,6 +20,9 @@ _DEFAULT_COMMISSION_MIN: float = 5.0
 _DEFAULT_STAMP_DUTY_RATE: float = 0.001
 _DEFAULT_SLIPPAGE_BPS: float = 1.0
 
+# Compile-time guard: values must stay in sync with ditto_kernel.trading constants.
+assert _DEFAULT_COMMISSION_RATE == 0.0003  # noqa: S101, PLR2004
+
 
 class RunResponse(BaseModel):
     """运行记录响应."""
