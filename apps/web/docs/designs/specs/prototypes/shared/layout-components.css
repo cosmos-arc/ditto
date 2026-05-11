@@ -3416,3 +3416,50 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
  * Optional third = Object-specific context
  * ─────────────────────────────────────────────────── */
 }
+
+/* Final-review high-risk confirmation contract */
+.risk-confirmation-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.7fr);
+  gap: var(--space-10);
+}
+
+.risk-confirmation-block {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-6);
+  background: color-mix(in oklch, var(--risk-critical-fg) 4%, var(--surface-panel-base));
+  padding: var(--space-8);
+}
+
+.risk-confirmation-title {
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.risk-confirmation-copy {
+  margin-top: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-compact);
+}
+
+.risk-confirmation-list {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.risk-confirmation-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+}
+
+.risk-confirmation-value {
+  color: var(--text-primary);
+  font-family: var(--font-family-numeric);
+  font-variant-numeric: tabular-nums;
+}
