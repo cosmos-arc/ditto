@@ -2980,7 +2980,7 @@
           <div class="risk-confirmation-grid">
             <div data-impact-summary class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
-              <p class="risk-confirmation-copy">撤单请求提交到券商通道后结果取决于成交状态；已成交部分不可撤回。</p>
+              <p class="risk-confirmation-copy">重试会按原始或修正后的订单参数重新进入提交流程；修正草稿保存后仍需再次提交确认。</p>
             </div>
             <div data-before-after class="risk-confirmation-block">
               <div class="risk-confirmation-title">操作前后</div>
@@ -2996,7 +2996,7 @@
             </div>
             <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
               <div class="risk-confirmation-title">恢复路径</div>
-              <p class="risk-confirmation-copy">撤单结果会回写订单台账；失败时保留原订单状态并提示下一步处理。</p>
+              <p class="risk-confirmation-copy">重试或修正结果会回写订单台账；失败时保留原订单状态、修正草稿和下一步处理提示。</p>
             </div>
           </div>
 

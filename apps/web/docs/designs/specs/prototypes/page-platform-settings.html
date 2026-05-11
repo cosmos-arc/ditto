@@ -926,7 +926,7 @@
         <div class="header-spacer"></div>
         <div class="header-actions" role="toolbar" aria-label="配置操作">
           <button class="btn btn-sm">验证配置</button>
-          <button class="btn btn-primary btn-sm">保存草稿</button>
+          <label for="overlay-reset-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存草稿</label>
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
@@ -1178,7 +1178,7 @@
                         <div class="form-group"><label class="form-label" for="general-fee-rate">默认手续费率</label><input id="general-fee-rate" class="form-input" type="text" value="0.025%"></div>
                         <div class="form-group"><label class="form-label" for="general-slippage">默认滑点</label><input id="general-slippage" class="form-input" type="text" value="0.01%"></div>
                       </div>
-                      <div class="settings-actions-row"><button class="btn btn-primary btn-sm">保存配置</button><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置为默认值</label></div>
+                      <div class="settings-actions-row"><label for="overlay-reset-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存配置</label><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置为默认值</label></div>
                     </div>
                   </section>
                 </div>
@@ -1251,18 +1251,18 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-reset-config">
       <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation>
-        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存或重置配置确认" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存/重置配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
-          <p data-risk-object>对象：prod-cn-a 配置草稿 r18</p>
+          <p data-risk-object>对象：prod-cn-a 配置草稿 r18 / 默认值重置</p>
           <div class="risk-confirmation-grid">
             <div data-impact-summary class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
-              <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境，正在运行任务不会自动重启。</p>
+              <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境，正在运行任务不会自动重启。重置默认值会覆盖当前表单草稿并生成可审计的配置差异。</p>
             </div>
             <div data-before-after class="risk-confirmation-block">
               <div class="risk-confirmation-title">操作前后</div>
-              <p class="risk-confirmation-copy">当前配置草稿会成为生效版本，相关连接和运行参数按新配置读取。</p>
+              <p class="risk-confirmation-copy">保存草稿会更新配置版本；保存配置会成为生效版本；重置会将当前表单恢复到默认配置。</p>
             </div>
             <div data-evidence-chain class="risk-confirmation-block">
               <div class="risk-confirmation-title">证据链</div>
@@ -1274,12 +1274,12 @@
             </div>
             <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
               <div class="risk-confirmation-title">恢复路径</div>
-              <p class="risk-confirmation-copy">可从设置变更历史回滚上一版配置；密钥类字段只显示指纹，不回显明文。</p>
+              <p class="risk-confirmation-copy">可从设置变更历史回滚上一版配置；密钥类字段只显示指纹，不回显明文。重置前快照会保留在配置历史中。</p>
             </div>
           </div>
           <div class="overlay-actions">
             <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留草稿</label>
-            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认保存配置</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认保存/重置配置</label>
           </div>
         </div>
       </div>
