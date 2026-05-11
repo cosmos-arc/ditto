@@ -59,6 +59,80 @@ describe("page-a-shares market structure map", () => {
 		expect(elementText(map, ".map-interaction-hint")).toContain("点击");
 	});
 
+	it("makes A-share map color semantics explicit instead of relying on perceived purple-cyan tint", () => {
+		const document = loadPage();
+		const html = loadHtml();
+		const map = document.querySelector(".map-container");
+
+		expect(elementText(map, "[data-map-color]")).toContain("涨跌幅");
+		expect(elementText(map, "[data-map-color]")).toContain("A股：红涨绿跌");
+		expect(elementText(map, "[data-map-metric-switcher]")).toContain("行业 Size 成交额占比");
+		expect(elementText(map, "[data-map-metric-switcher]")).toContain("个股 Size 成交额");
+		expect(elementText(map, "[data-map-metric-switcher]")).toContain("Color 涨跌幅");
+		expect(elementText(map, "[data-map-breadcrumb]")).toContain("申万一级");
+		expect(html).toContain("--map-market-up-1");
+		expect(html).toContain("--map-market-down-1");
+		expect(html).not.toContain("--map-positive-1");
+		expect(html).not.toContain("--map-negative-1");
+	});
+
+	it("requires sector treemap cells to encode direction through sign, text, and aria labels", () => {
+		const document = loadPage();
+		const cells = [...document.querySelectorAll<HTMLElement>(".treemap-cell-iv")];
+
+		expect(cells.length).toBeGreaterThanOrEqual(16);
+
+		for (const [index, cell] of cells.entries()) {
+			const direction = cell.getAttribute("data-direction");
+			const label = cell.getAttribute("aria-label") ?? "";
+			const sign = cell.querySelector<HTMLElement>(':scope > .treemap-cell-sign[aria-hidden="true"]');
+
+			expect(direction).toMatch(/^(up|down|flat)$/);
+			if (direction === "up") {
+				expect(sign?.textContent?.trim(), `cell ${index + 1}`).toBe("▲");
+				expect(label, `cell ${index + 1}`).toContain("涨幅");
+			}
+			if (direction === "down") {
+				expect(sign?.textContent?.trim(), `cell ${index + 1}`).toBe("▼");
+				expect(label, `cell ${index + 1}`).toContain("跌幅");
+			}
+			if (direction === "flat") {
+				expect(sign?.textContent?.trim(), `cell ${index + 1}`).toBe("•");
+				expect(label, `cell ${index + 1}`).toMatch(/持平|涨跌幅/);
+			}
+		}
+	});
+
+	it("applies a deterministic treemap label budget so small rectangles do not become text clutter", () => {
+		const document = loadPage();
+		const cells = [...document.querySelectorAll<HTMLElement>(".treemap-cell-iv")];
+
+		expect(cells.length).toBeGreaterThanOrEqual(16);
+
+		for (const [index, cell] of cells.entries()) {
+			const budget = cell.getAttribute("data-label-budget");
+			const name = cell.querySelector(".treemap-cell-name");
+			const change = cell.querySelector(".treemap-cell-change");
+			const volume = cell.querySelector(".treemap-cell-vol");
+
+			expect(budget, `cell ${index + 1}`).toMatch(/^(full|compact|name-only)$/);
+			expect(name, `cell ${index + 1}`).not.toBeNull();
+
+			if (budget === "full") {
+				expect(change, `cell ${index + 1}`).not.toBeNull();
+				expect(volume, `cell ${index + 1}`).not.toBeNull();
+			}
+			if (budget === "compact") {
+				expect(change, `cell ${index + 1}`).not.toBeNull();
+				expect(volume, `cell ${index + 1}`).toBeNull();
+			}
+			if (budget === "name-only") {
+				expect(change, `cell ${index + 1}`).toBeNull();
+				expect(volume, `cell ${index + 1}`).toBeNull();
+			}
+		}
+	});
+
 	it("keeps treemap and heatmap cells grouped, direction-aware, and keyboard reachable", () => {
 		const document = loadPage();
 		const treemapCells = document.querySelectorAll(".treemap-cell-iv");
@@ -119,12 +193,14 @@ describe("page-a-shares market structure map", () => {
 		const mapCells = document.querySelectorAll(".treemap-cell-iv, .heatmap-cell");
 
 		for (const step of [1, 2, 3, 4]) {
-			expect(html).toContain(`--map-positive-${step}`);
-			expect(html).toContain(`--map-negative-${step}`);
+			expect(html).toContain(`--map-market-up-${step}`);
+			expect(html).toContain(`--map-market-down-${step}`);
 			expect(html).toContain(`--heat-up-${step}`);
 			expect(html).toContain(`--heat-down-${step}`);
 		}
 
+		expect(html).not.toContain("--map-positive-");
+		expect(html).not.toContain("--map-negative-");
 		expect(html).toContain("--map-neutral-fill");
 		expect(html).toContain("--map-text-on-cell");
 		expect(html).toContain("--heat-flat");
