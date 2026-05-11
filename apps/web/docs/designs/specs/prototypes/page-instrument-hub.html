@@ -2174,28 +2174,28 @@
         <!-- CTAs -->
         <div class="header-ctas" data-decision-cluster aria-label="标的详情首屏决策">
           <!-- Overlay triggers (checkbox first, label as visual button) -->
-          <label for="overlay-add-watchlist" class="btn cursor-pointer" role="button" tabindex="0" data-decision-option aria-label="加入观察" data-answer-action>
+          <label for="overlay-add-watchlist" class="btn cursor-pointer" role="button" tabindex="0" data-decision-option aria-label="加入观察" data-answer-action data-action-tier="primary">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12m-6-6h12"/></svg>
             加入观察
           </label>
-          <label for="overlay-add-watchlist" class="btn cursor-pointer" data-decision-option aria-label="加入标的池">
+          <label for="overlay-add-watchlist" class="btn cursor-pointer" data-decision-option aria-label="加入标的池" data-action-tier="context">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h8M4 15h12"/><circle cx="17" cy="15" r="2"/></svg>
             加入标的池
           </label>
-          <label for="overlay-send-research" class="btn cursor-pointer" data-decision-option aria-label="发送到研究">
+          <label for="overlay-send-research" class="btn cursor-pointer" data-decision-option aria-label="发送到研究" data-action-tier="context">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/><path d="M7 9h4"/></svg>
             发送到研究
           </label>
-          <button class="btn" data-decision-option aria-label="打开 Chart Lab">
+          <button class="btn" data-decision-option aria-label="打开 Chart Lab" data-action-tier="overflow">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 14l4-4 3 2 7-7"/></svg>
             Chart Lab
           </button>
-          <button class="btn" type="button" data-decision-overflow aria-label="更多标的操作">...</button>
+          <button class="btn" type="button" data-decision-overflow aria-label="更多标的操作" data-action-tier="overflow">...</button>
         </div>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -2690,31 +2690,31 @@
           </div>
           <div class="pad-panel-sm">
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" class="news-list-item">
+              <label for="overlay-news-detail" class="news-list-item" data-action-tier="context">
                 <span class="news-title">贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</span>
                 <span class="news-source"><span>财联社</span><span>2小时前</span><span class="news-ai-badge">AI 摘要</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" class="news-list-item">
+              <label for="overlay-news-detail" class="news-list-item" data-action-tier="context">
                 <span class="news-title">白酒板块集体走强，北向资金净买入超15亿</span>
                 <span class="news-source"><span>东方财富</span><span>4小时前</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" class="news-list-item">
+              <label for="overlay-news-detail" class="news-list-item" data-action-tier="context">
                 <span class="news-title">茅台集团2026年营收目标锁定1800亿，系列酒占比将提升至15%</span>
                 <span class="news-source"><span>证券时报</span><span>昨日</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" class="news-list-item">
+              <label for="overlay-news-detail" class="news-list-item" data-action-tier="context">
                 <span class="news-title">招商证券：上调贵州茅台目标价至2,200元，维持"强烈推荐"</span>
                 <span class="news-source"><span>招商证券</span><span>昨日</span><span class="news-ai-badge">AI 摘要</span></span>
               </label>
             </div>
             <div class="news-item" tabindex="0">
-              <label for="overlay-news-detail" class="news-list-item">
+              <label for="overlay-news-detail" class="news-list-item" data-action-tier="context">
                 <span class="news-title">飞天茅台批价站稳2,700元，经销商信心持续回暖</span>
                 <span class="news-source"><span>21世纪经济报道</span><span>2天前</span></span>
               </label>
@@ -2802,31 +2802,31 @@
           </div>
           <div class="pad-panel-sm">
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" class="announce-list-item">
+              <label for="overlay-announcement-detail" class="announce-list-item" data-action-tier="context">
                 <span class="announce-tag annual">年报</span>
                 <div class="announce-body"><span class="announce-title">2025年年度报告</span><span class="announce-date">2026-03-25</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" class="announce-list-item">
+              <label for="overlay-announcement-detail" class="announce-list-item" data-action-tier="context">
                 <span class="announce-tag dividend">分红</span>
                 <div class="announce-body"><span class="announce-title">2025年度利润分配方案公告</span><span class="announce-date">2026-03-25</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" class="announce-list-item">
+              <label for="overlay-announcement-detail" class="announce-list-item" data-action-tier="context">
                 <span class="announce-tag board">董事会</span>
                 <div class="announce-body"><span class="announce-title">第二届董事会第四十二次会议决议公告</span><span class="announce-date">2026-03-20</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" class="announce-list-item">
+              <label for="overlay-announcement-detail" class="announce-list-item" data-action-tier="context">
                 <span class="announce-tag shareholder">股东</span>
                 <div class="announce-body"><span class="announce-title">关于召开2025年年度股东大会的通知</span><span class="announce-date">2026-03-15</span></div>
               </label>
             </div>
             <div class="announce-item" tabindex="0">
-              <label for="overlay-announcement-detail" class="announce-list-item">
+              <label for="overlay-announcement-detail" class="announce-list-item" data-action-tier="context">
                 <span class="announce-tag board">董事会</span>
                 <div class="announce-body"><span class="announce-title">投资者关系活动记录表（2026年3月）</span><span class="announce-date">2026-03-10</span></div>
               </label>

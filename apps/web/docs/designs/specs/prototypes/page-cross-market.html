@@ -1829,18 +1829,18 @@
         </div>
         <div class="header-spacer"></div>
         <div class="header-actions">
-          <div class="header-action-btn" title="Time Frame">
+          <div class="header-action-btn" title="Time Frame" data-action-tier="command">
             <span class="header-timeframe">1D</span>
           </div>
           <div class="header-timestamp">09:46 CST</div>
-          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器">
+          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器" data-action-tier="context">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
           </label>
 
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <span class="header-led" role="status" aria-label="数据连接状态: 正常"></span>
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -1888,7 +1888,7 @@
           <span class="context-bar-indicator" aria-label="2 条预警"></span>
         </div>
         <div class="context-bar-sep"></div>
-        <label for="overlay-pin-viewpoint" class="context-bar-item cursor-pointer pin-viewpoint-trigger" title="固定当前视角">
+        <label for="overlay-pin-viewpoint" class="context-bar-item cursor-pointer pin-viewpoint-trigger" title="固定当前视角" data-action-tier="context">
           <span class="context-bar-label">固定视角</span>
         </label>
         <span class="pin-viewpoint-status" data-pin-viewpoint-status role="status" aria-live="polite">已固定</span>
@@ -1901,7 +1901,7 @@
 
       <!-- Scope Strip (L1: today's interpretation) -->
       <div class="scope-strip" data-contract-slot="scope-strip" data-primary-answer-equivalent data-primary-weight="dominant" role="status" aria-label="影响范围：全球市场 · 1D · FOMC 前夜">
-        <div class="context-bar-item scope-strip-item--lead" data-answer-judgment data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="cross-market-matrix" aria-label="查看相关矩阵">
+        <div class="context-bar-item scope-strip-item--lead" data-answer-judgment data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="cross-market-matrix" aria-label="查看相关矩阵" data-action-tier="primary">
           <span class="context-bar-label">判断</span>
           <span class="context-bar-value regime-on">港股弹性领跑，黄金避险仍强，美元走弱支撑成长</span>
         </div>

@@ -1722,17 +1722,17 @@
     <header class="shell-header">
       <h1 class="header-title">执行账本</h1>
       <div class="header-filters" data-contract-slot="filter-bar" role="toolbar" aria-label="订单筛选">
-        <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话">
+        <button class="filter-btn" tabindex="0" aria-label="会话: 主策略会话" data-action-tier="context">
           <span>会话</span>
           <span class="filter-value">主策略会话</span>
           <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
         </button>
-        <button class="filter-btn" tabindex="0" aria-label="账户: 中信建投">
+        <button class="filter-btn" tabindex="0" aria-label="账户: 中信建投" data-action-tier="context">
           <span>账户</span>
           <span class="filter-value">中信建投</span>
           <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
         </button>
-        <button class="filter-btn" tabindex="0" aria-label="券商: 全部">
+        <button class="filter-btn" tabindex="0" aria-label="券商: 全部" data-action-tier="context">
           <span>券商</span>
           <span class="filter-value">全部</span>
           <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8l5 5 5-5"/></svg>
@@ -1740,30 +1740,30 @@
         <span class="filter-sep" aria-hidden="true"></span>
         <!-- JS Tabs: 快速过滤 -->
         <div data-tabs="order-tabs" role="tablist" aria-label="订单快速过滤">
-          <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true" id="tab-all" aria-controls="panel-all">全部</button>
-          <button class="filter-btn" data-tab-target="pending" role="tab" aria-selected="false" id="tab-pending" aria-controls="panel-pending">待处理</button>
-          <button class="filter-btn" data-tab-target="filled" role="tab" aria-selected="false" id="tab-filled" aria-controls="panel-filled">已成</button>
-          <button class="filter-btn" data-tab-target="cancelled" role="tab" aria-selected="false" id="tab-cancelled" aria-controls="panel-cancelled">撤单</button>
+          <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true" id="tab-all" aria-controls="panel-all" data-action-tier="context">全部</button>
+          <button class="filter-btn" data-tab-target="pending" role="tab" aria-selected="false" id="tab-pending" aria-controls="panel-pending" data-action-tier="context">待处理</button>
+          <button class="filter-btn" data-tab-target="filled" role="tab" aria-selected="false" id="tab-filled" aria-controls="panel-filled" data-action-tier="context">已成</button>
+          <button class="filter-btn" data-tab-target="cancelled" role="tab" aria-selected="false" id="tab-cancelled" aria-controls="panel-cancelled" data-action-tier="context">撤单</button>
         </div>
         <span class="filter-sep" aria-hidden="true"></span>
-        <button class="filter-btn" tabindex="0" aria-label="日期范围: 今日">
+        <button class="filter-btn" tabindex="0" aria-label="日期范围: 今日" data-action-tier="context">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="1"/><path d="M3 9h14M7 2v4M13 2v4"/></svg>
           <span class="filter-value">今日</span>
         </button>
       </div>
       <div class="header-spacer"></div>
       <div class="header-actions" role="toolbar" aria-label="页面操作">
-        <button class="filter-btn" tabindex="0" aria-label="刷新订单" title="刷新">
+        <button class="filter-btn" tabindex="0" aria-label="刷新订单" title="刷新" data-action-tier="context">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10a6 6 0 0111.5-2.5M16 10a6 6 0 01-11.5 2.5"/><path d="M15.5 4.5v3h-3M4.5 15.5v-3h3"/></svg>
           刷新
         </button>
-        <div class="header-action-btn" tabindex="0" role="button" aria-label="导出订单" title="导出">
+        <div class="header-action-btn" tabindex="0" role="button" aria-label="导出订单" title="导出" data-action-tier="context">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10m0 0l-3-3m3 3l3-3M3 17h14"/></svg>
         </div>
 
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -1812,27 +1812,27 @@
       <input type="radio" name="orders-tab" id="orders-failed" class="tab-radio sr-only">
 
       <div class="status-tabs">
-        <label for="orders-pending" class="status-tab label-tab" role="tab" id="tab-orders-pending" aria-selected="false" aria-controls="panel-orders-pending" data-answer-evidence>
+        <label for="orders-pending" class="status-tab label-tab" role="tab" id="tab-orders-pending" aria-selected="false" aria-controls="panel-orders-pending" data-answer-evidence data-action-tier="context">
           <span class="tab-dot pending" aria-hidden="true"></span>
           待提交
           <span class="tab-count">2</span>
         </label>
-        <label for="orders-submitted" class="status-tab label-tab" role="tab" id="tab-orders-submitted" aria-selected="false" aria-controls="panel-orders-submitted" data-answer-evidence>
+        <label for="orders-submitted" class="status-tab label-tab" role="tab" id="tab-orders-submitted" aria-selected="false" aria-controls="panel-orders-submitted" data-answer-evidence data-action-tier="context">
           <span class="tab-dot submitted" aria-hidden="true"></span>
           已提交
           <span class="tab-count">5</span>
         </label>
-        <label for="orders-partial" class="status-tab label-tab" role="tab" id="tab-orders-partial" aria-selected="false" aria-controls="panel-orders-partial" data-answer-judgment>
+        <label for="orders-partial" class="status-tab label-tab" role="tab" id="tab-orders-partial" aria-selected="false" aria-controls="panel-orders-partial" data-answer-judgment data-action-tier="context">
           <span class="tab-dot partial" aria-hidden="true"></span>
           1 笔部分成交需处理
           <span class="tab-count" data-answer-metric>1</span>
         </label>
-        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true" id="tab-orders-done" aria-controls="panel-orders-done">
+        <label for="orders-done" class="status-tab label-tab" role="tab" aria-selected="true" id="tab-orders-done" aria-controls="panel-orders-done" data-action-tier="context">
           <span class="tab-dot done" aria-hidden="true"></span>
           已完成
           <span class="tab-count">148</span>
         </label>
-        <label for="orders-failed" class="status-tab label-tab" role="tab" id="tab-orders-failed" aria-selected="false" aria-controls="panel-orders-failed" data-answer-evidence>
+        <label for="orders-failed" class="status-tab label-tab" role="tab" id="tab-orders-failed" aria-selected="false" aria-controls="panel-orders-failed" data-answer-evidence data-action-tier="context">
           <span class="tab-dot failed" aria-hidden="true"></span>
           失败/撤单
           <span class="tab-count">12</span>
@@ -1840,9 +1840,9 @@
       </div>
       <div class="status-strip-spacer"></div>
       <div class="status-strip-actions" data-bulk-action-bar role="toolbar" aria-label="订单批量操作">
-        <label for="overlay-retry-submit" class="strip-action primary label-trigger" tabindex="0" role="button" aria-label="重试失败订单" data-answer-action>重试失败订单</label>
-        <label for="overlay-batch-cancel" class="strip-action danger label-trigger" tabindex="0" role="button" aria-label="批量撤单">撤单</label>
-        <label for="overlay-retry-submit" class="strip-action secondary label-trigger" tabindex="0" role="button" aria-label="批量重试">重试</label>
+        <label for="overlay-retry-submit" class="strip-action primary label-trigger" tabindex="0" role="button" aria-label="重试失败订单" data-answer-action data-action-tier="primary">重试失败订单</label>
+        <label for="overlay-batch-cancel" class="strip-action danger label-trigger" tabindex="0" role="button" aria-label="批量撤单" data-action-tier="overflow">撤单</label>
+        <label for="overlay-retry-submit" class="strip-action secondary label-trigger" tabindex="0" role="button" aria-label="批量重试" data-action-tier="overflow">重试</label>
       </div>
     </div>
 
@@ -2690,9 +2690,9 @@
         <div class="pagination-bar">
           <span class="pagination-info">共 2 条 · 第 1/1 页</span>
           <div class="pagination-controls">
-            <button class="pagination-btn" disabled aria-label="上一页">&#8249;</button>
-            <button class="pagination-btn active">1</button>
-            <button class="pagination-btn" disabled aria-label="下一页">&#8250;</button>
+            <button class="pagination-btn" disabled aria-label="上一页" data-action-tier="context">&#8249;</button>
+            <button class="pagination-btn active" data-action-tier="context">1</button>
+            <button class="pagination-btn" disabled aria-label="下一页" data-action-tier="context">&#8250;</button>
           </div>
         </div>
       </div>
@@ -2924,7 +2924,7 @@
           </div>
           <div class="overlay-actions">
             <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消，保留订单</label>
-            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action>确认撤单</label>
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action data-action-tier="primary">确认撤单</label>
           </div>
         </div>
       </div>
@@ -3002,7 +3002,7 @@
 
           <div class="overlay-actions">
             <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消</label>
-            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger" data-confirm-control data-danger-action>确认重试/修正</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger" data-confirm-control data-danger-action data-action-tier="primary">确认重试/修正</label>
           </div>
         </div>
       </div>
@@ -3157,7 +3157,7 @@
           </div>
           <div class="overlay-actions">
             <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消</label>
-            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action>确认批量撤单</label>
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action data-action-tier="primary">确认批量撤单</label>
           </div>
         </div>
       </div>

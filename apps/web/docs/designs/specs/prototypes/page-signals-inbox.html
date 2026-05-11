@@ -1853,7 +1853,7 @@
 
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -1892,22 +1892,22 @@
         <input type="radio" name="signals" id="tab-ordered" class="tab-radio sr-only">
 
         <!-- Tab labels -->
-        <label for="tab-pending" class="scope-tab" role="tab" aria-selected="true" id="tab-control-pending" aria-controls="panel-pending">
+        <label for="tab-pending" class="scope-tab" role="tab" aria-selected="true" id="tab-control-pending" aria-controls="panel-pending" data-action-tier="context">
           待复核 <span class="tab-count">12</span>
         </label>
-        <label for="tab-confirmed" class="scope-tab" role="tab" aria-selected="false" id="tab-control-confirmed" aria-controls="panel-confirmed">
+        <label for="tab-confirmed" class="scope-tab" role="tab" aria-selected="false" id="tab-control-confirmed" aria-controls="panel-confirmed" data-action-tier="context">
           已确认 <span class="tab-count">34</span>
         </label>
-        <label for="tab-ignored" class="scope-tab" role="tab" aria-selected="false" id="tab-control-ignored" aria-controls="panel-ignored">
+        <label for="tab-ignored" class="scope-tab" role="tab" aria-selected="false" id="tab-control-ignored" aria-controls="panel-ignored" data-action-tier="context">
           已忽略 <span class="tab-count">8</span>
         </label>
-        <label for="tab-ordered" class="scope-tab" role="tab" aria-selected="false" id="tab-control-ordered" aria-controls="panel-ordered">
+        <label for="tab-ordered" class="scope-tab" role="tab" aria-selected="false" id="tab-control-ordered" aria-controls="panel-ordered" data-action-tier="context">
           已转订单 <span class="tab-count">156</span>
         </label>
       </div>
 
       <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-secondary-context>
-        <label for="overlay-batch-confirm" class="scope-status-item" role="button" tabindex="0" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action>
+        <label for="overlay-batch-confirm" class="scope-status-item" role="button" tabindex="0" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action data-action-tier="primary">
           <span class="scope-status-dot warn"></span>
           优先处理贵州茅台买入信号：置信度 <span data-answer-metric>82%</span>，若批准后组合 Beta 0.94 · 批准 / 拒绝 / 查看证据
         </label>
@@ -1935,24 +1935,24 @@
         <div class="signals-header" data-active-filters-summary data-secondary-context>
           <div class="signals-filters">
             <div class="filter-group" role="group" aria-label="信号来源">
-              <button class="filter-btn active" aria-pressed="true">全部</button>
-              <button class="filter-btn" aria-pressed="false">策略</button>
-              <button class="filter-btn" aria-pressed="false">AI</button>
-              <button class="filter-btn" aria-pressed="false">手动</button>
+              <button class="filter-btn active" aria-pressed="true" data-action-tier="context">全部</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">策略</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">AI</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">手动</button>
             </div>
             <div class="filter-group" role="group" aria-label="优先级">
-              <button class="filter-btn active" aria-pressed="true">全部</button>
-              <button class="filter-btn" aria-pressed="false">高</button>
-              <button class="filter-btn" aria-pressed="false">中</button>
-              <button class="filter-btn" aria-pressed="false">低</button>
+              <button class="filter-btn active" aria-pressed="true" data-action-tier="context">全部</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">高</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">中</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">低</button>
             </div>
           </div>
           <div class="signals-filters" data-tabs="signal-tabs">
             <div class="filter-group" role="tablist" aria-label="信号方向过滤">
-              <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true" id="tab-all" aria-controls="panel-all">全部</button>
-              <button class="filter-btn" data-tab-target="buy" role="tab" aria-selected="false" id="tab-buy" aria-controls="panel-buy">买入</button>
-              <button class="filter-btn" data-tab-target="sell" role="tab" aria-selected="false" id="tab-sell" aria-controls="panel-sell">卖出</button>
-              <button class="filter-btn" data-tab-target="hold" role="tab" aria-selected="false" id="tab-hold" aria-controls="panel-hold">持有</button>
+              <button class="filter-btn active" data-tab-target="all" role="tab" aria-selected="true" id="tab-all" aria-controls="panel-all" data-action-tier="context">全部</button>
+              <button class="filter-btn" data-tab-target="buy" role="tab" aria-selected="false" id="tab-buy" aria-controls="panel-buy" data-action-tier="context">买入</button>
+              <button class="filter-btn" data-tab-target="sell" role="tab" aria-selected="false" id="tab-sell" aria-controls="panel-sell" data-action-tier="context">卖出</button>
+              <button class="filter-btn" data-tab-target="hold" role="tab" aria-selected="false" id="tab-hold" aria-controls="panel-hold" data-action-tier="context">持有</button>
             </div>
           </div>
           <div class="account-selector" tabindex="0" role="button" aria-label="切换账户">
@@ -2652,35 +2652,35 @@
         <!-- Actions -->
         <div class="detail-actions">
           <!-- Overlay trigger: 确认信号 → 弹出订单复核面板 -->
-          <label for="overlay-order-confirm" class="detail-action primary" role="button" tabindex="0" aria-label="确认转入订单复核" data-answer-action>
+          <label for="overlay-order-confirm" class="detail-action primary" role="button" tabindex="0" aria-label="确认转入订单复核" data-answer-action data-action-tier="primary">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             确认转入订单复核
           </label>
           <!-- Overlay trigger: 确认信号→生成订单复核 → 弹出信号确认 Modal -->
-          <label for="overlay-signal-confirm-to-order" class="detail-action secondary" tabindex="0" aria-label="确认生成订单复核">
+          <label for="overlay-signal-confirm-to-order" class="detail-action secondary" tabindex="0" aria-label="确认生成订单复核" data-action-tier="overflow">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
             确认生成订单复核
           </label>
           <!-- Overlay trigger: 生成订单复核 → 弹出订单复核面板 -->
-          <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核">
+          <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核" data-action-tier="overflow">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
             生成订单复核
           </label>
           <!-- Overlay trigger: AI 分析信号 → 弹出 AI 解读 Modal -->
-          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="AI 分析信号">
+          <label for="overlay-ai-read" class="detail-action secondary" tabindex="0" aria-label="AI 分析信号" data-action-tier="overflow">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l2 4.5L15 7.5l-3.5 3.5.8 5L8 13.5 3.7 16l.8-5L1 7.5l5-1L8 2z"/></svg>
             AI 分析信号
           </label>
-          <button class="detail-action ghost" tabindex="0" aria-label="查看来源回测">
+          <button class="detail-action ghost" tabindex="0" aria-label="查看来源回测" data-action-tier="context">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 2 5-6"/><circle cx="14" cy="4" r="1.5" fill="currentColor"/></svg>
             查看策略回测
           </button>
-          <button class="detail-action ghost" tabindex="0" aria-label="查看来源策略">
+          <button class="detail-action ghost" tabindex="0" aria-label="查看来源策略" data-action-tier="context">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M6 3v10"/></svg>
             查看策略详情
           </button>
-          <label for="overlay-batch-confirm" class="detail-action ghost" tabindex="0" aria-label="驳回信号">
+          <label for="overlay-batch-confirm" class="detail-action ghost" tabindex="0" aria-label="驳回信号" data-action-tier="overflow">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
             驳回信号
           </label>

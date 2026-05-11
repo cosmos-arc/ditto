@@ -2051,28 +2051,28 @@
       <div class="header-spacer"></div>
       <div class="studio-actions header-actions" role="toolbar" aria-label="策略工作台首屏决策" data-decision-cluster>
 
-        <label for="overlay-save-strategy" class="studio-action" tabindex="0" data-decision-option aria-label="保存策略">
+        <label for="overlay-save-strategy" class="studio-action" tabindex="0" data-decision-option aria-label="保存策略" data-action-tier="context">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10l2 2v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4l2-1z"/><path d="M7 3v5h6V3"/><path d="M6 16h8"/></svg>
           保存
         </label>
 
-        <label for="overlay-validation-toast" class="studio-action" tabindex="0" data-decision-option aria-label="校验策略" data-action-icon="shield-check">
+        <label for="overlay-validation-toast" class="studio-action" tabindex="0" data-decision-option aria-label="校验策略" data-action-icon="shield-check" data-action-tier="context">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l6 2.2v4.6c0 3.8-2.4 7.1-6 8.7-3.6-1.6-6-4.9-6-8.7V4.2L10 2z"/><path d="M7.2 10.2l1.8 1.8 3.8-4.2"/></svg>
           校验
         </label>
-        <button class="studio-action" tabindex="0" data-decision-option aria-label="执行 Dry Run 模拟" data-action-icon="test-tube">
+        <button class="studio-action" tabindex="0" data-decision-option aria-label="执行 Dry Run 模拟" data-action-icon="test-tube" data-action-tier="overflow">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h6"/><path d="M8 3v5.5l-3.8 5.8A2.3 2.3 0 006.1 18h7.8a2.3 2.3 0 001.9-3.7L12 8.5V3"/><path d="M6.8 13h6.4"/></svg>
           Dry Run
         </button>
 
-        <label for="overlay-backtest-config" class="studio-action primary" role="button" tabindex="0" data-decision-option aria-label="提交回测" data-action-icon="rocket" data-answer-action>
+        <label for="overlay-backtest-config" class="studio-action primary" role="button" tabindex="0" data-decision-option aria-label="提交回测" data-action-icon="rocket" data-answer-action data-action-tier="primary">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3c2.5.6 4.4 2.5 5 5l-5.5 5.5-4-4L12 3z"/><path d="M8 10l-3 1 4 4 1-3"/><path d="M5 15l-2 2"/><circle cx="13" cy="7" r="1.2"/></svg>
           提交回测
         </label>
-        <button class="studio-action" type="button" data-decision-overflow aria-label="更多策略操作">...</button>
+        <button class="studio-action" type="button" data-decision-overflow aria-label="更多策略操作" data-action-tier="overflow">...</button>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -2289,7 +2289,7 @@
             <div class="studio-panel-title">因子权重配置</div>
             <div class="studio-panel-subtitle">调整各因子在综合评分中的权重</div>
           </div>
-          <button class="studio-action" tabindex="0" aria-label="自动均衡权重">
+          <button class="studio-action" tabindex="0" aria-label="自动均衡权重" data-action-tier="context">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 10h12M10 4l4 6-4 6"/></svg>
             自动均衡
           </button>

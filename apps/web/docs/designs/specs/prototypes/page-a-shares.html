@@ -1904,20 +1904,20 @@
         <span class="header-subtitle">总览</span>
         <div class="header-spacer"></div>
         <div class="header-actions">
-          <div class="header-action-btn" title="时间框架">
+          <div class="header-action-btn" title="时间框架" data-action-tier="command">
             <span class="header-timeframe">1D</span>
           </div>
           <div class="header-timestamp">09:46 CST</div>
-          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器">
+          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器" data-action-tier="context">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
           </label>
-          <label for="overlay-ai-analysis" class="header-action-btn cursor-pointer" title="AI 解读" aria-label="打开 AI 解读">
+          <label for="overlay-ai-analysis" class="header-action-btn cursor-pointer" title="AI 解读" aria-label="打开 AI 解读" data-action-tier="context">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l2.5 5.5L18 9l-4 4 1 6-5-2.5L5 19l1-6-4-4 5.5-1.5L10 2z"/></svg>
           </label>
 
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -1956,7 +1956,7 @@
           <span class="context-bar-value regime-on" data-tooltip="上涨家数 > 60%，市场广度偏强">偏强</span>
         </div>
         <div class="context-bar-sep"></div>
-        <label for="overlay-northbound-detail" class="context-bar-item cursor-pointer" title="查看北向资金详情" role="button" tabindex="0" aria-label="查看北向资金详情，当前净流入 12 亿">
+        <label for="overlay-northbound-detail" class="context-bar-item cursor-pointer" title="查看北向资金详情" role="button" tabindex="0" aria-label="查看北向资金详情，当前净流入 12 亿" data-action-tier="context">
           <span class="context-bar-label">北向</span>
           <span class="context-bar-value inflow iv-text-up dir-up" data-tooltip="点击查看北向资金分时详情">+12 亿</span>
         </label>
@@ -1976,7 +1976,7 @@
 
       <!-- Scope Strip -->
       <div class="scope-strip" data-contract-slot="scope-strip" role="status" aria-label="影响范围：A股市场主线与资金轮动" data-primary-answer-equivalent data-primary-weight="dominant">
-        <div class="scope-tag lead" data-tooltip="今日领涨板块，AI 算力 + 半导体设备" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="main-content" aria-label="查看 AI / 半导体主线">查看 AI / 半导体主线</div>
+        <div class="scope-tag lead" data-tooltip="今日领涨板块，AI 算力 + 半导体设备" data-answer-action data-answer-evidence role="button" tabindex="0" aria-controls="main-content" aria-label="查看 AI / 半导体主线" data-action-tier="primary">查看 AI / 半导体主线</div>
         <span class="scope-sep">|</span>
         <div class="scope-tag lag" data-tooltip="今日领跌板块，地产风险 + 银行跟跌" data-answer-evidence>对比地产 / 银行拖累</div>
         <span class="scope-sep">|</span>

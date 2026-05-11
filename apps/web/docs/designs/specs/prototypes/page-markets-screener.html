@@ -1959,16 +1959,16 @@
       </div>
       <div class="header-spacer"></div>
       <div class="header-btn-group-left">
-        <label for="overlay-save-preset" class="btn ov-label-btn">保存视图</label>
-        <button class="btn btn-primary" data-filter-action="apply">执行筛选</button>
+        <label for="overlay-save-preset" class="btn ov-label-btn" data-action-tier="context">保存视图</label>
+        <button class="btn btn-primary" data-filter-action="apply" data-action-tier="primary">执行筛选</button>
       </div>
       <div class="header-btn-group-right">
-        <button class="btn btn-ghost">重置</button>
-        <label for="overlay-export" class="btn btn-ghost ov-label-btn">导出</label>
+        <button class="btn btn-ghost" data-action-tier="overflow">重置</button>
+        <label for="overlay-export" class="btn btn-ghost ov-label-btn" data-action-tier="overflow">导出</label>
 
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -2063,7 +2063,7 @@
         <span class="screener-insight-label">Filters</span>
         <span class="screener-insight-value">3 条激活 · 行业/市值/信号</span>
       </div>
-      <div class="screener-insight-item" data-answer-action role="button" tabindex="0" aria-controls="main-content catalog-detail-panel" data-drilldown-target="catalog-detail-panel" aria-label="查看筛选结果去向">
+      <div class="screener-insight-item" data-answer-action role="button" tabindex="0" aria-controls="main-content catalog-detail-panel" data-drilldown-target="catalog-detail-panel" aria-label="查看筛选结果去向" data-action-tier="context">
         <span class="screener-insight-label">Destination</span>
         <span class="screener-insight-value">观察 · 标的池 · 研究 · 对比</span>
       </div>
@@ -2096,7 +2096,7 @@
             <span class="condition-control"><span class="condition-control-label">关系</span><span data-condition-operator>&lt;</span></span>
             <span class="condition-control"><span class="condition-control-label">阈值</span><span data-condition-value>20</span></span>
             <button class="btn btn-ghost" data-filter-action="add-condition">添加条件</button>
-            <button class="btn btn-primary" data-filter-action="apply">应用筛选</button>
+            <button class="btn btn-primary" data-filter-action="apply" data-action-tier="context">应用筛选</button>
           </div>
         </div>
         <div class="filter-workbench-section">
@@ -2547,7 +2547,7 @@
         </div>
         <div class="detail-actions-body">
           <button class="btn">加入观察</button>
-          <label for="overlay-generate-pool" class="btn btn-primary ov-label-btn">加入标的池</label>
+          <label for="overlay-generate-pool" class="btn btn-primary ov-label-btn" data-action-tier="primary">加入标的池</label>
           <button class="btn btn-ghost">发送到研究</button>
         </div>
       </div>
@@ -2561,19 +2561,19 @@
         </summary>
         <div class="context-section-body">
           <!-- Preset 1 -->
-          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：高ROE低估值" data-reveal="fade-up" data-reveal-delay="0" data-tooltip="ROE > 15% 且 PE < 20 的标的">
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：高ROE低估值" data-reveal="fade-up" data-reveal-delay="0" data-tooltip="ROE > 15% 且 PE < 20 的标的" data-action-tier="context">
             <div class="preset-card-title">高ROE低估值</div>
             <div class="preset-card-desc">ROE&gt;15%, PE&lt;20</div>
             <div class="preset-card-match">匹配 23 只</div>
           </div>
           <!-- Preset 2 -->
-          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：动量强势" data-reveal="fade-up" data-reveal-delay="80" data-tooltip="20日涨幅 > 10% 且成交额放大">
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：动量强势" data-reveal="fade-up" data-reveal-delay="80" data-tooltip="20日涨幅 > 10% 且成交额放大" data-action-tier="context">
             <div class="preset-card-title">动量强势</div>
             <div class="preset-card-desc">20日涨幅&gt;10%, 成交额放大</div>
             <div class="preset-card-match">匹配 45 只</div>
           </div>
           <!-- Preset 3 -->
-          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：低波动红利" data-reveal="fade-up" data-reveal-delay="160" data-tooltip="波动率 < 15% 且股息率 > 3%">
+          <div class="preset-card" role="button" tabindex="0" aria-label="筛选预设：低波动红利" data-reveal="fade-up" data-reveal-delay="160" data-tooltip="波动率 < 15% 且股息率 > 3%" data-action-tier="context">
             <div class="preset-card-title">低波动红利</div>
             <div class="preset-card-desc">波动率&lt;15%, 股息率&gt;3%</div>
             <div class="preset-card-match">匹配 18 只</div>
@@ -2635,7 +2635,7 @@
               <span class="compare-item-spark sparkline-up"><svg role="img" data-sparkline='{"data":[5,8,6,10,14,16,20],"series":"up","width":32,"height":12}' aria-label="走势"></svg></span>
             </div>
             <div class="compare-item-actions">
-              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除贵州茅台">&times;</span>
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除贵州茅台" data-action-tier="overflow">&times;</span>
             </div>
           </div>
           <div class="compare-item">
@@ -2647,7 +2647,7 @@
               <span class="compare-item-spark sparkline-up"><svg role="img" data-sparkline='{"data":[6,8,14,10,18,16,22],"series":"up","width":32,"height":12}' aria-label="走势"></svg></span>
             </div>
             <div class="compare-item-actions">
-              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除宁德时代">&times;</span>
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除宁德时代" data-action-tier="overflow">&times;</span>
             </div>
           </div>
           <div class="compare-item">
@@ -2659,10 +2659,10 @@
               <span class="compare-item-spark sparkline-up"><svg role="img" data-sparkline='{"data":[4,6,8,10,16,14,20],"series":"up","width":32,"height":12}' aria-label="走势"></svg></span>
             </div>
             <div class="compare-item-actions">
-              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际">&times;</span>
+              <span class="compare-item-remove" role="button" tabindex="0" aria-label="移除中芯国际" data-action-tier="overflow">&times;</span>
             </div>
           </div>
-          <label for="overlay-compare" class="btn btn-primary compare-cta ov-label-btn">开始对比 &rarr;</label>
+          <label for="overlay-compare" class="btn btn-primary compare-cta ov-label-btn" data-action-tier="primary">开始对比 &rarr;</label>
         </div>
       </details>
     </div>

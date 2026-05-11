@@ -259,10 +259,10 @@
         </div>
         <div class="header-spacer"></div>
         <div class="header-btn-group">
-          <button class="btn btn-primary">新建策略</button>
+          <button class="btn btn-primary" data-action-tier="primary">新建策略</button>
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
-        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
+        <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command" data-action-tier="command">
           <span class="command-prompt" aria-hidden="true">&gt;</span>
           <span class="command-query">命令 / 搜索</span>
           <kbd class="command-shortcut">Ctrl K</kbd>
@@ -299,19 +299,19 @@
         <div class="filter-divider"></div>
         <div class="filter-group">
           <span class="filter-label">类型:</span>
-          <button class="filter-chip active">全部</button>
-          <button class="filter-chip">Alpha</button>
-          <button class="filter-chip">择时</button>
-          <button class="filter-chip">行业轮动</button>
-          <button class="filter-chip">多因子</button>
+          <button class="filter-chip active" data-action-tier="context">全部</button>
+          <button class="filter-chip" data-action-tier="context">Alpha</button>
+          <button class="filter-chip" data-action-tier="context">择时</button>
+          <button class="filter-chip" data-action-tier="context">行业轮动</button>
+          <button class="filter-chip" data-action-tier="context">多因子</button>
         </div>
         <div class="filter-divider"></div>
         <div class="filter-group">
           <span class="filter-label">状态:</span>
-          <button class="filter-chip active">全部</button>
-          <button class="filter-chip">运行中</button>
-          <button class="filter-chip">已暂停</button>
-          <button class="filter-chip">草稿</button>
+          <button class="filter-chip active" data-action-tier="context">全部</button>
+          <button class="filter-chip" data-action-tier="context">运行中</button>
+          <button class="filter-chip" data-action-tier="context">已暂停</button>
+          <button class="filter-chip" data-action-tier="context">草稿</button>
         </div>
         <div class="filter-spacer"></div>
         <span class="filter-count" data-active-filters-summary>共 <span>12 个策略</span></span>
@@ -336,7 +336,7 @@
           <span class="perf-value negative">2 暂停</span>
           <span class="perf-sub">暂停原因: 回撤 / 数据延迟</span>
         </div>
-        <div class="perf-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳策略">
+        <div class="perf-item" data-answer-action role="button" tabindex="0" aria-controls="catalog-detail-panel" aria-label="查看最佳策略" data-action-tier="context">
           <span class="perf-label">最佳健康策略</span>
           <span class="perf-value strategy-name">Alpha-Momentum-v3</span>
         </div>
@@ -384,7 +384,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>24.3%</td>
                   <td class="right numeric metric-risk heat-bg-4 bar-w-33">-8.2%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 16 L6 14 L12 15 L18 11 L24 12 L30 9 L36 10 L42 6 L48 7 L54 3 L60 2 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 16 L6 14 L12 15 L18 11 L24 12 L30 9 L36 10 L42 6 L48 7 L54 3 L60 2"></path></svg></span><span>2026-04-21</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -399,7 +399,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>21.8%</td>
                   <td class="right numeric metric-risk heat-bg-4 bar-w-39">-9.7%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 18 L6 16 L12 14 L18 15 L24 12 L30 10 L36 11 L42 8 L48 6 L54 4 L60 3 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 18 L6 16 L12 14 L18 15 L24 12 L30 10 L36 11 L42 8 L48 6 L54 4 L60 3"></path></svg></span><span>2026-04-21</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -414,7 +414,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>19.4%</td>
                   <td class="right numeric metric-risk heat-bg-3 bar-w-40">-10.1%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline up"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 14 L6 12 L12 13 L18 10 L24 11 L30 8 L36 9 L42 7 L48 5 L54 6 L60 4 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 14 L6 12 L12 13 L18 10 L24 11 L30 8 L36 9 L42 7 L48 5 L54 6 L60 4"></path></svg></span><span>2026-04-21</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -429,7 +429,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>16.2%</td>
                   <td class="right numeric metric-risk heat-bg-3 bar-w-46">-11.4%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 15 L6 13 L12 14 L18 11 L24 12 L30 10 L36 8 L42 9 L48 7 L54 5 L60 6 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 15 L6 13 L12 14 L18 11 L24 12 L30 10 L36 8 L42 9 L48 7 L54 5 L60 6"></path></svg></span><span>2026-04-20</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -444,7 +444,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>13.4%</td>
                   <td class="right numeric metric-risk heat-bg-4 bar-w-27">-6.8%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 12 L6 14 L12 11 L18 13 L24 9 L30 10 L36 8 L42 6 L48 7 L54 5 L60 4 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 12 L6 14 L12 11 L18 13 L24 9 L30 10 L36 8 L42 6 L48 7 L54 5 L60 4"></path></svg></span><span>2026-04-21</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -459,7 +459,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>11.9%</td>
                   <td class="right numeric metric-risk heat-bg-4 bar-w-38">-9.6%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 4 L6 5 L12 3 L18 6 L24 8 L30 7 L36 10 L42 9 L48 12 L54 14 L60 13 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 4 L6 5 L12 3 L18 6 L24 8 L30 7 L36 10 L42 9 L48 12 L54 14 L60 13"></path></svg></span><span>2026-04-18</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -474,7 +474,7 @@
                   <td class="right numeric">12.1%</td>
                   <td class="right numeric metric-risk heat-bg-3 bar-w-49">-12.3%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 3 L6 4 L12 6 L18 5 L24 8 L30 10 L36 9 L42 12 L48 14 L54 13 L60 16 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 3 L6 4 L12 6 L18 5 L24 8 L30 10 L36 9 L42 12 L48 14 L54 13 L60 16"></path></svg></span><span>2026-04-15</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -489,7 +489,7 @@
                   <td class="right numeric">9.2%</td>
                   <td class="right numeric metric-risk heat-bg-5 bar-w-20">-4.9%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 10 L6 8 L12 9 L18 7 L24 8 L30 6 L36 7 L42 5 L48 6 L54 4 L60 5 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 10 L6 8 L12 9 L18 7 L24 8 L30 6 L36 7 L42 5 L48 6 L54 4 L60 5"></path></svg></span><span>2026-04-13</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -504,7 +504,7 @@
                   <td class="right numeric">8.5%</td>
                   <td class="right numeric metric-risk heat-bg-4 bar-w-22">-5.4%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 6 L6 5 L12 7 L18 8 L24 6 L30 9 L36 11 L42 10 L48 13 L54 15 L60 14 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 6 L6 5 L12 7 L18 8 L24 6 L30 9 L36 11 L42 10 L48 13 L54 15 L60 14"></path></svg></span><span>2026-04-10</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -519,7 +519,7 @@
                   <td class="right numeric cell-change-up"><span class="metric-delta">▲</span>15.1%</td>
                   <td class="right numeric metric-risk heat-bg-3 bar-w-59">-14.7%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 8 L6 10 L12 7 L18 9 L24 6 L30 8 L36 5 L42 7 L48 4 L54 6 L60 3 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 8 L6 10 L12 7 L18 9 L24 6 L30 8 L36 5 L42 7 L48 4 L54 6 L60 3"></path></svg></span><span>2026-04-09</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -534,7 +534,7 @@
                   <td class="right numeric">14.6%</td>
                   <td class="right numeric metric-risk heat-bg-3 bar-w-53">-13.2%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline accent"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 5 L6 6 L12 4 L18 7 L24 5 L30 8 L36 6 L42 9 L48 7 L54 10 L60 8 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 5 L6 6 L12 4 L18 7 L24 5 L30 8 L36 6 L42 9 L48 7 L54 10 L60 8"></path></svg></span><span>2026-04-08</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
                 <tr class="row" tabindex="0">
                   <td>
@@ -549,7 +549,7 @@
                   <td class="right numeric">7.8%</td>
                   <td class="right numeric metric-risk heat-bg-4 bar-w-23">-5.8%<span class="micro-bar"><span class="micro-bar-fill risk"></span></span></td>
                   <td class="right"><span class="last-run-cell"><span class="cell-sparkline down"><svg viewBox="0 0 60 20" preserveAspectRatio="none"><path class="spark-area" d="M0 4 L6 3 L12 5 L18 6 L24 4 L30 7 L36 9 L42 8 L48 11 L54 12 L60 14 L60 20 L0 20 Z"></path><path class="spark-line" d="M0 4 L6 3 L12 5 L18 6 L24 4 L30 7 L36 9 L42 8 L48 11 L54 12 L60 14"></path></svg></span><span>2026-03-28</span></span></td>
-                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action">克隆</label><label for="overlay-strategy-delete" class="row-action danger">删除</label></span></td>
+                  <td class="right"><span class="row-actions"><label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆</label><label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除</label></span></td>
                 </tr>
               </tbody>
             </table>
@@ -654,9 +654,9 @@
           </div>
           <div class="context-section-body">
             <div class="detail-actions">
-              <button class="btn btn-primary w-full">运行回测</button>
-              <label for="overlay-strategy-clone" class="row-action">克隆策略</label>
-              <label for="overlay-strategy-delete" class="row-action danger">删除策略</label>
+              <button class="btn btn-primary w-full" data-action-tier="primary">运行回测</button>
+              <label for="overlay-strategy-clone" class="row-action" data-action-tier="context">克隆策略</label>
+              <label for="overlay-strategy-delete" class="row-action danger" data-action-tier="overflow">删除策略</label>
             </div>
           </div>
         </div>
@@ -746,8 +746,8 @@
               </div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消，保留策略状态</label>
-              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认变更策略状态</label>
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control data-action-tier="context">取消，保留策略状态</label>
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action data-action-tier="primary">确认变更策略状态</label>
             </div>
           </div>
         </div>
