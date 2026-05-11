@@ -244,7 +244,9 @@ describe("page-a-shares market structure map", () => {
 
 		for (const cell of treemapCells) {
 			expect(cell.querySelector(".treemap-cell-name")?.textContent?.trim()).toBeTruthy();
-			expect(cell.querySelector(".treemap-cell-change")?.textContent?.trim()).toMatch(/^[+-]\d/);
+			if (cell.getAttribute("data-label-budget") !== "name-only") {
+				expect(cell.querySelector(".treemap-cell-change")?.textContent?.trim()).toMatch(/^[+-]\d/);
+			}
 		}
 
 		for (const cell of heatmapCells) {

@@ -256,7 +256,7 @@
 
     .context-bar-label {
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       text-transform: uppercase;
       letter-spacing: 0.06em;
     }
@@ -382,25 +382,25 @@
       --market-map-cell-meta: var(--text-tertiary);
       --map-text-on-cell: var(--market-map-cell-title);
       --map-muted-on-cell: var(--market-map-cell-meta);
-      --map-neutral-fill: oklch(0.225 0.008 250);
-      --map-positive-base: oklch(0.226 0.026 22);
-      --map-negative-base: oklch(0.220 0.024 162);
-      --map-positive-1: color-mix(in oklch, var(--market-up-fg) 5%, var(--map-positive-base));
-      --map-positive-2: color-mix(in oklch, var(--market-up-fg) 11%, var(--map-positive-base));
-      --map-positive-3: color-mix(in oklch, var(--market-up-fg) 18%, var(--map-positive-base));
-      --map-positive-4: color-mix(in oklch, var(--market-up-fg) 26%, var(--map-positive-base));
-      --map-negative-1: color-mix(in oklch, var(--market-down-fg) 5%, var(--map-negative-base));
-      --map-negative-2: color-mix(in oklch, var(--market-down-fg) 11%, var(--map-negative-base));
-      --map-negative-3: color-mix(in oklch, var(--market-down-fg) 18%, var(--map-negative-base));
-      --map-negative-4: color-mix(in oklch, var(--market-down-fg) 26%, var(--map-negative-base));
-      --map-positive-edge-1: color-mix(in oklch, var(--market-up-fg) 38%, transparent);
-      --map-positive-edge-2: color-mix(in oklch, var(--market-up-fg) 48%, transparent);
-      --map-positive-edge-3: color-mix(in oklch, var(--market-up-fg) 58%, transparent);
-      --map-positive-edge-4: color-mix(in oklch, var(--market-up-fg) 68%, transparent);
-      --map-negative-edge-1: color-mix(in oklch, var(--market-down-fg) 38%, transparent);
-      --map-negative-edge-2: color-mix(in oklch, var(--market-down-fg) 48%, transparent);
-      --map-negative-edge-3: color-mix(in oklch, var(--market-down-fg) 58%, transparent);
-      --map-negative-edge-4: color-mix(in oklch, var(--market-down-fg) 68%, transparent);
+      --map-neutral-fill: color-mix(in oklch, var(--surface-panel-base) 82%, var(--neutral-950) 18%);
+      --map-market-up-base: color-mix(in oklch, var(--market-up-fg) 14%, var(--surface-panel-base));
+      --map-market-down-base: color-mix(in oklch, var(--market-down-fg) 14%, var(--surface-panel-base));
+      --map-market-up-1: color-mix(in oklch, var(--market-up-fg) 5%, var(--map-market-up-base));
+      --map-market-up-2: color-mix(in oklch, var(--market-up-fg) 11%, var(--map-market-up-base));
+      --map-market-up-3: color-mix(in oklch, var(--market-up-fg) 18%, var(--map-market-up-base));
+      --map-market-up-4: color-mix(in oklch, var(--market-up-fg) 26%, var(--map-market-up-base));
+      --map-market-down-1: color-mix(in oklch, var(--market-down-fg) 5%, var(--map-market-down-base));
+      --map-market-down-2: color-mix(in oklch, var(--market-down-fg) 11%, var(--map-market-down-base));
+      --map-market-down-3: color-mix(in oklch, var(--market-down-fg) 18%, var(--map-market-down-base));
+      --map-market-down-4: color-mix(in oklch, var(--market-down-fg) 26%, var(--map-market-down-base));
+      --map-market-up-edge-1: color-mix(in oklch, var(--market-up-fg) 38%, transparent);
+      --map-market-up-edge-2: color-mix(in oklch, var(--market-up-fg) 48%, transparent);
+      --map-market-up-edge-3: color-mix(in oklch, var(--market-up-fg) 58%, transparent);
+      --map-market-up-edge-4: color-mix(in oklch, var(--market-up-fg) 68%, transparent);
+      --map-market-down-edge-1: color-mix(in oklch, var(--market-down-fg) 38%, transparent);
+      --map-market-down-edge-2: color-mix(in oklch, var(--market-down-fg) 48%, transparent);
+      --map-market-down-edge-3: color-mix(in oklch, var(--market-down-fg) 58%, transparent);
+      --map-market-down-edge-4: color-mix(in oklch, var(--market-down-fg) 68%, transparent);
       --map-light-up-1: color-mix(in oklch, var(--market-up-fg) 8%, var(--surface-panel-base));
       --map-light-up-2: color-mix(in oklch, var(--market-up-fg) 12%, var(--surface-panel-base));
       --map-light-up-3: color-mix(in oklch, var(--market-up-fg) 17%, var(--surface-panel-base));
@@ -418,22 +418,22 @@
       --map-light-down-edge-3: color-mix(in oklch, var(--market-down-fg) 52%, var(--border-subtle));
       --map-light-down-edge-4: color-mix(in oklch, var(--market-down-fg) 62%, var(--border-subtle));
       --heat-flat: var(--map-neutral-fill);
-      --heat-up-1: var(--map-positive-1);
-      --heat-up-2: var(--map-positive-2);
-      --heat-up-3: var(--map-positive-3);
-      --heat-up-4: var(--map-positive-4);
-      --heat-down-1: var(--map-negative-1);
-      --heat-down-2: var(--map-negative-2);
-      --heat-down-3: var(--map-negative-3);
-      --heat-down-4: var(--map-negative-4);
-      --heat-up-line-1: var(--map-positive-edge-1);
-      --heat-up-line-2: var(--map-positive-edge-2);
-      --heat-up-line-3: var(--map-positive-edge-3);
-      --heat-up-line-4: var(--map-positive-edge-4);
-      --heat-down-line-1: var(--map-negative-edge-1);
-      --heat-down-line-2: var(--map-negative-edge-2);
-      --heat-down-line-3: var(--map-negative-edge-3);
-      --heat-down-line-4: var(--map-negative-edge-4);
+      --heat-up-1: var(--map-market-up-1);
+      --heat-up-2: var(--map-market-up-2);
+      --heat-up-3: var(--map-market-up-3);
+      --heat-up-4: var(--map-market-up-4);
+      --heat-down-1: var(--map-market-down-1);
+      --heat-down-2: var(--map-market-down-2);
+      --heat-down-3: var(--map-market-down-3);
+      --heat-down-4: var(--map-market-down-4);
+      --heat-up-line-1: var(--map-market-up-edge-1);
+      --heat-up-line-2: var(--map-market-up-edge-2);
+      --heat-up-line-3: var(--map-market-up-edge-3);
+      --heat-up-line-4: var(--map-market-up-edge-4);
+      --heat-down-line-1: var(--map-market-down-edge-1);
+      --heat-down-line-2: var(--map-market-down-edge-2);
+      --heat-down-line-3: var(--map-market-down-edge-3);
+      --heat-down-line-4: var(--map-market-down-edge-4);
       --heat-neutral-line: color-mix(in oklch, var(--neutral-600) 44%, transparent);
       display: flex;
       flex-direction: column;
@@ -544,7 +544,7 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       white-space: nowrap;
     }
@@ -563,7 +563,7 @@
       min-width: 0;
       flex-wrap: wrap;
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
     }
 
     .map-insight-strip strong {
@@ -595,7 +595,7 @@
     }
 
     .map-legend-label {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
@@ -792,6 +792,33 @@
     .heatmap-cell[data-size-bucket="xl"] .hm-name { font-size: var(--font-size-12); }
     .heatmap-cell[data-size-bucket="sm"] .hm-name { font-size: var(--font-size-10); }
 
+    .treemap-cell-sign {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: var(--radius-3);
+      color: var(--market-map-cell-value);
+      background: color-mix(in oklch, var(--surface-panel-base) 34%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--heat-line) 42%, transparent);
+      font-family: var(--font-family-ui);
+      font-size: var(--font-size-10);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1;
+    }
+
+    .treemap-cell-iv[data-label-budget="compact"] .treemap-cell-vol,
+    .treemap-cell-iv[data-label-budget="name-only"] .treemap-cell-change,
+    .treemap-cell-iv[data-label-budget="name-only"] .treemap-cell-vol {
+      display: none;
+    }
+
+    .treemap-cell-iv[data-label-budget="name-only"] {
+      justify-content: center;
+      padding: var(--space-5);
+    }
+
     .heatmap-cell > span {
       position: relative;
       z-index: 1;
@@ -838,7 +865,7 @@
     .treemap-cell-vol,
     .hm-vol {
       font-family: var(--font-family-ui);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--market-map-cell-meta);
       line-height: 1;
       letter-spacing: 0;
@@ -1976,7 +2003,7 @@
 	            <div class="map-metadata" aria-label="市场结构图读图规则">
 	              <div class="map-readout">
 	                <span class="map-readout-item" data-map-size>Size <strong>成交额占比</strong></span>
-	                <span class="map-readout-item" data-map-color>Color <strong>涨跌幅</strong></span>
+	                <span class="map-readout-item" data-map-color>Color <strong>涨跌幅（A股：红涨绿跌）</strong></span>
 	                <span class="map-readout-item" data-map-grouping>Grouping <strong>申万一级</strong></span>
 	              </div>
 	              <div class="map-insight-strip">
@@ -1984,7 +2011,7 @@
 	                <span class="map-insight-sep" aria-hidden="true"></span>
 	                <span data-map-selected-summary>选中 <strong>电子 +2.34%</strong> · 成交额 15.2%</span>
 	                <span class="map-insight-sep" aria-hidden="true"></span>
-	                <span data-map-metric-switcher>行业 Size 成交额占比 · 个股 Size 成交额 · Color 涨跌幅</span>
+	                <span data-map-metric-switcher>行业 Size 成交额占比 · 个股 Size 成交额 · Color 涨跌幅（A股：红涨绿跌）</span>
 	                <span class="map-insight-sep" aria-hidden="true"></span>
 	                <span class="map-interaction-hint"><strong>悬停</strong>看明细 · <strong>点击</strong>下钻</span>
 	              </div>
@@ -2016,70 +2043,83 @@
 	              <span class="map-sector-boundary financial" aria-hidden="true"></span>
 	              <span class="map-sector-boundary defensive" aria-hidden="true"></span>
 	              <span class="map-sector-boundary cyclical" aria-hidden="true"></span>
-              <div class="treemap-cell-iv tm-cell-1" role="button" data-direction="up" data-heat="up-4" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="电子 — 涨幅 +2.34%，成交额占比 15.2%" data-tooltip="电子 — 涨幅 +2.34%，成交额占比 15.2%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+              <div class="treemap-cell-iv tm-cell-1" role="button" data-direction="up" data-heat="up-4" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="full" aria-label="电子 — 涨幅 +2.34%，成交额占比 15.2%" data-tooltip="电子 — 涨幅 +2.34%，成交额占比 15.2%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">电子</span>
 	                <span class="treemap-cell-change up">+2.34%</span>
 	                <span class="treemap-cell-vol">占比 15.2%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-2" role="button" data-direction="up" data-heat="up-3" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="计算机 — 涨幅 +1.87%，成交额占比 9.8%" data-tooltip="计算机 — 涨幅 +1.87%，成交额占比 9.8%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-2" role="button" data-direction="up" data-heat="up-3" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="full" aria-label="计算机 — 涨幅 +1.87%，成交额占比 9.8%" data-tooltip="计算机 — 涨幅 +1.87%，成交额占比 9.8%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">计算机</span>
 	                <span class="treemap-cell-change up">+1.87%</span>
 	                <span class="treemap-cell-vol">占比 9.8%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-3" role="button" data-direction="up" data-heat="up-3" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="通信 — 涨幅 +1.52%，成交额占比 4.3%" data-tooltip="通信 — 涨幅 +1.52%，成交额占比 4.3%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-3" role="button" data-direction="up" data-heat="up-3" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="通信 — 涨幅 +1.52%，成交额占比 4.3%" data-tooltip="通信 — 涨幅 +1.52%，成交额占比 4.3%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">通信</span>
 	                <span class="treemap-cell-change up">+1.52%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-4" role="button" data-direction="down" data-heat="down-1" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="医药 — 跌幅 -0.23%，成交额占比 5.1%" data-tooltip="医药 — 跌幅 -0.23%，成交额占比 5.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-4" role="button" data-direction="down" data-heat="down-1" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="医药 — 跌幅 -0.23%，成交额占比 5.1%" data-tooltip="医药 — 跌幅 -0.23%，成交额占比 5.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
 	                <span class="treemap-cell-name">医药</span>
 	                <span class="treemap-cell-change down">-0.23%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-5" role="button" data-direction="down" data-heat="down-2" data-sector-family="financial" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="银行 — 跌幅 -0.67%，成交额占比 12.0%" data-tooltip="银行 — 跌幅 -0.67%，成交额占比 12.0%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-5" role="button" data-direction="down" data-heat="down-2" data-sector-family="financial" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="full" aria-label="银行 — 跌幅 -0.67%，成交额占比 12.0%" data-tooltip="银行 — 跌幅 -0.67%，成交额占比 12.0%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
 	                <span class="treemap-cell-name">银行</span>
 	                <span class="treemap-cell-change down">-0.67%</span>
 	                <span class="treemap-cell-vol">占比 12.0%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-6" role="button" data-direction="up" data-heat="up-2" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="新能源 — 涨幅 +0.86%，成交额占比 6.7%" data-tooltip="新能源 — 涨幅 +0.86%，成交额占比 6.7%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-6" role="button" data-direction="up" data-heat="up-2" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="新能源 — 涨幅 +0.86%，成交额占比 6.7%" data-tooltip="新能源 — 涨幅 +0.86%，成交额占比 6.7%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">新能源</span>
 	                <span class="treemap-cell-change up">+0.86%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-7" role="button" data-direction="down" data-heat="down-3" data-sector-family="financial" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="房地产 — 跌幅 -1.45%，成交额占比 3.2%" data-tooltip="房地产 — 跌幅 -1.45%，成交额占比 3.2%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-7" role="button" data-direction="down" data-heat="down-3" data-sector-family="financial" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="房地产 — 跌幅 -1.45%，成交额占比 3.2%" data-tooltip="房地产 — 跌幅 -1.45%，成交额占比 3.2%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
 	                <span class="treemap-cell-name">房地产</span>
 	                <span class="treemap-cell-change down">-1.45%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-8" role="button" data-direction="up" data-heat="up-1" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="消费 — 涨幅 +0.45%，成交额占比 5.6%" data-tooltip="消费 — 涨幅 +0.45%，成交额占比 5.6%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-8" role="button" data-direction="up" data-heat="up-1" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="消费 — 涨幅 +0.45%，成交额占比 5.6%" data-tooltip="消费 — 涨幅 +0.45%，成交额占比 5.6%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">消费</span>
 	                <span class="treemap-cell-change up">+0.45%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-9" role="button" data-direction="up" data-heat="up-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="有色 — 涨幅 +0.56%，成交额占比 2.8%" data-tooltip="有色 — 涨幅 +0.56%，成交额占比 2.8%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-9" role="button" data-direction="up" data-heat="up-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="有色 — 涨幅 +0.56%，成交额占比 2.8%" data-tooltip="有色 — 涨幅 +0.56%，成交额占比 2.8%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">有色</span>
 	                <span class="treemap-cell-change up">+0.56%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-10" role="button" data-direction="up" data-heat="up-2" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="军工 — 涨幅 +1.12%，成交额占比 3.9%" data-tooltip="军工 — 涨幅 +1.12%，成交额占比 3.9%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-10" role="button" data-direction="up" data-heat="up-2" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="军工 — 涨幅 +1.12%，成交额占比 3.9%" data-tooltip="军工 — 涨幅 +1.12%，成交额占比 3.9%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">军工</span>
 	                <span class="treemap-cell-change up">+1.12%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-11" role="button" data-direction="up" data-heat="up-2" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="汽车 — 涨幅 +0.67%，成交额占比 2.9%" data-tooltip="汽车 — 涨幅 +0.67%，成交额占比 2.9%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-11" role="button" data-direction="up" data-heat="up-2" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="汽车 — 涨幅 +0.67%，成交额占比 2.9%" data-tooltip="汽车 — 涨幅 +0.67%，成交额占比 2.9%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">汽车</span>
 	                <span class="treemap-cell-change up">+0.67%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-12" role="button" data-direction="down" data-heat="down-1" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="传媒 — 跌幅 -0.34%，成交额占比 2.1%" data-tooltip="传媒 — 跌幅 -0.34%，成交额占比 2.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-12" role="button" data-direction="down" data-heat="down-1" data-sector-family="growth" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="传媒 — 跌幅 -0.34%，成交额占比 2.1%" data-tooltip="传媒 — 跌幅 -0.34%，成交额占比 2.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
 	                <span class="treemap-cell-name">传媒</span>
 	                <span class="treemap-cell-change down">-0.34%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-13" role="button" data-direction="up" data-heat="up-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="建材 — 涨幅 +0.18%，成交额占比 1.4%" data-tooltip="建材 — 涨幅 +0.18%，成交额占比 1.4%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-13" role="button" data-direction="up" data-heat="up-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="name-only" aria-label="建材 — 涨幅 +0.18%，成交额占比 1.4%" data-tooltip="建材 — 涨幅 +0.18%，成交额占比 1.4%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">建材</span>
-	                <span class="treemap-cell-change up">+0.18%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-14" role="button" data-direction="down" data-heat="down-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="交运 — 跌幅 -0.12%，成交额占比 1.1%" data-tooltip="交运 — 跌幅 -0.12%，成交额占比 1.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-14" role="button" data-direction="down" data-heat="down-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="name-only" aria-label="交运 — 跌幅 -0.12%，成交额占比 1.1%" data-tooltip="交运 — 跌幅 -0.12%，成交额占比 1.1%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
 	                <span class="treemap-cell-name">交运</span>
-	                <span class="treemap-cell-change down">-0.12%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-15" role="button" data-direction="down" data-heat="down-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="煤炭 — 跌幅 -0.08%，成交额占比 1.6%" data-tooltip="煤炭 — 跌幅 -0.08%，成交额占比 1.6%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-15" role="button" data-direction="down" data-heat="down-1" data-sector-family="cyclical" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="name-only" aria-label="煤炭 — 跌幅 -0.08%，成交额占比 1.6%" data-tooltip="煤炭 — 跌幅 -0.08%，成交额占比 1.6%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▼</span>
 	                <span class="treemap-cell-name">煤炭</span>
-	                <span class="treemap-cell-change down">-0.08%</span>
 	              </div>
-	              <div class="treemap-cell-iv tm-cell-16" role="button" data-direction="up" data-heat="up-2" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" aria-label="电力 — 涨幅 +0.91%，成交额占比 2.3%" data-tooltip="电力 — 涨幅 +0.91%，成交额占比 2.3%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	              <div class="treemap-cell-iv tm-cell-16" role="button" data-direction="up" data-heat="up-2" data-sector-family="defensive" data-reveal="fade-up" data-size-metric="turnover-share" data-color-metric="change-pct" data-label-budget="compact" aria-label="电力 — 涨幅 +0.91%，成交额占比 2.3%" data-tooltip="电力 — 涨幅 +0.91%，成交额占比 2.3%" tabindex="0" onclick="document.getElementById('overlay-sector-detail').checked=true">
+	                <span class="treemap-cell-sign" aria-hidden="true">▲</span>
 	                <span class="treemap-cell-name">电力</span>
 	                <span class="treemap-cell-change up">+0.91%</span>
 	              </div>
@@ -2549,7 +2589,7 @@
           <label for="overlay-northbound-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body" data-reveal="fade-up">
-          <h4>分时净流入曲线</h4>
+          <h2>分时净流入曲线</h2>
           <svg viewBox="0 0 300 80" class="iv-chart-area" fill="none" aria-hidden="true">
             <defs>
               <linearGradient id="nb-flow-grad" x1="0" y1="0" x2="0" y2="1">
@@ -2570,13 +2610,13 @@
             <span class="iv-flex-center-gap4"><span class="iv-dot-brand"></span> 沪股通</span>
             <span class="iv-flex-center-gap4"><span class="iv-dot-amber"></span> 深股通</span>
           </div>
-          <h4>北向持仓 Top10 变动</h4>
+          <h2>北向持仓 Top10 变动</h2>
           <div class="overlay-field"><span class="overlay-field-label">贵州茅台</span><span class="overlay-field-value val-up">+1.2 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">宁德时代</span><span class="overlay-field-value val-up">+0.8 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">中芯国际</span><span class="overlay-field-value val-up">+0.5 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">美的集团</span><span class="overlay-field-value val-up">+0.4 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">招商银行</span><span class="overlay-field-value val-down">-0.6 亿</span></div>
-          <h4>行业偏好</h4>
+          <h2>行业偏好</h2>
           <div class="overlay-field"><span class="overlay-field-label">电子</span><span class="overlay-field-value val-up">+3.2 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">计算机</span><span class="overlay-field-value val-up">+2.1 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">银行</span><span class="overlay-field-value val-down">-1.8 亿</span></div>
@@ -2610,14 +2650,14 @@
               <div class="iv-numeric-lg">3.82%</div>
             </div>
           </div>
-          <h4>领涨个股</h4>
+          <h2>领涨个股</h2>
           <div class="overlay-field"><span class="overlay-field-label">寒武纪-U</span><span class="overlay-field-value val-up">+12.34%</span></div>
           <div class="overlay-field"><span class="overlay-field-label">中芯国际</span><span class="overlay-field-value val-up">+8.76%</span></div>
           <div class="overlay-field"><span class="overlay-field-label">海光信息</span><span class="overlay-field-value val-up">+7.23%</span></div>
-          <h4>领跌个股</h4>
+          <h2>领跌个股</h2>
           <div class="overlay-field"><span class="overlay-field-label">立讯精密</span><span class="overlay-field-value val-down">-2.18%</span></div>
           <div class="overlay-field"><span class="overlay-field-label">歌尔股份</span><span class="overlay-field-value val-down">-1.45%</span></div>
-          <h4>资金流向</h4>
+          <h2>资金流向</h2>
           <div class="overlay-field"><span class="overlay-field-label">主力净流入</span><span class="overlay-field-value val-up">+28.3 亿</span></div>
           <div class="overlay-field"><span class="overlay-field-label">北向净买入</span><span class="overlay-field-value val-up">+3.2 亿</span></div>
           <div class="overlay-actions">
@@ -2637,7 +2677,7 @@
           <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body" data-reveal="fade-up">
-          <h4>板块范围</h4>
+          <h2>板块范围</h2>
           <div class="iv-flex-wrap-gap4-mb12">
             <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 全部</label>
             <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 沪市主板</label>
@@ -2645,13 +2685,13 @@
             <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 创业板</label>
             <label class="iv-inline-chip-interactive"><input type="checkbox" checked class="iv-accent-brand"> 科创板</label>
           </div>
-          <h4>时间框架</h4>
+          <h2>时间框架</h2>
           <div class="iv-flex-gap4-mb12">
             <button class="iv-btn-primary-sm">当日</button>
             <button class="iv-btn-ghost-sm">5日</button>
             <button class="iv-btn-ghost-sm">20日</button>
           </div>
-          <h4>Map 视图模式</h4>
+          <h2>Map 视图模式</h2>
           <div class="iv-flex-gap4-mb12">
             <button class="iv-btn-primary-sm">Treemap</button>
             <button class="iv-btn-ghost-sm">Heatmap</button>
