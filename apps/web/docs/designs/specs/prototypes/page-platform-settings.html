@@ -1246,14 +1246,15 @@
 
     <div class="overlay-backdrop" data-overlay="overlay-reset-config">
       <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置" data-danger-confirmation data-high-risk-confirmation>
-        <div class="overlay-header"><span class="overlay-title">重置配置</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-header"><span class="overlay-title">保存配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
-          <p data-impact-summary><span data-danger-marker>!</span> 确认将所有配置重置为默认值？此操作不可撤销。</p>
-          <p data-recovery-hint>恢复提示：重置前会保留 r17 stable 回滚点和配置 diff。</p>
+          <p data-risk-object>对象：prod-cn-a 配置草稿 r18</p>
+          <p data-impact-summary><span data-danger-marker>!</span> 影响范围：保存配置会影响数据源连接、券商授权和风险默认参数。</p>
+          <p data-recovery-hint>恢复路径：可回滚到 r17 stable，配置差异保留在审计日志。</p>
           <div class="overlay-actions">
-            <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
-            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认重置</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留草稿</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认保存配置</label>
           </div>
         </div>
       </div>

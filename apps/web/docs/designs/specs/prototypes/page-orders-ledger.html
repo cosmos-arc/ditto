@@ -966,7 +966,7 @@
     .slippage-bar-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .slippage-bar-fill.negative {
@@ -1473,7 +1473,7 @@
     }
     .status-flow-segment {
       height: 100%;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .status-flow-segment.seg-filled { background: var(--execution-filled-fg); }
     .status-flow-segment.seg-partial { background: var(--execution-partial-fg); }
@@ -1487,24 +1487,26 @@
       font-weight: var(--font-weight-regular);
     }
 
-    /* ── Table row conditional border accent ── */
-    .ledger-table tbody tr.row-filled {
-      border-left: 2px solid transparent;
-    }
+    /* ── Table row conditional state tint ── */
     .ledger-table tbody tr.row-filled td:first-child {
-      border-left: 2px solid color-mix(in oklch, var(--execution-filled-fg) 25%, transparent);
+      outline: 1px solid color-mix(in oklch, var(--execution-filled-fg) 18%, transparent);
+      outline-offset: -1px;
     }
     .ledger-table tbody tr.row-partial td:first-child {
-      border-left: 2px solid color-mix(in oklch, var(--execution-partial-fg) 30%, transparent);
+      outline: 1px solid color-mix(in oklch, var(--execution-partial-fg) 20%, transparent);
+      outline-offset: -1px;
     }
     .ledger-table tbody tr.row-pending td:first-child {
-      border-left: 2px solid color-mix(in oklch, var(--execution-pending-fg) 30%, transparent);
+      outline: 1px solid color-mix(in oklch, var(--execution-pending-fg) 20%, transparent);
+      outline-offset: -1px;
     }
     .ledger-table tbody tr.row-failed td:first-child {
-      border-left: 2px solid color-mix(in oklch, var(--execution-rejected-fg) 25%, transparent);
+      outline: 1px solid color-mix(in oklch, var(--execution-rejected-fg) 18%, transparent);
+      outline-offset: -1px;
     }
     .ledger-table tbody tr.row-submitted td:first-child {
-      border-left: 2px solid color-mix(in oklch, var(--cyan-500) 25%, transparent);
+      outline: 1px solid color-mix(in oklch, var(--cyan-500) 18%, transparent);
+      outline-offset: -1px;
     }
 
     .kpi-strip {
@@ -1522,10 +1524,7 @@
 
     /* Brand DNA #3: Overlay accent border — all sheets and drawers */
     .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
-    }
-    .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
     }
 
     .ledger-table thead tr {
@@ -1548,9 +1547,10 @@
       color: var(--brand-accent);
     }
 
-    /* Batch action accent button hover shadow */
+    /* Batch action accent button hover state */
     .batch-action-btn.accent:hover {
-      box-shadow: 0 0 0 1px var(--brand-accent), 0 2px 8px color-mix(in oklch, var(--brand-accent) 15%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 30%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 6%, transparent);
     }
 
     /* Slippage bar height alignment — 4px → 6px */
@@ -2875,13 +2875,14 @@
     <!-- Overlay A: 撤单确认 Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-cancel-confirm">
       <label class="overlay-dismiss" for="overlay-cancel-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="撤单确认">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="撤单确认" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
+          <span class="overlay-title overlay-warning-title"><span data-danger-marker>!</span> 撤单确认</span>
           <label for="overlay-cancel-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>订单摘要</h4>
+          <h2>订单摘要</h2>
+          <p data-risk-object>对象：ORD-001 贵州茅台买入订单</p>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">招商银行 600036</span>
@@ -2898,12 +2899,11 @@
             <span class="overlay-field-label">当前状态</span>
             <span class="overlay-field-value"><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></span>
           </div>
-          <p class="overlay-desc">
-            确认撤销此订单？已成交部分将被保留，未成交部分将被取消。此操作不可撤销。
-          </p>
+          <p class="overlay-desc" data-impact-summary>影响范围：撤单会停止剩余未成交数量，已成交 200 股保持入账。</p>
+          <p class="overlay-desc" data-recovery-hint>恢复路径：撤单后可按原策略重新提交订单，并保留券商回报记录。</p>
           <div class="overlay-actions">
-            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary cursor-trigger">取消</label>
-            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger">确认撤单</label>
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消，保留订单</label>
+            <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action>确认撤单</label>
           </div>
         </div>
       </div>
@@ -2918,7 +2918,7 @@
           <label for="overlay-retry-submit" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>原始订单参数</h4>
+          <h2>原始订单参数</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">紫金矿业 601899</span>
@@ -2936,12 +2936,12 @@
             <span class="overlay-field-value">15.60</span>
           </div>
 
-          <h4>失败原因</h4>
+          <h2>失败原因</h2>
           <p class="overlay-desc-error">
             券商网关超时：订单在 30 秒内未收到确认回报，系统自动标记为失败。
           </p>
 
-          <h4>风控检查</h4>
+          <h2>风控检查</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">持仓集中度</span>
             <span class="overlay-field-value text-pass">通过 ✓</span>
@@ -2968,7 +2968,7 @@
           <label for="overlay-order-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>订单信息</h4>
+          <h2>订单信息</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">订单 ID</span>
             <span class="overlay-field-value">ORD-20240401-002</span>
@@ -2998,7 +2998,7 @@
             <span class="overlay-field-value">限价</span>
           </div>
 
-          <h4>状态时间线</h4>
+          <h2>状态时间线</h2>
           <div class="status-timeline">
             <div class="timeline-step">
               <div class="timeline-indicator completed">
@@ -3029,7 +3029,7 @@
             </div>
           </div>
 
-          <h4>费用明细</h4>
+          <h2>费用明细</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">佣金</span>
             <span class="overlay-field-value">99.60</span>
@@ -3062,7 +3062,7 @@
           <p class="overlay-desc-batch">
             确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
           </p>
-          <h4>已选订单摘要</h4>
+          <h2>已选订单摘要</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">ORD-004</span>
             <span class="overlay-field-value">招商银行 · 买入 2,000 股 · 已提交</span>
@@ -3474,7 +3474,7 @@
             <span class="overlay-title overlay-warning-title">⚠ 撤单确认</span>
           </div>
           <div class="overlay-body">
-            <h4>订单摘要</h4>
+            <h2>订单摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的</span>
               <span class="overlay-field-value">招商银行 600036</span>
@@ -3511,7 +3511,7 @@
             <span class="overlay-title">重试提交</span>
           </div>
           <div class="overlay-body">
-            <h4>原始订单参数</h4>
+            <h2>原始订单参数</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的</span>
               <span class="overlay-field-value">紫金矿业 601899</span>
@@ -3529,12 +3529,12 @@
               <span class="overlay-field-value">15.60</span>
             </div>
 
-            <h4>失败原因</h4>
+            <h2>失败原因</h2>
             <p class="overlay-desc-error">
               券商网关超时：订单在 30 秒内未收到确认回报，系统自动标记为失败。
             </p>
 
-            <h4>风控检查</h4>
+            <h2>风控检查</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">持仓集中度</span>
               <span class="overlay-field-value text-pass">通过 ✓</span>
@@ -3561,7 +3561,7 @@
             <span class="overlay-title">订单详情</span>
           </div>
           <div class="overlay-body">
-            <h4>订单信息</h4>
+            <h2>订单信息</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">订单 ID</span>
               <span class="overlay-field-value">ORD-20240401-002</span>
@@ -3591,7 +3591,7 @@
               <span class="overlay-field-value">限价</span>
             </div>
 
-            <h4>状态时间线</h4>
+            <h2>状态时间线</h2>
             <div class="status-timeline">
               <div class="timeline-step">
                 <div class="timeline-indicator completed">
@@ -3622,7 +3622,7 @@
               </div>
             </div>
 
-            <h4>费用明细</h4>
+            <h2>费用明细</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">佣金</span>
               <span class="overlay-field-value">99.60</span>
@@ -3655,7 +3655,7 @@
             <p class="overlay-desc-batch">
               确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
             </p>
-            <h4>已选订单摘要</h4>
+            <h2>已选订单摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">ORD-004</span>
               <span class="overlay-field-value">招商银行 · 买入 2,000 股 · 已提交</span>

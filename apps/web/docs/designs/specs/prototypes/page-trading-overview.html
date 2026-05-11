@@ -173,15 +173,15 @@
       outline-offset: 2px;
     }
 
-    /* Decision Banner visual anchor — left brand border */
+    /* Decision Banner visual anchor — restrained full-frame tint */
     .shell-analytical.trading-variant .decision-banner {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 35%, transparent);
-      padding-left: var(--space-16);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
     }
 
     /* Decision Banner regime tag */
     .decision-regime-tag {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       padding: 1px var(--space-4);
       border: 1px solid var(--border-subtle);
@@ -296,7 +296,7 @@
     }
 
     .scope-metric-label {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
@@ -352,7 +352,7 @@
       padding: 0;
       background: transparent;
       border: none;
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       min-height: 24px;
       overflow: hidden;
     }
@@ -400,7 +400,7 @@
     .pipeline-arrow {
       color: var(--text-tertiary);
       opacity: 0.4;
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
     }
 
     .trading-variant .decision-primary,
@@ -569,7 +569,7 @@
       position: absolute;
       top: var(--space-8);
       left: var(--space-12);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       z-index: 1;
     }
@@ -838,13 +838,13 @@
       opacity: 0.7;
     }
 
-    /* Critical alert with left border */
+    /* Critical alert with full-frame emphasis */
     .risk-item.critical-alert {
       padding-left: var(--space-8);
-      border-left: 2px solid var(--risk-critical-fg);
+      border: 1px solid color-mix(in oklch, var(--risk-critical-fg) 24%, var(--border-subtle));
       margin: var(--space-2) calc(var(--space-8) * -1);
       padding-right: var(--space-8);
-      border-radius: 0 var(--radius-3) var(--radius-3) 0;
+      border-radius: var(--radius-3);
     }
 
     .risk-progress {
@@ -1094,7 +1094,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .status-indicator, .risk-item-dot.critical, .scope-phase .phase-dot {
+      .status-indicator, .risk-item-dot.critical, .scope-phase .phase-dot, .pipeline-arrow {
         transition: none !important;
         animation: none !important;
       }
@@ -1353,11 +1353,11 @@
     /* Selected state highlight for risk items */
     .risk-item.selected {
       background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
-      border-left: 2px solid var(--brand-accent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
       padding-left: var(--space-8);
       margin: var(--space-2) calc(var(--space-8) * -1);
       padding-right: var(--space-8);
-      border-radius: 0 var(--radius-3) var(--radius-3) 0;
+      border-radius: var(--radius-3);
     }
 
     /* Positions table selected row */
@@ -1411,7 +1411,7 @@
      * Extracted utility classes (P0 inline-style reduction)
      * ══════════════════════════════════════════════ */
 
-    /* Review mode section label (h4 sub-headers) */
+    /* Review mode section label */
     .section-label {
       font-size: var(--font-size-12);
       color: var(--text-tertiary);
@@ -1672,15 +1672,13 @@
 
     /* Pending order — elevated visual weight */
     .order-row.order-pending {
-      border-left: 3px solid var(--brand-accent);
-      padding-left: calc(var(--space-12) - 3px);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
     }
 
     /* Partial fill — elevated with warning accent */
     .order-row.order-partial {
-      border-left: 3px solid var(--risk-high-fg);
-      padding-left: calc(var(--space-12) - 3px);
+      border-color: color-mix(in oklch, var(--risk-high-fg) 24%, var(--border-subtle));
       background: color-mix(in oklch, var(--risk-high-fg) 3%, var(--surface-panel-base));
     }
 
@@ -1821,7 +1819,7 @@
     /* ── A2. Overlay accent border (Brand DNA #3) ── */
     .overlay-surface,
     .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
     }
 
     /* ── A3. Trading context brand-tinted bottom border ── */
@@ -2532,7 +2530,7 @@
               </div>
             </div>
             <div class="panel-body">
-              <h4 class="section-label">行业贡献</h4>
+              <h2 class="section-label">行业贡献</h2>
               <div class="attribution-row">
                 <span class="attribution-label">科技</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-65"></div></div>
@@ -2549,7 +2547,7 @@
                 <span class="attribution-value up">+1,040</span>
               </div>
 
-              <h4 class="section-label">个股贡献</h4>
+              <h2 class="section-label">个股贡献</h2>
               <div class="attribution-row">
                 <span class="attribution-label">贵州茅台</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-45"></div></div>
@@ -2566,7 +2564,7 @@
                 <span class="attribution-value down">-1,200</span>
               </div>
 
-              <h4 class="section-label">因子贡献</h4>
+              <h2 class="section-label">因子贡献</h2>
               <div class="attribution-row">
                 <span class="attribution-label">动量</span>
                 <div class="attribution-bar-track"><div class="attribution-bar-fill up attr-w-55"></div></div>
@@ -2863,14 +2861,15 @@
           <div class="overlay-warning-layout">
             <div class="overlay-warning-icon" data-danger-marker>!</div>
             <div>
-              <p class="text-primary-medium" data-impact-summary>暂停后所有新订单将被拦截</p>
+              <p class="text-primary-medium" data-risk-object>对象：当前交易模式和待处理信号队列</p>
+              <p class="text-primary-medium" data-impact-summary>影响范围：暂停交易会阻止新订单提交，已提交订单继续按券商状态回报。</p>
               <p class="text-body">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
-              <p class="text-body" data-recovery-hint>恢复提示：可从交易会话条恢复接单，并保留暂停审计记录。</p>
+              <p class="text-body" data-recovery-hint>恢复路径：可在交易总览重新启用交易，所有切换写入审计日志。</p>
             </div>
           </div>
           <div class="overlay-actions">
-            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary label-interactive" data-cancel-control>取消</label>
-            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger label-interactive" data-confirm-control data-danger-action>确认暂停</label>
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary label-interactive" data-cancel-control>取消，保持交易模式</label>
+            <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger label-interactive" data-confirm-control data-danger-action>确认暂停交易</label>
           </div>
         </div>
       </div>
@@ -2885,7 +2884,7 @@
           <label for="overlay-position-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>标的信息</h4>
+          <h2>标的信息</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">代码</span>
             <span class="overlay-field-value">600519</span>
@@ -2903,7 +2902,7 @@
             <span class="overlay-field-value text-up dir-up">+3.98%</span>
           </div>
 
-          <h4>持仓信息</h4>
+          <h2>持仓信息</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">持有数量</span>
             <span class="overlay-field-value">200 股</span>
@@ -2925,13 +2924,13 @@
             <span class="overlay-field-value">全部可卖</span>
           </div>
 
-          <h4>当日成交记录</h4>
+          <h2>当日成交记录</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">14:30</span>
             <span class="overlay-field-value text-up dir-up">买入 100股 @ ¥1,850.00</span>
           </div>
 
-          <h4>关联信号</h4>
+          <h2>关联信号</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">卖出信号</span>
             <span class="overlay-field-value text-down dir-down">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
@@ -2949,7 +2948,7 @@
           <label for="overlay-risk-alert-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>预警概要</h4>
+          <h2>预警概要</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">类型</span>
             <span class="overlay-field-value">行业集中度超限</span>
@@ -2963,12 +2962,12 @@
             <span class="overlay-field-value">14:20:33</span>
           </div>
 
-          <h4>详细描述</h4>
+          <h2>详细描述</h2>
           <p class="text-body-desc">
             科技板块持仓集中度达到 37.2%，超过规则上限 35%。当前科技板块持仓包括：宁德时代、比亚迪、立讯精密、中芯国际。建议适度减配至 33% 以下，降低单一板块风险敞口。
           </p>
 
-          <h4>影响范围</h4>
+          <h2>影响范围</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">受影响持仓</span>
             <span class="overlay-field-value">4 只标的</span>
@@ -2982,7 +2981,7 @@
             <span class="overlay-field-value text-critical">37.2%</span>
           </div>
 
-          <h4>建议操作</h4>
+          <h2>建议操作</h2>
           <p class="text-body-desc">
             1. 优先减持立讯精密（亏损 -6.32%，动量反转信号明确）<br>
             2. 评估宁德时代仓位，当前盈利 +1.40% 可适度止盈<br>
@@ -3001,22 +3000,22 @@
           <label for="overlay-limit-status" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>接近涨停</h4>
+          <h2>接近涨停</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">中芯国际 (688981)</span>
             <span class="overlay-field-value text-up dir-up">¥51.00 (+6.25%) · 距涨停 3.75%</span>
           </div>
 
-          <h4>接近跌停</h4>
+          <h2>接近跌停</h2>
           <div class="overlay-field" role="listitem">
             <span class="overlay-field-label">立讯精密 (002475)</span>
             <span class="overlay-field-value text-down dir-down">¥35.60 (-6.32%) · 距跌停 3.68%</span>
           </div>
 
-          <h4>今日已涨停</h4>
+          <h2>今日已涨停</h2>
           <div class="empty-placeholder">暂无标的触及涨停</div>
 
-          <h4>今日已跌停</h4>
+          <h2>今日已跌停</h2>
           <div class="empty-placeholder">暂无标的触及跌停</div>
         </div>
       </div>
@@ -3617,7 +3616,7 @@
             <span class="overlay-title">持仓详情 — 贵州茅台 (600519)</span>
           </div>
           <div class="overlay-body" role="document">
-            <h4>标的信息</h4>
+            <h2>标的信息</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">代码</span>
               <span class="overlay-field-value">600519</span>
@@ -3634,7 +3633,7 @@
               <span class="overlay-field-label">涨跌幅</span>
               <span class="overlay-field-value text-up dir-up">+3.98%</span>
             </div>
-            <h4>持仓信息</h4>
+            <h2>持仓信息</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">持有数量</span>
               <span class="overlay-field-value">200 股</span>
@@ -3655,12 +3654,12 @@
               <span class="overlay-field-label">T+1 状态</span>
               <span class="overlay-field-value">全部可卖</span>
             </div>
-            <h4>当日成交记录</h4>
+            <h2>当日成交记录</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">14:30</span>
               <span class="overlay-field-value text-up dir-up">买入 100股 @ ¥1,850.00</span>
             </div>
-            <h4>关联信号</h4>
+            <h2>关联信号</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">卖出信号</span>
               <span class="overlay-field-value text-down dir-down">Alpha v3 · RSI背离+放量 · 置信度 87%</span>
@@ -3678,7 +3677,7 @@
             <span class="overlay-title">风控预警详情</span>
           </div>
           <div class="overlay-body" role="document">
-            <h4>预警概要</h4>
+            <h2>预警概要</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">类型</span>
               <span class="overlay-field-value">行业集中度超限</span>
@@ -3691,11 +3690,11 @@
               <span class="overlay-field-label">触发时间</span>
               <span class="overlay-field-value">14:20:33</span>
             </div>
-            <h4>详细描述</h4>
+            <h2>详细描述</h2>
             <p class="text-body-desc">
               科技板块持仓集中度达到 37.2%，超过规则上限 35%。当前科技板块持仓包括：宁德时代、比亚迪、立讯精密、中芯国际。建议适度减配至 33% 以下，降低单一板块风险敞口。
             </p>
-            <h4>影响范围</h4>
+            <h2>影响范围</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">受影响持仓</span>
               <span class="overlay-field-value">4 只标的</span>
@@ -3708,7 +3707,7 @@
               <span class="overlay-field-label">占总权益</span>
               <span class="overlay-field-value text-critical">37.2%</span>
             </div>
-            <h4>建议操作</h4>
+            <h2>建议操作</h2>
             <p class="text-body-desc">
               1. 优先减持立讯精密（亏损 -6.32%，动量反转信号明确）<br>
               2. 评估宁德时代仓位，当前盈利 +1.40% 可适度止盈<br>
@@ -3727,19 +3726,19 @@
             <span class="overlay-title">涨跌停标的状态概览</span>
           </div>
           <div class="overlay-body" role="document">
-            <h4>接近涨停</h4>
+            <h2>接近涨停</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">中芯国际 (688981)</span>
               <span class="overlay-field-value text-up dir-up">¥51.00 (+6.25%) · 距涨停 3.75%</span>
             </div>
-            <h4>接近跌停</h4>
+            <h2>接近跌停</h2>
             <div class="overlay-field" role="listitem">
               <span class="overlay-field-label">立讯精密 (002475)</span>
               <span class="overlay-field-value text-down dir-down">¥35.60 (-6.32%) · 距跌停 3.68%</span>
             </div>
-            <h4>今日已涨停</h4>
+            <h2>今日已涨停</h2>
             <div class="empty-placeholder">暂无标的触及涨停</div>
-            <h4>今日已跌停</h4>
+            <h2>今日已跌停</h2>
             <div class="empty-placeholder">暂无标的触及跌停</div>
           </div>
         </div>

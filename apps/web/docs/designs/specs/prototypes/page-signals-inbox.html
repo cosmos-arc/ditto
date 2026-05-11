@@ -455,7 +455,7 @@
     .confidence-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .confidence-fill.high   { background: var(--system-healthy-fg); }
@@ -1203,10 +1203,10 @@
       border-bottom: 2px solid var(--border-default);
     }
 
-    /* Active/selected row: left accent border */
+    /* Active/selected row: full-frame selection */
     .data-table tr.row.selected {
       background: var(--interaction-selected-bg);
-      box-shadow: inset 3px 0 0 var(--interaction-selected-border);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
 
     /* Detail panel: stronger separation */
@@ -1282,7 +1282,7 @@
       font-weight: var(--font-weight-medium);
     }
     .row.unread td:first-child {
-      box-shadow: inset 2px 0 0 var(--interaction-selected-border);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
 
     /* Cell time: numeric font */
@@ -1605,7 +1605,7 @@
 
     /* ── 3. Overlay Accent Border (matches factor-analysis) ── */
     .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
     }
 
     /* ── 4. Confidence Bar Gradient Enhancement ── */
@@ -1763,7 +1763,7 @@
 
     /* ── 9. Overlay Drawer Accent Border (parity with overlay surface) ── */
     .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
     }
 
     /* ── 10. Batch Bar Brand Touch ── */
@@ -2679,7 +2679,7 @@
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>标的信息</h4>
+          <h2>标的信息</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">600519 贵州茅台</span>
@@ -2693,7 +2693,7 @@
             <span class="overlay-field-value">100 股（1 手）</span>
           </div>
 
-          <h4>标的状态检查</h4>
+          <h2>标的状态检查</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">标的状态</span>
             <span class="overlay-field-value color-pass">✓ 正常交易（非停牌/非退市）</span>
@@ -2711,7 +2711,7 @@
             <span class="overlay-field-value color-pass">✓ 担保比例充足</span>
           </div>
 
-          <h4>委托配置</h4>
+          <h2>委托配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">委托类型</span>
             <span class="overlay-field-value">限价委托</span>
@@ -2725,7 +2725,7 @@
             <span class="overlay-field-value tnum">100 股（1 手）</span>
           </div>
 
-          <h4>预估费用</h4>
+          <h2>预估费用</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">佣金</span>
             <span class="overlay-field-value tnum">¥4.64</span>
@@ -2760,17 +2760,17 @@
           <label for="overlay-ai-read" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>市场背景</h4>
+          <h2>市场背景</h2>
           <p class="overlay-body-text">
             当前 A 股市场整体处于温和上行通道，沪深 300 近 5 日涨幅 +1.2%。白酒板块受春节后消费数据超预期提振，行业景气度指数回升至 68.5。北向资金连续 5 日净流入，累计 +24.6 亿。
           </p>
 
-          <h4>标的分析：贵州茅台 (600519)</h4>
+          <h2>标的分析：贵州茅台 (600519)</h2>
           <p class="overlay-body-text">
             动量因子持续走强，近 20 日收益率排名第 87 百分位。MACD 周线金叉确认，成交量放大 1.4 倍。筹码集中度提升，主力资金连续 3 日净流入。当前估值 PE(TTM) 32.8x，处于近 3 年 55% 分位，估值合理。
           </p>
 
-          <h4>风险评估</h4>
+          <h2>风险评估</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">集中度风险</span>
             <span class="overlay-field-value color-warn">偏高（板块占比 37.2%）</span>
@@ -2784,7 +2784,7 @@
             <span class="overlay-field-value color-warn">今日已买入</span>
           </div>
 
-          <h4>建议操作</h4>
+          <h2>建议操作</h2>
           <p class="overlay-body-text">
             建议分批建仓，首次买入建议权重 3%，观察 2 个交易日后视动量衰减情况追加至目标权重 5%。建议设置止损价 1,520 元（跌破 20 日均线）。
           </p>
@@ -2805,13 +2805,14 @@
     <!-- Overlay C: 批量确认 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-confirm">
       <label class="overlay-dismiss" for="overlay-batch-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量确认信号">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量确认信号" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title">批量确认信号</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 批量确认信号</span>
           <label for="overlay-batch-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>已选信号摘要</h4>
+          <h2>已选信号摘要</h2>
+          <p data-risk-object>对象：已选择 3 条待复核信号</p>
           <div class="overlay-field">
             <span class="overlay-field-label">信号数量</span>
             <span class="overlay-field-value">3 条</span>
@@ -2829,7 +2830,8 @@
             <span class="overlay-field-value tnum">¥528,400.00</span>
           </div>
 
-          <h4>风控批量检查</h4>
+          <p data-impact-summary>影响范围：批量确认会进入下单约束检查，批量忽略会保留信号但不触发订单。</p>
+          <h2>风控批量检查</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">组合集中度</span>
             <span class="overlay-field-value color-warn">⚠ 白酒板块将达 42.3%</span>
@@ -2843,9 +2845,10 @@
             <span class="overlay-field-value color-pass">✓ 均可正常交易</span>
           </div>
 
+          <p data-recovery-hint>恢复路径：已忽略信号可从已忽略队列恢复，确认记录进入审计日志。</p>
           <div class="overlay-actions">
-            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" >取消</label>
-            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" >确认全部</label>
+            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留待复核</label>
+            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认处理 3 条信号</label>
           </div>
         </div>
       </div>
@@ -3216,7 +3219,7 @@
             <span class="overlay-close" aria-label="关闭">✕</span>
           </div>
           <div class="overlay-body">
-            <h4>标的信息</h4>
+            <h2>标的信息</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的</span>
               <span class="overlay-field-value">600519 贵州茅台</span>
@@ -3230,7 +3233,7 @@
               <span class="overlay-field-value">100 股（1 手）</span>
             </div>
 
-            <h4>标的状态检查</h4>
+            <h2>标的状态检查</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的状态</span>
               <span class="overlay-field-value color-pass">✓ 正常交易（非停牌/非退市）</span>
@@ -3248,7 +3251,7 @@
               <span class="overlay-field-value color-pass">✓ 担保比例充足</span>
             </div>
 
-            <h4>委托配置</h4>
+            <h2>委托配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">委托类型</span>
               <span class="overlay-field-value">限价委托</span>
@@ -3262,7 +3265,7 @@
               <span class="overlay-field-value tnum">100 股（1 手）</span>
             </div>
 
-            <h4>预估费用</h4>
+            <h2>预估费用</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">佣金</span>
               <span class="overlay-field-value tnum">¥4.64</span>
@@ -3298,17 +3301,17 @@
             <span class="overlay-close" aria-label="关闭">✕</span>
           </div>
           <div class="overlay-body">
-            <h4>市场背景</h4>
+            <h2>市场背景</h2>
             <p class="overlay-body-text">
               当前 A 股市场整体处于温和上行通道，沪深 300 近 5 日涨幅 +1.2%。白酒板块受春节后消费数据超预期提振，行业景气度指数回升至 68.5。北向资金连续 5 日净流入，累计 +24.6 亿。
             </p>
 
-            <h4>标的分析：贵州茅台 (600519)</h4>
+            <h2>标的分析：贵州茅台 (600519)</h2>
             <p class="overlay-body-text">
               动量因子持续走强，近 20 日收益率排名第 87 百分位。MACD 周线金叉确认，成交量放大 1.4 倍。筹码集中度提升，主力资金连续 3 日净流入。当前估值 PE(TTM) 32.8x，处于近 3 年 55% 分位，估值合理。
             </p>
 
-            <h4>风险评估</h4>
+            <h2>风险评估</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">集中度风险</span>
               <span class="overlay-field-value color-warn">偏高（板块占比 37.2%）</span>
@@ -3322,7 +3325,7 @@
               <span class="overlay-field-value color-warn">今日已买入</span>
             </div>
 
-            <h4>建议操作</h4>
+            <h2>建议操作</h2>
             <p class="overlay-body-text">
               建议分批建仓，首次买入建议权重 3%，观察 2 个交易日后视动量衰减情况追加至目标权重 5%。建议设置止损价 1,520 元（跌破 20 日均线）。
             </p>
@@ -3350,7 +3353,7 @@
             <span class="overlay-close" aria-label="关闭">✕</span>
           </div>
           <div class="overlay-body">
-            <h4>已选信号摘要</h4>
+            <h2>已选信号摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">信号数量</span>
               <span class="overlay-field-value">3 条</span>
@@ -3368,7 +3371,7 @@
               <span class="overlay-field-value tnum">¥528,400.00</span>
             </div>
 
-            <h4>风控批量检查</h4>
+            <h2>风控批量检查</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">组合集中度</span>
               <span class="overlay-field-value color-warn">⚠ 白酒板块将达 42.3%</span>

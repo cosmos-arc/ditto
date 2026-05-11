@@ -180,7 +180,7 @@
     }
 
     .data-table tr.row.selected td:first-child {
-      box-shadow: inset 3px 0 0 var(--interaction-selected-border);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
 
     .col-select { width: 30px; }
@@ -965,19 +965,19 @@
             <label for="overlay-universe-edit" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
-            <h4>名称</h4>
+            <h2>名称</h2>
             <div class="sv-pad-6-0">
               <input type="text" placeholder="输入股票池名称" class="ov-input" value="沪深300成分股">
             </div>
 
-            <h4>来源方式</h4>
+            <h2>来源方式</h2>
             <div class="sv-pad-section">
               <label class="ov-check-label"><input type="radio" name="universe-source-live" checked> 指数成分股</label>
               <label class="ov-check-label"><input type="radio" name="universe-source-live"> 从筛选结果导入</label>
               <label class="ov-check-label"><input type="radio" name="universe-source-live"> 手动添加</label>
             </div>
 
-            <h4>筛选条件配置</h4>
+            <h2>筛选条件配置</h2>
             <div class="sv-pad-6-0">
               <div class="overlay-field"><span class="overlay-field-label">基础范围</span><span class="overlay-field-value">沪深300</span></div>
               <div class="overlay-field"><span class="overlay-field-label">排除</span><span class="overlay-field-value">ST / 停牌 / 新股</span></div>
@@ -1000,16 +1000,17 @@
             <label for="overlay-universe-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
-            <p data-impact-summary><span data-danger-marker>!</span> 确认删除股票池「科技龙头组合」？关联策略将不再使用此股票池。</p>
-            <p data-recovery-hint>恢复提示：删除后可用导出快照重建，关联策略需重新绑定。</p>
+            <p data-risk-object>对象：沪深300成分股股票池</p>
+            <p data-impact-summary><span data-danger-marker>!</span> 影响范围：删除会影响 3 个关联策略的标的引用，已运行回测保持可追溯。</p>
+            <p data-recovery-hint>恢复路径：可从指数成分源重新同步，并保留删除审计记录。</p>
             <div class="sv-pad-section">
               <div class="overlay-field"><span class="overlay-field-label">标的数</span><span class="overlay-field-value">42</span></div>
               <div class="overlay-field"><span class="overlay-field-label">关联策略</span><span class="overlay-field-value">2 个</span></div>
               <div class="overlay-field"><span class="overlay-field-label">更新时间</span><span class="overlay-field-value">2026-04-19 10:20</span></div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消</label>
-              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认删除</label>
+              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消，保留股票池</label>
+              <label for="overlay-universe-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认删除股票池</label>
             </div>
           </div>
         </div>
@@ -1180,17 +1181,17 @@
                   <button class="overlay-close" aria-label="关闭">x</button>
                 </div>
                 <div class="overlay-body">
-                  <h4>名称</h4>
+                  <h2>名称</h2>
                   <div class="sv-pad-6-0">
                     <input type="text" placeholder="输入股票池名称" class="ov-input">
                   </div>
-                  <h4>来源方式</h4>
+                  <h2>来源方式</h2>
                   <div class="sv-pad-section">
                     <label class="ov-check-label"><input type="radio" name="universe-source-gallery" checked> 指数成分股</label>
                     <label class="ov-check-label"><input type="radio" name="universe-source-gallery"> 从筛选结果导入</label>
                     <label class="ov-check-label"><input type="radio" name="universe-source-gallery"> 手动添加</label>
                   </div>
-                  <h4>成分股预览</h4>
+                  <h2>成分股预览</h2>
                   <div class="sv-pad-6-0">
                     <div class="overlay-field"><span class="overlay-field-label">预计标的数</span><span class="overlay-field-value">300</span></div>
                     <div class="overlay-field"><span class="overlay-field-label">关联策略</span><span class="overlay-field-value">0</span></div>

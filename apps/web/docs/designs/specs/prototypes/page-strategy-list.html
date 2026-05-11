@@ -77,7 +77,7 @@
       position: relative;
     }
     .shell-catalog .catalog-detail {
-      box-shadow: inset 4px 0 10px -6px var(--overlay-3);
+      box-shadow: none;
     }
 
     .catalog-table-inner { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
@@ -208,7 +208,7 @@
 
     .state-variant .state-variant-content { background: var(--surface-app); }
     .data-table tr.row.selected { background: color-mix(in oklch, var(--brand-accent) 5%, transparent); }
-    .data-table tr.row.selected td:first-child { box-shadow: inset 3px 0 0 var(--interaction-selected-border); }
+    .data-table tr.row.selected td:first-child { box-shadow: inset 0 0 0 1px var(--interaction-selected-border); }
 
     .batch-bar { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-12); background: var(--brand-accent-subtle); border-bottom: 1px solid var(--brand-accent); }
     .batch-bar .batch-count { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); color: var(--brand-accent); }
@@ -688,7 +688,7 @@
                 <span class="overlay-field-value">1.85</span>
               </div>
             </div>
-            <h4>新策略名称</h4>
+            <h2>新策略名称</h2>
             <div class="sv-pad-6-0">
               <input type="text" value="Alpha-Momentum-v3-copy" class="ov-input">
             </div>
@@ -708,8 +708,9 @@
             <label for="overlay-strategy-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
-            <p data-impact-summary><span data-danger-marker>!</span> 确定要删除 Timing-Macro？关联回测记录和信号历史将被保留，但策略配置无法恢复。</p>
-            <p data-recovery-hint>恢复提示：保留回测与信号历史，可从版本归档重新创建策略。</p>
+            <p data-risk-object>对象：Alpha-Momentum-v3 策略</p>
+            <p data-impact-summary><span data-danger-marker>!</span> 影响范围：暂停或删除会停止后续回测和信号生成，历史记录保留。</p>
+            <p data-recovery-hint>恢复路径：可从策略详情恢复运行或克隆最近版本。</p>
             <div class="sv-pad-section">
               <div class="overlay-field">
                 <span class="overlay-field-label">关联回测</span>
@@ -725,8 +726,8 @@
               </div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消</label>
-              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认删除</label>
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消，保留策略状态</label>
+              <label for="overlay-strategy-delete" class="overlay-btn overlay-btn-danger ov-label-btn" data-confirm-control data-danger-action>确认变更策略状态</label>
             </div>
           </div>
         </div>
@@ -941,7 +942,7 @@
                       <span class="overlay-field-value">1.85</span>
                     </div>
                   </div>
-                  <h4>新策略名称</h4>
+                  <h2>新策略名称</h2>
                   <div class="sv-pad-6-0">
                     <input type="text" value="Alpha-Momentum-v3-副本" class="ov-input">
                   </div>

@@ -817,7 +817,7 @@
       height: 6px;
       border-radius: 3px;
       background: var(--brand-accent);
-      transition: width var(--motion-duration-fast) var(--motion-easing-emphasis);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .weight-bar-track {
       height: 6px;
@@ -1864,6 +1864,19 @@
       </div>
     </div>
 
+    <section class="danger-confirmation-summary" data-danger-confirmation aria-label="高风险操作确认">
+      <div class="overlay-header">
+        <span class="overlay-title"><span data-danger-marker aria-hidden="true">!</span> 删除策略复核</span>
+      </div>
+      <p data-risk-object>对象：动量因子增强策略 v3.2</p>
+      <p data-impact-summary>影响范围：删除后会停止新回测、保留历史回测和信号审计，不影响已成交订单。</p>
+      <div class="overlay-actions">
+        <button type="button" class="overlay-btn sd-btn-danger" data-confirm-control data-danger-action aria-label="确认删除策略">确认删除策略</button>
+        <button type="button" class="overlay-btn overlay-btn-secondary" data-cancel-control aria-label="取消并保留策略">取消，保留策略</button>
+      </div>
+      <p data-recovery-hint>恢复路径：删除记录进入审计日志，可从最近版本克隆恢复。</p>
+    </section>
+
   </div><!-- /shell-hub -->
   </section>
 
@@ -2124,7 +2137,7 @@
                   <span class="overlay-title">回测参数配置</span>
                 </div>
                 <div class="overlay-body">
-                  <h4>时间区间</h4>
+                  <h2>时间区间</h2>
                   <div class="sd-flex-gap8-mb8">
                     <div class="sd-flex1">
                       <div class="sd-text10-tertiary-mb2">起始日期</div>
@@ -2135,7 +2148,7 @@
                       <div class="sd-date-input">2026-04-10</div>
                     </div>
                   </div>
-                  <h4>基准与参数</h4>
+                  <h2>基准与参数</h2>
                   <div class="overlay-field">
                     <span class="overlay-field-label">基准指数</span>
                     <span class="overlay-field-value">沪深300</span>
@@ -2166,9 +2179,9 @@
                   <span class="overlay-title">复制策略</span>
                 </div>
                 <div class="overlay-body">
-                  <h4>新策略名称</h4>
+                  <h2>新策略名称</h2>
                   <input type="text" class="form-input sd-w-full-mb10" placeholder="动量因子增强策略 (副本)">
-                  <h4>描述</h4>
+                  <h2>描述</h2>
                   <textarea placeholder="可选：描述此副本的用途..." class="form-textarea sd-w-full"></textarea>
                   <div class="overlay-actions">
                     <button class="overlay-btn overlay-btn-secondary">取消</button>
