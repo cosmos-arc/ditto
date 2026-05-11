@@ -11,6 +11,14 @@ const rowContextMenuPages = [
 	"page-strategy-list.html",
 	"page-orders-ledger.html",
 ];
+const complexDecisionBudgetPages = [
+	"page-alpha-explorer.html",
+	"page-agent-console-v2.html",
+	"page-strategy-studio.html",
+	"page-instrument-hub.html",
+] as const;
+
+const maxVisibleDecisionOptions = 4;
 
 function loadDocument(file: string): Document {
 	return new JSDOM(readFileSync(resolve(prototypesDir, file), "utf8")).window.document;
@@ -64,6 +72,70 @@ describe("prototype expert efficiency", () => {
 				if (!status.querySelector("[data-danger-marker], [data-status-label]")) {
 					violations.push(file);
 				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps complex expert pages within a four-option first-screen decision budget", () => {
+		const violations: string[] = [];
+
+		for (const file of complexDecisionBudgetPages) {
+			const document = loadDocument(file);
+			const cluster = document.querySelector("[data-decision-cluster]");
+			const options = cluster?.querySelectorAll("[data-decision-option]") ?? [];
+			const overflow = cluster?.querySelector("[data-decision-overflow]");
+			const primaryAnswer = document.querySelector("[data-primary-answer], [data-primary-answer-equivalent]");
+
+			if (!cluster) {
+				violations.push(`${file}:decision-cluster:missing`);
+				continue;
+			}
+			if (!primaryAnswer) {
+				violations.push(`${file}:primary-answer:missing`);
+			}
+			if (options.length === 0) {
+				violations.push(`${file}:decision-options:missing`);
+			}
+			if (options.length > maxVisibleDecisionOptions) {
+				violations.push(`${file}:decision-options:${options.length}`);
+			}
+			if (options.length === maxVisibleDecisionOptions && !overflow) {
+				violations.push(`${file}:overflow:missing`);
+			}
+			for (const [index, option] of [...options].entries()) {
+				const text = option.textContent?.replace(/\s+/g, " ").trim() ?? "";
+				const label = option.getAttribute("aria-label") ?? "";
+				if (!text && !label) {
+					violations.push(`${file}:decision-option:${index + 1}:name`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps complex page inspectors focused on current-decision evidence by default", () => {
+		const violations: string[] = [];
+
+		for (const file of complexDecisionBudgetPages) {
+			const document = loadDocument(file);
+			const defaultOpenSections = document.querySelectorAll(
+				"[data-decision-evidence][data-default-open='true'], details[data-decision-evidence][open]",
+			);
+			const backgroundSections = document.querySelectorAll(
+				"[data-background-evidence][data-default-open='true'], details[data-background-evidence][open]",
+			);
+
+			if (defaultOpenSections.length < 1) {
+				violations.push(`${file}:decision-evidence:missing`);
+			}
+			if (defaultOpenSections.length > 2) {
+				violations.push(`${file}:decision-evidence:${defaultOpenSections.length}`);
+			}
+			if (backgroundSections.length > 0) {
+				violations.push(`${file}:background-open:${backgroundSections.length}`);
 			}
 		}
 
