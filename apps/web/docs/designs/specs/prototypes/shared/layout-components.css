@@ -3477,3 +3477,23 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
 [data-tertiary-context] :is(.panel-title, .section-title, .card-title) {
   color: var(--text-tertiary);
 }
+
+/* Final-review action tiering */
+[data-action-tier="primary"] {
+  color: var(--brand-accent-fg);
+  background: var(--brand-accent);
+  border-color: var(--brand-accent);
+}
+
+[data-action-tier="context"] {
+  color: var(--text-secondary);
+}
+
+[data-action-tier="overflow"] {
+  color: var(--text-tertiary);
+}
+
+[data-action-tier="command"] {
+  color: var(--text-tertiary);
+  font-family: var(--font-family-code);
+}
