@@ -476,9 +476,12 @@ const catalogContractPages = [
 const highRiskActionPages = [
 	"platform-settings",
 	"trading-overview",
+	"signals-inbox",
+	"orders-ledger",
 	"universe-list",
+	"strategies-detail",
 	"strategy-list",
-];
+] as const;
 const requiredChartAffordances = [
 	"crosshair",
 	"tooltip",
@@ -4247,10 +4250,12 @@ describe("prototype design consistency", () => {
 		expect(violations).toEqual([]);
 	});
 
-	it("documents high-risk actions with impact, confirmation, cancel, recovery, and non-color danger cues", () => {
+	it("documents high-risk actions with object, impact, confirmation, cancel, recovery, and non-color danger cues", () => {
 		const violations: string[] = [];
 
-		for (const page of activePages().filter((prototype) => highRiskActionPages.includes(prototype.id))) {
+		for (const page of activePages().filter((prototype) =>
+			highRiskActionPages.includes(prototype.id as (typeof highRiskActionPages)[number]),
+		)) {
 			const document = readPrototypeDocument(page);
 			const defaultView = document.querySelector("#default-view");
 			const action = defaultView?.querySelector("[data-danger-action], [data-high-risk-action]");
@@ -4266,6 +4271,7 @@ describe("prototype design consistency", () => {
 				continue;
 			}
 			for (const selector of [
+				"[data-risk-object]",
 				"[data-impact-summary]",
 				"[data-confirm-control]",
 				"[data-cancel-control]",
@@ -4275,6 +4281,17 @@ describe("prototype design consistency", () => {
 				if (!container.querySelector(selector)) {
 					violations.push(`${page.id}:${selector}`);
 				}
+			}
+
+			const containerText = getReadablePrimaryText(container);
+			if (!/(影响|后果|范围|订单|策略|标的池|信号|配置|交易|撤单|审批)/.test(containerText)) {
+				violations.push(`${page.id}:impact-copy`);
+			}
+			if (!/(取消|保留|返回|不执行)/.test(containerText)) {
+				violations.push(`${page.id}:cancel-copy`);
+			}
+			if (!/(恢复|回滚|可重新|保留记录|审计)/.test(containerText)) {
+				violations.push(`${page.id}:recovery-copy`);
 			}
 		}
 
