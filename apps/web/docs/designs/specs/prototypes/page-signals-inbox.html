@@ -2283,10 +2283,10 @@
         <div class="signals-header">
           <div class="signals-filters">
             <div class="filter-group" role="group" aria-label="信号来源">
-              <button class="filter-btn active" aria-pressed="true">全部</button>
-              <button class="filter-btn" aria-pressed="false">策略</button>
-              <button class="filter-btn" aria-pressed="false">AI</button>
-              <button class="filter-btn" aria-pressed="false">手动</button>
+              <button class="filter-btn active" aria-pressed="true" data-action-tier="context">全部</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">策略</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">AI</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">手动</button>
             </div>
           </div>
           <div class="account-selector" tabindex="0" role="button" aria-label="切换账户">
@@ -2354,10 +2354,10 @@
         <div class="signals-header">
           <div class="signals-filters">
             <div class="filter-group" role="group" aria-label="忽略原因">
-              <button class="filter-btn active" aria-pressed="true">全部</button>
-              <button class="filter-btn" aria-pressed="false">风控阻断</button>
-              <button class="filter-btn" aria-pressed="false">手动忽略</button>
-              <button class="filter-btn" aria-pressed="false">过期</button>
+              <button class="filter-btn active" aria-pressed="true" data-action-tier="context">全部</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">风控阻断</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">手动忽略</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">过期</button>
             </div>
           </div>
         </div>
@@ -2383,7 +2383,7 @@
                 <td><span class="source-badge ai"><span class="source-badge-dot"></span>AI 信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-reason danger">涨跌停阻断：涨停价买入</td>
-                <td><button class="filter-btn">恢复</button></td>
+                <td><button class="filter-btn" data-action-tier="context">恢复</button></td>
               </tr>
               <tr class="row" role="row" tabindex="0">
                 <td class="cell-time">13:55:42</td>
@@ -2394,7 +2394,7 @@
                 <td><span class="source-badge manual"><span class="source-badge-dot"></span>手动信号</span></td>
                 <td><span class="side-badge buy"><span class="side-badge-sym">▲</span> 买入</span></td>
                 <td class="cell-reason muted">手动忽略：行情判断不符</td>
-                <td><button class="filter-btn">恢复</button></td>
+                <td><button class="filter-btn" data-action-tier="context">恢复</button></td>
               </tr>
             </tbody>
           </table>
@@ -2406,11 +2406,11 @@
         <div class="signals-header">
           <div class="signals-filters">
             <div class="filter-group" role="group" aria-label="订单状态">
-              <button class="filter-btn active" aria-pressed="true">全部</button>
-              <button class="filter-btn" aria-pressed="false">已提交</button>
-              <button class="filter-btn" aria-pressed="false">部分成交</button>
-              <button class="filter-btn" aria-pressed="false">已完成</button>
-              <button class="filter-btn" aria-pressed="false">失败</button>
+              <button class="filter-btn active" aria-pressed="true" data-action-tier="context">全部</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">已提交</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">部分成交</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">已完成</button>
+              <button class="filter-btn" aria-pressed="false" data-action-tier="context">失败</button>
             </div>
           </div>
         </div>

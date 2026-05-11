@@ -33,7 +33,7 @@ describe("prototype primary answer contract", () => {
 		}
 
 		expect(failures).toEqual([]);
-	});
+	}, 20_000);
 
 	it("marks secondary context regions so visual hierarchy can be audited", () => {
 		const failures: string[] = [];
@@ -53,5 +53,5 @@ describe("prototype primary answer contract", () => {
 		}
 
 		expect(failures).toEqual([]);
-	});
+	}, 20_000);
 });

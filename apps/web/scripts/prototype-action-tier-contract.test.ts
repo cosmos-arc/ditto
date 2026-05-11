@@ -52,20 +52,31 @@ const actionCandidateSelector =
 		".view-detail-link",
 		".collapsible-strip-toggle",
 	].join(", ");
-const hiddenContextSelector =
-	"#states-gallery, #overlays-gallery, [data-overlay], [aria-hidden='true'], [hidden], template";
+const excludedActionContextSelector =
+	"#states-gallery, #overlays-gallery, [data-overlay], [hidden], template";
+const currentlyHiddenActionContextSelector = `${excludedActionContextSelector}, [aria-hidden='true']`;
 
 function loadDocument(file: string): Document {
 	return new JSDOM(readFileSync(join(prototypesDir, file), "utf8")).window.document;
 }
 
-function isInHiddenContext(element: Element): boolean {
-	return element.closest(hiddenContextSelector) !== null;
+function isInExcludedActionContext(element: Element): boolean {
+	return element.closest(excludedActionContextSelector) !== null;
+}
+
+function isInCurrentlyHiddenContext(element: Element): boolean {
+	return element.closest(currentlyHiddenActionContextSelector) !== null;
+}
+
+function getRuntimeReachableActionCandidates(document: Document): HTMLElement[] {
+	return [...document.querySelectorAll<HTMLElement>(actionCandidateSelector)].filter(
+		(action) => !isInExcludedActionContext(action),
+	);
 }
 
 function getVisibleActionCandidates(document: Document): HTMLElement[] {
-	return [...document.querySelectorAll<HTMLElement>(actionCandidateSelector)].filter(
-		(action) => !isInHiddenContext(action),
+	return getRuntimeReachableActionCandidates(document).filter(
+		(action) => !isInCurrentlyHiddenContext(action),
 	);
 }
 
@@ -78,12 +89,12 @@ function getActionName(action: Element): string {
 }
 
 describe("prototype action tier contract", () => {
-	it("marks visible decision actions with an explicit action tier", () => {
+	it("marks runtime-reachable decision actions with an explicit action tier", () => {
 		const failures: string[] = [];
 
 		for (const file of highDensityPages) {
 			const document = loadDocument(file);
-			const actions = getVisibleActionCandidates(document);
+			const actions = getRuntimeReachableActionCandidates(document);
 
 			for (const action of actions) {
 				const text = getActionName(action);
@@ -173,7 +184,7 @@ describe("prototype action tier contract", () => {
 			...document.querySelectorAll<HTMLElement>(
 				'table[data-compare-source="screener-results"] tbody tr',
 			),
-		].filter((row) => !isInHiddenContext(row));
+		].filter((row) => !isInCurrentlyHiddenContext(row));
 		const failures: string[] = [];
 
 		for (const row of resultRows) {

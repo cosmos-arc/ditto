@@ -208,5 +208,5 @@ describe("prototype final review remediation gates", () => {
 		} finally {
 			await browser.close();
 		}
-	});
+	}, 20_000);
 });

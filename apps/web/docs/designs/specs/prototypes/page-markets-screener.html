@@ -2544,8 +2544,8 @@
         </button>
       </div>
       <div class="sort-panel-actions">
-        <button class="btn btn-ghost" data-sort-action="reset">重置</button>
-        <button class="btn btn-primary" data-sort-action="apply">应用排序</button>
+        <button class="btn btn-ghost" data-sort-action="reset" data-action-tier="overflow">重置</button>
+        <button class="btn btn-primary" data-sort-action="apply" data-action-tier="context">应用排序</button>
       </div>
     </div><!-- end data-tab-panel="sort" -->
 
@@ -2577,8 +2577,8 @@
         </div>
       </div>
       <div class="compare-panel-actions">
-        <button class="btn btn-ghost">清空</button>
-        <label for="overlay-compare" class="btn btn-primary ov-label-btn">开始对比 &rarr;</label>
+        <button class="btn btn-ghost" data-action-tier="overflow">清空</button>
+        <label for="overlay-compare" class="btn btn-primary ov-label-btn" data-action-tier="primary">开始对比 &rarr;</label>
       </div>
     </div><!-- end data-tab-panel="compare" -->
 
