@@ -959,13 +959,14 @@
     <div class="overlays">
       <div class="overlay-backdrop" data-overlay="overlay-universe-edit">
         <label class="overlay-dismiss" for="overlay-universe-edit" aria-label="关闭"></label>
-        <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="创建或编辑股票池">
+        <div class="overlay-surface overlay-surface--drawer danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="创建或编辑股票池" data-danger-confirmation data-high-risk-confirmation>
           <div class="overlay-header">
-            <span class="overlay-title">创建/编辑股票池</span>
+            <span class="overlay-title"><span data-danger-marker>!</span> 创建/编辑股票池</span>
             <label for="overlay-universe-edit" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
             <h2>名称</h2>
+            <p data-risk-object>对象：沪深300成分股股票池</p>
             <div class="sv-pad-6-0">
               <input type="text" placeholder="输入股票池名称" class="ov-input" value="沪深300成分股">
             </div>
@@ -984,9 +985,32 @@
               <div class="overlay-field"><span class="overlay-field-label">预览标的</span><span class="overlay-field-value">300</span></div>
             </div>
 
+            <div class="risk-confirmation-grid">
+              <div data-impact-summary class="risk-confirmation-block">
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">修改股票池会影响引用它的策略、回测和筛选预设，不会自动重跑历史结果。</p>
+              </div>
+              <div data-before-after class="risk-confirmation-block">
+                <div class="risk-confirmation-title">操作前后</div>
+                <p class="risk-confirmation-copy">保存后生成新的股票池版本，后续引用会读取新成分快照。</p>
+              </div>
+              <div data-evidence-chain class="risk-confirmation-block">
+                <div class="risk-confirmation-title">证据链</div>
+                <p class="risk-confirmation-copy">保留成分 diff、筛选规则、来源快照和引用清单。</p>
+              </div>
+              <div data-audit-record class="risk-confirmation-block">
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录操作人、股票池 id、版本号、成分变化和时间。</p>
+              </div>
+              <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">可从股票池版本历史恢复上一版成分；引用策略会收到版本变更提示。</p>
+              </div>
+            </div>
+
             <div class="overlay-actions">
-              <label for="overlay-universe-edit" class="overlay-btn overlay-btn-secondary ov-label-btn">取消</label>
-              <label for="overlay-universe-edit" class="overlay-btn overlay-btn-primary ov-label-btn">保存</label>
+              <label for="overlay-universe-edit" class="overlay-btn overlay-btn-secondary ov-label-btn" data-cancel-control>取消</label>
+              <label for="overlay-universe-edit" class="overlay-btn overlay-btn-primary ov-label-btn" data-confirm-control data-danger-action>保存</label>
             </div>
           </div>
         </div>
@@ -996,13 +1020,33 @@
         <label class="overlay-dismiss" for="overlay-universe-delete" aria-label="关闭"></label>
         <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="删除股票池确认" data-danger-confirmation data-high-risk-confirmation>
           <div class="overlay-header">
-            <span class="overlay-title">确认删除股票池</span>
+            <span class="overlay-title"><span data-danger-marker>!</span> 确认删除股票池</span>
             <label for="overlay-universe-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
             <p data-risk-object>对象：沪深300成分股股票池</p>
-            <p data-impact-summary><span data-danger-marker>!</span> 影响范围：删除会影响 3 个关联策略的标的引用，已运行回测保持可追溯。</p>
-            <p data-recovery-hint>恢复路径：可从指数成分源重新同步，并保留删除审计记录。</p>
+            <div class="risk-confirmation-grid">
+              <div data-impact-summary class="risk-confirmation-block">
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">修改股票池会影响引用它的策略、回测和筛选预设，不会自动重跑历史结果。</p>
+              </div>
+              <div data-before-after class="risk-confirmation-block">
+                <div class="risk-confirmation-title">操作前后</div>
+                <p class="risk-confirmation-copy">股票池会从当前列表移除，引用对象保留最后一次成分版本。</p>
+              </div>
+              <div data-evidence-chain class="risk-confirmation-block">
+                <div class="risk-confirmation-title">证据链</div>
+                <p class="risk-confirmation-copy">保留删除前成分、筛选规则、来源快照和引用清单。</p>
+              </div>
+              <div data-audit-record class="risk-confirmation-block">
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录操作人、股票池 id、版本号、删除原因和时间。</p>
+              </div>
+              <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">可从股票池版本历史恢复上一版成分；引用策略会收到版本变更提示。</p>
+              </div>
+            </div>
             <div class="sv-pad-section">
               <div class="overlay-field"><span class="overlay-field-label">标的数</span><span class="overlay-field-value">42</span></div>
               <div class="overlay-field"><span class="overlay-field-label">关联策略</span><span class="overlay-field-value">2 个</span></div>

@@ -1252,11 +1252,31 @@
     <div class="overlay-backdrop" data-overlay="overlay-reset-config">
       <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
       <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation>
-        <div class="overlay-header"><span class="overlay-title">保存配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
+        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
           <p data-risk-object>对象：prod-cn-a 配置草稿 r18</p>
-          <p data-impact-summary><span data-danger-marker>!</span> 影响范围：保存配置会影响数据源连接、券商授权和风险默认参数。</p>
-          <p data-recovery-hint>恢复路径：可回滚到 r17 stable，配置差异保留在审计日志。</p>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境，正在运行任务不会自动重启。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">当前配置草稿会成为生效版本，相关连接和运行参数按新配置读取。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留配置 diff、连接测试结果、密钥指纹和变更备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、配置域、版本号、字段摘要和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从设置变更历史回滚上一版配置；密钥类字段只显示指纹，不回显明文。</p>
+            </div>
+          </div>
           <div class="overlay-actions">
             <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留草稿</label>
             <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认保存配置</label>

@@ -2691,13 +2691,14 @@
     <!-- Overlay A: 订单确认面板 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
       <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="订单确认">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="订单确认" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title">订单确认</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 订单确认</span>
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <h2>标的信息</h2>
+          <p data-risk-object>对象：600519 贵州茅台买入信号</p>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">600519 贵州茅台</span>
@@ -2761,9 +2762,32 @@
             <span class="overlay-field-value">185,604.83 元</span>
           </div>
 
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录复核人、动作、信号 id、证据快照和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">已采纳信号可在订单前撤回；已驳回信号可从审计历史恢复为待复核。</p>
+            </div>
+          </div>
+
           <div class="overlay-actions">
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" >取消</label>
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" >确认提交订单</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认提交订单</label>
           </div>
         </div>
       </div>
@@ -2772,13 +2796,14 @@
     <!-- Overlay B: AI 解读信号 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-ai-read">
       <label class="overlay-dismiss" for="overlay-ai-read" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="AI 解读信号">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="AI 解读信号" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title">AI 解读信号</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> AI 解读信号</span>
           <label for="overlay-ai-read" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <h2>市场背景</h2>
+          <p data-risk-object>对象：600519 贵州茅台信号建议</p>
           <p class="overlay-body-text">
             当前 A 股市场整体处于温和上行通道，沪深 300 近 5 日涨幅 +1.2%。白酒板块受春节后消费数据超预期提振，行业景气度指数回升至 68.5。北向资金连续 5 日净流入，累计 +24.6 亿。
           </p>
@@ -2812,9 +2837,32 @@
             <span class="overlay-field-value">82 / 100（高置信）</span>
           </div>
 
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录复核人、动作、信号 id、证据快照和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">已采纳信号可在订单前撤回；已驳回信号可从审计历史恢复为待复核。</p>
+            </div>
+          </div>
+
           <div class="overlay-actions">
-            <label for="overlay-ai-read" class="overlay-btn overlay-btn-secondary" >关闭</label>
-            <label for="overlay-ai-read" class="overlay-btn overlay-btn-primary" >采纳建议</label>
+            <label for="overlay-ai-read" class="overlay-btn overlay-btn-secondary" data-cancel-control>关闭</label>
+            <label for="overlay-ai-read" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>采纳建议</label>
           </div>
         </div>
       </div>
@@ -2848,7 +2896,28 @@
             <span class="overlay-field-value tnum">¥528,400.00</span>
           </div>
 
-          <p data-impact-summary>影响范围：批量确认会进入下单约束检查，批量忽略会保留信号但不触发订单。</p>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录复核人、动作、信号 id、证据快照和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">已采纳信号可在订单前撤回；已驳回信号可从审计历史恢复为待复核。</p>
+            </div>
+          </div>
           <h2>风控批量检查</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">组合集中度</span>
@@ -2862,8 +2931,6 @@
             <span class="overlay-field-label">涨跌停</span>
             <span class="overlay-field-value color-pass">✓ 均可正常交易</span>
           </div>
-
-          <p data-recovery-hint>恢复路径：已忽略信号可从已忽略队列恢复，确认记录进入审计日志。</p>
           <div class="overlay-actions">
             <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留待复核</label>
             <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认处理 3 条信号</label>
@@ -2875,13 +2942,14 @@
     <!-- Overlay D: 信号确认→生成订单 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-signal-confirm-to-order">
       <label class="overlay-dismiss" for="overlay-signal-confirm-to-order" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="信号确认">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="信号确认" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title">确认信号并生成订单</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 确认信号并生成订单</span>
           <label for="overlay-signal-confirm-to-order" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <!-- 信号摘要 -->
+          <p data-risk-object>对象：贵州茅台买入信号</p>
           <div class="overlay-field">
             <span class="overlay-field-label">信号</span>
             <span class="overlay-field-value">贵州茅台 (600519) · 买入 · 权重 +3.2%</span>
@@ -2908,10 +2976,32 @@
             <span class="overlay-field-label">组合影响</span>
             <span class="overlay-field-value">白酒板块占比将升至 37.2%</span>
           </div>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">本次操作只改变信号复核状态，不直接提交订单。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">待复核信号 → 已采纳或已驳回；后续订单仍需交易确认。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留信号来源、模型置信度、风控摘要和复核备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录复核人、动作、信号 id、证据快照和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">已采纳信号可在订单前撤回；已驳回信号可从审计历史恢复为待复核。</p>
+            </div>
+          </div>
           <!-- 操作按钮 -->
           <div class="overlay-actions">
-            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-secondary">取消</label>
-            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-primary">确认提交订单</label>
+            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
+            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认提交订单</label>
           </div>
         </div>
       </div>

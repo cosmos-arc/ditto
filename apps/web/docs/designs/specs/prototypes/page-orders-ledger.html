@@ -2899,8 +2899,28 @@
             <span class="overlay-field-label">当前状态</span>
             <span class="overlay-field-value"><span class="order-status submitted"><span class="status-dot-inline" aria-hidden="true"></span> 已提交</span></span>
           </div>
-          <p class="overlay-desc" data-impact-summary>影响范围：撤单会停止剩余未成交数量，已成交 200 股保持入账。</p>
-          <p class="overlay-desc" data-recovery-hint>恢复路径：撤单后可按原策略重新提交订单，并保留券商回报记录。</p>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">撤单请求提交到券商通道后结果取决于成交状态；已成交部分不可撤回。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">订单状态从待处理或失败进入券商通道处理；最终状态以回报为准。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留原始订单参数、券商回报、失败原因和操作备注。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、订单 id、动作、通道响应和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">撤单结果会回写订单台账；失败时保留原订单状态并提示下一步处理。</p>
+            </div>
+          </div>
           <div class="overlay-actions">
             <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消，保留订单</label>
             <label for="overlay-cancel-confirm" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action>确认撤单</label>
@@ -2912,13 +2932,14 @@
     <!-- Overlay B: 重试提交 Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-retry-submit">
       <label class="overlay-dismiss" for="overlay-retry-submit" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="重试提交">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重试提交" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title">重试提交</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 重试提交</span>
           <label for="overlay-retry-submit" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <h2>原始订单参数</h2>
+          <p data-risk-object>对象：紫金矿业失败订单重试</p>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">紫金矿业 601899</span>
@@ -2951,9 +2972,32 @@
             <span class="overlay-field-value text-pass">通过 ✓</span>
           </div>
 
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">撤单请求提交到券商通道后结果取决于成交状态；已成交部分不可撤回。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">失败订单会按原始参数重新进入提交流程；券商回报决定最终状态。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留原始订单参数、失败原因、重试前风控检查和通道响应。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、订单 id、重试动作、券商通道和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">撤单结果会回写订单台账；失败时保留原订单状态并提示下一步处理。</p>
+            </div>
+          </div>
+
           <div class="overlay-actions">
-            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary cursor-trigger">取消</label>
-            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger">重新提交</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger" data-confirm-control data-danger-action>重新提交</label>
           </div>
         </div>
       </div>
@@ -3053,15 +3097,16 @@
     <!-- Overlay D: 批量撤单确认 Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-cancel">
       <label class="overlay-dismiss" for="overlay-batch-cancel" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="批量撤单确认">
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量撤单确认" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title overlay-warning-title">⚠ 批量撤单确认</span>
+          <span class="overlay-title overlay-warning-title"><span data-danger-marker>!</span> 批量撤单确认</span>
           <label for="overlay-batch-cancel" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <p class="overlay-desc-batch">
             确认撤销以下 <strong class="text-highlight">5</strong> 条订单？已成交部分将被保留，未成交部分将被取消。
           </p>
+          <p data-risk-object>对象：已选择 5 条订单</p>
           <h2>已选订单摘要</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">ORD-004</span>
@@ -3083,9 +3128,31 @@
             <span class="overlay-field-label">ORD-011</span>
             <span class="overlay-field-value">海尔智家 · 买入 400 股 · 待提交</span>
           </div>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">撤单请求提交到券商通道后结果取决于成交状态；已成交部分不可撤回。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">选中订单会逐笔提交撤单请求；部分订单可能因成交状态返回不同结果。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留批量选择快照、每笔订单状态、券商回报和失败原因。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、订单集合、批量动作、通道响应和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">撤单结果会回写订单台账；失败时保留原订单状态并提示下一步处理。</p>
+            </div>
+          </div>
           <div class="overlay-actions">
-            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-secondary cursor-trigger">取消</label>
-            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger cursor-trigger">确认批量撤单</label>
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消</label>
+            <label for="overlay-batch-cancel" class="overlay-btn overlay-btn-danger cursor-trigger" data-confirm-control data-danger-action>确认批量撤单</label>
           </div>
         </div>
       </div>

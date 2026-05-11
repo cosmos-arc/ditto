@@ -704,13 +704,33 @@
         <label class="overlay-dismiss" for="overlay-strategy-delete" aria-label="关闭"></label>
         <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="策略删除确认" data-danger-confirmation data-high-risk-confirmation>
           <div class="overlay-header">
-            <span class="overlay-title">确认删除策略</span>
+            <span class="overlay-title"><span data-danger-marker>!</span> 确认删除策略</span>
             <label for="overlay-strategy-delete" class="overlay-close" aria-label="关闭">&#10005;</label>
           </div>
           <div class="overlay-body">
             <p data-risk-object>对象：Alpha-Momentum-v3 策略</p>
-            <p data-impact-summary><span data-danger-marker>!</span> 影响范围：暂停或删除会停止后续回测和信号生成，历史记录保留。</p>
-            <p data-recovery-hint>恢复路径：可从策略详情恢复运行或克隆最近版本。</p>
+            <div class="risk-confirmation-grid">
+              <div data-impact-summary class="risk-confirmation-block">
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">删除会移除策略草稿和本地配置，不删除历史回测、订单、审计记录。</p>
+              </div>
+              <div data-before-after class="risk-confirmation-block">
+                <div class="risk-confirmation-title">操作前后</div>
+                <p class="risk-confirmation-copy">策略从当前列表移至归档，后续信号和新回测不再自动生成。</p>
+              </div>
+              <div data-evidence-chain class="risk-confirmation-block">
+                <div class="risk-confirmation-title">证据链</div>
+                <p class="risk-confirmation-copy">保留策略版本、参数快照、关联回测和删除前依赖清单。</p>
+              </div>
+              <div data-audit-record class="risk-confirmation-block">
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录操作人、策略 id、版本号、删除原因和时间。</p>
+              </div>
+              <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">可从策略归档恢复最近一次版本；恢复操作会创建新的策略版本。</p>
+              </div>
+            </div>
             <div class="sv-pad-section">
               <div class="overlay-field">
                 <span class="overlay-field-label">关联回测</span>
