@@ -8,7 +8,7 @@ const prototypesDir = join(root, "docs/designs/specs/prototypes");
 
 const activePrototypeFiles = readdirSync(prototypesDir).filter(
 	(file) => /^page-.*\.html$/.test(file) && file !== "page-agent-console.html",
-);
+).sort();
 
 function loadDocument(file: string): Document {
 	return new JSDOM(readFileSync(join(prototypesDir, file), "utf8")).window.document;
@@ -40,7 +40,11 @@ describe("prototype primary answer contract", () => {
 
 		for (const file of activePrototypeFiles) {
 			const document = loadDocument(file);
-			const primaryRegions = [...document.querySelectorAll("[data-primary-weight='dominant']")];
+			const primaryRegions = [
+				...document.querySelectorAll(
+					"[data-primary-answer][data-primary-weight='dominant'], [data-primary-answer-equivalent][data-primary-weight='dominant']",
+				),
+			];
 			const secondaryRegions = [...document.querySelectorAll("[data-secondary-context]")];
 
 			if (primaryRegions.length === 1 && secondaryRegions.length === 0) {
