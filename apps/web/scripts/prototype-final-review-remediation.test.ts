@@ -174,7 +174,7 @@ describe("prototype final review remediation gates", () => {
 		}
 
 		expect(failures).toEqual([]);
-	});
+	}, 20_000);
 
 	it("keeps Cross Market macro driver items inside the strip at desktop review widths", async () => {
 		const browser = await chromium.launch({ headless: true });

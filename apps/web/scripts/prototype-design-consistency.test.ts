@@ -5220,7 +5220,7 @@ describe("prototype design consistency", () => {
 		}
 
 		expect(violations).toEqual([]);
-	});
+	}, 20_000);
 
 	it("documents compact geometry fixes for final full-directory review risks", () => {
 		const checks = [

@@ -7,7 +7,10 @@ import { chromium, type Browser } from "playwright";
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
 const navigationTimeoutMs = 20_000;
-const auditTimeoutMs = 90_000;
+// This test intentionally scans every prototype HTML file across three desktop review widths.
+// Under the full Vitest suite it shares CPU with other Playwright and JSDOM tests, so the
+// timeout must cover worst-case full-suite scheduling, not only isolated execution time.
+const auditTimeoutMs = 180_000;
 const viewports = [
 	{ name: "standard", width: 1536, height: 1080 },
 	{ name: "compact", width: 1366, height: 768 },
