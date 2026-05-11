@@ -3441,7 +3441,7 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   margin-top: var(--space-4);
   color: var(--text-secondary);
   font-size: var(--font-size-12);
-  line-height: var(--line-height-compact);
+  line-height: 1.4;
 }
 
 .risk-confirmation-list {
