@@ -19,7 +19,19 @@ const highDensityPages = [
 
 const actionTierValues = new Set(["primary", "context", "overflow", "command"]);
 const actionCandidateSelector =
-	"[data-decision-option], [data-answer-action], .btn-primary, .header-action-btn, .studio-action, .row-action";
+	[
+		"[data-decision-option]",
+		"[data-answer-action]",
+		".btn-primary",
+		".header-action-btn",
+		".header-utility-btn",
+		".studio-action",
+		".row-action",
+		".batch-btn",
+		".batch-action-btn",
+		".detail-action",
+		".trace-action-btn",
+	].join(", ");
 const hiddenContextSelector =
 	"#states-gallery, #overlays-gallery, [aria-hidden='true'], [hidden], template";
 
@@ -77,6 +89,43 @@ describe("prototype action tier contract", () => {
 
 			if (primaryActions.length > 3) {
 				failures.push(`${file}: ${primaryActions.length} primary actions`);
+			}
+		}
+
+		expect(failures).toEqual([]);
+	});
+
+	it("keeps screener result rows exposing compare actions", () => {
+		const document = loadDocument("page-markets-screener.html");
+		const resultRows = [
+			...document.querySelectorAll<HTMLElement>(
+				'table[data-compare-source="screener-results"] tbody tr',
+			),
+		].filter((row) => !isInHiddenContext(row));
+		const failures: string[] = [];
+
+		for (const row of resultRows) {
+			const code = row.querySelector(".cell-ticker")?.textContent?.trim() ?? "unknown";
+			const compareAction = row.querySelector<HTMLElement>(".row-action");
+
+			if (compareAction === null) {
+				failures.push(`page-markets-screener.html: missing row compare action on ${code}`);
+				continue;
+			}
+
+			const actionText = compareAction.textContent?.replace(/\s+/g, " ").trim();
+			const actionTier = compareAction.getAttribute("data-action-tier");
+
+			if (actionText !== "+ 对比") {
+				failures.push(
+					`page-markets-screener.html: invalid row compare action "${actionText}" on ${code}`,
+				);
+			}
+
+			if (actionTier !== "context" && actionTier !== "overflow") {
+				failures.push(
+					`page-markets-screener.html: row compare action on ${code} must be context or overflow`,
+				);
 			}
 		}
 
