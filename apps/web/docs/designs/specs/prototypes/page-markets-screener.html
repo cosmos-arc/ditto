@@ -2023,32 +2023,32 @@
     <div class="filter-toolbar" data-contract-slot="filter-panel" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
       <div class="filter-group">
         <span class="filter-label">股票池:</span>
-        <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹">沪深300</button>
-        <button class="filter-chip" data-tooltip="中证500成分股，中盘成长">中证500</button>
-        <button class="filter-chip" data-tooltip="全部A股上市公司">全A</button>
-        <button class="filter-chip" data-tooltip="自定义股票池，支持导入">自定义</button>
+        <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹" data-action-tier="context">沪深300</button>
+        <button class="filter-chip" data-tooltip="中证500成分股，中盘成长" data-action-tier="context">中证500</button>
+        <button class="filter-chip" data-tooltip="全部A股上市公司" data-action-tier="context">全A</button>
+        <button class="filter-chip" data-tooltip="自定义股票池，支持导入" data-action-tier="context">自定义</button>
       </div>
       <div class="filter-divider"></div>
       <div class="filter-group">
         <span class="filter-label">行业:</span>
-        <button class="filter-chip active" aria-haspopup="listbox" aria-expanded="false" data-tooltip="按申万一级行业筛选">
+        <button class="filter-chip active" aria-haspopup="listbox" aria-expanded="false" data-tooltip="按申万一级行业筛选" data-action-tier="context">
           全部行业 <span aria-hidden="true">▾</span>
         </button>
       </div>
       <div class="filter-divider"></div>
       <div class="filter-group">
         <span class="filter-label">市值:</span>
-        <button class="filter-chip active" data-tooltip="不限市值范围">全部</button>
-        <button class="filter-chip" data-tooltip="流通市值 > 500亿">大盘</button>
-        <button class="filter-chip" data-tooltip="流通市值 100-500亿">中盘</button>
-        <button class="filter-chip" data-tooltip="流通市值 < 100亿">小盘</button>
+        <button class="filter-chip active" data-tooltip="不限市值范围" data-action-tier="context">全部</button>
+        <button class="filter-chip" data-tooltip="流通市值 > 500亿" data-action-tier="context">大盘</button>
+        <button class="filter-chip" data-tooltip="流通市值 100-500亿" data-action-tier="context">中盘</button>
+        <button class="filter-chip" data-tooltip="流通市值 < 100亿" data-action-tier="context">小盘</button>
       </div>
       <div class="filter-divider"></div>
       <div class="filter-group">
         <span class="filter-label">信号:</span>
-        <button class="filter-chip active" data-tooltip="不限信号类型">全部</button>
-        <button class="filter-chip" data-tooltip="AI评分 >= 0.80 的买入信号">买入信号</button>
-        <button class="filter-chip" data-tooltip="AI评分 >= 0.70 的卖出信号">卖出信号</button>
+        <button class="filter-chip active" data-tooltip="不限信号类型" data-action-tier="context">全部</button>
+        <button class="filter-chip" data-tooltip="AI评分 >= 0.80 的买入信号" data-action-tier="context">买入信号</button>
+        <button class="filter-chip" data-tooltip="AI评分 >= 0.70 的卖出信号" data-action-tier="context">卖出信号</button>
       </div>
       <div class="filter-spacer"></div>
       <span class="filter-count" role="status" aria-live="polite" data-active-filters-summary data-tooltip="当前筛选条件下的匹配标的数量">共 238 只</span>
@@ -2498,11 +2498,11 @@
             <span>显示 1-22 / 共 238 只 · 第 1/11 页</span>
           </div>
           <div class="table-footer-actions">
-            <button class="pagination-btn active">1</button>
-            <button class="pagination-btn">2</button>
-            <button class="pagination-btn">3</button>
+            <button class="pagination-btn active" data-action-tier="context">1</button>
+            <button class="pagination-btn" data-action-tier="context">2</button>
+            <button class="pagination-btn" data-action-tier="context">3</button>
             <span class="pagination-ellipsis">···</span>
-            <button class="pagination-btn">11</button>
+            <button class="pagination-btn" data-action-tier="context">11</button>
           </div>
         </div>
         <div class="bulk-action-bar" data-bulk-action-bar hidden>已选对象操作</div>
@@ -2593,9 +2593,9 @@
           <span class="context-section-count">贵州茅台</span>
         </div>
         <div class="detail-actions-body">
-          <button class="btn">加入观察</button>
+          <button class="btn" data-action-tier="context">加入观察</button>
           <label for="overlay-generate-pool" class="btn btn-primary ov-label-btn" data-action-tier="primary">加入标的池</label>
-          <button class="btn btn-ghost">发送到研究</button>
+          <button class="btn btn-ghost" data-action-tier="overflow">发送到研究</button>
         </div>
       </div>
 

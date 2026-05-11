@@ -23,6 +23,10 @@ const actionCandidateSelector =
 		"[data-decision-option]",
 		"[data-answer-action]",
 		".btn-primary",
+		".filter-actions .btn",
+		".sort-panel-actions .btn",
+		".compare-panel-actions .btn",
+		".detail-actions-body .btn",
 		".header-action-btn",
 		".header-utility-btn",
 		".studio-action",
@@ -31,9 +35,25 @@ const actionCandidateSelector =
 		".batch-action-btn",
 		".detail-action",
 		".trace-action-btn",
+		".filter-chip:is(button, [role='button'], [tabindex])",
+		".filter-btn",
+		".scope-tab",
+		".status-tab",
+		".strip-action",
+		".preset-card:is([role='button'], [tabindex])",
+		".compare-item-remove",
+		".pagination-btn",
+		".context-bar-item:is(a, button, label, [role='button'], [tabindex])",
+		".tab-band-tab",
+		".hub-tab",
+		".bottom-tab",
+		".news-list-item",
+		".announce-list-item",
+		".view-detail-link",
+		".collapsible-strip-toggle",
 	].join(", ");
 const hiddenContextSelector =
-	"#states-gallery, #overlays-gallery, [aria-hidden='true'], [hidden], template";
+	"#states-gallery, #overlays-gallery, [data-overlay], [aria-hidden='true'], [hidden], template";
 
 function loadDocument(file: string): Document {
 	return new JSDOM(readFileSync(join(prototypesDir, file), "utf8")).window.document;
@@ -49,6 +69,14 @@ function getVisibleActionCandidates(document: Document): HTMLElement[] {
 	);
 }
 
+function getActionName(action: Element): string {
+	return (
+		action.textContent?.replace(/\s+/g, " ").trim() ||
+		action.getAttribute("aria-label") ||
+		"unnamed"
+	);
+}
+
 describe("prototype action tier contract", () => {
 	it("marks visible decision actions with an explicit action tier", () => {
 		const failures: string[] = [];
@@ -58,10 +86,7 @@ describe("prototype action tier contract", () => {
 			const actions = getVisibleActionCandidates(document);
 
 			for (const action of actions) {
-				const text =
-					action.textContent?.replace(/\s+/g, " ").trim() ||
-					action.getAttribute("aria-label") ||
-					"unnamed";
+				const text = getActionName(action);
 				const actionTier = action.getAttribute("data-action-tier");
 
 				if (actionTier === null) {
@@ -71,6 +96,53 @@ describe("prototype action tier contract", () => {
 
 				if (!actionTierValues.has(actionTier)) {
 					failures.push(`${file}: invalid data-action-tier "${actionTier}" on "${text}"`);
+				}
+			}
+		}
+
+		expect(failures).toEqual([]);
+	});
+
+	it("marks high-risk confirmation overlay controls with explicit tiers", () => {
+		const failures: string[] = [];
+
+		for (const file of highDensityPages) {
+			const document = loadDocument(file);
+			const confirmations = [
+				...document.querySelectorAll<HTMLElement>("[data-high-risk-confirmation]"),
+			].filter((confirmation) => !confirmation.closest("#overlays-gallery"));
+
+			for (const confirmation of confirmations) {
+				const controls = [
+					...confirmation.querySelectorAll<HTMLElement>(".overlay-btn"),
+				];
+
+				for (const control of controls) {
+					const text = getActionName(control);
+					const actionTier = control.getAttribute("data-action-tier");
+
+					if (actionTier === null) {
+						failures.push(`${file}: missing data-action-tier on confirmation "${text}"`);
+						continue;
+					}
+
+					if (!actionTierValues.has(actionTier)) {
+						failures.push(
+							`${file}: invalid data-action-tier "${actionTier}" on confirmation "${text}"`,
+						);
+					}
+
+					if (control.hasAttribute("data-confirm-control") && actionTier !== "primary") {
+						failures.push(`${file}: confirm control "${text}" must be primary`);
+					}
+
+					if (
+						control.hasAttribute("data-cancel-control") &&
+						actionTier !== "context" &&
+						actionTier !== "overflow"
+					) {
+						failures.push(`${file}: cancel control "${text}" must be context or overflow`);
+					}
 				}
 			}
 		}
