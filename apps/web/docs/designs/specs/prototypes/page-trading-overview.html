@@ -2084,7 +2084,7 @@
     <!-- ═══ Trading Context Bar: session + margin + connectivity + risk + queue ═══ -->
     <div class="trading-context-bar" role="region" aria-label="交易上下文：会话、保证金、连接、风险与执行队列" data-contract-slot="trading-context-bar">
       <div class="trading-context-item scope-phase">
-        <span class="phase-dot"></span>
+        <span class="phase-dot motion-state-only"></span>
         连续竞价
       </div>
       <div class="scope-separator"></div>
@@ -2161,17 +2161,17 @@
                 <span class="pipeline-stage-label">信号池</span>
                 <span class="pipeline-stage-count">4</span>
               </label>
-              <div class="pipeline-arrow" aria-hidden="true">→</div>
+              <div class="pipeline-arrow motion-state-only" aria-hidden="true">→</div>
               <label class="pipeline-stage" for="pipeline-pending" role="button" tabindex="0" aria-label="展开待复核信号，2 个等待人工复核" data-tooltip="等待人工复核的信号 · 点击展开">
                 <span class="pipeline-stage-label">待复核</span>
                 <span class="pipeline-stage-count warning">2</span>
               </label>
-              <div class="pipeline-arrow" aria-hidden="true">→</div>
+              <div class="pipeline-arrow motion-state-only" aria-hidden="true">→</div>
               <label class="pipeline-stage" for="pipeline-ordered" role="button" tabindex="0" aria-label="展开已下单队列，3 个订单未完全成交" data-tooltip="已提交但未完全成交的订单 · 点击展开">
                 <span class="pipeline-stage-label">已下单</span>
                 <span class="pipeline-stage-count">3</span>
               </label>
-              <div class="pipeline-arrow" aria-hidden="true">→</div>
+              <div class="pipeline-arrow motion-state-only" aria-hidden="true">→</div>
               <label class="pipeline-stage" for="pipeline-filled" role="button" tabindex="0" aria-label="展开已成交记录，今日 47 笔完全成交" data-tooltip="今日已完全成交的订单 · 点击展开">
                 <span class="pipeline-stage-label">已成交</span>
                 <span class="pipeline-stage-count ok">47</span>
@@ -2677,7 +2677,7 @@
           </summary>
           <div class="context-section-body">
             <div class="risk-item critical-alert" data-tooltip="科技板块集中度 37.2%，超出上限 35%，建议减持">
-              <div class="risk-item-dot critical"></div>
+              <div class="risk-item-dot critical motion-state-only"></div>
               <div class="risk-item-body">
                 <div class="risk-item-row">
                   <span class="risk-item-label">行业集中度</span>
@@ -3054,7 +3054,7 @@
   <div class="status-bar" role="status" aria-label="系统状态" data-bottom-tray data-bottom-tray-state="peek">
     <button class="status-kbd" type="button" data-bottom-tray-toggle aria-controls="trading-bottom-tray-content" aria-expanded="true" aria-label="展开交易状态">▴</button>
     <span id="trading-bottom-tray-content" data-bottom-tray-content aria-hidden="false">
-    <span class="status-indicator" aria-hidden="true"></span>
+    <span class="status-indicator motion-state-only" aria-hidden="true"></span>
     <span class="status-live">LIVE</span>
     <span class="status-sep">│</span>
     <span>华泰证券 已连接</span>
@@ -3127,17 +3127,17 @@
             <span class="pipeline-stage-label">信号池</span>
             <span class="pipeline-stage-count">4</span>
           </div>
-          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-arrow motion-state-only" aria-hidden="true">→</div>
           <div class="pipeline-stage">
             <span class="pipeline-stage-label">待复核</span>
             <span class="pipeline-stage-count warning">2</span>
           </div>
-          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-arrow motion-state-only" aria-hidden="true">→</div>
           <div class="pipeline-stage">
             <span class="pipeline-stage-label">已下单</span>
             <span class="pipeline-stage-count">3</span>
           </div>
-          <div class="pipeline-arrow" aria-hidden="true">→</div>
+          <div class="pipeline-arrow motion-state-only" aria-hidden="true">→</div>
           <div class="pipeline-stage">
             <span class="pipeline-stage-label">已成交</span>
             <span class="pipeline-stage-count ok">47</span>
@@ -3496,7 +3496,7 @@
 <div class="state-variant-content" data-state="selected">
             <div class="flex-col-container">
               <div class="risk-item critical-alert selected">
-                <div class="risk-item-dot critical"></div>
+                <div class="risk-item-dot critical motion-state-only"></div>
                 <div class="risk-item-body">
                   <div class="risk-item-row">
                     <span class="risk-item-label">行业集中度</span>

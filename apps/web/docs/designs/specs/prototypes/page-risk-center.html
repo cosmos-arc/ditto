@@ -116,15 +116,7 @@
     }
     /* ── Header title underline (brand anchor) ── */
     .header-title {
-      background: linear-gradient(
-        to right,
-        var(--brand-accent) 0%,
-        var(--brand-accent) 40%,
-        transparent 100%
-      );
-      background-size: 100% 2px;
-      background-repeat: no-repeat;
-      background-position: 0 100%;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
       padding-bottom: 2px;
     }
 

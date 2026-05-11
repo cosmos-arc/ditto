@@ -3497,3 +3497,23 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   color: var(--text-tertiary);
   font-family: var(--font-family-code);
 }
+
+/* Final-review quieting utilities */
+.visual-noise-muted {
+  opacity: 0.72;
+}
+
+.motion-state-only {
+  animation-duration: var(--motion-duration-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-state-only {
+    animation: none !important;
+  }
+}
+
+.chart-static-frame {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+}
