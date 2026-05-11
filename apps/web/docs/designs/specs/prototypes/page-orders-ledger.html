@@ -1196,6 +1196,7 @@
     /* Overlay D: 批量撤单确认 Modal */
     :root:has(#overlay-batch-cancel:checked)
       [data-overlay="overlay-batch-cancel"] { display: flex; }
+
     .overlay-close {
       background: none;
       border: none;
@@ -1839,7 +1840,7 @@
       </div>
       <div class="status-strip-spacer"></div>
       <div class="status-strip-actions" data-bulk-action-bar role="toolbar" aria-label="订单批量操作">
-        <button class="strip-action primary" tabindex="0" role="button" aria-label="重试失败订单" data-answer-action>重试失败订单</button>
+        <label for="overlay-retry-submit" class="strip-action primary label-trigger" tabindex="0" role="button" aria-label="重试失败订单" data-answer-action>重试失败订单</label>
         <label for="overlay-batch-cancel" class="strip-action danger label-trigger" tabindex="0" role="button" aria-label="批量撤单">撤单</label>
         <label for="overlay-retry-submit" class="strip-action secondary label-trigger" tabindex="0" role="button" aria-label="批量重试">重试</label>
       </div>
@@ -2683,7 +2684,7 @@
         <div class="batch-action-bar">
           <span>已选择 2 笔待提交</span>
           <div class="flex-spacer"></div>
-          <button class="batch-action-btn">批量编辑</button>
+          <label for="overlay-retry-submit" class="batch-action-btn label-trigger" tabindex="0" role="button" aria-label="批量编辑订单">批量编辑</label>
           <button class="batch-action-btn accent">批量提交</button>
         </div>
         <div class="pagination-bar">
@@ -2929,17 +2930,17 @@
       </div>
     </div>
 
-    <!-- Overlay B: 重试提交 Modal -->
+    <!-- Overlay B: 重试/修正提交 Modal -->
     <div class="overlay-backdrop" data-overlay="overlay-retry-submit">
       <label class="overlay-dismiss" for="overlay-retry-submit" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重试提交" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重试或修正提交" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title"><span data-danger-marker>!</span> 重试提交</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 重试/修正提交</span>
           <label for="overlay-retry-submit" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
           <h2>原始订单参数</h2>
-          <p data-risk-object>对象：紫金矿业失败订单重试</p>
+          <p data-risk-object>对象：失败订单重试或待提交订单修正</p>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">紫金矿业 601899</span>
@@ -2955,6 +2956,10 @@
           <div class="overlay-field">
             <span class="overlay-field-label">委托价格</span>
             <span class="overlay-field-value">15.60</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">修正入口</span>
+            <span class="overlay-field-value">批量编辑会先保存修正草稿，再进入提交复核</span>
           </div>
 
           <h2>失败原因</h2>
@@ -2997,7 +3002,7 @@
 
           <div class="overlay-actions">
             <label for="overlay-retry-submit" class="overlay-btn overlay-btn-secondary cursor-trigger" data-cancel-control>取消</label>
-            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger" data-confirm-control data-danger-action>重新提交</label>
+            <label for="overlay-retry-submit" class="overlay-btn overlay-btn-primary cursor-trigger" data-confirm-control data-danger-action>确认重试/修正</label>
           </div>
         </div>
       </div>

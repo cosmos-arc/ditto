@@ -1907,10 +1907,10 @@
       </div>
 
       <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-primary-answer-equivalent>
-        <button type="button" class="scope-status-item" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action>
+        <label for="overlay-batch-confirm" class="scope-status-item" role="button" tabindex="0" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action>
           <span class="scope-status-dot warn"></span>
           优先处理贵州茅台买入信号：置信度 <span data-answer-metric>82%</span>，若批准后组合 Beta 0.94 · 批准 / 拒绝 / 查看证据
-        </button>
+        </label>
         <div class="scope-status-item" data-answer-evidence>
           <span class="scope-status-dot pass"></span>
           T+1 今日已买入
@@ -2680,6 +2680,10 @@
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M6 3v10"/></svg>
             查看策略详情
           </button>
+          <label for="overlay-batch-confirm" class="detail-action ghost" tabindex="0" aria-label="驳回信号">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+            驳回信号
+          </label>
         </div>
       </div>
     </aside>
@@ -2868,12 +2872,12 @@
       </div>
     </div>
 
-    <!-- Overlay C: 批量确认 (Modal 居中弹窗) -->
+    <!-- Overlay C: 批量确认/驳回 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-batch-confirm">
       <label class="overlay-dismiss" for="overlay-batch-confirm" aria-label="关闭"></label>
       <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="批量确认信号" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title"><span data-danger-marker>!</span> 批量确认信号</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 信号复核确认</span>
           <label for="overlay-batch-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
@@ -2894,6 +2898,10 @@
           <div class="overlay-field">
             <span class="overlay-field-label">预估总金额</span>
             <span class="overlay-field-value tnum">¥528,400.00</span>
+          </div>
+          <div class="overlay-field">
+            <span class="overlay-field-label">可执行动作</span>
+            <span class="overlay-field-value">采纳 / 驳回 / 保留待复核</span>
           </div>
 
           <div class="risk-confirmation-grid">
@@ -2933,7 +2941,7 @@
           </div>
           <div class="overlay-actions">
             <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留待复核</label>
-            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认处理 3 条信号</label>
+            <label for="overlay-batch-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认采纳/驳回处理</label>
           </div>
         </div>
       </div>
