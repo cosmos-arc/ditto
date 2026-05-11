@@ -26,6 +26,7 @@ from ditto_execution.targets import TargetPortfolioLike
 from ditto_execution.trade_builder import (
     FifoTradeBuilder,
     FlatToFlatTradeBuilder,
+    TradeBuilder,
     TradeMatchingMethod,
 )
 from ditto_kernel import traced
@@ -40,8 +41,6 @@ from loguru import logger
 
 from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed, Slice
-
-# Re-export from extracted module
 from ditto_backtest.engine_steps import (
     EngineOptions,
     StepDeps,
@@ -70,6 +69,7 @@ __all__ = [
     "EngineMode",
     "EngineOptions",
     "EngineResult",
+    "assemble_engine_result",
 ]
 
 
@@ -119,6 +119,23 @@ class EngineLoop:
         self._pre_trade_check = pre_trade_check
         self._data_feed = data_feed
         self._synchronizer = synchronizer
+        self._init_options(options)
+        self._init_state(config)
+        self._trade_builder = self._create_trade_builder(config)
+        self._recorded_trade_ids: set[str] = set()
+        self._steps = self._build_steps()
+
+    # -- R1: __init__ helpers --------------------------------------------------
+
+    @staticmethod
+    def _create_trade_builder(config: EngineConfig) -> TradeBuilder:
+        """根据 config.trade_matching 创建成交匹配器。"""
+        if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
+            return FlatToFlatTradeBuilder()
+        return FifoTradeBuilder()
+
+    def _init_options(self, options: EngineOptions) -> None:
+        """从 EngineOptions 初始化可选组件引用。"""
         self._fee_model = options.fee_model
         self._rule_provider = options.rule_provider
         self._post_trade_guard = options.post_trade_guard
@@ -129,10 +146,10 @@ class EngineLoop:
         self._should_stop = options.should_stop
         self._on_progress = options.on_progress
 
-        # 跨日可变状态
+    def _init_state(self, config: EngineConfig) -> None:
+        """初始化跨日可变状态。"""
         self._fills: list[FillEvent] = []
         self._orders: list[Order] = []
-
         self._strategy_context = StrategyContext()
         self._execution_delay = config.execution_delay
         self._knowledge_lag_days = config.knowledge_lag_days
@@ -142,16 +159,6 @@ class EngineLoop:
         self._trading_day_index: dict[str, int] = {}
         self._input_instruments: set[InstrumentId] = set()
         self._bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]] = {}
-
-        # TradeBuilder -- 根据 config.trade_matching 创建成交匹配器
-        if config.trade_matching == TradeMatchingMethod.FLAT_TO_FLAT:
-            self._trade_builder = FlatToFlatTradeBuilder()
-        else:
-            self._trade_builder = FifoTradeBuilder()
-        self._recorded_trade_ids: set[str] = set()
-
-        # 构建 Step chain
-        self._steps = self._build_steps()
 
     def _build_steps(self) -> tuple[TradingStep, ...]:
         """构建 TradingStep chain — 委托给 engine_steps.build_steps。"""
@@ -189,17 +196,48 @@ class EngineLoop:
         通过 Synchronizer 驱动主循环，逐日执行策略决策和订单处理.
         """
         run_id = self._config.strategy_run_id or uuid.uuid4().hex[:8]
-        # 构建 trading_days 索引 — 用于 is_rebalance_day() 计算
-        # 注: BacktestSynchronizer 也按 start_date 过滤（控制迭代范围），
-        # 此处过滤是为 is_rebalance_day 提供日期索引
-        # （首个交易日 idx=0 触发调仓）
+        trading_days = self._build_trading_days()
+        start = trading_days[0] if trading_days else self._config.start_date
+        end = trading_days[-1] if trading_days else self._config.end_date
+
+        skipped, cancelled = self._run_main_loop(trading_days)
+        self._flush_delayed_signals()
+
+        account_view = self._brokerage.get_account()
+        self._flush_open_trades()
+
+        manifest = build_run_manifest(
+            run_id=run_id,
+            config=self._config,
+            input_instruments=self._input_instruments,
+            bar_fingerprints=self._bar_fingerprints,
+            rule_refs=self._rule_ref_collector.rule_refs,
+            random_seed=self._random_seed,
+        )
+        return assemble_engine_result(
+            run_id=run_id,
+            start=start,
+            end=end,
+            account_view=account_view,
+            manifest=manifest,
+            fills=self._fills,
+            orders=self._orders,
+            skipped=skipped,
+            cancelled=cancelled,
+        )
+
+    # -- R2: run helpers ------------------------------------------------------
+
+    def _build_trading_days(self) -> list[str]:
+        """构建 trading_days 索引 — 用于 is_rebalance_day() 计算。"""
         days = self._data_feed.trading_days()
         trading_days = [d for d in days if d >= self._config.start_date]
         self._trading_days = tuple(trading_days)
         self._trading_day_index = {d: i for i, d in enumerate(self._trading_days)}
-        start = trading_days[0] if trading_days else self._config.start_date
-        end = trading_days[-1] if trading_days else self._config.end_date
+        return trading_days
 
+    def _run_main_loop(self, trading_days: list[str]) -> tuple[list[str], bool]:
+        """执行主循环 — 返回 (skipped_dates, cancelled)。"""
         skipped: list[str] = []
         cancelled = False
         completed_days = 0
@@ -226,40 +264,21 @@ class EngineLoop:
                 len(skipped),
                 skipped,
             )
+        return skipped, cancelled
 
-        # flush 延迟信号 -- 回测结束时执行队列中剩余的延迟信号
+    def _flush_delayed_signals(self) -> None:
+        """Flush 延迟信号 — 回测结束时执行队列中剩余的延迟信号。"""
         while self._execution_delay > 0 and self._signal_queue:
             signal = self._signal_queue.popleft()
             self._execute_delayed_signal(signal)
 
-        account_view = self._brokerage.get_account()
-
-        # flush 未平仓交易 -- 回测结束时记录剩余开仓交易
+    def _flush_open_trades(self) -> None:
+        """Flush 未平仓交易 — 回测结束时记录剩余开仓交易。"""
         if self._audit_collector is not None:
             for trade in self._trade_builder.flush():
                 if trade.trade_id not in self._recorded_trade_ids:
                     self._audit_collector.record_closed_trade(trade)
                     self._recorded_trade_ids.add(trade.trade_id)
-
-        manifest = build_run_manifest(
-            run_id=run_id,
-            config=self._config,
-            input_instruments=self._input_instruments,
-            bar_fingerprints=self._bar_fingerprints,
-            rule_refs=self._rule_ref_collector.rule_refs,
-            random_seed=self._random_seed,
-        )
-        return assemble_engine_result(
-            run_id=run_id,
-            start=start,
-            end=end,
-            account_view=account_view,
-            manifest=manifest,
-            fills=self._fills,
-            orders=self._orders,
-            skipped=skipped,
-            cancelled=cancelled,
-        )
 
     # -- internals ------------------------------------------------------------
 
@@ -342,65 +361,85 @@ class EngineLoop:
     def _step(self, time_slice: TimeSlice) -> bool:
         """执行单日步骤 -- 通过 Step chain 编排。返回 False 表示某 step 失败。"""
         trade_date = time_slice.time_context.trade_date
-        is_rebalance = self._is_rebalance_day(trade_date)
-
-        # 从 data_feed 获取完整 Slice（benchmark_close 等）
-        slice_ = self._data_feed.get_slice(trade_date)
-        ctx = StepContext(
-            time_context=time_slice.time_context,
-            is_rebalance_day=is_rebalance,
-            bars=time_slice.bars,
-            slice_=slice_,
-        )
+        ctx = self._build_step_context(time_slice)
         delay = self._execution_delay
         deferred_signal = self._dequeue_delayed_signal()
 
         # 执行 Step chain
         for step in self._steps:
-            # execution_delay: 无延迟信号时跳过 PlanningStep
-            # （信号已入队，等待 N 日后执行）
-            if delay > 0 and deferred_signal is None and isinstance(step, PlanningStep):
+            if self._process_delayed_signal(step, ctx, delay, deferred_signal):
                 continue
-
-            # execution_delay: PlanningStep 前恢复延迟信号
-            if (
-                delay > 0
-                and deferred_signal is not None
-                and isinstance(step, PlanningStep)
-            ):
-                ctx.target_portfolio = deferred_signal
-                ctx.is_rebalance_day = True
-
             result = step.execute(ctx)
             if not result.success:
-                step_name = type(step).__name__
-                errors = "; ".join(result.errors) if result.errors else "unknown"
-                logger.warning(
-                    "Step {} failed on {}: {}",
-                    step_name,
-                    trade_date,
-                    errors,
-                )
+                self._log_step_failure(step, result, trade_date)
                 return False
-
-            # execution_delay: StrategyStep 后将当日信号入队并清除
-            if delay > 0 and isinstance(step, StrategyStep):
-                if ctx.target_portfolio is not None:
-                    self._signal_queue.append(ctx.target_portfolio)
-                ctx.target_portfolio = None
+            self._enqueue_signal(step, ctx, delay)
 
         # 累积跨日结果
         self._fills.extend(ctx.step_fills)
         self._orders.extend(ctx.step_orders)
+        self._record_audit(trade_date, ctx)
+        return True
 
-        # 审计日志: 批量记录 PreTrade 决策
+    # -- R3: _step helpers ----------------------------------------------------
+
+    def _build_step_context(self, time_slice: TimeSlice) -> StepContext:
+        """构建当日 StepContext。"""
+        trade_date = time_slice.time_context.trade_date
+        is_rebalance = self._is_rebalance_day(trade_date)
+        slice_ = self._data_feed.get_slice(trade_date)
+        return StepContext(
+            time_context=time_slice.time_context,
+            is_rebalance_day=is_rebalance,
+            bars=time_slice.bars,
+            slice_=slice_,
+        )
+
+    @staticmethod
+    def _log_step_failure(step: TradingStep, result: object, trade_date: str) -> None:
+        """记录 step 失败日志。"""
+        step_name = type(step).__name__
+        errors = getattr(result, "errors", None)
+        msg = "; ".join(errors) if errors else "unknown"
+        logger.warning("Step {} failed on {}: {}", step_name, trade_date, msg)
+
+    def _enqueue_signal(
+        self,
+        step: TradingStep,
+        ctx: StepContext,
+        delay: int,
+    ) -> None:
+        """execution_delay: StrategyStep 后将当日信号入队并清除。"""
+        if delay > 0 and isinstance(step, StrategyStep):
+            if ctx.target_portfolio is not None:
+                self._signal_queue.append(ctx.target_portfolio)
+            ctx.target_portfolio = None
+
+    def _process_delayed_signal(
+        self,
+        step: TradingStep,
+        ctx: StepContext,
+        delay: int,
+        deferred_signal: TargetPortfolioLike | None,
+    ) -> bool:
+        """处理延迟信号逻辑 — 返回 True 表示应跳过当前 step。"""
+        if delay <= 0 or not isinstance(step, PlanningStep):
+            return False
+        # 无延迟信号时跳过 PlanningStep（信号已入队，等待 N 日后执行）
+        if deferred_signal is None:
+            return True
+        # PlanningStep 前恢复延迟信号
+        ctx.target_portfolio = deferred_signal
+        ctx.is_rebalance_day = True
+        return False
+
+    def _record_audit(self, trade_date: str, ctx: StepContext) -> None:
+        """审计日志: 批量记录 PreTrade 决策。"""
         if self._audit_collector is not None and ctx.pre_trade_decisions:
             self._audit_collector.record_pre_trade_decisions(
                 trade_date,
                 tuple(ctx.pre_trade_decisions),
             )
-
-        return True
 
     def _is_rebalance_day(self, date: str) -> bool:
         """根据配置判断是否为调仓日 — 委托给 engine_steps.is_rebalance_day。"""

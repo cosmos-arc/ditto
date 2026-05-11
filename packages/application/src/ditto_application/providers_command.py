@@ -42,17 +42,6 @@ from ditto_application.commands.universe import (
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_tracker import ManualTracker
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
-from ditto_application.settings import TradingSettings
-
-
-def get_trading_calendar_range(
-    trading_settings: TradingSettings,
-) -> tuple[str, str]:
-    """获取交易日历查询的日期范围。"""
-    return (
-        trading_settings.trading_calendar_start,
-        trading_settings.trading_calendar_end,
-    )
 
 
 class AppCommandProvider(Provider):

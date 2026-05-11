@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from ditto_kernel.strategy import ImpactModel
-from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
+from ditto_kernel.trading import DEFAULT_COMMISSION_RATE, DEFAULT_SLIPPAGE_BPS
 from ditto_strategy.alpha.specs import (
     ConstraintSpec,
     CostModelSpec,
@@ -57,12 +57,8 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Local defaults
 # ---------------------------------------------------------------------------
-# The deferred-annotation mode under ``from __future__ import annotations``
-# causes unused-import linters to strip kernel-level imports referenced only
-# in default expressions, so these are kept as module-level constants.
-# Values mirror ditto_kernel.trading.DEFAULT_SLIPPAGE_BPS.
 
-_DEFAULT_SLIPPAGE_BPS = 1.0
+_DEFAULT_SLIPPAGE_BPS = DEFAULT_SLIPPAGE_BPS
 _DEFAULT_TRAILING_STOP_PCT = 0.08
 _DEFAULT_MAX_WEIGHT = 0.15
 _DEFAULT_TOP_K = 10

@@ -25,7 +25,7 @@
 | Macro data | experimental | Macro source/category support exists; current review plan treats global macro as future expansion and API presence must not imply production maturity. | Maturity-aware API docs. |
 | FX/commodity data | experimental | APIs/storage/query surfaces exist; not current initial-focus production scope. | Maturity-aware API docs. |
 | Feature/factor materialization | initial-focus | Expression/materialization/publication safety are implemented; Features review confirms DataCatalog provenance and shared time semantics remain open. | Features provenance/time remediation. |
-| Strategy alpha templates | initial-focus for A-share ETF, experimental for broader templates | Strategy review confirms package isolation and ETF template maturity; stock/sector templates remain experimental until explicitly promoted. ETF templates: `etf_rotation`, `etf_trend_swing` = initial-focus. Stock templates: `stock_selection_trend`, `stock_sector_rotation` = experimental (no dedicated tests). | Stage schema/template maturity remediation. |
+| Strategy alpha templates | initial-focus for A-share ETF, experimental for broader templates | Strategy review confirms package isolation and ETF template maturity; stock/sector templates remain experimental until explicitly promoted. ETF templates: `etf_rotation`, `etf_trend_swing` = initial-focus. Stock templates: `stock_selection_trend` = experimental (has unit tests), `stock_sector_rotation` = experimental (has snapshot integration tests). | Stage schema/template maturity remediation. |
 | Portfolio accounting/rebalancing | experimental | Core accounting/rebalancing models exist; Portfolio review confirms positions/holdings/target portfolio runtime/store and event publication are incomplete. | Portfolio state projection remediation. |
 | Risk checks | experimental | Pre/post checks exist; Risk review confirms continuous risk gate, typed audit payloads, and state recovery are incomplete. | Risk gate/state remediation. |
 | Backtest engine | initial-focus | Engine loop and simulation exist; Backtest review confirms shared paper seam and replay recovery beyond NAV are open. | Backtest/paper seam remediation. |
@@ -37,7 +37,7 @@
 | Analysis SHIFT_TO_NEXT_SNAPSHOT late-arrival policy | reserved | Enum member exists but has no implementation; warns and returns frame unchanged. Must not be relied upon until promoted. | Late-arrival policy implementation. |
 | Platform config/observability/storage foundations | infrastructure | Platform is business-agnostic and guarded; Platform review found one P1 SQL helper validation gap and P2 storage/API polish items. | Platform SQL remediation. |
 | DataCatalog runtime | experimental | Data review confirms contracts exist but no runtime store/integration; do not treat catalog/lineage as active enforcement yet. | DataCatalog runtime remediation. |
-| Runtime event/time/state/OMS spine | experimental | All W1 runtime reviews confirm EventBus/Clock exist, but typed events, TimeContext, state recovery, risk state, portfolio projection, and OMS Lite are incomplete. | Runtime spine remediation. |
+| Runtime event/time/state/OMS spine | experimental | All W1 runtime reviews confirm EventBus/Clock exist. Typed events (B4), risk state snapshot/restore (B5), portfolio state projection (B5) are complete. TimeContext integration, OMS Lite remain incomplete. | Runtime spine remediation. |
 
 ## Guard Rules
 

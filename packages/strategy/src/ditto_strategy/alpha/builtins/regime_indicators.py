@@ -225,6 +225,8 @@ class MomentumIndicator:
         close_column: 收盘价列名。
         lookback: 回看天数。
         default_regime: 默认市场状态。
+        momentum_low: 涨幅映射下界（对应输出 0.0）。
+        momentum_high: 涨幅映射上界（对应输出 1.0）。
 
     """
 
@@ -233,6 +235,8 @@ class MomentumIndicator:
     close_column: str = "close"
     lookback: int = 20
     default_regime: RegimeLabel = RegimeLabel.NEUTRAL
+    momentum_low: float = -0.10
+    momentum_high: float = 0.10
 
     def compute(self, frame: pl.DataFrame) -> float:
         """从 frame 的 close 列计算动量分位 (0-1)."""
@@ -254,5 +258,8 @@ class MomentumIndicator:
 
         change = (current - past) / past
 
-        # 将涨幅映射到 0-1: -10% → 0.0, +10% → 1.0
-        return max(0.0, min(1.0, (change + 0.10) / 0.20))
+        # 将涨幅映射到 0-1: momentum_low → 0.0, momentum_high → 1.0
+        span = self.momentum_high - self.momentum_low
+        if span == 0:
+            return 0.5
+        return max(0.0, min(1.0, (change - self.momentum_low) / span))

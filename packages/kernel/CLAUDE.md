@@ -147,6 +147,8 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 |------|-------------------|
 | `market` | `CalendarId`, `GrainId` |
 
+> `trading.py` 的领域特定 Protocol（FeeModel/FeeSchedule/InstrumentDefinition 等）因使用范围窄（仅 Execution/Backtest）不列入此表，直接从叶模块导入。`strategy.py` 的 `RunStatus` 同理。
+
 ## Barrel 公共 API 分级
 
 Barrel `__all__` 包含 30 个符号，按稳定性分为两层：

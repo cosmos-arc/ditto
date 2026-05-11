@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import polars as pl
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionResult
+from ditto_data.services.market_service import MarketService
+from ditto_data.services.metadata_service import MetadataService
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_platform.foundation import OnDuplicate, logger
 
@@ -34,17 +34,13 @@ from ditto_application.processes.ingestion.post_ingest import (
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 from ditto_application.processes.ingestion.types import SourceFetchers
 
-if TYPE_CHECKING:
-    from ditto_data.services.market_service import MarketService
-    from ditto_data.services.metadata_service import MetadataService
-
 __all__ = [
     "backfill_adj_factor",
     "ingest_by_instrument",
 ]
 
 
-def ingest_by_instrument(  # noqa: PLR0913
+def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入的 fetchers/metadata/result_handler/data_writer
     dataset: str,
     params: InstrumentIngestParams,
     force: bool,
@@ -112,7 +108,7 @@ def ingest_by_instrument(  # noqa: PLR0913
     )
 
 
-def _fetch_and_ingest_by_instrument(  # noqa: PLR0913
+def _fetch_and_ingest_by_instrument(  # noqa: PLR0913 — 内部编排：透传 DI 服务 + dataset 上下文
     dataset: str,
     dataset_enum: Dataset,
     source_ticker: str,
@@ -230,7 +226,7 @@ def _fetch_by_dataset(
     return handlers[dataset_enum]()
 
 
-def backfill_adj_factor(  # noqa: PLR0913
+def backfill_adj_factor(  # noqa: PLR0913 — 回补入口：DI 服务 + BackfillContext 构造，参数已收敛至 BackfillContext
     instrument_id: int,
     start: str,
     end: str,

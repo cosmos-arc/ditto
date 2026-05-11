@@ -15,6 +15,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, Protocol
 
 __all__ = ["DomainEvent", "EventBus", "EventName", "SimpleEventBus"]
@@ -23,21 +24,22 @@ __all__ = ["DomainEvent", "EventBus", "EventName", "SimpleEventBus"]
 EventHandler = Callable[["DomainEvent"], None]
 
 
-class EventName:
+class EventName(StrEnum):
     """
-    事件名称常量 — runtime spine 的事件名 catalog.
+    事件名称枚举 — runtime spine 的事件名 catalog.
 
     所有领域事件的 event_type 值均在此定义，确保跨包引用的类型安全。
+    StrEnum 成员同时也是 str 实例，可直接用于字符串比较和赋值。
     消费者通过 ``from ditto_kernel.events import EventName`` 引用。
     """
 
-    ORDER_SUBMITTED: str = "order_submitted"
-    ORDER_FILLED: str = "order_filled"
-    ORDER_CANCELED: str = "order_canceled"
-    RISK_GUARD_TRIGGERED: str = "risk_guard_triggered"
-    POSITION_CHANGED: str = "position_changed"
-    ACCOUNT_UPDATED: str = "account_updated"
-    STRATEGY_SIGNAL_GENERATED: str = "strategy_signal_generated"
+    ORDER_SUBMITTED = "order_submitted"
+    ORDER_FILLED = "order_filled"
+    ORDER_CANCELED = "order_canceled"
+    RISK_GUARD_TRIGGERED = "risk_guard_triggered"
+    POSITION_CHANGED = "position_changed"
+    ACCOUNT_UPDATED = "account_updated"
+    STRATEGY_SIGNAL_GENERATED = "strategy_signal_generated"
 
 
 @dataclass(frozen=True, kw_only=True)

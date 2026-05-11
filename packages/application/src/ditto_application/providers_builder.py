@@ -25,6 +25,17 @@ from ditto_application.builders import (
 )
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.settings import TradingSettings
+
+
+def get_trading_calendar_range(
+    trading_settings: TradingSettings,
+) -> tuple[str, str]:
+    """获取交易日历查询的日期范围。"""
+    return (
+        trading_settings.trading_calendar_start,
+        trading_settings.trading_calendar_end,
+    )
 
 
 class AppBuilderFactory(Provider):

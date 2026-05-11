@@ -49,7 +49,7 @@ from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
 from ditto_application.processes.quality import QualityPatrolService
-from ditto_application.providers_command import get_trading_calendar_range
+from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.settings import TradingSettings

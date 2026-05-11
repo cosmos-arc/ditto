@@ -14,11 +14,11 @@ from __future__ import annotations
 
 from dishka import Provider
 
-from ditto_application.providers_builder import AppBuilderFactory
-from ditto_application.providers_command import (
-    AppCommandProvider,
+from ditto_application.providers_builder import (
+    AppBuilderFactory,
     get_trading_calendar_range,
 )
+from ditto_application.providers_command import AppCommandProvider
 from ditto_application.providers_market import AppMarketQueryProvider
 from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_process import AppProcessProvider

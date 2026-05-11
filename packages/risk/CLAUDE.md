@@ -82,6 +82,7 @@ packages/risk/tests/
     ├── test_concentration_pre_check_unit.py
     ├── test_contracts_typed_unit.py
     ├── test_daily_turnover_pre_check_unit.py
+    ├── test_drawdown_snapshot_unit.py
     ├── test_import_risk_unit.py
     ├── test_lot_size_check_unit.py
     ├── test_market_anomaly_rule_unit.py

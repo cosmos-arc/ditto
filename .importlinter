@@ -357,6 +357,7 @@ ignore_imports =
     ditto_apps.registry.** -> ditto_data.config.**
     ditto_apps.jobs.context -> ditto_data.quality
     ditto_apps.jobs.context -> ditto_data.quality.protocols
+    # intentional debt: DQ types consumed by apps.jobs context (tracked for kernel candidacy)
     ditto_apps.jobs.tasks.dq_batch -> ditto_data.quality.quality_types
     ditto_apps.jobs.tasks.monitoring -> ditto_data.quality.quality_types
 allow_indirect_imports = true

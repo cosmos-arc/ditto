@@ -191,62 +191,97 @@ def is_rebalance_day(
     return True
 
 
+def _build_data_fetch_step(deps: StepDeps) -> DataFetchStep:
+    """构建 DataFetchStep — 账户快照 + 数据指纹 + 清除锁定。"""
+    return DataFetchStep(
+        brokerage=deps.brokerage,
+        strategy_context=deps.strategy_context,
+        input_instruments=deps.input_instruments,
+        bar_fingerprints=deps.bar_fingerprints,
+    )
+
+
+def _build_risk_scan_step(deps: StepDeps) -> RiskScanStep:
+    """构建 RiskScanStep — PostTrade 风控扫描 + 锁管理。"""
+    return RiskScanStep(
+        post_trade_guard=deps.post_trade_guard,
+        audit_collector=deps.audit_collector,
+        event_bus=deps.event_bus,
+        strategy_context=deps.strategy_context,
+        clock=deps.clock,
+    )
+
+
+def _build_strategy_step(deps: StepDeps) -> StrategyStep:
+    """构建 StrategyStep — 策略 Pipeline -> TargetPortfolio。"""
+    builder = deps.input_bundle_builder
+    if builder is None:
+
+        def _default_bundle_builder(ctx: StepContext) -> StrategyInputBundle:
+            return deps.build_input_bundle_fn(
+                ctx.time_context.trade_date,
+                require_slice(ctx.slice_),
+            )
+
+        builder = _default_bundle_builder
+
+    return StrategyStep(
+        pipeline=deps.pipeline,
+        strategy_context=deps.strategy_context,
+        strategy_id=deps.config.strategy_id,
+        strategy_run_id=deps.config.strategy_run_id,
+        input_bundle_builder=builder,
+    )
+
+
+def _build_planning_step(deps: StepDeps) -> PlanningStep:
+    """构建 PlanningStep — ExecutionPlanner -> ExecutionPlan。"""
+    return PlanningStep(
+        planner=deps.planner,
+        rule_provider=deps.rule_provider,
+        rule_ref_collector=deps.rule_ref_collector,
+        strategy_context=deps.strategy_context,
+    )
+
+
+def _build_pre_trade_step(deps: StepDeps) -> PreTradeStep:
+    """构建 PreTradeStep — PreTrade 校验 + 订单提交。"""
+    return PreTradeStep(
+        pre_trade_check=deps.pre_trade_check,
+        brokerage=deps.brokerage,
+        fee_model=deps.fee_model,
+        event_bus=deps.event_bus,
+        clock=deps.clock,
+    )
+
+
+def _build_execution_step(deps: StepDeps) -> ExecutionStep:
+    """构建 ExecutionStep — 订单成交处理。"""
+    return ExecutionStep(
+        brokerage=deps.brokerage,
+        event_bus=deps.event_bus,
+        clock=deps.clock,
+    )
+
+
+def _build_audit_step(deps: StepDeps) -> AuditStep:
+    """构建 AuditStep — 审计记录。"""
+    return AuditStep(
+        audit_collector=deps.audit_collector,
+        brokerage=deps.brokerage,
+        trade_builder=deps.trade_builder,
+        recorded_trade_ids=deps.recorded_trade_ids,
+    )
+
+
 def build_steps(deps: StepDeps) -> tuple[TradingStep, ...]:
     """构建 TradingStep chain。"""
-
-    def _default_bundle_builder(ctx: StepContext) -> StrategyInputBundle:
-        return deps.build_input_bundle_fn(
-            ctx.time_context.trade_date,
-            require_slice(ctx.slice_),
-        )
-
-    input_bundle_builder = deps.input_bundle_builder
-    if input_bundle_builder is None:
-        input_bundle_builder = _default_bundle_builder
-
     return (
-        DataFetchStep(
-            brokerage=deps.brokerage,
-            strategy_context=deps.strategy_context,
-            input_instruments=deps.input_instruments,
-            bar_fingerprints=deps.bar_fingerprints,
-        ),
-        RiskScanStep(
-            post_trade_guard=deps.post_trade_guard,
-            audit_collector=deps.audit_collector,
-            event_bus=deps.event_bus,
-            strategy_context=deps.strategy_context,
-            clock=deps.clock,
-        ),
-        StrategyStep(
-            pipeline=deps.pipeline,
-            strategy_context=deps.strategy_context,
-            strategy_id=deps.config.strategy_id,
-            strategy_run_id=deps.config.strategy_run_id,
-            input_bundle_builder=input_bundle_builder,
-        ),
-        PlanningStep(
-            planner=deps.planner,
-            rule_provider=deps.rule_provider,
-            rule_ref_collector=deps.rule_ref_collector,
-            strategy_context=deps.strategy_context,
-        ),
-        PreTradeStep(
-            pre_trade_check=deps.pre_trade_check,
-            brokerage=deps.brokerage,
-            fee_model=deps.fee_model,
-            event_bus=deps.event_bus,
-            clock=deps.clock,
-        ),
-        ExecutionStep(
-            brokerage=deps.brokerage,
-            event_bus=deps.event_bus,
-            clock=deps.clock,
-        ),
-        AuditStep(
-            audit_collector=deps.audit_collector,
-            brokerage=deps.brokerage,
-            trade_builder=deps.trade_builder,
-            recorded_trade_ids=deps.recorded_trade_ids,
-        ),
+        _build_data_fetch_step(deps),
+        _build_risk_scan_step(deps),
+        _build_strategy_step(deps),
+        _build_planning_step(deps),
+        _build_pre_trade_step(deps),
+        _build_execution_step(deps),
+        _build_audit_step(deps),
     )

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal, cast
+from typing import Literal, cast
 
 import httpx
 import polars as pl
@@ -21,10 +21,8 @@ from ditto_application.processes.ingestion.data_writer import IngestionDataWrite
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
+from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
-
-if TYPE_CHECKING:
-    from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 
 __all__ = [
     "create_freeze_point",
@@ -99,7 +97,7 @@ def run_list_date_inference(
         )
 
 
-def process_fetched_data(  # noqa: PLR0913
+def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在各字段，引入 dataclass 需改动 coordinator + 测试
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
@@ -266,7 +264,7 @@ def create_freeze_point(
     )
 
 
-def write_data_safe(  # noqa: PLR0913
+def write_data_safe(  # noqa: PLR0913 — 统一写入入口：result_handler + data_writer 为 DI 服务，无法进一步收敛
     dataset: str,
     df: pl.DataFrame,
     trade_date: str,

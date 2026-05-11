@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,6 +38,59 @@ def prepare_for_write(
     return df.sort(sort_columns)
 
 
+# -- merge strategy helpers --------------------------------------------------
+
+
+def _merge_error(
+    _df: pl.DataFrame,
+    _existing: pl.DataFrame,
+    _key_columns: list[str],
+    overlap_count: int,
+) -> MergeResult:
+    """ERROR 策略 — 检测到重复键时抛出 ValueError。"""
+    msg = (
+        f"Duplicate data: {overlap_count} overlapping key pairs. "
+        "Use OnDuplicate.KEEP_FIRST to preserve, or "
+        "OnDuplicate.KEEP_LAST to overwrite."
+    )
+    raise ValueError(msg)
+
+
+def _merge_keep_first(
+    df: pl.DataFrame,
+    existing: pl.DataFrame,
+    key_columns: list[str],
+    _overlap_count: int,
+) -> MergeResult:
+    """KEEP_FIRST 策略 — 保留已有数据，丢弃新数据中的重复行。"""
+    existing_keys = existing.select(key_columns)
+    new_keys = df.select(key_columns)
+    non_overlapping = new_keys.join(existing_keys, on=key_columns, how="anti")
+    df = df.join(non_overlapping, on=key_columns, how="inner")
+    combined = pl.concat([existing, df])
+    return MergeResult(df=combined, added=len(df), updated=0)
+
+
+def _merge_keep_last(
+    df: pl.DataFrame,
+    existing: pl.DataFrame,
+    key_columns: list[str],
+    overlap_count: int,
+) -> MergeResult:
+    """KEEP_LAST 策略 — 用新数据覆盖已有数据（Last-Write-Wins）。"""
+    combined = pl.concat([existing, df])
+    combined = combined.unique(subset=key_columns, keep="last")
+    added = len(df) - overlap_count
+    return MergeResult(df=combined, added=added, updated=overlap_count)
+
+
+_MERGE_STRATEGIES: dict[OnDuplicate, Callable[..., MergeResult]] = {
+    OnDuplicate.ERROR: _merge_error,
+    OnDuplicate.KEEP_FIRST: _merge_keep_first,
+    OnDuplicate.KEEP_LAST: _merge_keep_last,
+}
+
+
 def merge_with_existing(
     df: pl.DataFrame,
     existing: pl.DataFrame,
@@ -60,34 +114,15 @@ def merge_with_existing(
     merged_keys = existing_keys.join(new_keys, on=key_columns, how="inner")
     overlap_count = len(merged_keys)
 
-    if not merged_keys.is_empty():
-        if on_duplicate == OnDuplicate.ERROR:
-            msg = (
-                f"Duplicate data: {overlap_count} overlapping key pairs. "
-                "Use OnDuplicate.KEEP_FIRST to preserve, or "
-                "OnDuplicate.KEEP_LAST to overwrite."
-            )
-            raise ValueError(msg)
-        elif on_duplicate == OnDuplicate.KEEP_FIRST:
-            non_overlapping = new_keys.join(existing_keys, on=key_columns, how="anti")
-            df = df.join(non_overlapping, on=key_columns, how="inner")
-            combined = pl.concat([existing, df])
-            added = len(df)
-            updated = 0
-        elif on_duplicate == OnDuplicate.KEEP_LAST:
-            combined = pl.concat([existing, df])
-            combined = combined.unique(subset=key_columns, keep="last")
-            added = len(df) - overlap_count
-            updated = overlap_count
-        else:
-            msg = f"Unknown OnDuplicate strategy: {on_duplicate}"
-            raise ValueError(msg)
-    else:
+    if merged_keys.is_empty():
         combined = pl.concat([existing, df])
-        added = len(df)
-        updated = 0
+        return MergeResult(df=combined, added=len(df), updated=0)
 
-    return MergeResult(df=combined, added=added, updated=updated)
+    strategy = _MERGE_STRATEGIES.get(on_duplicate)
+    if strategy is None:
+        msg = f"Unknown OnDuplicate strategy: {on_duplicate}"
+        raise ValueError(msg)
+    return strategy(df, existing, key_columns, overlap_count)
 
 
 def delete_from_partition(

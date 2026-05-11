@@ -12,7 +12,8 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+
+type JsonValue = str | int | float | bool | None
 
 __all__ = [
     "DQIssue",
@@ -53,7 +54,7 @@ class DQIssue:
     rule_name: str
     message: str
     affected_rows: int = 0
-    sample_data: list[dict[str, Any]] = field(default_factory=lambda: [])
+    sample_data: list[dict[str, JsonValue]] = field(default_factory=lambda: [])
 
     @property
     def is_error(self) -> bool:

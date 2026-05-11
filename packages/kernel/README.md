@@ -102,7 +102,7 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
 
 # 从叶模块导入（低频或子域内聚符号）
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
-from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy
+from ditto_kernel.strategy import ExecutionPolicy, ImpactModel, RiskScope, RunStatus
 from ditto_kernel.identity import InstrumentId
 
 # StrEnum 直接支持字符串比较
@@ -135,10 +135,10 @@ pixi run -e dev pytest packages/kernel/tests/
 - 新增 `research.py`（4 frozen dataclass）
 - 新增 `exceptions.py`（5 异常类）
 - 新增 `math.py`（pearson_correlation）
-- 新增 `DerivedSpec` / `ExecutionPolicy` / `ImpactModel` / `RiskScope`
+- 新增 `DerivedSpec` / `ExecutionPolicy` / `ImpactModel` / `RiskScope`（DerivedSpec 已在 v0.3.1 迁出）
 - `RunStatus` 新增 `CANCELLED` 成员
-- `DerivedRole` 更新为 `FEATURE/FACTOR/SIGNAL/LABEL`
-- `MaterializationProfile` 更新为 `SERIES/STATE/DERIVE/OFFLINE`
+- `DerivedRole` 更新为 `FEATURE/FACTOR/SIGNAL/LABEL`（已在 v0.3.1 迁出）
+- `MaterializationProfile` 更新为 `SERIES/STATE/DERIVE/OFFLINE`（已在 v0.3.1 迁出）
 
 ### v0.2.0 (2026-04-04)
 - 新增 clock.py（Clock Protocol + SimulatedClock + RealtimeClock）

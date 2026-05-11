@@ -141,7 +141,9 @@ def _make_synchronizer(
         for day in trading_days:
             tc = TimeContext(
                 decision_time=step_time,
-                knowledge_date=step_time.date() - timedelta(days=1),
+                knowledge_date=(
+                    step_time.date() - timedelta(days=config.knowledge_lag_days)
+                ),
                 trade_date=day,
             )
             slices.append(TimeSlice(time_context=tc, bars={}))
