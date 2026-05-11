@@ -53,9 +53,10 @@ describe("page-platform-settings prototype", () => {
 		expect(document.querySelectorAll("#states-gallery [data-component='datasource-list'] .gallery-card")).toHaveLength(5);
 		expect(document.querySelectorAll("#states-gallery [data-component='broker-list'] .gallery-card")).toHaveLength(5);
 		expect(document.querySelectorAll("#states-gallery [data-component='settings-form'] .gallery-card")).toHaveLength(2);
-		expect(document.querySelectorAll("#overlays-gallery .gallery-card")).toHaveLength(3);
+		expect(document.querySelectorAll("#overlays-gallery .gallery-card")).toHaveLength(4);
 		expect(document.querySelector("#overlay-datasource-test")).not.toBeNull();
 		expect(document.querySelector("#overlay-broker-test")).not.toBeNull();
+		expect(document.querySelector("#overlay-save-config")).not.toBeNull();
 		expect(document.querySelector("#overlay-reset-config")).not.toBeNull();
 	});
 

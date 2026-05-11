@@ -9,9 +9,10 @@
   - settings-broker (券商连接) [covered]
   - settings-general (通用设置) [covered]
 
-  Overlays: 3
+  Overlays: 4
   - overlay-datasource-test (Dialog: 数据源连接测试) [covered]
   - overlay-broker-test (Dialog: 券商连接测试) [covered]
+  - overlay-save-config (Modal: 保存配置确认) [covered]
   - overlay-reset-config (Modal: 重置配置) [covered]
 
   State Variants: 4 components × multi-state
@@ -842,6 +843,7 @@
 
     :root:has(#overlay-datasource-test:checked) [data-overlay="overlay-datasource-test"],
     :root:has(#overlay-broker-test:checked) [data-overlay="overlay-broker-test"],
+    :root:has(#overlay-save-config:checked) [data-overlay="overlay-save-config"],
     :root:has(#overlay-reset-config:checked) [data-overlay="overlay-reset-config"] {
       display: flex;
     }
@@ -891,6 +893,7 @@
 
   <input type="checkbox" id="overlay-datasource-test" class="sr-only">
   <input type="checkbox" id="overlay-broker-test" class="sr-only">
+  <input type="checkbox" id="overlay-save-config" class="sr-only">
   <input type="checkbox" id="overlay-reset-config" class="sr-only">
 
   <nav class="proto-nav" aria-label="原型视图切换">
@@ -926,7 +929,7 @@
         <div class="header-spacer"></div>
         <div class="header-actions" role="toolbar" aria-label="配置操作">
           <button class="btn btn-sm">验证配置</button>
-          <label for="overlay-reset-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存草稿</label>
+          <label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存草稿</label>
         </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
@@ -1023,7 +1026,7 @@
                             <div class="config-item-info"><div class="config-item-name">Bloomberg</div><div class="config-item-type">全球宏观 + 另类数据</div></div>
                             <span class="status-dot disconnected">未连接</span>
                             <span class="config-item-meta">auth required</span>
-                            <div class="config-item-actions"><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">配置</label></div>
+                            <div class="config-item-actions"><label for="overlay-save-config" class="btn btn-sm ov-label-btn">配置</label></div>
                           </div>
                           <div class="config-item">
                             <div class="config-item-info"><div class="config-item-name">通达信期权</div><div class="config-item-type">期权链数据</div></div>
@@ -1080,7 +1083,7 @@
                           <div class="route-step"><span class="route-index">3</span><span class="route-name">CSV sandbox · manual recovery</span><span class="status-pill warn">manual</span></div>
                         </div>
                       </div>
-                      <div class="settings-actions-row"><label for="overlay-reset-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存数据源</label><label for="overlay-datasource-test" class="btn btn-sm ov-label-btn">测试连接</label></div>
+                      <div class="settings-actions-row"><label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存数据源</label><label for="overlay-datasource-test" class="btn btn-sm ov-label-btn">测试连接</label></div>
                     </div>
                   </section>
                 </div>
@@ -1100,7 +1103,7 @@
                       <div class="panel-body">
                         <div class="config-list">
                           <div class="config-item"><div class="config-item-info"><div class="config-item-name">中信证券（模拟盘）</div><div class="config-item-type">XTP 接口 · 模拟环境</div></div><span class="status-dot connected">已连接</span><span class="config-item-meta">****8823</span><div class="config-item-actions"><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试</label></div></div>
-                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">华泰证券（模拟盘）</div><div class="config-item-type">柜台接口 · 模拟环境</div></div><span class="status-dot disconnected">未连接</span><span class="config-item-meta">Token 过期</span><div class="config-item-actions"><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">配置</label></div></div>
+                          <div class="config-item"><div class="config-item-info"><div class="config-item-name">华泰证券（模拟盘）</div><div class="config-item-type">柜台接口 · 模拟环境</div></div><span class="status-dot disconnected">未连接</span><span class="config-item-meta">Token 过期</span><div class="config-item-actions"><label for="overlay-save-config" class="btn btn-sm ov-label-btn">配置</label></div></div>
                           <div class="config-item"><div class="config-item-info"><div class="config-item-name">国泰君安（实盘只读）</div><div class="config-item-type">账户同步 · 交易关闭</div></div><span class="status-dot stale">待复核</span><span class="config-item-meta">T+1 verify</span><div class="config-item-actions"><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试</label></div></div>
                         </div>
                       </div>
@@ -1131,7 +1134,7 @@
                         <div class="form-group"><label class="form-label" for="broker-order-limit">下单限额</label><input id="broker-order-limit" class="form-input" type="text" value="500,000 CNY"></div>
                         <div class="form-group full"><div class="form-label" id="broker-trade-protection-label">交易保护</div><div role="group" aria-labelledby="broker-trade-protection-label"><div class="toggle-row"><span>强制订单复核</span><span class="toggle-switch" aria-hidden="true"></span></div><div class="toggle-row"><span>开盘前禁止自动下单</span><span class="toggle-switch" aria-hidden="true"></span></div></div></div>
                       </div>
-                      <div class="settings-actions-row"><label for="overlay-reset-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存连接</label><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试券商</label></div>
+                      <div class="settings-actions-row"><label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存连接</label><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试券商</label></div>
                     </div>
                   </section>
                 </div>
@@ -1178,7 +1181,7 @@
                         <div class="form-group"><label class="form-label" for="general-fee-rate">默认手续费率</label><input id="general-fee-rate" class="form-input" type="text" value="0.025%"></div>
                         <div class="form-group"><label class="form-label" for="general-slippage">默认滑点</label><input id="general-slippage" class="form-input" type="text" value="0.01%"></div>
                       </div>
-                      <div class="settings-actions-row"><label for="overlay-reset-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存配置</label><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置为默认值</label></div>
+                      <div class="settings-actions-row"><label for="overlay-save-config" class="btn btn-primary btn-sm ov-label-btn" tabindex="0" role="button">保存配置</label><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置为默认值</label></div>
                     </div>
                   </section>
                 </div>
@@ -1249,37 +1252,73 @@
       </div>
     </div>
 
-    <div class="overlay-backdrop" data-overlay="overlay-reset-config">
-      <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存或重置配置确认" data-danger-confirmation data-high-risk-confirmation>
-        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存/重置配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
+    <div class="overlay-backdrop" data-overlay="overlay-save-config">
+      <label class="overlay-dismiss" for="overlay-save-config" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="保存配置确认" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 保存配置确认</span><label for="overlay-save-config" class="overlay-close" aria-label="关闭">✕</label></div>
         <div class="overlay-body">
-          <p data-risk-object>对象：prod-cn-a 配置草稿 r18 / 默认值重置</p>
+          <p data-risk-object>对象：prod-cn-a 配置草稿 r18</p>
           <div class="risk-confirmation-grid">
             <div data-impact-summary class="risk-confirmation-block">
               <div class="risk-confirmation-title">影响范围</div>
-              <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境，正在运行任务不会自动重启。重置默认值会覆盖当前表单草稿并生成可审计的配置差异。</p>
+              <p class="risk-confirmation-copy">保存后会影响数据源、交易通道或 Agent 运行环境；正在运行任务不会自动重启，需由 Platform Ops 确认是否滚动刷新。</p>
             </div>
             <div data-before-after class="risk-confirmation-block">
               <div class="risk-confirmation-title">操作前后</div>
-              <p class="risk-confirmation-copy">保存草稿会更新配置版本；保存配置会成为生效版本；重置会将当前表单恢复到默认配置。</p>
+              <p class="risk-confirmation-copy">保存草稿会更新配置草稿版本；保存数据源、连接或通用配置会生成待生效 diff，验证通过后成为新的配置版本。</p>
             </div>
             <div data-evidence-chain class="risk-confirmation-block">
               <div class="risk-confirmation-title">证据链</div>
-              <p class="risk-confirmation-copy">保留配置 diff、连接测试结果、密钥指纹和变更备注。</p>
+              <p class="risk-confirmation-copy">保留配置 diff、schema 校验、连接测试结果、密钥指纹和变更备注。</p>
             </div>
             <div data-audit-record class="risk-confirmation-block">
               <div class="risk-confirmation-title">审计记录</div>
-              <p class="risk-confirmation-copy">记录操作人、配置域、版本号、字段摘要和时间。</p>
+              <p class="risk-confirmation-copy">记录操作人、配置域、版本号、字段摘要、验证结果和时间。</p>
             </div>
             <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
               <div class="risk-confirmation-title">恢复路径</div>
-              <p class="risk-confirmation-copy">可从设置变更历史回滚上一版配置；密钥类字段只显示指纹，不回显明文。重置前快照会保留在配置历史中。</p>
+              <p class="risk-confirmation-copy">可从设置变更历史回滚上一版配置；密钥类字段只显示指纹，不回显明文，需重新授权后恢复。</p>
+            </div>
+          </div>
+          <div class="overlay-actions">
+            <label for="overlay-save-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，继续编辑</label>
+            <label for="overlay-save-config" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认保存配置</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay-backdrop" data-overlay="overlay-reset-config">
+      <label class="overlay-dismiss" for="overlay-reset-config" aria-label="关闭"></label>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="重置配置确认" data-danger-confirmation data-high-risk-confirmation>
+        <div class="overlay-header"><span class="overlay-title"><span data-danger-marker>!</span> 重置配置确认</span><label for="overlay-reset-config" class="overlay-close" aria-label="关闭">✕</label></div>
+        <div class="overlay-body">
+          <p data-risk-object>对象：prod-cn-a 当前表单草稿 r18 默认值重置</p>
+          <div class="risk-confirmation-grid">
+            <div data-impact-summary class="risk-confirmation-block">
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">重置会覆盖当前未保存表单草稿，恢复平台默认参数；不会保存数据源、券商连接或密钥配置，也不会重启正在运行任务。</p>
+            </div>
+            <div data-before-after class="risk-confirmation-block">
+              <div class="risk-confirmation-title">操作前后</div>
+              <p class="risk-confirmation-copy">重置前保留 r18 草稿字段摘要；重置后表单值回到默认配置，并生成一条默认值重置 diff 供复核。</p>
+            </div>
+            <div data-evidence-chain class="risk-confirmation-block">
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">保留重置前快照、默认值模板版本、字段级 diff、密钥指纹和重置原因。</p>
+            </div>
+            <div data-audit-record class="risk-confirmation-block">
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作人、配置域、草稿版本、默认值模板版本、字段摘要和时间。</p>
+            </div>
+            <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从设置变更历史恢复重置前草稿快照；密钥类字段只显示指纹，不回显明文，恢复后需重新验证连接。</p>
             </div>
           </div>
           <div class="overlay-actions">
             <label for="overlay-reset-config" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消，保留草稿</label>
-            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认保存/重置配置</label>
+            <label for="overlay-reset-config" class="overlay-btn overlay-btn-danger" data-confirm-control data-danger-action>确认重置为默认值</label>
           </div>
         </div>
       </div>
@@ -1327,7 +1366,8 @@
         <div class="gallery-cards">
           <div class="gallery-card" data-overlay-ref="overlay-datasource-test"><div class="gallery-card__label">数据源测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="连接测试"><div class="overlay-header"><span class="overlay-title">连接测试</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><div class="test-result success">✓ 连接正常 — 延迟 120ms</div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-broker-test"><div class="gallery-card__label">券商测试 (Dialog)</div><div class="gallery-card__trigger">触发：点击「测试」按钮</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="券商连接测试"><div class="overlay-header"><span class="overlay-title">券商连接测试</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><div class="test-progress"><div class="test-spinner"></div> 正在测试…</div></div></div></div></div>
-          <div class="gallery-card" data-overlay-ref="overlay-reset-config"><div class="gallery-card__label">重置配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「重置为默认值」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="重置配置"><div class="overlay-header"><span class="overlay-title">重置配置</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><p>确认将所有配置重置为默认值？此操作不可撤销。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-save-config"><div class="gallery-card__label">保存配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「保存配置」或「配置」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="保存配置确认"><div class="overlay-header"><span class="overlay-title">保存配置确认</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><p>确认保存 prod-cn-a 配置草稿？保存后会生成配置 diff、验证证据和回滚点。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-reset-config"><div class="gallery-card__label">重置配置 (Modal)</div><div class="gallery-card__trigger">触发：点击「重置为默认值」</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="重置配置"><div class="overlay-header"><span class="overlay-title">重置配置</span><span class="overlay-close" aria-label="关闭">✕</span></div><div class="overlay-body"><p>确认将当前草稿重置为默认值？重置前快照会保留在配置历史中。</p></div></div></div></div>
         </div>
       </div>
     </div>

@@ -148,6 +148,23 @@
       ]
     },
     {
+      "id": "platform-settings.save-config",
+      "kind": "modal",
+      "blocking": true,
+      "requiredInDefaultFlow": true,
+      "trigger": {
+        "slot": "main",
+        "action": "open-overlay"
+      },
+      "prototypeSelector": "#overlay-save-config",
+      "reactComponent": "PrototypeOnlyOverlay",
+      "closeBehavior": [
+        "escape",
+        "outside-click",
+        "primary-action"
+      ]
+    },
+    {
       "id": "platform-settings.reset-config",
       "kind": "modal",
       "blocking": true,

@@ -1133,7 +1133,7 @@
       },
       "stateCoverage": {
         "tabs": 3,
-        "overlays": 3,
+        "overlays": 4,
         "stateVariants": 12,
         "coveragePercent": 100
       },

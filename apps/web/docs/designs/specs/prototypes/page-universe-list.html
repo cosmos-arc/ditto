@@ -1028,15 +1028,15 @@
             <div class="risk-confirmation-grid">
               <div data-impact-summary class="risk-confirmation-block">
                 <div class="risk-confirmation-title">影响范围</div>
-                <p class="risk-confirmation-copy">修改股票池会影响引用它的策略、回测和筛选预设，不会自动重跑历史结果。</p>
+                <p class="risk-confirmation-copy">删除后股票池会从当前列表和新建引用选择器中移除；已绑定策略、回测和筛选预设不会自动改绑或重跑。</p>
               </div>
               <div data-before-after class="risk-confirmation-block">
                 <div class="risk-confirmation-title">操作前后</div>
-                <p class="risk-confirmation-copy">股票池会从当前列表移除，引用对象保留最后一次成分版本。</p>
+                <p class="risk-confirmation-copy">删除前保留当前成分和引用清单；删除后引用对象继续读取最后一次成分快照，并标记为已删除来源。</p>
               </div>
               <div data-evidence-chain class="risk-confirmation-block">
                 <div class="risk-confirmation-title">证据链</div>
-                <p class="risk-confirmation-copy">保留删除前成分、筛选规则、来源快照和引用清单。</p>
+                <p class="risk-confirmation-copy">保留删除前成分、筛选规则、来源快照、引用清单和删除原因，便于后续恢复或替换引用。</p>
               </div>
               <div data-audit-record class="risk-confirmation-block">
                 <div class="risk-confirmation-title">审计记录</div>
@@ -1044,7 +1044,7 @@
               </div>
               <div data-recovery-path data-recovery-hint class="risk-confirmation-block">
                 <div class="risk-confirmation-title">恢复路径</div>
-                <p class="risk-confirmation-copy">可从股票池版本历史恢复上一版成分；引用策略会收到版本变更提示。</p>
+                <p class="risk-confirmation-copy">可从删除记录恢复股票池并重新同步最后一次成分快照；引用策略需复核后手动恢复绑定或改绑到新股票池。</p>
               </div>
             </div>
             <div class="sv-pad-section">
