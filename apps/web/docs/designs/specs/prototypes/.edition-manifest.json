@@ -28,6 +28,13 @@
       "fullCheck": "PASS: biome check, tsc -b, 1768 vitest tests"
     }
   },
+  "releaseUxReview": {
+    "reviewedAt": "2026-05-11",
+    "status": "requires-remediation",
+    "scoreFamily": "release-ux",
+    "score": "23/40",
+    "note": "Gate score and release UX score are separate. Do not compare manifest near-10 scores with release UX heuristic score."
+  },
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",
