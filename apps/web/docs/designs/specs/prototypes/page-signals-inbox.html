@@ -11,10 +11,10 @@
   - tab-ordered (已转订单) [covered]
 
   Overlays: 4
-  - overlay-order-confirm (Sheet: 订单确认面板) [covered]
+  - overlay-order-confirm (Sheet: 订单复核面板) [covered]
   - overlay-ai-read (Modal: AI 解读信号) [covered]
   - overlay-batch-confirm (Modal: 批量确认) [covered]
-  - overlay-signal-confirm-to-order (Modal: 信号确认→生成订单) [covered]
+  - overlay-signal-confirm-to-order (Modal: 信号确认→生成订单复核) [covered]
 
   State Variants: 5 components × 3 states (empty/loading/error)
   - scope-strip: default[covered] loading[covered] empty[n/a] failed[n/a] stale[covered] selected[n/a]
@@ -2651,18 +2651,18 @@
 
         <!-- Actions -->
         <div class="detail-actions">
-          <!-- Overlay trigger: 确认信号 → 弹出订单确认面板 -->
-          <label for="overlay-order-confirm" class="detail-action primary" tabindex="0" aria-label="确认信号">
+          <!-- Overlay trigger: 确认信号 → 弹出订单复核面板 -->
+          <label for="overlay-order-confirm" class="detail-action primary" tabindex="0" aria-label="确认转入订单复核">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
-            确认信号
+            确认转入订单复核
           </label>
-          <!-- Overlay trigger: 确认信号→生成订单 → 弹出信号确认 Modal -->
-          <label for="overlay-signal-confirm-to-order" class="detail-action secondary" tabindex="0" aria-label="确认信号并生成订单">
+          <!-- Overlay trigger: 确认信号→生成订单复核 → 弹出信号确认 Modal -->
+          <label for="overlay-signal-confirm-to-order" class="detail-action secondary" tabindex="0" aria-label="确认生成订单复核">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
-            确认并下单
+            确认生成订单复核
           </label>
-          <!-- Overlay trigger: 生成订单复核 → 弹出订单确认面板 -->
+          <!-- Overlay trigger: 生成订单复核 → 弹出订单复核面板 -->
           <label for="overlay-order-confirm" class="detail-action secondary" tabindex="0" aria-label="生成订单复核">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 7h12M5 3v10"/></svg>
             生成订单复核
@@ -2692,12 +2692,12 @@
   <!-- ═══ Overlay Containers ═══ -->
   <div class="overlays">
 
-    <!-- Overlay A: 订单确认面板 (Sheet 居中弹窗) -->
+    <!-- Overlay A: 订单复核面板 (Sheet 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
       <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="订单确认" data-danger-confirmation data-high-risk-confirmation>
+      <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="订单复核确认" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title"><span data-danger-marker>!</span> 订单确认</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 订单复核确认</span>
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
@@ -2791,7 +2791,7 @@
 
           <div class="overlay-actions">
             <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认提交订单</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认转入订单复核</label>
           </div>
         </div>
       </div>
@@ -2947,12 +2947,12 @@
       </div>
     </div>
 
-    <!-- Overlay D: 信号确认→生成订单 (Modal 居中弹窗) -->
+    <!-- Overlay D: 信号确认→生成订单复核 (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-signal-confirm-to-order">
       <label class="overlay-dismiss" for="overlay-signal-confirm-to-order" aria-label="关闭"></label>
       <div class="overlay-surface overlay-surface--sheet danger-confirmation-summary" role="dialog" aria-modal="true" aria-label="信号确认" data-danger-confirmation data-high-risk-confirmation>
         <div class="overlay-header">
-          <span class="overlay-title"><span data-danger-marker>!</span> 确认信号并生成订单</span>
+          <span class="overlay-title"><span data-danger-marker>!</span> 确认信号并生成订单复核</span>
           <label for="overlay-signal-confirm-to-order" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
@@ -3009,7 +3009,7 @@
           <!-- 操作按钮 -->
           <div class="overlay-actions">
             <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
-            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认提交订单</label>
+            <label for="overlay-signal-confirm-to-order" class="overlay-btn overlay-btn-primary" data-confirm-control data-danger-action>确认生成订单复核</label>
           </div>
         </div>
       </div>
@@ -3327,11 +3327,11 @@
           <div class="gallery-cards">
 
     <div class="gallery-card" data-overlay-ref="overlay-order-confirm">
-      <div class="gallery-card__label">订单确认 (Sheet)</div>
+      <div class="gallery-card__label">订单复核确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="订单确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="订单复核确认">
           <div class="overlay-header">
-            <span class="overlay-title">订单确认</span>
+            <span class="overlay-title">订单复核确认</span>
             <span class="overlay-close" aria-label="关闭">✕</span>
           </div>
           <div class="overlay-body">
@@ -3401,7 +3401,7 @@
 
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">取消</button>
-              <button class="overlay-btn overlay-btn-primary">确认提交订单</button>
+              <button class="overlay-btn overlay-btn-primary">确认转入订单复核</button>
             </div>
           </div>
         </div>
@@ -3515,7 +3515,7 @@
       <div class="gallery-card__preview gallery-card__preview--overlay">
         <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="信号确认">
           <div class="overlay-header">
-            <span class="overlay-title">确认信号并生成订单</span>
+            <span class="overlay-title">确认信号并生成订单复核</span>
             <span class="overlay-close" aria-label="关闭">✕</span>
           </div>
           <div class="overlay-body">
@@ -3545,7 +3545,7 @@
             </div>
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">取消</button>
-              <button class="overlay-btn overlay-btn-primary">确认提交订单</button>
+              <button class="overlay-btn overlay-btn-primary">确认生成订单复核</button>
             </div>
           </div>
         </div>
