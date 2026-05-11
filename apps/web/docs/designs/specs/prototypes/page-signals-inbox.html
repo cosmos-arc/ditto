@@ -1906,7 +1906,7 @@
         </label>
       </div>
 
-      <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-primary-answer-equivalent data-primary-weight="dominant">
+      <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-secondary-context>
         <label for="overlay-batch-confirm" class="scope-status-item" role="button" tabindex="0" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action>
           <span class="scope-status-dot warn"></span>
           优先处理贵州茅台买入信号：置信度 <span data-answer-metric>82%</span>，若批准后组合 Beta 0.94 · 批准 / 拒绝 / 查看证据
@@ -2472,13 +2472,13 @@
     <div class="resize-separator" data-resize-separator data-resize-panel-id="signal-detail-panel" data-resize-var="--shell-signals-detail-width" data-resize-default="380" data-resize-min="300" data-resize-max="560" role="separator" tabindex="0" aria-label="调整信号详情宽度" aria-orientation="vertical" aria-controls="main-content signal-detail-panel" aria-valuemin="300" aria-valuemax="560" aria-valuenow="380" aria-valuetext="调整信号详情宽度 380 像素"></div>
 
     <!-- ═══ Detail Panel (380px) ═══ -->
-    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-secondary-context>
+    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-primary-answer-equivalent data-primary-weight="dominant">
       <div class="detail-header">
         <div>
           <div class="detail-header-title">贵州茅台</div>
           <div class="detail-header-subtitle">600519.SH</div>
         </div>
-        <span class="side-badge buy lg">
+        <span class="side-badge buy lg" data-answer-judgment>
           <span class="side-badge-sym">▲</span> 买入
         </span>
       </div>
@@ -2516,7 +2516,7 @@
             <div class="detail-confidence-bar">
               <div class="detail-confidence-fill detail-conf-w-82"></div>
             </div>
-            <span class="detail-confidence-value">82%</span>
+            <span class="detail-confidence-value" data-answer-metric>82%</span>
             <span class="detail-confidence-label">高置信</span>
           </div>
         </div>
@@ -2524,7 +2524,7 @@
         <!-- Explanation -->
         <div class="detail-section">
           <span class="detail-section-title">策略解读</span>
-          <p class="detail-text">
+          <p class="detail-text" data-answer-evidence>
             动量因子持续走强，近 20 日收益率排名第 87 百分位。资金面北向连续 5 日净流入，筹码集中度提升。MACD 周线金叉确认，成交量放大 1.4 倍。
           </p>
         </div>
@@ -2532,7 +2532,7 @@
         <!-- Risk checks -->
         <div class="detail-section">
           <span class="detail-section-title">风控检查</span>
-          <div class="risk-check-list">
+          <div class="risk-check-list" data-answer-evidence>
             <div class="risk-check" tabindex="0" role="listitem">
               <div class="risk-check-left">
                 <span class="risk-check-icon pass">
@@ -2575,7 +2575,7 @@
         <!-- Portfolio impact -->
         <div class="detail-section">
           <span class="detail-section-title">组合影响预估</span>
-          <div class="impact-grid">
+          <div class="impact-grid" data-answer-evidence>
             <div class="impact-card">
               <span class="impact-card-label">当前持仓</span>
               <span class="impact-card-value">3.2%</span>
@@ -2652,7 +2652,7 @@
         <!-- Actions -->
         <div class="detail-actions">
           <!-- Overlay trigger: 确认信号 → 弹出订单复核面板 -->
-          <label for="overlay-order-confirm" class="detail-action primary" tabindex="0" aria-label="确认转入订单复核">
+          <label for="overlay-order-confirm" class="detail-action primary" role="button" tabindex="0" aria-label="确认转入订单复核" data-answer-action>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>
             确认转入订单复核
           </label>
