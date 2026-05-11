@@ -144,8 +144,8 @@
     /* ── Frosted glass header ── */
     .shell-home .shell-header {
       background: var(--surface-frosted);
-      backdrop-filter: blur(16px) saturate(1.2);
-      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
     /* ── Header title structural accent ── */
@@ -303,13 +303,13 @@
 
     /* ── Context section disclosure — refined ── */
     .shell-home .context-section-disclosure {
-      border-left: 1px solid transparent;
+      border: 1px solid transparent;
       padding-left: var(--space-8);
       transition: color var(--motion-duration-fast) var(--motion-easing-standard),
                   border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .shell-home .context-section-disclosure:hover {
-      border-left-color: color-mix(in oklch, var(--brand-signature-fg) 12%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 12%, transparent);
     }
 
     /* ── Context section dual-line separator — light from above ── */
@@ -478,7 +478,7 @@
     }
     .global-pulse-label {
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -493,7 +493,7 @@
     .global-pulse-value.positive { color: var(--market-up-fg); }
     .global-pulse-note {
       color: var(--text-tertiary);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
     }
     .global-pulse-note.positive { color: var(--market-up-fg); }
     .global-pulse-note.warning { color: var(--risk-medium-fg); }
@@ -600,7 +600,7 @@
     }
     .impact-label {
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -620,7 +620,7 @@
       font-weight: var(--font-weight-semibold);
     }
     .impact-arrow {
-      color: var(--text-quaternary);
+      color: var(--prototype-light-readable-text, var(--text-quaternary));
       font-family: var(--font-family-ui);
       font-size: var(--font-size-10);
     }
@@ -710,6 +710,10 @@
     [data-theme="light"] .shell-home .context-section + .context-section::before {
       background: var(--border-subtle);
     }
+    [data-theme="light"] .shell-home {
+      --prototype-light-readable-text: var(--neutral-600);
+      --prototype-light-muted-text: var(--neutral-500);
+    }
     [data-theme="light"] .noise-layer {
       opacity: 0.008;
     }
@@ -790,7 +794,7 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: var(--font-size-14);
-      color: var(--text-quaternary);
+      color: var(--prototype-light-readable-text, var(--text-quaternary));
       opacity: 0;
       transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
@@ -885,13 +889,13 @@
 
     /* ── Queue disclosure refined ── */
     .shell-home .queue-disclosure {
-      border-left: 1px solid transparent;
+      border: 1px solid transparent;
       padding-left: var(--space-8);
       transition: color var(--motion-duration-fast) var(--motion-easing-standard),
                   border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .shell-home .queue-disclosure:hover {
-      border-left-color: color-mix(in oklch, var(--brand-signature-fg) 12%, transparent);
+      border-color: color-mix(in oklch, var(--brand-signature-fg) 12%, transparent);
     }
 
     /* ── Queue item tags — refined with subtle border ── */
@@ -908,7 +912,7 @@
     /* ── Queue item P1 urgency edge ── */
     .shell-home .queue-item:has(.queue-item-bar.p1) {
       position: relative;
-      box-shadow: inset 2px 0 0 var(--border-strong);
+      box-shadow: inset 0 0 0 1px var(--border-strong);
     }
 
     /* Queue item hover elevation */
@@ -1169,14 +1173,16 @@
       display: flex;
       gap: var(--space-8);
       padding: var(--space-6) var(--space-8);
+      border: 1px solid transparent;
       border-radius: var(--radius-4);
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
       position: relative;
     }
     .activity-item:hover {
       background: var(--interaction-hover-subtle-bg);
     }
-    /* Timeline dot — connects to previous item via border-left on body */
+    /* Timeline dot — connects activity cadence */
     .activity-item:not(:first-child)::before {
       content: '';
       position: absolute;
@@ -1187,12 +1193,22 @@
       background: var(--border-subtle);
       pointer-events: none;
     }
-    /* Semantic left-border for activity items */
-    .event-signal-buy { border-left: 2px solid var(--market-up-fg); }
-    .event-signal-sell { border-left: 2px solid var(--market-down-fg); }
-    .event-risk { border-left: 2px solid var(--risk-critical-fg); }
-    .event-data { border-left: 2px solid var(--system-degraded-fg); }
-    .event-agent { border-left: 2px solid var(--brand-accent); }
+    /* Semantic full-frame tint for activity items */
+    .event-signal-buy {
+      border-color: color-mix(in oklch, var(--market-up-fg) 20%, transparent);
+    }
+    .event-signal-sell {
+      border-color: color-mix(in oklch, var(--market-down-fg) 20%, transparent);
+    }
+    .event-risk {
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 20%, transparent);
+    }
+    .event-data {
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 20%, transparent);
+    }
+    .event-agent {
+      border-color: color-mix(in oklch, var(--brand-accent) 18%, transparent);
+    }
     .activity-icon {
       width: 24px;
       height: 24px;
@@ -1417,10 +1433,9 @@
       background: var(--interaction-hover-subtle-bg);
     }
 
-    /* ── Sidebar brass edge line ── */
+    /* ── Sidebar positioning context ── */
     .shell-home .shell-sidebar {
       position: relative;
-      border-left: 1px solid color-mix(in oklch, var(--brand-signature-fg) 12%, var(--border-subtle));
     }
     .shell-home .context-rail {
       position: relative;
@@ -1547,7 +1562,7 @@
     }
 
     .interaction-selected {
-      border-left: 2px solid var(--brand-accent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
       background: var(--interaction-selected-bg);
       padding: var(--space-8);
       border-radius: var(--radius-4, 4px);
@@ -1750,21 +1765,6 @@
           </section>
         </div>
 
-        <!-- State Variants: Decision Card -->
-        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="decision-card" aria-label="decision-card 过期状态">
-          <div class="panel-body">
-            <div class="state-stale">
-              <div class="state-stale-icon">!</div>
-              <div class="state-stale-title">决策快照已过期</div>
-              <div class="state-stale-desc">市场判断数据超过 5 分钟未更新，建议刷新获取最新信号</div>
-              <button class="state-stale-retry">刷新数据</button>
-            </div>
-          </div>
-        </div>
-
-
-
-
         <!-- Today's Priority Items — Main Work Surface -->
         <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-reveal="fade-up">
           <div class="panel-header">
@@ -1854,32 +1854,6 @@
             </div>
           </div>
         </div>
-
-        <!-- State Variants: Pending / Next Actions -->
-        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="pending-actions" aria-label="pending-actions 过期状态">
-          <div class="panel-body">
-            <div class="state-stale">
-              <div class="state-stale-icon">!</div>
-              <div class="state-stale-title">优先事项快照已过期</div>
-              <div class="state-stale-desc">待办列表数据超过 5 分钟未更新</div>
-              <button class="state-stale-retry">刷新数据</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel" data-state="selected" data-contract-slot="pending-actions" aria-label="pending-actions 选中状态">
-          <div class="panel-body interaction-selected">
-            <span class="text-secondary">选中项已高亮，右侧展示关联上下文</span>
-          </div>
-        </div>
-
-
-
-
-        <!-- State Variants: My Workspace -->
-
-
-
-
 
         <!-- Intelligence Stream (merged activity + AI insights) -->
         <div class="panel" data-contract-slot="recent-signals" data-selected-object-region data-reveal="fade-up" data-reveal-delay="150">
@@ -1990,25 +1964,6 @@
             </div>
           </div>
         </div>
-
-        <!-- State Variants: Recent Signals / Intelligence Stream -->
-        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="recent-signals" aria-label="recent-signals 过期状态">
-          <div class="panel-body">
-            <div class="state-stale">
-              <div class="state-stale-icon">!</div>
-              <div class="state-stale-title">智能脉络快照已过期</div>
-              <div class="state-stale-desc">事件与洞察数据超过 5 分钟未更新</div>
-              <button class="state-stale-retry">刷新数据</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel" data-state="selected" data-contract-slot="recent-signals" aria-label="recent-signals 选中状态">
-          <div class="panel-body interaction-selected">
-            <span class="text-secondary">选中信号已高亮，右侧展示关联上下文</span>
-          </div>
-        </div>
-
-
 
       </div>
     </div>
@@ -2131,21 +2086,6 @@
           </div>
         </details>
 
-        <!-- State Variants: Alerts / Market Snapshot -->
-        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="alerts-market" aria-label="alerts-market 过期状态">
-          <div class="panel-body">
-            <div class="state-stale">
-              <div class="state-stale-icon">!</div>
-              <div class="state-stale-title">预警与行情快照已过期</div>
-              <div class="state-stale-desc">市场快照数据超过 5 分钟未更新，建议刷新获取最新行情</div>
-              <button class="state-stale-retry">刷新数据</button>
-            </div>
-          </div>
-        </div>
-
-
-
-
         <!-- Data Health (system trust check) -->
         <details class="context-section" open data-collapse-priority="l3" data-contract-slot="data-health" data-reveal="fade-right" data-reveal-delay="300">
           <summary class="context-section-header">
@@ -2179,20 +2119,6 @@
           </div>
         </details>
 
-        <!-- State Variants: Data Health -->
-        <div class="panel state-stale-variant" data-state="stale" data-contract-slot="data-health" aria-label="data-health 过期状态">
-          <div class="panel-body">
-            <div class="state-stale">
-              <div class="state-stale-icon">!</div>
-              <div class="state-stale-title">数据健康快照已过期</div>
-              <div class="state-stale-desc">数据源状态信息超过 5 分钟未更新，建议刷新获取最新状态</div>
-              <button class="state-stale-retry">刷新数据</button>
-            </div>
-          </div>
-        </div>
-
-
-
         <!-- Sidebar Toggle -->
         <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="home-sidebar" aria-expanded="true" aria-label="折叠侧边栏" title="折叠侧边栏">&#x00BB;</button>
       </div>
@@ -2211,7 +2137,7 @@
           <label for="overlay-signal-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>信号摘要</h4>
+          <h2>信号摘要</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">贵州茅台（600519）</span>
@@ -2237,7 +2163,7 @@
             <span class="overlay-field-value val-healthy">正常交易</span>
           </div>
 
-          <h4>风险评估</h4>
+          <h2>风险评估</h2>
           <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
 
           <div class="overlay-actions">
@@ -2259,7 +2185,7 @@
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>订单摘要</h4>
+          <h2>订单摘要</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">600519 贵州茅台</span>
@@ -2277,13 +2203,13 @@
             <span class="overlay-field-value">市价</span>
           </div>
 
-          <h4>风险校验</h4>
+          <h2>风险校验</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">校验结果</span>
             <span class="overlay-field-value val-healthy">通过 ✓</span>
           </div>
 
-          <h4>预估费用</h4>
+          <h2>预估费用</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">佣金</span>
             <span class="overlay-field-value">¥89.50</span>
@@ -2310,7 +2236,7 @@
           <label for="overlay-edit-workspace" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>可用 Widget</h4>
+          <h2>可用 Widget</h2>
           <div class="widget-list">
             <label class="widget-item">
               <input type="checkbox" checked> 持仓概览
@@ -2326,7 +2252,7 @@
             </label>
           </div>
 
-          <h4>当前布局预览</h4>
+          <h2>当前布局预览</h2>
           <div class="layout-preview">
             持仓概览（顶部全宽）<br>
             关注列表 · 研究进展（并排）<br>
@@ -2350,12 +2276,12 @@
           <label for="overlay-ai-advice" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>建议全文</h4>
+          <h2>建议全文</h2>
           <p class="overlay-desc overlay-desc--relaxed">
             当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
           </p>
 
-          <h4>关联数据支撑</h4>
+          <h2>关联数据支撑</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">IVIX</span>
             <span class="overlay-field-value">18.52 <span class="val-weak">(-3.1%)</span></span>
@@ -2772,7 +2698,7 @@
             <span class="overlay-title">信号详情</span>
           </div>
           <div class="overlay-body">
-            <h4>信号摘要</h4>
+            <h2>信号摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的</span>
               <span class="overlay-field-value">贵州茅台（600519）</span>
@@ -2797,7 +2723,7 @@
               <span class="overlay-field-label">标的当前状态</span>
               <span class="overlay-field-value val-healthy">正常交易</span>
             </div>
-            <h4>风险评估</h4>
+            <h2>风险评估</h2>
             <p class="overlay-desc">集中度已偏高，建议分批减仓，避免单笔冲击成本过高。当前科技板块占比 37.2%，超出规则上限 35%。</p>
             <div class="overlay-actions">
               <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">采纳信号</label>
@@ -2817,7 +2743,7 @@
             <span class="overlay-title">确认订单</span>
           </div>
           <div class="overlay-body">
-            <h4>订单摘要</h4>
+            <h2>订单摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的</span>
               <span class="overlay-field-value">600519 贵州茅台</span>
@@ -2834,12 +2760,12 @@
               <span class="overlay-field-label">价格</span>
               <span class="overlay-field-value">市价</span>
             </div>
-            <h4>风险校验</h4>
+            <h2>风险校验</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">校验结果</span>
               <span class="overlay-field-value val-healthy">通过 ✓</span>
             </div>
-            <h4>预估费用</h4>
+            <h2>预估费用</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">佣金</span>
               <span class="overlay-field-value">¥89.50</span>
@@ -2865,7 +2791,7 @@
             <span class="overlay-title">编辑工作台</span>
           </div>
           <div class="overlay-body">
-            <h4>可用 Widget</h4>
+            <h2>可用 Widget</h2>
             <div class="widget-list">
               <label class="widget-item">
                 <input type="checkbox" checked> 持仓概览
@@ -2880,7 +2806,7 @@
                 <input type="checkbox"> 市场日历
               </label>
             </div>
-            <h4>当前布局预览</h4>
+            <h2>当前布局预览</h2>
             <div class="layout-preview">
               持仓概览（顶部全宽）<br>
               关注列表 · 研究进展（并排）<br>
@@ -2903,11 +2829,11 @@
             <span class="overlay-title">AI 操作建议</span>
           </div>
           <div class="overlay-body">
-            <h4>建议全文</h4>
+            <h2>建议全文</h2>
             <p class="overlay-desc overlay-desc--relaxed">
               当前市场波动回落，北向资金连续 3 日净流入，但科技板块拥挤度偏高。建议关注：(1) 科技板块适度减配至 30% 以下；(2) 关注消费板块轮动信号；(3) 沪深 300 指数增强策略近期表现优异，可考虑增配。
             </p>
-            <h4>关联数据支撑</h4>
+            <h2>关联数据支撑</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">IVIX</span>
               <span class="overlay-field-value">18.52 <span class="val-weak">(-3.1%)</span></span>
