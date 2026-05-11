@@ -1996,7 +1996,7 @@
     </header>
 
     <!-- ═══ Filter Toolbar ═══ -->
-    <div class="filter-toolbar" data-contract-slot="filter-panel" data-reveal="fade-up" data-reveal-delay="0">
+    <div class="filter-toolbar" data-contract-slot="filter-panel" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
       <div class="filter-group">
         <span class="filter-label">股票池:</span>
         <button class="filter-chip active" data-tooltip="沪深300成分股，大盘蓝筹">沪深300</button>
@@ -2039,7 +2039,7 @@
 
 
     <!-- ═══ Screener Reading Strip ═══ -->
-    <section class="screener-insight-strip" data-primary-answer-equivalent data-catalog-task="screener-result-routing" aria-label="影响范围：当前筛选条件下的 A 股标的集合" data-reveal="fade-up" data-reveal-delay="50">
+    <section class="screener-insight-strip" data-primary-answer-equivalent data-primary-weight="dominant" data-catalog-task="screener-result-routing" aria-label="影响范围：当前筛选条件下的 A 股标的集合" data-reveal="fade-up" data-reveal-delay="50">
       <div class="screener-insight-item" data-screener-scope data-answer-evidence>
         <span class="screener-insight-label">Scope</span>
         <span class="screener-insight-value" data-answer-judgment data-answer-metric>沪深300 · A股 · 238 只</span>
@@ -2503,7 +2503,7 @@
     </div><!-- end data-tab-panel="sort" -->
 
     <!-- Compare Panel -->
-    <div data-tab-panel="compare" id="panel-screener-compare" role="tabpanel" aria-labelledby="tab-screener-compare" aria-hidden="true" class="compare-panel" data-reveal="fade-up" data-reveal-delay="0">
+    <div data-tab-panel="compare" id="panel-screener-compare" role="tabpanel" aria-labelledby="tab-screener-compare" aria-hidden="true" class="compare-panel" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
       <div class="compare-panel-desc">快速对比已选标的，当前已选 <span data-compare-count>3</span> 只：</div>
       <div class="compare-chart-section">
         <div class="compare-chart-label">成交额占比</div>
@@ -2553,7 +2553,7 @@
       </div>
 
       <!-- Section 2: 筛选预设 (默认折叠 — 低频) -->
-      <details class="context-section" data-collapse-priority="l3">
+      <details class="context-section" data-collapse-priority="l3" data-secondary-context>
         <summary class="context-section-header">
           <span class="context-section-title">筛选预设</span>
           <span class="collapse-count">3 预设</span>
@@ -2582,7 +2582,7 @@
       </details>
 
       <!-- Section 3: 多维评分 -->
-      <details class="context-section" data-collapse-priority="l2" open data-reveal="fade-up" data-reveal-delay="150">
+      <details class="context-section" data-collapse-priority="l2" open data-reveal="fade-up" data-reveal-delay="150" data-secondary-context>
         <summary class="context-section-header">
           <span class="context-section-title">多维评分</span>
           <span class="collapse-count">5 项</span>

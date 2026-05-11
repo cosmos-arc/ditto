@@ -1596,7 +1596,7 @@
     </div>
 
     <!-- ═══ Risk Strip — Key Metrics ═══ -->
-    <div class="scope-strip" data-contract-slot="risk-strip" data-primary-answer-equivalent role="status" aria-label="影响范围：交易组合风险限额">
+    <div class="scope-strip" data-contract-slot="risk-strip" data-primary-answer-equivalent data-primary-weight="dominant" role="status" aria-label="影响范围：交易组合风险限额">
       <div class="risk-strip-metric" data-answer-evidence>
         <span class="risk-strip-label" data-answer-judgment>最大回撤距阈值 1.55pp，先降低科技集中度</span>
         <span class="risk-strip-value ok" data-tooltip="VaR 95% 分位，阈值 2.50%" data-tooltip-delay="400" data-answer-metric>1.23%</span>
@@ -1674,10 +1674,10 @@
       <div class="risk-main-layout">
 
         <!-- ─── Left: Main Risk Charts (~65%) ─── -->
-        <div class="risk-charts" data-contract-slot="risk-dashboard">
+        <div class="risk-charts" data-contract-slot="risk-dashboard" data-secondary-context>
 
           <!-- Chart 1: VaR 趋势图 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
             <div class="panel-header">
               <span class="panel-title">VaR 趋势</span>
               <span class="panel-subtitle panel-subtitle-offset">95% 置信区间 · 日线</span>
@@ -1705,7 +1705,7 @@
           </div>
 
           <!-- Chart 2: 回撤图 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="100">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="100" data-secondary-context>
             <div class="panel-header">
               <span class="panel-title">最大回撤</span>
               <span class="panel-subtitle panel-subtitle-offset">当前 3.45% / 阈值 5.00%</span>
@@ -1732,7 +1732,7 @@
           </div>
 
           <!-- Chart 3: 行业暴露度 -->
-          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="200">
+          <div class="panel chart-panel" data-reveal="fade-up" data-reveal-delay="200" data-secondary-context>
             <div class="panel-header">
               <span class="panel-title">行业暴露度</span>
               <span class="panel-subtitle panel-subtitle-offset">按中信一级行业分布</span>
@@ -1934,7 +1934,7 @@
           </div>
 
           <!-- Right: Incident Timeline -->
-          <div class="incident-timeline-list">
+          <div class="incident-timeline-list" data-secondary-context>
 
           <!-- Incident 1 -->
           <div class="incident-item" data-reveal="fade-up" data-reveal-delay="0">

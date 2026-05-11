@@ -1673,7 +1673,7 @@
       </div>
       <div class="collapsible-content" id="home-global-pulse-content">
         <div class="collapsible-inner">
-    <div class="global-pulse" data-contract-slot="global-pulse" data-operating-summary aria-label="今日全局操作总览" data-reveal="fade-up">
+    <div class="global-pulse" data-contract-slot="global-pulse" data-operating-summary aria-label="今日全局操作总览" data-reveal="fade-up" data-secondary-context>
       <span class="global-pulse-item global-pulse-item--hero" data-operating-metric data-operating-category="account" data-direction="up" data-tooltip="账户总权益 ¥25,432,180">
         <span class="global-pulse-label freshness-realtime">总权益</span>
         <span class="global-pulse-value">¥25.43M</span>
@@ -1725,7 +1725,7 @@
       <!-- Primary: Decision Card + Execution Queue -->
       <div class="main-primary">
         <!-- Decision Card: primary decision + risk evidence + next action -->
-        <div class="panel" data-contract-slot="decision-card" data-primary-answer data-command-decision-card aria-label="影响范围：全局账户、市场和优先事项">
+        <div class="panel" data-contract-slot="decision-card" data-primary-answer data-primary-weight="dominant" data-command-decision-card aria-label="影响范围：全局账户、市场和优先事项">
           <section class="decision-card" data-reveal="fade-up">
             <!-- Left: today's primary decision -->
             <div class="decision-primary">
@@ -1766,7 +1766,7 @@
         </div>
 
         <!-- Today's Priority Items — Main Work Surface -->
-        <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-reveal="fade-up">
+        <div class="panel panel-grow" data-contract-slot="pending-actions" data-selected-object-region data-reveal="fade-up" data-secondary-context>
           <div class="panel-header">
             <span class="panel-title">今日优先事项 <span class="panel-subtitle">多来源待办</span></span>
             <span class="panel-count">6</span>
@@ -1856,7 +1856,7 @@
         </div>
 
         <!-- Intelligence Stream (merged activity + AI insights) -->
-        <div class="panel" data-contract-slot="recent-signals" data-selected-object-region data-reveal="fade-up" data-reveal-delay="150">
+        <div class="panel" data-contract-slot="recent-signals" data-selected-object-region data-reveal="fade-up" data-reveal-delay="150" data-secondary-context>
           <div class="panel-header">
             <span class="panel-title">智能脉络 <span class="panel-subtitle">事件 · 洞察 · 约束</span></span>
             <button class="panel-action">查看全部 →</button>
@@ -1970,7 +1970,7 @@
 
     <!-- ═══ Sidebar (full-height context rail: Market Pulse → Alerts → Health) ═══ -->
     <div class="shell-sidebar" id="home-sidebar" data-sidebar>
-      <div class="context-rail" data-command-center-rail>
+      <div class="context-rail" data-command-center-rail data-secondary-context>
         <div class="sidebar-collapsed-strip" data-sidebar-collapsed-strip aria-label="折叠侧栏摘要" aria-hidden="true">
           <span class="sidebar-collapsed-icon" title="市场脉搏">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 14l4-4 3 2 7-7"/><path d="M13 5h4v4"/></svg>
@@ -2023,7 +2023,7 @@
         </details>
 
         <!-- Global Alerts -->
-        <details class="context-section" data-collapse-priority="l2" data-contract-slot="global-alerts" data-reveal="fade-right" data-reveal-delay="200" open>
+        <details class="context-section" data-collapse-priority="l2" data-contract-slot="global-alerts" data-reveal="fade-right" data-reveal-delay="200" open data-secondary-context>
           <summary class="context-section-header">
             <span class="context-section-title">全局预警</span>
             <span class="collapse-count panel-count">4</span>

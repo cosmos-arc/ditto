@@ -1883,7 +1883,7 @@
 
     <!-- ═══ Scope Strip (Tabs: pending / confirmed / ignored / ordered) ═══ -->
     <div class="scope-strip">
-      <div class="scope-tabs tab-group" role="tablist" aria-label="信号状态" data-tab-group="signals">
+      <div class="scope-tabs tab-group" role="tablist" aria-label="信号状态" data-tab-group="signals" data-secondary-context>
 
         <!-- Tab radios -->
         <input type="radio" name="signals" id="tab-pending" checked class="tab-radio sr-only">
@@ -1906,7 +1906,7 @@
         </label>
       </div>
 
-      <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-primary-answer-equivalent>
+      <div class="scope-status" role="status" aria-label="影响范围：信号收件箱复核状态与组合 Beta" data-primary-answer-equivalent data-primary-weight="dominant">
         <label for="overlay-batch-confirm" class="scope-status-item" role="button" tabindex="0" aria-label="批准、拒绝或查看贵州茅台信号证据" data-answer-judgment data-answer-action>
           <span class="scope-status-dot warn"></span>
           优先处理贵州茅台买入信号：置信度 <span data-answer-metric>82%</span>，若批准后组合 Beta 0.94 · 批准 / 拒绝 / 查看证据
@@ -1932,7 +1932,7 @@
       <!-- ══════════ Tab Panel: 待复核 (default) ══════════ -->
       <div class="tab-panel active-by-default" data-panel="tab-pending" role="tabpanel" aria-label="待复核信号" id="panel-pending" aria-labelledby="tab-control-pending" aria-hidden="false">
         <!-- Signals Header (filters) -->
-        <div class="signals-header" data-active-filters-summary>
+        <div class="signals-header" data-active-filters-summary data-secondary-context>
           <div class="signals-filters">
             <div class="filter-group" role="group" aria-label="信号来源">
               <button class="filter-btn active" aria-pressed="true">全部</button>
@@ -1962,7 +1962,7 @@
         </div>
 
         <!-- Signal Table -->
-        <div class="signals-table-wrap" data-tab-panel="all" id="panel-all" role="tabpanel" aria-labelledby="tab-all" aria-hidden="false">
+        <div class="signals-table-wrap" data-tab-panel="all" id="panel-all" role="tabpanel" aria-labelledby="tab-all" aria-hidden="false" data-secondary-context>
           <table class="data-table" data-table-column-resize-ready data-table-freeze-ready data-row-context-menu-ready role="grid" aria-label="信号列表">
             <thead>
               <tr>
@@ -2472,7 +2472,7 @@
     <div class="resize-separator" data-resize-separator data-resize-panel-id="signal-detail-panel" data-resize-var="--shell-signals-detail-width" data-resize-default="380" data-resize-min="300" data-resize-max="560" role="separator" tabindex="0" aria-label="调整信号详情宽度" aria-orientation="vertical" aria-controls="main-content signal-detail-panel" aria-valuemin="300" aria-valuemax="560" aria-valuenow="380" aria-valuetext="调整信号详情宽度 380 像素"></div>
 
     <!-- ═══ Detail Panel (380px) ═══ -->
-    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情">
+    <aside class="detail-panel" id="signal-detail-panel" data-contract-slot="detail" data-selected-object-region role="complementary" aria-label="信号详情" data-secondary-context>
       <div class="detail-header">
         <div>
           <div class="detail-header-title">贵州茅台</div>

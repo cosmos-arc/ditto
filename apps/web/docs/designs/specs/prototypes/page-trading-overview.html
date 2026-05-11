@@ -2132,7 +2132,7 @@
 
     <!-- ═══ Decision Banner ═══ -->
     <div class="trading-banner">
-      <div class="panel" data-contract-slot="decision-banner" data-primary-answer-equivalent aria-label="影响范围：主策略账户交易会话">
+      <div class="panel" data-contract-slot="decision-banner" data-primary-answer-equivalent data-primary-weight="dominant" aria-label="影响范围：主策略账户交易会话">
         <div class="decision-banner" aria-live="polite">
           <!-- Left: Primary status (~42%) -->
           <div class="decision-primary">
@@ -2200,7 +2200,7 @@
       <div class="trading-panels" role="group" aria-label="交易面板">
 
         <!-- Panel 1: 权益/盈亏 (~35%) -->
-        <div class="panel panel-equity" role="region" aria-label="权益盈亏" data-contract-slot="equity-pnl" data-reveal="fade-up" data-reveal-delay="0">
+        <div class="panel panel-equity" role="region" aria-label="权益盈亏" data-contract-slot="equity-pnl" data-reveal="fade-up" data-reveal-delay="0" data-secondary-context>
           <div class="equity-metrics">
             <div class="equity-primary">
               <span class="equity-label">权益曲线</span>
@@ -2287,7 +2287,7 @@
 
 
         <!-- Panel 2: 持仓汇总 (~38%) -->
-        <div class="panel panel-positions" role="region" aria-label="持仓汇总" data-contract-slot="positions-summary" data-reveal="fade-up" data-reveal-delay="1">
+        <div class="panel panel-positions" role="region" aria-label="持仓汇总" data-contract-slot="positions-summary" data-reveal="fade-up" data-reveal-delay="1" data-secondary-context>
           <div class="panel-header">
             <span class="panel-title freshness-realtime">持仓</span>
             <span class="panel-count" data-tooltip="持有 9 只标的，含 2 只亏损，1 只 T+1 锁定">9</span>
@@ -2666,11 +2666,11 @@
     </div>
 
     <!-- ═══ Activity Stack (300px right side) ═══ -->
-    <div class="activity-stack" role="complementary" aria-label="活动面板" data-contract-slot="sidebar">
+    <div class="activity-stack" role="complementary" aria-label="活动面板" data-contract-slot="sidebar" data-secondary-context>
       <div class="context-rail">
 
         <!-- Section 1: 风控监控 -->
-        <details class="context-section section-risk" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="3" open>
+        <details class="context-section section-risk" data-collapse-priority="l2" data-reveal="fade-up" data-reveal-delay="3" open data-secondary-context>
           <summary class="context-section-header">
             <span class="context-section-title">风控监控</span>
             <span class="collapse-count" aria-label="2 项预警" title="2 项预警"><span class="text-risk-critical">2</span></span>
@@ -2731,7 +2731,7 @@
 
 
         <!-- Section 2: 信号队列 -->
-        <details class="context-section" data-collapse-priority="l2" role="region" aria-label="信号队列" data-reveal="fade-up" data-reveal-delay="4" open>
+        <details class="context-section" data-collapse-priority="l2" role="region" aria-label="信号队列" data-reveal="fade-up" data-reveal-delay="4" open data-secondary-context>
           <summary class="context-section-header">
             <span class="context-section-title">信号队列</span>
             <span class="collapse-count">4 信号</span>

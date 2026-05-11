@@ -2026,7 +2026,7 @@
     </nav>
 
     <!-- ═══ Studio Header ═══ -->
-    <header class="shell-header studio-header" data-contract-slot="header" data-primary-answer-equivalent aria-label="影响范围：多因子动量策略 v2.3 校验运行状态">
+    <header class="shell-header studio-header" data-contract-slot="header" data-primary-answer-equivalent data-primary-weight="dominant" aria-label="影响范围：多因子动量策略 v2.3 校验运行状态">
       <h1 class="header-title">策略工作台</h1>
       <div class="strategy-name">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" class="header-strategy-icon" data-icon="strategy-blueprint">
@@ -2247,7 +2247,7 @@
     <div class="resize-separator" data-resize-separator data-resize-panel-id="studio-sources-panel" data-resize-var="--prototype-studio-source-width" data-resize-default="240" data-resize-min="180" data-resize-max="360" data-resize-edge="start" role="separator" tabindex="0" aria-label="调整资源栏宽度" aria-orientation="vertical" aria-controls="studio-sources-panel main-content" aria-valuemin="180" aria-valuemax="360" aria-valuenow="240" aria-valuetext="调整资源栏宽度 240 像素"></div>
 
     <!-- ═══ Main Studio Canvas (Tab Panels) ═══ -->
-    <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-selected-object-region role="main">
+    <main class="studio-main tab-panels" id="main-content" data-contract-slot="main" data-selected-object-region role="main" data-secondary-context>
 
       <!-- Tab Panel: Form Builder -->
       <div class="tab-panel" data-panel="studio-mode-form" id="panel-studio-mode-form" role="tabpanel" aria-labelledby="tab-studio-mode-form" aria-hidden="false">
@@ -2544,9 +2544,9 @@
     <!-- ═══ Inspector Panel (Right) ═══ -->
     <div class="resize-separator" data-resize-separator data-resize-panel-id="studio-inspector-panel" data-resize-var="--prototype-studio-inspector-width" data-resize-default="300" data-resize-min="220" data-resize-max="520" role="separator" tabindex="0" aria-label="调整检查器宽度" aria-orientation="vertical" aria-controls="main-content studio-inspector-panel" aria-valuemin="220" aria-valuemax="520" aria-valuenow="300" aria-valuetext="调整检查器宽度 300 像素"></div>
 
-    <aside class="studio-inspector" id="studio-inspector-panel" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region>
+    <aside class="studio-inspector" id="studio-inspector-panel" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region data-secondary-context>
       <!-- AI Assistant (always visible above tabs) -->
-      <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0" data-decision-evidence data-default-open="true" aria-label="AI 助手建议">
+      <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0" data-decision-evidence data-default-open="true" aria-label="AI 助手建议" data-secondary-context>
         <div class="inspector-section-title">AI 助手</div>
         <div class="strategy-status-tag validated" title="策略校验通过">
           <span class="strategy-status-dot" data-icon="status-validated"></span>
@@ -2617,7 +2617,7 @@
           </div>
 
           <!-- Strategy Summary -->
-          <div class="inspector-section">
+          <div class="inspector-section" data-secondary-context>
             <div class="inspector-section-title">策略摘要</div>
             <div class="summary-grid">
               <div class="summary-item">
@@ -2819,7 +2819,7 @@
     </aside>
 
     <!-- ═══ Bottom Logs Panel ═══ -->
-    <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="collapsed" data-background-evidence>
+    <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="collapsed" data-background-evidence data-secondary-context>
       <div class="logs-header bottom-tray-header">
         <div class="logs-tabs">
           <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation" id="tab-validation" aria-controls="panel-validation">校验结果</span>
