@@ -9,10 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
+from ditto_execution.trade_builder import TradeBuilder
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
@@ -104,7 +104,7 @@ class StepDeps:
     input_instruments: set[InstrumentId]
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]]
     rule_ref_collector: RuleRefCollector
-    trade_builder: Any  # FifoTradeBuilder | FlatToFlatTradeBuilder
+    trade_builder: TradeBuilder
     recorded_trade_ids: set[str]
     build_input_bundle_fn: Callable[[str, Slice], StrategyInputBundle]
 

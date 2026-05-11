@@ -60,7 +60,7 @@ apps → application ✅
 apps → platform ✅
 apps.registry → data/features/strategy/portfolio/risk/execution/backtest/analysis ✅
 apps.jobs.context → ditto_data.quality ✅ (narrow DQ engine lookup)
-apps.jobs.tasks.{dq_batch,monitoring} → ditto_data.quality.kernel_types ✅ (DQ type annotations for task signatures)
+apps.jobs.tasks.{dq_batch,monitoring} → ditto_data.quality.quality_types ✅ (DQ type annotations for task signatures)
 ```
 
 ## 禁止依赖

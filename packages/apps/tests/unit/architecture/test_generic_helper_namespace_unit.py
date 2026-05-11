@@ -27,6 +27,7 @@ _MODULE = _load_module()
 
 _CURRENT_GENERIC_HELPER_SOURCE_PATHS = frozenset(
     {
+        "packages/application/src/ditto_application/config/helpers.py",
         "packages/application/src/ditto_application/processes/materialization/helpers.py",
         "packages/apps/src/ditto_apps/api/utils/__init__.py",
         "packages/apps/src/ditto_apps/api/utils/identifier.py",

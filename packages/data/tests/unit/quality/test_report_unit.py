@@ -1,7 +1,7 @@
 """Tests for DQ report generator."""
 
 from ditto_data.quality import DQReportGenerator
-from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class TestDQReportGenerator:

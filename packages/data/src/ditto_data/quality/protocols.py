@@ -14,7 +14,7 @@ from typing import Any, Literal, Protocol
 
 import polars as pl
 
-from ditto_data.quality.kernel_types import DQResult
+from ditto_data.quality.quality_types import DQResult
 
 
 class QualityEngineProtocol(Protocol):

@@ -1,6 +1,6 @@
 # ditto-kernel
 
-**版本**: v0.3.0 | **日期**: 2026-04-27 | **状态**: 稳定
+**版本**: v0.3.1 | **日期**: 2026-05-10 | **状态**: 稳定
 
 ## 概要
 
@@ -13,12 +13,14 @@
 ```
 ditto_kernel/
 ├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
-├── order.py               # Order 子域 — OrderSide
+├── order.py               # Order 子域 — OrderSide / OrderType
 ├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus
+├── strategy.py            # Strategy 子域 — ExecutionPolicy / ImpactModel / RiskScope / RunStatus
 ├── identity.py            # 共享身份类型（NewType）
 ├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus
+├── time_context.py        # TimeContext 值对象 — PIT 语义统一入口
+├── synchronizer.py        # Synchronizer Protocol + TimeSlice 值对象 — 回测/实盘切换 seam
+├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
 ├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
 ├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
@@ -47,9 +49,6 @@ instrument / order / market / identity: 无子域间依赖
 | `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
 | `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
 | `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analysis, Strategy |
-| `DerivedSpec` | strategy.py | frozen dataclass | Analysis, Strategy |
-| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analysis, Strategy |
 | `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
@@ -57,6 +56,10 @@ instrument / order / market / identity: 无子域间依赖
 | `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
 | `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
 | `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
+| `EventName` | events.py | `StrEnum` catalog（领域事件类型常量） | Backtest, Application |
+| `TimeContext` | time_context.py | frozen dataclass（含 `pit_cutoff` property） | Backtest, Application |
+| `TimeSlice` | synchronizer.py | frozen dataclass | Backtest, Application |
+| `Synchronizer` | synchronizer.py | `Protocol`（回测/实盘切换 seam） | Backtest, Application |
 | `MarketSnapshot` | trading.py | frozen dataclass | Execution, Backtest |
 | `InstrumentDefinition` | trading.py | frozen dataclass | Execution, Backtest |
 | `TradingRuleSet` | trading.py | frozen dataclass | Execution, Backtest |
@@ -122,7 +125,7 @@ pixi run -e dev pytest packages/kernel/tests/
 ## 变更记录
 
 ### v0.3.1 (2026-05-10)
-- 迁移 `quality.py` → `ditto_data.quality.kernel_types`（DQLevel / DQSeverity / DQIssue / DQResult）
+- 迁移 `quality.py` → `ditto_data.quality.quality_types`（DQLevel / DQSeverity / DQIssue / DQResult）
 - 迁移 `research.py` → `ditto_analysis.research.domain`（4 frozen dataclass）
 - 迁移 `publication_safety.py` → `ditto_features.publication_safety_records`（6 frozen dataclass）
 

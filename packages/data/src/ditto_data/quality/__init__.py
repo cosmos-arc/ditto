@@ -11,7 +11,6 @@ from ditto_data.quality.checkers.technical import TechnicalChecker
 from ditto_data.quality.config import DQSettings
 from ditto_data.quality.engine import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetOptions, GoldenDatasetSpec
-from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
@@ -19,6 +18,7 @@ from ditto_data.quality.protocols import (
     QuarantineWriterProtocol,
     TdxSourceProtocol,
 )
+from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_data.quality.report import DQReportGenerator
 from ditto_data.quality.spec import (
     DatasetRules,

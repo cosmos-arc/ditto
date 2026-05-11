@@ -73,7 +73,7 @@ ditto_analysis/
 ├── di/                   # analysis DI providers
 │   ├── _factory.py       # DI 工厂
 │   └── storage.py        # 存储层 DI Provider
-├── research/             # 研究 control-plane domain/services
+├── research/             # 研究 control-plane domain/services（domain.py 包含从 kernel 迁入的 4 个 frozen dataclass）
 │   ├── domain.py         # 研究领域模型
 │   ├── catalog_service.py    # 研究目录服务
 │   └── artifact_service.py   # 研究产物服务

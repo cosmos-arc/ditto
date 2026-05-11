@@ -196,7 +196,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py",
-        allowed_modules=frozenset({"ditto_data.quality.kernel_types"}),
+        allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
         owner="apps DQ batch task",
         reason=(
             "DQ batch task uses DQIssue type annotations for task signatures; "
@@ -205,7 +205,7 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
     ),
     CompositionImportAllowance(
         path="packages/apps/src/ditto_apps/jobs/tasks/monitoring.py",
-        allowed_modules=frozenset({"ditto_data.quality.kernel_types"}),
+        allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
         owner="apps ingestion monitoring task",
         reason=(
             "Ingestion monitoring task uses DQResult type annotations for "
@@ -405,6 +405,13 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
+    GenericHelperNamespaceAllowance(
+        path="packages/application/src/ditto_application/config/helpers.py",
+        owner="application config",
+        reason=(
+            "Extracted now_iso() helper; pure utility re-exported by config barrel."
+        ),
+    ),
     GenericHelperNamespaceAllowance(
         path="packages/application/src/ditto_application/processes/materialization/helpers.py",
         owner="application materialization process",

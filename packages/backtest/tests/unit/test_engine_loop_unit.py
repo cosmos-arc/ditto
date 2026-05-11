@@ -1290,3 +1290,80 @@ class TestExecutionDelay:
 
         with pytest.raises(RuntimeError, match="unexpected DB error"):
             loop._execute_delayed_signal(_make_target())
+
+    def test_flush_uses_configured_knowledge_lag_days(self) -> None:
+        """flush 阶段的 knowledge_date 使用 config.knowledge_lag_days."""
+        from datetime import timedelta
+
+        from ditto_backtest.steps import StepResult
+
+        config = replace(
+            _make_config(),
+            execution_delay=1,
+            knowledge_lag_days=3,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        order = _make_order()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(order,),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        clock = _make_clock()
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
+        )
+
+        # Capture StepContext from flush step execution
+        captured_ctxs: list[object] = []
+
+        def _capturing_execute(ctx: object) -> StepResult:
+            captured_ctxs.append(ctx)
+            return StepResult.ok()
+
+        mock_step = Mock()
+        mock_step.execute = _capturing_execute
+        loop._steps = (mock_step,)
+
+        loop._execute_delayed_signal(_make_target())
+
+        # flush 应产生至少一个 StepContext
+        assert len(captured_ctxs) >= 1
+        ctx = captured_ctxs[0]
+        tc = ctx.time_context  # type: ignore[attr-defined]
+
+        # _make_slice 的 step_time = datetime(2026, 3, 1, 15, 0)
+        # knowledge_lag_days=3 → knowledge_date = 2026-02-26
+        expected_knowledge = tc.decision_time.date() - timedelta(days=3)
+        assert tc.knowledge_date == expected_knowledge

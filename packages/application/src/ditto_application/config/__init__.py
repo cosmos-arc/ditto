@@ -16,8 +16,7 @@ The registry enables:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
+from ditto_application.config.helpers import now_iso
 from ditto_application.config.queries import (
     INGESTION_SPECS,
     get_all_datasets,
@@ -52,8 +51,3 @@ __all__ = [
     "get_parallel_datasets",
     "now_iso",
 ]
-
-
-def now_iso() -> str:
-    """Return current UTC timestamp in ISO format."""
-    return datetime.now(UTC).isoformat()

@@ -11,13 +11,15 @@
 | instrument.py | AssetClass / Exchange / InstrumentIngestParams |
 | order.py | OrderSide |
 | market.py | CalendarId / GrainId / TimeSpec / MacroCategory |
-| strategy.py | DerivedRole / DerivedSpec / RunStatus |
+| strategy.py | ExecutionPolicy / ImpactModel / RiskScope / RunStatus |
 | identity.py | InstrumentId (NewType) |
 | clock.py | Clock Protocol + SimulatedClock/RealtimeClock |
 | events.py | DomainEvent + EventBus Protocol + SimpleEventBus |
 | trading.py | A 股交易常量、FeeModel/InstrumentRuleProvider Protocol |
-| quality.py | DQLevel / DQSeverity / DQIssue / DQResult |
 | exceptions.py | DittoError 全局异常根 |
+| time_context.py | TimeContext 值对象（PIT 语义统一入口） |
+| synchronizer.py | Synchronizer Protocol + TimeSlice 值对象 |
+| math.py | pearson_correlation 等纯计算函数 |
 
 ## 依赖规则
 

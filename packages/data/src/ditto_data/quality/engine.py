@@ -11,7 +11,7 @@ from ditto_data.quality.checkers.cross_source import CrossSourceChecker
 from ditto_data.quality.checkers.statistical import StatisticalChecker
 from ditto_data.quality.checkers.technical import TechnicalChecker
 from ditto_data.quality.config import DQSettings
-from ditto_data.quality.kernel_types import DQIssue, DQResult, DQSeverity
+from ditto_data.quality.quality_types import DQIssue, DQResult, DQSeverity
 from ditto_data.quality.spec import DQSpec
 
 

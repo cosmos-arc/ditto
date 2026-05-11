@@ -135,6 +135,7 @@ class EngineLoop:
 
         self._strategy_context = StrategyContext()
         self._execution_delay = config.execution_delay
+        self._knowledge_lag_days = config.knowledge_lag_days
         self._signal_queue: deque[TargetPortfolioLike] = deque()
         self._rule_ref_collector = RuleRefCollector()
         self._trading_days: tuple[str, ...] = ()
@@ -309,7 +310,9 @@ class EngineLoop:
 
         tc = TimeContext(
             decision_time=slice_.step_time,
-            knowledge_date=slice_.step_time.date() - timedelta(days=1),
+            knowledge_date=(
+                slice_.step_time.date() - timedelta(days=self._knowledge_lag_days)
+            ),
             trade_date=slice_.trade_date,
         )
         ctx = StepContext(

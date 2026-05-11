@@ -3,7 +3,7 @@
 from io import StringIO
 from pathlib import Path
 
-from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 class DQReportGenerator:

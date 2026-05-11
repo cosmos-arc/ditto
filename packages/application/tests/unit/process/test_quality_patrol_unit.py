@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.processes.quality.types import L3CheckResult
-from ditto_data.quality.kernel_types import DQIssue, DQLevel, DQResult, DQSeverity
+from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 
 
 @pytest.mark.unit

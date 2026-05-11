@@ -11,8 +11,8 @@ from typing import Literal
 
 import polars as pl
 import polars.exceptions as pl_exceptions
-from ditto_data.quality.kernel_types import DQIssue, DQResult
 from ditto_data.quality.protocols import QualityEngineProtocol
+from ditto_data.quality.quality_types import DQIssue, DQResult
 from ditto_platform.foundation import logger
 from ditto_platform.services import AlertManager, NotificationLevel
 

@@ -110,7 +110,7 @@ ditto_features/
 │   ├── derived_artifact_writer.py
 │   ├── parquet/          # 因子/特征 Parquet 存储
 │   ├── runtime/          # 发布运行时记录存储
-│   │   ├── publication_safety/
+│   │   ├── publication_safety/  # 含 publication_safety_records.py（从 kernel 迁入的 6 个 frozen dataclass）
 │   │   └── publication_shadow_sqlite/
 │   └── sqlite/           # 衍生 artifact SQLite 存储
 ├── errors.py             # 错误定义

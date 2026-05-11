@@ -6,13 +6,13 @@ from dataclasses import dataclass
 
 import polars as pl
 from ditto_data.quality.golden import GoldenDatasetSpec
-from ditto_data.quality.kernel_types import DQResult
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
     InstrumentStoreProtocol,
     QualityEngineProtocol,
     TdxSourceProtocol,
 )
+from ditto_data.quality.quality_types import DQResult
 from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppCommandError

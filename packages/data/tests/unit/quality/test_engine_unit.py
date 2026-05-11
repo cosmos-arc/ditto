@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import polars as pl
 import pytest
 from ditto_data.quality import QualityEngine
-from ditto_data.quality.kernel_types import DQResult
+from ditto_data.quality.quality_types import DQResult
 from ditto_data.quality.spec import (
     DatasetRules,
     DQSpec,

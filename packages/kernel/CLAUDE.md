@@ -96,9 +96,6 @@ instrument / order / market / identity: 无子域间依赖
 | `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
 | `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
 | `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analysis, Strategy |
-| `DerivedSpec` | strategy.py | frozen dataclass | Analysis, Strategy |
-| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analysis, Strategy |
 | `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution, App |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
@@ -149,9 +146,6 @@ from ditto_data.models.enums import ...  # kernel 中禁止
 | 子域 | 需叶模块导入的符号 |
 |------|-------------------|
 | `market` | `CalendarId`, `GrainId` |
-| `events` | `EventName` |
-| `time_context` | `TimeContext` |
-| `synchronizer` | `Synchronizer`, `TimeSlice` |
 
 ## Barrel 公共 API 分级
 
@@ -168,13 +162,15 @@ Barrel `__all__` 包含 30 个符号，按稳定性分为两层：
 | `order.py` | `OrderSide`, `OrderType` |
 | `identity.py` | `InstrumentId` |
 | `clock.py` | `Clock`, `RealtimeClock`, `SimulatedClock` |
+| `synchronizer.py` | `Synchronizer`, `TimeSlice` |
+| `time_context.py` | `TimeContext` |
 
 ### Candidate — 候选类型（1-2 包消费，接口可能演进）
 
 | 来源模块 | 符号 | 备注 |
 |----------|------|------|
-| `strategy.py` | `DerivedRole`, `DerivedSpec`, `ExecutionPolicy`, `ImpactModel`, `MaterializationProfile`, `RiskScope` | 6/30 符号来自 strategy.py；最可能在未来需要改为叶模块直导 |
-| `events.py` | `DomainEvent`, `EventBus`, `SimpleEventBus` | |
+| `strategy.py` | `ExecutionPolicy`, `ImpactModel`, `RiskScope` | |
+| `events.py` | `DomainEvent`, `EventBus`, `EventName`, `SimpleEventBus` | |
 | `tracing.py` | `traced` | |
 
 > **注意**：`DittoError` 作为跨包异常基类放在 kernel 是合理的——它是异常层级的根。

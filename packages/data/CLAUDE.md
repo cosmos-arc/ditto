@@ -46,6 +46,7 @@ ditto_data/
 │   └── provider.py      # ServiceBackedDataProvider 实现
 ├── quality/             # 数据质量引擎
 │   ├── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
+│   ├── quality_types.py # DQ 类型（DQLevel / DQSeverity / DQIssue / DQResult）
 │   ├── config.py        # DQ 配置加载
 │   ├── engine.py        # 质量引擎主类
 │   ├── golden.py        # 黄金标准参考
