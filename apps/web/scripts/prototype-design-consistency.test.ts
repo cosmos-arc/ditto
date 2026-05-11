@@ -3293,6 +3293,16 @@ describe("prototype design consistency", () => {
 		expect(reducedMotionCssCoversUsage(reducedMotionCss, runningUsage)).toBe(false);
 	});
 
+	it("keeps secondary and tertiary context markers from dimming whole regions", () => {
+		const css = readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8");
+		const contextSelectors = ["[data-secondary-context]", "[data-tertiary-context]"] as const;
+		const violations = contextSelectors.filter((selector) =>
+			hasDeclaration(getSelectorRuleBody(css, selector), "opacity", /.+/),
+		);
+
+		expect(violations).toEqual([]);
+	});
+
 	it("keeps shared faded skeleton opacity out of reduced-motion resets", () => {
 		const layoutStateCss = readFileSync(join(prototypesDir, "shared/layout-state.css"), "utf8");
 		const reducedMotionCss = getMediaBlocksMatching(layoutStateCss, /prefers-reduced-motion\s*:\s*reduce/i).join(

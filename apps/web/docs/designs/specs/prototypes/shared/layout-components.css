@@ -3470,14 +3470,10 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
 }
 
-[data-secondary-context] {
-  opacity: 0.84;
-}
-
 [data-secondary-context] :is(.panel-title, .section-title, .card-title) {
   color: var(--text-secondary);
 }
 
-[data-tertiary-context] {
-  opacity: 0.72;
+[data-tertiary-context] :is(.panel-title, .section-title, .card-title) {
+  color: var(--text-tertiary);
 }
