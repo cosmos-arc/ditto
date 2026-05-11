@@ -30,7 +30,7 @@
   },
   "releaseUxReview": {
     "reviewedAt": "2026-05-11",
-    "status": "verified",
+    "status": "remediated-pending-critique-rerun",
     "scoreFamily": "release-ux",
     "score": "23/40",
     "expectedAfterRemediation": "29-32/40",
