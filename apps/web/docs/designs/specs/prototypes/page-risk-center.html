@@ -2334,7 +2334,10 @@
           <h2>场景选择</h2>
           <div class="flex-col-gap">
             <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario" checked> 极端下跌 -15%（预设）
+              <input type="radio" name="stress-scenario" checked> 标准风控（当前）
+            </label>
+            <label class="overlay-radio-option">
+              <input type="radio" name="stress-scenario"> 极端下跌 -15%（预设）
             </label>
             <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario"> 利率上行 +100bp（预设）
@@ -2342,15 +2345,12 @@
             <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario"> 流动性危机（预设）
             </label>
-            <label class="overlay-radio-option">
-              <input type="radio" name="stress-scenario"> 自定义场景
-            </label>
           </div>
 
           <h2>参数配置</h2>
           <div class="overlay-field">
-            <span class="overlay-field-label">冲击幅度</span>
-            <span class="overlay-field-value">-15%</span>
+            <span class="overlay-field-label">当前场景</span>
+            <span class="overlay-field-value">标准风控</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">持续时间</span>
@@ -2452,19 +2452,19 @@
           <h2>规则参数</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">规则名称</span>
-            <span class="overlay-field-value">最大回撤</span>
+            <span class="overlay-field-value">行业集中度</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">当前阈值</span>
-            <span class="overlay-field-value">5.00%</span>
+            <span class="overlay-field-value">40.00%</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">新阈值</span>
-            <span class="overlay-field-value">6.00%</span>
+            <span class="overlay-field-value">新阈值</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">触发条件</span>
-            <span class="overlay-field-value">触及阈值时告警</span>
+            <span class="overlay-field-value">超出阈值时告警</span>
           </div>
           <div class="overlay-field">
             <span class="overlay-field-label">通知方式</span>
@@ -2832,7 +2832,10 @@
             <h2>场景选择</h2>
             <div class="flex-col-gap">
               <label class="overlay-radio-option">
-                <input type="radio" name="stress-scenario" checked> 极端下跌 -15%（预设）
+                <input type="radio" name="stress-scenario" checked> 标准风控（当前）
+              </label>
+              <label class="overlay-radio-option">
+                <input type="radio" name="stress-scenario"> 极端下跌 -15%（预设）
               </label>
               <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario"> 利率上行 +100bp（预设）
@@ -2840,15 +2843,12 @@
               <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario"> 流动性危机（预设）
               </label>
-              <label class="overlay-radio-option">
-                <input type="radio" name="stress-scenario"> 自定义场景
-              </label>
             </div>
 
             <h2>参数配置</h2>
             <div class="overlay-field">
-              <span class="overlay-field-label">冲击幅度</span>
-              <span class="overlay-field-value">-15%</span>
+              <span class="overlay-field-label">当前场景</span>
+              <span class="overlay-field-value">标准风控</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">持续时间</span>
@@ -2950,19 +2950,19 @@
             <h2>规则参数</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">规则名称</span>
-              <span class="overlay-field-value">最大回撤</span>
+              <span class="overlay-field-value">行业集中度</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">当前阈值</span>
-              <span class="overlay-field-value">5.00%</span>
+              <span class="overlay-field-value">40.00%</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">新阈值</span>
-              <span class="overlay-field-value">6.00%</span>
+              <span class="overlay-field-value">新阈值</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">触发条件</span>
-              <span class="overlay-field-value">触及阈值时告警</span>
+              <span class="overlay-field-value">超出阈值时告警</span>
             </div>
             <div class="overlay-field">
               <span class="overlay-field-label">通知方式</span>
