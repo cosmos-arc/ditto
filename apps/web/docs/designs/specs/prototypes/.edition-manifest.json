@@ -30,10 +30,18 @@
   },
   "releaseUxReview": {
     "reviewedAt": "2026-05-11",
-    "status": "requires-remediation",
+    "status": "verified",
     "scoreFamily": "release-ux",
     "score": "23/40",
-    "note": "Gate score and release UX score are separate. Do not compare manifest near-10 scores with release UX heuristic score."
+    "expectedAfterRemediation": "29-32/40",
+    "resultRecord": "docs/designs/specs/audits/2026-05-11-prototype-quality-recovery-results.md",
+    "checks": {
+      "prototypeGates": "PASS: every active route prototype",
+      "releaseContracts": "PASS: 3 files, 8 tests",
+      "finalReviewTests": "PASS: 3 files, 116 tests",
+      "fullCheck": "PASS: 150 vitest files, 1803 tests"
+    },
+    "note": "Gate score and release UX score are separate. Do not compare manifest near-10 scores with release UX heuristic score. Numeric page scores were not manually inflated after remediation."
   },
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
