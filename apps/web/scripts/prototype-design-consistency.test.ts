@@ -482,6 +482,12 @@ const highRiskActionPages = [
 	"strategies-detail",
 	"strategy-list",
 ] as const;
+const lightReadabilityPages = [
+	"home",
+	"a-shares",
+	"strategy-studio",
+	"platform-settings",
+] as const;
 const requiredChartAffordances = [
 	"crosshair",
 	"tooltip",
@@ -4132,6 +4138,31 @@ describe("prototype design consistency", () => {
 		]) {
 			if (!css.includes(`${token}:`)) {
 				violations.push(`a-shares:light-token:${token}`);
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps selected light-mode prototype weak text on readable semantic tokens", () => {
+		const violations: string[] = [];
+
+		for (const pageId of lightReadabilityPages) {
+			const page = activePageById(pageId);
+			const html = readPrototypeHtml(page);
+			const hasLightOverride =
+				/\[data-theme="light"\][^{]+\{[^}]*--text-(?:tertiary|quaternary):\s*color-mix\(in oklch,\s*var\(--neutral-(?:400|500|600)\)/s.test(
+					html,
+				) ||
+				/\[data-theme="light"\][^{]+\{[^}]*--prototype-light-readable-text:\s*var\(--neutral-600\)/s.test(
+					html,
+				);
+
+			if (!hasLightOverride) {
+				violations.push(`${pageId}:light-readable-text`);
+			}
+			if (/color:\s*var\(--text-quaternary\)/.test(html) && !html.includes("--prototype-light-readable-text")) {
+				violations.push(`${pageId}:quaternary-without-light-readable-token`);
 			}
 		}
 
