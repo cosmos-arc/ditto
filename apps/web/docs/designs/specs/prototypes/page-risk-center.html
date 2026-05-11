@@ -2303,12 +2303,34 @@
     <!-- Overlay A: Stress Test Config (Sheet 居中) -->
     <div class="overlay-backdrop" data-overlay="overlay-stress-config">
       <label class="overlay-dismiss" for="overlay-stress-config" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation>
         <div class="overlay-header">
           <span class="overlay-title">压力测试配置</span>
           <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">运行压力测试会生成新的风险快照，不会改变实盘订单或风险阈值。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">测试前后</div>
+              <p class="risk-confirmation-copy">当前场景为标准风控，测试后新增一条压力测试记录并刷新 Breaches 面板。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain>
+              <div class="risk-confirmation-title">输入证据</div>
+              <p class="risk-confirmation-copy">组合、场景、VaR、最大回撤和行业集中度使用当前风险快照。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录测试参数、操作者、运行时间和结果摘要。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">测试记录可归档，规则和交易状态不受影响。</p>
+            </div>
+          </div>
           <h2>场景选择</h2>
           <div class="flex-col-gap">
             <label class="overlay-radio-option">
@@ -2340,8 +2362,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
-            <label for="overlay-stress-config" class="overlay-btn overlay-btn-primary cursor-pointer">确认运行</label>
+            <label for="overlay-stress-config" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消</label>
+            <label for="overlay-stress-config" class="overlay-btn overlay-btn-primary cursor-pointer" data-confirm-control>确认运行</label>
           </div>
         </div>
       </div>
@@ -2399,12 +2421,34 @@
     <!-- Overlay C: Rule Editor (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-rule-editor">
       <label class="overlay-dismiss" for="overlay-rule-editor" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true" data-high-risk-confirmation>
         <div class="overlay-header">
           <span class="overlay-title">调整风控规则</span>
           <label for="overlay-rule-editor" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">保存后会改变后续风险告警阈值，不会回写历史事件。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">规则前后</div>
+              <p class="risk-confirmation-copy">行业集中度阈值 40% → 新阈值；所有新告警按新规则计算。</p>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain>
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">最近 6 次压力测试和当前行业暴露用于解释本次调整。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录旧阈值、新阈值、原因、操作者和审批时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">可从规则历史恢复上一版阈值，恢复操作同样写入审计。</p>
+            </div>
+          </div>
           <h2>规则参数</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">规则名称</span>
@@ -2428,8 +2472,8 @@
           </div>
 
           <div class="overlay-actions">
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
-            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-primary cursor-pointer">保存</label>
+            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消</label>
+            <label for="overlay-rule-editor" class="overlay-btn overlay-btn-primary cursor-pointer" data-confirm-control>保存</label>
           </div>
         </div>
       </div>
@@ -2758,11 +2802,33 @@
     <div class="gallery-card" data-overlay-ref="overlay-stress-config">
       <div class="gallery-card__label">压力测试配置 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="压力测试配置" aria-modal="true" data-high-risk-confirmation>
           <div class="overlay-header">
             <span class="overlay-title">压力测试配置</span>
           </div>
           <div class="overlay-body">
+            <div class="risk-confirmation-grid">
+              <div class="risk-confirmation-block" data-impact-summary>
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">运行压力测试会生成新的风险快照，不会改变实盘订单或风险阈值。</p>
+              </div>
+              <div class="risk-confirmation-block" data-before-after>
+                <div class="risk-confirmation-title">测试前后</div>
+                <p class="risk-confirmation-copy">当前场景为标准风控，测试后新增一条压力测试记录并刷新 Breaches 面板。</p>
+              </div>
+              <div class="risk-confirmation-block" data-evidence-chain>
+                <div class="risk-confirmation-title">输入证据</div>
+                <p class="risk-confirmation-copy">组合、场景、VaR、最大回撤和行业集中度使用当前风险快照。</p>
+              </div>
+              <div class="risk-confirmation-block" data-audit-record>
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录测试参数、操作者、运行时间和结果摘要。</p>
+              </div>
+              <div class="risk-confirmation-block" data-recovery-path>
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">测试记录可归档，规则和交易状态不受影响。</p>
+              </div>
+            </div>
             <h2>场景选择</h2>
             <div class="flex-col-gap">
               <label class="overlay-radio-option">
@@ -2794,8 +2860,8 @@
             </div>
 
             <div class="overlay-actions">
-              <button class="overlay-btn overlay-btn-secondary">取消</button>
-              <button class="overlay-btn overlay-btn-primary">确认运行</button>
+              <button class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</button>
+              <button class="overlay-btn overlay-btn-primary" data-confirm-control>确认运行</button>
             </div>
           </div>
         </div>
@@ -2854,11 +2920,33 @@
     <div class="gallery-card" data-overlay-ref="overlay-rule-editor">
       <div class="gallery-card__label">调整风控规则 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-label="规则编辑" aria-modal="true" data-high-risk-confirmation>
           <div class="overlay-header">
             <span class="overlay-title">调整风控规则</span>
           </div>
           <div class="overlay-body">
+            <div class="risk-confirmation-grid">
+              <div class="risk-confirmation-block" data-impact-summary>
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">保存后会改变后续风险告警阈值，不会回写历史事件。</p>
+              </div>
+              <div class="risk-confirmation-block" data-before-after>
+                <div class="risk-confirmation-title">规则前后</div>
+                <p class="risk-confirmation-copy">行业集中度阈值 40% → 新阈值；所有新告警按新规则计算。</p>
+              </div>
+              <div class="risk-confirmation-block" data-evidence-chain>
+                <div class="risk-confirmation-title">证据链</div>
+                <p class="risk-confirmation-copy">最近 6 次压力测试和当前行业暴露用于解释本次调整。</p>
+              </div>
+              <div class="risk-confirmation-block" data-audit-record>
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录旧阈值、新阈值、原因、操作者和审批时间。</p>
+              </div>
+              <div class="risk-confirmation-block" data-recovery-path>
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">可从规则历史恢复上一版阈值，恢复操作同样写入审计。</p>
+              </div>
+            </div>
             <h2>规则参数</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">规则名称</span>
@@ -2882,8 +2970,8 @@
             </div>
 
             <div class="overlay-actions">
-              <button class="overlay-btn overlay-btn-secondary">取消</button>
-              <button class="overlay-btn overlay-btn-primary">保存</button>
+              <button class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</button>
+              <button class="overlay-btn overlay-btn-primary" data-confirm-control>保存</button>
             </div>
           </div>
         </div>

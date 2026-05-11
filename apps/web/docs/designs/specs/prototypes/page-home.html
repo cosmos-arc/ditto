@@ -2179,49 +2179,41 @@
     <!-- Overlay B: Order Confirm (Modal 居中弹窗) -->
     <div class="overlay-backdrop" data-overlay="overlay-order-confirm">
       <label class="overlay-dismiss" for="overlay-order-confirm" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认订单">
+      <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认订单" data-high-risk-confirmation>
         <div class="overlay-header">
           <span class="overlay-title">确认订单</span>
           <label for="overlay-order-confirm" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h2>订单摘要</h2>
-          <div class="overlay-field">
-            <span class="overlay-field-label">标的</span>
-            <span class="overlay-field-value">600519 贵州茅台</span>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">确认后将提交 600519 贵州茅台卖出市价单 200 股。订单进入券商通道后不可在 Ditto 内直接撤销，只能走订单撤单流程。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">交易前后</div>
+              <div class="risk-confirmation-list">
+                <div class="risk-confirmation-item"><span>持仓</span><span class="risk-confirmation-value">200 股 → 0 股</span></div>
+                <div class="risk-confirmation-item"><span>集中度</span><span class="risk-confirmation-value">37.2% → 34.8%</span></div>
+                <div class="risk-confirmation-item"><span>预计冲击成本</span><span class="risk-confirmation-value">¥5.9K</span></div>
+              </div>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain>
+              <div class="risk-confirmation-title">证据链</div>
+              <p class="risk-confirmation-copy">Alpha v3 卖出信号 87%，RSI 背离与放量确认，风险预算从 27% 回落至 21%。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">将记录操作者、信号来源、订单参数、风险校验快照和确认时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">提交后可在订单台账查看状态；未成交部分可从 Orders Ledger 发起撤单。</p>
+            </div>
           </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">方向</span>
-            <span class="overlay-field-value val-weak">卖出</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">数量</span>
-            <span class="overlay-field-value">200 股</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">价格</span>
-            <span class="overlay-field-value">市价</span>
-          </div>
-
-          <h2>风险校验</h2>
-          <div class="overlay-field">
-            <span class="overlay-field-label">校验结果</span>
-            <span class="overlay-field-value val-healthy">通过 ✓</span>
-          </div>
-
-          <h2>预估费用</h2>
-          <div class="overlay-field">
-            <span class="overlay-field-label">佣金</span>
-            <span class="overlay-field-value">¥89.50</span>
-          </div>
-          <div class="overlay-field">
-            <span class="overlay-field-label">印花税</span>
-            <span class="overlay-field-value">¥55.90</span>
-          </div>
-
           <div class="overlay-actions">
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认下单</label>
-            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消，返回复核</label>
+            <label for="overlay-order-confirm" class="overlay-btn overlay-btn-danger cursor-pointer" data-confirm-control data-danger-action>确认提交订单</label>
           </div>
         </div>
       </div>
@@ -2738,45 +2730,40 @@
     <div class="gallery-card" data-overlay-ref="overlay-order-confirm">
       <div class="gallery-card__label">确认订单 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认订单">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="确认订单" data-high-risk-confirmation>
           <div class="overlay-header">
             <span class="overlay-title">确认订单</span>
           </div>
           <div class="overlay-body">
-            <h2>订单摘要</h2>
-            <div class="overlay-field">
-              <span class="overlay-field-label">标的</span>
-              <span class="overlay-field-value">600519 贵州茅台</span>
-            </div>
-            <div class="overlay-field">
-              <span class="overlay-field-label">方向</span>
-              <span class="overlay-field-value val-weak">卖出</span>
-            </div>
-            <div class="overlay-field">
-              <span class="overlay-field-label">数量</span>
-              <span class="overlay-field-value">200 股</span>
-            </div>
-            <div class="overlay-field">
-              <span class="overlay-field-label">价格</span>
-              <span class="overlay-field-value">市价</span>
-            </div>
-            <h2>风险校验</h2>
-            <div class="overlay-field">
-              <span class="overlay-field-label">校验结果</span>
-              <span class="overlay-field-value val-healthy">通过 ✓</span>
-            </div>
-            <h2>预估费用</h2>
-            <div class="overlay-field">
-              <span class="overlay-field-label">佣金</span>
-              <span class="overlay-field-value">¥89.50</span>
-            </div>
-            <div class="overlay-field">
-              <span class="overlay-field-label">印花税</span>
-              <span class="overlay-field-value">¥55.90</span>
+            <div class="risk-confirmation-grid">
+              <div class="risk-confirmation-block" data-impact-summary>
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">确认后将提交 600519 贵州茅台卖出市价单 200 股。订单进入券商通道后不可在 Ditto 内直接撤销，只能走订单撤单流程。</p>
+              </div>
+              <div class="risk-confirmation-block" data-before-after>
+                <div class="risk-confirmation-title">交易前后</div>
+                <div class="risk-confirmation-list">
+                  <div class="risk-confirmation-item"><span>持仓</span><span class="risk-confirmation-value">200 股 → 0 股</span></div>
+                  <div class="risk-confirmation-item"><span>集中度</span><span class="risk-confirmation-value">37.2% → 34.8%</span></div>
+                  <div class="risk-confirmation-item"><span>预计冲击成本</span><span class="risk-confirmation-value">¥5.9K</span></div>
+                </div>
+              </div>
+              <div class="risk-confirmation-block" data-evidence-chain>
+                <div class="risk-confirmation-title">证据链</div>
+                <p class="risk-confirmation-copy">Alpha v3 卖出信号 87%，RSI 背离与放量确认，风险预算从 27% 回落至 21%。</p>
+              </div>
+              <div class="risk-confirmation-block" data-audit-record>
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">将记录操作者、信号来源、订单参数、风险校验快照和确认时间。</p>
+              </div>
+              <div class="risk-confirmation-block" data-recovery-path>
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">提交后可在订单台账查看状态；未成交部分可从 Orders Ledger 发起撤单。</p>
+              </div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-primary cursor-pointer">确认下单</label>
-              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-secondary cursor-pointer" data-cancel-control>取消，返回复核</label>
+              <label for="overlay-order-confirm" class="overlay-btn overlay-btn-danger cursor-pointer" data-confirm-control data-danger-action>确认提交订单</label>
             </div>
           </div>
         </div>

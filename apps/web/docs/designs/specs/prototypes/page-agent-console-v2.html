@@ -67,6 +67,10 @@
       background: var(--surface-app);
     }
 
+    :root:has(#overlay-approval-confirm:checked) [data-overlay="overlay-approval-confirm"] {
+      display: flex;
+    }
+
     .agent-shell {
       --agent-console-source-width: 288px;
       --agent-console-inspector-width: 372px;
@@ -1519,7 +1523,44 @@
         <div class="gallery-cards">
           <div class="gallery-card" data-overlay-ref="overlay-plan-create"><div class="gallery-card__label">新建计划 · 侧滑面板</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="新建计划"><div class="overlay-header"><span class="overlay-title">新建智能体计划</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">模板</span><span class="overlay-field-value">全链路研究流水线</span></div><div class="overlay-field"><span class="overlay-field-label">目标</span><span class="overlay-field-value">低相关反转因子探索</span></div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-run-rerun"><div class="gallery-card__label">运行重跑 · 确认</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="重跑运行"><div class="overlay-header"><span class="overlay-title">确认重跑 run-8842？</span></div><div class="overlay-body"><p class="event-note">当前流式任务会被中断，已生成产物保留。</p></div></div></div></div>
-          <div class="gallery-card" data-overlay-ref="overlay-approval-confirm"><div class="gallery-card__label">审批确认 · 弹窗</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface" role="dialog" aria-modal="true" aria-label="审批确认"><div class="overlay-header"><span class="overlay-title">确认采纳此发现？</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">置信度</span><span class="overlay-field-value">86 · 高</span></div><p class="event-note">通过后自动生成信号至待复核队列。</p></div></div></div></div>
+          <div class="gallery-card" data-overlay-ref="overlay-approval-confirm">
+            <div class="gallery-card__label">审批确认 · 弹窗</div>
+            <div class="gallery-card__preview gallery-card__preview--overlay">
+              <div class="overlay-surface" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation>
+                <div class="overlay-header">
+                  <span class="overlay-title">确认采纳此发现？</span>
+                </div>
+                <div class="overlay-body">
+                  <div class="risk-confirmation-grid">
+                    <div class="risk-confirmation-block" data-impact-summary>
+                      <div class="risk-confirmation-title">影响范围</div>
+                      <p class="risk-confirmation-copy">通过后自动生成信号至待复核队列，不直接下单。信号会绑定候选因子、证据快照和审批人。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-before-after>
+                      <div class="risk-confirmation-title">审批前后</div>
+                      <p class="risk-confirmation-copy">候选发现 → 待复核信号；交易员仍需在 Signals Inbox 二次确认。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-evidence-chain>
+                      <div class="risk-confirmation-title">证据链</div>
+                      <p class="risk-confirmation-copy">IC 0.047、证据 91.2、内部模型来源、工具输出 af-4421。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-audit-record>
+                      <div class="risk-confirmation-title">审计记录</div>
+                      <p class="risk-confirmation-copy">记录审批人、run id、工具调用、模型版本、信号草案和审批时间。</p>
+                    </div>
+                    <div class="risk-confirmation-block" data-recovery-path>
+                      <div class="risk-confirmation-title">恢复路径</div>
+                      <p class="risk-confirmation-copy">可在 Signals Inbox 驳回信号，或在 Agent Console 撤回本次产物。</p>
+                    </div>
+                  </div>
+                  <div class="overlay-actions">
+                    <button class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</button>
+                    <button class="overlay-btn overlay-btn-primary" data-confirm-control>确认采纳</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="gallery-card" data-overlay-ref="overlay-tool-trace-detail"><div class="gallery-card__label">工具追踪 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="工具追踪"><div class="overlay-header"><span class="overlay-title">工具追踪详情</span></div><div class="overlay-body"><div class="trace-item"><span class="dot"></span><span><span class="fn">calc_factor_ic</span> · schema v2 · 输出 <span class="str">af-4421</span></span><span><span class="num">2.4</span>s</span></div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-artifact-preview"><div class="gallery-card__label">产物预览 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="产物预览"><div class="overlay-header"><span class="overlay-title">产物 af-4421</span></div><div class="overlay-body"><div class="artifact-grid"><div class="artifact-card"><span class="card-label">schema</span><span class="card-value">factor.v2</span></div><div class="artifact-card"><span class="card-label">快照</span><span class="card-value">ds-119</span></div></div></div></div></div></div>
           <div class="gallery-card" data-overlay-ref="overlay-guardrail-detail"><div class="gallery-card__label">规则详情 · 抽屉</div><div class="gallery-card__preview gallery-card__preview--overlay"><div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="规则详情"><div class="overlay-header"><span class="overlay-title">规则阻断</span></div><div class="overlay-body"><div class="overlay-field"><span class="overlay-field-label">策略</span><span class="overlay-field-value">公告时间戳权限</span></div><p class="event-note">申请更高数据权限后可恢复。</p></div></div></div></div>
@@ -1528,6 +1569,44 @@
       </div>
     </div>
   </section>
+
+  <div class="overlay-backdrop" data-overlay="overlay-approval-confirm">
+    <label class="overlay-dismiss" for="overlay-approval-confirm" aria-label="关闭审批确认"></label>
+    <div class="overlay-surface overlay-surface--modal" role="dialog" aria-modal="true" aria-label="审批确认" data-high-risk-confirmation>
+      <div class="overlay-header">
+        <span class="overlay-title">确认采纳此发现？</span>
+        <label for="overlay-approval-confirm" class="overlay-close" aria-label="关闭">✕</label>
+      </div>
+      <div class="overlay-body">
+        <div class="risk-confirmation-grid">
+          <div class="risk-confirmation-block" data-impact-summary>
+            <div class="risk-confirmation-title">影响范围</div>
+            <p class="risk-confirmation-copy">通过后自动生成信号至待复核队列，不直接下单。信号会绑定候选因子、证据快照和审批人。</p>
+          </div>
+          <div class="risk-confirmation-block" data-before-after>
+            <div class="risk-confirmation-title">审批前后</div>
+            <p class="risk-confirmation-copy">候选发现 → 待复核信号；交易员仍需在 Signals Inbox 二次确认。</p>
+          </div>
+          <div class="risk-confirmation-block" data-evidence-chain>
+            <div class="risk-confirmation-title">证据链</div>
+            <p class="risk-confirmation-copy">IC 0.047、证据 91.2、内部模型来源、工具输出 af-4421。</p>
+          </div>
+          <div class="risk-confirmation-block" data-audit-record>
+            <div class="risk-confirmation-title">审计记录</div>
+            <p class="risk-confirmation-copy">记录审批人、run id、工具调用、模型版本、信号草案和审批时间。</p>
+          </div>
+          <div class="risk-confirmation-block" data-recovery-path>
+            <div class="risk-confirmation-title">恢复路径</div>
+            <p class="risk-confirmation-copy">可在 Signals Inbox 驳回信号，或在 Agent Console 撤回本次产物。</p>
+          </div>
+        </div>
+        <div class="overlay-actions">
+          <label for="overlay-approval-confirm" class="overlay-btn overlay-btn-secondary" data-cancel-control>取消</label>
+          <label for="overlay-approval-confirm" class="overlay-btn overlay-btn-primary" data-confirm-control>确认采纳</label>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <input type="checkbox" id="overlay-plan-create" class="overlay-radio sr-only">
   <input type="checkbox" id="overlay-run-rerun" class="overlay-radio sr-only">

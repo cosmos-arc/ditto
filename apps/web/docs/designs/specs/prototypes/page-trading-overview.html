@@ -2866,9 +2866,32 @@
             <div class="overlay-warning-icon" data-danger-marker>!</div>
             <div>
               <p class="text-primary-medium" data-risk-object>对象：当前交易模式和待处理信号队列</p>
-              <p class="text-primary-medium" data-impact-summary>影响范围：暂停交易会阻止新订单提交，已提交订单继续按券商状态回报。</p>
-              <p class="text-body">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
-              <p class="text-body" data-recovery-hint>恢复路径：可在交易总览重新启用交易，所有切换写入审计日志。</p>
+            </div>
+          </div>
+          <div class="risk-confirmation-grid">
+            <div class="risk-confirmation-block" data-impact-summary>
+              <div class="risk-confirmation-title">影响范围</div>
+              <p class="risk-confirmation-copy">暂停后阻止所有新订单提交，已提交订单继续接收券商回报。当前 3 笔待成交订单不自动撤销。</p>
+            </div>
+            <div class="risk-confirmation-block" data-before-after>
+              <div class="risk-confirmation-title">交易前后</div>
+              <div class="risk-confirmation-list">
+                <div class="risk-confirmation-item"><span>新订单</span><span class="risk-confirmation-value">允许 → 阻止</span></div>
+                <div class="risk-confirmation-item"><span>待成交</span><span class="risk-confirmation-value">3 笔保持</span></div>
+                <div class="risk-confirmation-item"><span>恢复方式</span><span class="risk-confirmation-value">手动恢复</span></div>
+              </div>
+            </div>
+            <div class="risk-confirmation-block" data-evidence-chain>
+              <div class="risk-confirmation-title">触发证据</div>
+              <p class="risk-confirmation-copy">风险预算 52.9%，券商连接正常，暂停原因将写入交易审计流。</p>
+            </div>
+            <div class="risk-confirmation-block" data-audit-record>
+              <div class="risk-confirmation-title">审计记录</div>
+              <p class="risk-confirmation-copy">记录操作者、账户、交易模式、待成交订单数和暂停时间。</p>
+            </div>
+            <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+              <div class="risk-confirmation-title">恢复路径</div>
+              <p class="risk-confirmation-copy">从交易上下文栏恢复交易；恢复前仍需重新确认风险预算。</p>
             </div>
           </div>
           <div class="overlay-actions">
@@ -3591,21 +3614,46 @@
     <div class="gallery-card" data-overlay-ref="overlay-pause-trading">
       <div class="gallery-card__label">暂停交易确认 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认">
+        <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="暂停交易确认" data-high-risk-confirmation>
           <div class="overlay-header">
             <span class="overlay-title text-danger">确认暂停交易</span>
           </div>
           <div class="overlay-body" role="document">
             <div class="overlay-warning-layout">
-              <div class="overlay-warning-icon">!</div>
+              <div class="overlay-warning-icon" data-danger-marker>!</div>
               <div>
-                <p class="text-primary-medium">暂停后所有新订单将被拦截</p>
-                <p class="text-body">已挂未成交订单不会被自动撤销。如需撤销已有订单，请在订单面板手动操作。</p>
+                <p class="text-primary-medium" data-risk-object>对象：当前交易模式和待处理信号队列</p>
+              </div>
+            </div>
+            <div class="risk-confirmation-grid">
+              <div class="risk-confirmation-block" data-impact-summary>
+                <div class="risk-confirmation-title">影响范围</div>
+                <p class="risk-confirmation-copy">暂停后阻止所有新订单提交，已提交订单继续接收券商回报。当前 3 笔待成交订单不自动撤销。</p>
+              </div>
+              <div class="risk-confirmation-block" data-before-after>
+                <div class="risk-confirmation-title">交易前后</div>
+                <div class="risk-confirmation-list">
+                  <div class="risk-confirmation-item"><span>新订单</span><span class="risk-confirmation-value">允许 → 阻止</span></div>
+                  <div class="risk-confirmation-item"><span>待成交</span><span class="risk-confirmation-value">3 笔保持</span></div>
+                  <div class="risk-confirmation-item"><span>恢复方式</span><span class="risk-confirmation-value">手动恢复</span></div>
+                </div>
+              </div>
+              <div class="risk-confirmation-block" data-evidence-chain>
+                <div class="risk-confirmation-title">触发证据</div>
+                <p class="risk-confirmation-copy">风险预算 52.9%，券商连接正常，暂停原因将写入交易审计流。</p>
+              </div>
+              <div class="risk-confirmation-block" data-audit-record>
+                <div class="risk-confirmation-title">审计记录</div>
+                <p class="risk-confirmation-copy">记录操作者、账户、交易模式、待成交订单数和暂停时间。</p>
+              </div>
+              <div class="risk-confirmation-block" data-recovery-path data-recovery-hint>
+                <div class="risk-confirmation-title">恢复路径</div>
+                <p class="risk-confirmation-copy">从交易上下文栏恢复交易；恢复前仍需重新确认风险预算。</p>
               </div>
             </div>
             <div class="overlay-actions">
-              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary label-interactive">取消</label>
-              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger label-interactive">确认暂停</label>
+              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-secondary label-interactive" data-cancel-control>取消，保持交易模式</label>
+              <label for="overlay-pause-trading" class="overlay-btn overlay-btn-danger label-interactive" data-confirm-control data-danger-action>确认暂停交易</label>
             </div>
           </div>
         </div>
