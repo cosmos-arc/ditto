@@ -3463,3 +3463,21 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   font-family: var(--font-family-numeric);
   font-variant-numeric: tabular-nums;
 }
+
+/* Final-review primary answer hierarchy */
+[data-primary-weight="dominant"] {
+  border-color: color-mix(in oklch, var(--brand-signature-fg) 28%, var(--border-subtle));
+  background: color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base));
+}
+
+[data-secondary-context] {
+  opacity: 0.84;
+}
+
+[data-secondary-context] :is(.panel-title, .section-title, .card-title) {
+  color: var(--text-secondary);
+}
+
+[data-tertiary-context] {
+  opacity: 0.72;
+}
