@@ -1063,11 +1063,11 @@
                     </div>
                     <div class="panel-body">
                       <div class="config-form-grid">
-                        <div class="form-group"><label class="form-label">API Host</label><input class="form-input" type="text" value="https://api.wind.local"></div>
-                        <div class="form-group"><label class="form-label">同步频率</label><select class="form-input form-select"><option selected>60s polling</option><option>30s polling</option></select></div>
-                        <div class="form-group"><label class="form-label">超时阈值</label><input class="form-input" type="text" value="850ms"></div>
-                        <div class="form-group"><label class="form-label">失败重试</label><input class="form-input" type="text" value="3 attempts"></div>
-                        <div class="form-group full"><label class="form-label">延迟趋势</label><div class="latency-strip" aria-label="Wind latency sparkline"><span class="latency-bar bar-h-8"></span><span class="latency-bar bar-h-10"></span><span class="latency-bar bar-h-7"></span><span class="latency-bar bar-h-12"></span><span class="latency-bar bar-h-9"></span><span class="latency-bar bar-h-6"></span><span class="latency-bar bar-h-10"></span><span class="latency-bar bar-h-12"></span><span class="latency-bar bar-h-14"></span><span class="latency-bar warn bar-h-18"></span><span class="latency-bar bar-h-11"></span><span class="latency-bar bar-h-9"></span></div><div class="form-hint">最近 12 次验证，1 次接近 SLA 阈值。</div></div>
+                        <div class="form-group"><label class="form-label" for="datasource-api-host">API Host</label><input id="datasource-api-host" class="form-input" type="text" value="https://api.wind.local"></div>
+                        <div class="form-group"><label class="form-label" for="datasource-sync-frequency">同步频率</label><select id="datasource-sync-frequency" class="form-input form-select"><option selected>60s polling</option><option>30s polling</option></select></div>
+                        <div class="form-group"><label class="form-label" for="datasource-timeout-threshold">超时阈值</label><input id="datasource-timeout-threshold" class="form-input" type="text" value="850ms"></div>
+                        <div class="form-group"><label class="form-label" for="datasource-retry-count">失败重试</label><input id="datasource-retry-count" class="form-input" type="text" value="3 attempts"></div>
+                        <div class="form-group full"><div class="form-label" id="datasource-latency-trend-label">延迟趋势</div><div class="latency-strip" role="img" aria-labelledby="datasource-latency-trend-label" aria-label="Wind 最近 12 次延迟趋势"><span class="latency-bar bar-h-8"></span><span class="latency-bar bar-h-10"></span><span class="latency-bar bar-h-7"></span><span class="latency-bar bar-h-12"></span><span class="latency-bar bar-h-9"></span><span class="latency-bar bar-h-6"></span><span class="latency-bar bar-h-10"></span><span class="latency-bar bar-h-12"></span><span class="latency-bar bar-h-14"></span><span class="latency-bar warn bar-h-18"></span><span class="latency-bar bar-h-11"></span><span class="latency-bar bar-h-9"></span></div><div class="form-hint">最近 12 次验证，1 次接近 SLA 阈值。</div></div>
                       </div>
                       <div class="editor-evidence" aria-label="数据源覆盖率和容灾路由">
                         <div class="coverage-cell"><div class="coverage-label">Quotes</div><div class="coverage-value ok">99.8%</div><div class="field-hint">Level 1 + snapshot</div></div>
@@ -1125,11 +1125,11 @@
                     <div class="panel-header"><div><div class="panel-title">中信证券编辑器</div><div class="panel-subtitle">交易权限、账户掩码与风控前置检查</div></div><span class="status-pill ok">paper</span></div>
                     <div class="panel-body">
                       <div class="config-form-grid">
-                        <div class="form-group"><label class="form-label">账户别名</label><input class="form-input" type="text" value="CITIC Paper A"></div>
-                        <div class="form-group"><label class="form-label">交易模式</label><select class="form-input form-select"><option selected>模拟盘</option><option>实盘只读</option></select></div>
-                        <div class="form-group"><label class="form-label">柜台地址</label><input class="form-input" type="text" value="xtp.paper.local:18888"></div>
-                        <div class="form-group"><label class="form-label">下单限额</label><input class="form-input" type="text" value="500,000 CNY"></div>
-                        <div class="form-group full"><label class="form-label">交易保护</label><div class="toggle-row"><span>强制订单复核</span><span class="toggle-switch" aria-hidden="true"></span></div><div class="toggle-row"><span>开盘前禁止自动下单</span><span class="toggle-switch" aria-hidden="true"></span></div></div>
+                        <div class="form-group"><label class="form-label" for="broker-account-alias">账户别名</label><input id="broker-account-alias" class="form-input" type="text" value="CITIC Paper A"></div>
+                        <div class="form-group"><label class="form-label" for="broker-trading-mode">交易模式</label><select id="broker-trading-mode" class="form-input form-select"><option selected>模拟盘</option><option>实盘只读</option></select></div>
+                        <div class="form-group"><label class="form-label" for="broker-counter-url">柜台地址</label><input id="broker-counter-url" class="form-input" type="text" value="xtp.paper.local:18888"></div>
+                        <div class="form-group"><label class="form-label" for="broker-order-limit">下单限额</label><input id="broker-order-limit" class="form-input" type="text" value="500,000 CNY"></div>
+                        <div class="form-group full"><div class="form-label" id="broker-trade-protection-label">交易保护</div><div role="group" aria-labelledby="broker-trade-protection-label"><div class="toggle-row"><span>强制订单复核</span><span class="toggle-switch" aria-hidden="true"></span></div><div class="toggle-row"><span>开盘前禁止自动下单</span><span class="toggle-switch" aria-hidden="true"></span></div></div></div>
                       </div>
                       <div class="settings-actions-row"><button class="btn btn-primary btn-sm">保存连接</button><label for="overlay-broker-test" class="btn btn-sm ov-label-btn">测试券商</label></div>
                     </div>
@@ -1171,12 +1171,12 @@
                     <div class="panel-header"><div><div class="panel-title">设置表单</div><div class="panel-subtitle">保存前会生成配置 diff 和回滚点</div></div><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置默认</label></div>
                     <div class="panel-body">
                       <div class="config-form-grid">
-                        <div class="form-group"><label class="form-label">默认市场</label><select class="form-input form-select"><option selected>A股（沪深）</option><option>港股</option><option>美股</option></select></div>
-                        <div class="form-group"><label class="form-label">时区</label><select class="form-input form-select"><option selected>Asia/Shanghai (UTC+8)</option><option>America/New_York (UTC-5)</option></select></div>
-                        <div class="form-group"><label class="form-label">界面语言</label><select class="form-input form-select"><option selected>简体中文</option><option>English</option></select></div>
-                        <div class="form-group"><label class="form-label">通知偏好</label><select class="form-input form-select"><option>全部通知</option><option selected>仅重要通知</option><option>静默</option></select></div>
-                        <div class="form-group"><label class="form-label">默认手续费率</label><input class="form-input" type="text" value="0.025%"></div>
-                        <div class="form-group"><label class="form-label">默认滑点</label><input class="form-input" type="text" value="0.01%"></div>
+                        <div class="form-group"><label class="form-label" for="general-default-market">默认市场</label><select id="general-default-market" class="form-input form-select"><option selected>A股（沪深）</option><option>港股</option><option>美股</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-timezone">时区</label><select id="general-timezone" class="form-input form-select"><option selected>Asia/Shanghai (UTC+8)</option><option>America/New_York (UTC-5)</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-language">界面语言</label><select id="general-language" class="form-input form-select"><option selected>简体中文</option><option>English</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-notifications">通知偏好</label><select id="general-notifications" class="form-input form-select"><option>全部通知</option><option selected>仅重要通知</option><option>静默</option></select></div>
+                        <div class="form-group"><label class="form-label" for="general-fee-rate">默认手续费率</label><input id="general-fee-rate" class="form-input" type="text" value="0.025%"></div>
+                        <div class="form-group"><label class="form-label" for="general-slippage">默认滑点</label><input id="general-slippage" class="form-input" type="text" value="0.01%"></div>
                       </div>
                       <div class="settings-actions-row"><button class="btn btn-primary btn-sm">保存配置</button><label for="overlay-reset-config" class="btn btn-sm ov-label-btn">重置为默认值</label></div>
                     </div>
@@ -1292,7 +1292,7 @@
       <div class="gallery-group" data-component="settings-form">
         <div class="gallery-group__label">Settings Form</div>
         <div class="gallery-cards">
-          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="config-form-grid"><div class="form-group"><label class="form-label">默认市场</label><select class="form-input form-select"><option selected>A股（沪深）</option></select></div><div class="form-group"><label class="form-label">通知偏好</label><select class="form-input form-select"><option selected>仅重要通知</option></select></div></div></div></div>
+          <div class="gallery-card"><div class="gallery-card__label">Default State</div><div class="gallery-card__preview"><div class="config-form-grid"><div class="form-group"><label class="form-label" for="gallery-default-market">默认市场</label><select id="gallery-default-market" class="form-input form-select"><option selected>A股（沪深）</option></select></div><div class="form-group"><label class="form-label" for="gallery-notifications">通知偏好</label><select id="gallery-notifications" class="form-input form-select"><option selected>仅重要通知</option></select></div></div></div></div>
           <div class="gallery-card"><div class="gallery-card__label">Loading State</div><div class="gallery-card__preview"><div class="state-loading"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></div></div></div>
         </div>
       </div>

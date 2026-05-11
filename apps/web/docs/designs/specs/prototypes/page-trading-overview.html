@@ -1834,11 +1834,15 @@
     #default-view > .status-bar {
       position: relative !important;
       bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
       flex: 0 0 1.5rem !important;
       height: 1.5rem !important;
-      margin-left: var(--shell-rail-width);
-      width: calc(100vw - var(--shell-rail-width));
-      overflow: hidden !important;
+      margin-left: 0;
+      width: auto !important;
+      max-width: calc(100vw - var(--shell-rail-width));
+      box-sizing: border-box;
+      overflow: hidden;
     }
     /* ── B1. Tab stagger animation (matches backtest-result tab-fade-in) ── */
     @keyframes trading-tab-fade-in {
@@ -2153,22 +2157,22 @@
               </div>
             </div>
             <div class="decision-pipeline" data-pipeline-context role="group" aria-label="信号到订单流转状态">
-              <label class="pipeline-stage" for="pipeline-signal-pool" data-tooltip="信号池中的待处理信号 · 点击展开">
+              <label class="pipeline-stage" for="pipeline-signal-pool" role="button" tabindex="0" aria-label="展开信号池，4 个待处理信号" data-tooltip="信号池中的待处理信号 · 点击展开">
                 <span class="pipeline-stage-label">信号池</span>
                 <span class="pipeline-stage-count">4</span>
               </label>
               <div class="pipeline-arrow" aria-hidden="true">→</div>
-              <label class="pipeline-stage" for="pipeline-pending" data-tooltip="等待人工复核的信号 · 点击展开">
+              <label class="pipeline-stage" for="pipeline-pending" role="button" tabindex="0" aria-label="展开待复核信号，2 个等待人工复核" data-tooltip="等待人工复核的信号 · 点击展开">
                 <span class="pipeline-stage-label">待复核</span>
                 <span class="pipeline-stage-count warning">2</span>
               </label>
               <div class="pipeline-arrow" aria-hidden="true">→</div>
-              <label class="pipeline-stage" for="pipeline-ordered" data-tooltip="已提交但未完全成交的订单 · 点击展开">
+              <label class="pipeline-stage" for="pipeline-ordered" role="button" tabindex="0" aria-label="展开已下单队列，3 个订单未完全成交" data-tooltip="已提交但未完全成交的订单 · 点击展开">
                 <span class="pipeline-stage-label">已下单</span>
                 <span class="pipeline-stage-count">3</span>
               </label>
               <div class="pipeline-arrow" aria-hidden="true">→</div>
-              <label class="pipeline-stage" for="pipeline-filled" data-tooltip="今日已完全成交的订单 · 点击展开">
+              <label class="pipeline-stage" for="pipeline-filled" role="button" tabindex="0" aria-label="展开已成交记录，今日 47 笔完全成交" data-tooltip="今日已完全成交的订单 · 点击展开">
                 <span class="pipeline-stage-label">已成交</span>
                 <span class="pipeline-stage-count ok">47</span>
               </label>

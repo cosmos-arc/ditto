@@ -1212,6 +1212,46 @@
       color: var(--text-tertiary);
       z-index: 1;
     }
+    .history-chart-svg {
+      width: 100%;
+      max-width: 16.25rem;
+      height: 4.5rem;
+    }
+
+    .history-chart-grid {
+      stroke: var(--border-subtle);
+      stroke-width: 1;
+      opacity: 0.45;
+    }
+
+    .history-chart-loss-line,
+    .history-chart-tail-line {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 2;
+    }
+
+    .history-chart-loss-line {
+      stroke: var(--system-warning-fg);
+    }
+
+    .history-chart-tail-line {
+      stroke: var(--system-critical-fg);
+      opacity: 0.75;
+    }
+
+    .history-chart-dot {
+      fill: currentColor;
+    }
+
+    .history-chart-dot.loss {
+      color: var(--system-warning-fg);
+    }
+
+    .history-chart-dot.tail {
+      color: var(--system-critical-fg);
+    }
 
     /* ══════════════════════════════════════════════
      * Incident detail hint (extracted)
@@ -1245,10 +1285,7 @@
 
     /* Brand DNA #3: Overlay accent border */
     .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
-    }
-    .overlay-surface {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
     }
 
     /* Tab active text color → brand-accent */
@@ -1347,7 +1384,7 @@
     }
     .breach-progress-fill {
       border-radius: 3px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-emphasis);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .breach-progress-fill.ok {
       background: linear-gradient(90deg, var(--risk-low-fg), color-mix(in oklch, var(--risk-low-fg) 70%, transparent));
@@ -2099,8 +2136,15 @@
             <span class="text-size-12 text-weight-medium text-primary">历史压力测试对比</span>
             <span class="text-size-10 text-tertiary">近期结果趋势</span>
           </div>
-          <div class="history-chart-placeholder">
-            <span class="placeholder-label">历史对比图表占位</span>
+          <div class="history-chart-placeholder" role="img" aria-label="历史压力测试对比，展示最近 6 次组合损益、尾部风险与突破次数">
+            <svg class="history-chart-svg" viewBox="0 0 260 72" aria-hidden="true" focusable="false">
+              <path class="history-chart-grid" d="M8 12H252M8 36H252M8 60H252" />
+              <path class="history-chart-loss-line" d="M10 50L52 44L94 48L136 34L178 39L220 28L250 31" />
+              <path class="history-chart-tail-line" d="M10 42L52 38L94 40L136 31L178 34L220 24L250 27" />
+              <circle class="history-chart-dot loss" cx="220" cy="28" r="3" />
+              <circle class="history-chart-dot tail" cx="220" cy="24" r="3" />
+            </svg>
+            <span class="placeholder-label">近 6 次压力测试 · 损益 / 尾部风险</span>
           </div>
         </div>
 
@@ -2265,7 +2309,7 @@
           <label for="overlay-stress-config" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>场景选择</h4>
+          <h2>场景选择</h2>
           <div class="flex-col-gap">
             <label class="overlay-radio-option">
               <input type="radio" name="stress-scenario" checked> 极端下跌 -15%（预设）
@@ -2281,7 +2325,7 @@
             </label>
           </div>
 
-          <h4>参数配置</h4>
+          <h2>参数配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">冲击幅度</span>
             <span class="overlay-field-value">-15%</span>
@@ -2312,7 +2356,7 @@
           <label for="overlay-breach-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>规则名称</h4>
+          <h2>规则名称</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">规则</span>
             <span class="overlay-field-value">最大回撤</span>
@@ -2330,7 +2374,7 @@
             <span class="overlay-field-value">-1.55pp</span>
           </div>
 
-          <h4>涉及持仓</h4>
+          <h2>涉及持仓</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">贵州茅台（600519）</span>
             <span class="overlay-field-value text-market-down">-2.1%</span>
@@ -2361,7 +2405,7 @@
           <label for="overlay-rule-editor" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>规则参数</h4>
+          <h2>规则参数</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">规则名称</span>
             <span class="overlay-field-value">最大回撤</span>
@@ -2719,7 +2763,7 @@
             <span class="overlay-title">压力测试配置</span>
           </div>
           <div class="overlay-body">
-            <h4>场景选择</h4>
+            <h2>场景选择</h2>
             <div class="flex-col-gap">
               <label class="overlay-radio-option">
                 <input type="radio" name="stress-scenario" checked> 极端下跌 -15%（预设）
@@ -2735,7 +2779,7 @@
               </label>
             </div>
 
-            <h4>参数配置</h4>
+            <h2>参数配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">冲击幅度</span>
               <span class="overlay-field-value">-15%</span>
@@ -2766,7 +2810,7 @@
             <span class="overlay-title">违规详情</span>
           </div>
           <div class="overlay-body">
-            <h4>规则名称</h4>
+            <h2>规则名称</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">规则</span>
               <span class="overlay-field-value">最大回撤</span>
@@ -2784,7 +2828,7 @@
               <span class="overlay-field-value">-1.55pp</span>
             </div>
 
-            <h4>涉及持仓</h4>
+            <h2>涉及持仓</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">贵州茅台（600519）</span>
               <span class="overlay-field-value text-market-down">-2.1%</span>
@@ -2815,7 +2859,7 @@
             <span class="overlay-title">调整风控规则</span>
           </div>
           <div class="overlay-body">
-            <h4>规则参数</h4>
+            <h2>规则参数</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">规则名称</span>
               <span class="overlay-field-value">最大回撤</span>

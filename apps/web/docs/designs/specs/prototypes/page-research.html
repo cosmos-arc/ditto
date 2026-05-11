@@ -540,9 +540,9 @@
       display: flex;
       align-items: center;
       gap: var(--space-8);
-      padding: var(--space-6) var(--space-6) var(--space-6) 0;
+      padding: var(--space-6);
+      border: 1px solid transparent;
       border-bottom: 1px solid var(--border-subtle);
-      border-left: 2px solid transparent;
       cursor: pointer;
       border-radius: var(--radius-4);
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard), background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard);
@@ -550,7 +550,7 @@
 
     .queue-review-item:hover {
       background: var(--interaction-hover-subtle-bg);
-      border-left-color: color-mix(in oklch, var(--brand-accent) 40%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       margin: 0 calc(var(--space-8) * -1);
       padding: var(--space-6) var(--space-8);
     }
@@ -941,7 +941,7 @@
     }
     .data-table tbody tr.row.selected {
       background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
-      box-shadow: inset 3px 0 0 var(--interaction-selected-border);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
 
     /* ── P1: tabular-nums for numeric cells ── */
@@ -1451,7 +1451,7 @@
     .width-row-fill {
       height: 100%;
       border-radius: 3px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .width-row-fill.accent {
       background: var(--brand-accent);
@@ -1493,39 +1493,19 @@
       box-shadow: 0 2px 8px color-mix(in oklch, var(--text-primary) 4%, transparent);
     }
 
-    /* ── Run item hover: subtle left accent bar ── */
-    .run-item::before {
-      content: '';
-      position: absolute;
-      left: calc(var(--space-8) * -1);
-      top: var(--space-4);
-      bottom: var(--space-4);
-      width: 0;
-      border-radius: 1px;
-      background: var(--brand-accent);
-      transition: width var(--motion-duration-fast) var(--motion-easing-standard);
-    }
+    /* ── Run item hover: full-frame emphasis ── */
     .run-item {
       position: relative;
     }
-    .run-item:hover::before {
-      width: 2px;
+    .run-item:hover {
+      outline: 1px solid color-mix(in oklch, var(--brand-accent) 18%, transparent);
+      outline-offset: -1px;
     }
 
-    /* ── Queue review item hover: enhanced accent bar ── */
-    .queue-review-item::before {
-      content: '';
-      position: absolute;
-      left: calc(var(--space-8) * -1);
-      top: var(--space-4);
-      bottom: var(--space-4);
-      width: 0;
-      border-radius: 1px;
-      background: var(--brand-accent);
-      transition: width var(--motion-duration-fast) var(--motion-easing-standard);
-    }
-    .queue-review-item:hover::before {
-      width: 2px;
+    /* ── Queue review item hover: full-frame emphasis ── */
+    .queue-review-item:hover {
+      outline: 1px solid color-mix(in oklch, var(--brand-accent) 18%, transparent);
+      outline-offset: -1px;
     }
 
     /* ── Factor name group layout ── */
@@ -1770,7 +1750,7 @@
       width: 0;
       height: 2px;
       background: var(--brand-accent);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .report-card:hover::after {
       width: 100%;
@@ -1792,7 +1772,7 @@
       width: 0;
       height: 2px;
       background: var(--brand-accent);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .backtest-card:hover::after {
       width: 100%;
@@ -1803,20 +1783,21 @@
 
     /* ── Analysis notes: gentle left-accent for stale items ── */
     .analysis-notes-item.stale {
-      border-left: 2px solid var(--data-state-stale-fg);
+      border: 1px solid color-mix(in oklch, var(--data-state-stale-fg) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--data-state-stale-fg) 4%, transparent);
       padding-left: var(--space-8);
     }
 
     /* ── Factor table row: enhanced selected state ── */
     .data-table tbody tr.row.selected {
       background: color-mix(in oklch, var(--brand-accent) 5%, transparent);
-      box-shadow: inset 3px 0 0 var(--interaction-selected-border);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
     .data-table tbody tr.row.selected .cell-ticker {
       color: var(--brand-accent);
     }
 
-    /* ── Run item: smooth border-left accent on hover ── */
+    /* ── Run item: comfortable hover padding ── */
     .run-item {
       padding-left: var(--space-8);
     }
@@ -2614,7 +2595,7 @@
               <div class="run-item-detail">Sharpe 1.42, 最大回撤 -8.3%, 1,247 笔交易</div>
               <div class="run-item-footer">
                 <span class="run-item-status complete">完成</span>
-                <label for="overlay-run-detail" class="inline-action-link">查看详情</label>
+                <label for="overlay-run-detail" class="inline-action-link" role="button" tabindex="0" aria-label="查看价值因子 Q1 回测详情">查看详情</label>
                 <span class="run-item-time" data-tooltip="完成于 2026-04-02 13:28">1小时前</span>
               </div>
             </div>
@@ -2681,7 +2662,7 @@
               <div class="queue-priority"><span class="queue-priority-dot high"></span>高优先级 · 参数变更影响 3 个策略</div>
             </div>
             <span class="queue-review-badge pending">待复核</span>
-            <label for="overlay-review-action" class="inline-action-link tight">审核</label>
+            <label for="overlay-review-action" class="inline-action-link tight" role="button" tabindex="0" aria-label="审核行业轮动参数优化">审核</label>
           </div>
           <!-- Review 2 -->
           <div class="queue-review-item">
@@ -3085,7 +3066,7 @@
           <label for="overlay-new-backtest" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>回测配置</h4>
+          <h2>回测配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">回测名称</span>
             <span class="overlay-field-value muted">输入回测名称…</span>
@@ -3103,7 +3084,7 @@
             <span class="overlay-field-value">2024-01-01 ~ 2026-03-31</span>
           </div>
 
-          <h4>参数配置</h4>
+          <h2>参数配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">调仓频率</span>
             <span class="overlay-field-value">月度</span>
@@ -3134,7 +3115,7 @@
           <label for="overlay-new-strategy" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>策略配置</h4>
+          <h2>策略配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">策略名称</span>
             <span class="overlay-field-value muted">输入策略名称…</span>
@@ -3144,7 +3125,7 @@
             <span class="overlay-field-value muted">选择类型</span>
           </div>
 
-          <h4>因子配置</h4>
+          <h2>因子配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">主因子</span>
             <span class="overlay-field-value">动量12M</span>
@@ -3154,7 +3135,7 @@
             <span class="overlay-field-value">价值PE, 低波动</span>
           </div>
 
-          <h4>参数设置</h4>
+          <h2>参数设置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">换仓频率</span>
             <span class="overlay-field-value">周度</span>
@@ -3181,7 +3162,7 @@
           <label for="overlay-new-experiment" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>实验配置</h4>
+          <h2>实验配置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">实验名称</span>
             <span class="overlay-field-value muted">输入实验名称…</span>
@@ -3191,13 +3172,13 @@
             <span class="overlay-field-value muted">描述实验假设…</span>
           </div>
 
-          <h4>关联因子</h4>
+          <h2>关联因子</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">目标因子</span>
             <span class="overlay-field-value muted">选择因子</span>
           </div>
 
-          <h4>对照组设置</h4>
+          <h2>对照组设置</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">对照组 A</span>
             <span class="overlay-field-value">基准参数组</span>
@@ -3224,7 +3205,7 @@
           <label for="overlay-run-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>运行概况</h4>
+          <h2>运行概况</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">运行名称</span>
             <span class="overlay-field-value">价值因子 Q1 回测</span>
@@ -3246,7 +3227,7 @@
             <span class="overlay-field-value">2026-04-02 13:28</span>
           </div>
 
-          <h4>关键指标</h4>
+          <h2>关键指标</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">Sharpe Ratio</span>
             <span class="overlay-field-value brand">1.42</span>
@@ -3268,7 +3249,7 @@
             <span class="overlay-field-value">56.2%</span>
           </div>
 
-          <h4>日志</h4>
+          <h2>日志</h2>
           <div class="overlay-log">
             [13:15:01] 回测任务启动<br>
             [13:15:03] 加载因子数据…<br>
@@ -3295,7 +3276,7 @@
           <label for="overlay-review-action" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>审核内容摘要</h4>
+          <h2>审核内容摘要</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">审核项</span>
             <span class="overlay-field-value">行业轮动参数优化</span>
@@ -3313,7 +3294,7 @@
             <span class="overlay-field-value">新参数组 Sharpe 提升 0.15</span>
           </div>
 
-          <h4>审核意见</h4>
+          <h2>审核意见</h2>
           <div class="overlay-textarea-placeholder">
             输入审核意见…
           </div>
@@ -3686,7 +3667,7 @@
             <span class="overlay-title">新建回测</span>
           </div>
           <div class="overlay-body">
-            <h4>回测配置</h4>
+            <h2>回测配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">回测名称</span>
               <span class="overlay-field-value muted">输入回测名称…</span>
@@ -3703,7 +3684,7 @@
               <span class="overlay-field-label">时间范围</span>
               <span class="overlay-field-value">2024-01-01 ~ 2026-03-31</span>
             </div>
-            <h4>参数配置</h4>
+            <h2>参数配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">调仓频率</span>
               <span class="overlay-field-value">月度</span>
@@ -3733,7 +3714,7 @@
             <span class="overlay-title">新建策略</span>
           </div>
           <div class="overlay-body">
-            <h4>策略配置</h4>
+            <h2>策略配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">策略名称</span>
               <span class="overlay-field-value muted">输入策略名称…</span>
@@ -3742,7 +3723,7 @@
               <span class="overlay-field-label">策略类型</span>
               <span class="overlay-field-value muted">选择类型</span>
             </div>
-            <h4>因子配置</h4>
+            <h2>因子配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">主因子</span>
               <span class="overlay-field-value">动量12M</span>
@@ -3751,7 +3732,7 @@
               <span class="overlay-field-label">辅助因子</span>
               <span class="overlay-field-value">价值PE, 低波动</span>
             </div>
-            <h4>参数设置</h4>
+            <h2>参数设置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">换仓频率</span>
               <span class="overlay-field-value">周度</span>
@@ -3777,7 +3758,7 @@
             <span class="overlay-title">新建实验</span>
           </div>
           <div class="overlay-body">
-            <h4>实验配置</h4>
+            <h2>实验配置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">实验名称</span>
               <span class="overlay-field-value muted">输入实验名称…</span>
@@ -3786,12 +3767,12 @@
               <span class="overlay-field-label">假设描述</span>
               <span class="overlay-field-value muted">描述实验假设…</span>
             </div>
-            <h4>关联因子</h4>
+            <h2>关联因子</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">目标因子</span>
               <span class="overlay-field-value muted">选择因子</span>
             </div>
-            <h4>对照组设置</h4>
+            <h2>对照组设置</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">对照组 A</span>
               <span class="overlay-field-value">基准参数组</span>
@@ -3817,7 +3798,7 @@
             <span class="overlay-title">运行详情</span>
           </div>
           <div class="overlay-body">
-            <h4>运行概况</h4>
+            <h2>运行概况</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">运行名称</span>
               <span class="overlay-field-value">价值因子 Q1 回测</span>
@@ -3838,7 +3819,7 @@
               <span class="overlay-field-label">结束时间</span>
               <span class="overlay-field-value">2026-04-02 13:28</span>
             </div>
-            <h4>关键指标</h4>
+            <h2>关键指标</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">Sharpe Ratio</span>
               <span class="overlay-field-value brand">1.42</span>
@@ -3859,7 +3840,7 @@
               <span class="overlay-field-label">胜率</span>
               <span class="overlay-field-value">56.2%</span>
             </div>
-            <h4>日志</h4>
+            <h2>日志</h2>
             <div class="overlay-log">
               [13:15:01] 回测任务启动<br>
               [13:15:03] 加载因子数据…<br>
@@ -3885,7 +3866,7 @@
             <span class="overlay-title">审核操作</span>
           </div>
           <div class="overlay-body">
-            <h4>审核内容摘要</h4>
+            <h2>审核内容摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">审核项</span>
               <span class="overlay-field-value">行业轮动参数优化</span>
@@ -3902,7 +3883,7 @@
               <span class="overlay-field-label">变更摘要</span>
               <span class="overlay-field-value">新参数组 Sharpe 提升 0.15</span>
             </div>
-            <h4>审核意见</h4>
+            <h2>审核意见</h2>
             <div class="overlay-textarea-placeholder">
               输入审核意见…
             </div>

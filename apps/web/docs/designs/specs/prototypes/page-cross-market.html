@@ -613,7 +613,7 @@
       padding: var(--space-8) var(--space-12);
       background: var(--surface-panel-elevated);
       border-radius: var(--radius-4);
-      border-left: var(--accent-bar-width) solid var(--brand-accent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       line-height: 1.5;
       animation: conclusion-appear 0.6s ease-out 0.3s both;
     }
@@ -704,14 +704,14 @@
 
     /* ── L3: Macro Drivers Strip (ultra-light, no pill background) ── */
     .drivers-strip {
-      display: flex;
-      align-items: center;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-4);
-      flex-shrink: 0;
+      flex-shrink: 1;
+      min-width: 0;
       padding: var(--space-8) 0;
       margin-top: calc(var(--space-8) * -1); /* L1→L2: tighten transition */
-      overflow-x: auto;
-      scrollbar-width: none;
+      overflow: hidden;
     }
     .drivers-strip::-webkit-scrollbar { display: none; }
 
@@ -727,14 +727,24 @@
     .driver-item {
       display: inline-flex;
       align-items: center;
+      justify-content: space-between;
       gap: var(--space-4);
+      min-width: 0;
       padding: var(--space-2) var(--space-4);
       border-radius: var(--radius-3);
       background: none;
       white-space: nowrap;
       font-size: var(--font-size-12);
-      flex-shrink: 0;
+      flex-shrink: 1;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+    }
+
+    .driver-item-name,
+    .driver-item-val,
+    .driver-item-change {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .driver-item:hover {
@@ -1175,6 +1185,13 @@
         transition: none !important;
         transform: none !important;
       }
+
+      [data-panel="tab-rotation"],
+      [data-panel="tab-calendar"],
+      [data-panel="tab-ai"],
+      .pair-chart-panel {
+        animation: none !important;
+      }
     }
 
     /* ══════════════════════════════════════════════
@@ -1310,7 +1327,7 @@
       margin-bottom: var(--space-8);
     }
     .correlation-focus {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
     .correlation-focus strong {
@@ -1382,6 +1399,7 @@
     .corr-cell[data-corr="5"]  { background: var(--heat-down-1); color: var(--text-secondary); }
     .corr-cell[data-corr="6"]  { background: var(--heat-down-2); color: var(--text-secondary); }
     .corr-cell[data-corr="7"]  { background: var(--heat-down-2); color: var(--text-primary); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-strong) 70%, transparent); }
+    .pair-chart-trigger { background: var(--overlay-3); color: var(--text-tertiary); }
     .corr-cell--self {
       background: color-mix(in oklch, var(--surface-muted) 64%, transparent);
       color: var(--text-quaternary);
@@ -1447,7 +1465,7 @@
     .flow-bar-fill {
       height: 100%;
       border-radius: var(--radius-3);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .flow-bar-fill.inflow { background: var(--market-up-fg); }
     .flow-bar-fill.outflow { background: var(--market-down-fg); }
@@ -1481,13 +1499,46 @@
      * Macro Driver mini-bar — visual indicator
      * ══════════════════════════════════════════════ */
     .driver-mini-bar {
-      width: 2rem;
+      width: 1rem;
       height: 3px;
       border-radius: var(--radius-2);
-      flex-shrink: 0;
+      flex: 0 0 1rem;
     }
     .driver-mini-bar.up { background: var(--market-up-fg); opacity: 0.6; }
     .driver-mini-bar.down { background: var(--market-down-fg); opacity: 0.6; }
+
+    @media (max-width: 1366px) {
+      .drivers-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-4);
+        overflow: visible;
+        width: 100%;
+      }
+
+      .driver-item {
+        min-width: 0;
+        justify-content: space-between;
+      }
+
+      .driver-item-name,
+      .driver-item-val,
+      .driver-item-change {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .driver-sep {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .drivers-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
 
     /* ══════════════════════════════════════════════
      * Pulse sparkline — mini inline trend
@@ -1571,7 +1622,7 @@
       padding: var(--space-2);
     }
     .pill-tab-group label {
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--text-tertiary);
       padding: var(--space-2) var(--space-8);
@@ -1782,7 +1833,7 @@
             <span class="header-timeframe">1D</span>
           </div>
           <div class="header-timestamp">09:46 CST</div>
-          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器">
+          <label for="overlay-filter-panel" class="header-action-btn cursor-pointer" title="筛选器" aria-label="打开筛选器">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
           </label>
 
@@ -2126,15 +2177,15 @@
               </div>
               <!-- /correlation-grid -->
               <!-- Pair Chart overlay panel (inline toggle via checkbox) -->
-              <label for="pair-chart" class="corr-cell" role="button" tabindex="0" aria-label="查看市场对走势图" data-tooltip="点击查看市场对走势对比图" data-tooltip-pos="bottom" data-corr="4" data-tooltip-delay="150">
+              <label for="pair-chart" class="corr-cell pair-chart-trigger" role="button" tabindex="0" aria-label="查看市场对走势图" data-tooltip="点击查看市场对走势对比图" data-tooltip-pos="bottom" data-tooltip-delay="150">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14l4-4 3 2 5-6"/><path d="M11 4h4v4"/></svg>
               </label>
               <div class="pair-chart-panel">
                 <div class="pair-chart-header">
                   <span class="pair-chart-title">市场对走势对比 · 黄金 vs 美元</span>
-                  <label for="pair-chart" class="pair-chart-close" aria-label="关闭走势对比">关闭</label>
+                  <label for="pair-chart" class="pair-chart-close" role="button" tabindex="0" aria-label="关闭黄金 vs 美元走势对比">关闭</label>
                 </div>
-                <div class="pair-chart-placeholder" role="img" aria-label="黄金 vs 美元走势对比图（占位）">
+                <div class="pair-chart-placeholder" role="img" aria-label="黄金 vs 美元 30 日走势对比图，黄金以金色折线呈现，美元以蓝色折线呈现">
                   走势对比图 · 黄金(金) vs 美元(蓝) · 30D
                 </div>
               </div>
@@ -2549,7 +2600,7 @@
           <label for="overlay-market-depth" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>市场广度</h4>
+          <h2>市场广度</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">涨跌比</span>
             <span class="overlay-field-value up dir-up">382 : 98</span>
@@ -2562,7 +2613,7 @@
             <span class="overlay-field-label">相对恒指</span>
             <span class="overlay-field-value up dir-up">+0.8% α</span>
           </div>
-          <h4>板块资金流向</h4>
+          <h2>板块资金流向</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">主力净流入</span>
             <span class="overlay-field-value val-up dir-up">+42.3 亿</span>
@@ -2575,7 +2626,7 @@
             <span class="overlay-field-label">南向资金</span>
             <span class="overlay-field-value val-up dir-up">+18.6 亿</span>
           </div>
-          <h4>板块细分</h4>
+          <h2>板块细分</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">互联网</span>
             <span class="overlay-field-value val-up dir-up">+2.4%</span>
@@ -2588,7 +2639,7 @@
             <span class="overlay-field-label">消费电子</span>
             <span class="overlay-field-value val-down dir-down">-0.3%</span>
           </div>
-          <h4>领涨个股</h4>
+          <h2>领涨个股</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">腾讯控股</span>
             <span class="overlay-field-value val-up dir-up">+3.2%</span>
@@ -2617,7 +2668,7 @@
           <label for="overlay-index-components" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>权重 Top 5</h4>
+          <h2>权重 Top 5</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">贵州茅台</span>
             <span class="overlay-field-value">5.62%</span>
@@ -2654,7 +2705,7 @@
           <label for="overlay-filter-panel" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>市场区域</h4>
+          <h2>市场区域</h2>
           <div class="filter-list">
             <label class="filter-option">
               <input type="checkbox" checked class="filter-check"> A股
@@ -2669,7 +2720,7 @@
               <input type="checkbox" checked class="filter-check"> 利率 / 外汇 / 商品
             </label>
           </div>
-          <h4>涨跌幅范围</h4>
+          <h2>涨跌幅范围</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">最小涨跌幅</span>
             <span class="overlay-field-value">-5%</span>
@@ -2695,7 +2746,7 @@
           <label for="overlay-event-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>美国 CPI 数据发布</h4>
+          <h2>美国 CPI 数据发布</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">发布时间</span>
             <span class="overlay-field-value">今晚 20:30 EST</span>
@@ -2712,7 +2763,7 @@
             <span class="overlay-field-label">预期核心 CPI</span>
             <span class="overlay-field-value">3.7%</span>
           </div>
-          <h4>影响市场</h4>
+          <h2>影响市场</h2>
           <p>美股（纳指/标普）、美债收益率、美元指数、黄金。若数据低于预期，降息预期升温，利好权益与黄金；若高于预期，利率上行压力加大。</p>
           <div class="overlay-actions">
             <button class="overlay-btn overlay-btn-secondary">加入日历提醒</button>
@@ -3171,7 +3222,7 @@
             <span class="overlay-title">市场深度 · 港股科技</span>
           </div>
           <div class="overlay-body">
-            <h4>板块资金流向</h4>
+            <h2>板块资金流向</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">主力净流入</span>
               <span class="overlay-field-value val-up dir-up">+42.3 亿</span>
@@ -3184,7 +3235,7 @@
               <span class="overlay-field-label">南向资金</span>
               <span class="overlay-field-value val-up dir-up">+18.6 亿</span>
             </div>
-            <h4>领涨个股</h4>
+            <h2>领涨个股</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">腾讯控股</span>
               <span class="overlay-field-value val-up dir-up">+3.2%</span>
@@ -3213,7 +3264,7 @@
             <span class="overlay-title">指数成分股 · 沪深300</span>
           </div>
           <div class="overlay-body">
-            <h4>权重 Top 5</h4>
+            <h2>权重 Top 5</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">贵州茅台</span>
               <span class="overlay-field-value">5.62%</span>
@@ -3250,7 +3301,7 @@
             <span class="overlay-title">筛选器</span>
           </div>
           <div class="overlay-body">
-            <h4>市场区域</h4>
+            <h2>市场区域</h2>
             <div class="filter-list">
               <label class="filter-option">
                 <input type="checkbox" checked class="filter-check"> A股
@@ -3265,7 +3316,7 @@
                 <input type="checkbox" checked class="filter-check"> 利率 / 外汇 / 商品
               </label>
             </div>
-            <h4>涨跌幅范围</h4>
+            <h2>涨跌幅范围</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">最小涨跌幅</span>
               <span class="overlay-field-value">-5%</span>
@@ -3291,7 +3342,7 @@
             <span class="overlay-title">事件详情</span>
           </div>
           <div class="overlay-body">
-            <h4>美国 CPI 数据发布</h4>
+            <h2>美国 CPI 数据发布</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">发布时间</span>
               <span class="overlay-field-value">今晚 20:30 EST</span>
@@ -3308,7 +3359,7 @@
               <span class="overlay-field-label">预期核心 CPI</span>
               <span class="overlay-field-value">3.7%</span>
             </div>
-            <h4>影响市场</h4>
+            <h2>影响市场</h2>
             <p>美股（纳指/标普）、美债收益率、美元指数、黄金。若数据低于预期，降息预期升温，利好权益与黄金；若高于预期，利率上行压力加大。</p>
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">加入日历提醒</button>
