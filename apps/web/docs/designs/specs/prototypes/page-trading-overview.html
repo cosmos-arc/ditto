@@ -1093,6 +1093,14 @@
       background: color-mix(in oklch, var(--market-down-fg) 4%, transparent);
     }
 
+    .status-dot.live.motion-state-only,
+    .risk-item-dot.critical.motion-state-only,
+    .scope-phase .phase-dot.motion-state-only,
+    .pipeline-arrow.motion-state-only,
+    .status-bar .status-indicator.motion-state-only {
+      animation-duration: var(--motion-duration-normal);
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .status-indicator, .risk-item-dot.critical, .scope-phase .phase-dot, .pipeline-arrow {
         transition: none !important;
