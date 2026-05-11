@@ -85,9 +85,7 @@
         "rail list source-separator main inspector-separator inspector";
       width: 100vw;
       height: calc(100dvh - var(--status-bar-height));
-      background:
-        linear-gradient(180deg, color-mix(in oklch, var(--brand-accent) 4%, transparent), transparent 220px),
-        var(--surface-app);
+      background: var(--surface-app);
       color: var(--text-primary);
     }
 
@@ -185,7 +183,8 @@
       padding: 0 var(--space-16);
       border-bottom: 1px solid var(--border-subtle);
       background: var(--surface-frosted);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
     .title-stack {
@@ -203,15 +202,7 @@
       font-weight: var(--font-weight-semibold);
       line-height: 1.2;
       letter-spacing: 0;
-      background: linear-gradient(
-        to right,
-        var(--brand-accent) 0%,
-        var(--brand-accent) 40%,
-        transparent 100%
-      );
-      background-size: 100% 1px;
-      background-repeat: no-repeat;
-      background-position: 0 100%;
+      border-bottom: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
       padding-bottom: 2px;
     }
 
@@ -351,6 +342,13 @@
       background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
     }
 
+    .tab-overflow {
+      min-width: 32px;
+      width: 32px;
+      padding: 0;
+      color: var(--text-secondary);
+    }
+
     .badge {
       min-width: 18px;
       height: 18px;
@@ -382,7 +380,7 @@
     }
 
     .panel-kicker {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       font-family: var(--font-family-ui);
       font-variant-numeric: tabular-nums;
@@ -549,7 +547,7 @@
       align-items: start;
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
     }
 
     .event-time {
@@ -613,7 +611,7 @@
     .card-label {
       display: block;
       color: var(--text-tertiary);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-family: var(--font-family-ui);
       letter-spacing: 0;
     }
@@ -673,7 +671,7 @@
       grid-template-columns: 8px 1fr auto;
       gap: var(--space-8);
       align-items: start;
-      font-size: var(--font-size-11);
+      font-size: var(--font-size-12);
       color: var(--text-secondary);
       line-height: 1.45;
     }
@@ -880,7 +878,7 @@
 
     .finding-row:not(.header):hover {
       background: var(--interaction-hover-subtle-bg);
-      box-shadow: inset 2px 0 0 var(--interaction-selected-border);
+      box-shadow: inset 0 0 0 1px var(--interaction-selected-border);
     }
 
     .trace-item {
@@ -947,14 +945,14 @@
       white-space: nowrap;
     }
     .finding-source.wind { background: color-mix(in oklch, var(--brand-accent) 12%, transparent); color: var(--brand-accent); }
-    .finding-source.tushare { background: color-mix(in oklch, var(--cyan-500, oklch(0.7 0.12 200)) 12%, transparent); color: var(--cyan-500, oklch(0.7 0.12 200)); }
-    .finding-source.internal { background: color-mix(in oklch, var(--purple-500, oklch(0.6 0.14 300)) 12%, transparent); color: var(--purple-500, oklch(0.6 0.14 300)); }
+    .finding-source.tushare { background: color-mix(in oklch, var(--cyan-500) 12%, transparent); color: var(--cyan-500); }
+    .finding-source.internal { background: color-mix(in oklch, var(--purple-500) 12%, transparent); color: var(--purple-500); }
 
     /* Finding checkbox + batch action bar */
     .finding-row .finding-checkbox { width: 16px; height: 16px; accent-color: var(--brand-accent); cursor: pointer; flex-shrink: 0; }
     .finding-row .batch-actions { display: none; }
     .finding-row:has(.finding-checkbox:checked) ~ .batch-actions { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-8); background: var(--surface-strip); border-top: 1px solid var(--border-subtle); font-size: var(--font-size-12); color: var(--text-secondary); }
-    .batch-btn { font-size: var(--font-size-11); font-weight: var(--font-weight-medium); padding: var(--space-2) var(--space-8); border: 1px solid var(--border-default); border-radius: var(--radius-4); cursor: pointer; color: var(--text-secondary); }
+    .batch-btn { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); padding: var(--space-2) var(--space-8); border: 1px solid var(--border-default); border-radius: var(--radius-4); cursor: pointer; color: var(--text-secondary); }
     .batch-btn:hover { background: var(--interaction-hover-subtle-bg); }
     .batch-btn.primary { border-color: var(--brand-accent); color: var(--brand-accent); }
     .batch-btn.primary:hover { background: var(--brand-accent-subtle); }
@@ -970,13 +968,13 @@
     /* ── P0: Score direction indicators ── */
     .card-value[data-delta="up"] { color: var(--system-healthy-fg); }
     .card-value[data-delta="down"] { color: var(--risk-critical-fg); }
-    .card-value[data-delta="up"]::before { content: "▲ "; font-size: 8px; }
-    .card-value[data-delta="down"]::before { content: "▼ "; font-size: 8px; }
+    .card-value[data-delta="up"]::before { content: "▲ "; font-size: var(--font-size-12); }
+    .card-value[data-delta="down"]::before { content: "▼ "; font-size: var(--font-size-12); }
 
     /* ── Non-color status encoding (CVD-safe) ── */
-    .status-pill.running::before { content: "● "; font-size: 6px; }
-    .status-pill.warn::before { content: "▲ "; font-size: 7px; }
-    .status-pill.blocked::before { content: "✕ "; font-size: 8px; }
+    .status-pill.running::before { content: "● "; font-size: var(--font-size-12); }
+    .status-pill.warn::before { content: "▲ "; font-size: var(--font-size-12); }
+    .status-pill.blocked::before { content: "✕ "; font-size: var(--font-size-12); }
 
     /* ── Breathing animations ── */
     @keyframes status-breathe {
@@ -1034,7 +1032,8 @@
 
     /* ── Artifact card accent ── */
     .artifact-card {
-      border-left: 2px solid color-mix(in oklch, var(--brand-accent) 24%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 3%, var(--surface-panel-base));
     }
 
     /* ── Status bar separator fix ── */
@@ -1163,15 +1162,12 @@
       </div>
     </header>
 
-    <nav class="agent-tabs" aria-label="智能体控制台标签" data-contract-slot="tabs">
-      <button class="tab active" type="button">计划 <span class="badge">8</span></button>
-      <button class="tab" type="button">运行 <span class="badge">21</span></button>
+    <nav class="agent-tabs" aria-label="智能体控制台首屏决策" data-contract-slot="tabs" data-decision-cluster>
+      <button class="tab active" type="button" data-decision-option aria-label="查看计划队列">计划 <span class="badge">8</span></button>
+      <button class="tab" type="button" data-decision-option aria-label="查看运行中任务">运行 <span class="badge">21</span></button>
       <button class="tab" type="button">发现 <span class="badge">34</span></button>
-      <button class="tab" type="button">审批 <span class="badge">12</span></button>
-      <button class="tab" type="button">自动研究</button>
-      <button class="tab" type="button">产物</button>
-      <button class="tab" type="button">质量</button>
-      <button class="tab" type="button">策略</button>
+      <button class="tab" type="button" data-decision-option aria-label="查看待审批项">审批 <span class="badge">12</span></button>
+      <button class="tab tab-overflow" type="button" data-decision-overflow aria-haspopup="menu" aria-label="更多控制台视图：自动研究、产物、质量、策略" title="更多控制台视图">⋯</button>
     </nav>
 
     <aside class="list-panel" id="agent-source-panel" data-contract-slot="source" aria-label="Plan 和 Run 列表">
@@ -1328,7 +1324,7 @@
         <div class="panel-title">运行检查器</div>
         <div class="panel-kicker">run-8842</div>
       </div>
-      <section class="inspector-section">
+      <section class="inspector-section" data-decision-evidence data-default-open="true" aria-label="运行检查摘要">
         <div class="section-title">运行摘要</div>
         <div class="kv-grid">
           <div class="kv"><span class="card-label">目标</span><span class="card-value">低相关 Alpha</span></div>
@@ -1345,14 +1341,14 @@
         <div class="trace-item"><span class="dot"></span><span>风控 · 采纳检查待处理</span><span class="status-pill warn">待审批</span></div>
       </section>
 
-      <section class="inspector-section">
+      <section class="inspector-section" data-background-evidence aria-label="活动流">
         <div class="section-title">活动流</div>
         <div class="trace-item"><span class="dot"></span><span>候选因子已创建 · fc-1042</span><span class="event-time">09:42</span></div>
         <div class="trace-item"><span class="dot"></span><span>工具完成 · IC 0.047</span><span class="event-time">09:41</span></div>
         <div class="trace-item"><span class="dot"></span><span>审批请求已发送</span><span class="event-time">09:39</span></div>
       </section>
 
-      <section class="inspector-section">
+      <section class="inspector-section" data-background-evidence aria-label="工具追踪">
         <div class="section-title">工具追踪</div>
         <div class="trace-item"><span class="dot"></span><span><span class="fn">calc_factor_ic</span> · 输入 schema v2 · 输出产物 <span class="str">af-4421</span></span><span><span class="num">2.4</span>s</span></div>
         <div class="trace-item"><span class="dot"></span><span><span class="fn">scan_correlation</span> · 最高相关 <span class="num">0.29</span> · 数据快照 <span class="str">ds-119</span></span><span><span class="num">1.8</span>s</span></div>
@@ -1547,5 +1543,7 @@
     </filter>
   </svg>
   <script src="shared/theme-switcher.js"></script>
+  <link rel="stylesheet" href="shared/prototype-interactions.css">
+  <script src="shared/prototype-interactions.js"></script>
 </body>
 </html>

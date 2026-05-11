@@ -189,7 +189,7 @@
       padding: 0 var(--space-16);
       border-bottom: 1px solid var(--border-subtle);
       background: var(--surface-frosted);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(12px);
       z-index: 1;
     }
 
@@ -1224,10 +1224,10 @@
         <h1 class="page-title header-title">Alpha 探索器</h1>
         <div class="page-subtitle header-subtitle">/research/alpha · run alpha-20260502-017</div>
       </div>
-      <div class="mode-tabs" data-tabs="alpha-mode-tabs" role="tablist" aria-label="探索模式">
-        <button class="mode-tab active" type="button" role="tab" id="tab-alpha-mode-copilot" data-tab-target="copilot" aria-selected="true" aria-controls="panel-alpha-mode-copilot" tabindex="0">Copilot 探索</button>
-        <button class="mode-tab" type="button" role="tab" id="tab-alpha-mode-autoresearch" data-tab-target="autoresearch" aria-selected="false" aria-controls="panel-alpha-mode-autoresearch" tabindex="-1">自动研究审阅</button>
-        <button class="mode-tab" type="button" role="tab" id="tab-alpha-mode-factor-lab" data-tab-target="factor-lab" aria-selected="false" aria-controls="panel-alpha-mode-factor-lab" tabindex="-1">因子实验室</button>
+      <div class="mode-tabs" data-tabs="alpha-mode-tabs" role="tablist" aria-label="Alpha 探索首屏决策" data-decision-cluster>
+        <button class="mode-tab active" type="button" role="tab" id="tab-alpha-mode-copilot" data-tab-target="copilot" data-decision-option aria-label="Copilot 探索当前候选" aria-selected="true" aria-controls="panel-alpha-mode-copilot" tabindex="0">Copilot 探索</button>
+        <button class="mode-tab" type="button" role="tab" id="tab-alpha-mode-autoresearch" data-tab-target="autoresearch" data-decision-option aria-label="自动研究审阅" aria-selected="false" aria-controls="panel-alpha-mode-autoresearch" tabindex="-1">自动研究审阅</button>
+        <button class="mode-tab" type="button" role="tab" id="tab-alpha-mode-factor-lab" data-tab-target="factor-lab" data-decision-option aria-label="因子实验室" aria-selected="false" aria-controls="panel-alpha-mode-factor-lab" tabindex="-1">因子实验室</button>
       </div>
       <div class="header-metrics">
         <div class="header-metric">
@@ -1532,7 +1532,7 @@
       </section>
     </main>
 
-    <aside class="alpha-panel queue-panel" aria-label="采纳队列" data-contract-slot="adoption">
+    <aside class="alpha-panel queue-panel" aria-label="采纳队列" data-contract-slot="adoption" data-background-evidence>
       <div class="panel-header">
         <div class="panel-title">采纳队列</div>
         <div class="panel-kicker">8 项待处理</div>
@@ -1596,7 +1596,7 @@
         <div class="panel-title">候选检查器</div>
         <div class="panel-kicker">fc-1042</div>
       </div>
-      <section class="inspector-section">
+      <section class="inspector-section" data-decision-evidence data-default-open="true" aria-label="候选公式与理由">
         <div class="section-title">公式与理由</div>
         <div class="formula">rank(-ts_delta(close, 12)) * rank(ts_mean(turnover, 20))</div>
         <p class="reason">候选因子捕捉短周期价格回撤后的流动性确认。低流动性尾部被排除后，样本外稳定性提升。</p>
@@ -1616,7 +1616,7 @@
         <div class="exposure-row"><span>工业</span><div class="track"><div class="track-fill fill-38"></div></div><span>+0.11</span></div>
         <div class="exposure-row"><span>金融</span><div class="track"><div class="track-fill fill-62"></div></div><span>-0.23</span></div>
       </section>
-      <section class="inspector-section">
+      <section class="inspector-section" data-decision-evidence data-default-open="true" aria-label="候选证据链">
         <div class="section-title">证据链</div>
         <div class="evidence-item"><span class="dot"></span><span>工具 calc_factor_ic 已完成 · 2.4s · 数据集 cn_daily_v21</span></div>
         <div class="evidence-item"><span class="dot"></span><span>回测产物 bt-8842 · 成本模型 csi800-default</span></div>
@@ -1905,7 +1905,7 @@
               <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="候选深入">
                 <div class="overlay-header"><span class="overlay-title">候选深入 · fc-1042</span></div>
                 <div class="overlay-body">
-                  <h4>指标摘要</h4>
+                  <h2>指标摘要</h2>
                   <div class="overlay-field"><span class="overlay-field-label">OOS IC</span><span class="overlay-field-value">0.036</span></div>
                   <div class="overlay-field"><span class="overlay-field-label">最高相关</span><span class="overlay-field-value">0.29</span></div>
                   <div class="overlay-field"><span class="overlay-field-label">容量</span><span class="overlay-field-value">4200 万</span></div>

@@ -272,7 +272,7 @@
       background-size: 100% 1px;
       background-repeat: no-repeat;
       background-position: 0 100%;
-      padding-bottom: 2px;
+      padding-bottom: var(--space-2);
     }
 
     .strategy-name {
@@ -968,21 +968,22 @@
       gap: var(--space-8);
       padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-4);
-      border-left: 2px solid transparent;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      border: 1px solid transparent;
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .inspector-item:hover {
       background: var(--interaction-hover-subtle-bg);
     }
     .inspector-item.warn {
-      border-left-color: var(--system-degraded-fg);
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 24%, var(--border-subtle));
       background: color-mix(in oklch, var(--system-degraded-fg) 2%, transparent);
     }
     .inspector-item.warn:hover {
       background: color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);
     }
     .inspector-item.info {
-      border-left-color: var(--brand-accent);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       background: color-mix(in oklch, var(--brand-accent) 2%, transparent);
     }
 
@@ -990,7 +991,7 @@
       width: 16px;
       height: 16px;
       flex-shrink: 0;
-      margin-top: 1px;
+      margin-top: var(--space-1);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1003,7 +1004,7 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
     }
 
     .inspector-item-title {
@@ -1027,7 +1028,7 @@
     .summary-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
       padding: var(--space-6);
       background: var(--surface-panel-elevated);
       border-radius: var(--radius-4);
@@ -1151,7 +1152,7 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      padding: 1px var(--space-6);
+      padding: var(--space-1) var(--space-6);
       border-radius: var(--radius-3);
       font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
@@ -1445,7 +1446,7 @@
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      gap: 3px;
+      gap: var(--space-3);
       height: 80px;
       margin-bottom: var(--space-8);
     }
@@ -1457,7 +1458,7 @@
       display: flex;
       justify-content: center;
       gap: var(--space-12);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       margin-top: var(--space-4);
     }
     .distribution-legend-item {
@@ -1520,7 +1521,7 @@
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
-      margin-bottom: 2px;
+      margin-bottom: var(--space-2);
     }
     .toast-result-desc {
       font-size: var(--font-size-12);
@@ -1725,7 +1726,7 @@
       display: flex;
       gap: var(--space-12);
       margin-top: var(--space-6);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
     .equity-curve-legend-dot {
@@ -1753,7 +1754,7 @@
       padding: var(--space-8);
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--space-2);
       position: relative;
       overflow: hidden;
       transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
@@ -1763,7 +1764,7 @@
       border-color: var(--border-default);
     }
     .perf-metric-label {
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -1779,7 +1780,7 @@
     .perf-metric-value.negative { color: var(--market-down-fg); }
     .perf-metric-change {
       font-family: var(--font-family-numeric);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
 
@@ -1801,9 +1802,9 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-4);
-      padding: 2px var(--space-6);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-3);
-      font-size: var(--font-size-10);
+      font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -1942,7 +1943,7 @@
     }
     .param-matrix .param-delta {
       font-size: var(--font-size-10);
-      padding: 1px var(--space-4);
+      padding: var(--space-1) var(--space-4);
       border-radius: var(--radius-3);
     }
     .param-delta.positive {
@@ -2043,26 +2044,27 @@
         </label>
       </div>
       <div class="header-spacer"></div>
-      <div class="studio-actions header-actions" role="toolbar" aria-label="策略操作">
+      <div class="studio-actions header-actions" role="toolbar" aria-label="策略工作台首屏决策" data-decision-cluster>
 
-        <label for="overlay-save-strategy" class="studio-action" tabindex="0" aria-label="保存策略">
+        <label for="overlay-save-strategy" class="studio-action" tabindex="0" data-decision-option aria-label="保存策略">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10l2 2v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4l2-1z"/><path d="M7 3v5h6V3"/><path d="M6 16h8"/></svg>
           保存
         </label>
 
-        <label for="overlay-validation-toast" class="studio-action" tabindex="0" aria-label="校验策略" data-action-icon="shield-check">
+        <label for="overlay-validation-toast" class="studio-action" tabindex="0" data-decision-option aria-label="校验策略" data-action-icon="shield-check">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l6 2.2v4.6c0 3.8-2.4 7.1-6 8.7-3.6-1.6-6-4.9-6-8.7V4.2L10 2z"/><path d="M7.2 10.2l1.8 1.8 3.8-4.2"/></svg>
           校验
         </label>
-        <button class="studio-action" tabindex="0" aria-label="执行 Dry Run 模拟" data-action-icon="test-tube">
+        <button class="studio-action" tabindex="0" data-decision-option aria-label="执行 Dry Run 模拟" data-action-icon="test-tube">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h6"/><path d="M8 3v5.5l-3.8 5.8A2.3 2.3 0 006.1 18h7.8a2.3 2.3 0 001.9-3.7L12 8.5V3"/><path d="M6.8 13h6.4"/></svg>
           Dry Run
         </button>
 
-        <label for="overlay-backtest-config" class="studio-action primary" role="button" tabindex="0" aria-label="提交回测" data-action-icon="rocket" data-answer-action>
+        <label for="overlay-backtest-config" class="studio-action primary" role="button" tabindex="0" data-decision-option aria-label="提交回测" data-action-icon="rocket" data-answer-action>
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3c2.5.6 4.4 2.5 5 5l-5.5 5.5-4-4L12 3z"/><path d="M8 10l-3 1 4 4 1-3"/><path d="M5 15l-2 2"/><circle cx="13" cy="7" r="1.2"/></svg>
           提交回测
         </label>
+        <button class="studio-action" type="button" data-decision-overflow aria-label="更多策略操作">...</button>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
         <button class="header-utility-btn header-command-trigger" type="button" data-shell-utility="command" data-search-scope="global" data-command-scope="global" aria-label="打开全局命令 Ctrl+K" title="打开全局命令 Ctrl+K" data-icon="command">
@@ -2539,7 +2541,7 @@
 
     <aside class="studio-inspector" id="studio-inspector-panel" aria-label="检查器" data-contract-slot="inspector" data-selected-object-region>
       <!-- AI Assistant (always visible above tabs) -->
-      <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0">
+      <div class="inspector-section inspector-section--fixed" data-reveal="fade-up" data-reveal-delay="0" data-decision-evidence data-default-open="true" aria-label="AI 助手建议">
         <div class="inspector-section-title">AI 助手</div>
         <div class="strategy-status-tag validated" title="策略校验通过">
           <span class="strategy-status-dot" data-icon="status-validated"></span>
@@ -2576,7 +2578,7 @@
         <!-- Tab Panel: 策略 -->
         <div data-tab-panel="strategy" class="inspector-tab-panel" id="panel-strategy" role="tabpanel" aria-labelledby="tab-strategy" aria-hidden="false">
           <!-- Warnings / Suggestions -->
-          <div class="inspector-section">
+          <div class="inspector-section" data-decision-evidence data-default-open="true" aria-label="警告与建议">
             <div class="inspector-section-title">警告与建议</div>
             <div class="inspector-list">
               <div class="inspector-item warn" role="alert">
@@ -2812,7 +2814,7 @@
     </aside>
 
     <!-- ═══ Bottom Logs Panel ═══ -->
-    <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="collapsed">
+    <div class="studio-logs bottom-tray" role="log" aria-label="策略日志" data-contract-slot="activity-log" data-tabs="strategy-logs" data-bottom-tray data-bottom-tray-state="collapsed" data-background-evidence>
       <div class="logs-header bottom-tray-header">
         <div class="logs-tabs">
           <span class="logs-tab active" role="tab" aria-selected="true" tabindex="0" data-tab-target="validation" data-log-tab="validation" id="tab-validation" aria-controls="panel-validation">校验结果</span>
@@ -2949,7 +2951,7 @@
           <label for="overlay-save-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>策略信息</h4>
+          <h2>策略信息</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">策略名称</span>
             <span class="overlay-field-value">多因子动量策略 v2.3</span>
@@ -2959,12 +2961,12 @@
             <span class="overlay-field-value">多因子选股</span>
           </div>
 
-          <h4>版本备注</h4>
+          <h2>版本备注</h2>
           <div class="overlay-textarea-full">
             <textarea class="form-textarea" rows="2" placeholder="描述本次修改内容（可选）"></textarea>
           </div>
 
-          <h4>保存类型</h4>
+          <h2>保存类型</h2>
           <div class="overlay-radio-group">
             <label class="overlay-radio-label overlay-radio-label--primary">
               <input type="radio" name="save-type" checked> 新版本
@@ -2991,7 +2993,7 @@
           <label for="overlay-backtest-config" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>回测区间</h4>
+          <h2>回测区间</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">起始日期</span>
             <span class="overlay-field-value">2020-01-02</span>
@@ -3013,7 +3015,7 @@
             <span class="overlay-field-value">每月</span>
           </div>
 
-          <h4>交易成本</h4>
+          <h2>交易成本</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">印花税</span>
             <span class="overlay-field-value">卖出 0.05%</span>
@@ -3048,7 +3050,7 @@
           <label for="overlay-factor-preview" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>动量因子 — 处理前后分布对比</h4>
+          <h2>动量因子 — 处理前后分布对比</h2>
           <div class="distribution-chart">
             <!-- Distribution chart mock -->
             <div class="distribution-bars">
@@ -3070,7 +3072,7 @@
             </div>
           </div>
 
-          <h4>统计摘要</h4>
+          <h2>统计摘要</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">均值</span>
             <span class="overlay-field-value">0.003 → 0.000</span>
@@ -3115,7 +3117,7 @@
     <!-- Overlay 5: 确认策略删除 — Modal (破坏性操作) -->
     <div class="overlay-backdrop" data-overlay="overlay-delete-strategy">
       <label class="overlay-dismiss" for="overlay-delete-strategy" aria-label="关闭"></label>
-      <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-label="确认删除策略">
+      <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-modal="true" aria-label="确认删除策略">
         <div class="overlay-header">
           <span class="overlay-title">确认删除策略</span>
           <label for="overlay-delete-strategy" class="overlay-close" aria-label="关闭">&#10005;</label>
@@ -3529,7 +3531,7 @@
             <span class="overlay-title">保存策略</span>
           </div>
           <div class="overlay-body">
-            <h4>策略信息</h4>
+            <h2>策略信息</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">策略名称</span>
               <span class="overlay-field-value">多因子动量策略 v2.3</span>
@@ -3538,11 +3540,11 @@
               <span class="overlay-field-label">策略类型</span>
               <span class="overlay-field-value">多因子选股</span>
             </div>
-            <h4>版本备注</h4>
+            <h2>版本备注</h2>
             <div class="overlay-textarea-full">
               <textarea class="form-textarea" rows="2" placeholder="描述本次修改内容（可选）"></textarea>
             </div>
-            <h4>保存类型</h4>
+            <h2>保存类型</h2>
             <div class="overlay-radio-group">
               <label class="overlay-radio-label overlay-radio-label--primary">
                 <input type="radio" name="save-type" checked> 新版本
@@ -3568,7 +3570,7 @@
             <span class="overlay-title">回测参数配置</span>
           </div>
           <div class="overlay-body">
-            <h4>回测区间</h4>
+            <h2>回测区间</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">起始日期</span>
               <span class="overlay-field-value">2020-01-02</span>
@@ -3589,7 +3591,7 @@
               <span class="overlay-field-label">调仓频率</span>
               <span class="overlay-field-value">每月</span>
             </div>
-            <h4>交易成本</h4>
+            <h2>交易成本</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">印花税</span>
               <span class="overlay-field-value">卖出 0.05%</span>
@@ -3623,7 +3625,7 @@
             <span class="overlay-title">因子预处理预览</span>
           </div>
           <div class="overlay-body">
-            <h4>动量因子 — 处理前后分布对比</h4>
+            <h2>动量因子 — 处理前后分布对比</h2>
             <div class="distribution-chart">
               <!-- Distribution chart mock -->
               <div class="distribution-bars">
@@ -3644,7 +3646,7 @@
                 <span class="distribution-legend-item"><span class="distribution-legend-dot distribution-legend-dot--after"></span>处理后（Z-Score 标准化）</span>
               </div>
             </div>
-            <h4>统计摘要</h4>
+            <h2>统计摘要</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">均值</span>
               <span class="overlay-field-value">0.003 → 0.000</span>
@@ -3689,7 +3691,7 @@
     <div class="gallery-card" data-overlay-ref="overlay-factor-preview">
       <div class="gallery-card__label">确认删除策略 (Sheet)</div>
       <div class="gallery-card__preview gallery-card__preview--overlay">
-        <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-label="确认删除策略">
+        <div class="overlay-surface overlay-surface--sheet" role="alertdialog" aria-modal="true" aria-label="确认删除策略">
           <div class="overlay-header">
             <span class="overlay-title">确认删除策略</span>
           </div>

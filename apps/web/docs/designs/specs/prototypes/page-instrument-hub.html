@@ -744,7 +744,7 @@
       top: 0;
       height: 100%;
       border-radius: var(--radius-3);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .flow-bar-fill.inflow {
@@ -908,7 +908,7 @@
       gap: var(--space-4);
       padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-4);
-      border-left: 2px solid transparent;
+      border: 1px solid transparent;
       cursor: pointer;
       transition: background var(--motion-duration-fast) var(--motion-easing-standard),
                   border-color var(--motion-duration-fast) var(--motion-easing-standard),
@@ -916,19 +916,19 @@
     }
 
     .signal-item:has(.signal-dot.opportunity) {
-      border-left-color: color-mix(in oklch, var(--system-healthy-fg) 40%, transparent);
+      border-color: color-mix(in oklch, var(--system-healthy-fg) 18%, transparent);
     }
 
     .signal-item:has(.signal-dot.alert) {
-      border-left-color: color-mix(in oklch, var(--risk-medium-fg) 40%, transparent);
+      border-color: color-mix(in oklch, var(--risk-medium-fg) 18%, transparent);
     }
 
     .signal-item:has(.signal-dot.warning) {
-      border-left-color: color-mix(in oklch, var(--risk-high-fg) 40%, transparent);
+      border-color: color-mix(in oklch, var(--risk-high-fg) 18%, transparent);
     }
 
     .signal-item:has(.signal-dot.watch) {
-      border-left-color: color-mix(in oklch, var(--brand-accent) 25%, transparent);
+      border-color: color-mix(in oklch, var(--brand-accent) 16%, transparent);
     }
 
     .signal-item:hover {
@@ -1065,7 +1065,7 @@
     .note-item {
       padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-4);
-      border-left: 2px solid var(--brand-accent);
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
       background: color-mix(in oklch, var(--brand-accent) 4%, transparent);
     }
 
@@ -1648,8 +1648,7 @@
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  padding var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .news-item:last-child { border-bottom: none; }
     .news-item:hover { background: var(--interaction-hover-subtle-bg); padding-left: var(--space-4); padding-right: var(--space-4); }
@@ -1683,8 +1682,7 @@
       padding: var(--space-8) 0;
       border-bottom: 1px solid var(--border-subtle);
       cursor: pointer;
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard),
-                  padding var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .announce-item:last-child { border-bottom: none; }
     .announce-item:hover { background: var(--interaction-hover-subtle-bg); padding-left: var(--space-4); padding-right: var(--space-4); }
@@ -2174,24 +2172,25 @@
         </div>
 
         <!-- CTAs -->
-        <div class="header-ctas">
+        <div class="header-ctas" data-decision-cluster aria-label="标的详情首屏决策">
           <!-- Overlay triggers (checkbox first, label as visual button) -->
-          <label for="overlay-add-watchlist" class="btn cursor-pointer" role="button" tabindex="0" aria-label="加入观察" data-answer-action>
+          <label for="overlay-add-watchlist" class="btn cursor-pointer" role="button" tabindex="0" data-decision-option aria-label="加入观察" data-answer-action>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12m-6-6h12"/></svg>
             加入观察
           </label>
-          <label for="overlay-add-watchlist" class="btn cursor-pointer" aria-label="加入标的池">
+          <label for="overlay-add-watchlist" class="btn cursor-pointer" data-decision-option aria-label="加入标的池">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M4 10h8M4 15h12"/><circle cx="17" cy="15" r="2"/></svg>
             加入标的池
           </label>
-          <label for="overlay-send-research" class="btn cursor-pointer" aria-label="发送到研究">
+          <label for="overlay-send-research" class="btn cursor-pointer" data-decision-option aria-label="发送到研究">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/><path d="M7 9h4"/></svg>
             发送到研究
           </label>
-          <button class="btn" aria-label="打开 Chart Lab">
+          <button class="btn" data-decision-option aria-label="打开 Chart Lab">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M3 14l4-4 3 2 7-7"/></svg>
             Chart Lab
           </button>
+          <button class="btn" type="button" data-decision-overflow aria-label="更多标的操作">...</button>
         </div>
       </div>
       <div class="header-utility-bar" data-header-utility-bar aria-label="全局工具">
@@ -2850,7 +2849,7 @@
       <!-- ── Right: Related / Signals / Notes (shared across all tabs) ── -->
       <aside class="hub-sidebar" data-contract-slot="sidebar" aria-label="标的辅助信息">
         <!-- Signals -->
-        <details class="context-section pos-relative" data-collapse-priority="l2" aria-label="相关信号" data-reveal="fade-up" data-reveal-delay="120" open>
+        <details class="context-section pos-relative" data-collapse-priority="l2" aria-label="相关信号" data-reveal="fade-up" data-reveal-delay="120" data-decision-evidence data-default-open="true" open>
           <summary class="context-section-header context-header">
             <span class="context-section-title context-title">相关信号</span>
             <span class="context-count">3</span>
@@ -2893,7 +2892,7 @@
         </details>
 
         <!-- Related Research (默认折叠 — 低频补充) -->
-        <details class="context-section" data-collapse-priority="l3" aria-label="关联研究" data-reveal="fade-up" data-reveal-delay="160">
+        <details class="context-section" data-collapse-priority="l3" aria-label="关联研究" data-reveal="fade-up" data-reveal-delay="160" data-background-evidence>
           <summary class="context-section-header context-header">
             <span class="context-section-title context-title">关联研究</span>
             <span class="collapse-count">2 条</span>
@@ -2949,11 +2948,11 @@
       <input type="radio" id="bottom-tab-filings" name="bottom-tab" class="sr-only">
       <input type="radio" id="bottom-tab-research" name="bottom-tab" class="sr-only">
       <div class="bottom-tabs" role="tablist">
-        <label for="bottom-tab-events" class="bottom-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="bottom-events">最近事件</label>
-        <label for="bottom-tab-filings" class="bottom-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="bottom-filings">公告</label>
-        <label for="bottom-tab-research" class="bottom-tab" role="tab" tabindex="0" aria-selected="false" aria-controls="bottom-research">关联研究</label>
+        <label for="bottom-tab-events" class="bottom-tab" role="tab" tabindex="0" id="tab-bottom-events" aria-selected="true" aria-controls="bottom-events">最近事件</label>
+        <label for="bottom-tab-filings" class="bottom-tab" role="tab" tabindex="0" id="tab-bottom-filings" aria-selected="false" aria-controls="bottom-filings">公告</label>
+        <label for="bottom-tab-research" class="bottom-tab" role="tab" tabindex="0" id="tab-bottom-research" aria-selected="false" aria-controls="bottom-research">关联研究</label>
       </div>
-      <div class="bottom-content" data-panel="bottom-events" id="bottom-events" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-events" id="bottom-events" role="tabpanel" aria-labelledby="tab-bottom-events">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>
@@ -2989,7 +2988,7 @@
           </div>
         </div>
       </div>
-      <div class="bottom-content" data-panel="bottom-filings" id="bottom-filings" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-filings" id="bottom-filings" role="tabpanel" aria-labelledby="tab-bottom-filings">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker filing" aria-hidden="true"></div>
@@ -3017,7 +3016,7 @@
           </div>
         </div>
       </div>
-      <div class="bottom-content" data-panel="bottom-research" id="bottom-research" role="tabpanel">
+      <div class="bottom-content" data-panel="bottom-research" id="bottom-research" role="tabpanel" aria-labelledby="tab-bottom-research">
         <div class="timeline-list">
           <div class="timeline-item">
             <div class="timeline-marker event" aria-hidden="true"></div>
@@ -3126,7 +3125,7 @@
           <label for="overlay-news-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</h4>
+          <h2>贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">来源</span>
             <span class="overlay-field-value">财联社</span>
@@ -3138,11 +3137,11 @@
           <div class="overlay-section">
             <p class="overlay-body-text">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
           </div>
-          <h4>AI 摘要</h4>
+          <h2>AI 摘要</h2>
           <div class="overlay-ai-callout">
             <p class="overlay-body-text tight">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
           </div>
-          <h4>关联标的</h4>
+          <h2>关联标的</h2>
           <div class="overlay-tag-list">
             <span class="meta-tag">五粮液</span>
             <span class="meta-tag">泸州老窖</span>
@@ -3161,7 +3160,7 @@
           <label for="overlay-announcement-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>2025年年度报告</h4>
+          <h2>2025年年度报告</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">公告日期</span>
             <span class="overlay-field-value">2026-03-25</span>
@@ -3190,7 +3189,7 @@
           <label for="overlay-add-watchlist" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>已有列表</h4>
+          <h2>已有列表</h2>
           <div class="skel-col">
             <label class="form-check-label">
               <input type="checkbox" class="form-input"> 核心池 <span class="form-check-count">12只</span>
@@ -3205,7 +3204,7 @@
               <input type="checkbox" class="form-input"> 白酒专题 <span class="form-check-count">5只</span>
             </label>
           </div>
-          <h4>新建列表</h4>
+          <h2>新建列表</h2>
           <div class="form-row">
             <input type="text" placeholder="输入列表名称..." class="form-text-input">
             <button class="btn panel-shrink">新建</button>
@@ -3227,7 +3226,7 @@
           <label for="overlay-send-research" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>选择目标</h4>
+          <h2>选择目标</h2>
           <div class="skel-col">
             <label class="radio-card">
               <input type="radio" name="research-target" checked class="form-input">
@@ -3242,7 +3241,7 @@
               <div><div class="radio-card-title">AI 实验</div><div class="radio-card-desc">加入 AI 研究实验队列</div></div>
             </label>
           </div>
-          <h4>附注</h4>
+          <h2>附注</h2>
           <textarea placeholder="添加备注..." class="form-textarea"></textarea>
           <div class="overlay-actions">
             <label for="overlay-send-research" class="overlay-btn overlay-btn-secondary cursor-pointer">取消</label>
@@ -3261,7 +3260,7 @@
           <label for="overlay-halt-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>停牌信息</h4>
+          <h2>停牌信息</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">标的</span>
             <span class="overlay-field-value">贵州茅台（600519.SH）</span>
@@ -3278,7 +3277,7 @@
             <span class="overlay-field-label">预计复牌</span>
             <span class="overlay-field-value">2026-04-03</span>
           </div>
-          <h4>历史停牌记录</h4>
+          <h2>历史停牌记录</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">2025-09-15</span>
             <span class="overlay-field-value">临时停牌（1天）</span>
@@ -4114,7 +4113,7 @@
             <span class="overlay-title">新闻详情</span>
           </div>
           <div class="overlay-body">
-            <h4>贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</h4>
+            <h2>贵州茅台2025年年报：净利润862亿超预期，直销渠道占比提升至45%</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">来源</span>
               <span class="overlay-field-value">财联社</span>
@@ -4126,11 +4125,11 @@
             <div class="overlay-section">
               <p class="overlay-body-text">贵州茅台(600519.SH)发布2025年年度报告，全年实现营业总收入1,562亿元，同比增长16.2%；归属于母公司所有者的净利润862亿元，同比增长19.8%，超出市场预期。其中直销渠道收入占比提升至45%，i茅台平台贡献显著增量。公司拟每10股派发现金红利275.28元，分红率51.9%。</p>
             </div>
-            <h4>AI 摘要</h4>
+            <h2>AI 摘要</h2>
             <div class="overlay-ai-callout">
               <p class="overlay-body-text tight">年报整体超预期：净利润+19.8%超市场一致预期2.3pp，直销占比持续提升是核心亮点。分红率维持50%+，股息率1.48%具备防御价值。关注点：系列酒增速放缓及渠道库存变化。</p>
             </div>
-            <h4>关联标的</h4>
+            <h2>关联标的</h2>
             <div class="overlay-tag-list">
               <span class="meta-tag">五粮液</span>
               <span class="meta-tag">泸州老窖</span>
@@ -4149,7 +4148,7 @@
             <span class="overlay-title">公告详情</span>
           </div>
           <div class="overlay-body">
-            <h4>2025年年度报告</h4>
+            <h2>2025年年度报告</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">公告日期</span>
               <span class="overlay-field-value">2026-03-25</span>
@@ -4178,7 +4177,7 @@
             <span class="overlay-title">加入观察 / 标的池</span>
           </div>
           <div class="overlay-body">
-            <h4>已有列表</h4>
+            <h2>已有列表</h2>
             <div class="skel-col">
               <label class="form-check-label">
                 <input type="checkbox" class="form-input"> 核心池 <span class="form-check-count">12只</span>
@@ -4193,7 +4192,7 @@
                 <input type="checkbox" class="form-input"> 白酒专题 <span class="form-check-count">5只</span>
               </label>
             </div>
-            <h4>新建列表</h4>
+            <h2>新建列表</h2>
             <div class="form-row">
               <input type="text" placeholder="输入列表名称..." class="form-text-input">
               <button class="btn panel-shrink">新建</button>
@@ -4215,7 +4214,7 @@
             <span class="overlay-title">发送到研究</span>
           </div>
           <div class="overlay-body">
-            <h4>选择目标</h4>
+            <h2>选择目标</h2>
             <div class="skel-col">
               <label class="radio-card">
                 <input type="radio" name="research-target" checked class="form-input">
@@ -4230,7 +4229,7 @@
                 <div><div class="radio-card-title">AI 实验</div><div class="radio-card-desc">加入 AI 研究实验队列</div></div>
               </label>
             </div>
-            <h4>附注</h4>
+            <h2>附注</h2>
             <textarea placeholder="添加备注..." class="form-textarea"></textarea>
             <div class="overlay-actions">
               <button class="overlay-btn overlay-btn-secondary">取消</button>
@@ -4249,7 +4248,7 @@
             <span class="overlay-title">停牌详情</span>
           </div>
           <div class="overlay-body">
-            <h4>停牌信息</h4>
+            <h2>停牌信息</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">标的</span>
               <span class="overlay-field-value">贵州茅台（600519.SH）</span>
@@ -4266,7 +4265,7 @@
               <span class="overlay-field-label">预计复牌</span>
               <span class="overlay-field-value">2026-04-03</span>
             </div>
-            <h4>历史停牌记录</h4>
+            <h2>历史停牌记录</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">2025-09-15</span>
               <span class="overlay-field-value">临时停牌（1天）</span>
