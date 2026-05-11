@@ -13,7 +13,7 @@
     "featureModule": "src/features/trading",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "queued",
+    "visualAuditStatus": "verified",
     "reactTestRefs": [
       "src/features/trading/components/trading-components.test.tsx",
       "src/features/trading/components/positions-summary.test.tsx"

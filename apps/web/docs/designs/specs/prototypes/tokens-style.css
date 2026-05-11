@@ -19,7 +19,7 @@
   --panel-header-height:    38px;
   --tab-bar-height:         42px;
   --progress-bar-height:    6px;
-  --surface-noise-opacity:  0;
+  --surface-noise-opacity:  0.018;
 
   /* ── Instrument Hub — Domain-specific structural tokens ── */
   --sparkline-width:        48px;    /* metric-card inline sparkline */

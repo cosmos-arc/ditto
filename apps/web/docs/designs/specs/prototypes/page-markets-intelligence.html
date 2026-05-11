@@ -1412,7 +1412,7 @@
       top: 0;
       height: 100%;
       border-radius: var(--radius-3);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .flow-bar-fill.inflow {
       left: 0;
@@ -1839,7 +1839,7 @@
             <span class="header-timeframe">1D</span>
           </div>
           <div class="header-timestamp">09:46 CST</div>
-          <label for="overlay-custom-filter" class="header-action-btn cursor-pointer" title="筛选">
+          <label for="overlay-custom-filter" class="header-action-btn cursor-pointer" title="筛选" aria-label="打开自定义筛选">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h4m6 0h4M3 10h2m3 0h9M3 15h6m3 0h5"/><circle cx="9" cy="5" r="1.5" fill="currentColor"/><circle cx="11" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
           </label>
 
@@ -2944,7 +2944,7 @@
           <label for="overlay-intelligence-detail" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>PMI连续3个月回升，经济复苏动能增强</h4>
+          <h2>PMI连续3个月回升，经济复苏动能增强</h2>
           <div class="text-muted text-body-sm">
             新华财经 · 2026-04-02 09:45
           </div>
@@ -2955,7 +2955,7 @@
             分行业看，高技术制造业PMI为53.5%，继续保持高景气度；装备制造业PMI为52.8%，较上月回升1.2个百分点。小型企业PMI为49.8%，虽仍在荣枯线下方但环比改善明显。
           </p>
 
-          <h4>关联标的</h4>
+          <h2>关联标的</h2>
           <div class="flex-col flex-gap-4">
             <div class="flex-between py-4">
               <span>贵州茅台 600519</span>
@@ -2967,7 +2967,7 @@
             </div>
           </div>
 
-          <h4>AI 解读</h4>
+          <h2>AI 解读</h2>
           <p class="text-secondary text-body">
             PMI超预期回升表明制造业景气度持续改善，利好<strong class="text-primary">消费</strong>和<strong class="text-primary">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
           </p>
@@ -2989,7 +2989,7 @@
           <label for="overlay-custom-filter" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>情报分类</h4>
+          <h2>情报分类</h2>
           <div class="flex-gap-6 py-4">
             <label class="form-checkbox-label">
               <input type="checkbox" checked class="form-checkbox"> 资金面
@@ -3008,7 +3008,7 @@
             </label>
           </div>
 
-          <h4>股票池</h4>
+          <h2>股票池</h2>
           <div class="flex-gap-6 py-4">
             <label class="form-checkbox-label">
               <input type="radio" name="filter-pool" checked class="form-checkbox"> 沪深300
@@ -3021,13 +3021,13 @@
             </label>
           </div>
 
-          <h4>资金阈值</h4>
+          <h2>资金阈值</h2>
           <div class="form-row">
             <span class="cell-tertiary">净流入 &gt;</span>
             <input type="text" value="1亿" class="form-input">
           </div>
 
-          <h4>时间范围</h4>
+          <h2>时间范围</h2>
           <div class="flex-gap-6 py-4">
             <label class="form-checkbox-label">
               <input type="radio" name="filter-time" checked class="form-checkbox"> 今日
@@ -3098,12 +3098,12 @@
           <label for="overlay-send-to-copilot" class="overlay-close" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
-          <h4>发送内容</h4>
+          <h2>发送内容</h2>
           <p class="text-secondary text-body-sm mb-8">
             将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
           </p>
 
-          <h4>包含内容</h4>
+          <h2>包含内容</h2>
           <div class="flex-col flex-gap-4">
             <label class="form-checkbox-label">
               <input type="checkbox" checked class="form-checkbox"> AI 摘要
@@ -3122,7 +3122,7 @@
             </label>
           </div>
 
-          <h4>附加指令</h4>
+          <h2>附加指令</h2>
           <div class="py-6">
             <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." class="form-textarea"></textarea>
           </div>
@@ -3495,7 +3495,7 @@
             <span class="overlay-title">情报详情</span>
           </div>
           <div class="overlay-body">
-            <h4>PMI连续3个月回升，经济复苏动能增强</h4>
+            <h2>PMI连续3个月回升，经济复苏动能增强</h2>
             <div class="text-muted text-body-sm">
               新华财经 · 2026-04-02 09:45
             </div>
@@ -3505,7 +3505,7 @@
             <p class="text-secondary text-body mt-8">
               分行业看，高技术制造业PMI为53.5%，继续保持高景气度；装备制造业PMI为52.8%，较上月回升1.2个百分点。小型企业PMI为49.8%，虽仍在荣枯线下方但环比改善明显。
             </p>
-            <h4>关联标的</h4>
+            <h2>关联标的</h2>
             <div class="flex-col flex-gap-4">
               <div class="flex-between py-4">
                 <span>贵州茅台 600519</span>
@@ -3516,7 +3516,7 @@
                 <span class="stock-quick-change up dir-up">+5.20%</span>
               </div>
             </div>
-            <h4>AI 解读</h4>
+            <h2>AI 解读</h2>
             <p class="text-secondary text-body">
               PMI超预期回升表明制造业景气度持续改善，利好<strong class="text-primary">消费</strong>和<strong class="text-primary">制造</strong>板块。新订单指数连续走强预示需求端回暖，建议关注库存周期反转机会。
             </p>
@@ -3537,7 +3537,7 @@
             <span class="overlay-title">自定义筛选</span>
           </div>
           <div class="overlay-body">
-            <h4>情报分类</h4>
+            <h2>情报分类</h2>
             <div class="flex-gap-6 py-4">
               <label class="form-checkbox-label">
                 <input type="checkbox" checked class="form-checkbox"> 资金面
@@ -3555,7 +3555,7 @@
                 <input type="checkbox" class="form-checkbox"> 关联网络
               </label>
             </div>
-            <h4>股票池</h4>
+            <h2>股票池</h2>
             <div class="flex-gap-6 py-4">
               <label class="form-checkbox-label">
                 <input type="radio" name="filter-pool" checked class="form-checkbox"> 沪深300
@@ -3567,12 +3567,12 @@
                 <input type="radio" name="filter-pool" class="form-checkbox"> 全A
               </label>
             </div>
-            <h4>资金阈值</h4>
+            <h2>资金阈值</h2>
             <div class="form-row">
               <span class="cell-tertiary">净流入 &gt;</span>
               <input type="text" value="1亿" class="form-input">
             </div>
-            <h4>时间范围</h4>
+            <h2>时间范围</h2>
             <div class="flex-gap-6 py-4">
               <label class="form-checkbox-label">
                 <input type="radio" name="filter-time" checked class="form-checkbox"> 今日
@@ -3643,11 +3643,11 @@
             <span class="overlay-title">发送到 Copilot</span>
           </div>
           <div class="overlay-body">
-            <h4>发送内容</h4>
+            <h2>发送内容</h2>
             <p class="text-secondary text-body-sm mb-8">
               将当前情报摘要与分析发送到 Copilot，AI 将基于最新数据生成深度研究报告。
             </p>
-            <h4>包含内容</h4>
+            <h2>包含内容</h2>
             <div class="flex-col flex-gap-4">
               <label class="form-checkbox-label">
                 <input type="checkbox" checked class="form-checkbox"> AI 摘要
@@ -3665,7 +3665,7 @@
                 <input type="checkbox" class="form-checkbox"> 宏观指标
               </label>
             </div>
-            <h4>附加指令</h4>
+            <h2>附加指令</h2>
             <div class="py-6">
               <textarea placeholder="输入附加指令，如：重点分析科技板块资金流向..." class="form-textarea"></textarea>
             </div>

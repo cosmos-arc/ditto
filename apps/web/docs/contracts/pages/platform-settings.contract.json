@@ -16,7 +16,7 @@
     "featureModule": "src/features/platform",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "queued",
+    "visualAuditStatus": "verified",
     "reactTestRefs": [
       "src/features/platform/components/platform-components.test.tsx",
       "src/features/platform/hooks/platform-hooks.test.tsx"

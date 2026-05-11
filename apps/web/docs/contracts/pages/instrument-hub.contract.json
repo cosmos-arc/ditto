@@ -13,7 +13,7 @@
     "featureModule": "src/features/instruments",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "queued",
+    "visualAuditStatus": "verified",
     "reactTestRefs": [
       "src/features/instruments/components/info-level-annotations.test.tsx",
       "src/features/instruments/components/instrument-components.test.tsx"

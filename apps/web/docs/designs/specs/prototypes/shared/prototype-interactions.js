@@ -3792,9 +3792,44 @@
 
   /* ── Dynamic module base styles loaded via shared/prototype-interactions.css ── */
 
+  /* ══════════════════════════════════════════════
+   * PrototypeViewportGuard
+   *     Shared desktop-only safety notice for narrow screens.
+   * ══════════════════════════════════════════════ */
+  var PrototypeViewportGuard = {
+    init: function () {
+      if (document.querySelector('.prototype-viewport-guard')) return;
+
+      var guard = document.createElement('div');
+      guard.className = 'prototype-viewport-guard';
+      guard.setAttribute('role', 'alert');
+      guard.setAttribute('aria-live', 'polite');
+      guard.innerHTML = [
+        '<div class="prototype-viewport-guard__panel">',
+        '<span class="prototype-viewport-guard__kicker">Desktop prototype</span>',
+        '<strong class="prototype-viewport-guard__title">当前原型面向桌面工作台</strong>',
+        '<p class="prototype-viewport-guard__body">最小可用宽度为 1024px。窄屏只展示安全提示，交易、审批和风控判断不应在此视口执行。</p>',
+        '<span class="prototype-viewport-guard__meta">当前宽度 <span data-viewport-width></span>px</span>',
+        '</div>',
+      ].join('');
+
+      document.body.appendChild(guard);
+      PrototypeViewportGuard._syncWidth();
+      window.addEventListener('resize', PrototypeViewportGuard._syncWidth, { passive: true });
+    },
+
+    _syncWidth: function () {
+      var width = Math.round(window.innerWidth || document.documentElement.clientWidth || 0);
+      document.querySelectorAll('[data-viewport-width]').forEach(function (node) {
+        node.textContent = String(width);
+      });
+    },
+  };
+
   /* ── Auto-initialize ── */
   function init() {
     watchCssVarCacheInvalidation();
+    PrototypeViewportGuard.init();
     Tabs.init();
     RadioTabLabels.init();
     InteractiveRoleActions.init();

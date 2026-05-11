@@ -80,6 +80,25 @@ const targetSizeAuditViewports = [
 	{ name: "1536x1080", width: 1536, height: 1080 },
 ] as const;
 const semanticPolishPageIds = ["alpha-explorer", "agent-console-v2", "signals-inbox", "home"] as const;
+const representativeKeyboardPageIds = [
+	"instrument-hub",
+	"strategy-studio",
+	"signals-inbox",
+	"orders-ledger",
+	"risk-center",
+	"agent-console-v2",
+	"markets-screener",
+	"alpha-explorer",
+] as const;
+const reducedMotionPriorityPageIds = [
+	"portfolio",
+	"a-shares",
+	"strategies-detail",
+	"platform-settings",
+	"agent-console-v2",
+	"markets-intelligence",
+	"regime-monitor",
+] as const;
 const navigationTimeoutMs = 10_000;
 const targetSizeNavigationTimeoutMs = 30_000;
 const playwrightTestTimeoutMs = 15_000;
@@ -1460,6 +1479,53 @@ async function collectTargetSizeViolations(
 	return pageViolations.map((violation) => `${pageMeta.id}@${viewportName}: ${violation}`);
 }
 
+async function collectViewportGuardViolations(page: import("playwright").Page, pageMeta: ManifestPage): Promise<string[]> {
+	await page.goto(getPrototypeUrl(pageMeta), {
+		waitUntil: "load",
+		timeout: targetSizeNavigationTimeoutMs,
+	});
+
+	const guard = await page.evaluate(() => {
+		const element = document.querySelector<HTMLElement>(".prototype-viewport-guard");
+		if (!element) return { exists: false };
+
+		const style = getComputedStyle(element);
+		const rect = element.getBoundingClientRect();
+		const text = element.textContent?.replace(/\s+/g, " ").trim() ?? "";
+		const viewportWidth = document.querySelector<HTMLElement>("[data-viewport-width]")?.textContent?.trim() ?? "";
+
+		return {
+			display: style.display,
+			exists: true,
+			height: Math.round(rect.height),
+			role: element.getAttribute("role") ?? "",
+			text,
+			viewportWidth,
+			visibility: style.visibility,
+			visible: style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0,
+			width: Math.round(rect.width),
+		};
+	});
+
+	if (!guard.exists) return [`${pageMeta.id}:missing-guard`];
+
+	const violations: string[] = [];
+	if (!guard.visible) {
+		violations.push(`${pageMeta.id}:guard-not-visible:${guard.display}:${guard.visibility}:${guard.width}x${guard.height}`);
+	}
+	if (guard.role !== "alert") {
+		violations.push(`${pageMeta.id}:guard-role:${guard.role || "missing"}`);
+	}
+	if (!guard.text.includes("当前原型面向桌面工作台")) {
+		violations.push(`${pageMeta.id}:guard-copy`);
+	}
+	if (guard.viewportWidth !== "390") {
+		violations.push(`${pageMeta.id}:guard-width:${guard.viewportWidth || "missing"}`);
+	}
+
+	return violations;
+}
+
 describe("prototype interaction UX contracts", () => {
 	it("activates role button elements from Enter and Space through shared interactions", () => {
 		const dom = new JSDOM(
@@ -2403,6 +2469,195 @@ describe("prototype interaction UX contracts", () => {
 			await browser.close();
 		}
 	}, playwrightTestTimeoutMs);
+
+	it("shows the desktop-only viewport guard at 390px for every active prototype", async () => {
+		const browser = await launchPrototypeBrowser();
+		const violations: string[] = [];
+
+		try {
+			const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+			page.setDefaultNavigationTimeout(navigationTimeoutMs);
+
+			try {
+				for (const pageMeta of activePages()) {
+					violations.push(...(await collectViewportGuardViolations(page, pageMeta)));
+				}
+			} finally {
+				await closePlaywrightPage(page);
+			}
+		} finally {
+			await closePlaywrightBrowser(browser);
+		}
+
+		expect(violations).toEqual([]);
+	}, 120_000);
+
+	it("keeps representative high-risk page keyboard and ARIA paths live in browser", async () => {
+		const browser = await launchPrototypeBrowser();
+		const violations: string[] = [];
+
+		try {
+			for (const pageId of representativeKeyboardPageIds) {
+				const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+				page.setDefaultNavigationTimeout(navigationTimeoutMs);
+
+				try {
+					await page.goto(getPrototypeUrl(getActivePageById(pageId)), {
+						waitUntil: "load",
+						timeout: targetSizeNavigationTimeoutMs,
+					});
+
+					const pageState = await page.evaluate(() => {
+						const primaryActions = document.querySelectorAll(
+							"[data-primary-answer] [data-answer-action], [data-primary-answer-equivalent] [data-answer-action]",
+						);
+						const commandTriggers = document.querySelectorAll(
+							"[data-shell-utility='command'], .header-command-trigger, [data-command-trigger]",
+						);
+						const overlays = Array.from(document.querySelectorAll<HTMLElement>(".overlay-surface"));
+						const invalidOverlays = overlays.filter((overlay) => {
+							const role = overlay.getAttribute("role");
+							const hasName = Boolean(
+								overlay.getAttribute("aria-label")?.trim() || overlay.getAttribute("aria-labelledby")?.trim(),
+							);
+							const modalRole = role === "dialog" || role === "alertdialog";
+
+							return (
+								!hasName ||
+								!(modalRole || role === "alert") ||
+								(modalRole && overlay.getAttribute("aria-modal") !== "true")
+							);
+						});
+						const chartContracts = document.querySelectorAll("[data-chart-interaction-contract]");
+						const readyCharts = document.querySelectorAll("[data-chart-prototype-ready='true']");
+
+						return {
+							chartContracts: chartContracts.length,
+							commandTriggers: commandTriggers.length,
+							invalidOverlays: invalidOverlays.length,
+							overlays: overlays.length,
+							primaryActions: primaryActions.length,
+							readyCharts: readyCharts.length,
+						};
+					});
+
+					if (pageState.primaryActions < 1) {
+						violations.push(`${pageId}:primary-action`);
+					}
+					if (pageState.commandTriggers < 1) {
+						violations.push(`${pageId}:command-trigger`);
+					}
+					if (pageState.overlays > 0 && pageState.invalidOverlays > 0) {
+						violations.push(`${pageId}:invalid-overlays:${pageState.invalidOverlays}`);
+					}
+					if (pageState.chartContracts !== pageState.readyCharts) {
+						violations.push(`${pageId}:chart-ready:${pageState.readyCharts}/${pageState.chartContracts}`);
+					}
+
+					await page.keyboard.press("Control+K");
+					const commandState = await page.evaluate(() => {
+						const palette = document.querySelector<HTMLElement>("[data-command-palette]");
+						const suggestions = palette?.querySelectorAll("[data-command-suggestion], [data-command-action]") ?? [];
+
+						return {
+							hidden: palette?.hidden ?? true,
+							role: palette?.getAttribute("role") ?? "",
+							suggestions: suggestions.length,
+							text: palette?.textContent ?? "",
+						};
+					});
+
+					if (
+						commandState.hidden ||
+						commandState.role !== "dialog" ||
+						(commandState.suggestions < 1 && !commandState.text.includes("暂无对象上下文动作"))
+					) {
+						violations.push(`${pageId}:command-palette`);
+					}
+
+					await page.keyboard.press("Escape");
+					await page.evaluate(() => {
+						document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
+					});
+
+					const shortcutState = await page.evaluate(() => {
+						const overlay = document.querySelector<HTMLElement>("[data-shortcuts-overlay]");
+						const close = overlay?.querySelector<HTMLElement>("[data-shortcuts-close]");
+
+						return {
+							closeFocused: close ? document.activeElement === close : false,
+							hidden: overlay?.hidden ?? true,
+							role: overlay?.getAttribute("role") ?? "",
+							text: overlay?.textContent ?? "",
+						};
+					});
+
+					if (
+						shortcutState.hidden ||
+						shortcutState.role !== "dialog" ||
+						!shortcutState.closeFocused ||
+						!shortcutState.text.includes("Ctrl K")
+					) {
+						violations.push(`${pageId}:shortcut-overlay`);
+					}
+
+					await page.keyboard.press("Escape");
+				} finally {
+					await closePlaywrightPage(page);
+				}
+			}
+		} finally {
+			await closePlaywrightBrowser(browser);
+		}
+
+		expect(violations).toEqual([]);
+	}, 90_000);
+
+	it("keeps reduced motion active on priority pages in browser", async () => {
+		const browser = await launchPrototypeBrowser();
+		const violations: string[] = [];
+
+		try {
+			for (const pageId of reducedMotionPriorityPageIds) {
+				const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
+				page.setDefaultNavigationTimeout(navigationTimeoutMs);
+				await page.emulateMedia({ reducedMotion: "reduce" });
+
+				try {
+					await page.goto(getPrototypeUrl(getActivePageById(pageId)), {
+						waitUntil: "load",
+						timeout: targetSizeNavigationTimeoutMs,
+					});
+
+					const motionState = await page.evaluate(() => {
+						const readyCharts = Array.from(document.querySelectorAll<HTMLElement>("[data-chart-prototype-ready='true']"));
+						const reducedCharts = readyCharts.filter(
+							(chart) => chart.getAttribute("data-chart-reduced-motion") === "true",
+						);
+
+						return {
+							documentReduced: document.documentElement.hasAttribute("data-reduced-motion"),
+							readyCharts: readyCharts.length,
+							reducedCharts: reducedCharts.length,
+						};
+					});
+
+					if (!motionState.documentReduced) {
+						violations.push(`${pageId}:document-reduced-motion`);
+					}
+					if (motionState.readyCharts !== motionState.reducedCharts) {
+						violations.push(`${pageId}:chart-reduced-motion:${motionState.reducedCharts}/${motionState.readyCharts}`);
+					}
+				} finally {
+					await closePlaywrightPage(page);
+				}
+			}
+		} finally {
+			await closePlaywrightBrowser(browser);
+		}
+
+		expect(violations).toEqual([]);
+	}, 60_000);
 
 	it("keeps visible interactive targets at least 24px by 24px or explicitly exempted", async () => {
 		let browser = await launchPrototypeBrowser();
@@ -3404,9 +3659,9 @@ describe("prototype interaction UX contracts", () => {
 			it("keeps row context menu focus and viewport overflow affordances visible", () => {
 				const css = readSharedInteractionsCss();
 
-				expect(css).toMatch(
-					/\.ditto-row-context-menu\s*\{[^}]*max-height:\s*calc\(100vh - 16px\);[^}]*overflow:\s*auto;/s,
-				);
+		expect(css).toMatch(
+			/\.ditto-row-context-menu\s*\{[^}]*max-height:\s*calc\(100dvh - 16px\);[^}]*overflow:\s*auto;/s,
+		);
 				expect(css).toMatch(
 					/\.ditto-row-context-menu-item:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--interaction-focus-ring\);[^}]*outline-offset:\s*1px;/s,
 				);

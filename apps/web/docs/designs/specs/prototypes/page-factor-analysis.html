@@ -534,7 +534,7 @@
     .sparkline-down-40 { width: 32px; height: 38px; background: color-mix(in oklch, var(--market-down-fg) 40%, transparent); border-radius: var(--radius-2); }
     .chart-min-h { width: 100%; min-height: 60px; }
     .chart-mt-svg { width: 100%; margin-top: var(--space-8); opacity: 0.8; }
-    .overlay-surface { border-left: 2px solid color-mix(in oklch, var(--brand-accent) 40%, transparent); }
+    .overlay-surface { border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle)); }
     .overlay-backdrop {
       width: min(420px, calc(100vw - 32px));
       background: var(--surface-elevated);
@@ -1523,12 +1523,12 @@
         <label for="overlay-add-backtest" class="overlay-close" aria-label="关闭">&#10005;</label>
       </div>
       <div class="overlay-body">
-        <h4>目标回测</h4>
+        <h2>目标回测</h2>
         <div class="overlay-field">
           <span class="overlay-field-label">回测选择</span>
           <span class="overlay-field-value">新建回测</span>
         </div>
-        <h4>权重配置</h4>
+        <h2>权重配置</h2>
         <div class="overlay-field">
           <span class="overlay-field-label">因子权重</span>
           <span class="overlay-field-value numeric">0.20</span>
@@ -1553,12 +1553,12 @@
         <label for="overlay-add-experiment" class="overlay-close" aria-label="关闭">&#10005;</label>
       </div>
       <div class="overlay-body">
-        <h4>目标实验</h4>
+        <h2>目标实验</h2>
         <div class="overlay-field">
           <span class="overlay-field-label">实验选择</span>
           <span class="overlay-field-value">新建实验</span>
         </div>
-        <h4>变量角色</h4>
+        <h2>变量角色</h2>
         <div class="overlay-field">
           <span class="overlay-field-label">角色分配</span>
           <span class="overlay-field-value">实验组</span>
@@ -1579,14 +1579,14 @@
         <label for="overlay-ai-analysis" class="overlay-close" aria-label="关闭">&#10005;</label>
       </div>
       <div class="overlay-body">
-        <h4>解读维度</h4>
+        <h2>解读维度</h2>
         <div class="flex-wrap-gap">
           <span class="meta-tag brand cursor-pointer">IC 分析</span>
           <span class="meta-tag cursor-pointer">收益分析</span>
           <span class="meta-tag cursor-pointer">风险分析</span>
           <span class="meta-tag cursor-pointer">综合评估</span>
         </div>
-        <h4>附加上下文</h4>
+        <h2>附加上下文</h2>
         <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea chart-min-h"></textarea>
         <div class="overlay-actions">
           <label for="overlay-ai-analysis" class="overlay-btn overlay-btn-secondary">取消</label>
@@ -1844,12 +1844,12 @@
                   <span class="overlay-title">加入回测</span>
                 </div>
                 <div class="overlay-body">
-                  <h4>目标回测</h4>
+                  <h2>目标回测</h2>
                   <div class="overlay-field">
                     <span class="overlay-field-label">回测选择</span>
                     <span class="overlay-field-value">新建回测</span>
                   </div>
-                  <h4>权重配置</h4>
+                  <h2>权重配置</h2>
                   <div class="overlay-field">
                     <span class="overlay-field-label">因子权重</span>
                     <span class="overlay-field-value numeric">0.20</span>
@@ -1876,12 +1876,12 @@
                   <span class="overlay-title">加入实验</span>
                 </div>
                 <div class="overlay-body">
-                  <h4>目标实验</h4>
+                  <h2>目标实验</h2>
                   <div class="overlay-field">
                     <span class="overlay-field-label">实验选择</span>
                     <span class="overlay-field-value">新建实验</span>
                   </div>
-                  <h4>变量角色</h4>
+                  <h2>变量角色</h2>
                   <div class="overlay-field">
                     <span class="overlay-field-label">角色分配</span>
                     <span class="overlay-field-value">实验组</span>
@@ -1904,14 +1904,14 @@
                   <span class="overlay-title">AI 因子解读</span>
                 </div>
                 <div class="overlay-body">
-                  <h4>解读维度</h4>
+                  <h2>解读维度</h2>
                   <div class="flex-wrap-gap">
                     <span class="meta-tag brand cursor-pointer">IC 分析</span>
                     <span class="meta-tag cursor-pointer">收益分析</span>
                     <span class="meta-tag cursor-pointer">风险分析</span>
                     <span class="meta-tag cursor-pointer">综合评估</span>
                   </div>
-                  <h4>附加上下文</h4>
+                  <h2>附加上下文</h2>
                   <textarea placeholder="可选：补充分析背景或关注点..." class="form-textarea chart-min-h"></textarea>
                   <div class="overlay-actions">
                     <button class="overlay-btn overlay-btn-secondary">取消</button>

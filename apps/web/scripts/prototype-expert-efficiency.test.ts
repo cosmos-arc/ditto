@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
@@ -22,6 +22,14 @@ const maxVisibleDecisionOptions = 4;
 
 function loadDocument(file: string): Document {
 	return new JSDOM(readFileSync(resolve(prototypesDir, file), "utf8")).window.document;
+}
+
+function readPrototypeFile(file: string): string {
+	return readFileSync(resolve(prototypesDir, file), "utf8");
+}
+
+function readActivePrototypeFiles(): string[] {
+	return readdirSync(prototypesDir).filter((file) => /^page-.*\.html$/.test(file));
 }
 
 function readActionIds(element: Element | null): string[] {
@@ -152,6 +160,93 @@ describe("prototype expert efficiency", () => {
 
 		expect(states.has("stale")).toBe(true);
 		expect(states.has("selected")).toBe(true);
+	});
+
+	it("keeps Home default view free of prototype state gallery fixtures", () => {
+		const document = loadDocument("page-home.html");
+		const defaultView = document.querySelector("#default-view");
+		const leakedFixtures = Array.from(
+			defaultView?.querySelectorAll(
+				[
+					".state-stale-variant",
+					".state-variant-content",
+					'[data-state="stale"][aria-label*="过期状态"]',
+					'[data-state="selected"][aria-label*="选中状态"]',
+				].join(", "),
+			) ?? [],
+		).map((element) => element.getAttribute("data-contract-slot") ?? element.className);
+
+		expect(leakedFixtures).toEqual([]);
+	});
+
+	it("declares a safe narrow-viewport strategy for desktop-only prototypes", () => {
+		const layoutCss = readPrototypeFile("shared/layout-shell.css");
+		const interactionsJs = readPrototypeFile("shared/prototype-interactions.js");
+
+		expect(layoutCss).toContain("--prototype-min-desktop-width: 1024px;");
+		expect(layoutCss).toContain(".prototype-viewport-guard");
+		expect(layoutCss).toContain("@media (max-width: 767px)");
+		expect(interactionsJs).toContain("PrototypeViewportGuard");
+		expect(interactionsJs).toContain("当前原型面向桌面工作台");
+	});
+
+	it("keeps Agent Console V2 top-level navigation to four primary tabs plus overflow", () => {
+		const document = loadDocument("page-agent-console-v2.html");
+		const primaryTabs = document.querySelectorAll(".agent-tabs .tab:not(.tab-overflow)");
+		const overflow = document.querySelector(".agent-tabs .tab-overflow[aria-haspopup='menu']");
+
+		expect(primaryTabs.length).toBeLessThanOrEqual(4);
+		expect(overflow?.getAttribute("aria-label")).toContain("更多控制台视图");
+	});
+
+	it("keeps active prototype cards and lists free of thick directional side stripes", () => {
+		const violations: string[] = [];
+		const sideStripePattern =
+			/(border-(?:left|right):\s*(?:[2-9]|[0-9]{2,})px|border-left:\s*var\(--accent|box-shadow:\s*inset\s*-?(?:[2-9]|[0-9]{2,})px\s+0)/;
+
+		for (const file of readActivePrototypeFiles()) {
+			const lines = readPrototypeFile(file).split("\n");
+			lines.forEach((line, index) => {
+				const sortTriangle =
+					file === "page-research.html" &&
+					/border-(?:left|right):\s*3px\s+solid\s+transparent/.test(line) &&
+					lines.slice(index, index + 3).some((candidate) => candidate.includes("border-bottom: 4px solid"));
+
+				if (sideStripePattern.test(line) && !sortTriangle) {
+					violations.push(`${file}:${index + 1}:${line.trim()}`);
+				}
+			});
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps sampled material effects within the freeze budget", () => {
+		const sampledFiles = [
+			"page-home.html",
+			"page-trading-overview.html",
+			"page-strategy-studio.html",
+			"page-risk-center.html",
+			"page-agent-console-v2.html",
+			"page-orders-ledger.html",
+			"shared/layout-shell.css",
+		];
+		const violations = sampledFiles.flatMap((file) => {
+			const content = readPrototypeFile(file);
+			const overBlur = content.match(/backdrop-filter:\s*blur\((?:1[3-9]|[2-9][0-9])px/);
+			const frostedSaturate = content.match(/backdrop-filter:[^;]*saturate\(/);
+			const ambientShellGradient = content.match(
+				/linear-gradient\(180deg,\s*color-mix\(in oklch,\s*var\(--brand-accent\)[^;]+var\(--surface-app\)/,
+			);
+
+			return [
+				overBlur ? `${file}:over-blur:${overBlur[0]}` : "",
+				frostedSaturate ? `${file}:frosted-saturate:${frostedSaturate[0]}` : "",
+				ambientShellGradient ? `${file}:ambient-shell-gradient` : "",
+			].filter(Boolean);
+		});
+
+		expect(violations).toEqual([]);
 	});
 
 	it("exposes Studio and Agent slots needed for React parity", () => {

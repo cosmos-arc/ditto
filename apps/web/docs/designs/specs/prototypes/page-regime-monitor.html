@@ -1199,8 +1199,8 @@
       gap: var(--space-12);
       padding: var(--space-12);
       background: var(--interaction-hover-subtle-bg);
-      border-left: 2px solid var(--brand-accent);
-      border-radius: 0 var(--radius-6) var(--radius-6) 0;
+      border: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      border-radius: var(--radius-6);
     }
     .ai-callout__label {
       font-size: var(--font-size-10);
@@ -1372,7 +1372,7 @@
       border-radius: 3px;
       position: relative;
       min-width: 20px;
-      transition: flex-grow 0.3s ease;
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .regime-timeline-segment--risk-on {
       background: var(--market-up-fg);
@@ -1545,7 +1545,7 @@
     .fit-bar__fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
     .fit-bar__fill--good { background: var(--risk-low-fg); }
     .fit-bar__fill--moderate { background: var(--risk-medium-fg); }
@@ -1768,7 +1768,7 @@
 
     /* ── Fit bar fill animate ── */
     .fit-bar__fill {
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* ── Regime time button enhanced hover ── */
@@ -1812,14 +1812,19 @@
     .heatgrid-legend {
       display: flex;
       align-items: center;
-      gap: var(--space-16);
-      font-size: var(--font-size-10);
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: var(--space-6) var(--space-10);
+      max-width: 100%;
+      font-size: var(--font-size-12);
       color: var(--text-tertiary);
     }
     .heatgrid-legend-item {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: var(--space-4);
+      min-width: 0;
+      white-space: nowrap;
     }
     .heatgrid-legend-swatch {
       width: 8px;
@@ -2815,7 +2820,7 @@
           <label for="overlay-ai-regime" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>当前 Regime 判定</h4>
+          <h2>当前 Regime 判定</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">Regime 状态</span>
             <span class="overlay-field-value overlay-field-value--up">温和 Risk-On</span>
@@ -2833,7 +2838,7 @@
             <span class="overlay-field-value">Mixed (22 天)</span>
           </div>
 
-          <h4>核心驱动因子</h4>
+          <h2>核心驱动因子</h2>
           <div class="overlay-driver-list">
             <div class="overlay-driver-row">
               <span class="overlay-driver-name">波动率 (IVIX)</span>
@@ -2858,7 +2863,7 @@
             </div>
           </div>
 
-          <h4>AI 分析摘要</h4>
+          <h2>AI 分析摘要</h2>
           <p class="overlay-analysis">
             当前市场处于<strong class="cell-strategy-name">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
           </p>
@@ -2866,7 +2871,7 @@
             需关注的风险点：宏观因子（10Y 国债收益率）置信度仅 55%，暗示利率环境存在不确定性。若 IVIX 突破 22 或北向资金出现连续净流出，Regime 可能切换至 Mixed 或 Risk-Off。
           </p>
 
-          <h4>策略配置建议</h4>
+          <h2>策略配置建议</h2>
           <div class="overlay-strategy-list">
             <div class="overlay-strategy-row--bordered">
               <span class="overlay-strategy-name">Alpha v2</span>
@@ -3279,7 +3284,7 @@
             <span class="overlay-title">AI Regime 解读</span>
           </div>
           <div class="overlay-body">
-            <h4>当前 Regime 判定</h4>
+            <h2>当前 Regime 判定</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">Regime 状态</span>
               <span class="overlay-field-value overlay-field-value--up">温和 Risk-On</span>
@@ -3297,7 +3302,7 @@
               <span class="overlay-field-value">Mixed (22 天)</span>
             </div>
 
-            <h4>核心驱动因子</h4>
+            <h2>核心驱动因子</h2>
             <div class="overlay-driver-list">
               <div class="overlay-driver-row">
                 <span class="overlay-driver-name">波动率 (IVIX)</span>
@@ -3322,7 +3327,7 @@
               </div>
             </div>
 
-            <h4>AI 分析摘要</h4>
+            <h2>AI 分析摘要</h2>
             <p class="overlay-analysis">
               当前市场处于<strong class="cell-strategy-name">温和 Risk-On</strong>阶段，核心驱动力来自资金面的持续改善。北向资金连续净流入叠加融资余额回升，显示场外资金入市意愿增强。波动率 IVIX 维持在 20 以下低位，市场恐慌情绪消散。
             </p>
@@ -3330,7 +3335,7 @@
               需关注的风险点：宏观因子（10Y 国债收益率）置信度仅 55%，暗示利率环境存在不确定性。若 IVIX 突破 22 或北向资金出现连续净流出，Regime 可能切换至 Mixed 或 Risk-Off。
             </p>
 
-            <h4>策略配置建议</h4>
+            <h2>策略配置建议</h2>
             <div class="overlay-strategy-list">
               <div class="overlay-strategy-row--bordered">
                 <span class="overlay-strategy-name">Alpha v2</span>

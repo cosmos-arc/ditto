@@ -631,7 +631,9 @@
     .ai-plan-progress-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transform-origin: left center;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .ai-plan-progress-fill.active {
@@ -1159,14 +1161,14 @@
       height: 4px;
       border-radius: 50%;
       background: var(--ai-accent);
-      animation: ai-thinking-bounce var(--ai-thinking-speed) ease-in-out infinite;
+      animation: ai-thinking-pulse var(--ai-thinking-speed) var(--motion-easing-standard) infinite;
     }
     .ai-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
     .ai-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-    @keyframes ai-thinking-bounce {
-      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-      40% { opacity: 1; transform: scale(1.2); }
+    @keyframes ai-thinking-pulse {
+      0%, 80%, 100% { opacity: 0.35; transform: scale(0.86); }
+      40% { opacity: 1; transform: scale(1); }
     }
 
     /* ── AI Status Badge ──
@@ -1201,7 +1203,7 @@
     }
     .ai-status-badge.processing .ai-status-dot {
       background: var(--ai-accent);
-      animation: ai-thinking-bounce var(--ai-thinking-speed) ease-in-out infinite;
+      animation: ai-thinking-pulse var(--ai-thinking-speed) var(--motion-easing-standard) infinite;
     }
     .ai-status-badge.idle {
       color: var(--text-tertiary);
@@ -1224,7 +1226,9 @@
     .ai-confidence-bar-fill {
       height: 100%;
       border-radius: 1px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transform-origin: left center;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .ai-confidence-bar-fill.high   { background: var(--green-500); }
     .ai-confidence-bar-fill.medium { background: var(--amber-500); }

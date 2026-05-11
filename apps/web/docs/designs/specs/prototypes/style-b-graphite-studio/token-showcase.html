@@ -66,7 +66,7 @@
     .header-badge {
       display: inline-flex;
       align-items: center;
-      padding: 2px var(--space-8);
+      padding: var(--space-2) var(--space-8);
       border-radius: var(--radius-3);
       background: var(--brand-accent-subtle);
       color: var(--brand-accent);
@@ -85,7 +85,7 @@
       display: flex;
       align-items: center;
       gap: var(--space-2);
-      padding: 2px;
+      padding: var(--space-2);
       border-radius: var(--radius-6);
       background: var(--surface-app);
       border: 1px solid var(--border-subtle);
@@ -110,7 +110,8 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
     }
 
@@ -161,7 +162,7 @@
       font-weight: var(--font-weight-medium);
       color: var(--brand-accent);
       background: var(--brand-accent-subtle);
-      padding: 2px var(--space-6);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-3);
     }
 
@@ -188,7 +189,7 @@
       color: var(--text-tertiary);
       background: var(--code-bg);
       border: 1px solid var(--code-border);
-      padding: 1px var(--space-4);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-2);
     }
 
@@ -218,7 +219,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: var(--space-4);
+      gap: var(--space-6);
       padding: var(--space-8);
       border-radius: var(--radius-6);
       background: var(--surface-panel-base);
@@ -242,7 +243,7 @@
       font-size: var(--font-size-10);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
-      margin-bottom: 2px;
+      margin-bottom: var(--space-2);
     }
 
     .swatch-value {
@@ -321,7 +322,7 @@
       color: var(--text-primary);
       font-size: var(--font-size-16);
       line-height: 1.6;
-      margin-bottom: var(--space-4);
+      margin-bottom: var(--space-6);
     }
 
     .font-card-sample-2 {
@@ -368,7 +369,7 @@
     .spacing-list {
       display: flex;
       flex-direction: column;
-      gap: var(--space-4);
+      gap: var(--space-6);
     }
 
     .spacing-row {
@@ -390,7 +391,9 @@
       background: var(--brand-accent);
       opacity: 0.6;
       min-width: 4px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transform-origin: left center;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .spacing-value {
@@ -433,7 +436,7 @@
     .elevation-stack {
       display: flex;
       flex-direction: column;
-      gap: var(--space-4);
+      gap: var(--space-8);
     }
 
     .elevation-row {
@@ -549,7 +552,8 @@
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .accent-btn-primary {
@@ -589,7 +593,9 @@
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
       text-align: center;
     }
 
@@ -687,7 +693,9 @@
       height: 100%;
       border-radius: var(--radius-3);
       background: var(--feedback-progress-fill);
-      transition: width 0.6s var(--motion-easing-standard);
+      transform-origin: left center;
+      transition: transform 0.6s var(--motion-easing-standard),
+                  opacity 0.6s var(--motion-easing-standard);
     }
 
     /* ── Domain Tokens ── */
@@ -708,7 +716,7 @@
       color: var(--text-quaternary);
       background: var(--code-bg);
       border: 1px solid var(--code-border);
-      padding: 1px var(--space-4);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-2);
     }
 
@@ -721,12 +729,14 @@
     .domain-badge {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-4);
-      padding: var(--space-4) var(--space-8);
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-4);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .domain-badge-label {
@@ -748,7 +758,8 @@
       border-collapse: collapse;
       font-size: var(--font-size-13);
       font-family: var(--font-family-ui);
-      transition: all var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  color var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .demo-table thead {
@@ -777,8 +788,6 @@
       height: var(--density-row-height);
       display: flex;
       align-items: center;
-      transition: height var(--motion-duration-normal) var(--motion-easing-standard),
-                  padding var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .demo-table tbody tr:last-child td {
@@ -786,7 +795,12 @@
     }
 
     .demo-table tbody tr {
-      transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+      white-space: nowrap;
+      height: var(--density-row-height);
+      display: flex;
+      align-items: center;
+      transition: background-color var(--motion-duration-normal) var(--motion-easing-standard),
+                  color var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .demo-table tbody tr:hover {
@@ -829,7 +843,7 @@
       font-family: var(--font-family-numeric);
       font-size: var(--font-size-24);
       font-weight: var(--font-weight-semibold);
-      margin-bottom: var(--space-4);
+      margin-bottom: var(--space-6);
     }
 
     .market-card-change {
@@ -845,8 +859,8 @@
       color: var(--brand-accent);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      margin-bottom: var(--space-4);
-      padding: 2px var(--space-6);
+      margin-bottom: var(--space-6);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-3);
       background: var(--brand-accent-subtle);
       display: inline-block;
@@ -881,7 +895,7 @@
     .live-value {
       display: flex;
       justify-content: space-between;
-      padding: var(--space-4) var(--space-8);
+      padding: var(--space-6) var(--space-8);
       border-radius: var(--radius-3);
       background: var(--code-bg);
       border: 1px solid var(--code-border);
@@ -920,7 +934,7 @@
       .weight-row,
       .text-hierarchy-row {
         grid-template-columns: 1fr;
-        gap: var(--space-4);
+        gap: var(--space-8);
       }
 
       .market-comparison {
@@ -1060,7 +1074,7 @@
       font-size: var(--font-size-10);
       color: var(--chart-crosshair-label, var(--text-secondary));
       background: var(--surface-overlay);
-      padding: 1px var(--space-4);
+      padding: var(--space-2) var(--space-6);
       border-radius: var(--radius-2);
       top: 42%;
       left: 63%;
@@ -1293,7 +1307,9 @@
       color: var(--text-secondary);
       font-size: var(--btn-sm-font-size);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .demo-btn-sm:hover {
@@ -1309,7 +1325,9 @@
       color: var(--text-secondary);
       font-size: var(--btn-font-size);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .demo-btn-default:hover {
@@ -1325,7 +1343,9 @@
       color: var(--text-inverse);
       font-size: var(--btn-font-size);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .demo-btn-primary:hover {
@@ -1395,7 +1415,7 @@
     .demo-card-title {
       font-size: var(--font-size-14);
       font-weight: var(--font-weight-medium);
-      margin-bottom: var(--space-4);
+      margin-bottom: var(--space-6);
       color: var(--text-primary);
     }
 
@@ -1496,7 +1516,7 @@
     .progress-label-row {
       display: flex;
       justify-content: space-between;
-      margin-top: var(--space-4);
+      margin-top: var(--space-6);
     }
 
     .progress-label-text {
@@ -1527,7 +1547,7 @@
 
     /* ── Extracted: Font card sample overrides ── */
     .font-card-sample--ui {
-      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      font-family: var(--font-family-ui);
     }
 
     .font-card-sample-2--zh {
@@ -1580,9 +1600,11 @@
       color: var(--text-tertiary);
       font-size: var(--font-size-10);
       font-family: var(--font-family-numeric);
-      padding: 2px var(--space-8);
+      padding: var(--space-2) var(--space-8);
       cursor: pointer;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
       user-select: none;
     }
 
@@ -1592,18 +1614,25 @@
     }
 
     .section-fold-body {
-      transition: max-height 0.3s var(--motion-easing-standard), opacity 0.2s ease;
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.3s var(--motion-easing-standard), opacity 0.2s ease;
+      overflow: hidden;
+    }
+
+    .section-fold-body > * {
+      min-height: 0;
       overflow: hidden;
     }
 
     .section-fold-body.collapsed {
-      max-height: 0;
+      grid-template-rows: 0fr;
       opacity: 0;
       pointer-events: none;
     }
 
     .section-fold-body.expanded {
-      max-height: 5000px;
+      grid-template-rows: 1fr;
       opacity: 1;
     }
 
@@ -1683,7 +1712,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0 var(--space-4);
+      padding: 0 var(--space-6);
       min-width: 20px;
       height: 18px;
       border-radius: var(--radius-3);
@@ -1697,7 +1726,7 @@
     /* ── Quick Nav ── */
     .quick-nav {
       display: flex;
-      gap: var(--space-4);
+      gap: var(--space-6);
       flex-wrap: wrap;
       margin-bottom: var(--space-24);
       padding: var(--space-8) var(--space-12);
@@ -1713,7 +1742,8 @@
       font-weight: var(--font-weight-medium);
       color: var(--text-secondary);
       text-decoration: none;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .quick-nav-link:hover {
@@ -1811,7 +1841,9 @@
       color: var(--text-secondary);
       font-size: var(--font-size-12);
       text-decoration: none;
-      transition: all var(--motion-duration-fast) var(--motion-easing-standard);
+      transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard),
+                  color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .footer-top:hover {
@@ -1840,7 +1872,8 @@
     .tab-button.showcase-tab {
       padding: var(--space-2) var(--space-12);
       color: var(--text-secondary);
-      transition: all 0.15s ease;
+      transition: background-color 0.15s ease,
+                  color 0.15s ease;
     }
     .tab-button.showcase-tab.active {
       color: var(--brand-accent);
@@ -1906,7 +1939,7 @@
 
       <!-- ── Tabs Navigation ── -->
       <div data-tabs="token-tabs" style="margin-bottom: var(--space-16);">
-        <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-16); padding: 2px; border-radius: var(--radius-6); background: var(--surface-app); border: 1px solid var(--border-subtle);">
+        <div style="display: flex; gap: var(--space-6); margin-bottom: var(--space-16); padding: var(--space-2); border-radius: var(--radius-6); background: var(--surface-app); border: 1px solid var(--border-subtle);">
           <button data-tab-target="colors" class="tab-button showcase-tab active">色彩</button>
           <button data-tab-target="typography" class="tab-button showcase-tab">字号 / 字体</button>
           <button data-tab-target="spacing" class="tab-button showcase-tab">间距</button>

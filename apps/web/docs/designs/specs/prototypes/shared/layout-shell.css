@@ -125,6 +125,8 @@ button {
 
 /* ── Layout Component Variables (density-sensitive) ── */
 :root {
+  --prototype-min-desktop-width: 1024px;
+
   /* Shell grid */
   --shell-rail-width:     56px;
   --shell-header-height:  68px;
@@ -433,7 +435,7 @@ button {
 .shell-studio,
 .shell-ledger,
 .shell-regime {
-  min-width: 1024px;
+  min-width: var(--prototype-min-desktop-width);
 }
 
 body {
@@ -529,22 +531,80 @@ body {
   }
 }
 
-/* ── Responsive: Small tablet / large phone (below 768px) ──
- * Rail stays icon-only (it already is). Body allows scrolling.
- * Shells keep their min-width and scroll horizontally — not ideal
- * but functional for quick checks on smaller devices.
+/* ── Narrow viewport guard ──
+ * Desktop-first strategy: active product prototypes require 1024px+
+ * for trading, risk, order, and approval judgment. Below 768px, show an
+ * explicit guard so cropped screens are never mistaken for operable mobile UI.
  */
-@media (max-width: 768px) {
-  body {
-    overflow-x: auto;
-    overflow-y: auto;
-  }
+.prototype-viewport-guard {
+  display: none;
+}
 
+@media (max-width: 768px) {
   .shell-catalog,
   .shell-studio,
   .shell-agent,
   .shell-radar {
     overflow-x: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  body {
+    overflow: hidden;
+  }
+
+  :root:has(#view-default:checked) #default-view {
+    pointer-events: none;
+  }
+
+  :root:has(#view-default:checked) .prototype-viewport-guard {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: var(--space-20);
+    background: var(--surface-app);
+    color: var(--text-primary);
+  }
+
+  .prototype-viewport-guard__panel {
+    display: grid;
+    gap: var(--space-10);
+    width: min(100%, 360px);
+    padding: var(--space-20);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-8);
+    background: var(--surface-panel-base);
+    box-shadow: 0 12px 32px color-mix(in oklch, var(--neutral-0) 38%, transparent);
+  }
+
+  .prototype-viewport-guard__kicker {
+    color: var(--brand-accent);
+    font-size: var(--font-size-11);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .prototype-viewport-guard__title {
+    font-family: var(--font-family-heading);
+    font-size: var(--font-size-18);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.35;
+  }
+
+  .prototype-viewport-guard__body,
+  .prototype-viewport-guard__meta {
+    color: var(--text-secondary);
+    font-size: var(--font-size-12);
+    line-height: 1.55;
+  }
+
+  .prototype-viewport-guard__meta {
+    color: var(--text-tertiary);
+    font-family: var(--font-family-numeric);
   }
 }
 
@@ -652,7 +712,6 @@ body {
   height: 20px;
   background: var(--brand-accent);
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 6px var(--brand-signature-indicator-shadow);
 }
 
 .rail-icon svg {
@@ -691,15 +750,11 @@ body {
   z-index: 120;
 }
 
-/* Hub-style header: solid background + domain signature gradient */
+/* Hub-style header: solid background */
 .shell-header--solid {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: linear-gradient(
-    to right,
-    var(--surface-panel-base),
-    color-mix(in oklch, var(--brand-signature-fg) 3%, var(--surface-panel-base))
-  );
+  background: var(--surface-panel-base);
 }
 
 /* Override any page-level header ::after decoration */

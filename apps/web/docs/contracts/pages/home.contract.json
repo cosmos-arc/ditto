@@ -16,7 +16,7 @@
     "featureModule": "src/features/home",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "queued",
+    "visualAuditStatus": "verified",
     "reactTestRefs": [
       "src/features/home/components/home-components.test.tsx",
       "src/features/home/hooks/home-hooks.test.tsx"

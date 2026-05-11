@@ -170,10 +170,7 @@
   margin-top: 0;
   margin-bottom: 0;
   overflow: hidden;
-  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard),
-              max-height var(--motion-duration-normal) var(--motion-easing-standard),
-              padding var(--motion-duration-normal) var(--motion-easing-standard),
-              margin var(--motion-duration-normal) var(--motion-easing-standard);
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 /* ── Semantic Feedback Motion ── */

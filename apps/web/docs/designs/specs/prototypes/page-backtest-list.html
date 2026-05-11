@@ -57,6 +57,54 @@
     .header-subtitle { font-size: var(--font-size-12); font-weight: var(--font-weight-regular); color: var(--text-tertiary); margin-left: var(--space-8); letter-spacing: 0; }
     .header-title-group { display: flex; align-items: baseline; }
     .header-btn-group { display: flex; align-items: center; gap: var(--space-8); }
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 1 auto;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1200px) {
+      .filter-toolbar {
+        gap: var(--space-6);
+        overflow: hidden;
+      }
+
+      .filter-divider {
+        display: none;
+      }
+
+      .filter-group {
+        min-width: 0;
+        gap: var(--space-4);
+        flex: 0 1 auto;
+      }
+
+      .filter-search {
+        width: 140px;
+      }
+
+      .filter-chip {
+        min-width: 0;
+        max-width: 8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .filter-spacer {
+        min-width: var(--space-8);
+        flex: 1 1 var(--space-8);
+      }
+
+      .filter-count {
+        flex: 0 0 auto;
+        max-width: 7rem;
+      }
+    }
 
     .shell-catalog.catalog-shell {
       grid-template-rows: var(--shell-header-height) auto auto minmax(0, 1fr);
@@ -73,7 +121,7 @@
       -webkit-backdrop-filter: blur(12px);
       position: relative;
     }
-    .shell-catalog .catalog-detail { box-shadow: inset 4px 0 10px -6px var(--overlay-3); }
+    .shell-catalog .catalog-detail { box-shadow: none; }
     .catalog-table-inner { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
     .catalog-table-inner .table-container { flex: 1; overflow-y: auto; background: var(--surface-app); }
     .catalog-table-inner .table-footer { flex-shrink: 0; }
@@ -219,7 +267,7 @@
 
     .state-variant .state-variant-content { background: var(--surface-app); }
     .data-table tr.row.selected { background: color-mix(in oklch, var(--brand-accent) 5%, transparent); }
-    .data-table tr.row.selected td:first-child { box-shadow: inset 3px 0 0 var(--interaction-selected-border); }
+    .data-table tr.row.selected td:first-child { box-shadow: inset 0 0 0 1px var(--interaction-selected-border); }
 
     .stale-banner { padding: var(--space-12); display: flex; align-items: center; gap: var(--space-6); }
     .stale-dot-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--system-degraded-fg); display: inline-block; flex-shrink: 0; }
@@ -664,7 +712,7 @@
           <div class="overlay-body">
             <p>MOM-v3-2024Q1 与 MF-Enh-full-2025 已加入对比，适合确认收益质量、回撤路径和配置差异。</p>
 
-            <h4>对比回测</h4>
+            <h2>对比回测</h2>
             <div class="sv-pad-6-0">
               <div class="overlay-field">
                 <span class="overlay-field-label">回测 A</span>
@@ -676,7 +724,7 @@
               </div>
             </div>
 
-            <h4>绩效指标</h4>
+            <h2>绩效指标</h2>
             <div class="compare-table" aria-label="回测绩效指标对比">
               <span class="metric">指标</span><span>A</span><span>B</span>
               <span class="metric">Sharpe</span><span class="best">2.12 ★</span><span>1.85</span>
@@ -685,7 +733,7 @@
               <span class="metric">换手</span><span>1.8x</span><span class="best">1.4x ★</span>
             </div>
 
-            <h4>净值叠加</h4>
+            <h2>净值叠加</h2>
             <svg class="compare-curve" viewBox="0 0 320 120" role="img" aria-label="两组回测净值曲线对比">
               <path class="spark-line" d="M12 98 L48 91 L84 82 L120 70 L156 64 L192 48 L228 42 L264 29 L308 20"/>
               <path d="M12 104 L48 96 L84 88 L120 83 L156 72 L192 62 L228 54 L264 45 L308 38" fill="none" stroke="var(--text-secondary)" stroke-width="2"/>
@@ -856,7 +904,7 @@
                   <button class="overlay-close" aria-label="关闭">x</button>
                 </div>
                 <div class="overlay-body">
-                  <h4>对比回测 (2)</h4>
+                  <h2>对比回测 (2)</h2>
                   <div class="sv-pad-6-0">
                     <div class="overlay-field">
                       <span class="overlay-field-label">回测 A</span>
@@ -868,7 +916,7 @@
                     </div>
                   </div>
 
-                  <h4>绩效对比</h4>
+                  <h2>绩效对比</h2>
                   <div class="overlay-field">
                     <span class="overlay-field-label">Sharpe (A)</span>
                     <span class="overlay-field-value">2.12</span>
@@ -894,7 +942,7 @@
                     <span class="overlay-field-value">-9.2%</span>
                   </div>
 
-                  <h4>收益曲线对比</h4>
+                  <h2>收益曲线对比</h2>
                   <div class="skeleton skeleton-chart"></div>
 
                   <div class="overlay-actions">

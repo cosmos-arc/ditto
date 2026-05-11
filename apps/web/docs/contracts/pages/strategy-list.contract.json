@@ -13,7 +13,7 @@
     "featureModule": "src/features/strategy",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "queued",
+    "visualAuditStatus": "verified",
     "reactTestRefs": [
       "src/features/strategy/components/strategy-components.test.tsx"
     ],

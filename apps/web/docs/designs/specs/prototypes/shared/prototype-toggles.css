@@ -483,14 +483,14 @@
   line-height: 1.6;
 }
 
-.overlay-body h4 {
+.overlay-body :is(h2, h4) {
   margin: var(--space-10) 0 var(--space-4);
   color: var(--text-primary);
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-medium);
 }
 
-.overlay-body h4:first-child {
+.overlay-body :is(h2, h4):first-child {
   margin-top: 0;
 }
 

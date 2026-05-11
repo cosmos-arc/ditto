@@ -1520,6 +1520,10 @@
     :root:has(#overlay-session-template:checked)
       [data-overlay="overlay-session-template"] { display: flex; }
 
+    [data-overlay] .overlay-surface {
+      animation: none;
+    }
+
     /* ── Overlay content refinement ── */
     .overlay-surface .overlay-header,
     .overlay-surface .overlay-header {
@@ -1731,20 +1735,21 @@
     .message--user .message-content::after {
       content: '';
       position: absolute;
-      right: -8px;
       top: 50%;
-      transform: translateY(-50%);
+      right: -8px;
+      transform: translateY(-50%) scaleY(0);
+      transform-origin: center;
       width: 3px;
-      height: 0;
+      height: 16px;
       border-radius: 2px;
       background: var(--brand-accent);
       opacity: 0;
-      transition: height var(--motion-duration-normal) var(--motion-easing-emphasis),
+      transition: transform var(--motion-duration-normal) var(--motion-easing-emphasis),
                   opacity var(--motion-duration-normal) var(--motion-easing-emphasis);
     }
     .message--user:hover .message-content::after {
-      height: 16px;
-      opacity: 0.4;
+      transform: translateY(-50%) scaleY(1);
+      opacity: 1;
     }
 
     /* AI thinking indicator — pulsing shimmer */
@@ -1904,7 +1909,9 @@
     .confidence-bar-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width 0.8s var(--motion-easing-emphasis);
+      transform-origin: left center;
+      transition: transform 0.8s var(--motion-easing-emphasis),
+                  opacity 0.8s var(--motion-easing-emphasis);
       position: relative;
     }
     /* Confidence fill shimmer */
@@ -3006,7 +3013,7 @@
       <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="保存结论">
         <div class="overlay-header">
           <span class="overlay-title">保存结论</span>
-          <button onclick="document.getElementById('overlay-save-conclusion').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
+          <label for="overlay-save-conclusion" class="overlay-close" role="button" tabindex="0" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
           <h4>结论内容预览</h4>
@@ -3046,7 +3053,7 @@
       <div class="overlay-surface overlay-surface--drawer" role="dialog" aria-modal="true" aria-label="发送到工作区">
         <div class="overlay-header">
           <span class="overlay-title">发送到工作区</span>
-          <button onclick="document.getElementById('overlay-send-workspace').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
+          <label for="overlay-send-workspace" class="overlay-close" role="button" tabindex="0" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
           <h4>选择目标工作区</h4>
@@ -3100,7 +3107,7 @@
       <div class="overlay-surface overlay-surface--sheet" role="dialog" aria-modal="true" aria-label="会话模板">
         <div class="overlay-header">
           <span class="overlay-title">新建对话</span>
-          <button onclick="document.getElementById('overlay-session-template').checked=false" class="overlay-close" aria-label="关闭">&#10005;</button>
+          <label for="overlay-session-template" class="overlay-close" role="button" tabindex="0" aria-label="关闭">&#10005;</label>
         </div>
         <div class="overlay-body">
           <h4>选择对话模板</h4>

@@ -337,6 +337,12 @@ function getSelectorRuleBody(css: string, selector: string): string | undefined 
 		?.body;
 }
 
+function getSelectorRuleBodies(css: string, selector: string): string[] {
+	return readTopLevelCssRules(stripCssComments(css))
+		.filter((rule) => rule.selectors.includes(selector))
+		.map((rule) => rule.body);
+}
+
 function hasDeclaration(body: string | undefined, property: string, valuePattern: RegExp): boolean {
 	if (!body) return false;
 
@@ -403,6 +409,10 @@ function readPrototypeCssSources(): CssSource[] {
 		{ label: "shared/layout-components.css", css: readFileSync(join(prototypesDir, "shared/layout-components.css"), "utf8") },
 		{ label: "shared/layout-overlay.css", css: readFileSync(join(prototypesDir, "shared/layout-overlay.css"), "utf8") },
 		{ label: "shared/layout-state.css", css: readFileSync(join(prototypesDir, "shared/layout-state.css"), "utf8") },
+		{
+			label: "shared/prototype-interactions.css",
+			css: readFileSync(join(prototypesDir, "shared/prototype-interactions.css"), "utf8"),
+		},
 		{ label: "shared/theme-switcher.css", css: readFileSync(prototypeThemeSwitcherCss, "utf8") },
 		{ label: "shared/prototype-toggles.css", css: readFileSync(prototypeTogglesCss, "utf8") },
 		{ label: "tokens-style.css", css: readFileSync(prototypeTokensStyleCss, "utf8") },
@@ -411,6 +421,30 @@ function readPrototypeCssSources(): CssSource[] {
 			css: getStyleBlocks(readPrototypeHtml(page)),
 		})),
 	];
+}
+
+function readPrototypeHtmlFilesRecursive(dir = prototypesDir): HtmlSource[] {
+	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const fullPath = join(dir, entry.name);
+		if (entry.isDirectory()) return readPrototypeHtmlFilesRecursive(fullPath);
+		if (!entry.isFile() || !entry.name.endsWith(".html")) return [];
+
+		return [
+			{
+				label: relative(root, fullPath),
+				html: readFileSync(fullPath, "utf8"),
+			},
+		];
+	});
+}
+
+function readFullPrototypeCssSources(): CssSource[] {
+	const inlineSources = readPrototypeHtmlFilesRecursive().map((source) => ({
+		label: `${source.label}:inline-css`,
+		css: getStyleBlocks(source.html),
+	}));
+
+	return [...readPrototypeCssSources(), ...inlineSources];
 }
 
 function getFirstElementBody(html: string, selectorPattern: RegExp): string {
@@ -2563,6 +2597,29 @@ describe("prototype design consistency", () => {
 						}`,
 					);
 				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps every active prototype visual audit verified in manifest and page contracts", () => {
+		const contractByPrototype = new Map(
+			readContracts().map((contract) => [contract.prototypeRef, contract]),
+		);
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const prototypeRef = `docs/designs/specs/prototypes/${page.file}`;
+			const contract = contractByPrototype.get(prototypeRef);
+			const manifestStatus = page.landing?.visualAuditStatus;
+			const contractStatus = contract?.landing?.visualAuditStatus;
+
+			if (manifestStatus !== "verified") {
+				violations.push(`${page.id}:manifest:${manifestStatus ?? "missing"}`);
+			}
+			if (contractStatus !== "verified") {
+				violations.push(`${page.id}:contract:${contractStatus ?? "missing"}`);
 			}
 		}
 
@@ -5077,7 +5134,7 @@ describe("prototype design consistency", () => {
 			"animation: overlay-sheet-enter",
 			"animation: overlay-modal-enter",
 			".bottom-tray",
-			"transition: max-height",
+			"transition: opacity",
 			".semantic-value-flash",
 			".semantic-status-transition",
 			".threshold-crossed",
@@ -5091,8 +5148,234 @@ describe("prototype design consistency", () => {
 		expect(missing).toEqual([]);
 	});
 
+	it("keeps every prototype HTML file free of detector-blocking motion and generic font samples", () => {
+		const layoutDrivenTransitionProperties = new Set([
+			"width",
+			"height",
+			"max-width",
+			"max-height",
+			"min-width",
+			"min-height",
+			"padding",
+			"margin",
+			"flex",
+			"flex-grow",
+			"flex-shrink",
+			"flex-basis",
+		]);
+		const violations: string[] = [];
+
+		for (const source of readFullPrototypeCssSources()) {
+			const css = stripCssComments(source.css);
+
+			for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
+				const transitionValue = match[1];
+				const animatedProperties = transitionValue
+					.split(",")
+					.map((item) => item.trim().split(/\s+/)[0]?.toLowerCase() ?? "");
+
+				if (animatedProperties.some((property) => property === "all")) {
+					violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
+				}
+				if (animatedProperties.some((property) => layoutDrivenTransitionProperties.has(property))) {
+					violations.push(`${source.label}:${getLineNumber(css, match.index)}:layout-transition`);
+				}
+			}
+
+			for (const match of css.matchAll(/animation\s*:\s*([^;}]+)/gi)) {
+				if (/(?:bounce|elastic)/i.test(match[1])) {
+					violations.push(`${source.label}:${getLineNumber(css, match.index)}:bounce-animation`);
+				}
+			}
+
+			if (source.label !== "shared/fonts.css") {
+				for (const match of css.matchAll(/font-family\s*:\s*['"](?:Inter|Roboto|Open Sans|Lato|Montserrat|Arial)\b/gi)) {
+					violations.push(`${source.label}:${getLineNumber(css, match.index)}:literal-generic-font-sample`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps icon-only overlay triggers explicitly named beyond title attributes", () => {
+		const violations: string[] = [];
+
+		for (const source of readPrototypeHtmlFilesRecursive()) {
+			const document = new JSDOM(source.html).window.document;
+
+			for (const trigger of document.querySelectorAll("label[for], button, [role='button']")) {
+				const visibleText = trigger.textContent?.replace(/\s+/g, " ").trim() ?? "";
+				const hasIcon = Boolean(trigger.querySelector("svg"));
+				const hasExplicitName =
+					Boolean(trigger.getAttribute("aria-label")) ||
+					Boolean(trigger.getAttribute("aria-labelledby")) ||
+					visibleText.length > 0;
+
+				if (hasIcon && !hasExplicitName) {
+					const target = trigger.getAttribute("for") ?? trigger.getAttribute("aria-controls") ?? "unknown";
+					violations.push(`${source.label}:${target}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("documents compact geometry fixes for final full-directory review risks", () => {
+		const checks = [
+			{
+				page: activePageById("cross-market"),
+				expected: [
+					/@media\s*\(max-width:\s*1366px\)[\s\S]*\.drivers-strip\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
+					/@media\s*\(max-width:\s*1200px\)[\s\S]*\.drivers-strip\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+				],
+			},
+			{
+				page: activePageById("regime-monitor"),
+				expected: [
+					/\.heatgrid-legend\s*\{[\s\S]*flex-wrap:\s*wrap;/,
+					/\.heatgrid-legend\s*\{[\s\S]*max-width:\s*100%;/,
+				],
+			},
+			{
+				page: activePageById("signals-inbox"),
+				expected: [
+					/\.shell-signals\s+\.detail-panel\s*\{[\s\S]*min-width:\s*0;/,
+					/\.detail-header,\s*\.detail-body\s*\{[\s\S]*max-width:\s*100%;/,
+				],
+			},
+			{
+				page: activePageById("trading-overview"),
+				expected: [
+					/#default-view\s*>\s*\.status-bar\s*\{[\s\S]*width:\s*auto\s*!important;/,
+					/#default-view\s*>\s*\.status-bar\s*\{[\s\S]*max-width:\s*calc\(100vw - var\(--shell-rail-width\)\);/,
+				],
+			},
+			{
+				page: activePageById("backtest-list"),
+				expected: [/\.filter-count\s*\{[\s\S]*max-width:\s*100%;[\s\S]*overflow:\s*hidden;[\s\S]*text-overflow:\s*ellipsis;/],
+			},
+			{
+				page: activePageById("experiment-list"),
+				expected: [/\.filter-count\s*\{[\s\S]*max-width:\s*100%;[\s\S]*overflow:\s*hidden;[\s\S]*text-overflow:\s*ellipsis;/],
+			},
+		];
+		const violations: string[] = [];
+
+		for (const check of checks) {
+			const html = readPrototypeHtml(check.page);
+			for (const pattern of check.expected) {
+				if (!pattern.test(html)) {
+					violations.push(`${check.page.id}:${pattern.source.slice(0, 80)}`);
+				}
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps freeze-critical operational typography at 12px or above", () => {
+		const checks = [
+			{
+				pageId: "home",
+				selectors: [".global-pulse-label", ".global-pulse-note", ".impact-label"],
+			},
+			{
+				pageId: "trading-overview",
+				selectors: [
+					".scope-metric-label",
+					".decision-regime-tag",
+					".decision-pipeline",
+					".pipeline-arrow",
+					".equity-chart-label",
+					".order-tab",
+				],
+			},
+			{
+				pageId: "agent-console-v2",
+				selectors: [".panel-kicker", ".event", ".trace-item", ".node-kind", ".card-label"],
+			},
+			{
+				pageId: "a-shares",
+				selectors: [
+					".context-bar-label",
+					".map-readout-item",
+					".map-interaction-hint",
+					".map-insight-strip",
+					".map-legend-label",
+					".treemap-cell-vol",
+					".hm-vol",
+				],
+			},
+			{
+				pageId: "strategy-studio",
+				selectors: [
+					".distribution-legend",
+					".equity-curve-legend",
+					".strategy-status-tag",
+					".perf-metric-label",
+					".perf-metric-change",
+				],
+			},
+		] as const;
+		const violations: string[] = [];
+
+		for (const check of checks) {
+			const page = activePages().find((candidate) => candidate.id === check.pageId);
+			expect(page, `${check.pageId}: expected active prototype`).toBeDefined();
+			if (!page) continue;
+				const css = getStyleBlocks(readPrototypeHtml(page));
+				for (const selector of check.selectors) {
+					if (
+						!getSelectorRuleBodies(css, selector).some((body) =>
+							hasDeclaration(body, "font-size", /var\(\s*--font-size-12\s*\)/),
+						)
+					) {
+						violations.push(`${check.pageId}:${selector}`);
+					}
+				}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
+	it("keeps active prototype heading outline navigable without skipped levels", () => {
+		const violations: string[] = [];
+
+		for (const page of activePages()) {
+			const document = readPrototypeDocument(page);
+			let previousLevel = 0;
+			for (const heading of [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")]) {
+				const level = Number(heading.tagName.slice(1));
+				if (previousLevel > 0 && level > previousLevel + 1) {
+					violations.push(
+						`${page.id}:h${previousLevel}->h${level}:${heading.textContent?.trim().slice(0, 30)}`,
+					);
+				}
+				previousLevel = level;
+			}
+		}
+
+		expect(violations).toEqual([]);
+	});
+
 	it("keeps active prototype and shared CSS free of viewport, transition, focus, and tiny-text regressions", () => {
 		const violations: string[] = [];
+		const layoutDrivenTransitionProperties = new Set([
+			"width",
+			"height",
+			"max-width",
+			"max-height",
+			"min-width",
+			"min-height",
+			"padding",
+			"margin",
+			"flex",
+			"flex-grow",
+			"flex-shrink",
+			"flex-basis",
+		]);
 
 		for (const source of readPrototypeCssSources()) {
 			const rawCss = source.css;
@@ -5105,12 +5388,21 @@ describe("prototype design consistency", () => {
 				}
 			}
 
-			for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
-				const transitionValue = match[1];
-				if (transitionValue.split(",").some((item) => /^all(?:\s|$)/i.test(item.trim()))) {
-					violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
+				for (const match of css.matchAll(/transition\s*:\s*([^;}]+)/gi)) {
+					const transitionValue = match[1];
+					if (transitionValue.split(",").some((item) => /^all(?:\s|$)/i.test(item.trim()))) {
+						violations.push(`${source.label}:${getLineNumber(css, match.index)}:transition-all`);
+					}
+					if (
+						transitionValue
+							.split(",")
+							.some((item) =>
+								layoutDrivenTransitionProperties.has(item.trim().split(/\s+/)[0]?.toLowerCase() ?? ""),
+							)
+					) {
+						violations.push(`${source.label}:${getLineNumber(css, match.index)}:layout-transition`);
+					}
 				}
-			}
 
 			for (const match of css.matchAll(/font-size\s*:\s*9px\b/gi)) {
 				violations.push(`${source.label}:${getLineNumber(css, match.index)}:font-size-9px`);

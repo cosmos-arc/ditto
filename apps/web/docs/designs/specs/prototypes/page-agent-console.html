@@ -397,7 +397,9 @@
     .progress-bar-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transform-origin: left center;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
     }
 
     .progress-bar-fill.brand {
@@ -595,8 +597,6 @@
       gap: var(--space-8);
       padding: var(--space-8) var(--space-10);
       border: 1px solid var(--border-subtle);
-      border-left-width: 2px;
-      border-left-color: transparent;
       border-radius: var(--radius-4);
       margin-bottom: var(--space-6);
     }
@@ -604,7 +604,6 @@
     .agent-status-block.running {
       background: color-mix(in oklch, var(--brand-accent) 8%, transparent);
       border-color: color-mix(in oklch, var(--brand-accent) 18%, var(--border-subtle));
-      border-left-color: var(--brand-accent);
     }
 
     .agent-status-block.idle {
@@ -613,7 +612,7 @@
 
     .agent-status-block.waiting {
       background: color-mix(in oklch, var(--system-degraded-fg) 5%, transparent);
-      border-left-color: var(--system-degraded-fg);
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 24%, var(--border-subtle));
     }
 
     .agent-status-dot {
@@ -1396,8 +1395,8 @@
 
     /* ── Tool trace active indicator ── */
     .tool-trace-item:has(.tool-trace-result.pending) {
-      border-left: 2px solid var(--brand-accent);
-      padding-left: var(--space-4);
+      border-color: color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+      background: color-mix(in oklch, var(--brand-accent) 4%, transparent);
     }
 
     /* ── Agent status block enhanced pulse ── */
@@ -1456,7 +1455,9 @@
     .resource-bar-fill {
       height: 100%;
       border-radius: 2px;
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transform-origin: left center;
+      transition: transform var(--motion-duration-normal) var(--motion-easing-standard),
+                  opacity var(--motion-duration-normal) var(--motion-easing-standard);
     }
     .resource-bar-fill.normal { background: var(--system-healthy-fg); }
     .resource-bar-fill.warning { background: var(--system-degraded-fg); }
@@ -2340,7 +2341,7 @@
     <!-- ═══ Detail / Tool Trace Panel (340px) ═══ -->
     <div class="agent-detail" id="agent-detail-panel" data-contract-slot="detail" data-selected-object-region>
       <!-- Detail Header -->
-      <div class="detail-header" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--brand-accent) 3%, transparent)" data-mouse-glow-size="160px">
+      <div class="detail-header">
         <div class="detail-header-title">Alpha 因子挖掘计划</div>
         <div class="detail-header-meta">
           <span class="detail-running-status">
@@ -2361,7 +2362,7 @@
         <div class="detail-section-header">
           <span class="detail-section-title">当前 Agent</span>
         </div>
-        <div class="detail-section-body" data-mouse-glow="true" data-mouse-glow-color="color-mix(in oklch, var(--agent-running-fg) 4%, transparent)" data-mouse-glow-size="120px">
+        <div class="detail-section-body">
           <div class="agent-status-block running">
             <span class="agent-status-dot"></span>
             <span class="agent-status-label"><strong>Factor 挖掘 Agent</strong> · 正在分析动量因子</span>

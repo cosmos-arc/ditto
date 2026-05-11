@@ -17,6 +17,17 @@
       "tokenContrast": "PASS: 0 failed gating pairs"
     }
   },
+  "freezePolish": {
+    "reviewedAt": "2026-05-10",
+    "status": "verified",
+    "activeRoutePrototypeCount": 28,
+    "scope": "prototype freeze recommended route",
+    "resultRecord": "docs/plans/2026-05-10-prototype-freeze-polish-results.md",
+    "checks": {
+      "prototypeDesignConsistency": "PASS: 102 tests",
+      "fullCheck": "PASS: biome check, tsc -b, 1768 vitest tests"
+    }
+  },
   "stateCoverageAppliedAt": "2026-04-02",
   "iterationCompletedAt": "2026-04-05",
   "iterationV2CompletedAt": "2026-04-05",
@@ -58,7 +69,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -90,7 +101,7 @@
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -141,7 +152,7 @@
         "featureModule": "src/features/home",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -173,7 +184,7 @@
         "featureModule": "src/features/screener",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -206,7 +217,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -231,7 +242,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "missing"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -270,7 +281,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -310,7 +321,7 @@
         "featureModule": "src/features/instruments",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -349,7 +360,7 @@
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -389,7 +400,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -428,7 +439,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -468,7 +479,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -544,7 +555,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -586,7 +597,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -693,7 +704,7 @@
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -722,7 +733,7 @@
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -751,7 +762,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -780,7 +791,7 @@
         "featureModule": "src/features/backtest",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -826,7 +837,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -873,7 +884,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -928,7 +939,7 @@
         "featureModule": "src/features/trading",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -956,7 +967,7 @@
         "featureModule": "src/features/markets",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -984,7 +995,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -1012,7 +1023,7 @@
         "featureModule": "src/features/strategy",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -1040,7 +1051,7 @@
         "featureModule": "src/features/backtest",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -1068,7 +1079,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -1096,7 +1107,7 @@
         "featureModule": "src/features/research",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     },
     {
@@ -1124,7 +1135,7 @@
         "featureModule": "src/features/platform",
         "contractStatus": "draft",
         "overlayStatus": "triggerable",
-        "visualAuditStatus": "queued"
+        "visualAuditStatus": "verified"
       }
     }
   ],

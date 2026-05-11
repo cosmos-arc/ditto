@@ -323,9 +323,9 @@
   align-items: center;
   gap: var(--space-8);
   padding: var(--space-8) var(--space-12);
-  background: var(--interaction-hover-subtle-bg);
-  border-left: 2px solid var(--brand-accent);
-  border-radius: 0 var(--radius-4) var(--radius-4) 0;
+  background: color-mix(in oklch, var(--brand-accent) 5%, var(--surface-panel-base));
+  border: 1px solid color-mix(in oklch, var(--brand-accent) 24%, var(--border-subtle));
+  border-radius: var(--radius-4);
 }
 
 .system-conclusion-label {
@@ -368,10 +368,10 @@
   background: var(--interaction-hover-subtle-bg);
 }
 
-/* Execution queue item with left color bar */
+/* Execution queue item with compact semantic dot */
 .queue-item {
   display: flex;
-  gap: 0;
+  gap: var(--space-8);
   padding: var(--density-cell-padding-y) 0;
   cursor: pointer;
   transition: background var(--motion-duration-fast) var(--motion-easing-standard);
@@ -389,10 +389,12 @@
 }
 
 .queue-item-bar {
-  width: 2px;
+  width: 6px;
+  height: 6px;
   flex-shrink: 0;
-  align-self: stretch;
-  border-radius: 1px;
+  align-self: flex-start;
+  margin-top: 6px;
+  border-radius: var(--radius-full);
 }
 
 .queue-item-bar.p1 { background: var(--risk-high-fg); }
@@ -405,7 +407,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-left: var(--space-10);
+  padding-left: 0;
 }
 
 .queue-item-header {
@@ -1496,7 +1498,6 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .data-table tr.row:hover,
 .data-table tbody tr:hover {
   background: var(--interaction-hover-subtle-bg);
-  box-shadow: inset 2px 0 0 var(--brand-accent);
 }
 
 .data-table tr.row:hover td,
@@ -1978,7 +1979,7 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .confidence-bar-fill {
   height: 100%;
   border-radius: 2px;
-  transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .confidence-bar-fill.high   { background: var(--market-up-fg); }
@@ -2252,8 +2253,7 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
   max-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  transition: max-width 150ms var(--motion-easing-standard),
-              opacity 150ms var(--motion-easing-standard);
+  transition: opacity 150ms var(--motion-easing-standard);
 }
 
 .collapsible-strip[data-collapsed-state="true"] .collapsible-strip-count {
@@ -2792,7 +2792,7 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .progress-bar-fill {
   height: 100%;
   border-radius: 2px;
-  transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .progress-bar-fill.ok       { background: var(--system-healthy-fg); }
@@ -2860,7 +2860,22 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 .bar-fill    { height: 100%; border-radius: var(--radius-full); }
 
 /* ── Timeline ── */
-.timeline-item { padding: var(--space-8) 0; border-left: 2px solid var(--brand-accent); margin-left: 6px; }
+.timeline-item {
+  position: relative;
+  padding: var(--space-8) 0 var(--space-8) var(--space-12);
+  margin-left: 6px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--space-12);
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--brand-accent);
+}
 
 /* ── Accent checkbox ── */
 input[type="checkbox"].accent-brand,
@@ -3256,8 +3271,7 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
-  border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--brand-accent);
+  border: 1px solid color-mix(in oklch, var(--brand-accent) 28%, var(--border-subtle));
   border-radius: var(--radius-6);
   background: var(--interaction-selected-bg);
   padding: var(--space-6) var(--space-12);
@@ -3274,7 +3288,6 @@ input[type="radio"].accent-brand { accent-color: var(--brand-accent); }
   display: grid;
   gap: var(--space-6);
   border: 1px solid var(--risk-critical-fg);
-  border-left-width: 3px;
   border-radius: var(--radius-6);
   padding: var(--space-8) var(--space-10);
   background: var(--danger-subtle-bg);

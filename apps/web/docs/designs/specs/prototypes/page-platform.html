@@ -220,7 +220,7 @@
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
       color: var(--system-healthy-fg);
-      border-left: 2px solid var(--system-healthy-fg);
+      border: 1px solid color-mix(in oklch, var(--system-healthy-fg) 24%, var(--border-subtle));
     }
 
     .env-badge-dot {
@@ -454,7 +454,7 @@
     .quota-bar-fill {
       height: 100%;
       border-radius: var(--radius-2);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .quota-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, var(--surface-app))); }
@@ -658,7 +658,7 @@
     .resource-bar-fill {
       height: 100%;
       border-radius: var(--radius-2);
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     .resource-bar-fill.ok       { background: linear-gradient(90deg, var(--system-healthy-fg), color-mix(in oklch, var(--system-healthy-fg) 80%, var(--surface-app))); }
@@ -802,7 +802,7 @@
 
     /* Resource bar fill entrance — eased width transition */
     .resource-bar-fill {
-      transition: width var(--motion-duration-normal) var(--motion-easing-standard);
+      transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
     /* Data table row hover — subtle interactive hint */
@@ -833,27 +833,27 @@
       transition: background var(--motion-duration-fast) var(--motion-easing-standard),
                   border-color var(--motion-duration-fast) var(--motion-easing-standard),
                   padding-left var(--motion-duration-fast) var(--motion-easing-standard);
-      border-left: 2px solid transparent;
+      border: 1px solid transparent;
       padding-left: var(--space-8);
     }
     .alert-row:hover {
       background: var(--interaction-hover-subtle-bg);
-      border-left-color: color-mix(in oklch, var(--text-tertiary) 40%, transparent);
+      border-color: color-mix(in oklch, var(--text-tertiary) 24%, transparent);
     }
-    /* Critical alert left accent — scan priority */
+    /* Critical alert full-frame tint — scan priority */
     .alert-row:has(.alert-dot.critical) {
-      border-left-color: var(--system-down-fg);
+      border-color: color-mix(in oklch, var(--system-down-fg) 24%, var(--border-subtle));
       background: color-mix(in oklch, var(--system-down-fg) 4%, transparent);
     }
     .alert-row:has(.alert-dot.warning) {
       background: color-mix(in oklch, var(--system-degraded-fg) 2%, transparent);
     }
     .alert-row:has(.alert-dot.critical):hover {
-      border-left-color: var(--system-down-fg);
+      border-color: color-mix(in oklch, var(--system-down-fg) 30%, var(--border-subtle));
     }
     /* Warning alert hover — warm indicator */
     .alert-row:has(.alert-dot.warning):hover {
-      border-left-color: color-mix(in oklch, var(--system-degraded-fg) 50%, transparent);
+      border-color: color-mix(in oklch, var(--system-degraded-fg) 30%, var(--border-subtle));
     }
 
     /* ══════════════════════════════════════════════
@@ -2692,10 +2692,10 @@
           <label for="overlay-alert-handle" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>告警摘要</h4>
+          <h2>告警摘要</h2>
           <p class="overlay-text-primary">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
 
-          <h4>影响范围</h4>
+          <h2>影响范围</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">受影响服务</span>
             <span class="overlay-field-value">行情数据同步管道</span>
@@ -2709,7 +2709,7 @@
             <span class="overlay-field-value color-down"><span class="status-value">38</span> 分钟</span>
           </div>
 
-          <h4>根因分析</h4>
+          <h2>根因分析</h2>
           <p class="overlay-text-secondary-flush">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
 
           <div class="overlay-actions">
@@ -2753,7 +2753,7 @@
           <label for="overlay-task-detail" class="overlay-close" aria-label="关闭">✕</label>
         </div>
         <div class="overlay-body">
-          <h4>基本信息</h4>
+          <h2>基本信息</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">任务名称</span>
             <span class="overlay-field-value">日线行情同步</span>
@@ -2771,7 +2771,7 @@
             <span class="overlay-field-value">定时（每 30 分钟）</span>
           </div>
 
-          <h4>执行参数</h4>
+          <h2>执行参数</h2>
           <div class="overlay-field">
             <span class="overlay-field-label">数据源</span>
             <span class="overlay-field-value">Tushare + Wind</span>
@@ -2789,7 +2789,7 @@
             <span class="overlay-field-value"><span class="status-value">2</span> 分钟</span>
           </div>
 
-          <h4>运行日志</h4>
+          <h2>运行日志</h2>
           <div class="overlay-log-box-compact">
             <div><span class="log-timestamp">14:30:00</span> 任务启动</div>
             <div><span class="log-timestamp">14:30:01</span> 连接 Tushare API...</div>
@@ -3132,10 +3132,10 @@
             <span class="overlay-title">异常处理</span>
           </div>
           <div class="overlay-body">
-            <h4>告警摘要</h4>
+            <h2>告警摘要</h2>
             <p class="overlay-text-primary">上交所行情接口响应超时，超时 45s，已自动切换备用源。</p>
 
-            <h4>影响范围</h4>
+            <h2>影响范围</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">受影响服务</span>
               <span class="overlay-field-value">行情数据同步管道</span>
@@ -3149,7 +3149,7 @@
               <span class="overlay-field-value color-down"><span class="status-value">38</span> 分钟</span>
             </div>
 
-            <h4>根因分析</h4>
+            <h2>根因分析</h2>
             <p class="overlay-text-secondary-flush">上交所 Level-2 行情网关在 13:54 触发超时，疑似上游机房网络波动。备用源（东方财富）已接管，延迟略高于正常水平（45s vs 2s）。</p>
 
             <div class="overlay-actions">
@@ -3193,7 +3193,7 @@
             <span class="overlay-title">任务详情</span>
           </div>
           <div class="overlay-body">
-            <h4>基本信息</h4>
+            <h2>基本信息</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">任务名称</span>
               <span class="overlay-field-value">日线行情同步</span>
@@ -3211,7 +3211,7 @@
               <span class="overlay-field-value">定时（每 30 分钟）</span>
             </div>
 
-            <h4>执行参数</h4>
+            <h2>执行参数</h2>
             <div class="overlay-field">
               <span class="overlay-field-label">数据源</span>
               <span class="overlay-field-value">Tushare + Wind</span>
@@ -3229,7 +3229,7 @@
               <span class="overlay-field-value"><span class="status-value">2</span> 分钟</span>
             </div>
 
-            <h4>运行日志</h4>
+            <h2>运行日志</h2>
             <div class="overlay-log-box-compact">
               <div>14:30:00 任务启动</div>
               <div>14:30:01 连接 Tushare API...</div>

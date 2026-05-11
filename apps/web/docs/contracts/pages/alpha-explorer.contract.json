@@ -16,7 +16,7 @@
     "featureModule": "src/features/research",
     "contractStatus": "draft",
     "overlayStatus": "triggerable",
-    "visualAuditStatus": "missing",
+    "visualAuditStatus": "verified",
     "reactTestRefs": [],
     "reactComponentRefs": []
   },
