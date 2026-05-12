@@ -18,10 +18,7 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.tracing import traced
 from ditto_kernel.trading import DEFAULT_LOT_SIZE, InstrumentRules, MarketSnapshot
-from ditto_portfolio.accounting import (
-    AccountView,
-    Order,
-)
+from ditto_portfolio.accounting import AccountView
 
 from ditto_execution._planner_types import (
     BlockedOrder,
@@ -30,6 +27,9 @@ from ditto_execution._planner_types import (
 )
 from ditto_execution.cost_estimate import calc_cost, calc_turnover
 from ditto_execution.market_precheck import pre_check
+from ditto_execution.orders.book import OrderBookReadOnly
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_execution.target_diff import DiffContext, compute_diff, compute_pending_delta
 from ditto_execution.targets import TargetPortfolioLike
 
@@ -58,6 +58,7 @@ class ExecutionPlanner(Protocol):
         rules: dict[InstrumentId, InstrumentRules] | None = None,
         market_snapshots: dict[InstrumentId, MarketSnapshot] | None = None,
         locked_instruments: set[InstrumentId] | None = None,
+        order_book: OrderBookReadOnly | None = None,
     ) -> ExecutionPlan:
         """根据 target 和 account_view 生成执行计划。"""
         ...
@@ -101,13 +102,16 @@ class SimpleExecutionPlanner:
         rules: dict[InstrumentId, InstrumentRules] | None = None,
         market_snapshots: dict[InstrumentId, MarketSnapshot] | None = None,
         locked_instruments: set[InstrumentId] | None = None,
+        order_book: OrderBookReadOnly | None = None,
     ) -> ExecutionPlan:
         """生成执行计划。"""
         locked = locked_instruments or set()
         market = market_snapshots or {}
         instrument_rules = rules or {}
 
-        pending_delta = compute_pending_delta(account_view.order_book)
+        pending_delta = (
+            compute_pending_delta(order_book) if order_book is not None else {}
+        )
 
         all_instruments = set(target.positions.keys())
         all_instruments |= set(account_view.positions.keys())
@@ -150,7 +154,7 @@ class SimpleExecutionPlanner:
     ) -> Order:
         """创建 Order 对象。"""
         return Order(
-            order_id=self._next_id(),
+            client_id=ClientOrderId(value=self._next_id()),
             instrument_id=instrument_id,
             order_type=order_type or self._default_order_type,
             direction=direction,

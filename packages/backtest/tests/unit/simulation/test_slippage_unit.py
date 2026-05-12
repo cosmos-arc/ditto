@@ -1,15 +1,15 @@
 """SlippageModel unit tests — FixedBpsSlippage + VolumeShareSlippage."""
 
-from datetime import datetime
-
 import pytest
 from ditto_backtest.simulation.slippage import (
     FixedBpsSlippage,
     VolumeShareSlippage,
 )
-from ditto_kernel.order import OrderSide
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot
-from ditto_portfolio.accounting import Order
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -19,16 +19,15 @@ from ditto_portfolio.accounting import Order
 def _order(
     direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
 ) -> Order:
     return Order(
-        order_id="ORD-001",
+        client_id=ClientOrderId("ORD-001"),
         instrument_id=instrument_id,
-        order_type="market",
+        order_type=OrderType.MARKET,
         direction=direction,
         quantity=quantity,
         price=None,
-        created_at=datetime(2026, 3, 1),
     )
 
 

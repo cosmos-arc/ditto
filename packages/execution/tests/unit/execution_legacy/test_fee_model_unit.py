@@ -1,12 +1,11 @@
 """FeeModel unit tests — SimpleFeeModel + AShareFeeModel."""
 
-from datetime import datetime
-
 import pytest
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_execution.reality.fee import AShareFeeModel, SimpleFeeModel
-from ditto_kernel.order import OrderSide
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeSchedule
-from ditto_portfolio.accounting import Order
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -19,13 +18,12 @@ def _order(
     instrument_id: int = 1,
 ) -> Order:
     return Order(
-        order_id="ORD-001",
+        client_id=ClientOrderId(value="ORD-001"),
         instrument_id=instrument_id,
-        order_type="market",
+        order_type=OrderType.MARKET,
         direction=direction,
         quantity=quantity,
         price=None,
-        created_at=datetime(2026, 3, 1),
     )
 
 

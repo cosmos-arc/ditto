@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 from ditto_execution.cost_estimate import calc_cost, calc_turnover, get_estimated_price
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeSchedule, InstrumentRules, MarketSnapshot
-from ditto_portfolio.accounting import Order
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -42,13 +41,12 @@ def _order(
     direction: OrderSide = OrderSide.BUY,
 ) -> Order:
     return Order(
-        order_id="ORD-001",
+        client_id=ClientOrderId(value="ORD-001"),
         instrument_id=iid,
         order_type=OrderType.MARKET,
         direction=direction,
         quantity=quantity,
         price=None,
-        created_at=datetime(2026, 1, 1),
     )
 
 

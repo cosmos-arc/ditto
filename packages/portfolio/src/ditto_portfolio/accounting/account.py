@@ -12,10 +12,6 @@ from ditto_kernel.order import OrderSide
 
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import (
-    OrderBook,
-    OrderBookReadOnly,
-)
 from ditto_portfolio.accounting.position import Position
 from ditto_portfolio.events import PositionChanged
 
@@ -35,8 +31,6 @@ class AccountView:
         total_value: 总资产 = cash.total + exposure
         nav: 净资产值 = cash.total + sum(market_value + unrealized_pnl)
         exposure: 持仓总市值 = sum(market_value)
-        pending_buy_value: 未完成买入订单的预计金额
-        order_book: 订单簿只读视图
 
     """
 
@@ -45,8 +39,6 @@ class AccountView:
     total_value: float
     nav: float
     exposure: float
-    pending_buy_value: float
-    order_book: OrderBookReadOnly
 
 
 @dataclass
@@ -69,13 +61,11 @@ class Account:
         init=False,
         repr=False,
     )
-    order_book: OrderBook = field(default_factory=OrderBook, init=False)
 
     def __init__(
         self,
         positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
-        order_book: OrderBook | None = None,
         event_bus: EventBus | None = None,
     ) -> None:
         """
@@ -84,7 +74,6 @@ class Account:
         Args:
             positions: 持仓映射
             cash: 现金账本
-            order_book: 订单簿
             event_bus: 事件总线（可选，用于发布 PositionChanged 事件）
 
         """
@@ -104,11 +93,6 @@ class Account:
                 settled=0.0,
                 frozen=0.0,
             ),
-        )
-        object.__setattr__(
-            self,
-            "order_book",
-            order_book if order_book is not None else OrderBook(),
         )
         self._event_bus = event_bus
 
@@ -131,14 +115,6 @@ class Account:
         """计算持仓总市值 (exposure = sum(market_value))。"""
         return sum(p.market_value for p in self._positions.values())
 
-    def _calc_pending_buy_value(self) -> float:
-        """计算未完成买入订单的预计金额 (leaves_quantity * price)。"""
-        total = 0.0
-        for ticket in self.order_book.get_pending():
-            if ticket.order.direction == OrderSide.BUY:
-                total += ticket.leaves_quantity * (ticket.order.price or 0.0)
-        return total
-
     def get_view(self) -> AccountView:
         """生成只读账户快照。"""
         exposure = self._calc_exposure()
@@ -149,8 +125,6 @@ class Account:
             nav=self.cash.total
             + sum(p.market_value + p.unrealized_pnl for p in self._positions.values()),
             exposure=exposure,
-            pending_buy_value=self._calc_pending_buy_value(),
-            order_book=self.order_book.readonly_view(),
         )
 
     # -- fill application ----------------------------------------------------
@@ -279,7 +253,9 @@ class Account:
         """将计算好的持仓变更应用到内部 dict。"""
         if "upsert" in updates:
             iid, pos = updates["upsert"]
-            self._positions[iid] = pos  # type: ignore[assignment]
+            if pos is None:
+                raise ValueError(f"upsert entry for {iid} must have a Position")
+            self._positions[iid] = pos
         elif "remove" in updates:
             iid = updates["remove"][0]
             self._positions.pop(iid, None)

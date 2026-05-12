@@ -59,5 +59,6 @@ class DataFetchStep:
 
         # 写入 context 供后续步骤使用
         ctx.account_view = account_view
+        ctx.order_book = self._brokerage.get_order_book()
 
         return StepResult.ok()

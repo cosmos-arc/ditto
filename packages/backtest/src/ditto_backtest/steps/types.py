@@ -11,12 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from ditto_execution.orders.book import OrderBookReadOnly
+from ditto_execution.orders.model import Order
 from ditto_execution.planner import ExecutionPlan
 from ditto_execution.targets import TargetPortfolioLike
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_context import TimeContext
 from ditto_kernel.trading import InstrumentRules, MarketSnapshot
-from ditto_portfolio.accounting import AccountView, FillEvent, Order
+from ditto_portfolio.accounting import AccountView, FillEvent
 
 from ditto_backtest.audit.records import PreTradeDecisionRecord
 from ditto_backtest.data_feed import Slice
@@ -84,6 +86,7 @@ class StepContext:
         bars: 当日市场行情（由 Synchronizer 提供）
         slice_: 当日数据切片（benchmark_close 等，由 EngineLoop 设置）
         account_view: 账户快照（由 DataFetchStep 设置）
+        order_book: 订单簿只读视图（由 DataFetchStep 设置）
         target_portfolio: 目标组合（由 StrategyStep 设置，仅调仓日）
         execution_plan: 执行计划（由 PlanningStep 设置，仅调仓日）
         rules: 三层规则（由 PlanningStep 设置，仅调仓日）
@@ -101,6 +104,7 @@ class StepContext:
     # -- Step outputs (set by steps, read by subsequent steps) --
     slice_: Slice | None = None
     account_view: AccountView | None = None
+    order_book: OrderBookReadOnly | None = None
     target_portfolio: TargetPortfolioLike | None = None
     execution_plan: ExecutionPlan | None = None
     rules: dict[InstrumentId, InstrumentRules] | None = None

@@ -6,7 +6,11 @@ from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
-from ditto_execution.contracts import TradeDataPort
+from ditto_execution.contracts import (
+    FillDataPort,
+    IntentDataPort,
+    PositionDataPort,
+)
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
 from ditto_execution.storage.sqlite.trade import (
     FILLS_DDL,
@@ -75,6 +79,23 @@ class ExecutionStorageProvider(Provider):
         readers: ExecutionReaders,
         writers: ExecutionWriters,
         _schema_initialized: None,
-    ) -> TradeDataPort:
-        """交易信号/成交/持仓 CRUD 服务."""
+    ) -> TradeService:
+        """交易信号/成交/持仓 CRUD 服务（内部实例）。"""
         return TradeService(readers=readers, writers=writers)
+
+    # ── ISP 窄 Port 暴露 ──
+
+    @provide
+    def intent_data_port(self, trade_service: TradeService) -> IntentDataPort:
+        """交易意图窄 Port."""
+        return trade_service
+
+    @provide
+    def fill_data_port(self, trade_service: TradeService) -> FillDataPort:
+        """成交窄 Port."""
+        return trade_service
+
+    @provide
+    def position_data_port(self, trade_service: TradeService) -> PositionDataPort:
+        """持仓窄 Port."""
+        return trade_service

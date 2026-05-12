@@ -12,6 +12,8 @@ from unittest.mock import Mock
 import pytest
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.synchronizer import Synchronizer, TimeSlice
@@ -20,8 +22,6 @@ from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
-    Order,
-    OrderBookReadOnly,
 )
 from ditto_risk.pre_trade import (
     Decision,
@@ -49,8 +49,6 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -96,7 +94,7 @@ def _make_order(
     direction: OrderSide = OrderSide.BUY,
 ) -> Order:
     return Order(
-        order_id="order-001",
+        client_id=ClientOrderId(value="order-001"),
         instrument_id=iid,
         order_type=OrderType.MARKET,
         direction=direction,

@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from ditto_portfolio.accounting import AccountView, FillEvent, Order, OrderTicket
+from ditto_portfolio.accounting import AccountView, FillEvent
+
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.ticket import OrderTicket
 
 __all__ = ["BrokerGateway"]
 

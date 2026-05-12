@@ -25,8 +25,6 @@ def _account_view(nav: float = 100_000.0) -> AccountView:
         total_value=nav,
         nav=nav,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 

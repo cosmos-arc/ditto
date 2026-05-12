@@ -11,7 +11,13 @@ from ditto_execution.audit.models import (
 )
 from ditto_execution.models import FillRecord, PositionRecord, SignalRecord
 
-__all__ = ["OrderRouter", "TradeAuditor", "TradeDataPort"]
+__all__ = [
+    "FillDataPort",
+    "IntentDataPort",
+    "OrderRouter",
+    "PositionDataPort",
+    "TradeAuditor",
+]
 
 
 @runtime_checkable
@@ -48,16 +54,13 @@ class TradeAuditor(Protocol):
         ...
 
 
-class TradeDataPort(Protocol):
-    """
-    交易数据端口 — Application 层与 Execution 存储的解耦契约.
+# ---------------------------------------------------------------------------
+# ISP 窄 Port — 按聚合边界拆分交易数据访问
+# ---------------------------------------------------------------------------
 
-    覆盖 Application 层（queries/commands/providers）所需的全部公开方法，
-    消除 application 对 execution.storage.sqlite 的直接依赖。
-    TradeService 是本 Protocol 的唯一实现。
-    """
 
-    # -- Intent CRUD --
+class IntentDataPort(Protocol):
+    """交易意图窄 Port — 信号 CRUD + 状态变更."""
 
     def save_intent(self, record: SignalRecord) -> None:
         """保存交易信号记录."""
@@ -83,17 +86,19 @@ class TradeDataPort(Protocol):
         *,
         expected_current: tuple[str, ...],
     ) -> bool:
-        """更新交易信号状态（expected_current 用于 TOCTOU 防护）。"""
+        """更新交易信号状态."""
         ...
 
-    # -- Fill CRUD --
+
+class FillDataPort(Protocol):
+    """成交窄 Port — 成交 CRUD."""
 
     def save_fill(self, record: FillRecord) -> None:
         """保存成交记录."""
         ...
 
     def find_fill(self, intent_id: str, trade_date: str) -> FillRecord | None:
-        """按 intent_id + trade_date 查找成交记录（幂等去重用）。"""
+        """按 intent_id + trade_date 查找成交记录."""
         ...
 
     def list_fills(
@@ -106,7 +111,9 @@ class TradeDataPort(Protocol):
         """按条件查询成交记录列表."""
         ...
 
-    # -- Position CRUD --
+
+class PositionDataPort(Protocol):
+    """持仓窄 Port — 持仓快照读写."""
 
     def save_position(self, record: PositionRecord) -> None:
         """保存持仓快照."""

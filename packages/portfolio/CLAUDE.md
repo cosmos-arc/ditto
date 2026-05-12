@@ -39,11 +39,10 @@ ditto_portfolio → ditto_apps ❌
 ```
 ditto_portfolio/
 ├── accounting/           # 会计系统
-│   ├── account.py        # 账户（持有持仓、现金、订单簿）
+│   ├── account.py        # 账户（持有持仓、现金）
 │   ├── position.py       # 持仓模型
 │   ├── cash.py           # 现金簿
 │   ├── buying_power.py   # 购买力计算
-│   ├── order_book.py     # 订单簿
 │   └── fills.py          # 成交记录
 ├── rebalancing/          # 调仓逻辑
 │   ├── allocation.py     # 权重分配器（等权等）
@@ -76,8 +75,7 @@ packages/portfolio/tests/
 │       ├── test_account_unit.py
 │       ├── test_position_unit.py
 │       ├── test_cash_book_unit.py
-│       ├── test_buying_power_unit.py
-│       └── test_order_book_unit.py
+│       └── test_buying_power_unit.py
 ```
 
 ## 典型导入示例

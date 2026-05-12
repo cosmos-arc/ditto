@@ -16,7 +16,7 @@ from ditto_kernel.strategy import RiskScope
 from ditto_kernel.synchronizer import Synchronizer, TimeSlice
 from ditto_kernel.time_context import TimeContext
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting import AccountView, CashBook, OrderBook, Position
+from ditto_portfolio.accounting import AccountView, CashBook, Position
 from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
 from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
@@ -66,8 +66,6 @@ def _make_account_view(
         total_value=nav,
         nav=nav,
         exposure=sum(p.market_value for p in pos.values()),
-        pending_buy_value=0.0,
-        order_book=OrderBook().readonly_view(),
     )
 
 

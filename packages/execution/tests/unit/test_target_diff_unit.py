@@ -6,6 +6,11 @@ from types import MappingProxyType
 import pytest
 from ditto_execution._planner_types import BlockedOrder
 from ditto_execution.market_precheck import pre_check
+from ditto_execution.orders.book import OrderBookReadOnly
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.target_diff import DiffContext, compute_diff, compute_pending_delta
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
@@ -19,10 +24,6 @@ from ditto_kernel.trading import (
 from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
-    Order,
-    OrderBookReadOnly,
-    OrderStatus,
-    OrderTicket,
     Position,
 )
 from ditto_strategy.alpha.models import TargetPortfolio
@@ -73,8 +74,6 @@ def _account_view(
         total_value=nav,
         nav=nav,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -89,7 +88,7 @@ def _target(positions: dict[int, float]) -> TargetPortfolio:
 
 def _make_order(iid: InstrumentId, direction: OrderSide, quantity: int) -> Order:
     return Order(
-        order_id=f"test-{iid}-{direction.value}-{quantity}",
+        client_id=ClientOrderId(value=f"test-{iid}-{direction.value}-{quantity}"),
         instrument_id=iid,
         order_type=OrderType.MARKET,
         direction=direction,
@@ -398,7 +397,7 @@ class TestComputePendingDelta:
     def test_buy_and_sell(self) -> None:
         buy = OrderTicket(
             order=Order(
-                order_id="b1",
+                client_id=ClientOrderId(value="b1"),
                 instrument_id=_iid(1),
                 order_type=OrderType.MARKET,
                 direction=OrderSide.BUY,
@@ -408,7 +407,7 @@ class TestComputePendingDelta:
         )
         sell = OrderTicket(
             order=Order(
-                order_id="s1",
+                client_id=ClientOrderId(value="s1"),
                 instrument_id=_iid(2),
                 order_type=OrderType.MARKET,
                 direction=OrderSide.SELL,

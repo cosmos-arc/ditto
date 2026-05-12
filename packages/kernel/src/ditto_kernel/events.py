@@ -36,6 +36,8 @@ class EventName(StrEnum):
     ORDER_SUBMITTED = "order_submitted"
     ORDER_FILLED = "order_filled"
     ORDER_CANCELED = "order_canceled"
+    ORDER_REJECTED = "order_rejected"
+    ORDER_EXPIRED = "order_expired"
     RISK_GUARD_TRIGGERED = "risk_guard_triggered"
     POSITION_CHANGED = "position_changed"
     ACCOUNT_UPDATED = "account_updated"

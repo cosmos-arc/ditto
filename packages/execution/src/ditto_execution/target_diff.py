@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import InstrumentRules, MarketSnapshot
-from ditto_portfolio.accounting import AccountView, Order, OrderBookReadOnly
+from ditto_portfolio.accounting import AccountView
 
 from ditto_execution._planner_types import BlockedOrder, BlockSeverity
 from ditto_execution.cost_estimate import get_estimated_price
+from ditto_execution.orders.book import OrderBookReadOnly
+from ditto_execution.orders.model import Order
 from ditto_execution.quantity_rounding import (
     get_lot_size,
     round_buy_qty,

@@ -14,7 +14,7 @@
 | 类别 | 执行 | 接受现状 |
 |------|------|---------|
 | 代码级 | 4 项（含大文件拆分 7 文件） | 4 项 |
-| 架构级 | 3 Phase 依赖链 | — |
+| 架构级 | Phase 1 Runtime Spine + Phase 2 OMS Lite（含 Port ISP） | Phase 3 已降级合并入 Phase 2 |
 
 ---
 
@@ -146,31 +146,294 @@ ISynchronizer.StreamData() → IEnumerable<TimeSlice>
 
 ### Phase 2: OMS Lite（紧随 Phase 1）
 
+> 更新：2026-05-11 详细设计确认
+> 决策依据：源码审计（72 Protocol 完整盘点 + execution/backtest/portfolio 全链路分析）+ 业界对标（LEAN OrderTicket/NautilusTrader 14-state FSM/vnpy EventEngine）
+
 **业界共识**：Order FSM + Append-Only Journal，与执行引擎共置。
 
 ```
 Order 创建后不可变 → OrderEvent journal 是 source of truth → 状态机确定性
 ```
 
-**Ditto 落地方向**：
-- `ClientOrderId`/`BrokerOrderId`/`OrderState`/`OrderTicket` → execution 包内先设计
-- `OrderEvent` append-only journal（Python list / SQLite，不需要 Kafka）
-- 状态转换表是数据结构（不是 if-else）
-- Backtest/Paper 共享 seam 利用 Phase 1 的 Synchronizer 抽象
+**为何紧随 Phase 1**：portfolio 状态重建依赖 execution journal，是后续扩展的前置。
 
-**为何紧随 Phase 1**：portfolio 状态重建依赖 execution journal，是 Phase 3 的前置。
+#### 2.0 核心设计决策
 
-### Phase 3: Consumer-Owned Ports 深化
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| OMS 归属 | execution 包 | Order 生命周期是执行域核心关注点，不属于组合构建域 |
+| FSM 方式 | 表驱动 + 方法封装 | 转换表可审计/可测试，方法提供领域语义封装（NautilusTrader 验证） |
+| Event 存储 | Protocol + 内存默认 | 回测用内存，Paper/Live 加 SQLite 实现，API 不变 |
+| 双 ID 空间 | 现在定义，Live 时填充 | 类型系统一次到位，BacktestBrokerage 不填 BrokerOrderId |
+| Phase 3 降级 | 合并入 Phase 2 | 72 Protocol 已行业领先，增量仅 TradeDataPort 拆分 |
 
-**业界共识**（NautilusTrader 最纯粹）：每个有界上下文定义自己的 Port，ISP 是关键。
+#### 2.1 Order 模型迁移（execution 包）
 
-**Ditto 现状**：109 个 Protocol，已行业领先。
+**当前状态**（问题）：
 
-**演化方向**：
-- `ditto_data.provider.DataProvider` → 消费端各自定义窄 Port
-- application 层窄编排 Port（`ResearchCatalogPort`/`ResearchArtifactPort`/`IngestionSourcePort`）
-- DataCatalog Runtime Store
-- Dataset enum 降权为 DataCatalog 元数据
+| 类型 | 当前位置 | 问题 |
+|------|---------|------|
+| `Order` / `OrderTicket` / `OrderStatus` / `OrderEvent` / `OrderBook` | `portfolio/accounting/order_book.py` | Order 生命周期不在组合域 |
+| `OrderRecord`（扁平 DTO） | `execution/orders/store.py` | 与 portfolio Order 不关联 |
+| `OrderSubmitted/Filled/Canceled` | `execution/events.py` | 与 portfolio OrderEvent 双系统不统一 |
+
+**迁移方案**：Account 与 OrderBook 解耦
+
+```
+迁移前：
+  Account ──owns──> OrderBook ──contains──> OrderTicket ──references──> Order
+
+迁移后：
+  Account ──accepts──> FillEvent（纯值对象，已在 kernel）
+  ExecutionEngine ──owns──> OrderBook（生命周期管理）
+  ExecutionEngine ──calls──> Account.apply_fill()（现金/持仓更新）
+```
+
+**Account 失去的能力**（移到 execution/BacktestBrokerage）：
+- `submit_order()` → `ExecutionEngine.submit()`
+- `get_pending_orders()` → `OrderBook.get_pending()`
+- `apply_fill()` → 拆分：execution 做状态转换，调用 `Account.apply_fill()` 做现金/持仓更新
+
+**新 execution 内部结构**：
+
+```
+execution/
+├── orders/
+│   ├── model.py          # Order (frozen), OrderType, OrderDirection
+│   ├── status.py         # OrderStatus (enum, 7 状态)
+│   ├── trigger.py        # OrderTrigger (enum, 5 触发器)
+│   ├── fsm.py            # TRANSITIONS 表 + transition() 函数
+│   ├── ticket.py         # OrderTicket (frozen, with_* 方法调用 FSM)
+│   ├── book.py           # OrderBook (mutable state owner)
+│   ├── journal.py        # OrderEventJournal Protocol + InMemoryJournal
+│   ├── ids.py            # ClientOrderId, BrokerOrderId 值对象
+│   └── event.py          # OrderEvent (frozen, 含 trigger 字段)
+├── events.py             # DomainEvent 子类（已存在，扩展 + OrderRejected/OrderExpired）
+└── ...
+```
+
+#### 2.2 显式 FSM 转换表
+
+**状态**（保留现有 7 个，对齐 NautilusTrader 核心子集）：
+
+```
+NEW → SUBMITTED → PARTIALLY_FILLED → FILLED
+                   ↘ CANCELED
+                   ↘ REJECTED
+                   ↘ INVALID
+```
+
+**触发器**（新增 `OrderTrigger` enum）：
+
+| Trigger | 含义 | 产生的 DomainEvent |
+|---------|------|-------------------|
+| `SUBMIT` | 提交到市场 | `OrderSubmitted` |
+| `FILL(qty, price)` | 成交（部分/全部由 qty 决定） | `OrderFilled` |
+| `CANCEL` | 撤单 | `OrderCanceled` |
+| `REJECT` | 被拒 | `OrderRejected`（新增） |
+| `EXPIRE` | 过期 | `OrderExpired`（新增） |
+
+**转换表**（核心逻辑）：
+
+```python
+TRANSITIONS: dict[tuple[OrderStatus, OrderTrigger], None] = {
+    # 正常路径
+    (NEW, SUBMIT):                   None,  # → SUBMITTED
+    (SUBMITTED, FILL):               None,  # → PARTIALLY_FILLED or FILLED
+    (PARTIALLY_FILLED, FILL):        None,  # → FILLED or still PARTIALLY_FILLED
+    # 异常路径
+    (NEW, CANCEL):                   None,  # → CANCELED
+    (NEW, REJECT):                   None,  # → REJECTED
+    (SUBMITTED, CANCEL):             None,
+    (SUBMITTED, REJECT):             None,
+    (SUBMITTED, EXPIRE):             None,
+    (PARTIALLY_FILLED, CANCEL):      None,
+    (PARTIALLY_FILLED, EXPIRE):      None,
+}
+
+_TRIGGER_TARGET: dict[OrderTrigger, OrderStatus] = {
+    OrderTrigger.SUBMIT:  OrderStatus.SUBMITTED,
+    OrderTrigger.CANCEL:  OrderStatus.CANCELED,
+    OrderTrigger.REJECT:  OrderStatus.REJECTED,
+    OrderTrigger.EXPIRE:  OrderStatus.INVALID,
+}
+
+def transition(
+    current: OrderStatus,
+    trigger: OrderTrigger,
+    fill_qty: int = 0,
+    leaves_qty: int = 0,
+) -> OrderStatus:
+    if (current, trigger) not in TRANSITIONS:
+        raise OrderStateError(current, trigger)
+    if trigger == OrderTrigger.FILL:
+        return OrderStatus.FILLED if fill_qty >= leaves_qty else OrderStatus.PARTIALLY_FILLED
+    return _TRIGGER_TARGET[trigger]
+```
+
+**与 OrderTicket 的集成**：`with_fill()`/`with_cancel()` 等方法内部调用 `transition()` 做验证 + 状态确定，不再自己实现守卫逻辑。
+
+**对比业界**：
+
+| 特性 | LEAN | NautilusTrader | Ditto Phase 2 |
+|------|------|---------------|---------------|
+| FSM 状态数 | ~8（隐式） | 14（显式） | 7（显式） |
+| 转换表 | 无 | 有 | 有 |
+| 守卫检查 | 部分 | 完整 | 完整 |
+| 事件溯源 | OrderEvent 累积 | Cache + MessageBus | Journal Protocol |
+
+#### 2.3 Event Journal 与双 ID 空间
+
+**OrderEventJournal Protocol**：
+
+```python
+class OrderEventJournal(Protocol):
+    def append(self, event: OrderEvent) -> None: ...
+    def events_for(self, order_id: ClientOrderId) -> tuple[OrderEvent, ...]: ...
+    def all_events(self) -> tuple[OrderEvent, ...]: ...
+
+class InMemoryOrderEventJournal:
+    """默认实现：内存 list，回测用"""
+```
+
+**OrderEvent 扩展**（当前只有 `status` + `fill_price` + `fill_quantity`）：
+
+```python
+@dataclass(frozen=True, slots=True)
+class OrderEvent:
+    order_id: ClientOrderId
+    trigger: OrderTrigger        # 新增：什么触发了状态变化
+    status: OrderStatus           # 变化后的状态
+    fill_price: float | None = None
+    fill_quantity: int | None = None
+    fee: float | None = None
+    message: str | None = None
+    timestamp: datetime = field(default_factory=datetime.utcnow)
+```
+
+**双 ID 值对象**：
+
+```python
+@dataclass(frozen=True, slots=True)
+class ClientOrderId:
+    """策略/execution 分配的全局唯一 ID"""
+    value: str  # UUID 格式
+
+    @classmethod
+    def generate(cls) -> ClientOrderId:
+        return cls(value=f"ditto-{uuid4().hex[:16]}")
+
+@dataclass(frozen=True, slots=True)
+class BrokerOrderId:
+    """券商/交易所返回的 ID（回测时为 None）"""
+    value: str
+```
+
+**Order 模型更新**：
+
+```python
+@dataclass(frozen=True, slots=True)
+class Order:
+    order_id: ClientOrderId          # 替换 str
+    broker_id: BrokerOrderId | None  # 新增，Live 时填充
+    instrument_id: InstrumentId
+    order_type: OrderType
+    direction: OrderDirection
+    quantity: int
+    price: float | None = None
+    stop_price: float | None = None
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    strategy_run_id: str | None = None
+```
+
+`BrokerOrderId` 在 BacktestBrokerage 中始终为 `None`，Paper/Live 网关实现时自动填充。
+
+#### 2.4 Domain Event 扩展
+
+当前 `execution/events.py` 只有 `OrderSubmitted`/`OrderFilled`/`OrderCanceled`，需补充：
+
+| 新增事件 | 对应 Trigger | 用途 |
+|---------|-------------|------|
+| `OrderRejected` | `REJECT` | 券商拒单通知 |
+| `OrderExpired` | `EXPIRE` | 订单过期（GTC 到期） |
+
+#### 2.5 TradeDataPort ISP 拆分（Phase 3 降级项）
+
+当前 `execution/contracts.py` 的 `TradeDataPort`（10 方法）覆盖 intent/fill/position 三域，违反 ISP。
+
+**拆分方案**：
+
+```python
+class OrderIntentPort(Protocol):
+    """订单意向存储（execution 内部用）"""
+    def save_intent(self, record: SignalRecord) -> None: ...
+    def get_intent(self, order_id: str) -> SignalRecord | None: ...
+    def list_intents(self, ...) -> list[SignalRecord]: ...
+    def update_intent_status(self, order_id: str, status: str) -> None: ...
+
+class TradeFillPort(Protocol):
+    """成交记录存储（execution + backtest 消费）"""
+    def save_fill(self, record: FillRecord) -> None: ...
+    def get_fill(self, order_id: str) -> FillRecord | None: ...
+    def list_fills(self, ...) -> list[FillRecord]: ...
+
+class TradePositionPort(Protocol):
+    """持仓快照存储（execution + risk 消费）"""
+    def save_position(self, ...) -> None: ...
+    def list_positions(self, ...) -> list[PositionRecord]: ...
+```
+
+**消费者映射**：
+
+| 消费者 | 需要的 Port |
+|--------|------------|
+| BacktestBrokerage | `TradeFillPort` |
+| AuditService | `TradeFillPort` |
+| Risk scan | `TradePositionPort` |
+| Strategy Run | `OrderIntentPort` + `TradeFillPort` |
+
+**DataProvider 不动**：4 方法、2 消费者（backtest + application），窄化收益低。
+
+#### 2.6 迁移序列
+
+**7 步增量迁移**（每步可独立验证）：
+
+| 步骤 | 内容 | 涉及包 | 验证方式 |
+|------|------|--------|---------|
+| **S1** | 定义新类型（ids/model/status/trigger/fsm/journal/event） | execution | 单元测试 FSM 转换表 |
+| **S2** | 实现 OrderTicket（调用 FSM）+ OrderBook（使用 Journal） | execution | 单元测试状态转换 |
+| **S3** | Account 解耦 OrderBook：移除 `_order_book` 字段，`apply_fill()` 保留 | portfolio | 现有测试通过 |
+| **S4** | BacktestBrokerage 适配新 execution OMS | backtest + execution | 回测集成测试 |
+| **S5** | TradeDataPort 拆分为 3 窄 Port | execution | `arch-check` 通过 |
+| **S6** | 清理 portfolio 旧类型 + execution OrderRecord | portfolio + execution | 全量测试通过 |
+| **S7** | B9-K.6 删除 kernel DecisionFrame + B9-EX.4 DiffContext | kernel + execution | `pixi run -e dev check` |
+
+**关键约束**：
+- S1-S2 不改动现有代码，只新增
+- S3 是最关键的一步（Account 解耦），需先确保所有 Account 消费者已适配
+- S4 完成后回测应可正常运行（功能不变，内部重构）
+- S5-S7 是清理和优化，可独立执行
+
+#### 2.7 与 Phase 1 的衔接
+
+Phase 1（Runtime Spine）已建立 `Synchronizer`/`Clock`/`TimeContext` 抽象。Phase 2 在此基础上：
+- `BacktestSynchronizer` 产出的 `TimeSlice` 不变
+- `EngineLoop._step()` 中 PreTradeStep → ExecutionStep 调用链不变
+- 内部 Order 生命周期从 portfolio 隐式 → execution 显式 FSM
+- Phase 1 的 `Synchronizer` 抽象使 Backtest/Paper 共享 seam 天然存在
+
+### Phase 3: Consumer-Owned Ports 深化（已降级）
+
+> 2026-05-11 决策：降级为 Phase 2 附带任务（S5 TradeDataPort 拆分）。
+> 理由：72 Protocol 审计表明覆盖度已行业领先，DataProvider 4 方法 / 2 消费者无需窄化。
+
+**已完成项**（合并入 Phase 2 S5）：
+- `TradeDataPort` 拆分为 `OrderIntentPort` / `TradeFillPort` / `TradePositionPort`
+
+**延后项**（触发条件）：
+- `DataProvider` 窄化 → 第 3+ 消费者出现或 Live DataFeed 有不同需求时
+- application 层窄编排 Port → ResearchCatalog/ArtifactPort → 研究功能扩展时
+- DataCatalog Runtime Store → Dataset 降权 → 多数据源接入时
 
 ---
 
@@ -194,6 +457,10 @@ Order 创建后不可变 → OrderEvent journal 是 source of truth → 状态�
 | LEAN Engine.cs | 配置驱动 Handler 工厂方法 |
 | LEAN AlgorithmManager.cs | 确定性单线程主循环 |
 | LEAN ISynchronizer.cs | 回测/实盘时间抽象 |
-| NautilusTrader | Actor 模型 + 纯六边形架构 |
+| LEAN OrderTicket | 隐式 FSM + OrderEvent 累积 |
+| NautilusTrader | Actor 模型 + 纯六边形架构 + 14 状态显式 FSM |
+| NautilusTrader Adapter | 5 固定组件 + 窄 async 方法 + Cache-then-Publish |
 | vnpy EventEngine | 反应器模式（120 LOC） |
 | Martin Fowler Event Sourcing | 交易系统轻量级事件溯源 |
+| Mikhail Shilkov DIP | Consumer-Owned Ports 理论基础 |
+| Alistair Cockburn | 六边形架构原始定义 |

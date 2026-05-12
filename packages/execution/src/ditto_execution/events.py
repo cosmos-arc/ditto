@@ -9,7 +9,9 @@ from ditto_kernel.events import EventName
 
 __all__ = [
     "OrderCanceled",
+    "OrderExpired",
     "OrderFilled",
+    "OrderRejected",
     "OrderSubmitted",
 ]
 
@@ -41,5 +43,23 @@ class OrderCanceled(DomainEvent):
     """订单取消事件."""
 
     event_type: str = field(default=EventName.ORDER_CANCELED, init=False)
+    order_id: str
+    reason: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class OrderRejected(DomainEvent):
+    """订单拒绝事件."""
+
+    event_type: str = field(default=EventName.ORDER_REJECTED, init=False)
+    order_id: str
+    reason: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class OrderExpired(DomainEvent):
+    """订单过期事件."""
+
+    event_type: str = field(default=EventName.ORDER_EXPIRED, init=False)
     order_id: str
     reason: str

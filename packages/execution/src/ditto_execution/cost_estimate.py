@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRules, MarketSnapshot
-from ditto_portfolio.accounting import Order
+
+from ditto_execution.orders.model import Order
 
 __all__ = [
     "calc_cost",

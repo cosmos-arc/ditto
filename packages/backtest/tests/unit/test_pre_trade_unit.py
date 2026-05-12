@@ -3,6 +3,10 @@
 from types import MappingProxyType
 
 import pytest
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -16,10 +20,6 @@ from ditto_portfolio.accounting import (
     AccountView,
     CashAccountBuyingPower,
     CashBook,
-    Order,
-    OrderBookReadOnly,
-    OrderStatus,
-    OrderTicket,
 )
 from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.pre_trade import (
@@ -139,8 +139,6 @@ def account_view(cash_book: CashBook) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -179,7 +177,7 @@ def _buy_order(
     order_type: OrderType = OrderType.MARKET,
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=instrument_id,
         order_type=order_type,
         direction=OrderSide.BUY,
@@ -194,7 +192,7 @@ def _sell_order(
     quantity: int = 100,
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=instrument_id,
         order_type=OrderType.MARKET,
         direction=OrderSide.SELL,
@@ -294,10 +292,6 @@ class TestPreTradeContext:
             < empty_context.account_view.cash.available
         )
         assert new_ctx.account_view.cash.frozen > empty_context.account_view.cash.frozen
-        assert (
-            new_ctx.account_view.pending_buy_value
-            > empty_context.account_view.pending_buy_value
-        )
 
     def test_sell_decreases_available_quantity(
         self,
@@ -322,8 +316,6 @@ class TestPreTradeContext:
             total_value=505_000.0,
             nav=505_000.0,
             exposure=5000.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = PreTradeContext(
             account_view=view,
@@ -361,8 +353,6 @@ class TestPreTradeContext:
             total_value=501_000.0,
             nav=501_000.0,
             exposure=1000.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = PreTradeContext(
             account_view=view,
@@ -452,8 +442,6 @@ class TestNoShortSellCheck:
             total_value=505_000.0,
             nav=505_000.0,
             exposure=5000.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = PreTradeContext(
             account_view=view,
@@ -500,8 +488,6 @@ class TestNoShortSellCheck:
             total_value=500_500.0,
             nav=500_500.0,
             exposure=500.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = PreTradeContext(
             account_view=view,
@@ -601,8 +587,6 @@ class TestPriceValidityCheck:
                 total_value=1_000_000.0,
                 nav=1_000_000.0,
                 exposure=0.0,
-                pending_buy_value=0.0,
-                order_book=OrderBookReadOnly({}),
             ),
             rules={1: _make_instrument_rules(1)},
             market_snapshots=snapshots,
@@ -728,8 +712,6 @@ class TestBuyingPowerCheck:
                 total_value=1.0,
                 nav=1.0,
                 exposure=0.0,
-                pending_buy_value=0.0,
-                order_book=OrderBookReadOnly({}),
             ),
             rules={1: _make_instrument_rules(1)},
             market_snapshots={
@@ -804,8 +786,6 @@ class TestConcentrationPreCheck:
             total_value=1_000_000.0,
             nav=1_000_000.0,
             exposure=150_000.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = PreTradeContext(
             account_view=view,
@@ -838,8 +818,6 @@ class TestConcentrationPreCheck:
                 total_value=0.0,
                 nav=0.0,
                 exposure=0.0,
-                pending_buy_value=0.0,
-                order_book=OrderBookReadOnly({}),
             ),
             rules={1: _make_instrument_rules(1)},
             market_snapshots={1: _make_snapshot(1, close=10.0)},
@@ -968,8 +946,6 @@ class TestDailyTurnoverPreCheck:
                 total_value=0.0,
                 nav=0.0,
                 exposure=0.0,
-                pending_buy_value=0.0,
-                order_book=OrderBookReadOnly({}),
             ),
             rules={1: _make_instrument_rules(1)},
             market_snapshots={1: _make_snapshot(1, close=10.0)},
@@ -1006,8 +982,6 @@ class TestCompositeResize:
             total_value=3_500.0,
             nav=3_500.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = PreTradeContext(
             account_view=poor_view,

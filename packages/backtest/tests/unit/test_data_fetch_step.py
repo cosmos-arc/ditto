@@ -7,6 +7,7 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from ditto_backtest.steps import DataFetchStep, TradingStep
+from ditto_execution.orders.book import OrderBookReadOnly
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 from packages.backtest.tests.unit._helpers import (
@@ -98,6 +99,28 @@ class TestDataFetchStep:
 
         # cooldown_until > date -> 锁保留
         assert strategy_context.is_locked(IID_1)
+
+    def test_sets_order_book(self) -> None:
+        """执行后 ctx.order_book 被设置为 OrderBookReadOnly。"""
+        account_view = _make_account_view()
+        order_book_view = OrderBookReadOnly({})
+        bars = {IID_1: _make_snapshot(IID_1)}
+
+        step = DataFetchStep(
+            brokerage=Mock(
+                get_account=Mock(return_value=account_view),
+                get_order_book=Mock(return_value=order_book_view),
+            ),
+            strategy_context=StrategyContext(),
+            input_instruments=set(),
+            bar_fingerprints={},
+        )
+
+        ctx = _make_ctx(bars=bars)
+        result = step.execute(ctx)
+
+        assert result.success is True
+        assert ctx.order_book is order_book_view
 
     def test_satisfies_trading_step_protocol(self) -> None:
         """DataFetchStep 满足 TradingStep Protocol。"""

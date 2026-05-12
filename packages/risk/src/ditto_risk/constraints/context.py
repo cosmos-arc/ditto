@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from enum import StrEnum
 
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_kernel.identity import (
     InstrumentId as _InstrumentId,
 )
@@ -22,8 +24,6 @@ from ditto_portfolio.accounting import (
     AccountView,
     BuyingPowerModel,
     CashBook,
-    Order,
-    OrderTicket,
 )
 
 __all__ = [
@@ -137,9 +137,6 @@ class PreTradeContext:
             new_view = replace(
                 self.account_view,
                 cash=new_cash,
-                pending_buy_value=(
-                    self.account_view.pending_buy_value + estimated_cost
-                ),
             )
         else:
             # B3: 卖出时递减 available_quantity — 防止批内超卖

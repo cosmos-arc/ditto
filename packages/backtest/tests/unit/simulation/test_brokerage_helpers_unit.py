@@ -15,6 +15,12 @@ from ditto_backtest.simulation.settlement import (
     SimpleSettlementModel,
 )
 from ditto_execution.fills import Filled, NoFill
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -27,9 +33,6 @@ from ditto_portfolio.accounting import (
     Account,
     CashBook,
     FillEvent,
-    Order,
-    OrderStatus,
-    OrderTicket,
     Position,
 )
 
@@ -47,13 +50,12 @@ def _order(
     price: float | None = None,
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=InstrumentId(instrument_id),
         order_type=order_type,
         direction=direction,
         quantity=quantity,
         price=price,
-        created_at=datetime(2026, 3, 1),
     )
 
 
@@ -311,7 +313,10 @@ def _make_brokerage(
         account = Account(
             cash=CashBook(available=100_000.0, settled=100_000.0, frozen=0.0),
         )
-    return BacktestBrokerage(account=account)
+    return BacktestBrokerage(
+        account=account,
+        order_book=OrderBook(journal=InMemoryOrderEventJournal()),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -407,8 +412,8 @@ class TestProcessSingleTicket:
         brokerage = _make_brokerage(account=account)
 
         # 提交委托单使 order_book 跟踪
-        ticket = _ticket(instrument_id=1, quantity=1000)
-        account.order_book.submit(ticket)
+        order = _order(instrument_id=1, quantity=1000)
+        ticket = brokerage._order_book.submit(order)
 
         market = _market_snapshot(instrument_id=1, close=10.0)
         bars = {InstrumentId(1): market}
@@ -471,8 +476,8 @@ class TestProcessSingleTicket:
         brokerage = _make_brokerage(account=account)
 
         # 提交委托单使 order_book 跟踪
-        ticket = _ticket(instrument_id=1)
-        account.order_book.submit(ticket)
+        order = _order(instrument_id=1)
+        ticket = brokerage._order_book.submit(order)
 
         market = _market_snapshot(instrument_id=1)
         bars = {InstrumentId(1): market}
@@ -504,7 +509,7 @@ class TestProcessSingleTicket:
         assert result is None
 
         # 验证委托单在 order_book 中被标记为 INVALID
-        updated_ticket = account.order_book.get("ORD-001")
+        updated_ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert updated_ticket is not None
         assert updated_ticket.status == OrderStatus.INVALID
 
@@ -515,8 +520,7 @@ class TestProcessSingleTicket:
         )
         brokerage = _make_brokerage(account=account)
 
-        ticket = _ticket(instrument_id=1)
-        account.order_book.submit(ticket)
+        ticket = brokerage._order_book.submit(_order(instrument_id=1))
 
         market = _market_snapshot(instrument_id=1)
         bars = {InstrumentId(1): market}
@@ -548,6 +552,6 @@ class TestProcessSingleTicket:
         assert result is None
 
         # 委托单应保持 SUBMITTED（非 INVALID，非 FILLED）
-        updated_ticket = account.order_book.get("ORD-001")
+        updated_ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert updated_ticket is not None
         assert updated_ticket.status == OrderStatus.SUBMITTED

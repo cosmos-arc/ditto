@@ -12,6 +12,14 @@ from datetime import datetime
 from ditto_execution.brokerage import ProcessInput
 from ditto_execution.errors import FillProcessingError
 from ditto_execution.fills import Filled, NoFill
+from ditto_execution.orders.book import OrderBook, OrderBookReadOnly
+from ditto_execution.orders.event import OrderEvent
+from ditto_execution.orders.fsm import OrderStateError
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import (
@@ -25,17 +33,7 @@ from ditto_kernel.trading import (
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting import (
-    Account,
-    AccountView,
-    FillEvent,
-    Order,
-    OrderEvent,
-    OrderStatus,
-    OrderTicket,
-    Position,
-)
-from ditto_portfolio.errors import StateTransitionError
+from ditto_portfolio.accounting import Account, AccountView, FillEvent, Position
 
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.settlement import SettlementModel
@@ -137,6 +135,7 @@ class BacktestBrokerage:
 
     Args:
         account: 可变账户实例
+        order_book: 执行层订单簿（OMS）
         model: 模型组合包 (fill / slippage / fee / settlement)
         rules_getter: 规则获取函数 (instrument_id, trade_date) → 三层规则
 
@@ -145,10 +144,12 @@ class BacktestBrokerage:
     def __init__(
         self,
         account: Account,
+        order_book: OrderBook,
         model: BrokerageModel | None = None,
         rules_getter: RulesGetter | None = None,
     ) -> None:
         self._account = account
+        self._order_book = order_book
         self._model = model or BrokerageModel()
         self._rules_getter = rules_getter or _default_rules_getter
         self._fill_counter = 0
@@ -166,18 +167,20 @@ class BacktestBrokerage:
         """获取只读账户快照。"""
         return self._account.get_view()
 
+    def get_order_book(self) -> OrderBookReadOnly:
+        """获取订单簿只读快照。"""
+        return self._order_book.readonly_view()
+
     def place_order(self, order: Order) -> OrderTicket:
-        """提交订单，创建 OrderTicket (SUBMITTED)。"""
-        ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
-        self._account.order_book.submit(ticket)
-        return ticket
+        """提交订单，返回 OrderTicket (SUBMITTED)。"""
+        return self._order_book.submit(order)
 
     def cancel_order(self, order_id: str) -> bool:
         """撤销订单。终态不可撤销。"""
         try:
-            self._account.order_book.cancel(order_id)
+            self._order_book.cancel(ClientOrderId(value=order_id))
             return True
-        except (KeyError, StateTransitionError):
+        except (KeyError, OrderStateError):
             return False
 
     def process_pending(
@@ -194,7 +197,7 @@ class BacktestBrokerage:
         # 解冻到期份额
         self._thaw_frozen(trade_date)
 
-        for ticket in self._account.order_book.get_pending():
+        for ticket in self._order_book.get_pending():
             fill = self._process_single_ticket(
                 ticket,
                 bars,
@@ -274,12 +277,13 @@ class BacktestBrokerage:
 
         if isinstance(outcome, NoFill) and not outcome.can_retry:
             order_evt = OrderEvent(
-                order_id=ticket.order.order_id,
+                client_id=ticket.order.client_id,
+                trigger=OrderTrigger.INVALIDATE,
                 status=OrderStatus.INVALID,
                 message=outcome.reason,
                 timestamp=step_time,
             )
-            self._account.order_book.update(ticket.with_invalid(order_evt))
+            self._order_book.update(ticket.with_invalid(order_evt))
         # can_retry=True: 保持 SUBMITTED, 下 step 再试
 
         return None
@@ -351,7 +355,8 @@ class BacktestBrokerage:
         """成交后更新 OrderTicket + Account 仓位/现金。"""
         order = ticket.order
         order_evt = OrderEvent(
-            order_id=order.order_id,
+            client_id=order.client_id,
+            trigger=OrderTrigger.FILL,
             status=OrderStatus.FILLED
             if fill.leaves_quantity == 0
             else OrderStatus.PARTIALLY_FILLED,
@@ -365,7 +370,7 @@ class BacktestBrokerage:
             price=fill.fill_price,
             event=order_evt,
         )
-        self._account.order_book.update(updated_ticket)
+        self._order_book.update(updated_ticket)
         self._account.apply_fill(fill, settle_date, on_frozen=self._register_frozen)
 
     def _register_frozen(

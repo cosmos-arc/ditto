@@ -5,6 +5,7 @@ version = "0.1.0"
 dependencies = [
     "ditto-kernel",
     "ditto-portfolio",
+    "ditto-execution",
 ]
 
 [build-system]

@@ -11,7 +11,8 @@ from enum import StrEnum
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting import Order
+
+from ditto_execution.orders.model import Order
 
 __all__ = [
     "BlockSeverity",

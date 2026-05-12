@@ -5,6 +5,8 @@ from __future__ import annotations
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -16,7 +18,7 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting import AccountView, BuyingPowerModel, CashBook, Order
+from ditto_portfolio.accounting import AccountView, BuyingPowerModel, CashBook
 from ditto_risk.pre_trade import Decision, LotSizeCheck, PreTradeContext
 
 IID = InstrumentId(1)
@@ -63,8 +65,6 @@ def _ctx(rules: dict[InstrumentId, InstrumentRules] | None = None) -> PreTradeCo
             total_value=100_000.0,
             nav=100_000.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=MagicMock(),
         ),
         rules=rules or {IID: _rules(lot_size=100)},
         market_snapshots={
@@ -86,7 +86,7 @@ def _ctx(rules: dict[InstrumentId, InstrumentRules] | None = None) -> PreTradeCo
 
 def _order(direction: OrderSide, quantity: int = 100) -> Order:
     return Order(
-        order_id="o1",
+        client_id=ClientOrderId("o1"),
         instrument_id=IID,
         order_type=OrderType.MARKET,
         direction=direction,

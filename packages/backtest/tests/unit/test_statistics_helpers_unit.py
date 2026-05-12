@@ -32,7 +32,6 @@ from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
     FillEvent,
-    OrderBookReadOnly,
     Position,
 )
 
@@ -591,8 +590,6 @@ def _make_account_view(
         total_value=nav,
         nav=nav,
         exposure=exposure,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 

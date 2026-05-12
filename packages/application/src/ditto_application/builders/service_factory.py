@@ -16,6 +16,8 @@ from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.brokerage import Brokerage
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
@@ -153,6 +155,7 @@ class BacktestRuntimeBuilder:
                     frozen=0.0,
                 )
             ),
+            order_book=OrderBook(journal=InMemoryOrderEventJournal()),
             model=BrokerageModel(
                 fee_model=resolved_fee_model,
                 slippage_model=resolved_slippage,

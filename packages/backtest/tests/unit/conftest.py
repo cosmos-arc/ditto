@@ -11,6 +11,8 @@ from types import MappingProxyType
 from unittest.mock import MagicMock
 
 from ditto_backtest.data_feed import Slice
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_execution.planner import ExecutionPlan
 from ditto_kernel.clock import Clock
 from ditto_kernel.identity import InstrumentId
@@ -21,8 +23,6 @@ from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
     FillEvent,
-    Order,
-    OrderBookReadOnly,
 )
 from ditto_risk.post_trade import (
     RiskAction,
@@ -72,8 +72,6 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -131,7 +129,7 @@ def _make_order(
     quantity: int = 100,
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=instrument_id,
         order_type=OrderType.MARKET,
         direction=direction,

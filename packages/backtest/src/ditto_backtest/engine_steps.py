@@ -11,13 +11,14 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from ditto_execution.brokerage import Brokerage
+from ditto_execution.orders.model import Order
 from ditto_execution.planner import ExecutionPlanner
 from ditto_execution.trade_builder import TradeBuilder
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
-from ditto_portfolio.accounting import AccountView, FillEvent, Order
+from ditto_portfolio.accounting import AccountView, FillEvent
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.context import StrategyContext

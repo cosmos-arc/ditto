@@ -89,23 +89,27 @@ def _make_fill_record(
 class TestGetLatestPositions:
     """PortfolioActualQueryFacade.get_latest_positions — 最新持仓查询."""
 
-    def test_delegates_to_trade_service(self) -> None:
-        """委托到 TradeService.list_positions 并映射为 DTO."""
+    def test_delegates_to_position_port(self) -> None:
+        """委托到 PositionDataPort.list_positions 并映射为 DTO."""
         from ditto_application.queries.portfolio_actual import (
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         record = _make_position_record(instrument_id=1)
-        mock_trade_service.list_positions.return_value = [record]
+        mock_position_port.list_positions.return_value = [record]
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.get_latest_positions("strat-1")
 
         assert len(result) == 1
         assert result[0].instrument_id == 1
         assert result[0].strategy_id == "strat-1"
-        mock_trade_service.list_positions.assert_called_once_with("strat-1")
+        mock_position_port.list_positions.assert_called_once_with("strat-1")
 
     def test_empty_positions(self) -> None:
         """无持仓时返回空列表."""
@@ -113,10 +117,14 @@ class TestGetLatestPositions:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
-        mock_trade_service.list_positions.return_value = []
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_position_port.list_positions.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.get_latest_positions("strat-1")
 
         assert result == []
@@ -127,14 +135,18 @@ class TestGetLatestPositions:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         records = [
             _make_position_record(instrument_id=1, quantity=1000),
             _make_position_record(instrument_id=2, quantity=500),
         ]
-        mock_trade_service.list_positions.return_value = records
+        mock_position_port.list_positions.return_value = records
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.get_latest_positions("strat-1")
 
         assert len(result) == 2
@@ -156,15 +168,19 @@ class TestGetPositionHistory:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         record = _make_position_record(snapshot_date="2026-04-09")
-        mock_trade_service.list_positions.return_value = [record]
+        mock_position_port.list_positions.return_value = [record]
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.get_position_history("strat-1", snapshot_date="2026-04-09")
 
         assert len(result) == 1
-        mock_trade_service.list_positions.assert_called_once_with(
+        mock_position_port.list_positions.assert_called_once_with(
             "strat-1",
             snapshot_date="2026-04-09",
         )
@@ -175,13 +191,17 @@ class TestGetPositionHistory:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
-        mock_trade_service.list_positions.return_value = []
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_position_port.list_positions.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         facade.get_position_history("strat-1")
 
-        mock_trade_service.list_positions.assert_called_once_with(
+        mock_position_port.list_positions.assert_called_once_with(
             "strat-1",
             snapshot_date=None,
         )
@@ -195,23 +215,27 @@ class TestGetPositionHistory:
 class TestGetFills:
     """PortfolioActualQueryFacade.get_fills — 成交记录查询."""
 
-    def test_delegates_to_trade_service(self) -> None:
-        """委托到 TradeService.list_fills 并映射为 DTO."""
+    def test_delegates_to_fill_port(self) -> None:
+        """委托到 FillDataPort.list_fills 并映射为 DTO."""
         from ditto_application.queries.portfolio_actual import (
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         record = _make_fill_record()
-        mock_trade_service.list_fills.return_value = [record]
+        mock_fill_port.list_fills.return_value = [record]
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.get_fills("strat-1")
 
         assert len(result) == 1
         assert result[0].fill_id == "fill-1"
         assert result[0].instrument_id == 1
-        mock_trade_service.list_fills.assert_called_once_with(
+        mock_fill_port.list_fills.assert_called_once_with(
             "strat-1",
             trade_date=None,
             end_date=None,
@@ -223,17 +247,21 @@ class TestGetFills:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
-        mock_trade_service.list_fills.return_value = []
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_fill_port.list_fills.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         facade.get_fills(
             "strat-1",
             start_date="2026-01-01",
             end_date="2026-03-31",
         )
 
-        mock_trade_service.list_fills.assert_called_once_with(
+        mock_fill_port.list_fills.assert_called_once_with(
             "strat-1",
             trade_date="2026-01-01",
             end_date="2026-03-31",
@@ -245,10 +273,14 @@ class TestGetFills:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
-        mock_trade_service.list_fills.return_value = []
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_fill_port.list_fills.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.get_fills("strat-1")
 
         assert result == []
@@ -269,10 +301,14 @@ class TestComputePnl:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
-        mock_trade_service.list_positions.return_value = []
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_position_port.list_positions.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.compute_pnl("strat-1", "2026-04-10")
 
         assert result == PnlSummary(
@@ -288,21 +324,24 @@ class TestComputePnl:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         record = _make_position_record(
             realized_pnl=500.0,
             unrealized_pnl=200.0,
             total_fees=30.0,
         )
-        mock_trade_service.list_positions.return_value = [record]
+        mock_position_port.list_positions.return_value = [record]
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.compute_pnl("strat-1", "2026-04-10")
 
         assert result.total_realized_pnl == pytest.approx(500.0)
         assert result.total_unrealized_pnl == pytest.approx(200.0)
         assert result.total_fees == pytest.approx(30.0)
-        # net = 500 + 200 - 30 = 670
         assert result.net_pnl == pytest.approx(670.0)
 
     def test_multiple_positions_aggregation(self) -> None:
@@ -311,7 +350,8 @@ class TestComputePnl:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         records = [
             _make_position_record(
                 instrument_id=1,
@@ -326,15 +366,17 @@ class TestComputePnl:
                 total_fees=15.0,
             ),
         ]
-        mock_trade_service.list_positions.return_value = records
+        mock_position_port.list_positions.return_value = records
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.compute_pnl("strat-1", "2026-04-10")
 
-        assert result.total_realized_pnl == pytest.approx(500.0)  # 300 + 200
-        assert result.total_unrealized_pnl == pytest.approx(50.0)  # 100 + (-50)
-        assert result.total_fees == pytest.approx(25.0)  # 10 + 15
-        # net = 500 + 50 - 25 = 525
+        assert result.total_realized_pnl == pytest.approx(500.0)
+        assert result.total_unrealized_pnl == pytest.approx(50.0)
+        assert result.total_fees == pytest.approx(25.0)
         assert result.net_pnl == pytest.approx(525.0)
 
     def test_negative_net_pnl(self) -> None:
@@ -343,33 +385,40 @@ class TestComputePnl:
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
         record = _make_position_record(
             realized_pnl=-100.0,
             unrealized_pnl=-200.0,
             total_fees=50.0,
         )
-        mock_trade_service.list_positions.return_value = [record]
+        mock_position_port.list_positions.return_value = [record]
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         result = facade.compute_pnl("strat-1", "2026-04-10")
 
-        # net = -100 + (-200) - 50 = -350
         assert result.net_pnl == pytest.approx(-350.0)
 
     def test_compute_pnl_passes_snapshot_date(self) -> None:
-        """snapshot_date 正确传递给 TradeService."""
+        """snapshot_date 正确传递给 PositionDataPort."""
         from ditto_application.queries.portfolio_actual import (
             PortfolioActualQueryFacade,
         )
 
-        mock_trade_service = MagicMock()
-        mock_trade_service.list_positions.return_value = []
+        mock_fill_port = MagicMock()
+        mock_position_port = MagicMock()
+        mock_position_port.list_positions.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_trade_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=mock_fill_port,
+            position_port=mock_position_port,
+        )
         facade.compute_pnl("strat-1", "2026-04-09")
 
-        mock_trade_service.list_positions.assert_called_once_with(
+        mock_position_port.list_positions.assert_called_once_with(
             "strat-1",
             snapshot_date="2026-04-09",
         )

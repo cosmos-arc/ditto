@@ -13,6 +13,8 @@ from ditto_execution.events import (
     OrderFilled,
     OrderSubmitted,
 )
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel import SimpleEventBus
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import DomainEvent
@@ -25,8 +27,6 @@ from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
     FillEvent,
-    Order,
-    OrderBookReadOnly,
 )
 from ditto_risk.events import RiskGuardTriggered
 from ditto_risk.post_trade import (
@@ -63,8 +63,6 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -92,7 +90,7 @@ def _make_slice(date: str = "2026-03-01") -> Slice:
 
 def _make_order(iid: int = 1, qty: int = 100) -> Order:
     return Order(
-        order_id="order-001",
+        client_id=ClientOrderId(value="order-001"),
         instrument_id=iid,
         order_type=OrderType.MARKET,
         direction=OrderSide.BUY,

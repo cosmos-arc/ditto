@@ -155,13 +155,6 @@ class TestAccountView:
                 total_fees=0.0,
             )
 
-    def test_view_order_book_readonly(self) -> None:
-        account = Account(
-            cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
-        )
-        view = account.get_view()
-        assert view.order_book.get("NONEXISTENT") is None
-
 
 # ---------------------------------------------------------------------------
 # TestAccountApplyFill
@@ -492,7 +485,6 @@ class TestAccountApplyFillEdgeCases:
                     total_fees=pos.total_fees,
                 ),
             },
-            order_book=account.order_book,
         )
 
         account.apply_fill(sell_fill, settle_date="2026-03-02")

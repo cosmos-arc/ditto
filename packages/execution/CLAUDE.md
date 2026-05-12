@@ -44,8 +44,17 @@ ditto_execution/
 ├── broker/               # 券商网关抽象
 │   ├── contracts.py      # BrokerGateway Protocol
 │   └── gateways/         # 具体券商实现（placeholder-only, no concrete gateway）
-├── orders/               # 订单管理（Protocol placeholder, missing OMS identity types）
-│   └── store.py          # 订单存储接口
+├── orders/               # 订单管理（OMS Lite — FSM + Journal + 双 ID）
+│   ├── ids.py            # ClientOrderId / BrokerOrderId 值对象
+│   ├── status.py         # OrderStatus(StrEnum) — 7 状态 + is_terminal
+│   ├── trigger.py        # OrderTrigger(StrEnum) — 5 触发器
+│   ├── model.py          # Order(frozen dataclass) + OrderType + OrderSide
+│   ├── event.py          # OrderEvent(frozen) — 状态变更事件
+│   ├── fsm.py            # FSM 转换表 + transition() 纯函数
+│   ├── ticket.py         # OrderTicket(frozen) — 集成 FSM 状态转换
+│   ├── journal.py        # OrderEventJournal Protocol + InMemoryOrderEventJournal
+│   ├── book.py           # OrderBook(mutable) + OrderBookReadOnly
+│   └── store.py          # 订单存储接口（Protocol placeholder）
 ├── fills/                # 成交处理
 │   ├── store.py          # 成交存储接口
 │   └── outcomes.py       # 成交结果
@@ -89,6 +98,13 @@ packages/execution/tests/
 │   ├── test_order_events_unit.py
 │   ├── broker/
 │   │   └── test_contracts_unit.py
+│   ├── orders/                # OMS Lite 测试
+│   │   ├── test_ids_unit.py
+│   │   ├── test_fsm_unit.py
+│   │   ├── test_journal_unit.py
+│   │   ├── test_ticket_unit.py
+│   │   ├── test_book_unit.py
+│   │   └── test_orders_exports_unit.py
 │   ├── execution_legacy/    # 遗留执行测试
 │   │   ├── test_trade_builder_unit.py
 │   │   ├── test_fill_model_unit.py
@@ -127,7 +143,7 @@ from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 
 ## Known Gaps / Planned Work
 
-- **OMS Lite（EXEC-P1-01）**：`ClientOrderId`、`BrokerOrderId`、`OrderJournal`、execution 拥有的持久化状态机均未实现。当前 `orders/store.py` 是 Protocol 占位。
+- **~~OMS Lite（EXEC-P1-01）~~**：✅ 已实现（Phase 2）。`orders/` 包含完整 FSM、Journal、双 ID、OrderBook、OrderTicket。
 - **Broker Gateways（EXEC-P1-02）**：`broker/gateways/` 仅有占位文件，无具体网关实现。确定性 paper/mock gateway 是下一步补救目标。
 - **Reconciliation（EXEC-P1-03）**：`reconciliation/` 仅包含最小化的 count-summary dataclass，无 service 或 store。
 - **Audit Spine（EXEC-P1-04）**：存储表（`execution_fills`、`trade_intents`、`actual_positions`、`execution_audit`）缺乏统一关联键（broker order ID、client ID、journal sequence）。

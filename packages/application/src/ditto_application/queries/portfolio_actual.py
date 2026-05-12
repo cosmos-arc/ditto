@@ -1,7 +1,7 @@
 """
 PortfolioActualQueryFacade — 实际组合查询门面.
 
-通过 TradeService 间接访问交易数据，提供持仓查询、
+通过窄 Port 间接访问交易数据，提供持仓查询、
 成交查询和 P&L 汇总计算。
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_execution.contracts import TradeDataPort
+from ditto_execution.contracts import FillDataPort, PositionDataPort
 
 from ditto_application.execution_dto import (
     ActualPositionSnapshot,
@@ -44,12 +44,17 @@ class PortfolioActualQueryFacade:
     """
     实际组合查询门面.
 
-    通过 TradeService 间接访问数据，不直接操作 SQLite。
+    通过窄 Port 间接访问数据，不直接操作 SQLite。
     将 Record 映射为 App 层 DTO 后返回。
     """
 
-    def __init__(self, trade_service: TradeDataPort) -> None:
-        self._trade_service = trade_service
+    def __init__(
+        self,
+        fill_port: FillDataPort,
+        position_port: PositionDataPort,
+    ) -> None:
+        self._fill_port = fill_port
+        self._position_port = position_port
 
     def get_latest_positions(
         self,
@@ -58,7 +63,7 @@ class PortfolioActualQueryFacade:
         """
         获取策略的最新实际持仓.
 
-        从 TradeService 获取全部持仓快照并映射为 DTO。
+        从 PositionPort 获取全部持仓快照并映射为 DTO。
 
         Args:
             strategy_id: 策略 ID.
@@ -67,7 +72,7 @@ class PortfolioActualQueryFacade:
             ActualPositionSnapshot 列表.
 
         """
-        records = self._trade_service.list_positions(strategy_id)
+        records = self._position_port.list_positions(strategy_id)
         return [record_to_snapshot(r) for r in records]
 
     def get_position_history(
@@ -86,7 +91,7 @@ class PortfolioActualQueryFacade:
             ActualPositionSnapshot 列表.
 
         """
-        records = self._trade_service.list_positions(
+        records = self._position_port.list_positions(
             strategy_id,
             snapshot_date=snapshot_date,
         )
@@ -110,7 +115,7 @@ class PortfolioActualQueryFacade:
             ManualExecutionFill 列表.
 
         """
-        records = self._trade_service.list_fills(
+        records = self._fill_port.list_fills(
             strategy_id,
             trade_date=start_date,
             end_date=end_date,
@@ -135,7 +140,7 @@ class PortfolioActualQueryFacade:
             PnlSummary 实例.
 
         """
-        records = self._trade_service.list_positions(
+        records = self._position_port.list_positions(
             strategy_id,
             snapshot_date=snapshot_date,
         )

@@ -28,6 +28,8 @@ from ditto_backtest.engine import (
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import build_report
 from ditto_backtest.synchronizer import BacktestSynchronizer
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_kernel.clock import SimulatedClock
 from ditto_portfolio.accounting import Account, CashBook
@@ -88,6 +90,7 @@ def _build_engine_with_audit(
         planner=SimpleExecutionPlanner(),
         brokerage=BacktestBrokerage(
             account=account,
+            order_book=OrderBook(journal=InMemoryOrderEventJournal()),
             model=BrokerageModel(fee_model=fee_model),
         ),
         pre_trade_check=pre_trade_check,

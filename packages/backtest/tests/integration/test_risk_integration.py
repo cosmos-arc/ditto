@@ -29,6 +29,8 @@ from ditto_backtest.statistics import (
 from ditto_backtest.synchronizer import (
     BacktestSynchronizer,
 )
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -188,6 +190,7 @@ def _build_engine_with_risk_and_audit(
 
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=OrderBook(journal=InMemoryOrderEventJournal()),
         model=BrokerageModel(fee_model=SimpleFeeModel()),
     )
 

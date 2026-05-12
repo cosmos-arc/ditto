@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from types import MappingProxyType, SimpleNamespace
-from unittest.mock import MagicMock
 
 from ditto_portfolio.accounting import AccountView, CashBook
 from ditto_risk.drawdown.rules import DrawdownStateSnapshot, MaxDrawdownRule
@@ -17,8 +16,6 @@ def _account_view(nav: float = 100_000.0) -> AccountView:
         total_value=nav,
         nav=nav,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 

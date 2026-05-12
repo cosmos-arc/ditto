@@ -41,6 +41,8 @@ from ditto_backtest.statistics import (
 from ditto_backtest.synchronizer import (
     BacktestSynchronizer,
 )
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -179,8 +181,10 @@ def _build_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=BrokerageModel(fee_model=fee_model),
         rules_getter=rules_getter,
     )
@@ -233,8 +237,10 @@ def _build_audited_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=BrokerageModel(fee_model=fee_model),
         rules_getter=rules_getter,
     )

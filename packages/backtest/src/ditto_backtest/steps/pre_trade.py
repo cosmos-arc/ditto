@@ -17,10 +17,11 @@ from typing import ClassVar
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.events import OrderSubmitted
+from ditto_execution.orders.model import Order
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.trading import FeeModel
-from ditto_portfolio.accounting import CashAccountBuyingPower, Order
+from ditto_portfolio.accounting import CashAccountBuyingPower
 from ditto_risk.pre_trade import (
     CompositePreTradeCheck,
     Decision,
@@ -145,7 +146,7 @@ class PreTradeStep:
             market_snapshots=ctx.bars,
             fee_model=self._fee_model,
             buying_power_model=CashAccountBuyingPower(),
-            pending_tickets=account_view.order_book.get_pending(),
+            pending_tickets=ctx.order_book.get_pending() if ctx.order_book else (),
         )
 
     def _check_order(

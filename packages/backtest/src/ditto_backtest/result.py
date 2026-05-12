@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ditto_portfolio.accounting import AccountView, FillEvent, Order
+from ditto_execution.orders.model import Order
+from ditto_portfolio.accounting import AccountView, FillEvent
 
 from ditto_backtest.manifest import RunManifest
 

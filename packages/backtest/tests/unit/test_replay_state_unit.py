@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from types import MappingProxyType
-from unittest.mock import MagicMock
 
 from ditto_backtest.replay import AccountStateComparison, FillComparison, ReplayProof
 from ditto_kernel.identity import InstrumentId
@@ -54,8 +53,6 @@ def _account_view(
         total_value=nav,
         nav=nav,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 

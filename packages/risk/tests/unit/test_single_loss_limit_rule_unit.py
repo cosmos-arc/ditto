@@ -36,8 +36,6 @@ def _account_view(positions: dict[InstrumentId, Position] | None = None) -> Acco
         total_value=100_000.0,
         nav=100_000.0,
         exposure=50_000.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 

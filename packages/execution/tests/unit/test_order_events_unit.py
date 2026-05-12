@@ -5,10 +5,13 @@ from datetime import datetime
 import pytest
 from ditto_execution.events import (
     OrderCanceled,
+    OrderExpired,
     OrderFilled,
+    OrderRejected,
     OrderSubmitted,
 )
 from ditto_kernel import DomainEvent
+from ditto_kernel.events import EventName
 
 
 class TestOrderSubmitted:
@@ -81,3 +84,38 @@ class TestOrderCanceled:
         )
         assert event.event_type == "order_canceled"
         assert event.reason == "insufficient_funds"
+
+
+class TestOrderRejected:
+    def test_creation(self) -> None:
+        event = OrderRejected(
+            timestamp=datetime(2024, 1, 15, 9, 30),
+            order_id="ORD-002",
+            reason="invalid_price",
+        )
+        assert event.event_type == EventName.ORDER_REJECTED
+        assert event.order_id == "ORD-002"
+        assert event.reason == "invalid_price"
+        assert isinstance(event, DomainEvent)
+
+    def test_frozen(self) -> None:
+        event = OrderRejected(
+            timestamp=datetime(2024, 1, 15),
+            order_id="ORD-002",
+            reason="test",
+        )
+        with pytest.raises(AttributeError):
+            event.reason = "changed"  # type: ignore[misc]
+
+
+class TestOrderExpired:
+    def test_creation(self) -> None:
+        event = OrderExpired(
+            timestamp=datetime(2024, 1, 15, 15, 0),
+            order_id="ORD-003",
+            reason="market_closed",
+        )
+        assert event.event_type == EventName.ORDER_EXPIRED
+        assert event.order_id == "ORD-003"
+        assert event.reason == "market_closed"
+        assert isinstance(event, DomainEvent)

@@ -11,6 +11,11 @@ from ditto_backtest.simulation.settlement import (
 )
 from ditto_backtest.simulation.slippage import FixedBpsSlippage
 from ditto_execution.brokerage import ProcessInput
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -21,8 +26,6 @@ from ditto_kernel.trading import (
 from ditto_portfolio.accounting import (
     Account,
     CashBook,
-    Order,
-    OrderStatus,
 )
 
 # ---------------------------------------------------------------------------
@@ -36,6 +39,10 @@ def _account(initial_cash: float = 1_000_000.0) -> Account:
     )
 
 
+def _order_book() -> OrderBook:
+    return OrderBook(journal=InMemoryOrderEventJournal())
+
+
 def _order(
     order_id: str = "ORD-001",
     instrument_id: int = 1,
@@ -45,13 +52,12 @@ def _order(
     price: float | None = None,
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=instrument_id,
         order_type=order_type,
         direction=direction,
         quantity=quantity,
         price=price,
-        created_at=datetime(2026, 3, 1),
     )
 
 
@@ -89,6 +95,7 @@ def _process_input(
 def brokerage() -> BacktestBrokerage:
     return BacktestBrokerage(
         account=_account(),
+        order_book=_order_book(),
         model=BrokerageModel(
             slippage_model=FixedBpsSlippage(bps=0),
         ),
@@ -108,6 +115,25 @@ class TestConnectGetAccount:
         view = brokerage.get_account()
         assert view.cash.available == pytest.approx(1_000_000.0)
         assert len(view.positions) == 0
+
+    def test_get_order_book_returns_readonly_view(
+        self, brokerage: BacktestBrokerage
+    ) -> None:
+        from ditto_execution.orders.book import OrderBookReadOnly
+
+        view = brokerage.get_order_book()
+        assert isinstance(view, OrderBookReadOnly)
+
+    def test_get_order_book_reflects_submitted_order(
+        self, brokerage: BacktestBrokerage
+    ) -> None:
+        order = _order()
+        brokerage.place_order(order)
+
+        view = brokerage.get_order_book()
+        pending = view.get_pending()
+        assert len(pending) == 1
+        assert pending[0].order.order_id == "ORD-001"
 
 
 # ---------------------------------------------------------------------------
@@ -134,8 +160,8 @@ class TestPlaceOrder:
     def test_placed_order_in_pending(self, brokerage: BacktestBrokerage) -> None:
         order = _order()
         brokerage.place_order(order)
-        view = brokerage.get_account()
-        pending = view.order_book.get_pending()
+        _ = brokerage.get_account()
+        pending = brokerage._order_book.get_pending()
         assert len(pending) == 1
         assert pending[0].order.order_id == "ORD-001"
 
@@ -193,6 +219,7 @@ class TestProcessMarketWithSlippage:
     def test_buy_slippage_increases_price(self) -> None:
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=2),
             ),
@@ -209,6 +236,7 @@ class TestProcessMarketWithSlippage:
         # 先建仓
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=2),
             ),
@@ -251,8 +279,8 @@ class TestProcessLimitOrder:
         assert len(fills) == 0
 
         # Ticket should be INVALID
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.INVALID
 
@@ -262,8 +290,8 @@ class TestProcessLimitOrder:
         sd = _process_input()
         brokerage.process_pending(sd)
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.INVALID
 
@@ -289,8 +317,8 @@ class TestNoFillRetryable:
         fills = brokerage.process_pending(sd)
         assert len(fills) == 0
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.SUBMITTED
 
@@ -306,8 +334,8 @@ class TestCancelOrder:
         brokerage.place_order(order)
         assert brokerage.cancel_order("ORD-001") is True
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.CANCELED
 
@@ -337,8 +365,8 @@ class TestTerminalState:
         brokerage.place_order(order)
         brokerage.process_pending(_process_input())
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.FILLED
         assert ticket.status.is_terminal
@@ -574,6 +602,7 @@ def t1_brokerage() -> BacktestBrokerage:
     """T+1 冻结规则的回测经纪商。"""
     return BacktestBrokerage(
         account=_account(),
+        order_book=_order_book(),
         model=BrokerageModel(
             slippage_model=FixedBpsSlippage(bps=0),
             settlement_model=AShareSettlementModel(
@@ -727,6 +756,7 @@ class TestT1FreezeMultiInstrument:
         """不同标的独立冻结。"""
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=0),
                 settlement_model=AShareSettlementModel(
@@ -823,6 +853,7 @@ class TestT1FreezeSettlementCycle0:
         """settlement_cycle=0 标的, 买入即解冻。"""
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=0),
                 settlement_model=AShareSettlementModel(
@@ -845,6 +876,7 @@ class TestT1FreezeSettlementCycle0:
         """settlement_cycle=0 标的, 买入当日即可卖出。"""
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=0),
                 settlement_model=AShareSettlementModel(

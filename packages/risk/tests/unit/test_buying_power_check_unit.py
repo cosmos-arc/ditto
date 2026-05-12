@@ -5,16 +5,18 @@ from __future__ import annotations
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting import AccountView, BuyingPowerModel, CashBook, Order
+from ditto_portfolio.accounting import AccountView, BuyingPowerModel, CashBook
 from ditto_risk.pre_trade import BuyingPowerCheck, Decision, PreTradeContext
 
 IID = InstrumentId(1)
 
 ORDER = Order(
-    order_id="o1",
+    client_id=ClientOrderId("o1"),
     instrument_id=IID,
     order_type=OrderType.MARKET,
     direction=OrderSide.BUY,
@@ -31,8 +33,6 @@ def _ctx(buying_power: float = 10_000.0) -> PreTradeContext:
         total_value=100_000.0,
         nav=100_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
     return PreTradeContext(
         account_view=account_view,
@@ -61,7 +61,7 @@ class TestBuyingPowerCheck:
     def test_sell_accepted(self) -> None:
         """卖出不需要购买力，始终通过。"""
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ditto_execution.orders.model import Order
 from ditto_kernel.order import OrderSide, OrderType
-from ditto_portfolio.accounting import Order
 
 from ditto_risk._validation import validate_weight
 from ditto_risk.constraints.context import (

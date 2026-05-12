@@ -25,7 +25,6 @@ from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
     FillEvent,
-    OrderBookReadOnly,
     Position,
 )
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
@@ -50,8 +49,6 @@ def _account_view(
         total_value=nav,
         nav=nav,
         exposure=exposure,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 

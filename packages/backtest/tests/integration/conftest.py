@@ -35,6 +35,8 @@ from ditto_backtest.synchronizer import (
     BacktestSynchronizer,
 )
 from ditto_data.provider import BarQuery, InstrumentQuery
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -461,8 +463,10 @@ def assembled_engine_loop(
     fee_model: SimpleFeeModel,
 ) -> EngineLoop:
     """完整组装的 3 日回测引擎 — 所有组件均为真实实现。"""
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=backtest_account,
+        order_book=order_book,
         model=BrokerageModel(fee_model=fee_model),
     )
     planner = SimpleExecutionPlanner()
@@ -542,8 +546,10 @@ def five_day_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=BrokerageModel(fee_model=fee_model),
     )
     planner = SimpleExecutionPlanner()
@@ -628,8 +634,10 @@ def limit_up_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=ashare_brokerage_model,
     )
     planner = SimpleExecutionPlanner()
@@ -692,8 +700,10 @@ def limit_down_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=ashare_brokerage_model,
     )
     planner = SimpleExecutionPlanner()
@@ -756,8 +766,10 @@ def st_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=ashare_brokerage_model,
     )
     planner = SimpleExecutionPlanner()
