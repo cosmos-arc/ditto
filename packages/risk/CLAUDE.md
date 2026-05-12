@@ -20,8 +20,6 @@ ditto_risk → ditto_kernel ✅
 ditto_risk → ditto_portfolio ✅
 ```
 
-无外部依赖（kernel / portfolio 纯领域逻辑）
-
 ## 禁止依赖
 
 ```

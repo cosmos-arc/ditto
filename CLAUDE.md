@@ -75,7 +75,7 @@
   features → kernel, platform（不直接依赖 data；市场输入由 application/backtest 注入）
   strategy → kernel, platform（不依赖 data/features；信号存储通过 Protocol 注入）
   portfolio → kernel
-  risk → kernel, portfolio
+  risk → kernel, portfolio, execution.orders（窄依赖：仅 orders.model + orders.ticket）
   execution → kernel, platform, portfolio（不依赖 risk；使用自有 audit DTO）
   backtest → kernel, data, strategy, portfolio, risk, execution
   analysis → kernel, platform（不直接依赖生产包；研究通过 application query 边界读取）

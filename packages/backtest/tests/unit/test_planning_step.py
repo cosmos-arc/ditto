@@ -133,6 +133,27 @@ class TestPlanningStep:
         assert locked is not None
         assert IID_1 in locked
 
+    def test_passes_order_book_to_planner(self) -> None:
+        """ctx.order_book 被传递给 planner.plan()。"""
+        plan = _make_execution_plan()
+        planner = Mock(plan=Mock(return_value=plan))
+        order_book = Mock(name="order_book")
+
+        step = PlanningStep(
+            planner=planner,
+            rule_provider=None,
+            rule_ref_collector=None,
+            strategy_context=StrategyContext(),
+        )
+
+        ctx = self._make_ctx_with_target()
+        ctx.order_book = order_book
+        step.execute(ctx)
+
+        planner.plan.assert_called_once()
+        call_kwargs = planner.plan.call_args.kwargs
+        assert call_kwargs["order_book"] is order_book
+
     def test_satisfies_trading_step_protocol(self) -> None:
         """PlanningStep 满足 TradingStep Protocol。"""
         step: TradingStep = PlanningStep(  # type: ignore[assignment]

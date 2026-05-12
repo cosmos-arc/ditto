@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_execution.orders.model import Order
 from ditto_kernel.order import OrderSide, OrderType
 
 from ditto_risk._validation import validate_weight
@@ -13,6 +12,7 @@ from ditto_risk.constraints.context import (
     OrderCheckResult,
     PreTradeContext,
 )
+from ditto_risk.contracts import PreTradeOrder
 
 __all__ = [
     "BuyingPowerCheck",
@@ -35,7 +35,7 @@ class PreTradeRiskCheck(Protocol):
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """校验单个订单。"""
@@ -62,7 +62,7 @@ class NoShortSellCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """卖出时检查持仓数量是否充足。"""
@@ -95,7 +95,7 @@ class PriceValidityCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查 LIMIT 单价格是否在涨跌停范围内。"""
@@ -136,7 +136,7 @@ class LotSizeCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查数量是否满足手数要求，不满足则 resize。"""
@@ -177,7 +177,7 @@ class BuyingPowerCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查购买力是否充足。"""
@@ -217,7 +217,7 @@ class DailyTurnoverPreCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查日累计换手率是否超限。"""
@@ -280,7 +280,7 @@ class CompositePreTradeCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """组合检查，resize 后重新进入检查链 (A1)。"""

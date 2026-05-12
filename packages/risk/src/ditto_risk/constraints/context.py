@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from enum import StrEnum
 
-from ditto_execution.orders.model import Order
-from ditto_execution.orders.ticket import OrderTicket
 from ditto_kernel.identity import (
     InstrumentId as _InstrumentId,
 )
@@ -25,6 +23,8 @@ from ditto_portfolio.accounting import (
     BuyingPowerModel,
     CashBook,
 )
+
+from ditto_risk.contracts import PreTradeOrder, PreTradeTicket
 
 __all__ = [
     "Decision",
@@ -74,7 +74,7 @@ class PreTradeContext:
     market_snapshots: dict[_InstrumentId, MarketSnapshot]
     buying_power_model: BuyingPowerModel
     fee_model: FeeModel | None = None
-    pending_tickets: tuple[OrderTicket, ...] = ()
+    pending_tickets: tuple[PreTradeTicket, ...] = ()
 
     # -- 辅助方法 ---------------------------------------------------------
 
@@ -106,7 +106,7 @@ class PreTradeContext:
             )
         return instrument_rules[2]
 
-    def estimate_order_cost(self, order: Order) -> float:
+    def estimate_order_cost(self, order: PreTradeOrder) -> float:
         """估算订单成本 = price * quantity + fee。"""
         price = self.price_for(order.instrument_id)
         if price is None:
@@ -120,7 +120,7 @@ class PreTradeContext:
         )
         return cost
 
-    def with_order_accepted(self, order: Order) -> PreTradeContext:
+    def with_order_accepted(self, order: PreTradeOrder) -> PreTradeContext:
         """返回包含此订单影响的新上下文 — 保持 frozen 语义 (F1)。"""
         price = self.price_for(order.instrument_id)
         if price is None:

@@ -220,9 +220,7 @@ forbidden_modules =
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
-# Risk 层隔离：禁止依赖 execution/backtest/application/apps
-# OMS 类型（Order/OrderTicket）豁免：Phase 2 Order 迁移至 execution 后
-# risk 需要引用 Order/OrderTicket 进行 PreTrade 校验。
+# Risk 层隔离：禁止依赖 data/features/strategy/execution/backtest/analysis/application/apps
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:risk-boundary]
 name = Risk must not depend on data/features/strategy/execution/backtest/analysis/application/apps
@@ -238,9 +236,6 @@ forbidden_modules =
     ditto_backtest.**
     ditto_analysis.**
     ditto_execution.**
-ignore_imports =
-    ditto_risk.** -> ditto_execution.orders.model
-    ditto_risk.** -> ditto_execution.orders.ticket
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════

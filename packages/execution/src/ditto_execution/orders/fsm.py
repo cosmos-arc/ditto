@@ -8,14 +8,13 @@ from ditto_execution.orders.trigger import OrderTrigger
 
 __all__ = ["TRANSITIONS", "transition"]
 
+# FILL transitions handled by _fill_transition(), not TRANSITIONS table
 TRANSITIONS: dict[tuple[OrderStatus, OrderTrigger], OrderStatus] = {
     (OrderStatus.NEW, OrderTrigger.SUBMIT): OrderStatus.SUBMITTED,
     (OrderStatus.NEW, OrderTrigger.INVALIDATE): OrderStatus.INVALID,
-    (OrderStatus.SUBMITTED, OrderTrigger.FILL): OrderStatus.FILLED,
     (OrderStatus.SUBMITTED, OrderTrigger.CANCEL): OrderStatus.CANCELED,
     (OrderStatus.SUBMITTED, OrderTrigger.REJECT): OrderStatus.REJECTED,
     (OrderStatus.SUBMITTED, OrderTrigger.INVALIDATE): OrderStatus.INVALID,
-    (OrderStatus.PARTIALLY_FILLED, OrderTrigger.FILL): OrderStatus.PARTIALLY_FILLED,
     (OrderStatus.PARTIALLY_FILLED, OrderTrigger.CANCEL): OrderStatus.CANCELED,
 }
 
@@ -66,13 +65,8 @@ def _fill_transition(
         raise OrderStateError(f"FILL trigger not allowed from state: {current.value}")
     if fill_qty <= 0:
         raise OrderStateError(f"FILL requires positive fill_qty, got {fill_qty}")
-    if fill_qty > 0 and leaves_qty > 0:
-        return (
-            OrderStatus.FILLED
-            if fill_qty >= leaves_qty
-            else OrderStatus.PARTIALLY_FILLED
-        )
-    target = TRANSITIONS.get((current, OrderTrigger.FILL))
-    if target is None:
-        raise OrderStateError(f"No default FILL target for state: {current.value}")
-    return target
+    if leaves_qty <= 0:
+        raise OrderStateError(f"FILL with no remaining leaves_qty ({leaves_qty})")
+    return (
+        OrderStatus.FILLED if fill_qty >= leaves_qty else OrderStatus.PARTIALLY_FILLED
+    )

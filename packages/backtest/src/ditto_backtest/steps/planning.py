@@ -69,6 +69,7 @@ class PlanningStep:
             market_snapshots=ctx.bars,
             rules=rules,
             locked_instruments=self._strategy_context.get_locked_instruments(),
+            order_book=ctx.order_book,
         )
 
         ctx.execution_plan = plan

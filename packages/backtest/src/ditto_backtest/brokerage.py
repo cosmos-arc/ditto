@@ -14,7 +14,7 @@ from ditto_execution.errors import FillProcessingError
 from ditto_execution.fills import Filled, NoFill
 from ditto_execution.orders.book import OrderBook, OrderBookReadOnly
 from ditto_execution.orders.event import OrderEvent
-from ditto_execution.orders.fsm import OrderStateError
+from ditto_execution.orders.fsm import OrderStateError, transition
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
@@ -354,12 +354,17 @@ class BacktestBrokerage:
     ) -> None:
         """成交后更新 OrderTicket + Account 仓位/现金。"""
         order = ticket.order
+        # FSM 单一状态来源: transition() 决定 FILLED / PARTIALLY_FILLED
+        new_status = transition(
+            ticket.status,
+            OrderTrigger.FILL,
+            fill_qty=fill.filled_quantity,
+            leaves_qty=ticket.leaves_quantity,
+        )
         order_evt = OrderEvent(
             client_id=order.client_id,
             trigger=OrderTrigger.FILL,
-            status=OrderStatus.FILLED
-            if fill.leaves_quantity == 0
-            else OrderStatus.PARTIALLY_FILLED,
+            status=new_status,
             fill_price=fill.fill_price,
             fill_quantity=fill.filled_quantity,
             fee=fill.fee,

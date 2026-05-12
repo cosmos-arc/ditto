@@ -2571,11 +2571,10 @@ packages:
 - pypi: ./packages/risk
   name: ditto-risk
   version: 0.1.0
-  sha256: 60c606dab5823e8cb3140221f0ffa64209dfd66cc85bb55bd42f117e0b2ec97c
+  sha256: 9d15e9c49f5a3ee1ba5c97ed4a7dfc4d15b404ccdf29e20a75965aa290c9ad33
   requires_dist:
   - ditto-kernel
   - ditto-portfolio
-  - ditto-execution
   requires_python: '>=3.13'
 - pypi: ./packages/strategy
   name: ditto-strategy

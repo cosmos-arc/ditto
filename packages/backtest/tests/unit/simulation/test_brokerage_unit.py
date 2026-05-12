@@ -342,16 +342,16 @@ class TestCancelOrder:
     def test_cancel_nonexistent_order(self, brokerage: BacktestBrokerage) -> None:
         assert brokerage.cancel_order("NONEXISTENT") is False
 
-    def test_cancel_filled_order_fails(
+    def test_cancel_filled_order_is_noop(
         self,
         brokerage: BacktestBrokerage,
     ) -> None:
-        """Filled 订单是终态, 取消应返回 False (OrderBook raises)。"""
+        """Filled 订单是终态, cancel 是 no-op（不抛异常）。"""
         order = _order(quantity=1000)
         brokerage.place_order(order)
         brokerage.process_pending(_process_input())
-        # Ticket is now FILLED
-        assert brokerage.cancel_order("ORD-001") is False
+        # Ticket is now FILLED — cancel returns True (no error raised)
+        assert brokerage.cancel_order("ORD-001") is True
 
 
 # ---------------------------------------------------------------------------
@@ -371,13 +371,13 @@ class TestTerminalState:
         assert ticket.status == OrderStatus.FILLED
         assert ticket.status.is_terminal
 
-    def test_invalid_cannot_cancel(self, brokerage: BacktestBrokerage) -> None:
+    def test_invalid_cancel_is_noop(self, brokerage: BacktestBrokerage) -> None:
         order = _order(order_type=OrderType.LIMIT, price=9.0)
         brokerage.place_order(order)
         brokerage.process_pending(_process_input())
 
-        # INVALID is terminal
-        assert brokerage.cancel_order("ORD-001") is False
+        # INVALID is terminal — cancel returns True (no error raised)
+        assert brokerage.cancel_order("ORD-001") is True
 
 
 # ---------------------------------------------------------------------------
@@ -897,6 +897,150 @@ class TestT1FreezeSettlementCycle0:
 
         view = brk.get_account()
         assert 1 not in view.positions
+
+
+# ---------------------------------------------------------------------------
+# _apply_fill 状态一致性 — event.status == ticket.status
+# ---------------------------------------------------------------------------
+
+
+class TestApplyFillStatusConsistency:
+    """验证 _apply_fill 中 OrderEvent.status 与 FSM 计算的 ticket.status 一致。"""
+
+    def test_full_fill_event_status_matches_ticket_status(
+        self,
+        brokerage: BacktestBrokerage,
+    ) -> None:
+        """全量成交: event.status 应等于 updated_ticket.status (FILLED)。"""
+        order = _order(quantity=1000)
+        brokerage.place_order(order)
+        brokerage.process_pending(_process_input())
+
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket is not None
+        assert ticket.status == OrderStatus.FILLED
+
+        # 最后一个 order_event 的 status 应与 ticket.status 一致
+        last_event = ticket.order_events[-1]
+        assert last_event.status == OrderStatus.FILLED
+        assert last_event.status == ticket.status
+
+    def test_fill_event_status_derived_from_fsm(
+        self,
+        brokerage: BacktestBrokerage,
+    ) -> None:
+        """验证 event.status 由 FSM transition 计算而非手动判断。"""
+        order = _order(quantity=1000)
+        brokerage.place_order(order)
+        brokerage.process_pending(_process_input())
+
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket is not None
+
+        # ticket.status 由 FSM transition() 决定，event.status 必须一致
+        last_event = ticket.order_events[-1]
+        assert last_event.status == ticket.status
+
+    def test_partial_fill_event_status_consistency(self) -> None:
+        """部分成交场景（如果 V2 引入）event.status 也必须与 ticket.status 一致。
+
+        当前 V1 fill model 是 all-or-nothing，但通过直接调用 _apply_fill
+        验证部分成交时 event 与 ticket 状态一致性。
+        """
+
+        from ditto_portfolio.accounting import FillEvent
+
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+        )
+        order = _order(quantity=2000)
+        ticket = brk.place_order(order)
+
+        # 构造部分成交的 FillEvent (filled_quantity=1000, leaves_quantity=1000)
+        partial_fill = FillEvent(
+            fill_id="fill-partial",
+            order_id=order.order_id,
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            filled_quantity=1000,
+            fill_price=10.5,
+            fee=3.15,
+            slippage=0.0,
+            event_time=datetime(2026, 1, 1, 15, 0),
+            cumulative_quantity=1000,
+            leaves_quantity=1000,
+        )
+        brk._apply_fill(ticket, partial_fill, settle_date="2026-01-01")
+
+        updated = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert updated is not None
+        assert updated.status == OrderStatus.PARTIALLY_FILLED
+
+        # event.status 必须与 ticket.status 一致
+        last_event = updated.order_events[-1]
+        assert last_event.status == OrderStatus.PARTIALLY_FILLED
+        assert last_event.status == updated.status
+
+    def test_full_fill_after_partial_event_status_consistency(self) -> None:
+        """部分成交后再全量成交: 两次 event.status 分别与各自 ticket.status 一致。"""
+        from ditto_portfolio.accounting import FillEvent
+
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+        )
+        order = _order(quantity=2000)
+        ticket = brk.place_order(order)
+
+        # 第一次部分成交
+        partial_fill = FillEvent(
+            fill_id="fill-1",
+            order_id=order.order_id,
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            filled_quantity=1000,
+            fill_price=10.5,
+            fee=3.15,
+            slippage=0.0,
+            event_time=datetime(2026, 1, 1, 15, 0),
+            cumulative_quantity=1000,
+            leaves_quantity=1000,
+        )
+        brk._apply_fill(ticket, partial_fill, settle_date="2026-01-01")
+
+        ticket_after_partial = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket_after_partial is not None
+        assert ticket_after_partial.status == OrderStatus.PARTIALLY_FILLED
+        last_event = ticket_after_partial.order_events[-1]
+        assert last_event.status == OrderStatus.PARTIALLY_FILLED
+
+        # 第二次全部成交剩余
+        full_fill = FillEvent(
+            fill_id="fill-2",
+            order_id=order.order_id,
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            filled_quantity=1000,
+            fill_price=10.6,
+            fee=3.18,
+            slippage=0.0,
+            event_time=datetime(2026, 1, 1, 15, 1),
+            cumulative_quantity=2000,
+            leaves_quantity=0,
+        )
+        brk._apply_fill(ticket_after_partial, full_fill, settle_date="2026-01-01")
+
+        final_ticket = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert final_ticket is not None
+        assert final_ticket.status == OrderStatus.FILLED
+        assert final_ticket.order_events[-1].status == OrderStatus.FILLED
+        assert final_ticket.order_events[-1].status == final_ticket.status
+
+
+# ---------------------------------------------------------------------------
+# T+1 冻结逻辑
+# ---------------------------------------------------------------------------
 
 
 class TestT1FreezeSellDeduction:

@@ -17,7 +17,7 @@ class OrderBookReadOnly:
     """OrderBook 只读视图 — dict 副本实现不可变性。"""
 
     def __init__(self, tickets: dict[str, OrderTicket]) -> None:
-        self._tickets = tickets
+        self._tickets = dict(tickets)  # 浅拷贝保证不可变性
 
     def get(self, client_id: ClientOrderId) -> OrderTicket | None:
         """获取订单票据。"""
@@ -61,10 +61,12 @@ class OrderBook:
         self._tickets[ticket.order.client_id.value] = ticket
 
     def cancel(self, client_id: ClientOrderId) -> None:
-        """撤销订单。"""
+        """撤销订单。终态订单静默忽略（no-op）。"""
         ticket = self._tickets.get(client_id.value)
         if ticket is None:
             raise KeyError(f"Order not found: {client_id.value}")
+        if ticket.status.is_terminal:  # 终态防御
+            return
         event = OrderEvent(
             client_id=client_id,
             trigger=OrderTrigger.CANCEL,

@@ -104,3 +104,10 @@ class TestCountIdentifierValidation:
     def test_count_empty_table_name(self, client: SQLiteClient) -> None:
         with pytest.raises(ValueError, match="Invalid SQL identifier"):
             client.count("")
+
+    def test_count_rejects_where_without_params(self, client: SQLiteClient) -> None:
+        with pytest.raises(ValueError, match="'params' required"):
+            client.count("valid_table", "id = 1")
+
+    def test_count_accepts_where_with_params(self, client: SQLiteClient) -> None:
+        assert client.count("valid_table", "id = ?", [1]) == 1

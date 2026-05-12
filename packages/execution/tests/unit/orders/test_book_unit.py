@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from ditto_execution.errors import OrderStateError
 from ditto_execution.orders.book import OrderBook, OrderBookReadOnly
 from ditto_execution.orders.event import OrderEvent
 from ditto_execution.orders.ids import ClientOrderId
@@ -85,8 +84,10 @@ class TestOrderBookCancel:
         with pytest.raises(KeyError):
             book.cancel(ClientOrderId(value="ghost"))
 
-    def test_cancel_terminal_raises(self) -> None:
-        book = OrderBook(journal=InMemoryOrderEventJournal())
+    def test_cancel_terminal_is_noop(self) -> None:
+        """终态订单 cancel 是 no-op — 不抛异常、不追加 journal。"""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
         order = _make_order("can-term")
         cid = order.client_id
         ticket = book.submit(order)
@@ -97,8 +98,25 @@ class TestOrderBookCancel:
                 event=_make_event(cid, OrderTrigger.FILL, OrderStatus.FILLED),
             )
         )
-        with pytest.raises(OrderStateError):
-            book.cancel(cid)
+        events_before = len(journal.events_for(cid))
+        book.cancel(cid)  # no-op
+        assert book.get(cid).status == OrderStatus.FILLED
+        assert len(journal.events_for(cid)) == events_before
+
+    def test_cancel_canceled_order_is_noop(self) -> None:
+        """T9: 对已取消的终态订单再次 cancel 是 no-op。"""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("can-can")
+        cid = order.client_id
+        book.submit(order)
+        book.cancel(cid)  # 第一次 cancel
+        assert book.get(cid).status == OrderStatus.CANCELED
+        events_after_first = len(journal.events_for(cid))
+
+        book.cancel(cid)  # 第二次 cancel — no-op
+        assert book.get(cid).status == OrderStatus.CANCELED
+        assert len(journal.events_for(cid)) == events_after_first
 
 
 class TestOrderBookGetPending:
@@ -143,3 +161,17 @@ class TestOrderBookReadonlyView:
         book = OrderBook(journal=InMemoryOrderEventJournal())
         view = book.readonly_view()
         assert view.get(ClientOrderId(value="nope")) is None
+
+    def test_readonly_view_isolation(self) -> None:
+        """T8: 修改传入的 dict 后 readonly view 不受影响。"""
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        order = _make_order("iso-1")
+        cid = order.client_id
+        book.submit(order)
+
+        view = book.readonly_view()
+        assert view.get(cid) is not None
+
+        # 清空 book 内部状态，view 应不受影响
+        book._tickets.clear()
+        assert view.get(cid) is not None

@@ -269,6 +269,8 @@ class SQLiteClient:
 
         """
         validate_identifier(table)
+        if where and params is None:
+            raise ValueError("'params' required when 'where' is specified")
         sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608
         if where:
             sql += f" WHERE {where}"

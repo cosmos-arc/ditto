@@ -107,4 +107,4 @@ pixi run -e dev arch-check
 |----|------|------|------|
 | PORT-P1-01 | ~~状态投影~~ **已修复 (B5)** | `PortfolioStateSnapshot` + `FillProjector` Protocol + `AccountProjector` 已实现 | ✅ 完成 |
 | PORT-P1-02 | **target_portfolios 成熟度** | target_portfolios/ 目录为 reserved 命名空间 | 成熟度标注为 experimental，CLAUDE.md 已同步 |
-| PORT-P1-03 | **PositionChanged 事件** | `PositionChanged` 已定义但未发布（reserved） | 待状态恢复消费者实际消费后从 `apply_fill` 发布 |
+| PORT-P1-03 | **PositionChanged 事件** | `PositionChanged` 已在 apply_fill 中发布（active） | 待状态恢复消费者实际消费后从 `apply_fill` 发布 |

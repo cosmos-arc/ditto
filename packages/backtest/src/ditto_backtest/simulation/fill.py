@@ -231,7 +231,7 @@ def _make_filled(
         fill_price=fill_price,
         fee=0.0,
         slippage=0.0,
-        event_time=datetime(2026, 1, 1),
+        event_time=datetime.min,  # sentinel — Brokerage 补全实际时间
         cumulative_quantity=0,
         leaves_quantity=order.quantity - qty,
     )
