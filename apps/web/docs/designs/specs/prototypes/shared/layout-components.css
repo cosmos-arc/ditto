@@ -2272,23 +2272,28 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 }
 
 .rail-section[data-collapsible-strip] .rail-section-header::after {
-  content: '';
+  content: "›";
   position: absolute;
   right: 0;
   top: 50%;
   transform: translateY(-50%) rotate(0deg);
-  width: 0;
-  height: 0;
-  border-left: 4px solid var(--text-tertiary);
-  border-right: 4px solid transparent;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  transition: transform 200ms var(--motion-easing-standard);
-  opacity: 0.5;
+  width: 1rem;
+  height: 1rem;
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-12);
+  line-height: 1;
+  transition: transform 200ms var(--motion-easing-standard),
+    opacity 150ms var(--motion-easing-standard),
+    color 150ms var(--motion-easing-standard);
+  opacity: 0.58;
 }
 
 .rail-section[data-collapsible-strip] .rail-section-header:hover::after {
-  opacity: 0.8;
+  color: var(--text-secondary);
+  opacity: 0.9;
 }
 
 .rail-section[data-collapsed-state="true"] .rail-section-header::after {
