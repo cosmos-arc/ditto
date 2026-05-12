@@ -56,9 +56,11 @@ class OrderBook:
         )
         return ticket
 
-    def update(self, ticket: OrderTicket) -> None:
-        """更新订单票据。"""
+    def update(self, ticket: OrderTicket, event: OrderEvent | None = None) -> None:
+        """更新订单票据，可选地追加事件到 journal。"""
         self._tickets[ticket.order.client_id.value] = ticket
+        if event is not None:
+            self._journal.append(event)
 
     def cancel(self, client_id: ClientOrderId) -> None:
         """撤销订单。终态订单静默忽略（no-op）。"""

@@ -33,6 +33,12 @@ class OrderTicket:
         """记录成交，返回新 OrderTicket。"""
         if quantity <= 0:
             raise ValueError(f"fill quantity must be positive, got {quantity}")
+        if quantity > self.leaves_quantity:
+            msg = (
+                f"fill quantity ({quantity}) exceeds remaining "
+                f"leaves_quantity ({self.leaves_quantity})"
+            )
+            raise ValueError(msg)
         new_filled = self.filled_quantity + quantity
         new_status = transition(
             self.status,

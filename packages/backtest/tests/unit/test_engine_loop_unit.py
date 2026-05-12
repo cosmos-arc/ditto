@@ -1367,3 +1367,68 @@ class TestExecutionDelay:
         # knowledge_lag_days=3 → knowledge_date = 2026-02-26
         expected_knowledge = tc.decision_time.date() - timedelta(days=3)
         assert tc.knowledge_date == expected_knowledge
+
+    def test_flush_carries_order_book(self) -> None:
+        """flush 阶段的 StepContext 应携带 order_book."""
+        from ditto_backtest.steps import StepResult
+
+        config = replace(
+            _make_config(),
+            execution_delay=1,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        planner = Mock()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+        mock_order_book = Mock()
+        brokerage.get_order_book.return_value = mock_order_book
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        clock = _make_clock()
+        loop = EngineLoop(
+            config=config,
+            pipeline=Mock(),
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
+        )
+
+        captured_ctxs: list[object] = []
+
+        def _capturing_execute(ctx: object) -> StepResult:
+            captured_ctxs.append(ctx)
+            return StepResult.ok()
+
+        mock_step = Mock()
+        mock_step.execute = _capturing_execute
+        loop._steps = (mock_step,)
+
+        loop._execute_delayed_signal(_make_target())
+
+        assert len(captured_ctxs) >= 1
+        ctx = captured_ctxs[0]
+        assert ctx.order_book is mock_order_book  # type: ignore[attr-defined]

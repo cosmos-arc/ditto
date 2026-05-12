@@ -66,6 +66,22 @@ class TestOrderBookUpdate:
         assert book.get(cid) is filled
         assert book.get(cid).status == OrderStatus.FILLED
 
+    def test_update_with_event_appends_journal(self) -> None:
+        """update(ticket, event) 应将 fill 事件写入 journal."""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("fill-j-1")
+        cid = order.client_id
+        original = book.submit(order)
+
+        fill_evt = _make_event(cid, OrderTrigger.FILL, OrderStatus.FILLED)
+        filled = original.with_fill(quantity=100, price=10.0, event=fill_evt)
+        book.update(filled, event=fill_evt)
+
+        events = journal.events_for(cid)
+        assert len(events) == 2  # SUBMIT + FILL
+        assert events[1].trigger == OrderTrigger.FILL
+
 
 class TestOrderBookCancel:
     def test_cancel_sets_canceled_and_appends_journal(self) -> None:

@@ -343,6 +343,7 @@ class EngineLoop:
         )
         ctx.target_portfolio = signal
         ctx.account_view = self._brokerage.get_account()
+        ctx.order_book = self._brokerage.get_order_book()
 
         for step in self._steps:
             if isinstance(step, (DataFetchStep, RiskScanStep, StrategyStep)):

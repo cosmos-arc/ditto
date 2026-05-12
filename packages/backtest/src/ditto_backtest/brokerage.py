@@ -375,7 +375,7 @@ class BacktestBrokerage:
             price=fill.fill_price,
             event=order_evt,
         )
-        self._order_book.update(updated_ticket)
+        self._order_book.update(updated_ticket, event=order_evt)
         self._account.apply_fill(fill, settle_date, on_frozen=self._register_frozen)
 
     def _register_frozen(

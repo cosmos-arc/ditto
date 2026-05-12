@@ -243,7 +243,7 @@ class TestOrderEventsAccumulation:
 
 
 class TestWithFillValidation:
-    """with_fill(quantity <= 0) → ValueError。"""
+    """with_fill 参数校验。"""
 
     @pytest.mark.parametrize("quantity", [0, -1])
     def test_rejects_non_positive_quantity(
@@ -255,3 +255,14 @@ class TestWithFillValidation:
         event = _fill_event(cid)
         with pytest.raises(ValueError):
             submitted_ticket.with_fill(quantity=quantity, price=10.0, event=event)
+
+    def test_rejects_overfill(self, submitted_ticket: OrderTicket) -> None:
+        """with_fill(quantity > leaves_quantity) → ValueError。"""
+        cid = submitted_ticket.order.client_id
+        event = _fill_event(cid)
+        with pytest.raises(ValueError, match="exceeds remaining"):
+            submitted_ticket.with_fill(
+                quantity=submitted_ticket.leaves_quantity + 1,
+                price=10.0,
+                event=event,
+            )
