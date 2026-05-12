@@ -138,7 +138,10 @@ function pagesForContract(pageIds: Set<string>, label: string): ManifestPage[] {
 }
 
 async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: Viewport): Promise<BrowserScanResult> {
-	const browserPage = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
+	const browserPage = await browser.newPage({
+		reducedMotion: "reduce",
+		viewport: { width: viewport.width, height: viewport.height },
+	});
 	try {
 		await browserPage.goto(pathToFileURL(join(prototypesDir, pageSpec.file)).href, {
 			waitUntil: "load",
@@ -245,6 +248,40 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				return new DOMRect(left, top, width, height);
 			}
 
+			function intersectRects(first: DOMRect, second: DOMRect): DOMRect | null {
+				const left = Math.max(first.left, second.left);
+				const top = Math.max(first.top, second.top);
+				const right = Math.min(first.right, second.right);
+				const bottom = Math.min(first.bottom, second.bottom);
+				const width = right - left;
+				const height = bottom - top;
+
+				if (width < 4 || height < 4 || width * height < 24) return null;
+
+				return new DOMRect(left, top, width, height);
+			}
+
+			function clipsOverflow(element: Element): boolean {
+				const style = getComputedStyle(element);
+				return [style.overflowX, style.overflowY].some((overflow) =>
+					["auto", "clip", "hidden", "scroll"].includes(overflow),
+				);
+			}
+
+			function visibleIntersectionFor(element: Element, rect: DOMRect): DOMRect | null {
+				let intersection = intersectionWithViewport(rect);
+				let current = element.parentElement;
+
+				while (intersection && current && current !== document.documentElement) {
+					if (clipsOverflow(current)) {
+						intersection = intersectRects(intersection, current.getBoundingClientRect());
+					}
+					current = current.parentElement;
+				}
+
+				return intersection;
+			}
+
 			function samplePointsFor(rect: DOMRect): Array<{ x: number; y: number }> {
 				const insetX = Math.min(Math.max(rect.width * 0.2, 2), 10);
 				const insetY = Math.min(Math.max(rect.height * 0.2, 2), 10);
@@ -299,7 +336,7 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 			for (const target of [...document.querySelectorAll(interactiveSelector)]) {
 				if (!visible(target)) continue;
 				const rect = target.getBoundingClientRect();
-				const intersection = intersectionWithViewport(rect);
+				const intersection = visibleIntersectionFor(target, rect);
 				if (!intersection) continue;
 
 				const topElement = samplePointsFor(intersection)
@@ -352,6 +389,8 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				if (!visible(target)) continue;
 				const targetText = labelFor(target);
 				if (targetText.length === 0) continue;
+				const rect = target.getBoundingClientRect();
+				if (!visibleIntersectionFor(target, rect)) continue;
 				const style = getComputedStyle(target);
 				const isDataCell =
 					target.matches("td, th") ||
