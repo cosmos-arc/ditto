@@ -221,6 +221,10 @@
     .checkbox { width: var(--checkbox-size); height: var(--checkbox-size); border: 1px solid var(--border-default); border-radius: var(--radius-2); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .checkbox.checked { background: var(--brand-accent); border-color: var(--brand-accent); }
     @media (prefers-reduced-motion: reduce) { .btn { transition: none !important; } }
+    .data-table th:nth-child(2),
+    .data-table td:nth-child(2) { min-width: 9rem; }
+    .data-table th:nth-child(6),
+    .data-table td:nth-child(6) { min-width: 5.5rem; }
   </style>
 </head>
 <body>

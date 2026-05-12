@@ -1397,9 +1397,10 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
 }
 
 .data-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .data-table th {
@@ -1485,9 +1486,37 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
   text-align: right;
 }
 
-.data-table td.numeric {
+.data-table td.numeric,
+.data-table .numeric {
   font-family: var(--font-family-numeric);
   font-size: var(--font-size-12);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  min-width: max-content;
+}
+
+.data-table td.code-cell,
+.data-table td.cell-ticker,
+.data-table td.cell-volume,
+.data-table td.cell-change-up,
+.data-table td.cell-change-down,
+.data-table td.cell-change-flat {
+  white-space: nowrap;
+  min-width: max-content;
+}
+
+.data-table td.name-cell,
+.data-table td.cell-name,
+.data-table td.cell-note {
+  min-width: 7rem;
+}
+
+.table-container,
+.sd-overflow-auto,
+.catalog-table-inner .table-container {
+  overflow-x: auto;
+  scrollbar-gutter: stable both-edges;
 }
 
 .data-table tr.row {
@@ -1524,11 +1553,6 @@ details.context-section:not([open]) > .context-section-body > .context-section-b
   top: 0;
   z-index: 2;
   background: var(--surface-panel-base);
-}
-
-.data-table .numeric {
-  font-family: var(--font-family-numeric);
-  text-align: right;
 }
 
 .data-table .up    { color: var(--market-up-fg); }
