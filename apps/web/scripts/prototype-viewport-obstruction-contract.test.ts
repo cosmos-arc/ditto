@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -139,10 +140,11 @@ function pagesForContract(pageIds: Set<string>, label: string): ManifestPage[] {
 async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: Viewport): Promise<BrowserScanResult> {
 	const browserPage = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
 	try {
-		await browserPage.goto(`file://${join(prototypesDir, pageSpec.file)}`, {
+		await browserPage.goto(pathToFileURL(join(prototypesDir, pageSpec.file)).href, {
 			waitUntil: "load",
 			timeout: navigationTimeoutMs,
 		});
+		await browserPage.evaluate(() => document.fonts.ready.then(() => undefined));
 		await browserPage.waitForTimeout(120);
 
 		return await browserPage.evaluate((): BrowserScanResult => {
@@ -348,6 +350,8 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 			const textFitIssues: BrowserScanResult["textFitIssues"] = [];
 			for (const target of [...document.querySelectorAll(textFitSelector)]) {
 				if (!visible(target)) continue;
+				const targetText = labelFor(target);
+				if (targetText.length === 0) continue;
 				const style = getComputedStyle(target);
 				const isDataCell =
 					target.matches("td, th") ||
@@ -360,7 +364,7 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				if (target.scrollWidth > target.clientWidth + 2) {
 					textFitIssues.push({
 						targetPath: pathFor(target),
-						targetText: labelFor(target),
+						targetText,
 						scrollWidth: target.scrollWidth,
 						clientWidth: target.clientWidth,
 					});
@@ -444,15 +448,23 @@ function summarizeOverflowIssues(issues: OverflowIssue[]): string[] {
 	return summarizeIssues(issues, (issue) => `overflowX=${issue.overflowX}`);
 }
 
+function requireBrowser(browser: Browser | undefined): Browser {
+	if (!browser) {
+		throw new Error("Chromium browser failed to initialize before prototype scan.");
+	}
+
+	return browser;
+}
+
 describe("prototype viewport obstruction contract", () => {
-	let browser: Browser;
+	let browser: Browser | undefined;
 
 	beforeAll(async () => {
 		browser = await chromium.launch({ channel: "chromium", args: ["--disable-gpu"] });
 	});
 
 	afterAll(async () => {
-		await browser.close();
+		await browser?.close();
 	});
 
 	it(
@@ -461,10 +473,11 @@ describe("prototype viewport obstruction contract", () => {
 			const issues: ObstructionIssue[] = [];
 			const overflowIssues: OverflowIssue[] = [];
 			const pages = pagesForContract(criticalPageIds, "critical viewport obstruction contract");
+			const activeBrowser = requireBrowser(browser);
 
 			for (const pageSpec of pages) {
 				for (const viewport of gateViewports) {
-					const result = await scanPage(browser, pageSpec, viewport);
+					const result = await scanPage(activeBrowser, pageSpec, viewport);
 					issues.push(...withPageContext(pageSpec, viewport, result.obstructions));
 					if (result.overflowX > 2) {
 						overflowIssues.push({
@@ -488,10 +501,11 @@ describe("prototype viewport obstruction contract", () => {
 		async () => {
 			const issues: ClippedIssue[] = [];
 			const pages = pagesForContract(criticalPageIds, "critical fixed/sticky clipping contract");
+			const activeBrowser = requireBrowser(browser);
 
 			for (const pageSpec of pages) {
 				for (const viewport of [...gateViewports, ...stressViewports]) {
-					const result = await scanPage(browser, pageSpec, viewport);
+					const result = await scanPage(activeBrowser, pageSpec, viewport);
 					issues.push(...withPageContext(pageSpec, viewport, result.clippedFixedTargets));
 				}
 			}
@@ -506,10 +520,11 @@ describe("prototype viewport obstruction contract", () => {
 		async () => {
 			const issues: TextFitIssue[] = [];
 			const pages = pagesForContract(textFitPageIds, "dense text fit contract");
+			const activeBrowser = requireBrowser(browser);
 
 			for (const pageSpec of pages) {
 				for (const viewport of gateViewports) {
-					const result = await scanPage(browser, pageSpec, viewport);
+					const result = await scanPage(activeBrowser, pageSpec, viewport);
 					issues.push(...withPageContext(pageSpec, viewport, result.textFitIssues));
 				}
 			}
