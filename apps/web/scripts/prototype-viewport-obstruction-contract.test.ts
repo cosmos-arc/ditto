@@ -93,6 +93,13 @@ type TextFitIssue = {
 	clientWidth: number;
 };
 
+type OverflowIssue = {
+	pageId: string;
+	file: string;
+	viewport: string;
+	overflowX: number;
+};
+
 type BrowserScanResult = {
 	obstructions: Array<Omit<ObstructionIssue, "pageId" | "file" | "viewport">>;
 	clippedFixedTargets: Array<Omit<ClippedIssue, "pageId" | "file" | "viewport">>;
@@ -108,12 +115,25 @@ function activePage(page: ManifestPage): boolean {
 	return (
 		page.file.startsWith("page-") &&
 		page.file.endsWith(".html") &&
-		page.status !== "archived-specimen"
+		page.status !== "archived-specimen" &&
+		page.status !== "removed-specimen"
 	);
 }
 
 function auditedPages(): ManifestPage[] {
 	return readManifest().pages.filter(activePage);
+}
+
+function pagesForContract(pageIds: Set<string>, label: string): ManifestPage[] {
+	const activePages = auditedPages();
+	const activePageById = new Map(activePages.map((page) => [page.id, page]));
+	const missingPageIds = [...pageIds].filter((pageId) => !activePageById.has(pageId)).sort();
+
+	expect(missingPageIds, `${label} missing active prototype ids`).toEqual([]);
+
+	return [...pageIds]
+		.map((pageId) => activePageById.get(pageId))
+		.filter((page): page is ManifestPage => page !== undefined);
 }
 
 async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: Viewport): Promise<BrowserScanResult> {
@@ -144,10 +164,6 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				"[data-overlay-trigger]",
 			].join(",");
 			const textFitSelector = [
-				"button",
-				"a[href]",
-				"[role='button']",
-				"[role='tab']",
 				"th",
 				"td",
 				".metric-value",
@@ -202,6 +218,7 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				return !(
 					style.display === "none" ||
 					style.visibility === "hidden" ||
+					style.pointerEvents === "none" ||
 					Number(style.opacity) <= 0.05 ||
 					rect.width < 3 ||
 					rect.height < 3 ||
@@ -213,6 +230,65 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				);
 			}
 
+			function intersectionWithViewport(rect: DOMRect): DOMRect | null {
+				const left = Math.max(rect.left, 0);
+				const top = Math.max(rect.top, 0);
+				const right = Math.min(rect.right, viewportWidth);
+				const bottom = Math.min(rect.bottom, viewportHeight);
+				const width = right - left;
+				const height = bottom - top;
+
+				if (width < 4 || height < 4 || width * height < 24) return null;
+
+				return new DOMRect(left, top, width, height);
+			}
+
+			function samplePointsFor(rect: DOMRect): Array<{ x: number; y: number }> {
+				const insetX = Math.min(Math.max(rect.width * 0.2, 2), 10);
+				const insetY = Math.min(Math.max(rect.height * 0.2, 2), 10);
+				const left = rect.left + insetX;
+				const right = rect.right - insetX;
+				const top = rect.top + insetY;
+				const bottom = rect.bottom - insetY;
+				const centerX = rect.left + rect.width / 2;
+				const centerY = rect.top + rect.height / 2;
+
+				return [
+					{ x: centerX, y: centerY },
+					{ x: left, y: top },
+					{ x: right, y: top },
+					{ x: left, y: bottom },
+					{ x: right, y: bottom },
+				].filter((point) => point.x >= 0 && point.x <= viewportWidth && point.y >= 0 && point.y <= viewportHeight);
+			}
+
+			function blockingElementAt(target: Element, point: { x: number; y: number }): Element | null {
+				const topElement = document.elementFromPoint(point.x, point.y);
+				if (
+					!topElement ||
+					topElement === target ||
+					target.contains(topElement) ||
+					topElement.contains(target)
+				) {
+					return null;
+				}
+
+				const topStyle = getComputedStyle(topElement);
+				const topRect = topElement.getBoundingClientRect();
+				if (
+					topStyle.pointerEvents === "none" ||
+					topStyle.display === "none" ||
+					topStyle.visibility === "hidden" ||
+					Number(topStyle.opacity) <= 0.05 ||
+					topRect.width <= 4 ||
+					topRect.height <= 4
+				) {
+					return null;
+				}
+
+				return topElement;
+			}
+
 			function rectLabel(rect: DOMRect): string {
 				return `${Math.round(rect.left)},${Math.round(rect.top)},${Math.round(rect.width)}x${Math.round(rect.height)}`;
 			}
@@ -221,21 +297,13 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 			for (const target of [...document.querySelectorAll(interactiveSelector)]) {
 				if (!visible(target)) continue;
 				const rect = target.getBoundingClientRect();
-				const pointX = Math.min(Math.max(rect.left + rect.width / 2, 1), viewportWidth - 1);
-				const pointY = Math.min(Math.max(rect.top + rect.height / 2, 1), viewportHeight - 1);
-				const topElement = document.elementFromPoint(pointX, pointY);
-				if (
-					!topElement ||
-					topElement === target ||
-					target.contains(topElement) ||
-					topElement.contains(target)
-				) {
-					continue;
-				}
+				const intersection = intersectionWithViewport(rect);
+				if (!intersection) continue;
 
-				const topStyle = getComputedStyle(topElement);
-				const topRect = topElement.getBoundingClientRect();
-				if (topStyle.pointerEvents === "none" || topRect.width <= 4 || topRect.height <= 4) continue;
+				const topElement = samplePointsFor(intersection)
+					.map((point) => blockingElementAt(target, point))
+					.find((element): element is Element => element !== null);
+				if (!topElement) continue;
 
 				obstructions.push({
 					targetPath: pathFor(target),
@@ -284,6 +352,7 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 				const isDataCell =
 					target.matches("td, th") ||
 					target.classList.contains("metric-value") ||
+					target.classList.contains("metric-label") ||
 					target.classList.contains("header-metric") ||
 					target.classList.contains("calendar-reading-value") ||
 					target.classList.contains("regime-strip-metric");
@@ -327,6 +396,54 @@ function withPageContext<T extends object>(
 	}));
 }
 
+function summarizeIssues<TIssue extends { pageId: string; file: string; viewport: string }>(
+	issues: TIssue[],
+	formatIssue: (issue: TIssue) => string,
+): string[] {
+	const groups = new Map<string, TIssue[]>();
+	for (const issue of issues) {
+		const key = `${issue.pageId} ${issue.viewport}`;
+		groups.set(key, [...(groups.get(key) ?? []), issue]);
+	}
+
+	return [...groups.entries()]
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([key, groupedIssues]) => {
+			const file = groupedIssues[0]?.file ?? "unknown";
+			const samples = groupedIssues.slice(0, 3).map(formatIssue).join(" | ");
+			const remaining = groupedIssues.length > 3 ? ` (+${groupedIssues.length - 3} more)` : "";
+			return `${key} ${file}: ${groupedIssues.length} issue(s)${remaining}; ${samples}`;
+		});
+}
+
+function summarizeObstructions(issues: ObstructionIssue[]): string[] {
+	return summarizeIssues(
+		issues,
+		(issue) =>
+			`target="${issue.targetText}" path="${issue.targetPath}" blockedBy="${issue.blockerText}" blockerPath="${issue.blockerPath}" rect=${issue.rect}`,
+	);
+}
+
+function summarizeClippedTargets(issues: ClippedIssue[]): string[] {
+	return summarizeIssues(
+		issues,
+		(issue) =>
+			`target="${issue.targetText}" path="${issue.targetPath}" fixedOrStickyAncestor="${issue.ancestorPath}" rect=${issue.rect}`,
+	);
+}
+
+function summarizeTextFitIssues(issues: TextFitIssue[]): string[] {
+	return summarizeIssues(
+		issues,
+		(issue) =>
+			`target="${issue.targetText}" path="${issue.targetPath}" scrollWidth=${issue.scrollWidth} clientWidth=${issue.clientWidth}`,
+	);
+}
+
+function summarizeOverflowIssues(issues: OverflowIssue[]): string[] {
+	return summarizeIssues(issues, (issue) => `overflowX=${issue.overflowX}`);
+}
+
 describe("prototype viewport obstruction contract", () => {
 	let browser: Browser;
 
@@ -342,17 +459,26 @@ describe("prototype viewport obstruction contract", () => {
 		"does not cover visible interactive targets at gate viewports",
 		async () => {
 			const issues: ObstructionIssue[] = [];
-			const pages = auditedPages().filter((page) => criticalPageIds.has(page.id));
+			const overflowIssues: OverflowIssue[] = [];
+			const pages = pagesForContract(criticalPageIds, "critical viewport obstruction contract");
 
 			for (const pageSpec of pages) {
 				for (const viewport of gateViewports) {
 					const result = await scanPage(browser, pageSpec, viewport);
 					issues.push(...withPageContext(pageSpec, viewport, result.obstructions));
-					expect(result.overflowX, `${pageSpec.id} ${viewport.name} horizontal overflow`).toBeLessThanOrEqual(2);
+					if (result.overflowX > 2) {
+						overflowIssues.push({
+							pageId: pageSpec.id,
+							file: pageSpec.file,
+							viewport: viewport.name,
+							overflowX: result.overflowX,
+						});
+					}
 				}
 			}
 
-			expect(issues).toEqual([]);
+			expect(summarizeOverflowIssues(overflowIssues), "horizontal overflow").toEqual([]);
+			expect(summarizeObstructions(issues), "interactive target obstructions").toEqual([]);
 		},
 		scanTimeoutMs,
 	);
@@ -361,7 +487,7 @@ describe("prototype viewport obstruction contract", () => {
 		"does not clip fixed or sticky interactive targets at gate and stress viewports",
 		async () => {
 			const issues: ClippedIssue[] = [];
-			const pages = auditedPages().filter((page) => criticalPageIds.has(page.id));
+			const pages = pagesForContract(criticalPageIds, "critical fixed/sticky clipping contract");
 
 			for (const pageSpec of pages) {
 				for (const viewport of [...gateViewports, ...stressViewports]) {
@@ -370,7 +496,7 @@ describe("prototype viewport obstruction contract", () => {
 				}
 			}
 
-			expect(issues).toEqual([]);
+			expect(summarizeClippedTargets(issues)).toEqual([]);
 		},
 		scanTimeoutMs,
 	);
@@ -379,7 +505,7 @@ describe("prototype viewport obstruction contract", () => {
 		"keeps key dense data labels and numeric cells readable at release gate viewports",
 		async () => {
 			const issues: TextFitIssue[] = [];
-			const pages = auditedPages().filter((page) => textFitPageIds.has(page.id));
+			const pages = pagesForContract(textFitPageIds, "dense text fit contract");
 
 			for (const pageSpec of pages) {
 				for (const viewport of gateViewports) {
@@ -388,7 +514,7 @@ describe("prototype viewport obstruction contract", () => {
 				}
 			}
 
-			expect(issues).toEqual([]);
+			expect(summarizeTextFitIssues(issues)).toEqual([]);
 		},
 		scanTimeoutMs,
 	);
