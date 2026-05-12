@@ -11,6 +11,14 @@ type StaticFinding = {
 	snippet: string;
 };
 
+type SideBorderDeclaration = {
+	side: string;
+	kind: "shorthand" | "width" | "color";
+	value: string;
+	index: number;
+	snippet: string;
+};
+
 function readPrototypeFile(relativePath: string): string {
 	return readFileSync(join(prototypesDir, relativePath), "utf8");
 }
@@ -43,26 +51,70 @@ function isThickBorderWidth(width: string): boolean {
 	return Number.parseFloat(width) >= 2;
 }
 
+function widthValue(value: string): string | null {
+	return value.match(/\b([0-9]*\.?[0-9]+)px\b/i)?.[1] ?? null;
+}
+
+function hasThickBorderWidth(value: string): boolean {
+	const width = widthValue(value);
+	return width !== null && isThickBorderWidth(width);
+}
+
+function hasSolidBorderStyle(value: string): boolean {
+	return /\bsolid\b/i.test(value);
+}
+
 function isVisibleColor(color: string): boolean {
 	return !/^(?:transparent|currentColor)\b/i.test(color.trim());
+}
+
+function shorthandBorderColor(value: string): string | null {
+	const color = value
+		.replace(/\b[0-9]*\.?[0-9]+px\b/i, "")
+		.replace(/\bsolid\b/i, "")
+		.trim();
+
+	return color.length > 0 ? color : null;
+}
+
+function collectSideBorderDeclarations(source: string): SideBorderDeclaration[] {
+	return [
+		...source.matchAll(
+			/border-(left|right|inline-start|inline-end)(?:-(width|color))?:\s*([^;]+)/g,
+		),
+	].map((match) => ({
+		side: match[1] ?? "",
+		kind:
+			match[2] === "width" || match[2] === "color"
+				? match[2]
+				: "shorthand",
+		value: match[3]?.trim() ?? "",
+		index: match.index ?? 0,
+		snippet: match[0].trim(),
+	}));
 }
 
 function collectColoredSideBorderFindings(relativePath: string): StaticFinding[] {
 	const source = readPrototypeFile(relativePath);
 	const findings: StaticFinding[] = [];
-	const sideBorderPattern =
-		/border-(left|right|inline-start|inline-end):\s*([0-9]*\.?[0-9]+)px\s+solid\s+([^;]+)/g;
 
-	for (const match of source.matchAll(sideBorderPattern)) {
-		const [, , width, color] = match;
-		if (!width || !color || !isThickBorderWidth(width) || !isVisibleColor(color)) {
+	for (const declaration of collectSideBorderDeclarations(source).filter(
+		(borderDeclaration) => borderDeclaration.kind === "shorthand",
+	)) {
+		const color = shorthandBorderColor(declaration.value);
+		if (
+			!hasThickBorderWidth(declaration.value) ||
+			!hasSolidBorderStyle(declaration.value) ||
+			!color ||
+			!isVisibleColor(color)
+		) {
 			continue;
 		}
 
 		findings.push({
 			file: relativePath,
-			line: lineNumberAt(source, match.index ?? 0),
-			snippet: match[0].trim(),
+			line: lineNumberAt(source, declaration.index),
+			snippet: declaration.snippet,
 		});
 	}
 
@@ -73,30 +125,31 @@ function collectColoredSideBorderFindings(relativePath: string): StaticFinding[]
 		if (!body) continue;
 
 		const bodyOffset = (blockMatch.index ?? 0) + 1;
-		const splitBorderDeclarations = [
-			...body.matchAll(
-				/border-(left|right|inline-start|inline-end)-(width|color):\s*([^;]+)/g,
-			),
-		];
+		const declarations = collectSideBorderDeclarations(body);
+		const widthSources = declarations.filter(
+			(declaration) =>
+				(declaration.kind === "shorthand" &&
+					hasThickBorderWidth(declaration.value) &&
+					hasSolidBorderStyle(declaration.value) &&
+					shorthandBorderColor(declaration.value) === null) ||
+				(declaration.kind === "width" && hasThickBorderWidth(declaration.value)),
+		);
 
-		for (const widthDeclaration of splitBorderDeclarations.filter(
-			(declaration) => declaration[2] === "width",
-		)) {
-			const side = widthDeclaration[1];
-			const width = widthDeclaration[3]?.trim() ?? "";
-			const colorDeclaration = splitBorderDeclarations.find(
-				(declaration) => declaration[1] === side && declaration[2] === "color",
+		for (const widthSource of widthSources) {
+			const colorDeclaration = declarations.find(
+				(declaration) =>
+					declaration.side === widthSource.side && declaration.kind === "color",
 			);
-			const color = colorDeclaration?.[3]?.trim() ?? "";
+			const color = colorDeclaration?.value ?? "";
 
-			if (!isThickBorderWidth(width) || !color || !isVisibleColor(color)) {
+			if (!color || !isVisibleColor(color)) {
 				continue;
 			}
 
 			findings.push({
 				file: relativePath,
-				line: lineNumberAt(source, bodyOffset + (widthDeclaration.index ?? 0)),
-				snippet: `${widthDeclaration[0].trim()}; ${colorDeclaration?.[0].trim()}`,
+				line: lineNumberAt(source, bodyOffset + widthSource.index),
+				snippet: `${widthSource.snippet}; ${colorDeclaration?.snippet}`,
 			});
 		}
 	}
@@ -171,7 +224,28 @@ describe("prototype final polish static contract", () => {
 			...collectActiveSharedCssFiles(),
 			...collectActiveRootHtmlFiles(),
 		];
+		const requiredScannedFiles = [
+			"tokens-style.css",
+			"shared/fonts.css",
+			"shared/layout-components.css",
+			"shared/layout-gallery.css",
+			"shared/layout-overlay.css",
+			"shared/layout-shell.css",
+			"shared/layout-state.css",
+			"shared/prototype-interactions.css",
+			"shared/prototype-toggles.css",
+			"shared/theme-switcher.css",
+			"page-a-shares.html",
+			"page-agent-console.html",
+			"page-agent-console-v2.html",
+			"page-strategy-studio.html",
+			"page-markets-screener.html",
+		];
+		const missingScannedFiles = requiredScannedFiles.filter(
+			(file) => !scannedFiles.includes(file),
+		);
 
+		expect(missingScannedFiles).toEqual([]);
 		const findings = scannedFiles.flatMap(collectColoredSideBorderFindings);
 
 		expect(findings).toEqual([]);
