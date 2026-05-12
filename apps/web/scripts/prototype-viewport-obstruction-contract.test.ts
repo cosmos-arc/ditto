@@ -357,6 +357,8 @@ async function scanPage(browser: Browser, pageSpec: ManifestPage, viewport: View
 			for (const target of [...document.querySelectorAll(interactiveSelector)]) {
 				if (!visible(target)) continue;
 				const rect = target.getBoundingClientRect();
+				const intersection = visibleIntersectionFor(target, rect);
+				if (!intersection) continue;
 				let current: Element | null = target;
 				let fixedAncestor: Element | null = null;
 				while (current && current !== document.documentElement) {

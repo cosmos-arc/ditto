@@ -798,6 +798,12 @@
       align-self: start;
       flex: 1;
       min-width: 0;
+      max-height: calc(
+        100dvh - var(--shell-header-height) - var(--shell-context-bar-height) -
+        var(--shell-scope-strip-height) - var(--cross-market-status-height)
+      );
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .rail-section {
