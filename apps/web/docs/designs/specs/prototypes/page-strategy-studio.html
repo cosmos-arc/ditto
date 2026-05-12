@@ -255,7 +255,8 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-subtle);
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(280px, 1fr) minmax(360px, auto);
       align-items: center;
       padding: 0 var(--space-16);
       gap: var(--space-12);
@@ -284,10 +285,10 @@
       font-size: var(--font-size-13);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(120px, 1fr) auto auto;
       align-items: center;
       gap: var(--space-8);
-      flex: 1 1 0;
       min-width: 0;
       overflow: hidden;
       white-space: nowrap;
@@ -333,22 +334,31 @@
       white-space: nowrap;
     }
 
-    .header-spacer { flex: 0 0 var(--space-4); }
+    .strategy-run-chip[data-answer-evidence] {
+      max-width: 8.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-spacer { display: none; }
 
     /* ── Studio Actions (CTA buttons) ── */
     .studio-actions {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: var(--space-6);
-      flex-shrink: 0;
+      min-width: 0;
     }
 
     .studio-action {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: var(--space-4);
+      min-width: 0;
       height: var(--density-action-height);
-      padding: 0 var(--space-10);
+      padding: 0 var(--space-8);
       font-family: var(--font-family-ui);
       font-size: var(--font-size-12);
       font-weight: var(--font-weight-medium);
@@ -362,6 +372,23 @@
                   border-color var(--motion-duration-fast) var(--motion-easing-standard);
       white-space: nowrap;
     }
+
+    @media (max-width: 1360px) {
+      .studio-header {
+        grid-template-columns: auto minmax(220px, 1fr) minmax(300px, auto);
+        gap: var(--space-8);
+      }
+
+      .strategy-run-chip[data-answer-evidence],
+      .strategy-run-chip--optional {
+        display: none;
+      }
+
+      .studio-action {
+        padding: 0 var(--space-6);
+      }
+    }
+
     .studio-action:hover {
       color: var(--text-primary);
       background: var(--interaction-hover-strong-bg);
@@ -1363,17 +1390,28 @@
 
     /* ── Strategy header delete button ── */
     .header-delete-btn {
+      width: 28px;
+      height: 28px;
       cursor: pointer;
       color: var(--text-tertiary);
-      margin-left: var(--space-4);
-      font-size: var(--font-size-12);
       display: inline-flex;
       align-items: center;
-      gap: var(--space-2);
-      flex-shrink: 0;
-      transition: color var(--motion-duration-fast) var(--motion-easing-standard);
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: var(--radius-4);
+      flex: 0 0 28px;
+      transition: color var(--motion-duration-fast) var(--motion-easing-standard),
+                  background var(--motion-duration-fast) var(--motion-easing-standard),
+                  border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
-    .header-delete-btn:hover { color: var(--risk-critical-fg); }
+
+    .header-delete-btn:hover,
+    .header-delete-btn:focus-visible {
+      color: var(--risk-critical-fg);
+      background: var(--risk-critical-bg);
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 28%, var(--border-subtle));
+      outline: none;
+    }
 
     @media (max-width: 1440px) {
       .strategy-run-chip--optional {
@@ -2048,7 +2086,6 @@
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12M7 5V3h6v2M6 5v12a1 1 0 001 1h6a1 1 0 001-1V5"/></svg>
         </label>
       </div>
-      <div class="header-spacer"></div>
       <div class="studio-actions header-actions" role="toolbar" aria-label="策略工作台首屏决策" data-decision-cluster>
 
         <label for="overlay-save-strategy" class="studio-action" tabindex="0" data-decision-option aria-label="保存策略" data-action-tier="context">
