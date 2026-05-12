@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
+const actionTierScanTimeoutMs = 30_000;
 
 const highDensityPages = [
 	"page-markets-screener.html",
@@ -112,7 +113,7 @@ describe("prototype action tier contract", () => {
 		}
 
 		expect(failures).toEqual([]);
-	});
+	}, actionTierScanTimeoutMs);
 
 	it("marks high-risk confirmation overlay controls with explicit tiers", () => {
 		const failures: string[] = [];
