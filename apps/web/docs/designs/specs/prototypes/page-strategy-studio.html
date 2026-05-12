@@ -256,7 +256,7 @@
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-subtle);
       display: grid;
-      grid-template-columns: auto minmax(280px, 1fr) minmax(360px, auto);
+      grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
       align-items: center;
       padding: 0 var(--space-16);
       gap: var(--space-12);
@@ -286,7 +286,7 @@
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
       display: grid;
-      grid-template-columns: auto minmax(120px, 1fr) auto auto;
+      grid-template-columns: auto minmax(120px, 1fr) repeat(6, max-content);
       align-items: center;
       gap: var(--space-8);
       min-width: 0;
@@ -351,6 +351,10 @@
       min-width: 0;
     }
 
+    .studio-header [data-header-utility-bar] {
+      min-width: 0;
+    }
+
     .studio-action {
       display: inline-flex;
       align-items: center;
@@ -375,7 +379,7 @@
 
     @media (max-width: 1360px) {
       .studio-header {
-        grid-template-columns: auto minmax(220px, 1fr) minmax(300px, auto);
+        grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
         gap: var(--space-8);
       }
 
@@ -1405,17 +1409,32 @@
                   border-color var(--motion-duration-fast) var(--motion-easing-standard);
     }
 
-    .header-delete-btn:hover,
+    .header-delete-btn:hover {
+      color: var(--risk-critical-fg);
+      background: var(--risk-critical-bg);
+      border-color: color-mix(in oklch, var(--risk-critical-fg) 28%, var(--border-subtle));
+    }
+
     .header-delete-btn:focus-visible {
       color: var(--risk-critical-fg);
       background: var(--risk-critical-bg);
       border-color: color-mix(in oklch, var(--risk-critical-fg) 28%, var(--border-subtle));
-      outline: none;
+      outline: 2px solid var(--interaction-focus-ring);
+      outline-offset: 2px;
     }
 
     @media (max-width: 1440px) {
+      .studio-header {
+        gap: var(--space-8);
+      }
+
+      .strategy-run-chip[data-answer-evidence],
       .strategy-run-chip--optional {
         display: none;
+      }
+
+      .studio-header [data-header-utility-bar] {
+        gap: var(--space-4);
       }
     }
 
