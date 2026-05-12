@@ -93,6 +93,14 @@
       color: var(--text-primary);
     }
 
+    .main-panel {
+      display: grid;
+      grid-template-rows: minmax(220px, 0.95fr) minmax(220px, 1.05fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
     .agent-shell .resize-separator[data-resize-var="--agent-console-source-width"] {
       grid-area: source-separator;
     }
@@ -512,10 +520,6 @@
 
     .main-panel {
       grid-area: main;
-      display: grid;
-      grid-template-rows: minmax(260px, 0.9fr) minmax(260px, 1fr);
-      min-width: 0;
-      min-height: 0;
       background: color-mix(in oklch, var(--surface-panel-base) 88%, transparent);
     }
 
@@ -523,6 +527,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
       min-height: 0;
+      overflow: hidden;
       border-bottom: 1px solid var(--border-subtle);
     }
 
@@ -530,6 +535,8 @@
     .findings,
     .autoresearch,
     .quality {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
       min-width: 0;
       min-height: 0;
       overflow: hidden;
@@ -539,9 +546,11 @@
     .timeline-body,
     .findings-body,
     .dashboard-body {
+      min-height: 0;
+      height: auto;
       padding: var(--space-12);
       overflow-y: auto;
-      height: calc(100% - 38px);
+      overscroll-behavior: contain;
     }
 
     .event {
@@ -572,14 +581,21 @@
 
     .finding-row {
       display: grid;
-      grid-template-columns: 1.1fr 64px 64px 82px;
-      gap: var(--space-8);
+      grid-template-columns: 16px minmax(0, 1fr) 44px 54px 34px 58px;
+      gap: var(--space-6);
       align-items: center;
       min-height: 44px;
       padding: 0 var(--space-8);
       border-bottom: 1px solid var(--border-subtle);
       font-size: var(--font-size-12);
       color: var(--text-secondary);
+    }
+
+    .finding-row > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .finding-row.header {
@@ -593,6 +609,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       min-height: 0;
+      overflow: hidden;
     }
 
     .roadmap {
@@ -785,45 +802,32 @@
 
       .main-panel {
         grid-template-rows: none;
+        grid-auto-rows: max-content;
+        align-content: start;
         overflow-y: auto;
+        overscroll-behavior: contain;
       }
 
       .top-main,
       .bottom-main {
         grid-template-columns: minmax(0, 1fr);
-        grid-auto-rows: auto;
+        grid-auto-rows: minmax(180px, auto);
       }
 
       .timeline,
       .findings,
       .autoresearch,
       .quality {
-        min-height: 190px;
+        min-height: 180px;
         border-right: 0;
         border-bottom: 1px solid var(--border-subtle);
       }
 
-      .timeline,
-      .findings {
-        height: 190px;
-      }
-
-      .findings {
-        height: 156px;
-        min-height: 156px;
-      }
-
-      .timeline-body {
-        height: 152px;
-      }
-
-      .findings-body {
-        height: 118px;
-      }
-
       .timeline-body,
+      .findings-body,
       .dashboard-body {
-        overflow-y: auto;
+        height: auto;
+        min-height: 0;
       }
     }
 
@@ -954,7 +958,7 @@
 
     /* Finding checkbox + batch action bar */
     .finding-row .finding-checkbox { width: 16px; height: 16px; accent-color: var(--brand-accent); cursor: pointer; flex-shrink: 0; }
-    .finding-row .batch-actions { display: none; }
+    .batch-actions { display: none; }
     .finding-row:has(.finding-checkbox:checked) ~ .batch-actions { display: flex; align-items: center; gap: var(--space-8); padding: var(--space-6) var(--space-8); background: var(--surface-strip); border-top: 1px solid var(--border-subtle); font-size: var(--font-size-12); color: var(--text-secondary); }
     .batch-btn { font-size: var(--font-size-12); font-weight: var(--font-weight-medium); padding: var(--space-2) var(--space-8); border: 1px solid var(--border-default); border-radius: var(--radius-4); cursor: pointer; color: var(--text-secondary); }
     .batch-btn:hover { background: var(--interaction-hover-subtle-bg); }
