@@ -2636,9 +2636,10 @@ describe("prototype design consistency", () => {
 		expect(activeAgentConsolePages.map((page) => page.file)).toEqual([
 			"page-agent-console-v2.html",
 		]);
-		expect(agentConsolePages.find((page) => page.id === "agent-console")?.status).toBe(
-			"archived-specimen",
-		);
+		const legacyAgentConsole = agentConsolePages.find((page) => page.id === "agent-console");
+		expect(legacyAgentConsole?.status).toBe("removed-specimen");
+		expect(legacyAgentConsole?.file).toBe("");
+		expect(existsSync(join(prototypesDir, "page-agent-console.html"))).toBe(false);
 		expect(canonicalContract?.prototypeRef).toBe(
 			"docs/designs/specs/prototypes/page-agent-console-v2.html",
 		);

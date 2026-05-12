@@ -659,8 +659,8 @@
     },
     {
       "id": "agent-console",
-      "file": "page-agent-console.html",
-      "status": "archived-specimen",
+      "file": "",
+      "status": "removed-specimen",
       "score": 9.2,
       "styleAnchor": "platform",
       "rounds": 1,
@@ -695,7 +695,7 @@
         "overlayStatus": "archived",
         "visualAuditStatus": "superseded"
       },
-      "archiveNote": "2026-05-04: superseded by page-agent-console-v2.html as the canonical /platform/agents prototype."
+      "archiveNote": "2026-05-12: removed from the prototype release surface; page-agent-console-v2.html is the canonical /platform/agents prototype."
     },
     {
       "id": "agent-console-v2",
@@ -705,7 +705,7 @@
       "styleAnchor": "platform",
       "rounds": 1,
       "createdAt": "2026-05-02",
-      "note": "2026-05-04: canonical /platform/agents prototype; legacy page-agent-console.html is archived-specimen.",
+      "note": "2026-05-12: canonical /platform/agents prototype; legacy page-agent-console.html was removed from the release surface.",
       "stateCoverage": {
         "tabs": 0,
         "overlays": 7,
