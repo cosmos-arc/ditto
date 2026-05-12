@@ -7,7 +7,7 @@ const root = process.cwd();
 const prototypesDir = join(root, "docs/designs/specs/prototypes");
 
 const activePrototypeFiles = readdirSync(prototypesDir).filter(
-	(file) => /^page-.*\.html$/.test(file) && file !== "page-agent-console.html",
+	(file) => /^page-.*\.html$/.test(file),
 ).sort();
 
 function loadDocument(file: string): Document {

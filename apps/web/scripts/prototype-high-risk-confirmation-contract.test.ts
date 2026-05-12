@@ -67,6 +67,6 @@ describe("prototype high-risk confirmation contract", () => {
 		const rootFiles = readdirSync(prototypesDir).filter((file) => /^page-.*\.html$/.test(file));
 		const failures = rootFiles.filter((file) => file === "page-agent-console.html");
 
-		expect(failures).toEqual(["page-agent-console.html"]);
+		expect(failures).toEqual([]);
 	});
 });

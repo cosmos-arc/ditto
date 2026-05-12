@@ -2715,12 +2715,22 @@ describe("prototype interaction UX contracts", () => {
 				);
 			}
 
-			if (page.file === "page-strategy-studio.html" || page.file === "page-agent-console.html") {
+			if (page.file === "page-strategy-studio.html") {
 				violations.push(
 					...assertResizableGroupContract(
 						page.id,
 						document.querySelector('[data-resizable-panel-group="studio-workspace"]'),
 						"studio-workspace",
+					),
+				);
+			}
+
+			if (page.file === "page-agent-console-v2.html") {
+				violations.push(
+					...assertResizableGroupContract(
+						page.id,
+						document.querySelector('[data-resizable-panel-group="agent-console-workspace"]'),
+						"agent-console-workspace",
 					),
 				);
 			}
