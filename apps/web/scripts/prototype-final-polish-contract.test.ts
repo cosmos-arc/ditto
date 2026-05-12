@@ -25,6 +25,13 @@ function collectActiveRootHtmlFiles(): string[] {
 		.sort();
 }
 
+function collectActiveRootCssFiles(): string[] {
+	return readdirSync(prototypesDir, { withFileTypes: true })
+		.filter((entry) => entry.isFile() && entry.name.endsWith(".css"))
+		.map((entry) => entry.name)
+		.sort();
+}
+
 function collectActiveSharedCssFiles(): string[] {
 	return readdirSync(sharedDir, { withFileTypes: true })
 		.filter((entry) => entry.isFile() && entry.name.endsWith(".css"))
@@ -115,12 +122,8 @@ function extractCssRuleBlock(source: string, selector: string): string {
 	return "";
 }
 
-function extractDivByClassSnippet(source: string, className: string): string {
-	const marker = `class="${className}"`;
-	const startIndex = source.indexOf(marker);
-	if (startIndex === -1) return "";
-
-	const divStartIndex = source.lastIndexOf("<div", startIndex);
+function extractDivSnippetAt(source: string, index: number): string {
+	const divStartIndex = source.lastIndexOf("<div", index);
 	if (divStartIndex === -1) return "";
 
 	let depth = 0;
@@ -141,9 +144,30 @@ function extractDivByClassSnippet(source: string, className: string): string {
 	return "";
 }
 
+function extractDivByClassSnippet(source: string, className: string): string {
+	const marker = `class="${className}"`;
+	const startIndex = source.indexOf(marker);
+	if (startIndex === -1) return "";
+
+	return extractDivSnippetAt(source, startIndex);
+}
+
+function collectDivSnippetsByClassToken(source: string, classToken: string): string[] {
+	const classPattern = new RegExp(`<div\\b[^>]*class="[^"]*\\b${classToken}\\b[^"]*"`, "g");
+	const snippets: string[] = [];
+
+	for (const match of source.matchAll(classPattern)) {
+		const snippet = extractDivSnippetAt(source, match.index ?? 0);
+		if (snippet) snippets.push(snippet);
+	}
+
+	return snippets;
+}
+
 describe("prototype final polish static contract", () => {
 	it("does not use thick colored side accent borders in active prototype CSS", () => {
 		const scannedFiles = [
+			...collectActiveRootCssFiles(),
 			...collectActiveSharedCssFiles(),
 			...collectActiveRootHtmlFiles(),
 		];
@@ -164,6 +188,10 @@ describe("prototype final polish static contract", () => {
 		const source = readPrototypeFile("page-a-shares.html");
 		const mapContainerCss = extractCssRuleBlock(source, ".map-container");
 		const mapContainerMarkup = extractDivByClassSnippet(source, "map-container");
+		const marketStructureCellMarkup = [
+			...collectDivSnippetsByClassToken(source, "treemap-cell-iv"),
+			...collectDivSnippetsByClassToken(source, "heatmap-cell"),
+		].join("\n");
 		const requiredTokens = [
 			"--map-market-up-1: oklch(0.305 0.062 22);",
 			"--map-market-up-2: oklch(0.358 0.088 22);",
@@ -174,8 +202,7 @@ describe("prototype final polish static contract", () => {
 			"--map-market-down-3: oklch(0.406 0.092 155);",
 			"--map-market-down-4: oklch(0.462 0.112 155);",
 		];
-		const requiredMapSemantics = [
-			"A股：红涨绿跌",
+		const requiredMapCellSemantics = [
 			'data-direction="up"',
 			'data-direction="down"',
 			"▲",
@@ -183,12 +210,13 @@ describe("prototype final polish static contract", () => {
 		];
 
 		const missingTokens = requiredTokens.filter((token) => !mapContainerCss.includes(token));
-		const missingMapSemantics = requiredMapSemantics.filter(
-			(semantic) => !mapContainerMarkup.includes(semantic),
+		const missingMapCellSemantics = requiredMapCellSemantics.filter(
+			(semantic) => !marketStructureCellMarkup.includes(semantic),
 		);
 
 		expect(missingTokens).toEqual([]);
 		expect(mapContainerCss).not.toMatch(/--map-market-(?:up|down)-[1-4]:\s*color-mix\(/);
-		expect(missingMapSemantics).toEqual([]);
+		expect(mapContainerMarkup).toContain("A股：红涨绿跌");
+		expect(missingMapCellSemantics).toEqual([]);
 	});
 });
