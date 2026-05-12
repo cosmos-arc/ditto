@@ -94,6 +94,44 @@ function collectSideBorderDeclarations(source: string): SideBorderDeclaration[] 
 	}));
 }
 
+function collectSplitSideBorderFindings(
+	source: string,
+	relativePath: string,
+	body: string,
+	bodyOffset: number,
+): StaticFinding[] {
+	const findings: StaticFinding[] = [];
+	const declarations = collectSideBorderDeclarations(body);
+	const widthSources = declarations.filter(
+		(declaration) =>
+			(declaration.kind === "shorthand" &&
+				hasThickBorderWidth(declaration.value) &&
+				hasSolidBorderStyle(declaration.value) &&
+				shorthandBorderColor(declaration.value) === null) ||
+			(declaration.kind === "width" && hasThickBorderWidth(declaration.value)),
+	);
+
+	for (const widthSource of widthSources) {
+		const colorDeclaration = declarations.find(
+			(declaration) =>
+				declaration.side === widthSource.side && declaration.kind === "color",
+		);
+		const color = colorDeclaration?.value ?? "";
+
+		if (!color || !isVisibleColor(color)) {
+			continue;
+		}
+
+		findings.push({
+			file: relativePath,
+			line: lineNumberAt(source, bodyOffset + widthSource.index),
+			snippet: `${widthSource.snippet}; ${colorDeclaration?.snippet}`,
+		});
+	}
+
+	return findings;
+}
+
 function collectColoredSideBorderFindings(relativePath: string): StaticFinding[] {
 	const source = readPrototypeFile(relativePath);
 	const findings: StaticFinding[] = [];
@@ -125,33 +163,20 @@ function collectColoredSideBorderFindings(relativePath: string): StaticFinding[]
 		if (!body) continue;
 
 		const bodyOffset = (blockMatch.index ?? 0) + 1;
-		const declarations = collectSideBorderDeclarations(body);
-		const widthSources = declarations.filter(
-			(declaration) =>
-				(declaration.kind === "shorthand" &&
-					hasThickBorderWidth(declaration.value) &&
-					hasSolidBorderStyle(declaration.value) &&
-					shorthandBorderColor(declaration.value) === null) ||
-				(declaration.kind === "width" && hasThickBorderWidth(declaration.value)),
+		findings.push(
+			...collectSplitSideBorderFindings(source, relativePath, body, bodyOffset),
 		);
+	}
 
-		for (const widthSource of widthSources) {
-			const colorDeclaration = declarations.find(
-				(declaration) =>
-					declaration.side === widthSource.side && declaration.kind === "color",
-			);
-			const color = colorDeclaration?.value ?? "";
+	for (const styleMatch of source.matchAll(/\bstyle=(["'])(?<body>.*?)\1/gs)) {
+		const body = styleMatch.groups?.body;
+		if (!body) continue;
 
-			if (!color || !isVisibleColor(color)) {
-				continue;
-			}
-
-			findings.push({
-				file: relativePath,
-				line: lineNumberAt(source, bodyOffset + widthSource.index),
-				snippet: `${widthSource.snippet}; ${colorDeclaration?.snippet}`,
-			});
-		}
+		const styleAttributeStart = styleMatch.index ?? 0;
+		const bodyOffset = styleAttributeStart + styleMatch[0].indexOf(body);
+		findings.push(
+			...collectSplitSideBorderFindings(source, relativePath, body, bodyOffset),
+		);
 	}
 
 	return findings;
@@ -236,7 +261,6 @@ describe("prototype final polish static contract", () => {
 			"shared/prototype-toggles.css",
 			"shared/theme-switcher.css",
 			"page-a-shares.html",
-			"page-agent-console.html",
 			"page-agent-console-v2.html",
 			"page-strategy-studio.html",
 			"page-markets-screener.html",
