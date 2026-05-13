@@ -344,6 +344,7 @@ class ReplayProof:
         """对比两个 AccountView，返回 NAV / 现金 / 持仓差异。"""
         nav_diff = abs(original.nav - replay.nav)
         cash_diff = abs(original.cash.available - replay.cash.available)
+        cash_match = original.cash == replay.cash
         position_count_diff = len(original.positions) - len(replay.positions)
         keys_match = set(original.positions.keys()) == set(replay.positions.keys())
         position_values_match = keys_match and all(
@@ -352,7 +353,7 @@ class ReplayProof:
         )
         identical = (
             nav_diff == 0.0
-            and cash_diff == 0.0
+            and cash_match
             and position_count_diff == 0
             and position_values_match
         )

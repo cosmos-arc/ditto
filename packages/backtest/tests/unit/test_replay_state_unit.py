@@ -148,6 +148,32 @@ class TestAccountStateComparison:
         assert result.identical is False
         assert result.cash_diff == 10_000.0
 
+    def test_different_settled_cash_detected(self) -> None:
+        """settled 不同但 available 相同时，应判定为不一致。"""
+        original = _account_view(
+            nav=100_000.0,
+            cash=CashBook(available=100_000.0, settled=100_000.0, frozen=0.0),
+        )
+        replay = _account_view(
+            nav=100_000.0,
+            cash=CashBook(available=100_000.0, settled=80_000.0, frozen=0.0),
+        )
+        result = ReplayProof.compare_account_state(original, replay)
+        assert result.identical is False
+
+    def test_different_frozen_cash_detected(self) -> None:
+        """frozen 不同但 available 相同时，应判定为不一致。"""
+        original = _account_view(
+            nav=100_000.0,
+            cash=CashBook(available=100_000.0, settled=100_000.0, frozen=0.0),
+        )
+        replay = _account_view(
+            nav=100_000.0,
+            cash=CashBook(available=100_000.0, settled=100_000.0, frozen=20_000.0),
+        )
+        result = ReplayProof.compare_account_state(original, replay)
+        assert result.identical is False
+
     def test_different_positions(self) -> None:
         pos = Position(
             instrument_id=InstrumentId(600_000),
