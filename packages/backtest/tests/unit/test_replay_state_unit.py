@@ -96,6 +96,21 @@ class TestFillComparison:
         assert result.mismatch_count == 0
         assert result.point_count == 0
 
+    def test_different_fee_detected(self) -> None:
+        """fee 不同但 fill_id/price/quantity 相同时，应判定为不一致。"""
+        original = [_make_fill(fill_id="f1", fee=5.0)]
+        replay = [_make_fill(fill_id="f1", fee=50.0)]
+        result = ReplayProof.compare_fills(original, replay)
+        assert result.identical is False
+        assert result.mismatch_count > 0
+
+    def test_different_instrument_detected(self) -> None:
+        """instrument_id 不同但 fill_id/price/quantity 相同时，应判定为不一致。"""
+        original = [_make_fill(instrument_id=InstrumentId(600_000))]
+        replay = [_make_fill(instrument_id=InstrumentId(600_001))]
+        result = ReplayProof.compare_fills(original, replay)
+        assert result.identical is False
+
 
 # ---------------------------------------------------------------------------
 # TestAccountStateComparison
@@ -149,3 +164,37 @@ class TestAccountStateComparison:
         result = ReplayProof.compare_account_state(original, replay)
         assert result.identical is False
         assert result.position_count_diff == 1
+
+    def test_same_keys_different_quantity(self) -> None:
+        """相同持仓 key 但 quantity 不同时，应判定为不一致。"""
+        iid = InstrumentId(600_000)
+        pos_a = Position(
+            instrument_id=iid,
+            quantity=100,
+            available_quantity=100,
+            average_cost=10.0,
+            market_value=1000.0,
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            total_fees=5.0,
+        )
+        pos_b = Position(
+            instrument_id=iid,
+            quantity=200,
+            available_quantity=200,
+            average_cost=10.0,
+            market_value=2000.0,
+            unrealized_pnl=0.0,
+            realized_pnl=0.0,
+            total_fees=5.0,
+        )
+        original = _account_view(
+            nav=1000.0,
+            positions={iid: pos_a},
+        )
+        replay = _account_view(
+            nav=2000.0,
+            positions={iid: pos_b},
+        )
+        result = ReplayProof.compare_account_state(original, replay)
+        assert result.identical is False

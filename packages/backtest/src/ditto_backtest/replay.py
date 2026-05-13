@@ -326,11 +326,7 @@ class ReplayProof:
         identical = not length_mismatch
         mismatch_count = 0
         for a, b in zip(original, replay, strict=False):
-            if (
-                a.fill_id != b.fill_id
-                or a.fill_price != b.fill_price
-                or a.filled_quantity != b.filled_quantity
-            ):
+            if a != b:
                 identical = False
                 mismatch_count += 1
         return FillComparison(
@@ -349,11 +345,16 @@ class ReplayProof:
         nav_diff = abs(original.nav - replay.nav)
         cash_diff = abs(original.cash.available - replay.cash.available)
         position_count_diff = len(original.positions) - len(replay.positions)
+        keys_match = set(original.positions.keys()) == set(replay.positions.keys())
+        position_values_match = keys_match and all(
+            original.positions[iid] == replay.positions[iid]
+            for iid in original.positions
+        )
         identical = (
             nav_diff == 0.0
             and cash_diff == 0.0
             and position_count_diff == 0
-            and set(original.positions.keys()) == set(replay.positions.keys())
+            and position_values_match
         )
         return AccountStateComparison(
             identical=identical,
