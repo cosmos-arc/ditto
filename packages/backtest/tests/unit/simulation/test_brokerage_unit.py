@@ -16,6 +16,7 @@ from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -294,6 +295,19 @@ class TestProcessLimitOrder:
         ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.INVALID
+
+    def test_invalidate_appends_journal(self, brokerage: BacktestBrokerage) -> None:
+        """invalidate 事件应写入 journal（与 submit/fill/cancel 一致）。"""
+        cid = ClientOrderId(value="ORD-001")
+        order = _order(order_type=OrderType.LIMIT, price=9.0)
+        brokerage.place_order(order)
+        sd = _process_input()
+        brokerage.process_pending(sd)
+
+        journal = brokerage._order_book._journal
+        events = journal.events_for(cid)
+        assert len(events) == 2  # SUBMIT + INVALIDATE
+        assert events[1].trigger == OrderTrigger.INVALIDATE
 
 
 # ---------------------------------------------------------------------------

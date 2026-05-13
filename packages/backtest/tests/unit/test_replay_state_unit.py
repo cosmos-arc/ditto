@@ -125,7 +125,7 @@ class TestAccountStateComparison:
         result: AccountStateComparison = ReplayProof.compare_account_state(view, view)
         assert result.identical is True
         assert result.nav_diff == 0.0
-        assert result.cash_diff == 0.0
+        assert result.available_cash_diff == 0.0
         assert result.position_count_diff == 0
 
     def test_different_nav(self) -> None:
@@ -146,7 +146,7 @@ class TestAccountStateComparison:
         )
         result = ReplayProof.compare_account_state(original, replay)
         assert result.identical is False
-        assert result.cash_diff == 10_000.0
+        assert result.available_cash_diff == 10_000.0
 
     def test_different_settled_cash_detected(self) -> None:
         """settled 不同但 available 相同时，应判定为不一致。"""

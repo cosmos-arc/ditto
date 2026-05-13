@@ -303,7 +303,9 @@ class AccountStateComparison:
 
     identical: bool
     nav_diff: float
-    cash_diff: float
+    available_cash_diff: float
+    settled_cash_diff: float
+    frozen_cash_diff: float
     position_count_diff: int
 
 
@@ -343,7 +345,9 @@ class ReplayProof:
     ) -> AccountStateComparison:
         """对比两个 AccountView，返回 NAV / 现金 / 持仓差异。"""
         nav_diff = abs(original.nav - replay.nav)
-        cash_diff = abs(original.cash.available - replay.cash.available)
+        available_cash_diff = abs(original.cash.available - replay.cash.available)
+        settled_cash_diff = abs(original.cash.settled - replay.cash.settled)
+        frozen_cash_diff = abs(original.cash.frozen - replay.cash.frozen)
         cash_match = original.cash == replay.cash
         position_count_diff = len(original.positions) - len(replay.positions)
         keys_match = set(original.positions.keys()) == set(replay.positions.keys())
@@ -360,7 +364,9 @@ class ReplayProof:
         return AccountStateComparison(
             identical=identical,
             nav_diff=nav_diff,
-            cash_diff=cash_diff,
+            available_cash_diff=available_cash_diff,
+            settled_cash_diff=settled_cash_diff,
+            frozen_cash_diff=frozen_cash_diff,
             position_count_diff=position_count_diff,
         )
 

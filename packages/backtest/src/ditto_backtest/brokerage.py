@@ -283,7 +283,7 @@ class BacktestBrokerage:
                 message=outcome.reason,
                 timestamp=step_time,
             )
-            self._order_book.update(ticket.with_invalid(order_evt))
+            self._order_book.update(ticket.with_invalid(order_evt), event=order_evt)
         # can_retry=True: 保持 SUBMITTED, 下 step 再试
 
         return None
