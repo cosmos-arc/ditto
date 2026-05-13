@@ -38,10 +38,12 @@ class AccountProjector:
 
     def __init__(self, initial_cash: CashBook | None = None) -> None:
         cash = initial_cash or CashBook(available=0.0, settled=0.0, frozen=0.0)
+        self._initial_cash = cash
         self._account = Account(cash=cash)
 
     def project(self, fills: Iterable[FillEvent]) -> PortfolioStateSnapshot:
         """从 fill 流重建 portfolio 状态快照。"""
+        self._account = Account(cash=self._initial_cash)
         for fill in fills:
             self._account.apply_fill(fill, settle_date="1970-01-01")
         view = self._account.get_view()

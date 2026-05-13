@@ -222,3 +222,33 @@ class TestAccountProjectorParity:
         assert snapshot.cash.available == pytest.approx(account.cash.available)
         assert snapshot.cash.settled == pytest.approx(account.cash.settled)
         assert snapshot.cash.frozen == pytest.approx(account.cash.frozen)
+
+
+class TestAccountProjectorIdempotency:
+    """project() 多次调用不应累积状态。"""
+
+    def test_repeated_project_resets_state(self) -> None:
+        """同一 projector 调用 project() 两次，第二次结果应独立于第一次。"""
+        initial_cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
+        projector = AccountProjector(initial_cash=initial_cash)
+
+        buy_fill = _make_fill(filled_quantity=100, fill_price=10.0, fee=5.0)
+        projector.project([buy_fill])
+
+        # 第二次调用 — 同样的 fill，应产生相同结果
+        snapshot2 = projector.project([buy_fill])
+        pos = snapshot2.positions[_INSTRUMENT]
+        assert pos.quantity == 100
+        assert pos.total_fees == pytest.approx(5.0)
+
+    def test_repeated_project_empty_resets_to_initial(self) -> None:
+        """先 project 有 fill，再 project 空 → 应回到初始状态。"""
+        initial_cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
+        projector = AccountProjector(initial_cash=initial_cash)
+
+        buy_fill = _make_fill(filled_quantity=100, fill_price=10.0, fee=5.0)
+        projector.project([buy_fill])
+
+        snapshot2 = projector.project([])
+        assert snapshot2.positions == {}
+        assert snapshot2.cash == initial_cash
