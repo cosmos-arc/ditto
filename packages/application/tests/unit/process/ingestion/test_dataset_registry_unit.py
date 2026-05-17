@@ -102,3 +102,51 @@ class TestDefaultDatasetRegistry:
         assert registration.daily_fetch_factory is not None
         assert registration.instrument_fetch_factory is None
         assert registration.supports_instrument_ingestion is False
+
+
+@pytest.mark.unit
+class TestDatasetRegistryConformance:
+    """Cross-route invariants for default registrations."""
+
+    def test_every_instrument_supported_dataset_has_instrument_factory(self) -> None:
+        registry = default_dataset_registry()
+
+        for dataset in registry.supported_instrument_datasets():
+            registration = registry.require(dataset)
+            assert registration.instrument_fetch_factory is not None
+
+    def test_every_date_fetchable_registration_has_daily_factory(self) -> None:
+        registry = default_dataset_registry()
+        date_fetchable = {
+            Dataset.CALENDAR,
+            Dataset.STOCK_BASIC,
+            Dataset.ETF_BASIC,
+            Dataset.INDEX_BASIC,
+            Dataset.STOCK_DAILY,
+            Dataset.ETF_DAILY,
+            Dataset.INDEX_DAILY,
+            Dataset.STOCK_STATUS,
+            Dataset.ADJ_FACTOR,
+            Dataset.FUND_ADJ,
+            Dataset.BALANCE_SHEET,
+            Dataset.INCOME_STATEMENT,
+            Dataset.CASH_FLOW,
+            Dataset.DIVIDEND,
+            Dataset.VALUATION_METRICS,
+            Dataset.MARGIN_TRADING,
+            Dataset.PLEDGE_RATIO,
+            Dataset.MACRO_INDICATORS,
+            Dataset.CORPORATE_ACTIONS,
+            Dataset.FX_DAILY,
+            Dataset.COMMODITY_DAILY,
+        }
+
+        for dataset in date_fetchable:
+            assert registry.require(dataset).daily_fetch_factory is not None
+
+    def test_index_weight_is_registered_but_has_no_runtime_route(self) -> None:
+        registration = default_dataset_registry().require(Dataset.INDEX_WEIGHT)
+
+        assert registration.daily_fetch_factory is None
+        assert registration.instrument_fetch_factory is None
+        assert registration.write_kind is WriteKind.UNSUPPORTED
