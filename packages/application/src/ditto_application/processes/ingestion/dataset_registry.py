@@ -11,6 +11,7 @@ import polars as pl
 from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset
 from ditto_kernel.instrument import InstrumentIngestParams
 
+from ditto_application.exceptions import AppProcessError  # noqa: RUF100
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
@@ -89,9 +90,17 @@ class DatasetRegistration:
             }
             and self.write_dataset is None
         ):
-            raise ValueError(f"write_dataset is required for {self.write_kind.value}")
+            raise AppProcessError(
+                f"write_dataset is required for {self.write_kind.value}",
+                field="write_kind",
+                value=self.write_kind.value,
+            )
         if self.write_kind == WriteKind.BASIC and self.basic_asset_class is None:
-            raise ValueError("basic_asset_class is required for basic datasets")
+            raise AppProcessError(
+                "basic_asset_class is required for basic datasets",
+                field="basic_asset_class",
+                value=None,
+            )
 
     @property
     def supports_instrument_ingestion(self) -> bool:
@@ -118,8 +127,10 @@ class DatasetRegistry:
     def register(self, registration: DatasetRegistration) -> None:
         """Register one dataset route."""
         if registration.dataset in self._registrations:
-            raise ValueError(
-                f"Dataset already registered: {registration.dataset.value}"
+            raise AppProcessError(
+                f"Dataset already registered: {registration.dataset.value}",
+                field="dataset",
+                value=registration.dataset.value,
             )
         self._registrations[registration.dataset] = registration
 
@@ -128,7 +139,11 @@ class DatasetRegistry:
         try:
             return self._registrations[dataset]
         except KeyError:
-            raise KeyError(f"Dataset is not registered: {dataset.value}") from None
+            raise AppProcessError(
+                f"Dataset is not registered: {dataset.value}",
+                field="dataset",
+                value=dataset.value,
+            ) from None
 
     def datasets(self) -> Iterator[Dataset]:
         """Yield registered dataset IDs in insertion order."""
