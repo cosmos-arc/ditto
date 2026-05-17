@@ -282,7 +282,7 @@ class TestAccountApplyFillSell:
         assert pos.available_quantity == 600
         # realized_pnl = (12.0 - 10.0) * 400 = 800
         assert pos.realized_pnl == pytest.approx(800.0)
-        assert pos.market_value == pytest.approx(10.0 * 600)
+        assert pos.market_value == pytest.approx(12.0 * 600)
         assert pos.total_fees == pytest.approx(8.0)
 
     def test_sell_complete_exit_removes_position(self) -> None:

@@ -1,8 +1,12 @@
 """
-Risk domain contracts — PreTrade 解耦 Protocol.
+Risk domain contracts — PreTrade 解耦 Protocol + RiskGate lifecycle.
 
 将 Risk 对 Execution (Order / OrderTicket) 的直接依赖
 替换为本地 Protocol 抽象，使 Risk 不再 import ditto_execution。
+
+ADR: RiskGate 定义回测与模拟盘共用的风控门控契约。
+4 个生命周期钩子覆盖订单全流程：提交前 / 撤单前 / 成交后 / 每日扫描。
+具体实现由 backtest / paper-trading runtime 各自提供。
 """
 
 # ruff: noqa: D102 — Protocol stubs don't need docstrings
@@ -17,6 +21,7 @@ from ditto_kernel.order import OrderSide, OrderType
 __all__ = [
     "PreTradeOrder",
     "PreTradeTicket",
+    "RiskGate",
 ]
 
 
@@ -54,3 +59,39 @@ class PreTradeTicket(Protocol):
 
     @property
     def leaves_quantity(self) -> int: ...
+
+
+# ---------------------------------------------------------------------------
+# RiskGate — unified risk gate lifecycle (ADR)
+# ---------------------------------------------------------------------------
+
+
+class RiskGate(Protocol):
+    """
+    风控门控统一契约 — backtest / paper-trading 共用。
+
+    ADR: 定义 4 个生命周期钩子，将散布在 backtest 和 paper-trading
+    中的风控门控逻辑收拢为单一 Protocol。具体实现由各 runtime 提供。
+    """
+
+    def pre_submit(self, order: PreTradeOrder) -> PreTradeOrder | None:
+        """订单提交前校验 — 返回修改后订单或 None（拒绝）。"""
+        ...
+
+    def pre_cancel(self, order_id: str) -> None:
+        """撤单前处理。"""
+        ...
+
+    def post_fill(
+        self,
+        instrument_id: InstrumentId,
+        side: OrderSide,
+        qty: int,
+        price: float,
+    ) -> None:
+        """成交后更新风控状态。"""
+        ...
+
+    def daily_scan(self) -> list[object]:
+        """每日风控扫描 — 返回风控行为列表。"""
+        ...

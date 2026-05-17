@@ -12,21 +12,23 @@ Design Doc: v3 §7.1, §7.3
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope as _RiskScope
 from ditto_portfolio.accounting import AccountView
 
 __all__ = [
+    "BarSlice",
     "CompositePostTradeGuard",
     "PostTradeRiskGuard",
     "RiskAction",
     "RiskActionType",
     "RiskSeverity",
+    "SliceView",
 ]
 
 
@@ -90,6 +92,16 @@ class RiskAction:
 # ---------------------------------------------------------------------------
 
 
+class BarSlice(Protocol):
+    """Bar 数据窄协议 — risk 规则仅消费 close / prev_close."""
+
+    @property
+    def close(self) -> float: ...  # noqa: D102
+
+    @property
+    def prev_close(self) -> float: ...  # noqa: D102
+
+
 class SliceView(Protocol):
     """
     Minimal slice protocol for post-trade risk scanning.
@@ -98,7 +110,7 @@ class SliceView(Protocol):
     """
 
     @property
-    def bars(self) -> dict[InstrumentId, Any]: ...
+    def bars(self) -> Mapping[InstrumentId, BarSlice]: ...  # noqa: D102
 
 
 # ---------------------------------------------------------------------------
