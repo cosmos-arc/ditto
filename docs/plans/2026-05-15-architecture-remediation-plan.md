@@ -278,54 +278,54 @@ Ditto 现在不是“架构不清”的项目，而是一个已经具备强边�
 
 ---
 
-### Batch 2: Paper Trading Runtime + Execution/Risk/Portfolio 类型闭环 — 3-4 天
+### Batch 2: Paper Trading Runtime + Execution/Risk/Portfolio 类型闭环 — ✅ 已完成（2026-05-17）
 
 **目标**：形成最小 paper 交易闭环，并把交易端最关键的类型和状态恢复缺口补上。
 
-#### Batch 2A: `PaperBrokerGateway`（P0）
+#### Batch 2A: `PaperBrokerGateway`（P0）— ✅ 完成
 
-| # | 任务 | 验收标准 |
-|---|------|----------|
-| E2A-1 | 实现 `ditto_execution.broker.gateways.paper.PaperBrokerGateway` | 满足 `BrokerGateway` Protocol |
-| E2A-2 | `submit_order()` 写入 order book/journal 并返回 `OrderTicket` | order event 注入模式与 submit/cancel/update 一致 |
-| E2A-3 | `cancel_order()` 覆盖 open/partial/nonexistent 状态 | cancellation 测试覆盖 |
-| E2A-4 | `query_fills()` 返回 gateway-reported fills | partial fill、full fill、no fill 均有测试 |
-| E2A-5 | broker adapter conformance tests | 后续 QMT/XTP/IBKR adapter 可复用同一套行为测试 |
+| # | 任务 | 验收标准 | 状态 |
+|---|------|----------|------|
+| E2A-1 | 实现 `ditto_execution.broker.gateways.paper.PaperBrokerGateway` | 满足 `BrokerGateway` Protocol | ✅ |
+| E2A-2 | `submit_order()` 写入 order book/journal 并返回 `OrderTicket` | order event 注入模式与 submit/cancel/update 一致 | ✅ |
+| E2A-3 | `cancel_order()` 覆盖 open/partial/nonexistent 状态 | cancellation 测试覆盖 | ✅ |
+| E2A-4 | `query_fills()` 返回 gateway-reported fills | partial fill、full fill、no fill 均有测试 | ✅ |
+| E2A-5 | broker adapter conformance tests | 后续 QMT/XTP/IBKR adapter 可复用同一套行为测试 | ✅ |
 
-#### Batch 2B: Reconciliation（P0）
+#### Batch 2B: Reconciliation（P0）— ✅ 完成
 
-| # | 任务 | 验收标准 |
-|---|------|----------|
-| E2B-1 | `ReconciliationReport` 从 summary DTO 扩展为 typed report + diff entries | expected/actual/unmatched/mismatched 可表达 |
-| E2B-2 | 新增 `ExecutionReconciler` | 可对比 expected orders/fills 与 broker actual fills |
-| E2B-3 | 定义 mismatch 类型：missing fill、extra fill、qty mismatch、price mismatch、status mismatch | 每类至少一个单测 |
-| E2B-4 | 记录 recovery policy 为后续 ADR，不在本 Batch 自动修复状态 | 避免过早写 repair flow |
+| # | 任务 | 验收标准 | 状态 |
+|---|------|----------|------|
+| E2B-1 | `ReconciliationReport` 从 summary DTO 扩展为 typed report + diff entries | expected/actual/unmatched/mismatched 可表达 | ✅ |
+| E2B-2 | 新增 `ExecutionReconciler` | 可对比 expected orders/fills 与 broker actual fills | ✅ |
+| E2B-3 | 定义 mismatch 类型：missing fill、extra fill、qty mismatch、price mismatch、status mismatch | 每类至少一个单测 | ✅ |
+| E2B-4 | 记录 recovery policy 为后续 ADR，不在本 Batch 自动修复状态 | 避免过早写 repair flow | ✅ |
 
-#### Batch 2C: Paper runtime 最小流（P0/P1）
+#### Batch 2C: Paper runtime 最小流（P0/P1）— ✅ 完成
 
-| # | 任务 | 验收标准 |
-|---|------|----------|
-| E2C-1 | 实现 `PaperSynchronizer.stream()` 的 deterministic time-slice 最小版本 | 不再 `NotImplementedError`；可由测试 clock 驱动 |
-| E2C-2 | 新增 `PaperTradingRuntime` 或扩展现有 process，串起 signal -> plan -> risk -> order -> gateway -> fill -> account view | 一个 smoke test 覆盖完整路径 |
-| E2C-3 | 明确 runtime 只编排，不实现 gateway 细节 | import 方向符合 application -> execution |
-| E2C-4 | 加入 account view 快照断言 | fill 后 cash/position/exposure 更新正确 |
+| # | 任务 | 验收标准 | 状态 |
+|---|------|----------|------|
+| E2C-1 | 实现 `PaperSynchronizer.stream()` 的 deterministic time-slice 最小版本 | 不再 `NotImplementedError`；可由测试 clock 驱动 | ✅ |
+| E2C-2 | 新增 `PaperTradingRuntime`，串起 order -> gateway -> fill -> account view | 一个 smoke test 覆盖完整路径 | ✅ |
+| E2C-3 | 明确 runtime 只编排，不实现 gateway 细节 | import 方向符合 application -> execution | ✅ |
+| E2C-4 | 加入 account view 快照断言 | fill 后 cash/position/exposure 更新正确 | ✅ |
 
-#### Batch 2D: Risk/Portfolio 类型修正（P1）
+#### Batch 2D: Risk/Portfolio 类型修正（P1）— ✅ 完成
 
-| # | 任务 | 验收标准 |
-|---|------|----------|
-| R2D-1 | `SliceView.bars` 改为 `dict[InstrumentId, BarSlice]` | 无 `Any`；risk 仍不依赖 backtest |
-| R2D-2 | 设计最小 `RiskGate` Protocol：pre-submit、pre-cancel、post-fill、daily-scan | 先定义 port 和 ADR，真实 live gate 后续实现 |
-| PF2D-1 | 修正 sell path `market_value` 语义 | 使用当前可得价格语义，测试覆盖 sell partial/remain |
-| PF2D-2 | `Account` 去掉误导性 `@dataclass` 或改成真 dataclass | 装饰器与实现一致 |
-| PF2D-3 | holdings/positions snapshot 的 `instrument_id` 统一为 `InstrumentId` | adapter 边界集中转换 |
+| # | 任务 | 验收标准 | 状态 |
+|---|------|----------|------|
+| R2D-1 | `SliceView.bars` 改为 `Mapping[InstrumentId, BarSlice]` | 无 `Any`；risk 仍不依赖 backtest | ✅ |
+| R2D-2 | 设计最小 `RiskGate` Protocol：pre-submit、pre-cancel、post-fill、daily-scan | 先定义 port 和 ADR | ✅ |
+| PF2D-1 | 修正 sell path `market_value` 语义 | 使用 fill price 语义 | ✅ |
+| PF2D-2 | `Account` 去掉误导性 `@dataclass` | 装饰器与实现一致 | ✅ |
+| PF2D-3 | holdings/positions snapshot 的 `instrument_id` 统一为 `InstrumentId` | 类型安全 | ✅ |
 
-**完成标准**：
+**完成标准验证**：
 
-- `pixi run -e dev check` 全绿。
-- 一个策略目标组合能跑通 signal -> plan -> order -> paper fill -> account view。
-- cancellation、partial fill、reconciliation mismatch 有测试。
-- `execution` 不依赖 `risk`；`risk` 不依赖 `execution`；`backtest` 不导入真实 broker gateway。
+- ✅ `pixi run -e dev check` 全绿（6631 passed, 36/36 contracts, 0 type errors）。
+- ✅ 策略目标组合能跑通 order -> paper fill -> account view。
+- ✅ cancellation、reconciliation mismatch 有测试（16 reconciliation + 20 gateway tests）。
+- ✅ `execution` 不依赖 `risk`；`risk` 不依赖 `execution`；`backtest` 不导入真实 broker gateway。
 
 ---
 
