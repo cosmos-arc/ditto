@@ -1,5 +1,5 @@
 """
-IngestionCursorService - 数据摄入游标服务.
+IngestionCursorStore - 数据摄入游标服务.
 
 封装 Reader/Writer，为 Port 层提供统一的摄入游标管理接口.
 """
@@ -19,7 +19,7 @@ from ditto_data.storage.runtime.ingestion.ingestion_cursor_writer import (
 )
 
 
-class IngestionCursorService:
+class IngestionCursorStore:
     """
     数据摄入游标服务.
 
@@ -36,7 +36,7 @@ class IngestionCursorService:
         cursor_writer: IngestionCursorWriter,
     ) -> None:
         """
-        初始化 IngestionCursorService.
+        初始化 IngestionCursorStore.
 
         Args:
             cursor_reader: 摄入游标读取器实例

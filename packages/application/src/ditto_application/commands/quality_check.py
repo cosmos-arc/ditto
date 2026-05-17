@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import polars as pl
 import polars.exceptions as pl_exceptions
-from ditto_data.ingestion.quality_record_service import QualityRecordService
+from ditto_data.ingestion.quality_record_store import (
+    QualityRecordStore,
+)
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.quality_types import DQIssue, DQResult
 from ditto_platform.foundation import logger
@@ -21,14 +23,14 @@ class CheckDataQualityHandler:
     """
     数据质量检查 Command Handler — L1/L2 检查 + 隔离写入.
 
-    直接依赖 ditto_data 层服务（QualityEngine + QualityRecordService），
+    直接依赖 ditto_data 层服务（QualityEngine + QualityRecordStore），
     编排 check -> quarantine 写入的完整流程。
     """
 
     def __init__(
         self,
         engine: QualityEngine,
-        quarantine_writer: QualityRecordService | None = None,
+        quarantine_writer: QualityRecordStore | None = None,
     ) -> None:
         self._engine = engine
         self._quarantine_writer = quarantine_writer

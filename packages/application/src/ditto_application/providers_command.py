@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_data.ingestion.quality_record_service import QualityRecordService
+from ditto_data.ingestion.quality_record_store import (
+    QualityRecordStore,
+)
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.services.metadata_service import MetadataService
@@ -53,12 +55,12 @@ class AppCommandProvider(Provider):
     def check_data_quality_handler(
         self,
         dq_engine: QualityEngine,
-        quality_record_service: QualityRecordService,
+        quality_record_store: QualityRecordStore,
     ) -> CheckDataQualityHandler:
         """数据质量检查 Handler."""
         return CheckDataQualityHandler(
             engine=dq_engine,
-            quarantine_writer=quality_record_service,
+            quarantine_writer=quality_record_store,
         )
 
     @provide

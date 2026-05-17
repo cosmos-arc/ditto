@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import polars as pl
 from ditto_data.config.dataset_checksum import dataset_sort_keys
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
 from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import ChecksumCompute, logger
 
@@ -19,19 +21,19 @@ class MetadataManager:
     - 判断是否需要跳过
 
     Attributes:
-        _ingestion_log_service: IngestionLogService 实例, 用于访问数据摄取日志等数据。
+        _ingestion_log_store: IngestionLogStore 实例, 用于访问数据摄取日志等数据。
 
     """
 
-    def __init__(self, ingestion_log_service: IngestionLogService | None) -> None:
+    def __init__(self, ingestion_log_store: IngestionLogStore | None) -> None:
         """
         初始化 MetadataManager。
 
         Args:
-            ingestion_log_service: IngestionLogService 实例。
+            ingestion_log_store: IngestionLogStore 实例。
 
         """
-        self._ingestion_log_service = ingestion_log_service
+        self._ingestion_log_store = ingestion_log_store
 
     def should_skip(
         self,
@@ -67,10 +69,10 @@ class MetadataManager:
             return False, None
 
         # 检查是否有历史记录
-        if self._ingestion_log_service is None:
-            # 如果没有提供 ingestion_log_service，不跳过
+        if self._ingestion_log_store is None:
+            # 如果没有提供 ingestion_log_store，不跳过
             logger.debug(
-                "No ingestion_log_service provided, not skipping",
+                "No ingestion_log_store provided, not skipping",
                 event="should_skip_false",
                 dataset=dataset,
                 trade_date=trade_date,
@@ -78,7 +80,7 @@ class MetadataManager:
             )
             return False, None
 
-        existing = self._ingestion_log_service.get_log(
+        existing = self._ingestion_log_store.get_log(
             dataset=dataset,
             source=source,
             trade_date=trade_date,

@@ -1,4 +1,4 @@
-"""Unit tests for FundamentalService."""
+"""Unit tests for FundamentalStore."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from unittest.mock import MagicMock
 import polars as pl
 import pytest
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.fundamental_store import FundamentalStore
 
 
-class TestFundamentalServiceGetMethods:
+class TestFundamentalStoreGetMethods:
     """Test get_* methods (PIT queries)."""
 
     @pytest.fixture
@@ -45,8 +45,8 @@ class TestFundamentalServiceGetMethods:
         self,
         mock_readers: dict[str, MagicMock],
         mock_writers: dict[str, MagicMock],
-    ) -> FundamentalService:
-        """Create FundamentalService with mocked dependencies."""
+    ) -> FundamentalStore:
+        """Create FundamentalStore with mocked dependencies."""
         read_ports = FundamentalReaders(
             balance_sheet=mock_readers["balance_sheet"],
             income_statement=mock_readers["income_statement"],
@@ -67,13 +67,13 @@ class TestFundamentalServiceGetMethods:
             express=mock_writers["express"],
         )
 
-        return FundamentalService(
+        return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
         )
 
     def test_get_balance_sheet_returns_data_when_found(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_balance_sheet returns DataFrame when data exists."""
         test_df = pl.DataFrame({"instrument_id": [1_000_001], "total_assets": [1000]})
@@ -88,7 +88,7 @@ class TestFundamentalServiceGetMethods:
         )
 
     def test_get_balance_sheet_returns_none_when_empty(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_balance_sheet returns None when no data found."""
         mock_readers["balance_sheet"].get.return_value = pl.DataFrame()
@@ -98,7 +98,7 @@ class TestFundamentalServiceGetMethods:
         assert result is None
 
     def test_get_income_statement_returns_data_when_found(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_income_statement returns DataFrame when data exists."""
         test_df = pl.DataFrame({"instrument_id": [1_000_001], "revenue": [500]})
@@ -110,7 +110,7 @@ class TestFundamentalServiceGetMethods:
         assert result.equals(test_df)
 
     def test_get_income_statement_returns_none_when_empty(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_income_statement returns None when no data found."""
         mock_readers["income_statement"].get.return_value = pl.DataFrame()
@@ -120,7 +120,7 @@ class TestFundamentalServiceGetMethods:
         assert result is None
 
     def test_get_cash_flow_returns_data_when_found(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_cash_flow returns DataFrame when data exists."""
         test_df = pl.DataFrame(
@@ -134,7 +134,7 @@ class TestFundamentalServiceGetMethods:
         assert result.equals(test_df)
 
     def test_get_cash_flow_returns_none_when_empty(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_cash_flow returns None when no data found."""
         mock_readers["cash_flow"].get.return_value = pl.DataFrame()
@@ -144,7 +144,7 @@ class TestFundamentalServiceGetMethods:
         assert result is None
 
     def test_get_dividend_returns_data_when_found(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_dividend returns DataFrame when data exists."""
         test_df = pl.DataFrame(
@@ -158,7 +158,7 @@ class TestFundamentalServiceGetMethods:
         assert result.equals(test_df)
 
     def test_get_dividend_returns_none_when_empty(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_dividend returns None when no data found."""
         mock_readers["dividend"].get.return_value = pl.DataFrame()
@@ -168,7 +168,7 @@ class TestFundamentalServiceGetMethods:
         assert result is None
 
     def test_get_forecast_returns_data_when_found(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_forecast returns DataFrame when data exists."""
         test_df = pl.DataFrame(
@@ -186,7 +186,7 @@ class TestFundamentalServiceGetMethods:
         assert result.equals(test_df)
 
     def test_get_forecast_returns_none_when_empty(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_forecast returns None when no data found."""
         mock_readers["forecast"].get.return_value = pl.DataFrame()
@@ -196,7 +196,7 @@ class TestFundamentalServiceGetMethods:
         assert result is None
 
     def test_get_express_returns_data_when_found(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_express returns DataFrame when data exists."""
         test_df = pl.DataFrame({"instrument_id": [1_000_001], "report_type": ["快报"]})
@@ -208,7 +208,7 @@ class TestFundamentalServiceGetMethods:
         assert result.equals(test_df)
 
     def test_get_express_returns_none_when_empty(
-        self, service: FundamentalService, mock_readers: dict[str, MagicMock]
+        self, service: FundamentalStore, mock_readers: dict[str, MagicMock]
     ) -> None:
         """Test get_express returns None when no data found."""
         mock_readers["express"].get.return_value = pl.DataFrame()
@@ -218,7 +218,7 @@ class TestFundamentalServiceGetMethods:
         assert result is None
 
 
-class TestFundamentalServiceListMethods:
+class TestFundamentalStoreListMethods:
     """Test list_* methods."""
 
     def test_list_corporate_actions(self) -> None:
@@ -247,7 +247,7 @@ class TestFundamentalServiceListMethods:
             express=mock_writer,
         )
 
-        service = FundamentalService(
+        service = FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
         )
@@ -271,12 +271,12 @@ class TestFundamentalServiceListMethods:
         )
 
 
-class TestFundamentalServiceSaveMethods:
+class TestFundamentalStoreSaveMethods:
     """Test save_* methods."""
 
     @pytest.fixture
-    def service(self) -> FundamentalService:
-        """Create FundamentalService with mocked dependencies."""
+    def service(self) -> FundamentalStore:
+        """Create FundamentalStore with mocked dependencies."""
         mock_reader = MagicMock()
         mock_writer = MagicMock()
         mock_writer.write.return_value = 5  # Simulate 5 records written
@@ -301,7 +301,7 @@ class TestFundamentalServiceSaveMethods:
             express=mock_writer,
         )
 
-        return FundamentalService(
+        return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
         )
@@ -312,7 +312,7 @@ class TestFundamentalServiceSaveMethods:
         return pl.DataFrame({"instrument_id": [1_000_001], "value": [100]})
 
     def test_save_balance_sheet(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_balance_sheet calls writer and returns count."""
         result = service.save_balance_sheet(sample_df)
@@ -321,7 +321,7 @@ class TestFundamentalServiceSaveMethods:
         service._write_ports.balance_sheet.write.assert_called_once_with(sample_df)
 
     def test_save_income_statement(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_income_statement calls writer and returns count."""
         result = service.save_income_statement(sample_df)
@@ -330,7 +330,7 @@ class TestFundamentalServiceSaveMethods:
         service._write_ports.income_statement.write.assert_called_once_with(sample_df)
 
     def test_save_cash_flow(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_cash_flow calls writer and returns count."""
         result = service.save_cash_flow(sample_df)
@@ -339,7 +339,7 @@ class TestFundamentalServiceSaveMethods:
         service._write_ports.cash_flow.write.assert_called_once_with(sample_df)
 
     def test_save_dividend(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_dividend calls writer and returns count."""
         result = service.save_dividend(sample_df)
@@ -348,7 +348,7 @@ class TestFundamentalServiceSaveMethods:
         service._write_ports.dividend.write.assert_called_once_with(sample_df)
 
     def test_save_corporate_actions(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_corporate_actions calls writer and returns count."""
         result = service.save_corporate_actions(sample_df)
@@ -357,7 +357,7 @@ class TestFundamentalServiceSaveMethods:
         service._write_ports.corporate_actions.write.assert_called_once_with(sample_df)
 
     def test_save_forecast(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_forecast calls writer and returns count."""
         result = service.save_forecast(sample_df)
@@ -366,7 +366,7 @@ class TestFundamentalServiceSaveMethods:
         service._write_ports.forecast.write.assert_called_once_with(sample_df)
 
     def test_save_express(
-        self, service: FundamentalService, sample_df: pl.DataFrame
+        self, service: FundamentalStore, sample_df: pl.DataFrame
     ) -> None:
         """Test save_express calls writer and returns count."""
         result = service.save_express(sample_df)

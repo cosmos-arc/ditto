@@ -1,11 +1,11 @@
-"""Source query facade — 封装 SourceService + MetadataService."""
+"""Source query facade — 封装 SourceAccessor + MetadataService."""
 
 from __future__ import annotations
 
 import polars as pl
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_service import SourceService
+from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.fred.fred_source import FredSource
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
@@ -20,16 +20,16 @@ class SourceQueryFacade:
     """
     Source 数据查询 facade.
 
-    封装 SourceService 和 MetadataService 的联合操作，
+    封装 SourceAccessor 和 MetadataService 的联合操作，
     隐藏 Dataset 枚举和内部服务依赖。
     """
 
     def __init__(
         self,
-        source_service: SourceService,
+        source_accessor: SourceAccessor,
         metadata_service: MetadataService,
     ) -> None:
-        self._source = source_service
+        self._source = source_accessor
         self._metadata = metadata_service
 
     def get_dataset_asset_class(self, dataset: str) -> str | None:

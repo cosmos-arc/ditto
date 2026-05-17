@@ -8,13 +8,15 @@ from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
+from ditto_data.services.capital_store import CapitalStore
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_service import SourceService
+from ditto_data.services.source_accessor import SourceAccessor
 from ditto_features.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -72,12 +74,12 @@ class AppMarketQueryProvider(Provider):
     @provide
     def source_query_facade(
         self,
-        source_service: SourceService,
+        source_accessor: SourceAccessor,
         metadata_service: MetadataService,
     ) -> SourceQueryFacade:
         """数据源查询 facade — 隐藏 Dataset 枚举和服务接线."""
         return SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -112,18 +114,18 @@ class AppMarketQueryProvider(Provider):
     @provide
     def capital_query_facade(
         self,
-        capital_service: CapitalService,
+        capital_store: CapitalStore,
     ) -> CapitalQueryFacade:
         """资金查询 facade — 隐藏 CQRS 端口类型."""
-        return CapitalQueryFacade(capital_service=capital_service)
+        return CapitalQueryFacade(capital_store=capital_store)
 
     @provide
     def fundamental_query_facade(
         self,
-        fundamental_service: FundamentalService,
+        fundamental_store: FundamentalStore,
     ) -> FundamentalQueryFacade:
         """基本面查询 facade — 隐藏 CQRS 端口类型."""
-        return FundamentalQueryFacade(fundamental_service=fundamental_service)
+        return FundamentalQueryFacade(fundamental_store=fundamental_store)
 
     @provide
     def macro_query_facade(
@@ -160,7 +162,7 @@ class AppMarketQueryProvider(Provider):
     @provide
     def ingestion_status_query_facade(
         self,
-        ingestion_log_service: IngestionLogService,
+        ingestion_log_store: IngestionLogStore,
     ) -> IngestionStatusQueryFacade:
-        """摄取状态查询 facade — 封装 IngestionLogService."""
-        return IngestionStatusQueryFacade(ingestion_log_service=ingestion_log_service)
+        """摄取状态查询 facade — 封装 IngestionLogStore."""
+        return IngestionStatusQueryFacade(ingestion_log_store=ingestion_log_store)

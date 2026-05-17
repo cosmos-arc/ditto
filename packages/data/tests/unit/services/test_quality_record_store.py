@@ -1,12 +1,12 @@
-"""Tests for QualityRecordService."""
+"""Tests for QualityRecordStore."""
 
 import polars as pl
-from ditto_data.ingestion.quality_record_service import QualityRecordService
+from ditto_data.ingestion.quality_record_store import QualityRecordStore
 from pytest_mock import MockerFixture
 
 
-class TestQualityRecordService:
-    """Tests for QualityRecordService."""
+class TestQualityRecordStore:
+    """Tests for QualityRecordStore."""
 
     def test_list_quarantined_data_returns_dataframe(
         self, mocker: MockerFixture
@@ -20,7 +20,7 @@ class TestQualityRecordService:
         mock_reader.get_quarantined_data = mocker.Mock(return_value=expected_df)
 
         mock_writer = mocker.Mock()
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mock_reader,
@@ -48,7 +48,7 @@ class TestQualityRecordService:
         expected_df = pl.DataFrame()
         mock_reader.get_quarantined_data = mocker.Mock(return_value=expected_df)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mock_reader,
@@ -68,7 +68,7 @@ class TestQualityRecordService:
         expected_df = pl.DataFrame({"code": ["000001"], "close": [10.5]})
         mock_reader.get_failed_data_df = mocker.Mock(return_value=expected_df)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mock_reader,
@@ -92,7 +92,7 @@ class TestQualityRecordService:
         empty_df = pl.DataFrame()
         mock_reader.get_failed_data_df = mocker.Mock(return_value=empty_df)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mock_reader,
@@ -113,7 +113,7 @@ class TestQualityRecordService:
         mock_writer = mocker.Mock()
         test_df = pl.DataFrame({"col1": [1, 2]})
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mock_writer,
             quarantine_reader=mocker.Mock(),
@@ -137,7 +137,7 @@ class TestQualityRecordService:
         expected_df = pl.DataFrame({"status": ["pass"]})
         mock_reader.read_comparison = mocker.Mock(return_value=expected_df)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mock_reader,
             comparison_writer=mocker.Mock(),
             quarantine_reader=mocker.Mock(),
@@ -158,7 +158,7 @@ class TestQualityRecordService:
         mock_writer.save_failed_data = mocker.Mock(return_value=123)
         failed_df = pl.DataFrame({"code": ["000001"]})
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mocker.Mock(),
@@ -189,7 +189,7 @@ class TestQualityRecordService:
         expected_stats = [{"trade_date": "20240101", "row_count": 100}]
         mock_reader.get_stats = mocker.Mock(return_value=expected_stats)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mock_reader,
             comparison_writer=mocker.Mock(),
             quarantine_reader=mocker.Mock(),
@@ -212,7 +212,7 @@ class TestQualityRecordService:
         expected_stats = [{"dataset": "stock_daily", "count": 5}]
         mock_reader.get_stats = mocker.Mock(return_value=expected_stats)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mock_reader,
@@ -235,7 +235,7 @@ class TestQualityRecordService:
         mock_quar_reader = mocker.Mock()
         mock_quar_reader.get_stats = mocker.Mock(return_value=[{"quar": "stat"}])
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mock_comp_reader,
             comparison_writer=mocker.Mock(),
             quarantine_reader=mock_quar_reader,
@@ -259,7 +259,7 @@ class TestQualityRecordService:
         mock_writer = mocker.Mock()
         mock_writer.clear_old_records = mocker.Mock(return_value=42)
 
-        service = QualityRecordService(
+        service = QualityRecordStore(
             comparison_reader=mocker.Mock(),
             comparison_writer=mocker.Mock(),
             quarantine_reader=mocker.Mock(),

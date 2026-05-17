@@ -1,5 +1,5 @@
 """
-QualityRecordService - 质量记录服务.
+QualityRecordStore - 质量记录服务.
 
 封装 ComparisonReader/Writer 和 QuarantineReader/Writer，
 为 Port 层提供统一的质量记录接口.
@@ -19,7 +19,7 @@ from ditto_data.storage.runtime.quality import (
 )
 
 
-class QualityRecordService:
+class QualityRecordStore:
     """
     质量记录服务.
 
@@ -42,7 +42,7 @@ class QualityRecordService:
         quarantine_writer: QuarantineWriter,
     ) -> None:
         """
-        初始化 QualityRecordService.
+        初始化 QualityRecordStore.
 
         Args:
             comparison_reader: 质量对比结果读取器实例

@@ -1,5 +1,5 @@
 """
-IngestionLogService - 数据摄入日志服务.
+IngestionLogStore - 数据摄入日志服务.
 
 封装 IngestionLogReader 和 IngestionLogWriter，为 Port 层提供统一的数据摄入日志管理接口.
 """
@@ -13,7 +13,7 @@ from ditto_data.storage.runtime.ingestion import (
 )
 
 
-class IngestionLogService:
+class IngestionLogStore:
     """
     数据摄入日志服务.
 
@@ -31,7 +31,7 @@ class IngestionLogService:
         ingestion_log_writer: IngestionLogWriter,
     ) -> None:
         """
-        初始化 IngestionLogService.
+        初始化 IngestionLogStore.
 
         Args:
             ingestion_log_reader: 摄入日志读取器实例

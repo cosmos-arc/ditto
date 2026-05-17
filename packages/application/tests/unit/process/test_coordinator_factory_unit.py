@@ -20,11 +20,11 @@ def _make_services() -> CoordinatorServices:
         metadata_service=MagicMock(),
         market_service=MagicMock(),
         market_write_service=MagicMock(),
-        fundamental_service=MagicMock(),
-        capital_service=MagicMock(),
+        fundamental_store=MagicMock(),
+        capital_store=MagicMock(),
         macro_service=MagicMock(),
-        source_service=MagicMock(),
-        ingestion_log_service=MagicMock(),
+        source_accessor=MagicMock(),
+        ingestion_log_store=MagicMock(),
     )
 
 
@@ -45,7 +45,7 @@ class TestCreateCoordinatorStringSource:
     def test_valid_string_creates_coordinator(self) -> None:
         services = _make_services()
         mock_source = MagicMock()
-        services.source_service.tushare = mock_source
+        services.source_accessor.tushare = mock_source
 
         with _patch_coordinator_init() as (mock_cls, mock_instance):
             with create_coordinator(
@@ -101,8 +101,8 @@ class TestCreateCoordinatorFredDegradation:
 
     def test_fred_unavailable_degrades_gracefully(self) -> None:
         services = _make_services()
-        services.source_service.tushare = MagicMock()
-        services.source_service.fred = None
+        services.source_accessor.tushare = MagicMock()
+        services.source_accessor.fred = None
 
         with _patch_coordinator_init() as (mock_cls, mock_instance):
             with create_coordinator(services, source_name="tushare") as coordinator:
@@ -114,8 +114,8 @@ class TestCreateCoordinatorFredDegradation:
     def test_fred_available(self) -> None:
         services = _make_services()
         mock_fred = MagicMock()
-        services.source_service.tushare = MagicMock()
-        services.source_service.fred = mock_fred
+        services.source_accessor.tushare = MagicMock()
+        services.source_accessor.fred = mock_fred
 
         with _patch_coordinator_init() as (mock_cls, _):
             with create_coordinator(services, source_name="tushare"):

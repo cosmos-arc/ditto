@@ -6,7 +6,9 @@ from collections import Counter
 
 import polars as pl
 from ditto_data.errors import SourceFetchError
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
 from ditto_data.models.ingestion import (
     IngestionLog,
     IngestionResult,
@@ -81,23 +83,23 @@ class IngestionResultHandler:
     """
 
     def __init__(
-        self, ingestion_log_service: IngestionLogService | None, source_name: str
+        self, ingestion_log_store: IngestionLogStore | None, source_name: str
     ) -> None:
         """
         初始化 IngestionResultHandler。
 
         Args:
-            ingestion_log_service: IngestionLogService 实例，用于访问 ingestion_log
+            ingestion_log_store: IngestionLogStore 实例，用于访问 ingestion_log
             source_name: 数据源名称
 
         """
-        self._ingestion_log_service = ingestion_log_service
+        self._ingestion_log_store = ingestion_log_store
         self._source_name = source_name
 
     def _save_log(self, log: IngestionLog) -> None:
-        """保存日志（如果提供了 ingestion_log_service）。"""
-        if self._ingestion_log_service:
-            self._ingestion_log_service.save_log(log)
+        """保存日志（如果提供了 ingestion_log_store）。"""
+        if self._ingestion_log_store:
+            self._ingestion_log_store.save_log(log)
 
     def handle_fetch_error(
         self, dataset: str, trade_date: str, error: SourceFetchError

@@ -1,4 +1,4 @@
-"""Fundamental domain service with dedicated get/save methods."""
+"""Fundamental domain store with dedicated get/save methods."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from ditto_platform.foundation import logger
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
 
 
-class FundamentalService:
+class FundamentalStore:
     """
     Fundamental domain unified service.
 
@@ -24,7 +24,7 @@ class FundamentalService:
         write_ports: FundamentalWriters,
     ) -> None:
         """
-        Initialize FundamentalService with CQRS Readers/Writers.
+        Initialize FundamentalStore with CQRS Readers/Writers.
 
         Args:
             read_ports: Fundamental 域读取依赖（包含所有 Reader）.
@@ -35,8 +35,8 @@ class FundamentalService:
         self._write_ports = write_ports
 
         logger.debug(
-            "FundamentalService initialized with CQRS Readers/Writers",
-            event="fundamental_service_init_complete",
+            "FundamentalStore initialized with CQRS Readers/Writers",
+            event="fundamental_store_init_complete",
         )
 
     # get_* - Single record queries (PIT)

@@ -1,15 +1,15 @@
-"""Tests for CapitalService."""
+"""Tests for CapitalStore."""
 
 from datetime import date
 
 import polars as pl
-from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from pytest_mock import MockerFixture
 
 
-class TestCapitalServiceGetMethods:
-    """Tests for CapitalService get_* methods."""
+class TestCapitalStoreGetMethods:
+    """Tests for CapitalStore get_* methods."""
 
     def test_get_margin_trading_delegates_to_reader(
         self, mocker: MockerFixture
@@ -32,7 +32,7 @@ class TestCapitalServiceGetMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.get_margin_trading(
@@ -62,7 +62,7 @@ class TestCapitalServiceGetMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.get_pledge_ratio(instrument_id=1, as_of_date=date(2024, 1, 1))
@@ -92,7 +92,7 @@ class TestCapitalServiceGetMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.get_valuation_metrics(
@@ -124,7 +124,7 @@ class TestCapitalServiceGetMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.get_index_composition(
@@ -136,8 +136,8 @@ class TestCapitalServiceGetMethods:
         mock_reader.get.assert_called_once_with("399300.XSHE", date(2024, 1, 1))
 
 
-class TestCapitalServiceSaveMethods:
-    """Tests for CapitalService save_* methods."""
+class TestCapitalStoreSaveMethods:
+    """Tests for CapitalStore save_* methods."""
 
     def test_save_margin_trading_delegates_to_writer(
         self, mocker: MockerFixture
@@ -160,7 +160,7 @@ class TestCapitalServiceSaveMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.save_margin_trading(test_df)
@@ -188,7 +188,7 @@ class TestCapitalServiceSaveMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.save_pledge_ratio(test_df)
@@ -218,7 +218,7 @@ class TestCapitalServiceSaveMethods:
             valuation_metrics=mock_writer,
             index_composition=mocker.Mock(),
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.save_valuation_metrics(test_df)
@@ -248,7 +248,7 @@ class TestCapitalServiceSaveMethods:
             valuation_metrics=mocker.Mock(),
             index_composition=mock_writer,
         )
-        service = CapitalService(read_ports=read_ports, write_ports=write_ports)
+        service = CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
         # Act
         result = service.save_index_composition(test_df)

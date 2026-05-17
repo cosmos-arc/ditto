@@ -1,6 +1,6 @@
-"""Tests for FundamentalService int instrument_id migration.
+"""Tests for FundamentalStore int instrument_id migration.
 
-Verify that FundamentalService and its readers accept `int` instrument_id
+Verify that FundamentalStore and its readers accept `int` instrument_id
 and correctly pass it through the call chain.
 """
 
@@ -9,15 +9,15 @@ from datetime import date
 import polars as pl
 import pytest
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.fundamental_store import FundamentalStore
 from pytest_mock import MockerFixture
 
 
 def _make_service(
     mocker: MockerFixture,
     **override_readers: object,
-) -> FundamentalService:
-    """Create a FundamentalService with mocked dependencies."""
+) -> FundamentalStore:
+    """Create a FundamentalStore with mocked dependencies."""
     mock_reader = mocker.Mock()
     readers = {
         "balance_sheet": override_readers.get("balance_sheet", mock_reader),
@@ -39,12 +39,12 @@ def _make_service(
         forecast=mocker.Mock(),
         express=mocker.Mock(),
     )
-    return FundamentalService(read_ports=read_ports, write_ports=write_ports)
+    return FundamentalStore(read_ports=read_ports, write_ports=write_ports)
 
 
 @pytest.mark.unit
-class TestFundamentalServiceIntInstrumentId:
-    """Verify FundamentalService get_* methods accept int instrument_id."""
+class TestFundamentalStoreIntInstrumentId:
+    """Verify FundamentalStore get_* methods accept int instrument_id."""
 
     def test_get_balance_sheet_accepts_int(self, mocker: MockerFixture) -> None:
         """get_balance_sheet should accept int instrument_id and forward it."""

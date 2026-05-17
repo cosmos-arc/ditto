@@ -164,7 +164,7 @@ class FundamentalReaders:
     """
     Fundamental 域读取依赖。
 
-    包含所有 Fundamental 域的 Reader 依赖，用于 FundamentalService 的查询操作。
+    包含所有 Fundamental 域的 Reader 依赖，用于 FundamentalStore 的查询操作。
 
     Attributes:
         balance_sheet: 资产负债表读取器.
@@ -191,7 +191,7 @@ class FundamentalWriters:
     """
     Fundamental 域写入依赖。
 
-    包含所有 Fundamental 域的 Writer 依赖，用于 FundamentalService 的写入操作。
+    包含所有 Fundamental 域的 Writer 依赖，用于 FundamentalStore 的写入操作。
 
     Attributes:
         balance_sheet: 资产负债表写入器.
@@ -218,7 +218,7 @@ class CapitalReaders:
     """
     Capital 域读取依赖。
 
-    包含所有 Capital 域的 Reader 依赖，用于 CapitalService 的查询操作。
+    包含所有 Capital 域的 Reader 依赖，用于 CapitalStore 的查询操作。
 
     Attributes:
         margin_trading: 融资融券读取器.
@@ -239,7 +239,7 @@ class CapitalWriters:
     """
     Capital 域写入依赖。
 
-    包含所有 Capital 域的 Writer 依赖，用于 CapitalService 的写入操作。
+    包含所有 Capital 域的 Writer 依赖，用于 CapitalStore 的写入操作。
 
     Attributes:
         margin_trading: 融资融券写入器.

@@ -1,4 +1,4 @@
-"""Capital domain service with dedicated query/write methods."""
+"""Capital domain store with dedicated query/write methods."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from ditto_platform.foundation import logger
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 
 
-class CapitalService:
+class CapitalStore:
     """
-    Capital domain unified service.
+    Capital domain unified store.
 
     Thin wrapper around Reader/Writer components with dependency injection.
     Delegates all operations to the underlying readers and writers.
@@ -24,7 +24,7 @@ class CapitalService:
         write_ports: CapitalWriters,
     ) -> None:
         """
-        Initialize CapitalService.
+        Initialize CapitalStore.
 
         Args:
             read_ports: Capital domain read ports (all readers).
@@ -35,8 +35,8 @@ class CapitalService:
         self._write_ports = write_ports
 
         logger.debug(
-            "CapitalService initialized",
-            event="capital_service_init_complete",
+            "CapitalStore initialized",
+            event="capital_store_init_complete",
         )
 
     # Query methods (get_*)

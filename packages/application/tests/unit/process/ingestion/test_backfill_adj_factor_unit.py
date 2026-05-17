@@ -63,14 +63,14 @@ def mock_market_service():
 
 
 @pytest.fixture
-def mock_fundamental_service():
-    """创建 Mock FundamentalService。"""
+def mock_fundamental_store():
+    """创建 Mock FundamentalStore。"""
     return MagicMock()
 
 
 @pytest.fixture
-def mock_capital_service():
-    """创建 Mock CapitalService。"""
+def mock_capital_store():
+    """创建 Mock CapitalStore。"""
     return MagicMock()
 
 
@@ -90,8 +90,8 @@ def mock_source():
 def coordinator(
     mock_metadata_service,
     mock_market_service,
-    mock_fundamental_service,
-    mock_capital_service,
+    mock_fundamental_store,
+    mock_capital_store,
     mock_macro_service,
     mock_source,
 ):
@@ -103,8 +103,8 @@ def coordinator(
                 query=mock_market_service,
                 write=MagicMock(),
             ),
-            fundamental=mock_fundamental_service,
-            capital=mock_capital_service,
+            fundamental=mock_fundamental_store,
+            capital=mock_capital_store,
             macro=mock_macro_service,
         ),
         fetchers=SourceFetchers(

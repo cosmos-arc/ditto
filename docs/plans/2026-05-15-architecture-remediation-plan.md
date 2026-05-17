@@ -1,9 +1,9 @@
 # Ditto 架构攻坚最终计划
 
-> 日期：2026-05-15  
-> 修订：2026-05-16  
-> 整合自：`docs/reviews/audit/2026-05-13-comprehensive-architecture-evaluation.md`、`docs/reviews/audit/2026-05-14-comprehensive-architecture-evaluation-and-review-plan.md`、当前源码抽样复核  
-> 性质：面向后续实现的架构攻坚计划，不是单纯 review checklist  
+> 日期：2026-05-15
+> 修订：2026-05-16
+> 整合自：`docs/reviews/audit/2026-05-13-comprehensive-architecture-evaluation.md`、`docs/reviews/audit/2026-05-14-comprehensive-architecture-evaluation-and-review-plan.md`、当前源码抽样复核
+> 性质：面向后续实现的架构攻坚计划，不是单纯 review checklist
 > 前置条件：B1-B9 整改已完成，Phase 1 Runtime Spine + Phase 2 OMS Lite 已落地
 
 ---
@@ -261,13 +261,13 @@ Ditto 现在不是“架构不清”的项目，而是一个已经具备强边�
 
 #### Batch 1C: 触达式拆分（P1/P2）
 
-| # | 任务 | 验收标准 |
-|---|------|----------|
-| D1C-1 | 拆分 `data/services/metadata/instrument.py` 中被当前改动触达的查询/写入/校验块 | 单一职责；行为等价测试 |
-| D1C-2 | 拆分 `data/storage/base/sqlite_store.py` 的 DDL/helper，仅当 registry/store rename 触达 | helper 有独立单元测试 |
-| D1C-3 | 拆分 `instrument_reader.py` 查询构造和 row mapping，仅当类型迁移触达 | mapper 可单测 |
-| D1C-4 | 清理空壳 `providers/` 或把残留状态写入 CLAUDE.md | 无误导性空 namespace |
-| D1C-5 | 更新 `packages/data/CLAUDE.md` 和 architecture standards | 文档与新命名一致 |
+| # | 任务 | 验收标准 | 状态 |
+|---|------|----------|------|
+| D1C-1 | 拆分 `data/services/metadata/instrument.py` 中被当前改动触达的查询/写入/校验块 | 单一职责；行为等价测试 | ⏭️ 跳过：未被 Batch 1A/1B 触及 |
+| D1C-2 | 拆分 `data/storage/base/sqlite_store.py` 的 DDL/helper，仅当 registry/store rename 触达 | helper 有独立单元测试 | ⏭️ 跳过：未被 Batch 1A/1B 触及 |
+| D1C-3 | 拆分 `instrument_reader.py` 查询构造和 row mapping，仅当类型迁移触达 | mapper 可单测 | ⏭️ 跳过：未被 Batch 1A/1B 触及 |
+| D1C-4 | 清理空壳 `providers/` 或把残留状态写入 CLAUDE.md | 无误导性空 namespace | ✅ 完成 |
+| D1C-5 | 更新 `packages/data/CLAUDE.md` 和 architecture standards | 文档与新命名一致 | ✅ 完成 |
 
 **完成标准**：
 
@@ -505,4 +505,3 @@ pixi run -e dev test packages/execution/tests packages/portfolio/tests packages/
 | QuantConnect LEAN docs | backtest/live consistency、brokerage/data provider 配置 |
 | OpenBB docs | provider extension、coverage registry、provider 独立安装/发现 |
 | vn.py / VeighNa docs | gateway、event engine、OMS state cache 的交易产品闭环 |
-

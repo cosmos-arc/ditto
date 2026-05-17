@@ -21,9 +21,9 @@ class TestAdjFactorIngestion:
             MarketServices,
         )
         from ditto_application.processes.ingestion.types import SourceFetchers
-        from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-        from ditto_data.services.capital_service import CapitalService
-        from ditto_data.services.fundamental_service import FundamentalService
+        from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+        from ditto_data.services.capital_store import CapitalStore
+        from ditto_data.services.fundamental_store import FundamentalStore
         from ditto_data.services.macro_service import MacroService
         from ditto_data.services.market_service import MarketService
         from ditto_data.services.market_write_service import MarketWriteService
@@ -33,10 +33,10 @@ class TestAdjFactorIngestion:
         mock_metadata_service = mocker.MagicMock(spec=MetadataService)
         mock_market_service = mocker.MagicMock(spec=MarketService)
         mock_market_write_service = mocker.MagicMock(spec=MarketWriteService)
-        mock_fundamental_service = mocker.MagicMock(spec=FundamentalService)
-        mock_capital_service = mocker.MagicMock(spec=CapitalService)
+        mock_fundamental_store = mocker.MagicMock(spec=FundamentalStore)
+        mock_capital_store = mocker.MagicMock(spec=CapitalStore)
         mock_macro_service = mocker.MagicMock(spec=MacroService)
-        mock_ingestion_log_service = mocker.MagicMock(spec=IngestionLogService)
+        mock_ingestion_log_store = mocker.MagicMock(spec=IngestionLogStore)
 
         # Mock return values
         mock_market_write_service.save_adj_factor.return_value = 2
@@ -53,8 +53,8 @@ class TestAdjFactorIngestion:
                     query=mock_market_service,
                     write=mock_market_write_service,
                 ),
-                fundamental=mock_fundamental_service,
-                capital=mock_capital_service,
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
                 macro=mock_macro_service,
             ),
             fetchers=SourceFetchers(
@@ -65,7 +65,7 @@ class TestAdjFactorIngestion:
                 macro=mocker.MagicMock(),
             ),
             config=IngestionCoordinatorConfig(
-                ingestion_log_service=mock_ingestion_log_service,
+                ingestion_log_store=mock_ingestion_log_store,
             ),
         )
 
@@ -116,9 +116,9 @@ class TestAdjFactorIngestion:
             MarketServices,
         )
         from ditto_application.processes.ingestion.types import SourceFetchers
-        from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-        from ditto_data.services.capital_service import CapitalService
-        from ditto_data.services.fundamental_service import FundamentalService
+        from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+        from ditto_data.services.capital_store import CapitalStore
+        from ditto_data.services.fundamental_store import FundamentalStore
         from ditto_data.services.macro_service import MacroService
         from ditto_data.services.market_service import MarketService
         from ditto_data.services.market_write_service import MarketWriteService
@@ -128,10 +128,10 @@ class TestAdjFactorIngestion:
         mock_metadata_service = mocker.MagicMock(spec=MetadataService)
         mock_market_service = mocker.MagicMock(spec=MarketService)
         mock_market_write_service = mocker.MagicMock(spec=MarketWriteService)
-        mock_fundamental_service = mocker.MagicMock(spec=FundamentalService)
-        mock_capital_service = mocker.MagicMock(spec=CapitalService)
+        mock_fundamental_store = mocker.MagicMock(spec=FundamentalStore)
+        mock_capital_store = mocker.MagicMock(spec=CapitalStore)
         mock_macro_service = mocker.MagicMock(spec=MacroService)
-        mock_ingestion_log_service = mocker.MagicMock(spec=IngestionLogService)
+        mock_ingestion_log_store = mocker.MagicMock(spec=IngestionLogStore)
 
         # Mock return values
         mock_market_write_service.save_adj_factor.return_value = 2
@@ -148,8 +148,8 @@ class TestAdjFactorIngestion:
                     query=mock_market_service,
                     write=mock_market_write_service,
                 ),
-                fundamental=mock_fundamental_service,
-                capital=mock_capital_service,
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
                 macro=mock_macro_service,
             ),
             fetchers=SourceFetchers(
@@ -160,7 +160,7 @@ class TestAdjFactorIngestion:
                 macro=mocker.MagicMock(),
             ),
             config=IngestionCoordinatorConfig(
-                ingestion_log_service=mock_ingestion_log_service,
+                ingestion_log_store=mock_ingestion_log_store,
             ),
         )
 

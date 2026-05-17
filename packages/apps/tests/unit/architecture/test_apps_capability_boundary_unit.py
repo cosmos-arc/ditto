@@ -58,8 +58,8 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
         "packages/apps/src/ditto_apps/registry/contexts/query.py"
     ] == frozenset(
         {
-            "ditto_data.services.capital_service",
-            "ditto_data.services.fundamental_service",
+            "ditto_data.services.capital_store",
+            "ditto_data.services.fundamental_store",
             "ditto_data.services.macro_service",
             "ditto_data.services.market_service",
             "ditto_data.services.metadata_service",

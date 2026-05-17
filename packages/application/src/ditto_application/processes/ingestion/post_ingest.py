@@ -11,8 +11,10 @@ from ditto_data.errors import (
     NetworkError,
     SourceFetchError,
 )
-from ditto_data.ingestion.freeze_service import FreezeService
-from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
+from ditto_data.ingestion.freeze_store import FreezeStore
+from ditto_data.ingestion.ingestion_cursor_store import (
+    IngestionCursorStore,
+)
 from ditto_data.models.ingestion import IngestionResult
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
@@ -107,8 +109,8 @@ def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在
     data_writer: IngestionDataWriter,
     quality_checker: QualityCheckerProtocol | None,
     list_date_inference: ListDateInferenceService,
-    cursor_service: IngestionCursorService | None,
-    freeze_service: FreezeService | None,
+    cursor_store: IngestionCursorStore | None,
+    freeze_store: FreezeStore | None,
     source_name: str,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
@@ -157,8 +159,8 @@ def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在
     run_post_ingest_hooks(
         dataset,
         trade_date,
-        cursor_service=cursor_service,
-        freeze_service=freeze_service,
+        cursor_store=cursor_store,
+        freeze_store=freeze_store,
         source_name=source_name,
     )
 
@@ -169,21 +171,21 @@ def run_post_ingest_hooks(
     dataset: str,
     trade_date: str,
     *,
-    cursor_service: IngestionCursorService | None,
-    freeze_service: FreezeService | None,
+    cursor_store: IngestionCursorStore | None,
+    freeze_store: FreezeStore | None,
     source_name: str,
 ) -> None:
     """执行摄取后的副作用：游标更新、冻结点创建。"""
     update_ingestion_cursor(
         dataset,
         trade_date,
-        cursor_service=cursor_service,
+        cursor_store=cursor_store,
         source_name=source_name,
     )
     create_freeze_point(
         dataset,
         trade_date,
-        freeze_service=freeze_service,
+        freeze_store=freeze_store,
     )
 
 
@@ -220,13 +222,13 @@ def update_ingestion_cursor(
     dataset: str,
     trade_date: str,
     *,
-    cursor_service: IngestionCursorService | None,
+    cursor_store: IngestionCursorStore | None,
     source_name: str,
 ) -> None:
     """更新摄入游标（失败仅记录警告，不影响主流程）。"""
-    if cursor_service is None:
+    if cursor_store is None:
         return
-    svc = cursor_service
+    svc = cursor_store
     safe_side_effect(
         lambda: svc.update_cursor(
             dataset=dataset,
@@ -245,12 +247,12 @@ def create_freeze_point(
     dataset: str,
     trade_date: str,
     *,
-    freeze_service: FreezeService | None,
+    freeze_store: FreezeStore | None,
 ) -> None:
     """创建冻结点 — 轻量级版本追踪（失败仅记录警告，不影响主流程）。"""
-    if freeze_service is None:
+    if freeze_store is None:
         return
-    svc = freeze_service
+    svc = freeze_store
     safe_side_effect(
         lambda: svc.create_freeze(
             freeze_id=f"{dataset}_{trade_date}",

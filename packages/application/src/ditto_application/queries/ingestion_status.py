@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
 from ditto_data.models.ingestion import IngestionStatus
 
 
@@ -35,8 +35,8 @@ class HistoryItem:
 class IngestionStatusQueryFacade:
     """摄取状态查询编排."""
 
-    def __init__(self, ingestion_log_service: IngestionLogService) -> None:
-        self._log_service = ingestion_log_service
+    def __init__(self, ingestion_log_store: IngestionLogStore) -> None:
+        self._log_service = ingestion_log_store
 
     def get_status(self, datasets: list[str]) -> list[DatasetStatus]:
         """

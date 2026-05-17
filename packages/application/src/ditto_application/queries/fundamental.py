@@ -1,11 +1,11 @@
-"""Fundamental query facade — 封装 FundamentalService，隐藏内部端口类型."""
+"""Fundamental query facade — 封装 FundamentalStore，隐藏内部端口类型."""
 
 from __future__ import annotations
 
 from datetime import date
 
 import polars as pl
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.fundamental_store import FundamentalStore
 
 __all__ = ["FundamentalQueryFacade"]
 
@@ -14,12 +14,12 @@ class FundamentalQueryFacade:
     """
     Fundamental 域查询 facade.
 
-    封装 FundamentalService，隐藏 CQRS 端口类型，
+    封装 FundamentalStore，隐藏 CQRS 端口类型，
     对外只暴露原始参数和 pl.DataFrame 返回值。
     """
 
-    def __init__(self, fundamental_service: FundamentalService) -> None:
-        self._service = fundamental_service
+    def __init__(self, fundamental_store: FundamentalStore) -> None:
+        self._service = fundamental_store
 
     def get_balance_sheet(
         self, instrument_id: int, as_of_date: date

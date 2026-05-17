@@ -9,8 +9,8 @@ from typing import ClassVar, Literal, cast
 import polars as pl
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models import Dataset
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.capital_store import CapitalStore
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
@@ -119,8 +119,8 @@ class IngestionDataWriter:
         self,
         metadata_service: MetadataService,
         market_write_service: MarketWriteService,
-        fundamental_service: FundamentalService,
-        capital_service: CapitalService,
+        fundamental_store: FundamentalStore,
+        capital_store: CapitalStore,
         macro_service: MacroService,
         source_name: str,
     ) -> None:
@@ -130,16 +130,16 @@ class IngestionDataWriter:
         Args:
             metadata_service: MetadataService 实例
             market_write_service: MarketWriteService 实例
-            fundamental_service: FundamentalService 实例
-            capital_service: CapitalService 实例
+            fundamental_store: FundamentalStore 实例
+            capital_store: CapitalStore 实例
             macro_service: MacroService 实例
             source_name: 数据源名称
 
         """
         self._metadata_service = metadata_service
         self._market_write_service = market_write_service
-        self._fundamental_service = fundamental_service
-        self._capital_service = capital_service
+        self._fundamental_store = fundamental_store
+        self._capital_store = capital_store
         self._macro_service = macro_service
         self._source_name = source_name
 
@@ -447,11 +447,11 @@ class IngestionDataWriter:
 
         # Map dataset enum to the appropriate save method
         save_methods = {
-            Dataset.BALANCE_SHEET: self._fundamental_service.save_balance_sheet,
-            Dataset.INCOME_STATEMENT: self._fundamental_service.save_income_statement,
-            Dataset.CASH_FLOW: self._fundamental_service.save_cash_flow,
-            Dataset.DIVIDEND: self._fundamental_service.save_dividend,
-            Dataset.CORPORATE_ACTIONS: self._fundamental_service.save_corporate_actions,
+            Dataset.BALANCE_SHEET: self._fundamental_store.save_balance_sheet,
+            Dataset.INCOME_STATEMENT: self._fundamental_store.save_income_statement,
+            Dataset.CASH_FLOW: self._fundamental_store.save_cash_flow,
+            Dataset.DIVIDEND: self._fundamental_store.save_dividend,
+            Dataset.CORPORATE_ACTIONS: self._fundamental_store.save_corporate_actions,
         }
         save_method = save_methods[dataset_enum]
         records_written = save_method(enriched_df)
@@ -482,9 +482,9 @@ class IngestionDataWriter:
             dataset_enum.value,
         )
         capital_methods = {
-            "valuation_metrics": self._capital_service.save_valuation_metrics,
-            "margin_trading": self._capital_service.save_margin_trading,
-            "pledge_ratio": self._capital_service.save_pledge_ratio,
+            "valuation_metrics": self._capital_store.save_valuation_metrics,
+            "margin_trading": self._capital_store.save_margin_trading,
+            "pledge_ratio": self._capital_store.save_pledge_ratio,
         }
         save_method = capital_methods.get(capital_dataset)
         if save_method is None:

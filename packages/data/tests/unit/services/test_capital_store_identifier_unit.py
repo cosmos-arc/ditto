@@ -1,6 +1,6 @@
-"""Tests for CapitalService int instrument_id migration.
+"""Tests for CapitalStore int instrument_id migration.
 
-Verify that CapitalService and its readers accept `int` instrument_id
+Verify that CapitalStore and its readers accept `int` instrument_id
 and correctly pass it through the call chain.
 """
 
@@ -8,7 +8,7 @@ from datetime import date
 
 import polars as pl
 import pytest
-from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from pytest_mock import MockerFixture
 
@@ -19,8 +19,8 @@ def _make_service(
     mock_pledge_reader: object | None = None,
     mock_valuation_reader: object | None = None,
     mock_index_reader: object | None = None,
-) -> CapitalService:
-    """Create a CapitalService with mocked dependencies."""
+) -> CapitalStore:
+    """Create a CapitalStore with mocked dependencies."""
     read_ports = CapitalReaders(
         margin_trading=mock_margin_reader or mocker.Mock(),
         pledge_ratio=mock_pledge_reader or mocker.Mock(),
@@ -33,12 +33,12 @@ def _make_service(
         valuation_metrics=mocker.Mock(),
         index_composition=mocker.Mock(),
     )
-    return CapitalService(read_ports=read_ports, write_ports=write_ports)
+    return CapitalStore(read_ports=read_ports, write_ports=write_ports)
 
 
 @pytest.mark.unit
-class TestCapitalServiceIntInstrumentId:
-    """Verify CapitalService get_* methods accept int instrument_id."""
+class TestCapitalStoreIntInstrumentId:
+    """Verify CapitalStore get_* methods accept int instrument_id."""
 
     def test_get_margin_trading_accepts_int_and_passes_to_reader(
         self, mocker: MockerFixture

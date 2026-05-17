@@ -5,10 +5,10 @@ from __future__ import annotations
 from ditto_data.models.storage import FreezeManifest
 from ditto_data.runtime.freeze_manager import FreezeManager
 
-__all__ = ["FreezeService"]
+__all__ = ["FreezeStore"]
 
 
-class FreezeService:
+class FreezeStore:
     """
     Data versioning service wrapping FreezeManager.
 

@@ -1,5 +1,5 @@
 """
-SourceService - 外部数据源访问服务.
+SourceAccessor - 外部数据源访问服务.
 
 封装 DataSources，为 Port 层提供统一的外部数据源访问接口.
 """
@@ -12,7 +12,7 @@ from ditto_data.sources.source import DataSources
 from ditto_data.sources.tushare.tushare_source import TushareSource
 
 
-class SourceService:
+class SourceAccessor:
     """
     外部数据源访问服务.
 
@@ -26,7 +26,7 @@ class SourceService:
 
     def __init__(self, sources: DataSources) -> None:
         """
-        初始化 SourceService.
+        初始化 SourceAccessor.
 
         Args:
             sources: DataSources accessor 实例

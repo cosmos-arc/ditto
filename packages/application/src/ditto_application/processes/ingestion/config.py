@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ditto_data.ingestion.freeze_service import FreezeService
-from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.freeze_store import FreezeStore
+from ditto_data.ingestion.ingestion_cursor_store import (
+    IngestionCursorStore,
+)
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
@@ -31,7 +35,7 @@ class IngestionCoordinatorConfig:
     """IngestionCoordinator 可选依赖配置."""
 
     source_name: str = "tushare"
-    ingestion_log_service: IngestionLogService | None = None
-    ingestion_cursor_service: IngestionCursorService | None = None
+    ingestion_log_store: IngestionLogStore | None = None
+    ingestion_cursor_store: IngestionCursorStore | None = None
     quality_checker: QualityCheckerProtocol | None = None
-    freeze_service: FreezeService | None = None
+    freeze_store: FreezeStore | None = None

@@ -1,11 +1,11 @@
-"""Capital query facade — 封装 CapitalService，隐藏内部端口类型."""
+"""Capital query facade — 封装 CapitalStore，隐藏内部端口类型."""
 
 from __future__ import annotations
 
 from datetime import date
 
 import polars as pl
-from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.capital_store import CapitalStore
 
 __all__ = ["CapitalQueryFacade"]
 
@@ -14,12 +14,12 @@ class CapitalQueryFacade:
     """
     Capital 域查询 facade.
 
-    封装 CapitalService，隐藏 CQRS 端口类型，
+    封装 CapitalStore，隐藏 CQRS 端口类型，
     对外只暴露原始参数和 pl.DataFrame 返回值。
     """
 
-    def __init__(self, capital_service: CapitalService) -> None:
-        self._service = capital_service
+    def __init__(self, capital_store: CapitalStore) -> None:
+        self._service = capital_store
 
     def get_margin_trading(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """

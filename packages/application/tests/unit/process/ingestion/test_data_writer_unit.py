@@ -68,8 +68,8 @@ def mock_market_write_service(mocker):
 
 
 @pytest.fixture
-def mock_fundamental_service(mocker):
-    """创建 Mock FundamentalService。"""
+def mock_fundamental_store(mocker):
+    """创建 Mock FundamentalStore。"""
     service = mocker.Mock()
     service.save_balance_sheet.return_value = 1
     service.save_income_statement.return_value = 1
@@ -79,8 +79,8 @@ def mock_fundamental_service(mocker):
 
 
 @pytest.fixture
-def mock_capital_service(mocker):
-    """创建 Mock CapitalService。"""
+def mock_capital_store(mocker):
+    """创建 Mock CapitalStore。"""
     service = mocker.Mock()
     service.save_valuation_metrics.return_value = 1
     service.save_margin_trading.return_value = 1
@@ -102,16 +102,16 @@ def mock_macro_service(mocker):
 def data_writer(
     mock_metadata_service,
     mock_market_write_service,
-    mock_fundamental_service,
-    mock_capital_service,
+    mock_fundamental_store,
+    mock_capital_store,
     mock_macro_service,
 ):
     """创建 IngestionDataWriter 实例。"""
     return IngestionDataWriter(
         metadata_service=mock_metadata_service,
         market_write_service=mock_market_write_service,
-        fundamental_service=mock_fundamental_service,
-        capital_service=mock_capital_service,
+        fundamental_store=mock_fundamental_store,
+        capital_store=mock_capital_store,
         macro_service=mock_macro_service,
         source_name="tushare",
     )
@@ -124,7 +124,7 @@ class TestWriteCapital:
     def test_write_capital_valuation_metrics_writes_successfully(
         self,
         data_writer,
-        mock_capital_service,
+        mock_capital_store,
     ) -> None:
         """验证 valuation_metrics 数据写入成功。"""
         # Arrange
@@ -151,12 +151,12 @@ class TestWriteCapital:
         # Assert
         assert result.rows_written == 1
         assert not result.blocked
-        mock_capital_service.save_valuation_metrics.assert_called_once()
+        mock_capital_store.save_valuation_metrics.assert_called_once()
 
     def test_write_capital_margin_trading_writes_successfully(
         self,
         data_writer,
-        mock_capital_service,
+        mock_capital_store,
     ) -> None:
         """验证 margin_trading 数据写入成功。"""
         # Arrange
@@ -182,12 +182,12 @@ class TestWriteCapital:
         # Assert
         assert result.rows_written == 1
         assert not result.blocked
-        mock_capital_service.save_margin_trading.assert_called_once()
+        mock_capital_store.save_margin_trading.assert_called_once()
 
     def test_write_capital_pledge_ratio_writes_successfully(
         self,
         data_writer,
-        mock_capital_service,
+        mock_capital_store,
     ) -> None:
         """验证 pledge_ratio 数据写入成功。"""
         # Arrange
@@ -212,7 +212,7 @@ class TestWriteCapital:
         # Assert
         assert result.rows_written == 1
         assert not result.blocked
-        mock_capital_service.save_pledge_ratio.assert_called_once()
+        mock_capital_store.save_pledge_ratio.assert_called_once()
 
 
 @pytest.mark.unit

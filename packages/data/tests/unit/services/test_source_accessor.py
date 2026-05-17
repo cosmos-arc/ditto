@@ -1,14 +1,14 @@
-"""Tests for SourceService."""
+"""Tests for SourceAccessor."""
 
 import pytest
 from ditto_data.models.common import Source
-from ditto_data.services.source_service import SourceService
+from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.source import DataSources
 from pytest_mock import MockerFixture
 
 
-class TestSourceService:
-    """Tests for SourceService."""
+class TestSourceAccessor:
+    """Tests for SourceAccessor."""
 
     def test_get_source_by_name_string(self, mocker: MockerFixture) -> None:
         """Test get_source() method with string name returns DataSource."""
@@ -16,7 +16,7 @@ class TestSourceService:
         mock_tushare.fetch_calendar = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
-        service = SourceService(sources=sources)
+        service = SourceAccessor(sources=sources)
 
         source = service.get_source("tushare")
 
@@ -30,7 +30,7 @@ class TestSourceService:
         mock_tushare.fetch_calendar = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
-        service = SourceService(sources=sources)
+        service = SourceAccessor(sources=sources)
 
         source = service.get_source(Source.TUSHARE)
 
@@ -42,7 +42,7 @@ class TestSourceService:
         mock_tushare = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
-        service = SourceService(sources=sources)
+        service = SourceAccessor(sources=sources)
 
         source1 = service.get_source("TUSHARE")
         source2 = service.get_source("tushare")
@@ -57,7 +57,7 @@ class TestSourceService:
         mock_tushare = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
-        service = SourceService(sources=sources)
+        service = SourceAccessor(sources=sources)
 
         with pytest.raises(ValueError, match="Unknown source"):
             service.get_source("invalid_source")
@@ -68,7 +68,7 @@ class TestSourceService:
         mock_tushare.fetch_calendar = mocker.Mock()
 
         sources = DataSources(tushare=mock_tushare)
-        service = SourceService(sources=sources)
+        service = SourceAccessor(sources=sources)
 
         source = service.tushare
 

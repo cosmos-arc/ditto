@@ -14,14 +14,22 @@ from ditto_platform.foundation import (
 )
 
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_data.ingestion.freeze_service import FreezeService
-from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-from ditto_data.ingestion.quality_record_service import QualityRecordService
+from ditto_data.ingestion.freeze_store import (
+    FreezeStore,
+)
+from ditto_data.ingestion.ingestion_cursor_store import (
+    IngestionCursorStore,
+)
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
+from ditto_data.ingestion.quality_record_store import (
+    QualityRecordStore,
+)
 from ditto_data.runtime.freeze_manager import FreezeManager
 from ditto_data.runtime.instrument_id_allocator import InstrumentIdAllocator
 from ditto_data.runtime.sql_engine import SqlEngine
-from ditto_data.services.source_service import SourceService
+from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.source import DataSources
 from ditto_data.storage.runtime.ingestion import (
     IngestionCursorReader,
@@ -80,9 +88,9 @@ class RuntimeProvider(Provider):
         return FreezeManager(data_root=str(settings.data_root))
 
     @provide
-    def freeze_service(self, freeze_manager: FreezeManager) -> FreezeService:
+    def freeze_store(self, freeze_manager: FreezeManager) -> FreezeStore:
         """数据版本管理服务."""
-        return FreezeService(freeze_manager=freeze_manager)
+        return FreezeStore(freeze_manager=freeze_manager)
 
     @provide
     def file_lock(self, settings: DataStoreSettings) -> FileLockManager:
@@ -129,13 +137,13 @@ class RuntimeProvider(Provider):
     # ========================================================================
 
     @provide
-    def ingestion_log_service(
+    def ingestion_log_store(
         self,
         ingestion_log_reader: IngestionLogReader,
         ingestion_log_writer: IngestionLogWriter,
-    ) -> IngestionLogService:
+    ) -> IngestionLogStore:
         """数据摄入日志服务."""
-        return IngestionLogService(ingestion_log_reader, ingestion_log_writer)
+        return IngestionLogStore(ingestion_log_reader, ingestion_log_writer)
 
     @provide
     def ingestion_cursor_reader(
@@ -152,24 +160,24 @@ class RuntimeProvider(Provider):
         return IngestionCursorWriter(sqlite_client)
 
     @provide
-    def ingestion_cursor_service(
+    def ingestion_cursor_store(
         self,
         ingestion_cursor_reader: IngestionCursorReader,
         ingestion_cursor_writer: IngestionCursorWriter,
-    ) -> IngestionCursorService:
+    ) -> IngestionCursorStore:
         """数据摄入游标服务."""
-        return IngestionCursorService(ingestion_cursor_reader, ingestion_cursor_writer)
+        return IngestionCursorStore(ingestion_cursor_reader, ingestion_cursor_writer)
 
     @provide
-    def quality_record_service(
+    def quality_record_store(
         self,
         comparison_reader: ComparisonReader,
         comparison_writer: ComparisonWriter,
         quarantine_reader: QuarantineReader,
         quarantine_writer: QuarantineWriter,
-    ) -> QualityRecordService:
+    ) -> QualityRecordStore:
         """质量记录服务."""
-        return QualityRecordService(
+        return QualityRecordStore(
             comparison_reader,
             comparison_writer,
             quarantine_reader,
@@ -177,9 +185,9 @@ class RuntimeProvider(Provider):
         )
 
     @provide
-    def source_service(self, sources: DataSources) -> SourceService:
+    def source_accessor(self, sources: DataSources) -> SourceAccessor:
         """外部数据源访问服务."""
-        return SourceService(sources)
+        return SourceAccessor(sources)
 
     # ========================================================================
     # SQL Engine

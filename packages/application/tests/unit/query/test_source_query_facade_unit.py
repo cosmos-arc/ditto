@@ -1,4 +1,4 @@
-"""Tests for SourceQueryFacade — 封装 SourceService + MetadataService."""
+"""Tests for SourceQueryFacade — 封装 SourceAccessor + MetadataService."""
 
 from __future__ import annotations
 
@@ -14,10 +14,10 @@ class TestSourceQueryFacadeGetDatasetAssetClass:
     """SourceQueryFacade.get_dataset_asset_class — 内部使用 Dataset 枚举。"""
 
     def test_valid_dataset_returns_asset_class(self) -> None:
-        source_service = MagicMock()
+        source_accessor = MagicMock()
         metadata_service = MagicMock()
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -26,10 +26,10 @@ class TestSourceQueryFacadeGetDatasetAssetClass:
         assert result == "stock"
 
     def test_metadata_dataset_returns_none(self) -> None:
-        source_service = MagicMock()
+        source_accessor = MagicMock()
         metadata_service = MagicMock()
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -38,10 +38,10 @@ class TestSourceQueryFacadeGetDatasetAssetClass:
         assert result is None
 
     def test_invalid_dataset_raises_value_error(self) -> None:
-        source_service = MagicMock()
+        source_accessor = MagicMock()
         metadata_service = MagicMock()
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -53,11 +53,11 @@ class TestSourceQueryFacadeResolveSourceTicker:
     """SourceQueryFacade.resolve_source_ticker — 委托给 MetadataService。"""
 
     def test_delegates_to_metadata_service(self) -> None:
-        source_service = MagicMock()
+        source_accessor = MagicMock()
         metadata_service = MagicMock()
         metadata_service.resolve_source_ticker.return_value = "000001.SZ"
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -80,30 +80,30 @@ class TestSourceQueryFacadeResolveSourceTicker:
 
 
 class TestSourceQueryFacadeGetSource:
-    """SourceQueryFacade.get_source — 委托给 SourceService。"""
+    """SourceQueryFacade.get_source — 委托给 SourceAccessor。"""
 
     def test_get_source_by_name(self) -> None:
         mock_source = MagicMock()
-        source_service = MagicMock()
-        source_service.get_source.return_value = mock_source
+        source_accessor = MagicMock()
+        source_accessor.get_source.return_value = mock_source
         metadata_service = MagicMock()
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
         result = facade.get_source("tushare")
 
         assert result is mock_source
-        source_service.get_source.assert_called_once_with("tushare")
+        source_accessor.get_source.assert_called_once_with("tushare")
 
     def test_tushare_property(self) -> None:
         mock_source = MagicMock()
-        source_service = MagicMock()
-        source_service.tushare = mock_source
+        source_accessor = MagicMock()
+        source_accessor.tushare = mock_source
         metadata_service = MagicMock()
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -117,11 +117,11 @@ class TestSourceQueryFacadeFetchSourceData:
         expected = pl.DataFrame({"trade_date": ["2026-01-05"], "close": [10.0]})
         mock_source = MagicMock()
         mock_source.fetch_stock_daily.return_value = expected
-        source_service = MagicMock()
-        source_service.tushare = mock_source
+        source_accessor = MagicMock()
+        source_accessor.tushare = mock_source
         metadata_service = MagicMock()
         facade = SourceQueryFacade(
-            source_service=source_service,
+            source_accessor=source_accessor,
             metadata_service=metadata_service,
         )
 
@@ -142,7 +142,7 @@ class TestSourceQueryFacadeFetchSourceData:
 
     def test_unsupported_source_raises_value_error(self) -> None:
         facade = SourceQueryFacade(
-            source_service=MagicMock(),
+            source_accessor=MagicMock(),
             metadata_service=MagicMock(),
         )
 
@@ -157,7 +157,7 @@ class TestSourceQueryFacadeFetchSourceData:
 
     def test_unsupported_dataset_raises_value_error(self) -> None:
         facade = SourceQueryFacade(
-            source_service=MagicMock(),
+            source_accessor=MagicMock(),
             metadata_service=MagicMock(),
         )
 
