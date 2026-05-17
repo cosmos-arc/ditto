@@ -1,18 +1,19 @@
-"""
-数据集获取处理器映射.
-
-从 ``IngestionCoordinator._fetch_data`` 和 ``_fetch_by_dataset`` 提取。
-提供 Dataset→lambda 映射，将数据集枚举路由到正确的 Fetcher Protocol 方法。
-"""
+"""Dataset fetch handler builders backed by DatasetRegistry."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
 import polars as pl
-from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset
+from ditto_data.models import Dataset
 from ditto_kernel.instrument import InstrumentIngestParams
 
+from ditto_application.processes.ingestion.dataset_registry import (
+    DailyFetchContext,
+    DatasetRegistry,
+    InstrumentFetchContext,
+    default_dataset_registry,
+)
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
@@ -27,159 +28,32 @@ def build_daily_fetch_handlers(
     *,
     fetch_commodity_daily: Callable[[str], pl.DataFrame],
     get_cached_index_codes: Callable[[], list[str]],
+    registry: DatasetRegistry | None = None,
 ) -> dict[Dataset, Callable[[], pl.DataFrame]]:
-    """
-    构建日期级获取处理器映射.
-
-    Args:
-        fetchers: 域级 Fetcher Protocol 聚合.
-        trade_date: 交易日期 (YYYY-MM-DD).
-        fetch_commodity_daily: 商品数据获取函数.
-        get_cached_index_codes: 获取缓存的指数代码列表.
-
-    Returns:
-        Dataset → 无参获取函数映射.
-
-    """
-    _calendar_year = trade_date[:4]
-
-    return {
-        Dataset.CALENDAR: lambda y=_calendar_year: fetchers.metadata.fetch_calendar(
-            f"{y}-01-01", f"{y}-12-31"
-        ),
-        Dataset.STOCK_BASIC: fetchers.metadata.fetch_stock_basic,
-        Dataset.ETF_BASIC: fetchers.metadata.fetch_etf_basic,
-        Dataset.STOCK_DAILY: lambda: fetchers.market.fetch_stock_daily(
-            trade_date,
-        ),
-        Dataset.ETF_DAILY: lambda: fetchers.market.fetch_etf_daily(trade_date),
-        Dataset.STOCK_STATUS: lambda: fetchers.market.fetch_stock_status(
-            trade_date,
-        ),
-        Dataset.ADJ_FACTOR: lambda: fetchers.market.fetch_adj_factor(trade_date),
-        Dataset.FUND_ADJ: lambda: fetchers.market.fetch_fund_adj(trade_date),
-        Dataset.BALANCE_SHEET: lambda: fetchers.fundamental.fetch_balance_sheet(
-            trade_date,
-        ),
-        Dataset.INCOME_STATEMENT: lambda: fetchers.fundamental.fetch_income_statement(
-            trade_date
-        ),
-        Dataset.CASH_FLOW: lambda: fetchers.fundamental.fetch_cash_flow(
-            trade_date,
-        ),
-        Dataset.DIVIDEND: lambda: fetchers.fundamental.fetch_dividend(trade_date),
-        Dataset.VALUATION_METRICS: lambda: fetchers.capital.fetch_valuation_metrics(
-            trade_date
-        ),
-        Dataset.MARGIN_TRADING: lambda: fetchers.capital.fetch_margin_trading(
-            trade_date,
-        ),
-        Dataset.PLEDGE_RATIO: lambda: fetchers.capital.fetch_pledge_ratio(
-            trade_date,
-        ),
-        Dataset.MACRO_INDICATORS: lambda: fetchers.macro.fetch_macro_indicators(
-            trade_date,
-        ),
-        Dataset.CORPORATE_ACTIONS: lambda: fetchers.fundamental.fetch_corporate_actions(
-            trade_date
-        ),
-        Dataset.INDEX_BASIC: fetchers.metadata.fetch_index_basic,
-        Dataset.INDEX_DAILY: lambda: fetchers.market.fetch_index_daily(
-            trade_date,
-            ts_codes=get_cached_index_codes(),
-        ),
-        Dataset.FX_DAILY: lambda: fetchers.macro.fetch_fx_daily(
-            ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
-            start_date=trade_date,
-            end_date=trade_date,
-        ),
-        Dataset.COMMODITY_DAILY: lambda: fetch_commodity_daily(trade_date),
-    }
+    """Build date-level fetch handlers from the dataset registry."""
+    active_registry = registry or default_dataset_registry()
+    return active_registry.daily_fetch_handlers(
+        DailyFetchContext(
+            fetchers=fetchers,
+            trade_date=trade_date,
+            fetch_commodity_daily=fetch_commodity_daily,
+            get_cached_index_codes=get_cached_index_codes,
+        )
+    )
 
 
 def build_instrument_fetch_handlers(
     fetchers: SourceFetchers,
     source_ticker: str,
     params: InstrumentIngestParams,
+    registry: DatasetRegistry | None = None,
 ) -> dict[Dataset, Callable[[], pl.DataFrame]]:
-    """
-    构建按标的获取处理器映射.
-
-    Args:
-        fetchers: 域级 Fetcher Protocol 聚合.
-        source_ticker: 数据源代码.
-        params: 摄取参数.
-
-    Returns:
-        Dataset → 无参获取函数映射.
-
-    """
-    return {
-        # Market 域
-        Dataset.STOCK_DAILY: lambda: fetchers.market.fetch_stock_daily(
+    """Build instrument-level fetch handlers from the dataset registry."""
+    active_registry = registry or default_dataset_registry()
+    return active_registry.instrument_fetch_handlers(
+        InstrumentFetchContext(
+            fetchers=fetchers,
             source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        Dataset.ETF_DAILY: lambda: fetchers.market.fetch_etf_daily(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        Dataset.INDEX_DAILY: lambda: fetchers.market.fetch_index_daily(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        Dataset.ADJ_FACTOR: lambda: fetchers.market.fetch_adj_factor_by_ticker(
-            ts_code=source_ticker,
-            start_date=params.start_date.replace("-", ""),
-            end_date=params.end_date.replace("-", ""),
-        ),
-        Dataset.FUND_ADJ: lambda: fetchers.market.fetch_fund_adj(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        # Fundamental 域
-        Dataset.BALANCE_SHEET: lambda: fetchers.fundamental.fetch_balance_sheet(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        Dataset.INCOME_STATEMENT: (
-            lambda: fetchers.fundamental.fetch_income_statement(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            )
-        ),
-        Dataset.CASH_FLOW: lambda: fetchers.fundamental.fetch_cash_flow(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        Dataset.DIVIDEND: lambda: fetchers.fundamental.fetch_dividend(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        # Capital 域
-        Dataset.VALUATION_METRICS: (
-            lambda: fetchers.capital.fetch_valuation_metrics(
-                source_ticker=source_ticker,
-                start_date=params.start_date,
-                end_date=params.end_date,
-            )
-        ),
-        Dataset.MARGIN_TRADING: lambda: fetchers.capital.fetch_margin_trading(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-        Dataset.PLEDGE_RATIO: lambda: fetchers.capital.fetch_pledge_ratio(
-            source_ticker=source_ticker,
-            start_date=params.start_date,
-            end_date=params.end_date,
-        ),
-    }
+            params=params,
+        )
+    )
