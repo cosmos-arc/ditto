@@ -6,10 +6,10 @@ from dataclasses import asdict
 from typing import cast
 
 import polars as pl
+from ditto_features.derived_types import DerivedSpec
 from ditto_features.publication_safety import DerivedMinimalDQSummary
-from ditto_kernel.json_types import JsonDict
-from ditto_kernel.publication_safety import DerivedMinimalDQSummaryRecord
-from ditto_kernel.strategy import DerivedSpec
+from ditto_features.publication_safety_records import DerivedMinimalDQSummaryRecord
+from ditto_platform.foundation.json_types import JsonDict
 
 from ditto_application.config import now_iso
 

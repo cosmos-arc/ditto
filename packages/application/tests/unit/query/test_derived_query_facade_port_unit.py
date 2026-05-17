@@ -13,7 +13,7 @@ from ditto_application.queries.derived import (
     SeriesDerivedRequest,
     SourceCompareRequest,
 )
-from ditto_features.services.derived import (
+from ditto_features.services import (
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedSeriesQuery,

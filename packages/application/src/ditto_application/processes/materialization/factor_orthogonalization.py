@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 from ditto_features.evaluation.metrics import orthogonalize
-from ditto_features.services.derived import DerivedArtifactReader
+from ditto_features.services import DerivedArtifactReader
 
 __all__ = [
     "FactorOrthogonalizationService",

@@ -1,5 +1,8 @@
 """Unified derived query contracts."""
 
+from ditto_features.services.derived.artifact_persistence_service import (
+    ArtifactPersistenceService,
+)
 from ditto_features.services.derived.artifact_reader import (
     DerivedArtifactReader,
     VersionResolutionStrategy,
@@ -26,6 +29,7 @@ __all__ = [
     "COMPARE_RESULT_COLUMNS",
     "LATEST_RESULT_COLUMNS",
     "SERIES_RESULT_COLUMNS",
+    "ArtifactPersistenceService",
     "DerivedArtifactReader",
     "DerivedCompareQuery",
     "DerivedGarbageCollector",

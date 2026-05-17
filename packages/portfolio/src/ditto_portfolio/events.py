@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ditto_kernel import DomainEvent
+from ditto_kernel.events import EventName
+from ditto_kernel.identity import InstrumentId
 
 __all__ = [
     "PositionChanged",
@@ -13,9 +15,9 @@ __all__ = [
 
 @dataclass(frozen=True, kw_only=True)
 class PositionChanged(DomainEvent):
-    """持仓变更事件（预留 — 当前未在生产流程中发布）."""
+    """持仓变更事件 — Account.apply_fill 通过 event_bus 发布."""
 
-    event_type: str = field(default="position_changed", init=False)
-    instrument_id: int
-    quantity_change: float
-    new_quantity: float
+    event_type: str = field(default=EventName.POSITION_CHANGED, init=False)
+    instrument_id: InstrumentId
+    quantity_change: int
+    new_quantity: int

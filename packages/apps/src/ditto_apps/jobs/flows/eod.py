@@ -36,8 +36,7 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunServiceConfig,
 )
 from ditto_platform.foundation import logger
-from ditto_platform.services.notification.manager import AlertManager
-from ditto_platform.services.notification.message import NotificationLevel
+from ditto_platform.services import AlertManager, NotificationLevel
 from prefect import flow
 
 from ditto_apps.jobs.flows.daily import check_trading_day, daily_ingestion_flow

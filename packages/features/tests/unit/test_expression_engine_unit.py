@@ -7,6 +7,11 @@ from datetime import date
 
 import polars as pl
 import pytest
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression import ExpressionCompiler, compute_compile_cache_key
 from ditto_features.materialization import (
     DerivedExecutionPlanner,
@@ -14,7 +19,6 @@ from ditto_features.materialization import (
     DerivedRunMode,
     DerivedRunTrigger,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _is_non_finite(v: object) -> bool:

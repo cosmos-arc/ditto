@@ -118,10 +118,12 @@ def configure_observability_for_testing() -> None:
     参考: https://github.com/pallets/click/issues/2156
     """
     from ditto_apps.registry.infra.observability import register_app_metric_definitions
-    from ditto_platform.foundation.config.environment import Environment
-    from ditto_platform.foundation.observability import init
-    from ditto_platform.foundation.observability.config import ObservabilityConfig
-    from ditto_platform.foundation.observability.testing import reset_for_testing
+    from ditto_platform.foundation import (
+        Environment,
+        ObservabilityConfig,
+        init,
+        reset_for_testing,
+    )
 
     reset_for_testing()
     register_app_metric_definitions()

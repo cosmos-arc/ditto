@@ -14,8 +14,7 @@ from ditto_data.errors import LateArrivalRejectedError
 from ditto_data.models.ingestion import DataLateArrivalPolicy
 from ditto_data.services.deps import MarketWriters
 from ditto_data.services.market_write_service import MarketWriteService
-from ditto_platform.foundation.concurrency import FileLockManager
-from ditto_platform.foundation.storage.types import OnDuplicate
+from ditto_platform.foundation import FileLockManager, OnDuplicate
 
 
 @pytest.fixture

@@ -28,6 +28,40 @@ This backlog records the guard and public API work that should follow the review
 | Golden E2E proof lane | `APPS-P1-01` | CI-required synthetic fixture lane separate from optional TDX/Tushare tests. |
 | Reserved namespace source of truth | `ANALYSIS-P2-01` | Maturity/public API manifest instead of hard-coded script-only list. |
 
+## 命名消歧表（B3 产出）
+
+> 跨包同名类型的语义区分与归属定义。
+
+### PositionReader — 3 个定义（已消歧）
+
+| 包 | 类型 | 建议消歧名 | 角色 |
+|---|---|---|---|
+| `ditto_portfolio.positions` | `PositionReader` (Protocol) | 保持不变（portfolio 是 Position 领域所有者） | 组合持仓快照读取：`get_position(portfolio_id, instrument_id, snapshot_date)` |
+| `ditto_application.processes.execution.ports` | `PositionReader` (Protocol) | `PositionReadPort` | 执行流程端口：`get_current_positions(strategy_id) -> dict[int, float]` |
+| `ditto_execution.storage.sqlite.trade.positions` | `PositionReader` (concrete) | `TradePositionReader` | SQLite 实际持仓读取：`get_latest(strategy_id, instrument_id)` |
+
+**消歧策略**：application 和 execution 的 `PositionReader` 应重命名以消除歧义。portfolio 的 `PositionReader` 作为领域所有者保持不变。
+
+### TargetPortfolio — 已通过 B3.1 消解
+
+| 包 | 状态 | 说明 |
+|---|---|---|
+| `ditto_portfolio.target_portfolios` | **已删除**（B3.1） | 投机性持久化 DTO，零生产消费者 |
+| `ditto_strategy.alpha.models` | **保留** | 30+ 跨包消费者，等同 LEAN `PortfolioTarget` |
+| `ditto_execution.targets.TargetPortfolioLike` | **保留** | 消费端定义的 Protocol，正确实践 |
+
+未来 portfolio 需要持久化层时，应使用 `TargetWeightRecord` + `TargetWeightStore` 命名。
+
+### Signal — 语义区分（无需重命名）
+
+| 类型 | 包 | 角色 |
+|---|---|---|
+| `Signal` | `ditto_strategy.models` | 领域信号模型（type/strength/confidence） |
+| `SignalRecord` | `ditto_strategy.signals.models` | 持久化信号 DTO（strategy_id/run_id/score） |
+| `SignalSnapshot` | `ditto_strategy.alpha.models` | 管线输出（`dict[InstrumentId, float]`） |
+
+三个类型无名称冲突，但语义重叠。消费者应按职责选用：领域建模用 `Signal`、存储用 `SignalRecord`、管线传递用 `SignalSnapshot`。
+
 ## Reopen Rules
 
 Reopen this backlog before any change that:

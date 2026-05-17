@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ditto_kernel.quality import DQIssue
+from ditto_data.quality.quality_types import DQIssue
 
 __all__ = ["L3CheckResult", "ReconciliationResult"]
 

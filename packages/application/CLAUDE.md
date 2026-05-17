@@ -132,7 +132,7 @@ ditto_application/
 ├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
 ├── providers_portfolio.py  # 组合/交易查询 Provider（3 个 @provide）
 ├── settings.py             # 应用层设置
-├── config.py           # 数据集配置
+├── config/               # 数据集配置（__init__.py + helpers.py + queries.py + specs.py）
 ├── contracts.py        # 跨 CQRS 子模块共享契约（Command DTO + ReadModel）
 ├── execution_dto.py    # 执行层 DTO + 跨层映射（TradeIntent/Fill/Snapshot）
 └── exceptions.py       # 应用层自定义异常

@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import polars as pl
-from ditto_kernel.quality import DQIssue, DQResult, DQSeverity
 
 from ditto_data.quality.checkers.business import BusinessChecker
 from ditto_data.quality.checkers.cross_source import CrossSourceChecker
 from ditto_data.quality.checkers.statistical import StatisticalChecker
 from ditto_data.quality.checkers.technical import TechnicalChecker
 from ditto_data.quality.config import DQSettings
+from ditto_data.quality.quality_types import DQIssue, DQResult, DQSeverity
 from ditto_data.quality.spec import DQSpec
 
 

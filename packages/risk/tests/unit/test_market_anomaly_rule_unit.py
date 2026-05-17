@@ -8,8 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import AccountView, CashBook
 from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.exposure.rules import MarketAnomalyRule
 from ditto_risk.post_trade import RiskActionType, RiskSeverity
@@ -24,8 +23,6 @@ def _account_view() -> AccountView:
         total_value=100_000.0,
         nav=100_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 

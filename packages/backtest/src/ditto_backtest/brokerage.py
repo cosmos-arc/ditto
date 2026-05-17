@@ -7,12 +7,19 @@ BacktestBrokerage 是 state owner, 持有可变 Account 实例,
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import datetime
 
 from ditto_execution.brokerage import ProcessInput
 from ditto_execution.errors import FillProcessingError
 from ditto_execution.fills import Filled, NoFill
+from ditto_execution.orders.book import OrderBook, OrderBookReadOnly
+from ditto_execution.orders.event import OrderEvent
+from ditto_execution.orders.fsm import OrderStateError, transition
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import (
@@ -26,16 +33,7 @@ from ditto_kernel.trading import (
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account, AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import (
-    Order,
-    OrderEvent,
-    OrderStatus,
-    OrderTicket,
-    StateTransitionError,
-)
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import Account, AccountView, FillEvent, Position
 
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.settlement import SettlementModel
@@ -137,6 +135,7 @@ class BacktestBrokerage:
 
     Args:
         account: 可变账户实例
+        order_book: 执行层订单簿（OMS）
         model: 模型组合包 (fill / slippage / fee / settlement)
         rules_getter: 规则获取函数 (instrument_id, trade_date) → 三层规则
 
@@ -145,10 +144,12 @@ class BacktestBrokerage:
     def __init__(
         self,
         account: Account,
+        order_book: OrderBook,
         model: BrokerageModel | None = None,
         rules_getter: RulesGetter | None = None,
     ) -> None:
         self._account = account
+        self._order_book = order_book
         self._model = model or BrokerageModel()
         self._rules_getter = rules_getter or _default_rules_getter
         self._fill_counter = 0
@@ -166,18 +167,20 @@ class BacktestBrokerage:
         """获取只读账户快照。"""
         return self._account.get_view()
 
+    def get_order_book(self) -> OrderBookReadOnly:
+        """获取订单簿只读快照。"""
+        return self._order_book.readonly_view()
+
     def place_order(self, order: Order) -> OrderTicket:
-        """提交订单，创建 OrderTicket (SUBMITTED)。"""
-        ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
-        self._account.order_book.submit(ticket)
-        return ticket
+        """提交订单，返回 OrderTicket (SUBMITTED)。"""
+        return self._order_book.submit(order)
 
     def cancel_order(self, order_id: str) -> bool:
         """撤销订单。终态不可撤销。"""
         try:
-            self._account.order_book.cancel(order_id)
+            self._order_book.cancel(ClientOrderId(value=order_id))
             return True
-        except (KeyError, StateTransitionError):
+        except (KeyError, OrderStateError):
             return False
 
     def process_pending(
@@ -194,7 +197,7 @@ class BacktestBrokerage:
         # 解冻到期份额
         self._thaw_frozen(trade_date)
 
-        for ticket in self._account.order_book.get_pending():
+        for ticket in self._order_book.get_pending():
             fill = self._process_single_ticket(
                 ticket,
                 bars,
@@ -274,12 +277,13 @@ class BacktestBrokerage:
 
         if isinstance(outcome, NoFill) and not outcome.can_retry:
             order_evt = OrderEvent(
-                order_id=ticket.order.order_id,
+                client_id=ticket.order.client_id,
+                trigger=OrderTrigger.INVALIDATE,
                 status=OrderStatus.INVALID,
                 message=outcome.reason,
                 timestamp=step_time,
             )
-            self._account.order_book.update(ticket.with_invalid(order_evt))
+            self._order_book.update(ticket.with_invalid(order_evt), event=order_evt)
         # can_retry=True: 保持 SUBMITTED, 下 step 再试
 
         return None
@@ -350,11 +354,17 @@ class BacktestBrokerage:
     ) -> None:
         """成交后更新 OrderTicket + Account 仓位/现金。"""
         order = ticket.order
+        # FSM 单一状态来源: transition() 决定 FILLED / PARTIALLY_FILLED
+        new_status = transition(
+            ticket.status,
+            OrderTrigger.FILL,
+            fill_qty=fill.filled_quantity,
+            leaves_qty=ticket.leaves_quantity,
+        )
         order_evt = OrderEvent(
-            order_id=order.order_id,
-            status=OrderStatus.FILLED
-            if fill.leaves_quantity == 0
-            else OrderStatus.PARTIALLY_FILLED,
+            client_id=order.client_id,
+            trigger=OrderTrigger.FILL,
+            status=new_status,
             fill_price=fill.fill_price,
             fill_quantity=fill.filled_quantity,
             fee=fill.fee,
@@ -365,7 +375,7 @@ class BacktestBrokerage:
             price=fill.fill_price,
             event=order_evt,
         )
-        self._account.order_book.update(updated_ticket)
+        self._order_book.update(updated_ticket, event=order_evt)
         self._account.apply_fill(fill, settle_date, on_frozen=self._register_frozen)
 
     def _register_frozen(
@@ -381,12 +391,7 @@ class BacktestBrokerage:
         """
         if settle_date <= self._current_trade_date:
             # T+0 交收: 当日即解冻, 直接增加 available_quantity
-            pos = self._account.positions.get(instrument_id)
-            if pos is not None:
-                self._account.positions[instrument_id] = replace(
-                    pos,
-                    available_quantity=pos.available_quantity + quantity,
-                )
+            self._account.thaw_position(instrument_id, quantity)
             return
 
         frozen_for_iid = self._frozen_quantities.setdefault(instrument_id, {})
@@ -413,7 +418,4 @@ class BacktestBrokerage:
                     del date_qty_map[d]
                 if not date_qty_map:
                     del self._frozen_quantities[iid]
-                self._account.positions[iid] = replace(
-                    pos,
-                    available_quantity=pos.available_quantity + thaw_total,
-                )
+                self._account.thaw_position(iid, thaw_total)

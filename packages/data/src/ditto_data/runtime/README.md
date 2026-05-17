@@ -26,7 +26,7 @@
 ## 使用示例
 
 ```python
-from ditto_platform.foundation.db import SQLitePool  # 连接池来自 infra
+from ditto_platform.foundation import SQLitePool  # 连接池来自 infra
 from ditto_data.runtime import InstrumentIdAllocator, FreezeManager
 
 # Instrument ID 分配（依赖 infra 层的 SQLitePool）

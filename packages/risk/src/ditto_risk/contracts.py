@@ -1,34 +1,56 @@
-"""Risk domain contracts — Protocol definitions for risk consumers."""
+"""
+Risk domain contracts — PreTrade 解耦 Protocol.
+
+将 Risk 对 Execution (Order / OrderTicket) 的直接依赖
+替换为本地 Protocol 抽象，使 Risk 不再 import ditto_execution。
+"""
+
+# ruff: noqa: D102 — Protocol stubs don't need docstrings
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from ditto_kernel.identity import InstrumentId
-from ditto_portfolio.accounting.account import AccountView
+from ditto_kernel.order import OrderSide, OrderType
 
-from ditto_risk.post_trade import RiskAction
-
-__all__ = ["PostTradeGuard", "RiskSlice"]
-
-
-class RiskSlice(Protocol):
-    """盘后风控扫描所需的最小市场切片."""
-
-    @property
-    def bars(self) -> dict[InstrumentId, Any]:
-        """当前 bar 数据，按 instrument_id 索引."""
-        ...
+__all__ = [
+    "PreTradeOrder",
+    "PreTradeTicket",
+]
 
 
 @runtime_checkable
-class PostTradeGuard(Protocol):
-    """盘后风控扫描接口 — 检查账户状态并返回风控动作."""
+class PreTradeOrder(Protocol):
+    """订单抽象 — Risk 风控校验所需的只读订单接口。"""
 
-    def scan(self, account_view: AccountView, slice_: RiskSlice) -> list[RiskAction]:
-        """扫描账户状态，返回触发的风控动作列表."""
-        ...
+    @property
+    def instrument_id(self) -> InstrumentId: ...
 
-    def reset(self) -> None:
-        """重置风控扫描状态."""
-        ...
+    @property
+    def quantity(self) -> int: ...
+
+    @property
+    def direction(self) -> OrderSide: ...
+
+    @property
+    def order_id(self) -> str: ...
+
+    @property
+    def order_type(self) -> OrderType: ...
+
+    @property
+    def price(self) -> float | None: ...
+
+    def with_quantity(self, qty: int) -> PreTradeOrder: ...
+
+
+@runtime_checkable
+class PreTradeTicket(Protocol):
+    """订单票据抽象 — Risk 风控校验所需的只读票据接口。"""
+
+    @property
+    def order(self) -> PreTradeOrder: ...
+
+    @property
+    def leaves_quantity(self) -> int: ...

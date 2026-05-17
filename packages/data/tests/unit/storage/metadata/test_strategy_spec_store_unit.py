@@ -79,7 +79,7 @@ class TestSQLiteStrategySpecWriter:
         updated = _make_spec(name="Updated")
         writer.save(updated)
 
-        result = reader.get("strat-001", version=1)
+        result = reader.get_spec("strat-001", version=1)
         assert result is not None
         assert result.name == "Updated"
 
@@ -87,47 +87,47 @@ class TestSQLiteStrategySpecWriter:
 class TestSQLiteStrategySpecReader:
     """Tests for SQLiteStrategySpecReader."""
 
-    def test_get_returns_none_for_missing(
+    def test_get_spec_returns_none_for_missing(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
-        """get() returns None when no matching record exists."""
+        """get_spec() returns None when no matching record exists."""
         writer.init_schema()
-        assert reader.get("nonexistent") is None
-        assert reader.get("nonexistent", version=1) is None
+        assert reader.get_spec("nonexistent") is None
+        assert reader.get_spec("nonexistent", version=1) is None
 
-    def test_get_by_exact_version(
+    def test_get_spec_by_exact_version(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
-        """get() with explicit version returns that version."""
+        """get_spec() with explicit version returns that version."""
         writer.init_schema()
         writer.save(_make_spec(version=1))
         writer.save(_make_spec(version=2, name="V2"))
 
-        result = reader.get("strat-001", version=1)
+        result = reader.get_spec("strat-001", version=1)
         assert result is not None
         assert result.version == 1
         assert result.name == "Test Strategy"
 
-        result_v2 = reader.get("strat-001", version=2)
+        result_v2 = reader.get_spec("strat-001", version=2)
         assert result_v2 is not None
         assert result_v2.version == 2
         assert result_v2.name == "V2"
 
-    def test_get_without_version_returns_latest(
+    def test_get_spec_without_version_returns_latest(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
-        """get() with version=None returns the record with MAX(version)."""
+        """get_spec() with version=None returns the record with MAX(version)."""
         writer.init_schema()
         writer.save(_make_spec(version=1, name="V1"))
         writer.save(_make_spec(version=2, name="V2"))
         writer.save(_make_spec(version=3, name="V3"))
 
-        result = reader.get("strat-001")
+        result = reader.get_spec("strat-001")
         assert result is not None
         assert result.version == 3
         assert result.name == "V3"
 
-    def test_get_preserves_spec_json(
+    def test_get_spec_preserves_spec_json(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
         """spec_json should roundtrip through serialization."""
@@ -140,31 +140,31 @@ class TestSQLiteStrategySpecReader:
         )
         writer.save(spec)
 
-        result = reader.get("strat-001")
+        result = reader.get_spec("strat-001")
         assert result is not None
         assert result.spec_json == spec.spec_json
 
-    def test_get_preserves_tags(
+    def test_get_spec_preserves_tags(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
         """tags tuple should roundtrip as a tuple."""
         writer.init_schema()
         writer.save(_make_spec(tags=("momentum", "etf")))
 
-        result = reader.get("strat-001")
+        result = reader.get_spec("strat-001")
         assert result is not None
         assert result.tags == ("momentum", "etf")
 
-    def test_list_all_returns_latest_version_per_strategy(
+    def test_list_specs_returns_latest_version_per_strategy(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
     ) -> None:
-        """list_all() should return one record per strategy_id (latest version)."""
+        """list_specs() should return one record per strategy_id (latest version)."""
         writer.init_schema()
         writer.save(_make_spec(strategy_id="strat-a", version=1))
         writer.save(_make_spec(strategy_id="strat-a", version=2))
         writer.save(_make_spec(strategy_id="strat-b", version=1))
 
-        result = reader.list_all()
+        result = reader.list_specs()
         assert len(result) == 2
         ids = {r.strategy_id for r in result}
         assert ids == {"strat-a", "strat-b"}
@@ -172,14 +172,14 @@ class TestSQLiteStrategySpecReader:
             if r.strategy_id == "strat-a":
                 assert r.version == 2
 
-    def test_list_all_empty(
+    def test_list_specs_empty(
         self,
         writer: SQLiteStrategySpecWriter,
         reader: SQLiteStrategySpecReader,
     ) -> None:
-        """list_all() returns empty list when no records exist."""
+        """list_specs() returns empty list when no records exist."""
         writer.init_schema()
-        assert reader.list_all() == []
+        assert reader.list_specs() == []
 
     def test_list_versions_returns_all_for_strategy(
         self, writer: SQLiteStrategySpecWriter, reader: SQLiteStrategySpecReader
@@ -227,7 +227,7 @@ class TestSQLiteStrategySpecWriterUpdateStatus:
         ok = writer.update_status("strat-001", 1, "published")
         assert ok is True
 
-        result = reader.get("strat-001")
+        result = reader.get_spec("strat-001")
         assert result is not None
         assert result.status == "published"
 

@@ -15,9 +15,11 @@ from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_service import SourceService
-from ditto_features.services.derived import DerivedArtifactReader
-from ditto_features.services.derived.query_service import DerivedQueryService
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services import (
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    DerivedQueryService,
+)
 
 from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade

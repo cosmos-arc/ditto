@@ -10,6 +10,7 @@ from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.steps import AuditStep, StepContext, TradingStep
 from packages.backtest.tests.unit._helpers import (
     _make_account_view,
+    _make_ctx,
     _make_fill,
     _make_slice,
 )
@@ -20,7 +21,7 @@ class TestAuditStep:
 
     def _make_ctx_with_fills(self) -> StepContext:
         """构建包含 slice_, fills 的 StepContext。"""
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.slice_ = _make_slice()
         fill = _make_fill()
         ctx.step_fills.append(fill)

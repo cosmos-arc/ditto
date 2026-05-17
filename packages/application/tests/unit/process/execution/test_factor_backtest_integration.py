@@ -52,7 +52,8 @@ def _make_slice_with_bars() -> Slice:
 def _make_step_context(date: str, slice_: Slice) -> StepContext:
     """构造测试用 StepContext."""
     ctx = MagicMock(spec=StepContext)
-    ctx.date = date
+    ctx.time_context = MagicMock()
+    ctx.time_context.trade_date = date
     ctx.slice_ = slice_
     return ctx
 

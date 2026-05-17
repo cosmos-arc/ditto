@@ -11,8 +11,7 @@ from ditto_features.models.derived import (
     DerivedSpecRecord,
     DerivedVersionRecord,
 )
-from ditto_features.services.derived.garbage_collector import DerivedGarbageCollector
-from ditto_features.services.derived.gc_models import GcConfig, GcPlan, GcReport
+from ditto_features.services import DerivedGarbageCollector, GcConfig, GcPlan, GcReport
 
 # ---------------------------------------------------------------------------
 # Test doubles

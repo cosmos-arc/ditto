@@ -26,7 +26,7 @@ from ditto_features.materialization import (
     DerivedRunTrigger,
 )
 from ditto_features.models.derived import DerivedInvalidationRecord
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services import DerivedCatalogService
 from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppError

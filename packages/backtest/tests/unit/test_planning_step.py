@@ -11,6 +11,7 @@ from ditto_strategy.alpha.context import StrategyContext
 from packages.backtest.tests.unit._helpers import (
     IID_1,
     _make_account_view,
+    _make_ctx,
     _make_execution_plan,
     _make_slice,
 )
@@ -21,7 +22,7 @@ class TestPlanningStep:
 
     def _make_ctx_with_target(self) -> StepContext:
         """构建包含 slice_, account_view, target_portfolio 的 StepContext。"""
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.slice_ = _make_slice()
         ctx.account_view = _make_account_view()
         ctx.target_portfolio = Mock(name="target_portfolio")
@@ -36,7 +37,7 @@ class TestPlanningStep:
             strategy_context=StrategyContext(),
         )
 
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=False)
+        ctx = _make_ctx(is_rebalance_day=False)
         result = step.execute(ctx)
 
         assert result.success is True
@@ -131,6 +132,27 @@ class TestPlanningStep:
         )
         assert locked is not None
         assert IID_1 in locked
+
+    def test_passes_order_book_to_planner(self) -> None:
+        """ctx.order_book 被传递给 planner.plan()。"""
+        plan = _make_execution_plan()
+        planner = Mock(plan=Mock(return_value=plan))
+        order_book = Mock(name="order_book")
+
+        step = PlanningStep(
+            planner=planner,
+            rule_provider=None,
+            rule_ref_collector=None,
+            strategy_context=StrategyContext(),
+        )
+
+        ctx = self._make_ctx_with_target()
+        ctx.order_book = order_book
+        step.execute(ctx)
+
+        planner.plan.assert_called_once()
+        call_kwargs = planner.plan.call_args.kwargs
+        assert call_kwargs["order_book"] is order_book
 
     def test_satisfies_trading_step_protocol(self) -> None:
         """PlanningStep 满足 TradingStep Protocol。"""

@@ -20,8 +20,6 @@ ditto_risk → ditto_kernel ✅
 ditto_risk → ditto_portfolio ✅
 ```
 
-外部依赖：polars, orjson
-
 ## 禁止依赖
 
 ```
@@ -74,9 +72,30 @@ Risk 的正常业务结果通过返回值表达，不通过异常表达：
 
 ```
 packages/risk/tests/
-├── unit/
-│   ├── test_import_boundary_unit.py
-│   └── test_risk_events_unit.py
+└── unit/
+    ├── test_buying_power_check_unit.py
+    ├── test_composite_post_trade_guard_unit.py
+    ├── test_composite_pre_trade_check_unit.py
+    ├── test_concentration_limit_rule_unit.py
+    ├── test_concentration_pre_check_unit.py
+    ├── test_contracts_typed_unit.py
+    ├── test_daily_turnover_pre_check_unit.py
+    ├── test_drawdown_snapshot_unit.py
+    ├── test_import_risk_unit.py
+    ├── test_lot_size_check_unit.py
+    ├── test_market_anomaly_rule_unit.py
+    ├── test_max_drawdown_rule_unit.py
+    ├── test_models_unit.py
+    ├── test_no_short_sell_check_unit.py
+    ├── test_pre_trade_context_unit.py
+    ├── test_price_validity_check_unit.py
+    ├── test_risk_contracts_unit.py
+    ├── test_risk_errors_unit.py
+    ├── test_risk_events_unit.py
+    ├── test_risk_import_boundary_unit.py
+    ├── test_single_loss_limit_rule_unit.py
+    ├── test_subdomain_facade_unit.py
+    └── test_validation_unit.py
 ```
 
 ## 典型导入示例
@@ -84,14 +103,10 @@ packages/risk/tests/
 ```python
 # 风控检查
 from ditto_risk.pre_trade import CompositePreTradeCheck, BuyingPowerCheck, LotSizeCheck
-from ditto_risk.post_trade import CompositePostTradeGuard, RiskAction
-
-# 契约与模型
-from ditto_risk.contracts import PostTradeGuard, RiskSlice
-from ditto_risk.models import DrawdownStats, ExposureData, RiskMetrics
+from ditto_risk.post_trade import CompositePostTradeGuard, PostTradeRiskGuard, RiskAction
 
 # 事件
-from ditto_risk.events import RiskGuardTriggered
+from ditto_risk.events import RiskGuardDetails, RiskGuardTriggered
 ```
 
 ## 常用验证命令
@@ -101,3 +116,12 @@ pixi run -e dev pytest packages/risk/tests/unit -q
 pixi run -e dev type packages/risk/src
 pixi run -e dev arch-check
 ```
+
+## 已知差距 / 计划工作
+
+| ID | 差距 | 现状 | 目标 |
+|----|------|------|------|
+| RISK-P1-01 | **RiskGate 统一运行时契约** | Pre-trade / Post-trade 检查已实现，但回测与模拟盘各自内嵌风控门控逻辑，缺乏共享的 `RiskGate` 运行时契约 | 统一 `RiskGate` protocol，backtest 与 paper trading 共用同一门控抽象 |
+| RISK-P1-02 | ~~有状态规则的无损恢复~~ **已修复 (B5)** | `DrawdownStateSnapshot` + `MaxDrawdownRule.snapshot()/restore()` 已实现，重放一致性已验证 | ✅ 完成 |
+| RISK-P1-03 | ~~审计载荷类型化~~ **已修复 (B4)** | `RiskGuardDetails` typed dataclass 替代 `dict[str, Any]`，`event_type` 引用 `EventName` 常量 | ✅ 完成 |
+| RISK-P2-01 | **审计血缘跨包断裂** | `RiskAction` 经本地映射转为 backtest `RiskScanRecord` 再到 execution audit，审计血缘分散在多个包中 | 建立跨包审计 lineage protocol，统一 trace id |

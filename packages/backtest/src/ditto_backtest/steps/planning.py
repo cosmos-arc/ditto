@@ -59,16 +59,17 @@ class PlanningStep:
 
         # 收集规则引用
         if self._rule_ref_collector is not None:
-            self._rule_ref_collector.observe(ctx.date, rules)
+            self._rule_ref_collector.observe(ctx.time_context.trade_date, rules)
 
         # 生成执行计划
         plan = self._planner.plan(
             target=ctx.target_portfolio,
             account_view=ctx.account_view,
-            trade_date=ctx.date,
-            market_snapshots=ctx.slice_.bars,
+            trade_date=ctx.time_context.trade_date,
+            market_snapshots=ctx.bars,
             rules=rules,
             locked_instruments=self._strategy_context.get_locked_instruments(),
+            order_book=ctx.order_book,
         )
 
         ctx.execution_plan = plan
@@ -86,5 +87,8 @@ class PlanningStep:
         if slice_ is None:  # guarded by execute() -- unreachable in practice
             msg = "slice_ required"
             raise SimulationError(msg, step="planning")
-        instrument_ids = list(slice_.bars.keys())
-        return self._rule_provider.get_rules(ctx.date, instrument_ids)
+        instrument_ids = list(ctx.bars.keys())
+        return self._rule_provider.get_rules(
+            ctx.time_context.trade_date,
+            instrument_ids,
+        )

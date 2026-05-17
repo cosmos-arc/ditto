@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from ditto_application.processes.quality.types import L3CheckResult
 from ditto_apps.registry.infra.observability import register_app_metric_definitions
-from ditto_platform.foundation.observability.testing import reset_for_testing
+from ditto_platform.foundation import reset_for_testing
 from pytest_mock import MockerFixture
 
 

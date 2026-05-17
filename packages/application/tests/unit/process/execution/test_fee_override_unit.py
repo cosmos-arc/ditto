@@ -22,12 +22,13 @@ from ditto_application.processes.execution.fee_override import (
     build_fee_model,
     build_slippage_model,
 )
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_execution.reality.fee import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import FeeSchedule
-from ditto_portfolio.accounting.order_book import Order
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -56,7 +57,7 @@ def _make_order(
 ) -> Order:
     """构造测试用 Order."""
     return Order(
-        order_id="test-001",
+        client_id=ClientOrderId("test-001"),
         instrument_id=_INSTRUMENT_ID,
         order_type="market",  # type: ignore[arg-type]
         direction=direction,

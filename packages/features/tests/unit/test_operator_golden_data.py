@@ -23,8 +23,12 @@ from __future__ import annotations
 from datetime import date
 
 import polars as pl
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression import ExpressionCompiler
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Test helpers

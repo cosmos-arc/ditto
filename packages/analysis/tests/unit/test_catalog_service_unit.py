@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from ditto_analysis.research.catalog_service import ResearchCatalogService
-from ditto_kernel.research import (
+from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,

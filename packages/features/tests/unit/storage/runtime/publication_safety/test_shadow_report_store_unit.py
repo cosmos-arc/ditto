@@ -2,13 +2,13 @@
 
 from pathlib import Path
 
+from ditto_features.publication_safety_records import (
+    ShadowDiffReportRecord,
+    ShadowTraceRecordRecord,
+)
 from ditto_features.storage.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
-)
-from ditto_kernel.publication_safety import (
-    ShadowDiffReportRecord,
-    ShadowTraceRecordRecord,
 )
 
 

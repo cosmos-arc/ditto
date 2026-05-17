@@ -1,7 +1,7 @@
 """SQLite-backed writer for unified derived runtime metadata."""
 
 import orjson
-from ditto_platform.foundation.storage import SQLiteClient
+from ditto_platform.foundation import SQLiteClient
 
 from ditto_features.errors import FeatureStorageError
 from ditto_features.models.derived import (

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
 from unittest.mock import Mock
 
@@ -13,11 +13,10 @@ from ditto_backtest.engine import EngineLoop, EngineOptions
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
+from ditto_kernel.synchronizer import Synchronizer, TimeSlice
+from ditto_kernel.time_context import TimeContext
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import OrderBook
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import AccountView, CashBook, Position
 from ditto_risk.drawdown.rules import MaxDrawdownRule, SingleLossLimitRule
 from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
@@ -67,8 +66,6 @@ def _make_account_view(
         total_value=nav,
         nav=nav,
         exposure=sum(p.market_value for p in pos.values()),
-        pending_buy_value=0.0,
-        order_book=OrderBook().readonly_view(),
     )
 
 
@@ -131,7 +128,6 @@ class TestRiskAction:
             threshold=0.1,
         )
         assert action.cooldown_until_date is None
-        assert action.target_quantity is None
 
     def test_portfolio_wide_action_has_none_instrument_id(self) -> None:
         """Portfolio-wide actions use instrument_id=None, scope='portfolio'."""
@@ -1182,15 +1178,33 @@ class TestEngineLoopPostTradeIntegration:
         fee_model: Mock,
     ) -> None:
         """构建并运行 EngineLoop。"""
+        config = _make_engine_config()
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+
+        # 构建 mock Synchronizer — 按 trading_days 生成 TimeSlice 流
+        trading_days = [d for d in data_feed.trading_days() if d >= config.start_date]
+        step_time = datetime(2026, 1, 15, 15, 0, tzinfo=UTC)
+        slices: list[TimeSlice] = []
+        for day in trading_days:
+            tc = TimeContext(
+                decision_time=step_time,
+                knowledge_date=step_time.date() - timedelta(days=1),
+                trade_date=day,
+            )
+            slices.append(TimeSlice(time_context=tc, bars={}))
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = clock
+        sync.stream.return_value = iter(slices)
+
         loop = EngineLoop(
-            config=_make_engine_config(),
+            config=config,
             pipeline=pipeline,
             planner=planner,
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=sync,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 post_trade_guard=post_trade_guard,
             ),

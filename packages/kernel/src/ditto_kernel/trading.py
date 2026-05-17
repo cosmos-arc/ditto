@@ -12,6 +12,7 @@ __all__ = [
     "DEFAULT_COMMISSION_RATE",
     "DEFAULT_LOT_SIZE",
     "DEFAULT_MIN_COMMISSION",
+    "DEFAULT_SLIPPAGE_BPS",
     "FeeModel",
     "FeeSchedule",
     "InstrumentDefinition",
@@ -20,7 +21,6 @@ __all__ = [
     "MarketSnapshot",
     "RulesGetter",
     "TradingRuleSet",
-    "default_price_limit_pct",
 ]
 
 # ── 常量 ──────────────────────────────────────────────────────
@@ -33,6 +33,9 @@ DEFAULT_MIN_COMMISSION: float = 5.0
 
 DEFAULT_LOT_SIZE: int = 100
 """默认最小交易单位(A股一手 = 100 股)。"""
+
+DEFAULT_SLIPPAGE_BPS: float = 1.0
+"""默认滑点成本(基点)。"""
 
 # ── 市场快照 ──────────────────────────────────────────────────
 
@@ -134,22 +137,6 @@ type InstrumentRules = tuple[InstrumentDefinition, TradingRuleSet, FeeSchedule]
 
 type RulesGetter = Callable[[InstrumentId, str], InstrumentRules]
 """规则获取函数 — (instrument_id, trade_date) -> InstrumentRules。"""
-
-
-# ── 工具函数 ──────────────────────────────────────────────────
-
-
-def default_price_limit_pct(lifecycle_state: str, board_segment: str) -> float | None:
-    """根据 lifecycle_state 和 board_segment 计算默认涨跌停幅度。"""
-    if lifecycle_state in ("st", "st_star"):
-        return 0.05
-    if lifecycle_state == "delisting":
-        return 0.10
-    if lifecycle_state == "ipo":
-        return None
-    if board_segment in ("gem", "star"):
-        return 0.20
-    return 0.10
 
 
 # ── Protocol ──────────────────────────────────────────────────

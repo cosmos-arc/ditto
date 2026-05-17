@@ -55,11 +55,17 @@ class TestExecutionSpec:
             method="calendar",
             cost_model=CostModelSpec(
                 commission_rate=0.0003,
-                slippage_bps=5.0,
+                slippage_bps=3.0,
             ),
         )
         assert spec.cost_model.commission_rate == 0.0003
-        assert spec.cost_model.slippage_bps == 5.0
+        assert spec.cost_model.slippage_bps == 3.0
+
+    def test_cost_model_default_slippage_is_1_bps(self) -> None:
+        from ditto_strategy.alpha.specs import CostModelSpec
+
+        spec = CostModelSpec()
+        assert spec.slippage_bps == 1.0
 
     def test_is_frozen(self) -> None:
         from ditto_strategy.alpha.specs import ExecutionSpec
@@ -292,23 +298,24 @@ class TestStrategySpecValidation:
     @pytest.mark.parametrize(
         "code",
         [
-            pytest.param("999999.SH", id="invalid1"),
-            pytest.param("888888.SZ", id="invalid2"),
-            pytest.param("510300.SH", id="etf-not-index"),
+            pytest.param("999999.SH", id="valid-format-unknown-index"),
+            pytest.param("888888.SZ", id="valid-format-unknown-index-2"),
+            pytest.param("510300.SH", id="etf-valid-format"),
         ],
     )
-    def test_benchmark_unknown_index_raises(self, code: str) -> None:
+    def test_benchmark_valid_format_passes(self, code: str) -> None:
+        """格式合法（NNNNNN.SH|SZ）的 benchmark 均通过验证，不再限于已知指数."""
         from ditto_strategy.alpha.specs import StrategySpec
 
-        with pytest.raises(StrategySpecError, match="benchmark"):
-            StrategySpec(
-                strategy_id="id",
-                name="N",
-                template="etf_rotation",
-                universe="u",
-                asset_class="etf",
-                benchmark=code,
-            )
+        spec = StrategySpec(
+            strategy_id="id",
+            name="N",
+            template="etf_rotation",
+            universe="u",
+            asset_class="etf",
+            benchmark=code,
+        )
+        assert spec.benchmark == code
 
     def test_benchmark_invalid_format_raises(self) -> None:
         from ditto_strategy.alpha.specs import StrategySpec

@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import pytest
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_kernel.market import (
     CALENDAR_TO_TIMEZONE,
     GRAIN_TO_TIME_KEYS,
     TimeSpec,
 )
-from ditto_kernel.strategy import (
-    DerivedRole,
-    DerivedSpec,
-    ExecutionPolicy,
-    MaterializationProfile,
-)
+from ditto_kernel.strategy import ExecutionPolicy
 
 # ---------------------------------------------------------------------------
 # DerivedRole

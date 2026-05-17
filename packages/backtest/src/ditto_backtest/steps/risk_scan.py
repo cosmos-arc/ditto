@@ -13,7 +13,7 @@ from __future__ import annotations
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.strategy import RiskScope
-from ditto_risk.events import RiskGuardTriggered
+from ditto_risk.events import RiskGuardDetails, RiskGuardTriggered
 from ditto_risk.post_trade import (
     PostTradeRiskGuard,
     RiskActionType,
@@ -57,10 +57,10 @@ class RiskScanStep:
         # 审计日志: 记录风控扫描结果
         if risk_actions and self._audit_collector is not None:
             self._audit_collector.record_risk_scan(
-                ctx.date,
+                ctx.time_context.trade_date,
                 tuple(
                     RiskScanRecord(
-                        trade_date=ctx.date,
+                        trade_date=ctx.time_context.trade_date,
                         rule_id=action.rule_id,
                         instrument_id=action.instrument_id,
                         scope=action.scope,
@@ -93,8 +93,8 @@ class RiskScanStep:
                 self._event_bus.publish(
                     RiskGuardTriggered(
                         rule_name=action.rule_id,
-                        severity=action.severity.value,
-                        details={"instrument_id": action.instrument_id},
+                        severity=action.severity,
+                        details=RiskGuardDetails(instrument_id=action.instrument_id),
                         timestamp=self._clock.now(),
                     ),
                 )

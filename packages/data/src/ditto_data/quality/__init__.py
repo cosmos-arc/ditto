@@ -18,6 +18,7 @@ from ditto_data.quality.protocols import (
     QuarantineWriterProtocol,
     TdxSourceProtocol,
 )
+from ditto_data.quality.quality_types import DQIssue, DQLevel, DQResult, DQSeverity
 from ditto_data.quality.report import DQReportGenerator
 from ditto_data.quality.spec import (
     DatasetRules,
@@ -27,8 +28,12 @@ from ditto_data.quality.spec import (
 __all__ = [
     "BusinessChecker",
     "ComparisonStoreProtocol",
+    "DQIssue",
+    "DQLevel",
     "DQReportGenerator",
+    "DQResult",
     "DQSettings",
+    "DQSeverity",
     "DQSpec",
     "DatasetRules",
     "GoldenDatasetOptions",

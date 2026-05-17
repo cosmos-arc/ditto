@@ -16,7 +16,7 @@ ERROR_MODULES = (
     "packages/portfolio/src/ditto_portfolio/errors.py",
     "packages/risk/src/ditto_risk/errors.py",
     "packages/application/src/ditto_application/exceptions.py",
-    "packages/data/src/ditto_data/errors.py",
+    "packages/data/src/ditto_data/errors/__init__.py",
 )
 
 BUILTIN_EXCEPTION_BASES = {

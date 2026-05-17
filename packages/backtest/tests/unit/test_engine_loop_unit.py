@@ -4,22 +4,24 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import datetime
 from types import MappingProxyType
 from typing import NamedTuple
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineOptions
-from ditto_kernel.clock import Clock
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.synchronizer import Synchronizer, TimeSlice
+from ditto_kernel.time_context import TimeContext
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
-    Order,
-    OrderBookReadOnly,
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
 )
 from ditto_risk.pre_trade import (
     Decision,
@@ -47,8 +49,6 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -94,7 +94,7 @@ def _make_order(
     direction: OrderSide = OrderSide.BUY,
 ) -> Order:
     return Order(
-        order_id="order-001",
+        client_id=ClientOrderId(value="order-001"),
         instrument_id=iid,
         order_type=OrderType.MARKET,
         direction=direction,
@@ -112,11 +112,43 @@ def _make_config() -> EngineConfig:
     )
 
 
-def _make_clock() -> MagicMock:
-    """构建测试用 mock Clock."""
-    clock = MagicMock(spec=Clock)
-    clock.now.return_value = datetime(2026, 3, 1, 15, 0, tzinfo=UTC)
-    return clock
+def _make_clock() -> SimulatedClock:
+    """构建测试用 SimulatedClock — naive datetime 以匹配 Slice.step_time."""
+    return SimulatedClock(initial=datetime(2026, 3, 1, 15, 0))
+
+
+def _make_synchronizer(
+    data_feed: Mock,
+    config: EngineConfig,
+    clock: SimulatedClock,
+) -> Mock:
+    """构建 mock Synchronizer — 按交易日生成 TimeSlice 流.
+
+    stream() 使用 callable 以延迟读取 data_feed.trading_days()，
+    确保在调用时（而非构建时）获取最新的 return_value。
+    """
+    sync = Mock(spec=Synchronizer)
+    sync.clock.return_value = clock
+
+    def _make_stream() -> list[TimeSlice]:
+        from datetime import timedelta
+
+        step_time = datetime(2026, 3, 1, 15, 0)
+        trading_days = [d for d in data_feed.trading_days() if d >= config.start_date]
+        slices: list[TimeSlice] = []
+        for day in trading_days:
+            tc = TimeContext(
+                decision_time=step_time,
+                knowledge_date=(
+                    step_time.date() - timedelta(days=config.knowledge_lag_days)
+                ),
+                trade_date=day,
+            )
+            slices.append(TimeSlice(time_context=tc, bars={}))
+        return iter(slices)
+
+    sync.stream.side_effect = _make_stream
+    return sync
 
 
 def _make_engine_loop(
@@ -142,6 +174,7 @@ def _make_engine_loop(
     ):
         data_feed.trading_days.return_value = DAYS
 
+    clock = _make_clock()
     return EngineLoop(
         config=config,
         pipeline=pipeline,
@@ -149,7 +182,8 @@ def _make_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
-        options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+        synchronizer=_make_synchronizer(data_feed, config, clock),
+        options=EngineOptions(fee_model=fee_model),
     )
 
 
@@ -204,6 +238,7 @@ def _make_wired_engine_loop(
     fee_model = Mock()
     fee_model.estimate.return_value = 5.0
 
+    clock = _make_clock()
     loop = EngineLoop(
         config=config,
         pipeline=pipeline,
@@ -211,8 +246,8 @@ def _make_wired_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=_make_synchronizer(data_feed, config, clock),
         options=EngineOptions(
-            clock=_make_clock(),
             fee_model=fee_model,
             should_stop=should_stop,
         ),
@@ -262,6 +297,7 @@ class TestNonRebalanceDaySkipsPipeline:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -269,7 +305,8 @@ class TestNonRebalanceDaySkipsPipeline:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
 
         # Patch _is_rebalance_day to return False for all dates
@@ -324,6 +361,7 @@ class TestPreTradeRejectSkipsOrder:
 
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -331,7 +369,8 @@ class TestPreTradeRejectSkipsOrder:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
         loop.run()
 
@@ -379,6 +418,7 @@ class TestPreTradeResizeApplied:
         fee_model = Mock()
         fee_model.estimate.return_value = 5.0
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -386,7 +426,8 @@ class TestPreTradeResizeApplied:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
         loop.run()
 
@@ -435,6 +476,20 @@ class TestRollingContextUpdates:
         fee_model = Mock()
         fee_model.estimate.return_value = 5.0
 
+        clock = _make_clock()
+
+        # 构建 mock Synchronizer — 含 bars 以匹配 Slice 数据
+        slice_data = data_feed.get_slice.return_value
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        ts = TimeSlice(time_context=tc, bars=slice_data.bars)
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = clock
+        sync.stream.return_value = iter([ts])
+
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -442,7 +497,8 @@ class TestRollingContextUpdates:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=sync,
+            options=EngineOptions(fee_model=fee_model),
         )
         loop.run()
 
@@ -501,6 +557,19 @@ class TestProcessInputConversion:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
+
+        # 构建 mock Synchronizer — 含 bars 以匹配 Slice 数据
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        ts = TimeSlice(time_context=tc, bars=bars)
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = clock
+        sync.stream.return_value = iter([ts])
+
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -508,7 +577,8 @@ class TestProcessInputConversion:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=sync,
+            options=EngineOptions(fee_model=fee_model),
         )
         loop.run()
 
@@ -566,6 +636,19 @@ class TestRuleProviderInjection:
         rules = {1: ("defn", "rule", "fee"), 2: ("defn", "rule", "fee")}
         rule_provider.get_rules.return_value = rules
 
+        clock = _make_clock()
+
+        # 构建 mock Synchronizer — 含 bars 以传递 instrument_ids
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        ts = TimeSlice(time_context=tc, bars=bars)
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = clock
+        sync.stream.return_value = iter([ts])
+
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -573,8 +656,8 @@ class TestRuleProviderInjection:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=sync,
             options=EngineOptions(
-                clock=_make_clock(),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
             ),
@@ -620,6 +703,7 @@ class TestRuleProviderInjection:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -627,7 +711,8 @@ class TestRuleProviderInjection:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
         loop.run()
 
@@ -667,6 +752,7 @@ class TestEmptyPlanNoOrders:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -674,7 +760,8 @@ class TestEmptyPlanNoOrders:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
         result = loop.run()
 
@@ -798,6 +885,7 @@ class TestStepChainFailureLogging:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -805,7 +893,8 @@ class TestStepChainFailureLogging:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
 
         # 让第二个 trading day 的 DataFetchStep 失败
@@ -855,6 +944,7 @@ class TestStepChainFailureLogging:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -862,7 +952,8 @@ class TestStepChainFailureLogging:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
 
         result = loop.run()
@@ -889,6 +980,7 @@ class TestStepChainFailureLogging:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -896,7 +988,8 @@ class TestStepChainFailureLogging:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
 
         # 让 step 失败
@@ -936,6 +1029,7 @@ class TestStepChainFailureLogging:
         pre_trade_check = Mock()
         fee_model = Mock()
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -943,7 +1037,8 @@ class TestStepChainFailureLogging:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
 
         # 让所有 step 失败
@@ -1049,6 +1144,7 @@ class TestExecutionDelay:
         fee_model = Mock()
         fee_model.estimate.return_value = 5.0
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1056,7 +1152,8 @@ class TestExecutionDelay:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
-            options=EngineOptions(clock=_make_clock(), fee_model=fee_model),
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
         )
         return loop, pipeline, planner, brokerage
 
@@ -1157,6 +1254,7 @@ class TestExecutionDelay:
         fee_model = Mock()
         fee_model.estimate.return_value = 5.0
 
+        clock = _make_clock()
         loop = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1164,8 +1262,8 @@ class TestExecutionDelay:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=_make_synchronizer(data_feed, config, clock),
             options=EngineOptions(
-                clock=_make_clock(),
                 fee_model=fee_model,
                 audit_collector=audit_collector,
             ),
@@ -1192,3 +1290,145 @@ class TestExecutionDelay:
 
         with pytest.raises(RuntimeError, match="unexpected DB error"):
             loop._execute_delayed_signal(_make_target())
+
+    def test_flush_uses_configured_knowledge_lag_days(self) -> None:
+        """flush 阶段的 knowledge_date 使用 config.knowledge_lag_days."""
+        from datetime import timedelta
+
+        from ditto_backtest.steps import StepResult
+
+        config = replace(
+            _make_config(),
+            execution_delay=1,
+            knowledge_lag_days=3,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        order = _make_order()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(order,),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        clock = _make_clock()
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
+        )
+
+        # Capture StepContext from flush step execution
+        captured_ctxs: list[object] = []
+
+        def _capturing_execute(ctx: object) -> StepResult:
+            captured_ctxs.append(ctx)
+            return StepResult.ok()
+
+        mock_step = Mock()
+        mock_step.execute = _capturing_execute
+        loop._steps = (mock_step,)
+
+        loop._execute_delayed_signal(_make_target())
+
+        # flush 应产生至少一个 StepContext
+        assert len(captured_ctxs) >= 1
+        ctx = captured_ctxs[0]
+        tc = ctx.time_context  # type: ignore[attr-defined]
+
+        # _make_slice 的 step_time = datetime(2026, 3, 1, 15, 0)
+        # knowledge_lag_days=3 → knowledge_date = 2026-02-26
+        expected_knowledge = tc.decision_time.date() - timedelta(days=3)
+        assert tc.knowledge_date == expected_knowledge
+
+    def test_flush_carries_order_book(self) -> None:
+        """flush 阶段的 StepContext 应携带 order_book."""
+        from ditto_backtest.steps import StepResult
+
+        config = replace(
+            _make_config(),
+            execution_delay=1,
+        )
+        data_feed = Mock()
+        data_feed.trading_days.return_value = DAYS
+        data_feed.get_slice.side_effect = _make_slice
+
+        planner = Mock()
+        plan = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+        planner.plan.return_value = plan
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.process_pending.return_value = ()
+        mock_order_book = Mock()
+        brokerage.get_order_book.return_value = mock_order_book
+
+        pre_trade_check = Mock()
+        pre_trade_check.check_order.return_value = OrderCheckResult(
+            decision=Decision.ACCEPT,
+            order_id="order-001",
+        )
+        fee_model = Mock()
+        fee_model.estimate.return_value = 5.0
+
+        clock = _make_clock()
+        loop = EngineLoop(
+            config=config,
+            pipeline=Mock(),
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=pre_trade_check,
+            data_feed=data_feed,
+            synchronizer=_make_synchronizer(data_feed, config, clock),
+            options=EngineOptions(fee_model=fee_model),
+        )
+
+        captured_ctxs: list[object] = []
+
+        def _capturing_execute(ctx: object) -> StepResult:
+            captured_ctxs.append(ctx)
+            return StepResult.ok()
+
+        mock_step = Mock()
+        mock_step.execute = _capturing_execute
+        loop._steps = (mock_step,)
+
+        loop._execute_delayed_signal(_make_target())
+
+        assert len(captured_ctxs) >= 1
+        ctx = captured_ctxs[0]
+        assert ctx.order_book is mock_order_book  # type: ignore[attr-defined]

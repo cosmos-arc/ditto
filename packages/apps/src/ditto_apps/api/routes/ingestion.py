@@ -1,4 +1,8 @@
-"""数据摄取状态 API 路由."""
+"""
+数据摄取状态 API 路由.
+
+maturity: infrastructure
+"""
 
 from __future__ import annotations
 

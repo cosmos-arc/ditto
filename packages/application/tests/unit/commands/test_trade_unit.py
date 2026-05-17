@@ -20,21 +20,23 @@ from ditto_execution.models import (
 )
 
 
-def _make_trade_service() -> MagicMock:
-    """构建 TradeService mock，包含成交录入所需公开方法."""
-    mock = MagicMock(
-        spec=[
-            "get_intent",
-            "find_fill",
-            "save_fill",
-            "update_intent_status",
-            "list_fills",
-            "save_position",
-        ],
+def _make_intent_port() -> MagicMock:
+    """构建 IntentDataPort mock."""
+    return MagicMock(
+        spec=["get_intent", "update_intent_status", "save_intent", "list_intents"]
     )
-    # 默认 find_fill 返回 None（无已有记录），幂等测试单独覆盖
+
+
+def _make_fill_port() -> MagicMock:
+    """构建 FillDataPort mock."""
+    mock = MagicMock(spec=["find_fill", "save_fill", "list_fills"])
     mock.find_fill.return_value = None
     return mock
+
+
+def _make_position_port() -> MagicMock:
+    """构建 PositionDataPort mock."""
+    return MagicMock(spec=["save_position", "list_positions"])
 
 
 def _make_manual_tracker() -> MagicMock:
@@ -71,10 +73,11 @@ class TestRecordFillHandler:
 
     def test_idempotent_returns_existing_fill(self) -> None:
         """幂等性: 相同 intent_id + trade_date 已有 fill 时直接返回已有记录."""
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
-        # 模拟已有 fill 记录
         existing_record = FillRecord(
             fill_id="fill-existing",
             intent_id="intent-001",
@@ -86,10 +89,12 @@ class TestRecordFillHandler:
             fill_price=4.15,
             fee=5.0,
         )
-        service.find_fill.return_value = existing_record
+        fill_port.find_fill.return_value = existing_record
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -107,25 +112,24 @@ class TestRecordFillHandler:
 
         result = handler.handle(cmd)
 
-        # 验证返回已有 fill 的 DTO
         assert isinstance(result, ManualExecutionFill)
         assert result.fill_id == "fill-existing"
 
-        # 验证无副作用（不保存新 fill、不更新 intent 状态）
-        service.save_fill.assert_not_called()
-        service.update_intent_status.assert_not_called()
+        fill_port.save_fill.assert_not_called()
+        intent_port.update_intent_status.assert_not_called()
         tracker.compute_positions.assert_not_called()
 
     def test_handle_saves_fill_and_updates_intent(self) -> None:
         """成功录入 → fill 持久化 + intent 状态更新为 filled."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record()
-        service.get_intent.return_value = intent
+        intent_port.get_intent.return_value = intent
 
-        # list_fills 返回空列表 + 新 fill 的 record
         new_fill_record = FillRecord(
             fill_id="fill-001",
             intent_id="intent-001",
@@ -137,13 +141,15 @@ class TestRecordFillHandler:
             fill_price=4.15,
             fee=5.0,
         )
-        service.list_fills.return_value = [new_fill_record]
+        fill_port.list_fills.return_value = [new_fill_record]
 
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -161,38 +167,38 @@ class TestRecordFillHandler:
 
         result = handler.handle(cmd)
 
-        # 验证返回 ManualExecutionFill DTO
         assert isinstance(result, ManualExecutionFill)
         assert result.fill_id == "fill-001"
         assert result.intent_id == "intent-001"
         assert result.quantity == 1000
         assert result.fill_price == 4.15
 
-        # 验证 save_fill 被调用
-        service.save_fill.assert_called_once()
-        saved_record = service.save_fill.call_args[0][0]
+        fill_port.save_fill.assert_called_once()
+        saved_record = fill_port.save_fill.call_args[0][0]
         assert isinstance(saved_record, FillRecord)
         assert saved_record.fill_id == "fill-001"
 
-        # 验证 intent 状态更新为 filled
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
             expected_current=("pending", "partially_filled"),
         )
 
-        # 验证 tracker 被调用
         tracker.compute_positions.assert_called_once()
 
     def test_handle_raises_on_missing_intent(self) -> None:
         """intent 不存在 → ValueError."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
-        service.get_intent.return_value = None
+        intent_port.get_intent.return_value = None
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -211,23 +217,26 @@ class TestRecordFillHandler:
         with pytest.raises(AppCommandError, match="Intent not found: intent-missing"):
             handler.handle(cmd)
 
-        # 验证无副作用
-        service.save_fill.assert_not_called()
-        service.update_intent_status.assert_not_called()
+        fill_port.save_fill.assert_not_called()
+        intent_port.update_intent_status.assert_not_called()
 
     def test_handle_with_default_values(self) -> None:
         """带默认值 → fee/slippage/notes 正确传递."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
-        service.get_intent.return_value = _make_intent_record()
-        service.list_fills.return_value = []
+        intent_port.get_intent.return_value = _make_intent_record()
+        fill_port.list_fills.return_value = []
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -240,7 +249,6 @@ class TestRecordFillHandler:
             direction="buy",
             quantity=200,
             fill_price=4.20,
-            # fee, slippage, notes 使用默认值
         )
 
         result = handler.handle(cmd)
@@ -249,8 +257,7 @@ class TestRecordFillHandler:
         assert result.slippage == 0.0
         assert result.notes == ""
 
-        # 验证 save_fill 传递的 record 也包含默认值
-        saved_record = service.save_fill.call_args[0][0]
+        saved_record = fill_port.save_fill.call_args[0][0]
         assert saved_record.fee == 0.0
         assert saved_record.slippage == 0.0
         assert saved_record.notes == ""
@@ -258,13 +265,14 @@ class TestRecordFillHandler:
     def test_handle_triggers_tracker_recomputation(self) -> None:
         """录入成交后触发 ManualTracker 重新聚合持仓并持久化."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
-        service.get_intent.return_value = _make_intent_record()
-        service.list_fills.return_value = []
+        intent_port.get_intent.return_value = _make_intent_record()
+        fill_port.list_fills.return_value = []
 
-        # tracker 返回一个持仓快照
         snapshot = ActualPositionSnapshot(
             snapshot_id="snap-001",
             strategy_id="strat-alpha",
@@ -282,7 +290,9 @@ class TestRecordFillHandler:
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -300,31 +310,33 @@ class TestRecordFillHandler:
 
         handler.handle(cmd)
 
-        # 验证 tracker 使用正确的参数调用
         tracker.compute_positions.assert_called_once()
         call_kwargs = tracker.compute_positions.call_args
         assert call_kwargs[1]["strategy_id"] == "strat-alpha"
         assert call_kwargs[1]["snapshot_date"] == "2026-04-11"
 
-        # 验证持仓被持久化
-        service.save_position.assert_called_once()
-        saved_pos = service.save_position.call_args[0][0]
+        position_port.save_position.assert_called_once()
+        saved_pos = position_port.save_position.call_args[0][0]
         assert saved_pos.snapshot_id == "snap-001"
         assert saved_pos.quantity == 1000
 
     def test_handle_computes_settlement_date(self) -> None:
         """handler 调用 compute_settlement_date 并将结果传入 DTO."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
-        service.get_intent.return_value = _make_intent_record()
-        service.list_fills.return_value = []
+        intent_port.get_intent.return_value = _make_intent_record()
+        fill_port.list_fills.return_value = []
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -342,30 +354,30 @@ class TestRecordFillHandler:
 
         result = handler.handle(cmd)
 
-        # 验证调用了 compute_settlement_date 并传入 trade_date
         tracker.compute_settlement_date.assert_called_once_with("2026-04-11")
 
-        # 验证返回 DTO 的 settlement_date 正确
         assert result.settlement_date == "2026-04-14"
 
-        # 验证持久化的 record 也包含 settlement_date
-        saved_record = service.save_fill.call_args[0][0]
+        saved_record = fill_port.save_fill.call_args[0][0]
         assert saved_record.settlement_date == "2026-04-14"
 
     def test_handle_settlement_date_fallback(self) -> None:
         """tracker 返回空日历时 settlement_date fallback 到 trade_date."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
-        service.get_intent.return_value = _make_intent_record()
-        service.list_fills.return_value = []
+        intent_port.get_intent.return_value = _make_intent_record()
+        fill_port.list_fills.return_value = []
         tracker.compute_positions.return_value = []
-        # 空日历 → compute_settlement_date 返回 trade_date 本身
         tracker.compute_settlement_date.return_value = "2026-04-11"
 
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
 
@@ -382,10 +394,9 @@ class TestRecordFillHandler:
 
         result = handler.handle(cmd)
 
-        # fallback: settlement_date 等于 trade_date
         assert result.settlement_date == "2026-04-11"
 
-        saved_record = service.save_fill.call_args[0][0]
+        saved_record = fill_port.save_fill.call_args[0][0]
         assert saved_record.settlement_date == "2026-04-11"
 
 
@@ -400,10 +411,10 @@ class TestUpdateIntentStatusHandler:
     def test_handle_updates_status(self) -> None:
         """成功更新意图状态."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record()
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record()
 
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(
             intent_id="intent-001",
             status="cancelled",
@@ -412,8 +423,8 @@ class TestUpdateIntentStatusHandler:
         result = handler.handle(cmd)
 
         assert result is True
-        service.update_intent_status.assert_called_once()
-        call_kwargs = service.update_intent_status.call_args[1]
+        intent_port.update_intent_status.assert_called_once()
+        call_kwargs = intent_port.update_intent_status.call_args[1]
         assert call_kwargs["expected_current"] == (
             "filled",
             "partially_filled",
@@ -429,10 +440,10 @@ class TestUpdateIntentStatusHandler:
     def test_handle_raises_on_missing_intent(self) -> None:
         """intent 不存在 → ValueError."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = None
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = None
 
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(
             intent_id="intent-missing",
             status="cancelled",
@@ -441,7 +452,7 @@ class TestUpdateIntentStatusHandler:
         with pytest.raises(AppCommandError, match="Intent not found: intent-missing"):
             handler.handle(cmd)
 
-        service.update_intent_status.assert_not_called()
+        intent_port.update_intent_status.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -453,17 +464,21 @@ class TestTradeCommandProtocolConformance:
     """所有 Trade Handler 满足 CommandHandler Protocol."""
 
     def test_record_fill_handler_satisfies_protocol(self) -> None:
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
         handler = RecordFillHandler(
-            trade_service=service,
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
             manual_tracker=tracker,
         )
         assert isinstance(handler, CommandHandler)
 
     def test_update_intent_status_handler_satisfies_protocol(self) -> None:
-        service = _make_trade_service()
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         assert isinstance(handler, CommandHandler)
 
 
@@ -478,13 +493,20 @@ class TestRecordFillIdentityValidation:
     def _make_handler(self):
         """构建 handler (不导入在类外, 避免顶层导入)."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
-        service.get_intent.return_value = _make_intent_record()
-        service.list_fills.return_value = []
+        intent_port.get_intent.return_value = _make_intent_record()
+        fill_port.list_fills.return_value = []
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
-        return RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        return RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
 
     def test_strategy_id_mismatch_rejected(self) -> None:
         """command.strategy_id 与 intent.strategy_id 不一致 → ValueError."""
@@ -552,13 +574,14 @@ class TestRecordFillPartialFillDetection:
     def test_fill_quantity_equals_intent_returns_filled(self) -> None:
         """fill_quantity == intent_quantity → 状态更新为 filled."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record(quantity=1000)
-        service.get_intent.return_value = intent
-        # _determine_fill_status 查询累积 fills，save_fill 后数据库含当前 fill
-        service.list_fills.return_value = [
+        intent_port.get_intent.return_value = intent
+        fill_port.list_fills.return_value = [
             FillRecord(
                 fill_id="fill-full",
                 intent_id="intent-001",
@@ -574,7 +597,12 @@ class TestRecordFillPartialFillDetection:
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
-        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        handler = RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
         cmd = RecordFillCommand(
             fill_id="fill-full",
             intent_id="intent-001",
@@ -582,12 +610,12 @@ class TestRecordFillPartialFillDetection:
             trade_date="2026-04-11",
             instrument_id=510050,
             direction="buy",
-            quantity=1000,  # == intent quantity
+            quantity=1000,
             fill_price=4.15,
         )
         handler.handle(cmd)
 
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
             expected_current=("pending", "partially_filled"),
@@ -596,12 +624,14 @@ class TestRecordFillPartialFillDetection:
     def test_fill_quantity_less_than_intent_returns_partial(self) -> None:
         """fill_quantity < intent_quantity → 状态更新为 partially_filled."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record(quantity=1000)
-        service.get_intent.return_value = intent
-        service.list_fills.return_value = [
+        intent_port.get_intent.return_value = intent
+        fill_port.list_fills.return_value = [
             FillRecord(
                 fill_id="fill-partial",
                 intent_id="intent-001",
@@ -617,7 +647,12 @@ class TestRecordFillPartialFillDetection:
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
-        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        handler = RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
         cmd = RecordFillCommand(
             fill_id="fill-partial",
             intent_id="intent-001",
@@ -625,12 +660,12 @@ class TestRecordFillPartialFillDetection:
             trade_date="2026-04-11",
             instrument_id=510050,
             direction="buy",
-            quantity=500,  # < intent quantity (1000)
+            quantity=500,
             fill_price=4.15,
         )
         handler.handle(cmd)
 
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "partially_filled",
             expected_current=("pending", "partially_filled"),
@@ -639,12 +674,14 @@ class TestRecordFillPartialFillDetection:
     def test_fill_quantity_exceeds_intent_returns_filled(self) -> None:
         """fill_quantity > intent_quantity → 仍更新为 filled（超额成交）."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record(quantity=1000)
-        service.get_intent.return_value = intent
-        service.list_fills.return_value = [
+        intent_port.get_intent.return_value = intent
+        fill_port.list_fills.return_value = [
             FillRecord(
                 fill_id="fill-over",
                 intent_id="intent-001",
@@ -660,7 +697,12 @@ class TestRecordFillPartialFillDetection:
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
-        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        handler = RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
         cmd = RecordFillCommand(
             fill_id="fill-over",
             intent_id="intent-001",
@@ -668,12 +710,12 @@ class TestRecordFillPartialFillDetection:
             trade_date="2026-04-11",
             instrument_id=510050,
             direction="buy",
-            quantity=1500,  # > intent quantity (1000)
+            quantity=1500,
             fill_price=4.15,
         )
         handler.handle(cmd)
 
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
             expected_current=("pending", "partially_filled"),
@@ -681,13 +723,14 @@ class TestRecordFillPartialFillDetection:
 
     def test_cumulative_fills_reach_intent_quantity_returns_filled(self) -> None:
         """已有部分成交 + 新 fill 使累积量达到 intent 数量 → filled."""
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record(quantity=1000)
-        service.get_intent.return_value = intent
+        intent_port.get_intent.return_value = intent
 
-        # 模拟已有一次部分成交 600 股
         existing_fill = FillRecord(
             fill_id="fill-prev",
             intent_id="intent-001",
@@ -699,8 +742,7 @@ class TestRecordFillPartialFillDetection:
             fill_price=4.10,
             fee=2.5,
         )
-        # list_fills 需要同时返回历史 fill + 新 fill
-        service.list_fills.return_value = [
+        fill_port.list_fills.return_value = [
             existing_fill,
             FillRecord(
                 fill_id="fill-new",
@@ -717,7 +759,12 @@ class TestRecordFillPartialFillDetection:
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
-        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        handler = RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
         cmd = RecordFillCommand(
             fill_id="fill-new",
             intent_id="intent-001",
@@ -725,12 +772,12 @@ class TestRecordFillPartialFillDetection:
             trade_date="2026-04-11",
             instrument_id=510050,
             direction="buy",
-            quantity=400,  # 600 + 400 = 1000 == intent quantity
+            quantity=400,
             fill_price=4.15,
         )
         handler.handle(cmd)
 
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "filled",
             expected_current=("pending", "partially_filled"),
@@ -738,11 +785,13 @@ class TestRecordFillPartialFillDetection:
 
     def test_cumulative_fills_still_below_intent_returns_partial(self) -> None:
         """已有部分成交 + 新 fill 累积量仍低于 intent → partially_filled."""
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record(quantity=1000)
-        service.get_intent.return_value = intent
+        intent_port.get_intent.return_value = intent
 
         existing_fill = FillRecord(
             fill_id="fill-prev",
@@ -755,7 +804,7 @@ class TestRecordFillPartialFillDetection:
             fill_price=4.10,
             fee=1.5,
         )
-        service.list_fills.return_value = [
+        fill_port.list_fills.return_value = [
             existing_fill,
             FillRecord(
                 fill_id="fill-new",
@@ -772,7 +821,12 @@ class TestRecordFillPartialFillDetection:
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
-        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        handler = RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
         cmd = RecordFillCommand(
             fill_id="fill-new",
             intent_id="intent-001",
@@ -780,12 +834,12 @@ class TestRecordFillPartialFillDetection:
             trade_date="2026-04-11",
             instrument_id=510050,
             direction="buy",
-            quantity=200,  # 300 + 200 = 500 < 1000
+            quantity=200,
             fill_price=4.15,
         )
         handler.handle(cmd)
 
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "partially_filled",
             expected_current=("pending", "partially_filled"),
@@ -794,12 +848,14 @@ class TestRecordFillPartialFillDetection:
     def test_none_intent_quantity_returns_partial(self) -> None:
         """intent_quantity 为 None 时始终返回 partially_filled，不自动标记 filled."""
 
-        service = _make_trade_service()
+        intent_port = _make_intent_port()
+        fill_port = _make_fill_port()
+        position_port = _make_position_port()
         tracker = _make_manual_tracker()
 
         intent = _make_intent_record(quantity=None)
-        service.get_intent.return_value = intent
-        service.list_fills.return_value = [
+        intent_port.get_intent.return_value = intent
+        fill_port.list_fills.return_value = [
             FillRecord(
                 fill_id="fill-none",
                 intent_id="intent-001",
@@ -815,7 +871,12 @@ class TestRecordFillPartialFillDetection:
         tracker.compute_positions.return_value = []
         tracker.compute_settlement_date.return_value = "2026-04-14"
 
-        handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+        handler = RecordFillHandler(
+            intent_port=intent_port,
+            fill_port=fill_port,
+            position_port=position_port,
+            manual_tracker=tracker,
+        )
         cmd = RecordFillCommand(
             fill_id="fill-none",
             intent_id="intent-001",
@@ -828,7 +889,7 @@ class TestRecordFillPartialFillDetection:
         )
         handler.handle(cmd)
 
-        service.update_intent_status.assert_called_once_with(
+        intent_port.update_intent_status.assert_called_once_with(
             "intent-001",
             "partially_filled",
             expected_current=("pending", "partially_filled"),
@@ -838,14 +899,21 @@ class TestRecordFillPartialFillDetection:
         """intent 状态为 filled/cancelled/expired 时，拒绝录入成交."""
 
         for terminal_status in ("filled", "cancelled", "expired"):
-            service = _make_trade_service()
+            intent_port = _make_intent_port()
+            fill_port = _make_fill_port()
+            position_port = _make_position_port()
             tracker = _make_manual_tracker()
 
             intent = _make_intent_record(status=terminal_status)
-            service.get_intent.return_value = intent
+            intent_port.get_intent.return_value = intent
             tracker.compute_settlement_date.return_value = "2026-04-14"
 
-            handler = RecordFillHandler(trade_service=service, manual_tracker=tracker)
+            handler = RecordFillHandler(
+                intent_port=intent_port,
+                fill_port=fill_port,
+                position_port=position_port,
+                manual_tracker=tracker,
+            )
             cmd = RecordFillCommand(
                 fill_id=f"fill-terminal-{terminal_status}",
                 intent_id="intent-001",
@@ -862,9 +930,8 @@ class TestRecordFillPartialFillDetection:
             ):
                 handler.handle(cmd)
 
-            # 验证无副作用
-            service.save_fill.assert_not_called()
-            service.update_intent_status.assert_not_called()
+            fill_port.save_fill.assert_not_called()
+            intent_port.update_intent_status.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -878,9 +945,9 @@ class TestUpdateIntentStatusTransitions:
     def test_valid_transition_pending_to_cancelled(self) -> None:
         """pending → cancelled 合法."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="pending")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="pending")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="cancelled")
 
         assert handler.handle(cmd) is True
@@ -888,9 +955,9 @@ class TestUpdateIntentStatusTransitions:
     def test_valid_transition_pending_to_filled(self) -> None:
         """pending → filled 合法."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="pending")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="pending")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="filled")
 
         assert handler.handle(cmd) is True
@@ -898,11 +965,11 @@ class TestUpdateIntentStatusTransitions:
     def test_valid_transition_partially_filled_to_filled(self) -> None:
         """partially_filled → filled 合法."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(
             status="partially_filled",
         )
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="filled")
 
         assert handler.handle(cmd) is True
@@ -910,9 +977,9 @@ class TestUpdateIntentStatusTransitions:
     def test_invalid_transition_filled_to_pending_rejected(self) -> None:
         """filled → pending 非法 (终态不可回退)."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="filled")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="filled")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="pending")
 
         with pytest.raises(
@@ -924,9 +991,9 @@ class TestUpdateIntentStatusTransitions:
     def test_invalid_transition_cancelled_to_filled_rejected(self) -> None:
         """cancelled → filled 非法."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="cancelled")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="cancelled")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="filled")
 
         with pytest.raises(AppCommandError, match="Invalid transition"):
@@ -935,9 +1002,9 @@ class TestUpdateIntentStatusTransitions:
     def test_invalid_transition_expired_to_partially_filled_rejected(self) -> None:
         """expired → partially_filled 非法."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="expired")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="expired")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(
             intent_id="intent-001",
             status="partially_filled",
@@ -949,9 +1016,9 @@ class TestUpdateIntentStatusTransitions:
     def test_same_status_idempotent(self) -> None:
         """相同状态 idempotent: pending → pending 不报错."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="pending")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="pending")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(intent_id="intent-001", status="pending")
 
         assert handler.handle(cmd) is True
@@ -959,9 +1026,9 @@ class TestUpdateIntentStatusTransitions:
     def test_invalid_status_name_rejected(self) -> None:
         """非法状态名称 → ValueError."""
 
-        service = _make_trade_service()
-        service.get_intent.return_value = _make_intent_record(status="pending")
-        handler = UpdateIntentStatusHandler(trade_service=service)
+        intent_port = _make_intent_port()
+        intent_port.get_intent.return_value = _make_intent_record(status="pending")
+        handler = UpdateIntentStatusHandler(intent_port=intent_port)
         cmd = UpdateIntentStatusCommand(
             intent_id="intent-001",
             status="invalid_status",
@@ -970,4 +1037,4 @@ class TestUpdateIntentStatusTransitions:
         with pytest.raises(AppCommandError, match="Invalid status"):
             handler.handle(cmd)
 
-        service.update_intent_status.assert_not_called()
+        intent_port.update_intent_status.assert_not_called()

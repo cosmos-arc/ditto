@@ -6,8 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import orjson
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.checksum import compute_checksum
+from ditto_platform.foundation import compute_checksum, logger, traced
 
 from ..models.storage import FreezeManifest
 

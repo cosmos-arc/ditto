@@ -10,10 +10,14 @@ import orjson
 import polars as pl
 import pytest
 from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression import (
     CompiledDerivedExpression,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Schema SQL (excerpt for compile cache tables)

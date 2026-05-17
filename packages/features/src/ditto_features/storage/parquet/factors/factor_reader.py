@@ -11,8 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 import polars as pl
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
+from ditto_platform.foundation import ParquetStore, YearlyPartition, logger, traced
 
 FACTOR_KEY_COLUMNS = ("instrument_id", "trade_date", "factor_id", "effective_from")
 FACTOR_DATE_COLUMN = "trade_date"

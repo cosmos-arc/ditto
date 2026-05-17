@@ -11,6 +11,12 @@ from ditto_backtest.simulation.settlement import (
 )
 from ditto_backtest.simulation.slippage import FixedBpsSlippage
 from ditto_execution.brokerage import ProcessInput
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -18,11 +24,9 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
-    Order,
-    OrderStatus,
+from ditto_portfolio.accounting import (
+    Account,
+    CashBook,
 )
 
 # ---------------------------------------------------------------------------
@@ -36,6 +40,10 @@ def _account(initial_cash: float = 1_000_000.0) -> Account:
     )
 
 
+def _order_book() -> OrderBook:
+    return OrderBook(journal=InMemoryOrderEventJournal())
+
+
 def _order(
     order_id: str = "ORD-001",
     instrument_id: int = 1,
@@ -45,13 +53,12 @@ def _order(
     price: float | None = None,
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=instrument_id,
         order_type=order_type,
         direction=direction,
         quantity=quantity,
         price=price,
-        created_at=datetime(2026, 3, 1),
     )
 
 
@@ -89,6 +96,7 @@ def _process_input(
 def brokerage() -> BacktestBrokerage:
     return BacktestBrokerage(
         account=_account(),
+        order_book=_order_book(),
         model=BrokerageModel(
             slippage_model=FixedBpsSlippage(bps=0),
         ),
@@ -108,6 +116,25 @@ class TestConnectGetAccount:
         view = brokerage.get_account()
         assert view.cash.available == pytest.approx(1_000_000.0)
         assert len(view.positions) == 0
+
+    def test_get_order_book_returns_readonly_view(
+        self, brokerage: BacktestBrokerage
+    ) -> None:
+        from ditto_execution.orders.book import OrderBookReadOnly
+
+        view = brokerage.get_order_book()
+        assert isinstance(view, OrderBookReadOnly)
+
+    def test_get_order_book_reflects_submitted_order(
+        self, brokerage: BacktestBrokerage
+    ) -> None:
+        order = _order()
+        brokerage.place_order(order)
+
+        view = brokerage.get_order_book()
+        pending = view.get_pending()
+        assert len(pending) == 1
+        assert pending[0].order.order_id == "ORD-001"
 
 
 # ---------------------------------------------------------------------------
@@ -134,8 +161,8 @@ class TestPlaceOrder:
     def test_placed_order_in_pending(self, brokerage: BacktestBrokerage) -> None:
         order = _order()
         brokerage.place_order(order)
-        view = brokerage.get_account()
-        pending = view.order_book.get_pending()
+        _ = brokerage.get_account()
+        pending = brokerage._order_book.get_pending()
         assert len(pending) == 1
         assert pending[0].order.order_id == "ORD-001"
 
@@ -193,6 +220,7 @@ class TestProcessMarketWithSlippage:
     def test_buy_slippage_increases_price(self) -> None:
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=2),
             ),
@@ -209,6 +237,7 @@ class TestProcessMarketWithSlippage:
         # 先建仓
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=2),
             ),
@@ -251,8 +280,8 @@ class TestProcessLimitOrder:
         assert len(fills) == 0
 
         # Ticket should be INVALID
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.INVALID
 
@@ -262,10 +291,23 @@ class TestProcessLimitOrder:
         sd = _process_input()
         brokerage.process_pending(sd)
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.INVALID
+
+    def test_invalidate_appends_journal(self, brokerage: BacktestBrokerage) -> None:
+        """invalidate 事件应写入 journal（与 submit/fill/cancel 一致）。"""
+        cid = ClientOrderId(value="ORD-001")
+        order = _order(order_type=OrderType.LIMIT, price=9.0)
+        brokerage.place_order(order)
+        sd = _process_input()
+        brokerage.process_pending(sd)
+
+        journal = brokerage._order_book._journal
+        events = journal.events_for(cid)
+        assert len(events) == 2  # SUBMIT + INVALIDATE
+        assert events[1].trigger == OrderTrigger.INVALIDATE
 
 
 # ---------------------------------------------------------------------------
@@ -289,8 +331,8 @@ class TestNoFillRetryable:
         fills = brokerage.process_pending(sd)
         assert len(fills) == 0
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.SUBMITTED
 
@@ -306,24 +348,24 @@ class TestCancelOrder:
         brokerage.place_order(order)
         assert brokerage.cancel_order("ORD-001") is True
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.CANCELED
 
     def test_cancel_nonexistent_order(self, brokerage: BacktestBrokerage) -> None:
         assert brokerage.cancel_order("NONEXISTENT") is False
 
-    def test_cancel_filled_order_fails(
+    def test_cancel_filled_order_is_noop(
         self,
         brokerage: BacktestBrokerage,
     ) -> None:
-        """Filled 订单是终态, 取消应返回 False (OrderBook raises)。"""
+        """Filled 订单是终态, cancel 是 no-op（不抛异常）。"""
         order = _order(quantity=1000)
         brokerage.place_order(order)
         brokerage.process_pending(_process_input())
-        # Ticket is now FILLED
-        assert brokerage.cancel_order("ORD-001") is False
+        # Ticket is now FILLED — cancel returns True (no error raised)
+        assert brokerage.cancel_order("ORD-001") is True
 
 
 # ---------------------------------------------------------------------------
@@ -337,19 +379,19 @@ class TestTerminalState:
         brokerage.place_order(order)
         brokerage.process_pending(_process_input())
 
-        view = brokerage.get_account()
-        ticket = view.order_book.get("ORD-001")
+        _ = brokerage.get_account()
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
         assert ticket is not None
         assert ticket.status == OrderStatus.FILLED
         assert ticket.status.is_terminal
 
-    def test_invalid_cannot_cancel(self, brokerage: BacktestBrokerage) -> None:
+    def test_invalid_cancel_is_noop(self, brokerage: BacktestBrokerage) -> None:
         order = _order(order_type=OrderType.LIMIT, price=9.0)
         brokerage.place_order(order)
         brokerage.process_pending(_process_input())
 
-        # INVALID is terminal
-        assert brokerage.cancel_order("ORD-001") is False
+        # INVALID is terminal — cancel returns True (no error raised)
+        assert brokerage.cancel_order("ORD-001") is True
 
 
 # ---------------------------------------------------------------------------
@@ -574,6 +616,7 @@ def t1_brokerage() -> BacktestBrokerage:
     """T+1 冻结规则的回测经纪商。"""
     return BacktestBrokerage(
         account=_account(),
+        order_book=_order_book(),
         model=BrokerageModel(
             slippage_model=FixedBpsSlippage(bps=0),
             settlement_model=AShareSettlementModel(
@@ -727,6 +770,7 @@ class TestT1FreezeMultiInstrument:
         """不同标的独立冻结。"""
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=0),
                 settlement_model=AShareSettlementModel(
@@ -823,6 +867,7 @@ class TestT1FreezeSettlementCycle0:
         """settlement_cycle=0 标的, 买入即解冻。"""
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=0),
                 settlement_model=AShareSettlementModel(
@@ -845,6 +890,7 @@ class TestT1FreezeSettlementCycle0:
         """settlement_cycle=0 标的, 买入当日即可卖出。"""
         brk = BacktestBrokerage(
             account=_account(),
+            order_book=_order_book(),
             model=BrokerageModel(
                 slippage_model=FixedBpsSlippage(bps=0),
                 settlement_model=AShareSettlementModel(
@@ -865,6 +911,150 @@ class TestT1FreezeSettlementCycle0:
 
         view = brk.get_account()
         assert 1 not in view.positions
+
+
+# ---------------------------------------------------------------------------
+# _apply_fill 状态一致性 — event.status == ticket.status
+# ---------------------------------------------------------------------------
+
+
+class TestApplyFillStatusConsistency:
+    """验证 _apply_fill 中 OrderEvent.status 与 FSM 计算的 ticket.status 一致。"""
+
+    def test_full_fill_event_status_matches_ticket_status(
+        self,
+        brokerage: BacktestBrokerage,
+    ) -> None:
+        """全量成交: event.status 应等于 updated_ticket.status (FILLED)。"""
+        order = _order(quantity=1000)
+        brokerage.place_order(order)
+        brokerage.process_pending(_process_input())
+
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket is not None
+        assert ticket.status == OrderStatus.FILLED
+
+        # 最后一个 order_event 的 status 应与 ticket.status 一致
+        last_event = ticket.order_events[-1]
+        assert last_event.status == OrderStatus.FILLED
+        assert last_event.status == ticket.status
+
+    def test_fill_event_status_derived_from_fsm(
+        self,
+        brokerage: BacktestBrokerage,
+    ) -> None:
+        """验证 event.status 由 FSM transition 计算而非手动判断。"""
+        order = _order(quantity=1000)
+        brokerage.place_order(order)
+        brokerage.process_pending(_process_input())
+
+        ticket = brokerage._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket is not None
+
+        # ticket.status 由 FSM transition() 决定，event.status 必须一致
+        last_event = ticket.order_events[-1]
+        assert last_event.status == ticket.status
+
+    def test_partial_fill_event_status_consistency(self) -> None:
+        """部分成交场景（如果 V2 引入）event.status 也必须与 ticket.status 一致。
+
+        当前 V1 fill model 是 all-or-nothing，但通过直接调用 _apply_fill
+        验证部分成交时 event 与 ticket 状态一致性。
+        """
+
+        from ditto_portfolio.accounting import FillEvent
+
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+        )
+        order = _order(quantity=2000)
+        ticket = brk.place_order(order)
+
+        # 构造部分成交的 FillEvent (filled_quantity=1000, leaves_quantity=1000)
+        partial_fill = FillEvent(
+            fill_id="fill-partial",
+            order_id=order.order_id,
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            filled_quantity=1000,
+            fill_price=10.5,
+            fee=3.15,
+            slippage=0.0,
+            event_time=datetime(2026, 1, 1, 15, 0),
+            cumulative_quantity=1000,
+            leaves_quantity=1000,
+        )
+        brk._apply_fill(ticket, partial_fill, settle_date="2026-01-01")
+
+        updated = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert updated is not None
+        assert updated.status == OrderStatus.PARTIALLY_FILLED
+
+        # event.status 必须与 ticket.status 一致
+        last_event = updated.order_events[-1]
+        assert last_event.status == OrderStatus.PARTIALLY_FILLED
+        assert last_event.status == updated.status
+
+    def test_full_fill_after_partial_event_status_consistency(self) -> None:
+        """部分成交后再全量成交: 两次 event.status 分别与各自 ticket.status 一致。"""
+        from ditto_portfolio.accounting import FillEvent
+
+        brk = BacktestBrokerage(
+            account=_account(),
+            order_book=_order_book(),
+        )
+        order = _order(quantity=2000)
+        ticket = brk.place_order(order)
+
+        # 第一次部分成交
+        partial_fill = FillEvent(
+            fill_id="fill-1",
+            order_id=order.order_id,
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            filled_quantity=1000,
+            fill_price=10.5,
+            fee=3.15,
+            slippage=0.0,
+            event_time=datetime(2026, 1, 1, 15, 0),
+            cumulative_quantity=1000,
+            leaves_quantity=1000,
+        )
+        brk._apply_fill(ticket, partial_fill, settle_date="2026-01-01")
+
+        ticket_after_partial = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert ticket_after_partial is not None
+        assert ticket_after_partial.status == OrderStatus.PARTIALLY_FILLED
+        last_event = ticket_after_partial.order_events[-1]
+        assert last_event.status == OrderStatus.PARTIALLY_FILLED
+
+        # 第二次全部成交剩余
+        full_fill = FillEvent(
+            fill_id="fill-2",
+            order_id=order.order_id,
+            instrument_id=order.instrument_id,
+            direction=order.direction,
+            filled_quantity=1000,
+            fill_price=10.6,
+            fee=3.18,
+            slippage=0.0,
+            event_time=datetime(2026, 1, 1, 15, 1),
+            cumulative_quantity=2000,
+            leaves_quantity=0,
+        )
+        brk._apply_fill(ticket_after_partial, full_fill, settle_date="2026-01-01")
+
+        final_ticket = brk._order_book.get(ClientOrderId(value="ORD-001"))
+        assert final_ticket is not None
+        assert final_ticket.status == OrderStatus.FILLED
+        assert final_ticket.order_events[-1].status == OrderStatus.FILLED
+        assert final_ticket.order_events[-1].status == final_ticket.status
+
+
+# ---------------------------------------------------------------------------
+# T+1 冻结逻辑
+# ---------------------------------------------------------------------------
 
 
 class TestT1FreezeSellDeduction:

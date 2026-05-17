@@ -5,6 +5,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLitePool
 
+from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -95,6 +96,14 @@ class StrategyStorageProvider(Provider):
             reader=strategy_spec_reader,
             writer=strategy_spec_writer,
         )
+
+    @provide
+    def strategy_catalog_reader(
+        self,
+        catalog_service: StrategyCatalogService,
+    ) -> StrategyCatalogReader:
+        """将 StrategyCatalogService 注册为 StrategyCatalogReader Protocol."""
+        return catalog_service
 
     @provide
     def strategy_artifact_service(

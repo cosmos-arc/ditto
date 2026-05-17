@@ -2,7 +2,7 @@
 
 import pytest
 from ditto_apps.main import app
-from ditto_platform.foundation.config.environment import get_environment
+from ditto_platform.foundation import get_environment
 from starlette.routing import Route
 
 

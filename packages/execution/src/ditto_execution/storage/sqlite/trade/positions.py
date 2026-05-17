@@ -6,7 +6,7 @@ from typing import Any
 
 from ditto_execution.models import PositionRecord
 from ditto_execution.storage.sqlite.trade._sql import build_where_clause
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient
 
 __all__ = [
     "POSITIONS_DDL",

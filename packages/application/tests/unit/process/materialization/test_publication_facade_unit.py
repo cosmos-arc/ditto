@@ -11,6 +11,11 @@ import pytest
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization.models import (
     DerivedRunMode,
     DerivedRunStatus,
@@ -23,10 +28,14 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.publication_safety import CertificationStage
-from ditto_features.services.derived import DerivedArtifactReader
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
-from ditto_features.services.publication_safety_record_service import (
+from ditto_features.publication_safety_records import (
+    CompatibilityManifestRecord,
+    DerivedMinimalDQSummaryRecord,
+)
+from ditto_features.services import (
+    DerivedArtifactReader,
+    DerivedCatalogService,
+    DerivedShadowSlotService,
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
@@ -48,13 +57,7 @@ from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_kernel.publication_safety import (
-    CompatibilityManifestRecord,
-    DerivedMinimalDQSummaryRecord,
-)
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.fixture

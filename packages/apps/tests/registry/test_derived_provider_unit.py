@@ -29,7 +29,7 @@ from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
 from ditto_features.di import FeaturesStorageProvider
-from ditto_features.services.derived import DerivedQueryService
+from ditto_features.services import DerivedQueryService
 
 _tdx_mock = MagicMock(spec=TdxSource)
 

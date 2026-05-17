@@ -6,22 +6,22 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     JsonDict as _JsonDict,
 )
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     JsonValue as _JsonValue,
 )
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     require_bool as _require_bool,
 )
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     require_int as _require_int,
 )
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     require_payload as _require_payload,
 )
-from ditto_kernel.json_types import (
+from ditto_platform.foundation.json_types import (
     require_str as _require_str,
 )
 

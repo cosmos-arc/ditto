@@ -3,13 +3,12 @@
 from pathlib import Path
 
 import pytest
+from ditto_features.publication_safety_records import DerivedShadowSlotRecord
 from ditto_features.storage.runtime.publication_shadow_sqlite import (
     SQLiteDerivedShadowSlotReader,
     SQLiteDerivedShadowSlotWriter,
 )
-from ditto_kernel.publication_safety import DerivedShadowSlotRecord
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.fixture

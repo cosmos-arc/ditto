@@ -13,18 +13,18 @@ from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
 import polars as pl
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization import (
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
 )
 from ditto_features.models.derived import DerivedInvalidationRecord, DerivedSpecRecord
 from ditto_kernel.market import CalendarId, GrainId, TimeSpec
-from ditto_kernel.strategy import (
-    DerivedRole,
-    DerivedSpec,
-    ExecutionPolicy,
-    MaterializationProfile,
-)
+from ditto_kernel.strategy import ExecutionPolicy
 
 from ditto_application.exceptions import AppProcessError
 

@@ -7,7 +7,7 @@ SignalQueryFacade — 信号查询门面.
 
 from __future__ import annotations
 
-from ditto_execution.storage.sqlite.trade.service import TradeService
+from ditto_execution.contracts import IntentDataPort
 
 from ditto_application.execution_dto import TradeIntent, record_to_intent
 
@@ -22,8 +22,8 @@ class SignalQueryFacade:
     提供按最新信号日期和指定日期查询 intents 的能力。
     """
 
-    def __init__(self, trade_service: TradeService) -> None:
-        self._service = trade_service
+    def __init__(self, intent_port: IntentDataPort) -> None:
+        self._service = intent_port
 
     def get_latest_intents(self, strategy_id: str) -> list[TradeIntent]:
         """

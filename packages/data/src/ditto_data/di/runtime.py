@@ -7,10 +7,10 @@ from importlib.resources import files
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.concurrency import FileLockManager
-from ditto_platform.foundation.storage.sqlite_client import (
+from ditto_platform.foundation import (
+    FileLockManager,
     SQLiteClient,
+    SQLitePool,
 )
 
 from ditto_data.config.data_store import DataStoreSettings

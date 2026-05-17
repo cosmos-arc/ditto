@@ -1,10 +1,27 @@
-"""
-Orders — 订单管理（OMS）。
+"""Orders — 订单管理（OMS）生命周期类型 barrel。"""
 
-负责订单生命周期管理（创建/提交/取消/过期）、
-订单状态机、订单路由和批量订单处理。
-与 broker/ 配合，将订单通过网关发送至外部券商。
+from ditto_execution.orders.book import OrderBook, OrderBookReadOnly
+from ditto_execution.orders.event import OrderEvent
+from ditto_execution.orders.fsm import TRANSITIONS, transition
+from ditto_execution.orders.ids import BrokerOrderId, ClientOrderId
+from ditto_execution.orders.journal import InMemoryOrderEventJournal, OrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.orders.trigger import OrderTrigger
 
-此模块为占位符，定义了未来能力扩展的目标结构。
-当前不应删除 — 由能力包架构计划保留。
-"""
+__all__ = [
+    "TRANSITIONS",
+    "BrokerOrderId",
+    "ClientOrderId",
+    "InMemoryOrderEventJournal",
+    "Order",
+    "OrderBook",
+    "OrderBookReadOnly",
+    "OrderEvent",
+    "OrderEventJournal",
+    "OrderStatus",
+    "OrderTicket",
+    "OrderTrigger",
+    "transition",
+]

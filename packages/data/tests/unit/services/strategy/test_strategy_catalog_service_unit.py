@@ -82,10 +82,10 @@ class TestStrategyCatalogService:
         writer.save.assert_called_once_with(spec)
 
     def test_get_spec_delegates_to_reader(self, mocker: MockerFixture) -> None:
-        """get_spec() 委托给 reader.get()."""
+        """get_spec() 委托给 reader.get_spec()."""
         spec = _make_spec()
         reader = mocker.Mock()
-        reader.get = mocker.Mock(return_value=spec)
+        reader.get_spec = mocker.Mock(return_value=spec)
         service = StrategyCatalogService(
             reader=reader,
             writer=mocker.Mock(),
@@ -94,12 +94,12 @@ class TestStrategyCatalogService:
         result = service.get_spec("strat.momentum_20d", 1)
 
         assert result is spec
-        reader.get.assert_called_once_with("strat.momentum_20d", 1)
+        reader.get_spec.assert_called_once_with("strat.momentum_20d", 1)
 
     def test_get_spec_default_version(self, mocker: MockerFixture) -> None:
         """get_spec(version=None) 传递 None 给 reader."""
         reader = mocker.Mock()
-        reader.get = mocker.Mock(return_value=None)
+        reader.get_spec = mocker.Mock(return_value=None)
         service = StrategyCatalogService(
             reader=reader,
             writer=mocker.Mock(),
@@ -107,12 +107,12 @@ class TestStrategyCatalogService:
 
         service.get_spec("strat.momentum_20d")
 
-        reader.get.assert_called_once_with("strat.momentum_20d", None)
+        reader.get_spec.assert_called_once_with("strat.momentum_20d", None)
 
     def test_get_spec_not_found(self, mocker: MockerFixture) -> None:
         """get_spec() 查询不存在时返回 None."""
         reader = mocker.Mock()
-        reader.get = mocker.Mock(return_value=None)
+        reader.get_spec = mocker.Mock(return_value=None)
         service = StrategyCatalogService(
             reader=reader,
             writer=mocker.Mock(),
@@ -121,13 +121,13 @@ class TestStrategyCatalogService:
         result = service.get_spec("strat.nonexistent", 99)
 
         assert result is None
-        reader.get.assert_called_once_with("strat.nonexistent", 99)
+        reader.get_spec.assert_called_once_with("strat.nonexistent", 99)
 
     def test_list_specs_delegates_to_reader(self, mocker: MockerFixture) -> None:
-        """list_specs() 委托给 reader.list_all()."""
+        """list_specs() 委托给 reader.list_specs()."""
         specs = [_make_spec(strategy_id="s1"), _make_spec(strategy_id="s2")]
         reader = mocker.Mock()
-        reader.list_all = mocker.Mock(return_value=specs)
+        reader.list_specs = mocker.Mock(return_value=specs)
         service = StrategyCatalogService(
             reader=reader,
             writer=mocker.Mock(),
@@ -136,7 +136,7 @@ class TestStrategyCatalogService:
         result = service.list_specs()
 
         assert result == specs
-        reader.list_all.assert_called_once_with()
+        reader.list_specs.assert_called_once_with()
 
     def test_list_versions_delegates_to_reader(self, mocker: MockerFixture) -> None:
         """list_versions() 委托给 reader.list_versions()."""

@@ -12,7 +12,7 @@ from ditto_data.quality.protocols import (
     QualityEngineProtocol,
     TdxSourceProtocol,
 )
-from ditto_kernel.quality import DQResult
+from ditto_data.quality.quality_types import DQResult
 from ditto_platform.foundation import logger
 
 from ditto_application.exceptions import AppCommandError

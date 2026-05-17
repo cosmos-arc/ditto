@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 from ditto_data.models.storage import FreezeManifest
-from ditto_platform.foundation.storage.types import (
+from ditto_platform.foundation import (
     WriteResult,
     WriteStoreResult,
 )

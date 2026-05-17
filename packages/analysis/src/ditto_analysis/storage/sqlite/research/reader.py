@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import orjson
-from ditto_kernel.research import (
+from ditto_platform.foundation import SQLiteClient
+
+from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
-from ditto_platform.foundation.storage import SQLiteClient
 
 __all__ = ["SQLiteResearchCatalogReader"]
 

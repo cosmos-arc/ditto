@@ -11,8 +11,7 @@ from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.audit.models import RiskScanPayload
 from ditto_execution.di import ExecutionStorageProvider
 from ditto_features.di import FeaturesStorageProvider
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.derived_shadow_slot_service import DerivedShadowSlotService
+from ditto_features.services import DerivedCatalogService, DerivedShadowSlotService
 from ditto_kernel.strategy import RiskScope
 from ditto_strategy.di import StrategyStorageProvider
 from ditto_strategy.models import (

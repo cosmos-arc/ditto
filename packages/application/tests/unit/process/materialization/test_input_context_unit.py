@@ -15,6 +15,11 @@ from ditto_application.processes.materialization.types import (
     UnavailableDerivedInputProvider,
     hydrate_spec,
 )
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization import (
     DerivedExecutionPlan,
     DerivedMaterializationRequest,
@@ -22,7 +27,6 @@ from ditto_features.materialization import (
     DerivedRunTrigger,
 )
 from ditto_features.models.derived import DerivedSpecRecord
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 # ---------------------------------------------------------------------------
 # Helpers

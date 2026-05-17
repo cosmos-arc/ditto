@@ -43,7 +43,10 @@ class AuditStep:
         account_view = self._brokerage.get_account()
 
         # 记录账户快照
-        self._audit_collector.record_account_view(ctx.date, account_view)
+        self._audit_collector.record_account_view(
+            ctx.time_context.trade_date,
+            account_view,
+        )
 
         # 记录每个 fill + 传给 trade_builder
         for fill in ctx.step_fills:

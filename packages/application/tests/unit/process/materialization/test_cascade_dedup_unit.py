@@ -10,12 +10,12 @@ from ditto_application.processes.materialization.cascade_orchestrator import (
     CascadeStatus,
     InvalidationCascadeOrchestrator,
 )
+from ditto_features.derived_types import MaterializationProfile
 from ditto_features.materialization import DerivedMaterializationResult
 from ditto_features.materialization.models import (
     DerivedRunStatus,
 )
 from ditto_features.models.derived import DerivedInvalidationRecord
-from ditto_kernel.strategy import MaterializationProfile
 
 
 def _make_record(

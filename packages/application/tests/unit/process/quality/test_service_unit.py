@@ -62,7 +62,7 @@ class TestCheckAndQuarantine:
     ) -> None:
         """L2 警告不阻断写入."""
         # Arrange
-        from ditto_kernel.quality import DQResult
+        from ditto_data.quality.quality_types import DQResult
 
         handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = DQResult(
@@ -91,7 +91,7 @@ class TestCheckAndQuarantine:
     ) -> None:
         """L1 错误阻断写入."""
         # Arrange
-        from ditto_kernel.quality import DQResult
+        from ditto_data.quality.quality_types import DQResult
 
         handler = CheckDataQualityHandler(engine=mock_quality_engine)
         mock_quality_engine.check.return_value = DQResult(

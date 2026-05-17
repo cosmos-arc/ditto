@@ -7,7 +7,11 @@ import pytest
 from ditto_application.processes.materialization.orchestrator import (
     apply_cs_amplification,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

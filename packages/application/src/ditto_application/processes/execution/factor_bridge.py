@@ -11,15 +11,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import polars as pl
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_features.expression.diagnostics import ExpressionCompileError
-from ditto_kernel.strategy import (
-    DerivedRole,
-    DerivedSpec,
-    ExecutionPolicy,
-    MaterializationProfile,
-)
+from ditto_kernel.strategy import ExecutionPolicy
 
 from ditto_application.exceptions import AppProcessError
 

@@ -14,7 +14,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_platform.foundation.storage.types import OnDuplicate
+from ditto_platform.foundation import OnDuplicate
 from pytest_mock import MockerFixture
 
 from tests.e2e.parquet_helpers import market_parquet_store

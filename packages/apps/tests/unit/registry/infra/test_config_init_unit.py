@@ -5,7 +5,7 @@ from pathlib import Path
 from ditto_apps.registry.infra.config import ConfigProvider
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_features.config import FeatureArtifactStoreSettings
-from ditto_platform.foundation.config.initializer import InitScope
+from ditto_platform.foundation import InitScope
 
 
 def test_config_provider_init_coordinator_creates_feature_artifact_dirs(

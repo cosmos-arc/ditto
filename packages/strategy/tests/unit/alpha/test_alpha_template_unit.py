@@ -13,10 +13,14 @@ from ditto_strategy.alpha.builtins.selection import SelectionStage
 from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.alpha.specs import ParamConstraint
 from ditto_strategy.alpha.templates.etf_rotation import (
     ETFRotationConfig,
     build_etf_rotation_pipeline,
+    get_param_constraints,
+    validate_config,
 )
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -262,3 +266,75 @@ class TestRiskLockFilter:
         filt = RiskLockFilter()
         with pytest.raises(AttributeError):
             filt.some_attr = 1  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# ETFRotation validate_config
+# ---------------------------------------------------------------------------
+
+
+class TestETFRotationValidateConfig:
+    def test_valid_config_passes(self) -> None:
+        """合法配置不抛异常。"""
+        config = ETFRotationConfig()
+        validate_config(config)  # Should not raise
+
+    def test_invalid_top_k_raises(self) -> None:
+        """top_k < 1 时抛异常。"""
+        config = ETFRotationConfig(top_k=0)
+        with pytest.raises(StrategySpecError, match="top_k"):
+            validate_config(config)
+
+    def test_invalid_max_weight_zero_raises(self) -> None:
+        """max_weight <= 0 时抛异常。"""
+        config = ETFRotationConfig(max_weight=0.0)
+        with pytest.raises(StrategySpecError, match="max_weight"):
+            validate_config(config)
+
+    def test_invalid_max_weight_over_one_raises(self) -> None:
+        """max_weight > 1 时抛异常。"""
+        config = ETFRotationConfig(max_weight=1.5)
+        with pytest.raises(StrategySpecError, match="max_weight"):
+            validate_config(config)
+
+    def test_max_weight_none_ok(self) -> None:
+        """max_weight=None 不报错。"""
+        config = ETFRotationConfig(max_weight=None)
+        validate_config(config)  # Should not raise
+
+    def test_invalid_allocation_method_raises(self) -> None:
+        """非法 allocation_method 抛异常。"""
+        config = ETFRotationConfig(allocation_method="invalid")
+        with pytest.raises(StrategySpecError, match="allocation_method"):
+            validate_config(config)
+
+    def test_invalid_cash_target_raises(self) -> None:
+        """cash_target < 0 或 >= 1 时抛异常。"""
+        config = ETFRotationConfig(cash_target=-0.1)
+        with pytest.raises(StrategySpecError, match="cash_target"):
+            validate_config(config)
+
+        config2 = ETFRotationConfig(cash_target=1.0)
+        with pytest.raises(StrategySpecError, match="cash_target"):
+            validate_config(config2)
+
+
+# ---------------------------------------------------------------------------
+# ETFRotation get_param_constraints
+# ---------------------------------------------------------------------------
+
+
+class TestETFRotationGetParamConstraints:
+    def test_returns_constraints(self) -> None:
+        """返回非空的 ParamConstraint 元组。"""
+        constraints = get_param_constraints()
+        assert isinstance(constraints, tuple)
+        assert len(constraints) > 0
+        for c in constraints:
+            assert isinstance(c, ParamConstraint)
+
+    def test_contains_top_k(self) -> None:
+        """包含 top_k 约束。"""
+        constraints = get_param_constraints()
+        names = [c.name for c in constraints]
+        assert "top_k" in names

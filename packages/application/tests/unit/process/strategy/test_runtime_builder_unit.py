@@ -109,3 +109,36 @@ class TestStrategyRuntimeBuilder:
 
         with pytest.raises(AppBuilderError, match="published"):
             builder.build_published_runtime("momentum-etf", 3)
+
+    def test_default_slippage_bps_is_1(self) -> None:
+        """反序列化时若 spec_json 缺失 slippage_bps，默认值应为 1.0 bps。"""
+        spec = _make_rotation_spec()
+        record = _make_spec_record(spec)
+        # 从 spec_json 中移除 slippage_bps，模拟旧数据无此字段
+        spec_json: dict[str, object] = dict(record.spec_json)
+        exec_payload: dict[str, object] = dict(
+            spec_json.get("execution", {})  # type: ignore[arg-type]
+        )
+        cost_payload: dict[str, object] = dict(
+            exec_payload.get("cost_model", {})  # type: ignore[arg-type]
+        )
+        cost_payload.pop("slippage_bps", None)
+        exec_payload["cost_model"] = cost_payload
+        spec_json["execution"] = exec_payload
+        record = StrategySpecRecord(
+            strategy_id=record.strategy_id,
+            name=record.name,
+            spec_json=spec_json,
+            version=record.version,
+            status=record.status,
+            tags=record.tags,
+        )
+
+        catalog_service = MagicMock(spec=StrategyCatalogService)
+        catalog_service.get_spec.return_value = record
+        builder = strategy_services.StrategyRuntimeBuilder(
+            catalog_service=catalog_service,
+        )
+
+        runtime = builder.build_published_runtime("momentum-etf")
+        assert runtime.spec.execution.cost_model.slippage_bps == 1.0

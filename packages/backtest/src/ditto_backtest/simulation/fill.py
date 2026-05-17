@@ -8,16 +8,17 @@ Phase 3 升级 (R6 三层分离签名):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from ditto_execution.fills import Filled, FillOutcome, NoFill
+from ditto_execution.orders.model import Order as _Order
 from ditto_kernel.order import OrderSide as _OrderSide
 from ditto_kernel.order import OrderType as _OrderType
 from ditto_kernel.trading import InstrumentDefinition as _InstrumentDefinition
 from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 from ditto_kernel.trading import TradingRuleSet as _TradingRuleSet
-from ditto_portfolio.accounting.fills import FillEvent as _FillEvent
-from ditto_portfolio.accounting.order_book import Order as _Order
+from ditto_portfolio.accounting import FillEvent as _FillEvent
 
 __all__ = [
     "AShareFillModel",
@@ -230,7 +231,7 @@ def _make_filled(
         fill_price=fill_price,
         fee=0.0,
         slippage=0.0,
-        event_time=order.created_at,
+        event_time=datetime.min,  # sentinel — Brokerage 补全实际时间
         cumulative_quantity=0,
         leaves_quantity=order.quantity - qty,
     )

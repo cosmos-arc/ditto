@@ -5,7 +5,7 @@ from pathlib import Path
 
 import polars as pl
 from ditto_data.storage.market.fx.bars import FxBarsReader, FxBarsWriter
-from ditto_platform.foundation.storage import ParquetStore, YearlyPartition
+from ditto_platform.foundation import ParquetStore, YearlyPartition
 
 MARKET_KEY_COLUMNS = ("instrument_id", "trade_date")
 MARKET_DATE_COLUMN = "trade_date"

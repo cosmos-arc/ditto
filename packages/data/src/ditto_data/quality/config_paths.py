@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ditto_platform.foundation.config.project_root import find_project_root
+from ditto_platform.foundation import find_project_root
 
 __all__ = [
     "get_default_dq_rules_dir",

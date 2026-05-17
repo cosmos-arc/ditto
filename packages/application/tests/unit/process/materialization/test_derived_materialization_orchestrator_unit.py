@@ -17,6 +17,11 @@ from ditto_application.processes.materialization.types import (
     InMemoryDerivedInputProvider,
 )
 from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization import DerivedMaterializationRequest
 from ditto_features.materialization.models import (
     DerivedRunMode,
@@ -30,11 +35,9 @@ from ditto_features.models.derived import (
     DerivedVersionRecord,
 )
 from ditto_features.publication_safety import CompatibilityManifest
-from ditto_features.services.derived.artifact_persistence_service import (
+from ditto_features.services import (
     ArtifactPersistenceService,
-)
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
-from ditto_features.services.publication_safety_record_service import (
+    DerivedCatalogService,
     PublicationSafetyRecordService,
     PublicationSafetyRuntimeStores,
 )
@@ -52,7 +55,6 @@ from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _spec(profile: MaterializationProfile) -> DerivedSpec:

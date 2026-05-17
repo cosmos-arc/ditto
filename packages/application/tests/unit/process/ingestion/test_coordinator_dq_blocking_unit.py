@@ -28,8 +28,8 @@ class TestDQBlockingBehavior:
             MarketServices,
             SourceFetchers,
         )
-        from ditto_kernel.quality import DQResult
-        from ditto_platform.foundation.storage.types import WriteResult
+        from ditto_data.quality.quality_types import DQResult
+        from ditto_platform.foundation import WriteResult
 
         # Mock services
         mock_metadata_service = mocker.MagicMock()
@@ -115,8 +115,8 @@ class TestDQBlockingBehavior:
             SourceFetchers,
         )
         from ditto_data.models.ingestion import IngestionLog, IngestionStatus
-        from ditto_kernel.quality import DQResult
-        from ditto_platform.foundation.storage.types import WriteResult
+        from ditto_data.quality.quality_types import DQResult
+        from ditto_platform.foundation import WriteResult
 
         # Mock services
         mock_metadata_service = mocker.MagicMock()

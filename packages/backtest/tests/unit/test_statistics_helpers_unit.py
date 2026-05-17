@@ -14,152 +14,153 @@ import pytest
 from ditto_backtest.statistics import (
     ExecutionAuditCollector,
     PortfolioStatistics,
-    _annualized_return,
-    _annualized_volatility,
-    _benchmark_relative,
-    _compute_beta_and_bench_ann,
-    _compute_tracking_error,
-    _cost_metrics,
-    _daily_returns_from_navs,
-    _drawdown_analysis,
-    _empty_aggregated_trade_statistics,
-    _empty_alpha_statistics,
-    _sortino_ratio,
+    annualized_return,
+    annualized_volatility,
+    benchmark_relative,
+    compute_beta_and_bench_ann,
     compute_portfolio_statistics,
+    compute_tracking_error,
+    cost_metrics,
+    daily_returns_from_navs,
+    drawdown_analysis,
+    empty_aggregated_trade_statistics,
+    empty_alpha_statistics,
+    sortino_ratio,
 )
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import OrderBookReadOnly
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    FillEvent,
+    Position,
+)
 
 # ---------------------------------------------------------------------------
-# _daily_returns_from_navs
+# daily_returns_from_navs
 # ---------------------------------------------------------------------------
 
 
 class TestDailyReturnsFromNavs:
-    """_daily_returns_from_navs 精确值验证."""
+    """daily_returns_from_navs 精确值验证."""
 
     def test_normal_increasing(self) -> None:
-        result = _daily_returns_from_navs([100.0, 105.0, 110.25])
+        result = daily_returns_from_navs([100.0, 105.0, 110.25])
         # day 1: 105/100 - 1 = 0.05
         # day 2: 110.25/105 - 1 = 0.05
         assert result == pytest.approx([0.05, 0.05])
 
     def test_normal_decreasing(self) -> None:
-        result = _daily_returns_from_navs([100.0, 95.0])
+        result = daily_returns_from_navs([100.0, 95.0])
         assert result == pytest.approx([-0.05])
 
     def test_flat(self) -> None:
-        result = _daily_returns_from_navs([100.0, 100.0, 100.0])
+        result = daily_returns_from_navs([100.0, 100.0, 100.0])
         assert result == pytest.approx([0.0, 0.0])
 
     def test_single_element_returns_empty(self) -> None:
-        assert _daily_returns_from_navs([100.0]) == []
+        assert daily_returns_from_navs([100.0]) == []
 
     def test_zero_prev_nav_no_division_by_zero(self) -> None:
         """前一日 NAV 为 0 时返回 0.0 而非抛异常."""
-        result = _daily_returns_from_navs([0.0, 105.0])
+        result = daily_returns_from_navs([0.0, 105.0])
         assert result == [0.0]
 
     def test_all_zeros(self) -> None:
-        result = _daily_returns_from_navs([0.0, 0.0, 0.0])
+        result = daily_returns_from_navs([0.0, 0.0, 0.0])
         assert result == [0.0, 0.0]
 
     def test_large_positive_return(self) -> None:
-        result = _daily_returns_from_navs([1.0, 3.0])
+        result = daily_returns_from_navs([1.0, 3.0])
         assert result == pytest.approx([2.0])
 
     def test_near_zero_nav_recovery(self) -> None:
         """NAV 从接近零恢复时仍能正确计算."""
-        result = _daily_returns_from_navs([0.001, 1.0])
+        result = daily_returns_from_navs([0.001, 1.0])
         # 1.0 / 0.001 - 1 = 999.0
         assert result == pytest.approx([999.0])
 
     def test_empty_list_returns_empty(self) -> None:
-        assert _daily_returns_from_navs([]) == []
+        assert daily_returns_from_navs([]) == []
 
 
 # ---------------------------------------------------------------------------
-# _annualized_return
+# annualized_return
 # ---------------------------------------------------------------------------
 
 
 class TestAnnualizedReturn:
-    """_annualized_return 精确值验证."""
+    """annualized_return 精确值验证."""
 
     def test_one_year_positive(self) -> None:
         # 252 天，total_return = 0.10 → ann = 10%
-        result = _annualized_return(0.10, 252)
+        result = annualized_return(0.10, 252)
         assert result == pytest.approx(10.0, rel=1e-6)
 
     def test_one_year_negative(self) -> None:
-        result = _annualized_return(-0.20, 252)
+        result = annualized_return(-0.20, 252)
         assert result == pytest.approx(-20.0, rel=1e-6)
 
     def test_zero_total_return(self) -> None:
-        result = _annualized_return(0.0, 252)
+        result = annualized_return(0.0, 252)
         assert result == pytest.approx(0.0)
 
     def test_zero_days_returns_zero(self) -> None:
-        result = _annualized_return(0.10, 0)
+        result = annualized_return(0.10, 0)
         assert result == 0.0
 
     def test_negative_days_returns_zero(self) -> None:
-        result = _annualized_return(0.10, -1)
+        result = annualized_return(0.10, -1)
         assert result == 0.0
 
     def test_half_year(self) -> None:
         # 126 天，total_return = 0.05
         # ann = (1.05)^(252/126) - 1 = 1.05^2 - 1 = 0.1025 → 10.25%
-        result = _annualized_return(0.05, 126)
+        result = annualized_return(0.05, 126)
         assert result == pytest.approx(10.25, rel=1e-4)
 
     def test_one_day(self) -> None:
         # 1 天，total_return = 0.001
         # ann = (1.001)^252 - 1 ≈ 0.2862 → 28.62%
-        result = _annualized_return(0.001, 1)
+        result = annualized_return(0.001, 1)
         assert result > 0
         assert result < 100  # sanity check
 
     def test_two_years(self) -> None:
         # 504 天，total_return = 0.21
         # ann = (1.21)^(252/504) - 1 = 1.21^0.5 - 1 = sqrt(1.21) - 1 = 0.1 → 10%
-        result = _annualized_return(0.21, 504)
+        result = annualized_return(0.21, 504)
         assert result == pytest.approx(10.0, rel=1e-4)
 
 
 # ---------------------------------------------------------------------------
-# _annualized_volatility
+# annualized_volatility
 # ---------------------------------------------------------------------------
 
 
 class TestAnnualizedVolatility:
-    """_annualized_volatility 精确值验证."""
+    """annualized_volatility 精确值验证."""
 
     def test_empty_returns_zero(self) -> None:
-        assert _annualized_volatility([]) == 0.0
+        assert annualized_volatility([]) == 0.0
 
     def test_single_element_returns_zero(self) -> None:
-        assert _annualized_volatility([0.01]) == 0.0
+        assert annualized_volatility([0.01]) == 0.0
 
     def test_two_elements(self) -> None:
         # returns = [0.01, -0.01], n=2
         # mean = 0, variance = ((0.01)^2 + (-0.01)^2) / (2-1) = 0.0002
         # ann_vol = sqrt(0.0002) * sqrt(252) * 100
-        result = _annualized_volatility([0.01, -0.01])
+        result = annualized_volatility([0.01, -0.01])
         expected = math.sqrt(0.0002) * math.sqrt(252) * 100
         assert result == pytest.approx(expected)
 
     def test_constant_returns_zero_volatility(self) -> None:
         """恒定日收益率 → 年化波动率为 0."""
-        result = _annualized_volatility([0.01, 0.01, 0.01, 0.01])
+        result = annualized_volatility([0.01, 0.01, 0.01, 0.01])
         assert result == pytest.approx(0.0)
 
     def test_all_zero_returns(self) -> None:
-        result = _annualized_volatility([0.0, 0.0, 0.0])
+        result = annualized_volatility([0.0, 0.0, 0.0])
         assert result == pytest.approx(0.0)
 
     def test_known_volatility(self) -> None:
@@ -172,30 +173,30 @@ class TestAnnualizedVolatility:
         # variance = 0.0002 / 2 = 0.0001
         assert variance == pytest.approx(0.0001)
         expected = math.sqrt(variance) * math.sqrt(252) * 100
-        result = _annualized_volatility(returns)
+        result = annualized_volatility(returns)
         assert result == pytest.approx(expected)
 
 
 # ---------------------------------------------------------------------------
-# _sortino_ratio
+# sortino_ratio
 # ---------------------------------------------------------------------------
 
 
 class TestSortinoRatio:
-    """_sortino_ratio 精确值验证."""
+    """sortino_ratio 精确值验证."""
 
     def test_empty_returns_zero(self) -> None:
-        assert _sortino_ratio([], 10.0) == 0.0
+        assert sortino_ratio([], 10.0) == 0.0
 
     def test_single_element_returns_zero(self) -> None:
-        assert _sortino_ratio([0.01], 10.0) == 0.0
+        assert sortino_ratio([0.01], 10.0) == 0.0
 
     def test_all_positive_no_downside(self) -> None:
         """全正收益 → 无 downside → 0."""
-        assert _sortino_ratio([0.01, 0.02, 0.03], 10.0) == 0.0
+        assert sortino_ratio([0.01, 0.02, 0.03], 10.0) == 0.0
 
     def test_all_zero_returns_zero(self) -> None:
-        assert _sortino_ratio([0.0, 0.0, 0.0], 0.0) == 0.0
+        assert sortino_ratio([0.0, 0.0, 0.0], 0.0) == 0.0
 
     def test_mixed_with_downside(self) -> None:
         """混合正负收益，手工计算 sortino."""
@@ -208,7 +209,7 @@ class TestSortinoRatio:
         downside_dev = math.sqrt(downside_var) * math.sqrt(252) * 100
         ann_ret = 15.0
         expected = ann_ret / downside_dev
-        result = _sortino_ratio(returns, ann_ret)
+        result = sortino_ratio(returns, ann_ret)
         assert result == pytest.approx(expected)
 
     def test_all_negative(self) -> None:
@@ -219,33 +220,33 @@ class TestSortinoRatio:
         downside_dev = math.sqrt(downside_var) * math.sqrt(252) * 100
         ann_ret = -10.0
         expected = ann_ret / downside_dev
-        result = _sortino_ratio(returns, ann_ret)
+        result = sortino_ratio(returns, ann_ret)
         assert result == pytest.approx(expected)
         assert result < 0
 
     def test_zero_annualized_return(self) -> None:
         """年化收益为 0 时 sortino 应为 0."""
-        result = _sortino_ratio([-0.01, -0.02], 0.0)
+        result = sortino_ratio([-0.01, -0.02], 0.0)
         assert result == 0.0
 
 
 # ---------------------------------------------------------------------------
-# _drawdown_analysis
+# drawdown_analysis
 # ---------------------------------------------------------------------------
 
 
 class TestDrawdownAnalysis:
-    """_drawdown_analysis 精确值验证."""
+    """drawdown_analysis 精确值验证."""
 
     def test_monotonic_increase(self) -> None:
         """持续新高 → 0 回撤."""
-        max_dd, max_dur = _drawdown_analysis([100.0, 110.0, 120.0, 130.0])
+        max_dd, max_dur = drawdown_analysis([100.0, 110.0, 120.0, 130.0])
         assert max_dd == pytest.approx(0.0)
         assert max_dur == 0
 
     def test_monotonic_decrease(self) -> None:
         """持续下跌."""
-        max_dd, max_dur = _drawdown_analysis([120.0, 110.0, 100.0])
+        max_dd, max_dur = drawdown_analysis([120.0, 110.0, 100.0])
         # peak = 120
         # dd[1] = (110-120)/120 = -10/120
         # dd[2] = (100-120)/120 = -20/120
@@ -256,7 +257,7 @@ class TestDrawdownAnalysis:
 
     def test_recovery(self) -> None:
         """回撤后恢复."""
-        max_dd, max_dur = _drawdown_analysis([100.0, 80.0, 90.0, 100.0])
+        max_dd, max_dur = drawdown_analysis([100.0, 80.0, 90.0, 100.0])
         # peak = 100
         # dd[1] = (80-100)/100 = -0.20 → -20%
         # dd[2] = (90-100)/100 = -0.10 → -10%
@@ -266,7 +267,7 @@ class TestDrawdownAnalysis:
 
     def test_double_dip(self) -> None:
         """两次回撤，第二次更深."""
-        max_dd, max_dur = _drawdown_analysis([100.0, 90.0, 100.0, 70.0, 80.0])
+        max_dd, max_dur = drawdown_analysis([100.0, 90.0, 100.0, 70.0, 80.0])
         # First dip: peak=100, dd[1] = -10%
         # Recovery at [2]: peak=100
         # Second dip: peak=100, dd[3] = -30%, dd[4] = -20%
@@ -274,30 +275,30 @@ class TestDrawdownAnalysis:
         assert max_dur == 2  # days 3-4
 
     def test_flat_line(self) -> None:
-        max_dd, max_dur = _drawdown_analysis([100.0, 100.0, 100.0])
+        max_dd, max_dur = drawdown_analysis([100.0, 100.0, 100.0])
         assert max_dd == pytest.approx(0.0)
         assert max_dur == 0
 
     def test_single_element(self) -> None:
-        max_dd, max_dur = _drawdown_analysis([100.0])
+        max_dd, max_dur = drawdown_analysis([100.0])
         assert max_dd == pytest.approx(0.0)
         assert max_dur == 0
 
     def test_all_zeros(self) -> None:
         """全零 NAV → peak=0, 除零保护."""
-        max_dd, max_dur = _drawdown_analysis([0.0, 0.0, 0.0])
+        max_dd, max_dur = drawdown_analysis([0.0, 0.0, 0.0])
         assert max_dd == 0.0
         assert max_dur == 0
 
     def test_v_shape_recovery(self) -> None:
         """V 形回撤恢复."""
-        max_dd, max_dur = _drawdown_analysis([100.0, 50.0, 100.0])
+        max_dd, max_dur = drawdown_analysis([100.0, 50.0, 100.0])
         assert max_dd == pytest.approx(-50.0)
         assert max_dur == 1  # only day 1 is in drawdown
 
     def test_peak_updates_mid_series(self) -> None:
         """峰值在序列中间更新."""
-        max_dd, max_dur = _drawdown_analysis([100.0, 120.0, 110.0, 130.0, 100.0])
+        max_dd, max_dur = drawdown_analysis([100.0, 120.0, 110.0, 130.0, 100.0])
         # peak evolves: 100 → 120 → 120 → 130 → 130
         # dd[2] = (110-120)/120 = -8.33%
         # dd[4] = (100-130)/130 = -23.08%
@@ -306,24 +307,24 @@ class TestDrawdownAnalysis:
 
 
 # ---------------------------------------------------------------------------
-# _compute_tracking_error
+# compute_tracking_error
 # ---------------------------------------------------------------------------
 
 
 class TestComputeTrackingError:
-    """_compute_tracking_error 精确值验证."""
+    """compute_tracking_error 精确值验证."""
 
     def test_min_len_one_returns_none(self) -> None:
-        assert _compute_tracking_error([0.01], [0.01], 1) is None
+        assert compute_tracking_error([0.01], [0.01], 1) is None
 
     def test_min_len_zero_returns_none(self) -> None:
-        assert _compute_tracking_error([], [], 0) is None
+        assert compute_tracking_error([], [], 0) is None
 
     def test_identical_returns_zero_te(self) -> None:
         """策略与基准完全一致 → 跟踪误差为 0."""
         returns = [0.01, 0.02, -0.01]
         bench = [0.01, 0.02, -0.01]
-        result = _compute_tracking_error(returns, bench, 3)
+        result = compute_tracking_error(returns, bench, 3)
         assert result == pytest.approx(0.0)
 
     def test_known_tracking_error(self) -> None:
@@ -335,32 +336,32 @@ class TestComputeTrackingError:
         # te_var = (0.01^2 + (-0.01)^2) / (2-1) = 0.0002
         # te = sqrt(0.0002) * sqrt(252) * 100
         expected = math.sqrt(0.0002) * math.sqrt(252) * 100
-        result = _compute_tracking_error(port, bench, 2)
+        result = compute_tracking_error(port, bench, 2)
         assert result == pytest.approx(expected)
 
     def test_constant_excess_returns_zero(self) -> None:
         """策略始终跑赢基准 1% → 跟踪误差为 0."""
         port = [0.02, 0.03, 0.01]
         bench = [0.01, 0.02, 0.00]
-        result = _compute_tracking_error(port, bench, 3)
+        result = compute_tracking_error(port, bench, 3)
         assert result == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------
-# _compute_beta_and_bench_ann
+# compute_beta_and_bench_ann
 # ---------------------------------------------------------------------------
 
 
 class TestComputeBetaAndBenchAnn:
-    """_compute_beta_and_bench_ann 精确值验证."""
+    """compute_beta_and_bench_ann 精确值验证."""
 
     def test_min_len_one(self) -> None:
-        beta, bench_ann = _compute_beta_and_bench_ann([0.01], [0.01], (100.0, 101.0), 1)
+        beta, bench_ann = compute_beta_and_bench_ann([0.01], [0.01], (100.0, 101.0), 1)
         assert beta == 0.0
         assert bench_ann == 0.0
 
     def test_min_len_zero(self) -> None:
-        beta, bench_ann = _compute_beta_and_bench_ann([], [], (100.0, 100.0), 0)
+        beta, bench_ann = compute_beta_and_bench_ann([], [], (100.0, 100.0), 0)
         assert beta == 0.0
         assert bench_ann == 0.0
 
@@ -368,7 +369,7 @@ class TestComputeBetaAndBenchAnn:
         """基准日收益恒定 → var_b = 0 → beta = 0."""
         port = [0.01, 0.02]
         bench = [0.01, 0.01]  # constant → var_b = 0
-        beta, _bench_ann = _compute_beta_and_bench_ann(
+        beta, _bench_ann = compute_beta_and_bench_ann(
             port,
             bench,
             (100.0, 102.01),
@@ -387,7 +388,7 @@ class TestComputeBetaAndBenchAnn:
         # var_b = ((0.01-0.02)^2 + (0.03-0.02)^2) / (2-1)
         #       = (0.0001 + 0.0001) / 1 = 0.0002
         # beta = 0.0002 / 0.0002 = 1.0
-        beta, _ = _compute_beta_and_bench_ann(port, bench, bench_navs, 2)
+        beta, _ = compute_beta_and_bench_ann(port, bench, bench_navs, 2)
         assert beta == pytest.approx(1.0)
 
     def test_bench_annualized_calculation(self) -> None:
@@ -396,13 +397,13 @@ class TestComputeBetaAndBenchAnn:
         bench_navs = (100.0, 102.01)
         # bench_total = 102.01/100 - 1 = 0.0201
         # bench_ann = (1.0201)^(252/2) - 1) * 100
-        _, bench_ann = _compute_beta_and_bench_ann(bench, bench, bench_navs, 2)
+        _, bench_ann = compute_beta_and_bench_ann(bench, bench, bench_navs, 2)
         expected = ((1.0201) ** 126 - 1) * 100
         assert bench_ann == pytest.approx(expected, rel=1e-4)
 
     def test_zero_bench_initial_nav(self) -> None:
         """基准初始 NAV 为 0 → bench_total = 0."""
-        _beta, bench_ann = _compute_beta_and_bench_ann(
+        _beta, bench_ann = compute_beta_and_bench_ann(
             [0.01, 0.02],
             [0.01, 0.02],
             (0.0, 0.0),
@@ -412,15 +413,15 @@ class TestComputeBetaAndBenchAnn:
 
 
 # ---------------------------------------------------------------------------
-# _benchmark_relative
+# benchmark_relative
 # ---------------------------------------------------------------------------
 
 
 class TestBenchmarkRelative:
-    """_benchmark_relative 精确值验证."""
+    """benchmark_relative 精确值验证."""
 
     def test_no_benchmark_returns_none(self) -> None:
-        result = _benchmark_relative([0.01, 0.02], None, 2, 10.0)
+        result = benchmark_relative([0.01, 0.02], None, 2, 10.0)
         assert result.information_ratio is None
         assert result.tracking_error is None
         assert result.beta is None
@@ -428,7 +429,7 @@ class TestBenchmarkRelative:
 
     def test_length_mismatch_returns_none(self) -> None:
         """benchmark 长度与 n 不匹配 → graceful 降级."""
-        result = _benchmark_relative([0.01, 0.02, 0.03], (100.0, 101.0, 102.0), 4, 10.0)
+        result = benchmark_relative([0.01, 0.02, 0.03], (100.0, 101.0, 102.0), 4, 10.0)
         assert result.information_ratio is None
         assert result.tracking_error is None
         assert result.beta is None
@@ -440,7 +441,7 @@ class TestBenchmarkRelative:
         # bench_navs 精确产生 [0.01, 0.02, -0.01]:
         # 100*1.01=101, 101*1.02=103.02, 103.02*0.99=101.9898
         bench_navs = (100.0, 101.0, 103.02, 101.9898)
-        result = _benchmark_relative(port, bench_navs, 4, 10.0)
+        result = benchmark_relative(port, bench_navs, 4, 10.0)
         assert result.tracking_error is not None
         assert result.beta is not None
         assert result.alpha is not None
@@ -450,19 +451,19 @@ class TestBenchmarkRelative:
 
     def test_single_day_returns_none_te(self) -> None:
         """只有 1 天数据 → TE = None (min_len ≤ 1)."""
-        result = _benchmark_relative([0.01], (100.0, 101.0), 2, 10.0)
+        result = benchmark_relative([0.01], (100.0, 101.0), 2, 10.0)
         assert result.tracking_error is None
         assert result.beta == 0.0
         assert result.information_ratio is None
 
 
 # ---------------------------------------------------------------------------
-# _cost_metrics
+# cost_metrics
 # ---------------------------------------------------------------------------
 
 
 class TestCostMetrics:
-    """_cost_metrics 精确值验证."""
+    """cost_metrics 精确值验证."""
 
     def _make_fill(
         self,
@@ -486,7 +487,7 @@ class TestCostMetrics:
         )
 
     def test_empty_fills_zero_values(self) -> None:
-        result = _cost_metrics([], 100_000.0, [100_000.0])
+        result = cost_metrics([], 100_000.0, [100_000.0])
         assert result.total_turnover == 0.0
         assert result.total_fees == 0.0
         assert result.cost_drag == 0.0
@@ -494,7 +495,7 @@ class TestCostMetrics:
     def test_zero_initial_nav_no_cost_drag(self) -> None:
         """initial_nav = 0 → cost_drag = 0 (除零保护)."""
         fills = [self._make_fill()]
-        result = _cost_metrics(fills, 0.0, [100_000.0])
+        result = cost_metrics(fills, 0.0, [100_000.0])
         assert result.cost_drag == 0.0
 
     def test_single_fill(self) -> None:
@@ -502,7 +503,7 @@ class TestCostMetrics:
         navs = [100_000.0, 99_000.0]
         avg_nav = (100_000.0 + 99_000.0) / 2
         expected_turnover = (10.0 * 100) / avg_nav
-        result = _cost_metrics([fill], 100_000.0, navs)
+        result = cost_metrics([fill], 100_000.0, navs)
         assert result.total_turnover == pytest.approx(expected_turnover)
         assert result.total_fees == 5.0
         assert result.cost_drag == pytest.approx(5.0 / 100_000.0 * 100)
@@ -514,7 +515,7 @@ class TestCostMetrics:
             self._make_fill(price=20.0, qty=50, fee=3.0, date=datetime(2026, 1, 1)),
         ]
         navs = [100_000.0]
-        result = _cost_metrics(fills, 100_000.0, navs)
+        result = cost_metrics(fills, 100_000.0, navs)
         # 2 fills 同日 → rebalance_count = 1
         assert result.avg_turnover_per_rebalance == pytest.approx(result.total_turnover)
 
@@ -525,7 +526,7 @@ class TestCostMetrics:
             self._make_fill(price=10.0, qty=100, fee=5.0, date=datetime(2026, 1, 2)),
         ]
         navs = [100_000.0]
-        result = _cost_metrics(fills, 100_000.0, navs)
+        result = cost_metrics(fills, 100_000.0, navs)
         assert result.avg_turnover_per_rebalance == pytest.approx(
             result.total_turnover / 2,
         )
@@ -533,12 +534,12 @@ class TestCostMetrics:
     def test_empty_navs_uses_default_avg(self) -> None:
         """空 NAV 列表 → avg_nav = 1.0."""
         fill = self._make_fill(price=10.0, qty=100, fee=5.0)
-        result = _cost_metrics([fill], 100_000.0, [])
+        result = cost_metrics([fill], 100_000.0, [])
         assert result.total_turnover == pytest.approx(1000.0 / 1.0)
 
 
 # ---------------------------------------------------------------------------
-# _empty_* constructors
+# empty_* constructors
 # ---------------------------------------------------------------------------
 
 
@@ -546,7 +547,7 @@ class TestEmptyConstructors:
     """零值构造器验证."""
 
     def test_empty_aggregated_trade_statistics(self) -> None:
-        stats = _empty_aggregated_trade_statistics()
+        stats = empty_aggregated_trade_statistics()
         assert stats.total_trades == 0
         assert stats.win_rate == 0.0
         assert stats.profit_factor == 0.0
@@ -555,7 +556,7 @@ class TestEmptyConstructors:
         assert stats.worst_trade == 0.0
 
     def test_empty_alpha_statistics(self) -> None:
-        stats = _empty_alpha_statistics()
+        stats = empty_alpha_statistics()
         assert stats.annualized_return == 0.0
         assert stats.annualized_volatility == 0.0
         assert stats.sharpe_ratio == 0.0
@@ -589,8 +590,6 @@ def _make_account_view(
         total_value=nav,
         nav=nav,
         exposure=exposure,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 

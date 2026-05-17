@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Protocol
 
 import polars as pl
-from ditto_kernel.exceptions import DerivedNotFoundError, DerivedValidationError
 
+from ditto_features.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_features.models.derived import DerivedSpecRecord, DerivedVersionRecord
 from ditto_features.services.derived.artifact_reader import DerivedArtifactReader
 from ditto_features.services.derived.queries import (

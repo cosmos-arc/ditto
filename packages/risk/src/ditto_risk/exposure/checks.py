@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.order_book import Order
 
 from ditto_risk._validation import validate_weight
 from ditto_risk.constraints.context import (
@@ -11,6 +10,7 @@ from ditto_risk.constraints.context import (
     OrderCheckResult,
     PreTradeContext,
 )
+from ditto_risk.contracts import PreTradeOrder
 
 __all__ = ["ConcentrationPreCheck"]
 
@@ -29,7 +29,7 @@ class ConcentrationPreCheck:
 
     def check_order(
         self,
-        order: Order,
+        order: PreTradeOrder,
         context: PreTradeContext,
     ) -> OrderCheckResult:
         """检查单标的持仓占比是否超限。"""

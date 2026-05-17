@@ -1,4 +1,8 @@
-"""基本面数据 API 路由."""
+"""
+基本面数据 API 路由.
+
+maturity: experimental
+"""
 
 from __future__ import annotations
 

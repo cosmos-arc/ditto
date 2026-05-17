@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
-from ditto_kernel.publication_safety import (
+
+from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
+from ditto_features.publication_safety_records import (
     CompatibilityManifestRecord,
     DerivedMinimalDQSummaryRecord,
 )
-
-from ditto_features.models.derived import DerivedSpecRecord, PartitionInfo
 from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
     DerivedArtifactWriter,

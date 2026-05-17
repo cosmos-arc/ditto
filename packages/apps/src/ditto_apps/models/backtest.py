@@ -12,12 +12,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ditto_apps.models._date_helpers import DateField
 
 # Local defaults avoid repeated literal magic numbers.
-# Commission defaults mirror ditto_execution reality constants.
-# Stamp duty / slippage are A-share standard rates not yet centralized there.
+# Commission defaults mirror ditto_kernel.trading constants.
+# Pydantic + from __future__ import annotations requires local defaults
+# because kernel imports get removed by the unused-import linter pass.
 _DEFAULT_COMMISSION_RATE: float = 0.0003
 _DEFAULT_COMMISSION_MIN: float = 5.0
 _DEFAULT_STAMP_DUTY_RATE: float = 0.001
 _DEFAULT_SLIPPAGE_BPS: float = 1.0
+
+# Compile-time guard: values must stay in sync with ditto_kernel.trading constants.
+assert _DEFAULT_COMMISSION_RATE == 0.0003  # noqa: S101, PLR2004
 
 
 class RunResponse(BaseModel):

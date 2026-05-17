@@ -6,9 +6,11 @@ import pytest
 from ditto_execution.events import (
     OrderCanceled,
     OrderFilled,
+    OrderRejected,
     OrderSubmitted,
 )
 from ditto_kernel import DomainEvent
+from ditto_kernel.events import EventName
 
 
 class TestOrderSubmitted:
@@ -18,13 +20,13 @@ class TestOrderSubmitted:
             order_id="ORD-001",
             instrument_id=600000,
             side="BUY",
-            quantity=100.0,
+            quantity=100,
         )
         assert event.event_type == "order_submitted"
         assert event.order_id == "ORD-001"
         assert event.instrument_id == 600000
         assert event.side == "BUY"
-        assert event.quantity == 100.0
+        assert event.quantity == 100
         assert event.payload == {}
 
     def test_frozen(self) -> None:
@@ -33,7 +35,7 @@ class TestOrderSubmitted:
             order_id="ORD-001",
             instrument_id=600000,
             side="BUY",
-            quantity=100.0,
+            quantity=100,
         )
         with pytest.raises(AttributeError):
             event.order_id = "changed"  # type: ignore[misc]
@@ -44,7 +46,7 @@ class TestOrderSubmitted:
             order_id="ORD-001",
             instrument_id=600000,
             side="BUY",
-            quantity=100.0,
+            quantity=100,
         )
         assert isinstance(event, DomainEvent)
 
@@ -55,7 +57,7 @@ class TestOrderFilled:
             timestamp=datetime(2024, 1, 15, 9, 30, 5),
             order_id="ORD-001",
             fill_price=10.5,
-            filled_quantity=100.0,
+            filled_quantity=100,
         )
         assert event.event_type == "order_filled"
         assert event.fill_price == 10.5
@@ -66,7 +68,7 @@ class TestOrderFilled:
             timestamp=datetime(2024, 1, 15),
             order_id="ORD-001",
             fill_price=10.5,
-            filled_quantity=100.0,
+            filled_quantity=100,
             fee=5.25,
         )
         assert event.fee == 5.25
@@ -81,3 +83,25 @@ class TestOrderCanceled:
         )
         assert event.event_type == "order_canceled"
         assert event.reason == "insufficient_funds"
+
+
+class TestOrderRejected:
+    def test_creation(self) -> None:
+        event = OrderRejected(
+            timestamp=datetime(2024, 1, 15, 9, 30),
+            order_id="ORD-002",
+            reason="invalid_price",
+        )
+        assert event.event_type == EventName.ORDER_REJECTED
+        assert event.order_id == "ORD-002"
+        assert event.reason == "invalid_price"
+        assert isinstance(event, DomainEvent)
+
+    def test_frozen(self) -> None:
+        event = OrderRejected(
+            timestamp=datetime(2024, 1, 15),
+            order_id="ORD-002",
+            reason="test",
+        )
+        with pytest.raises(AttributeError):
+            event.reason = "changed"  # type: ignore[misc]

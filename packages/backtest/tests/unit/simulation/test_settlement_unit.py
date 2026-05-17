@@ -7,7 +7,7 @@ from ditto_backtest.simulation.settlement import (
 )
 from ditto_kernel.order import OrderSide
 from ditto_kernel.trading import TradingRuleSet
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import Position
 
 # ---------------------------------------------------------------------------
 # Test fixtures

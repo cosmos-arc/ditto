@@ -7,8 +7,7 @@ from unittest.mock import MagicMock
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import RiskScope
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import AccountView, CashBook
 from ditto_risk.post_trade import (
     CompositePostTradeGuard,
     RiskAction,
@@ -26,8 +25,6 @@ def _account_view(nav: float = 100_000.0) -> AccountView:
         total_value=nav,
         nav=nav,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 

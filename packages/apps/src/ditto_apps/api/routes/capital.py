@@ -1,4 +1,8 @@
-"""Capital 域 API 路由."""
+"""
+Capital 域 API 路由.
+
+maturity: experimental
+"""
 
 from __future__ import annotations
 

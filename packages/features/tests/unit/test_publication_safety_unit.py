@@ -1,5 +1,6 @@
 """Tests for publication safety models."""
 
+from ditto_features.derived_types import DerivedRole, MaterializationProfile
 from ditto_features.publication_safety import (
     CertificationCheckResult,
     CertificationPack,
@@ -9,7 +10,6 @@ from ditto_features.publication_safety import (
     PublicationSafetySeverity,
     ShadowDiffReport,
 )
-from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 
 class TestCompatibilityManifest:

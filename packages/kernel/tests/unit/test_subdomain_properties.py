@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
+from ditto_data.quality.quality_types import DQIssue, DQLevel, DQSeverity
 from ditto_kernel.instrument import InstrumentIngestParams
 from ditto_kernel.market import TimeSpec
-from ditto_kernel.quality import DQIssue, DQLevel, DQSeverity
 from ditto_kernel.strategy import ExecutionPolicy
 
 # ---------------------------------------------------------------------------

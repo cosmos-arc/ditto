@@ -1,13 +1,4 @@
-"""
-ReplayValidator — 回测运行复现性验证.
-
-Phase 3.1 — Run Lineage / Replayability.
-
-- ManifestDiff: 分类 manifest 差异（数据/配置/版本/种子）
-- NavComparison: NAV 序列对比指标
-- ReplayValidationResult: 完整复现性验证结果
-- ReplayValidator: 纯函数验证器（无 I/O，无副作用）
-"""
+"""回测运行复现性验证 — manifest 对比、NAV 序列、fill 与 account 状态."""
 
 from __future__ import annotations
 
@@ -15,6 +6,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ditto_kernel.math import pearson_correlation
+from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.fills import FillEvent
 
 from ditto_backtest.errors import ReplayError
 from ditto_backtest.manifest import (
@@ -23,8 +16,11 @@ from ditto_backtest.manifest import (
 )
 
 __all__ = [
+    "AccountStateComparison",
+    "FillComparison",
     "ManifestDiff",
     "NavComparison",
+    "ReplayProof",
     "ReplayValidationResult",
     "ReplayValidator",
 ]
@@ -278,6 +274,100 @@ class ReplayValidator:
             max_nav_diff_bps=nav_comp.max_diff_bps,
             manifest_diff=manifest_diff,
             input_data_match=input_data_match,
+        )
+
+
+# ---------------------------------------------------------------------------
+# FillComparison
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FillComparison:
+    """Fill 序列对比结果。"""
+
+    identical: bool
+    mismatch_count: int
+    length_mismatch: bool
+    point_count: int
+
+
+# ---------------------------------------------------------------------------
+# AccountStateComparison
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AccountStateComparison:
+    """Account 状态对比结果。"""
+
+    identical: bool
+    nav_diff: float
+    available_cash_diff: float
+    settled_cash_diff: float
+    frozen_cash_diff: float
+    position_count_diff: int
+
+
+# ---------------------------------------------------------------------------
+# ReplayProof
+# ---------------------------------------------------------------------------
+
+
+class ReplayProof:
+    """Fill 与 Account 状态对比 — 回测确定性验证."""
+
+    @staticmethod
+    def compare_fills(
+        original: Sequence[FillEvent],
+        replay: Sequence[FillEvent],
+    ) -> FillComparison:
+        """对比两条 fill 序列，返回差异报告。"""
+        n = len(original)
+        length_mismatch = n != len(replay)
+        identical = not length_mismatch
+        mismatch_count = 0
+        for a, b in zip(original, replay, strict=False):
+            if a != b:
+                identical = False
+                mismatch_count += 1
+        return FillComparison(
+            identical=identical,
+            mismatch_count=mismatch_count,
+            length_mismatch=length_mismatch,
+            point_count=n,
+        )
+
+    @staticmethod
+    def compare_account_state(
+        original: AccountView,
+        replay: AccountView,
+    ) -> AccountStateComparison:
+        """对比两个 AccountView，返回 NAV / 现金 / 持仓差异。"""
+        nav_diff = abs(original.nav - replay.nav)
+        available_cash_diff = abs(original.cash.available - replay.cash.available)
+        settled_cash_diff = abs(original.cash.settled - replay.cash.settled)
+        frozen_cash_diff = abs(original.cash.frozen - replay.cash.frozen)
+        cash_match = original.cash == replay.cash
+        position_count_diff = len(original.positions) - len(replay.positions)
+        keys_match = set(original.positions.keys()) == set(replay.positions.keys())
+        position_values_match = keys_match and all(
+            original.positions[iid] == replay.positions[iid]
+            for iid in original.positions
+        )
+        identical = (
+            nav_diff == 0.0
+            and cash_match
+            and position_count_diff == 0
+            and position_values_match
+        )
+        return AccountStateComparison(
+            identical=identical,
+            nav_diff=nav_diff,
+            available_cash_diff=available_cash_diff,
+            settled_cash_diff=settled_cash_diff,
+            frozen_cash_diff=frozen_cash_diff,
+            position_count_diff=position_count_diff,
         )
 
 

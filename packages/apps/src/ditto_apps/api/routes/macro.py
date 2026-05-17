@@ -1,4 +1,8 @@
-"""Macro 域 API 路由."""
+"""
+Macro 域 API 路由.
+
+maturity: experimental
+"""
 
 from __future__ import annotations
 

@@ -46,6 +46,7 @@ ditto_data/
 │   └── provider.py      # ServiceBackedDataProvider 实现
 ├── quality/             # 数据质量引擎
 │   ├── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
+│   ├── quality_types.py # DQ 类型（DQLevel / DQSeverity / DQIssue / DQResult）
 │   ├── config.py        # DQ 配置加载
 │   ├── engine.py        # 质量引擎主类
 │   ├── golden.py        # 黄金标准参考
@@ -245,3 +246,20 @@ reader = InstrumentReader(...)  # ❌
 | Parquet 写入不加锁 | FileLock (超时 30s) |
 | 冻结数据无保护 | FreezeManager.acquirefreeze() |
 | Interfaces 层直接访问 Reader/Writer | 通过 Service 间接访问 |
+
+## 数据集成熟度
+
+| 数据集族 | 成熟度 | 说明 |
+|----------|--------|------|
+| A-share ETF/指数 行情 | initial-focus | 当前生产范围核心 |
+| A-share ETF 元数据 | initial-focus | Universe/Instrument 基础设施 |
+| A-share 股票 行情/元数据 | experimental | 存储和适配器存在，但不属于 initial-focus |
+| 基本面（PIT） | experimental | PIT schema 和 API 存在，生产就绪待验证 |
+| 资金数据 | experimental | 估值/融资融券/质押/指数成分 |
+| 宏观指标 | experimental | FRED/Tushare 适配器存在，非当前生产范围 |
+| FX 外汇 | experimental | Tushare FX 适配器存在，非当前生产范围 |
+| 商品（WTI/Brent/Gold/Silver） | experimental | FRED/Tushare 适配器存在，非当前生产范围 |
+| DataCatalog runtime | experimental | Protocol contracts 存在，无具体实现 |
+| Lineage | reserved | contracts 仅占位 |
+
+成熟度定义见 `docs/architecture/capability-maturity.md`。API/CLI/文档不得将 experimental 数据集描述为生产就绪。

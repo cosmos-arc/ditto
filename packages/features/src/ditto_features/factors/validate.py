@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 from loguru import logger
 
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.expression.compiler import (
     ExpressionCompiler,
     detect_dependency_cycles,

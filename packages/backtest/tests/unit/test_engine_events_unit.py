@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.data_feed import Slice
@@ -13,18 +13,20 @@ from ditto_execution.events import (
     OrderFilled,
     OrderSubmitted,
 )
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel import SimpleEventBus
-from ditto_kernel.clock import Clock
+from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import DomainEvent
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import RiskScope
+from ditto_kernel.synchronizer import Synchronizer, TimeSlice
+from ditto_kernel.time_context import TimeContext
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import (
-    Order,
-    OrderBookReadOnly,
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    FillEvent,
 )
 from ditto_risk.events import RiskGuardTriggered
 from ditto_risk.post_trade import (
@@ -44,11 +46,9 @@ DAYS = ["2026-03-01"]
 STEP_TIME = datetime(2026, 3, 1, 15, 0, tzinfo=UTC)
 
 
-def _make_clock() -> MagicMock:
-    """构建测试用 mock Clock."""
-    clock = MagicMock(spec=Clock)
-    clock.now.return_value = STEP_TIME
-    return clock
+def _make_clock() -> SimulatedClock:
+    """构建测试用 SimulatedClock — tz-aware 以匹配 Slice.step_time."""
+    return SimulatedClock(initial=STEP_TIME)
 
 
 def _make_cash(available: float = 500_000.0) -> CashBook:
@@ -63,8 +63,6 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 
@@ -92,7 +90,7 @@ def _make_slice(date: str = "2026-03-01") -> Slice:
 
 def _make_order(iid: int = 1, qty: int = 100) -> Order:
     return Order(
-        order_id="order-001",
+        client_id=ClientOrderId(value="order-001"),
         instrument_id=iid,
         order_type=OrderType.MARKET,
         direction=OrderSide.BUY,
@@ -148,6 +146,22 @@ def _make_engine_loop(
     if not custom_brokerage:
         brokerage.process_pending.return_value = ()
 
+    clock = _make_clock()
+
+    # 构建 mock Synchronizer — 按 DAYS 生成 TimeSlice 流
+    trading_days = [d for d in DAYS if d >= config.start_date]
+    slices: list[TimeSlice] = []
+    for day in trading_days:
+        tc = TimeContext(
+            decision_time=STEP_TIME,
+            knowledge_date=STEP_TIME.date() - timedelta(days=1),
+            trade_date=day,
+        )
+        slices.append(TimeSlice(time_context=tc, bars={}))
+    sync = Mock(spec=Synchronizer)
+    sync.clock.return_value = clock
+    sync.stream.return_value = iter(slices)
+
     return EngineLoop(
         config=config,
         pipeline=pipeline,
@@ -155,8 +169,8 @@ def _make_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=sync,
         options=EngineOptions(
-            clock=_make_clock(),
             fee_model=fee_model,
             event_bus=event_bus,
             post_trade_guard=post_trade_guard,
@@ -204,18 +218,36 @@ class TestEngineLoopEvents:
         fee_model = Mock()
         fee_model.estimate.return_value = 5.0
 
+        config = _make_config()
+        data_feed = Mock(
+            trading_days=Mock(return_value=DAYS),
+            get_slice=Mock(return_value=_make_slice()),
+        )
+        clock = _make_clock()
+
+        # 构建 mock Synchronizer
+        trading_days = [d for d in DAYS if d >= config.start_date]
+        slices: list[TimeSlice] = []
+        for day in trading_days:
+            tc = TimeContext(
+                decision_time=STEP_TIME,
+                knowledge_date=STEP_TIME.date() - timedelta(days=1),
+                trade_date=day,
+            )
+            slices.append(TimeSlice(time_context=tc, bars={}))
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = clock
+        sync.stream.return_value = iter(slices)
+
         loop = EngineLoop(
-            config=_make_config(),
+            config=config,
             pipeline=Mock(),
             planner=planner,
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
-            data_feed=Mock(
-                trading_days=Mock(return_value=DAYS),
-                get_slice=Mock(return_value=_make_slice()),
-            ),
+            data_feed=data_feed,
+            synchronizer=sync,
             options=EngineOptions(
-                clock=_make_clock(),
                 fee_model=fee_model,
                 event_bus=event_bus,
             ),
@@ -285,7 +317,7 @@ class TestEngineLoopEvents:
         risk_events = [e for e in collected if isinstance(e, RiskGuardTriggered)]
         assert len(risk_events) >= 1
         assert risk_events[0].rule_name == "max_drawdown"
-        assert risk_events[0].severity == "critical"
+        assert risk_events[0].severity == RiskSeverity.CRITICAL
 
     def test_no_events_when_event_bus_none(self) -> None:
         """event_bus=None 时零副作用 — 不抛异常."""

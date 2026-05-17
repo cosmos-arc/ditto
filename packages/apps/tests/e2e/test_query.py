@@ -25,7 +25,7 @@ from ditto_data.storage.market.stock.adj import (
     StockAdjFactorWriter,
 )
 from ditto_data.storage.market.stock.bars import StockBarsReader, StockBarsWriter
-from ditto_platform.foundation.storage.types import OnDuplicate
+from ditto_platform.foundation import OnDuplicate
 
 from tests.e2e.parquet_helpers import market_parquet_store
 

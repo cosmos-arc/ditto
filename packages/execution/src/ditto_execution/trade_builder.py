@@ -15,8 +15,7 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting import AccountView, FillEvent
 
 __all__ = [
     "FifoTradeBuilder",

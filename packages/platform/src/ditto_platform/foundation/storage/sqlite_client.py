@@ -1,5 +1,6 @@
 """Generic SQLite client for database operations."""
 
+import re
 import sqlite3
 from typing import Any, cast
 
@@ -7,6 +8,21 @@ from ditto_platform.foundation import SQLitePool, logger, span
 
 # Maximum SQL length to log (truncates longer queries)
 _MAX_SQL_LOG_LENGTH = 100
+
+# Valid SQL identifier: letter/underscore start, alphanumeric + underscore body
+_VALID_IDENTIFIER = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def validate_identifier(identifier: str) -> None:
+    """
+    Validate a SQL identifier (table/column name) against injection.
+
+    Raises:
+        ValueError: If the identifier contains disallowed characters.
+
+    """
+    if not _VALID_IDENTIFIER.match(identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier!r}")
 
 
 class SQLiteClient:
@@ -248,8 +264,14 @@ class SQLiteClient:
         Returns:
             Record count.
 
+        Raises:
+            ValueError: If table name is not a valid SQL identifier.
+
         """
-        sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608 - table name should be validated by caller
+        validate_identifier(table)
+        if where and params is None:
+            raise ValueError("'params' required when 'where' is specified")
+        sql = f"SELECT COUNT(*) FROM {table}"  # noqa: S608
         if where:
             sql += f" WHERE {where}"
 

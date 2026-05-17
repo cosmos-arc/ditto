@@ -9,6 +9,6 @@ pytestmark = pytest.mark.serial
 @pytest.fixture(autouse=True)
 def reset_observability_state() -> None:
     """在每个测试前重置观察性系统状态，避免测试隔离问题."""
-    from ditto_platform.foundation.observability.testing import reset_for_testing
+    from ditto_platform.foundation import reset_for_testing
 
     reset_for_testing()

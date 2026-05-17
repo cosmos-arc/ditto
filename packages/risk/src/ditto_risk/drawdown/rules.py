@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ditto_kernel.strategy import RiskScope
-from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting import AccountView
 
 from ditto_risk.errors import RiskConfigurationError
 from ditto_risk.post_trade import (
@@ -13,7 +15,14 @@ from ditto_risk.post_trade import (
     SliceView,
 )
 
-__all__ = ["MaxDrawdownRule", "SingleLossLimitRule"]
+__all__ = ["DrawdownStateSnapshot", "MaxDrawdownRule", "SingleLossLimitRule"]
+
+
+@dataclass(frozen=True)
+class DrawdownStateSnapshot:
+    """MaxDrawdownRule 的可恢复状态。"""
+
+    peak_nav: float
 
 
 class MaxDrawdownRule:
@@ -55,6 +64,14 @@ class MaxDrawdownRule:
     def reset(self) -> None:
         """重置内部峰值 NAV 状态，确保跨回测隔离。"""
         self._peak_nav = 0.0
+
+    def snapshot(self) -> DrawdownStateSnapshot:
+        """捕获当前 peak NAV 状态快照。"""
+        return DrawdownStateSnapshot(peak_nav=self._peak_nav)
+
+    def restore(self, state: DrawdownStateSnapshot) -> None:
+        """从快照恢复 peak NAV 状态。"""
+        self._peak_nav = state.peak_nav
 
     def scan(
         self,

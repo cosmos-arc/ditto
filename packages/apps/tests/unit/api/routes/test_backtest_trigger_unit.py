@@ -153,7 +153,7 @@ class TestErrorHandlerMapping:
 
 
 class TestBuildFlowParams:
-    """Tests for _build_flow_params helper — result → flow 参数映射."""
+    """Tests for build_flow_params helper — result → flow 参数映射."""
 
     def test_basic_params_without_cost_config(self) -> None:
         """无 cost_config 时构建基本 flow 参数."""
@@ -161,7 +161,7 @@ class TestBuildFlowParams:
             BacktestRunCommand,
             BacktestRunResult,
         )
-        from ditto_apps.api.routes.backtest import _build_flow_params
+        from ditto_apps.api.routes.backtest import build_flow_params
 
         command = BacktestRunCommand(
             strategy_id="momentum-etf",
@@ -173,7 +173,7 @@ class TestBuildFlowParams:
             strategy_id="momentum-etf",
             status="pending",
         )
-        params = _build_flow_params(command, result)
+        params = build_flow_params(command, result)
 
         assert params["run_id"] == "abc12345"
         assert params["strategy_id"] == "momentum-etf"
@@ -191,7 +191,7 @@ class TestBuildFlowParams:
             BacktestRunResult,
             CostConfig,
         )
-        from ditto_apps.api.routes.backtest import _build_flow_params
+        from ditto_apps.api.routes.backtest import build_flow_params
 
         cost_cfg = CostConfig(commission_rate=0.0005, commission_min=10.0)
         command = BacktestRunCommand(
@@ -206,7 +206,7 @@ class TestBuildFlowParams:
             status="pending",
             cost_config=cost_cfg,
         )
-        params = _build_flow_params(command, result)
+        params = build_flow_params(command, result)
 
         assert "cost_config" in params
         cost_dict = params["cost_config"]
@@ -220,7 +220,7 @@ class TestBuildFlowParams:
             BacktestRunCommand,
             BacktestRunResult,
         )
-        from ditto_apps.api.routes.backtest import _build_flow_params
+        from ditto_apps.api.routes.backtest import build_flow_params
 
         command = BacktestRunCommand(
             strategy_id="test",
@@ -233,7 +233,7 @@ class TestBuildFlowParams:
             strategy_id="test",
             status="pending",
         )
-        params = _build_flow_params(command, result)
+        params = build_flow_params(command, result)
 
         assert params["parameter_overrides"] == ("key1=val1", "key2=val2")
 
@@ -270,13 +270,13 @@ class TestRaiseBusinessErrorBacktest:
 
 
 class TestRunBacktestFlow:
-    """Tests for _run_backtest_flow bypasses Prefect engine."""
+    """Tests for run_backtest_flow_sync bypasses Prefect engine."""
 
     def test_calls_flow_fn_not_flow_object(self) -> None:
-        """_run_backtest_flow 应通过 .fn 调用 raw function，避免触发 Prefect engine."""
+        """run_backtest_flow_sync 通过 .fn 调用 raw function，避免 Prefect engine."""
         from unittest.mock import MagicMock, patch
 
-        from ditto_apps.api.routes.backtest import _run_backtest_flow
+        from ditto_apps.api.routes.backtest import run_backtest_flow_sync
 
         mock_fn = MagicMock(return_value=None)
         mock_flow = MagicMock()
@@ -291,10 +291,10 @@ class TestRunBacktestFlow:
         }
 
         with patch(
-            "ditto_apps.api.routes.backtest.run_backtest_flow",
+            "ditto_apps.api.routes.backtest_run_routes.run_backtest_flow",
             mock_flow,
         ):
-            _run_backtest_flow(params)
+            run_backtest_flow_sync(params)
 
         # 应调用 .fn 而非直接调用 flow 对象
         mock_fn.assert_called_once_with(**params)
@@ -305,7 +305,7 @@ class TestRunBacktestFlow:
         """on_failure 回调应收到包含实际异常信息的字符串，而非泛化消息."""
         from unittest.mock import MagicMock, patch
 
-        from ditto_apps.api.routes.backtest import _run_backtest_flow
+        from ditto_apps.api.routes.backtest import run_backtest_flow_sync
 
         original_error = RuntimeError("strategy compilation failed: bad alpha expr")
         mock_fn = MagicMock(side_effect=original_error)
@@ -321,10 +321,10 @@ class TestRunBacktestFlow:
 
         failure_callback = MagicMock()
         with patch(
-            "ditto_apps.api.routes.backtest.run_backtest_flow",
+            "ditto_apps.api.routes.backtest_run_routes.run_backtest_flow",
             mock_flow,
         ):
-            _run_backtest_flow(params, on_failure=failure_callback)
+            run_backtest_flow_sync(params, on_failure=failure_callback)
 
         # on_failure 应被调用，且消息包含实际异常文本
         failure_callback.assert_called_once()

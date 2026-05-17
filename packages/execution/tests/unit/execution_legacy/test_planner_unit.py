@@ -3,6 +3,11 @@
 from types import MappingProxyType
 
 import pytest
+from ditto_execution.orders.book import OrderBookReadOnly
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.planner import (
     BlockedOrder,
     BlockSeverity,
@@ -19,15 +24,11 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
-    Order,
-    OrderBookReadOnly,
-    OrderStatus,
-    OrderTicket,
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    Position,
 )
-from ditto_portfolio.accounting.position import Position
 from ditto_strategy.alpha.models import TargetPortfolio
 
 # ---------------------------------------------------------------------------
@@ -44,21 +45,17 @@ from ditto_strategy.alpha.models import TargetPortfolio
 
 def _account_view(
     positions: dict[int, Position] | None = None,
-    pending_tickets: dict[str, OrderTicket] | None = None,
     nav: float = 100_000.0,
     exposure: float = 0.0,
 ) -> AccountView:
     """创建用于测试的 AccountView."""
     pos = positions or {}
-    pending = pending_tickets or {}
     return AccountView(
         positions=MappingProxyType({InstrumentId(k): v for k, v in pos.items()}),
         cash=CashBook(available=nav, settled=nav, frozen=0.0),
         total_value=nav + exposure,
         nav=nav,
         exposure=exposure,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly(pending),
     )
 
 
@@ -88,7 +85,7 @@ def _pending_buy(
 ) -> OrderTicket:
     """创建一个未成交的买单."""
     order = Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=InstrumentId(instrument_id),
         order_type=OrderType.MARKET,
         direction=OrderSide.BUY,
@@ -104,7 +101,7 @@ def _pending_sell(
 ) -> OrderTicket:
     """创建一个未成交的卖单."""
     order = Order(
-        order_id=order_id,
+        client_id=ClientOrderId(value=order_id),
         instrument_id=InstrumentId(instrument_id),
         order_type=OrderType.MARKET,
         direction=OrderSide.SELL,
@@ -401,19 +398,14 @@ class TestPendingAware:
 
     def test_pending_sell_no_duplicate(self) -> None:
         """已有 pending sell 10000 股 → effective_qty 减少，不重复卖出."""
+        sell_ticket = _pending_sell("pending-sell-1", 1, 10000)
+        ob = OrderBookReadOnly({"pending-sell-1": sell_ticket})
         av = _account_view(
             positions={
                 1: _position(
                     1,
                     quantity=30000,
                     market_value=30000.0,
-                ),
-            },
-            pending_tickets={
-                "pending-sell-1": _pending_sell(
-                    "pending-sell-1",
-                    1,
-                    10000,
                 ),
             },
             exposure=30000.0,
@@ -427,25 +419,21 @@ class TestPendingAware:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
+            order_book=ob,
         )
 
         assert len(plan.orders) == 0
 
     def test_pending_buy_increases_effective(self) -> None:
         """已有 pending buy 10000 股 → effective_qty 增加."""
+        buy_ticket = _pending_buy("pending-buy-1", 1, 10000)
+        ob = OrderBookReadOnly({"pending-buy-1": buy_ticket})
         av = _account_view(
             positions={
                 1: _position(
                     1,
                     quantity=10000,
                     market_value=10000.0,
-                ),
-            },
-            pending_tickets={
-                "pending-buy-1": _pending_buy(
-                    "pending-buy-1",
-                    1,
-                    10000,
                 ),
             },
             exposure=10000.0,
@@ -459,25 +447,21 @@ class TestPendingAware:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
+            order_book=ob,
         )
 
         assert len(plan.orders) == 0
 
     def test_pending_sell_creates_larger_buy(self) -> None:
         """pending sell 导致 effective_qty < target → 需要额外买入."""
+        sell_ticket = _pending_sell("pending-sell-1", 1, 10000)
+        ob = OrderBookReadOnly({"pending-sell-1": sell_ticket})
         av = _account_view(
             positions={
                 1: _position(
                     1,
                     quantity=30000,
                     market_value=30000.0,
-                ),
-            },
-            pending_tickets={
-                "pending-sell-1": _pending_sell(
-                    "pending-sell-1",
-                    1,
-                    10000,
                 ),
             },
             exposure=30000.0,
@@ -491,6 +475,7 @@ class TestPendingAware:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
+            order_book=ob,
         )
 
         assert len(plan.orders) == 1
@@ -761,15 +746,9 @@ class TestEdgeCases:
 
     def test_pending_sell_without_position_no_sell_order(self) -> None:
         """pending sell 但无 position → effective_qty < 0，不产生卖单."""
-        av = _account_view(
-            pending_tickets={
-                "pending-sell-all": _pending_sell(
-                    "pending-sell-all",
-                    1,
-                    500,
-                ),
-            },
-        )
+        sell_ticket = _pending_sell("pending-sell-all", 1, 500)
+        ob = OrderBookReadOnly({"pending-sell-all": sell_ticket})
+        av = _account_view()
         target = _target({2: 0.5})
 
         planner = SimpleExecutionPlanner()
@@ -777,6 +756,7 @@ class TestEdgeCases:
             target=target,
             account_view=av,
             trade_date="2026-03-21",
+            order_book=ob,
         )
 
         # ETF-001 不在 position, effective_qty = 0 + (-500) = -500

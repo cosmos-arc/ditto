@@ -6,8 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import polars as pl
-from ditto_platform.foundation.storage import ParquetStore
-from ditto_platform.foundation.storage.types import OnDuplicate, WriteStoreResult
+from ditto_platform.foundation import OnDuplicate, ParquetStore, WriteStoreResult
 
 INSTRUMENT_ID_COLUMN = "instrument_id"
 

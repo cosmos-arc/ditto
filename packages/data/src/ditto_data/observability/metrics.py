@@ -52,7 +52,7 @@ METRIC_DEFINITIONS: list[MetricDefinition] = [
 
 def register_metrics() -> None:
     """Register data-owned metric definitions with the platform meter."""
-    from ditto_platform.foundation.observability.metrics import (  # noqa: PLC0415
+    from ditto_platform.foundation import (  # noqa: PLC0415
         register_metric_definitions,
     )
 

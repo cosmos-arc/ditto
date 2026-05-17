@@ -33,11 +33,15 @@ from ditto_backtest.engine import (
 )
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import BacktestReport, build_report
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -152,25 +156,32 @@ def _build_engine_with_audit(
         strategy_id="e2e-smoke",
         strategy_run_id="e2e-smoke-run",
     )
+    clock = SimulatedClock(
+        initial=datetime(
+            int(start_date[:4]),
+            int(start_date[5:7]),
+            int(start_date[8:10]),
+            tzinfo=UTC,
+        ),
+    )
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=start_date,
+    )
     engine = EngineLoop(
         config=config,
         pipeline=pipeline,
         planner=SimpleExecutionPlanner(),
         brokerage=BacktestBrokerage(
             account=account,
+            order_book=OrderBook(journal=InMemoryOrderEventJournal()),
             model=BrokerageModel(fee_model=fee_model),
         ),
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(
-                initial=datetime(
-                    int(start_date[:4]),
-                    int(start_date[5:7]),
-                    int(start_date[8:10]),
-                    tzinfo=UTC,
-                ),
-            ),
             fee_model=fee_model,
             audit_collector=audit,
         ),
@@ -380,15 +391,12 @@ class TestE2ESmoke:
 
         使用自定义 Pipeline 验证 signal_value 注入后排序和权重分配正确。
         """
-        from ditto_portfolio.rebalancing.allocation import (
-            AllocationStage,
-            EqualWeightAllocator,
-        )
-
         # 构建自定义 Pipeline: Signal → Score → Selection → Allocation → Constraint
-        from ditto_portfolio.rebalancing.constraints import (
+        from ditto_portfolio.rebalancing import (
+            AllocationStage,
             ConstraintChecker,
             ConstraintStage,
+            EqualWeightAllocator,
             MaxWeightConstraint,
         )
         from ditto_strategy.alpha.builtins import (

@@ -160,13 +160,18 @@ def _make_snapshot(
     )
 
 
-def _make_mock_trade_service() -> MagicMock:
-    """构造 mock TradeService."""
-    service = MagicMock()
-    service.list_positions.return_value = []
-    service.list_fills.return_value = []
-    service.get_latest_position.return_value = None
-    return service
+def _make_mock_fill_port() -> MagicMock:
+    """构造 mock FillDataPort."""
+    port = MagicMock()
+    port.list_fills.return_value = []
+    return port
+
+
+def _make_mock_position_port() -> MagicMock:
+    """构造 mock PositionDataPort."""
+    port = MagicMock()
+    port.list_positions.return_value = []
+    return port
 
 
 # ===========================================================================
@@ -432,7 +437,8 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
         )
         from ditto_execution.models import PositionRecord
 
-        mock_service = _make_mock_trade_service()
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
         records = [
             PositionRecord(
                 snapshot_id="snap-1",
@@ -461,9 +467,11 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
                 total_fees=25.0,
             ),
         ]
-        mock_service.list_positions.return_value = records
+        position_port.list_positions.return_value = records
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.get_latest_positions(strategy_id="strat-001")
 
         assert len(result) == 2
@@ -478,8 +486,11 @@ class TestPortfolioActualQueryFacadeGetLatestPositions:
             PortfolioActualQueryFacade,
         )
 
-        mock_service = _make_mock_trade_service()
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.get_latest_positions(strategy_id="strat-001")
 
         assert result == []
@@ -495,7 +506,8 @@ class TestPortfolioActualQueryFacadeGetFills:
         )
         from ditto_execution.models import FillRecord
 
-        mock_service = _make_mock_trade_service()
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
         records = [
             FillRecord(
                 fill_id="fill-1",
@@ -509,14 +521,16 @@ class TestPortfolioActualQueryFacadeGetFills:
                 fee=10.0,
             ),
         ]
-        mock_service.list_fills.return_value = records
+        fill_port.list_fills.return_value = records
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.get_fills(strategy_id="strat-001")
 
         assert len(result) == 1
         assert result[0].fill_id == "fill-1"
-        mock_service.list_fills.assert_called_once_with(
+        fill_port.list_fills.assert_called_once_with(
             "strat-001",
             trade_date=None,
             end_date=None,
@@ -528,13 +542,16 @@ class TestPortfolioActualQueryFacadeGetFills:
             PortfolioActualQueryFacade,
         )
 
-        mock_service = _make_mock_trade_service()
-        mock_service.list_fills.return_value = []
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
+        fill_port.list_fills.return_value = []
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         facade.get_fills(strategy_id="strat-001", start_date="2024-01-10")
 
-        mock_service.list_fills.assert_called_once_with(
+        fill_port.list_fills.assert_called_once_with(
             "strat-001",
             trade_date="2024-01-10",
             end_date=None,
@@ -546,8 +563,11 @@ class TestPortfolioActualQueryFacadeGetFills:
             PortfolioActualQueryFacade,
         )
 
-        mock_service = _make_mock_trade_service()
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.get_fills(strategy_id="strat-001")
 
         assert result == []
@@ -563,7 +583,8 @@ class TestPortfolioActualQueryFacadeGetPositionHistory:
         )
         from ditto_execution.models import PositionRecord
 
-        mock_service = _make_mock_trade_service()
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
         records = [
             PositionRecord(
                 snapshot_id="snap-1",
@@ -592,16 +613,18 @@ class TestPortfolioActualQueryFacadeGetPositionHistory:
                 total_fees=10.0,
             ),
         ]
-        mock_service.list_positions.return_value = records
+        position_port.list_positions.return_value = records
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.get_position_history(
             strategy_id="strat-001",
             snapshot_date="2024-01-15",
         )
 
         assert len(result) == 2
-        mock_service.list_positions.assert_called_once_with(
+        position_port.list_positions.assert_called_once_with(
             "strat-001",
             snapshot_date="2024-01-15",
         )
@@ -617,7 +640,8 @@ class TestPortfolioActualQueryFacadeComputePnl:
         )
         from ditto_execution.models import PositionRecord
 
-        mock_service = _make_mock_trade_service()
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
         records = [
             PositionRecord(
                 snapshot_id="snap-1",
@@ -646,9 +670,11 @@ class TestPortfolioActualQueryFacadeComputePnl:
                 total_fees=25.0,
             ),
         ]
-        mock_service.list_positions.return_value = records
+        position_port.list_positions.return_value = records
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.compute_pnl(
             strategy_id="strat-001",
             snapshot_date="2024-01-16",
@@ -666,8 +692,11 @@ class TestPortfolioActualQueryFacadeComputePnl:
             PortfolioActualQueryFacade,
         )
 
-        mock_service = _make_mock_trade_service()
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.compute_pnl(
             strategy_id="strat-001",
             snapshot_date="2024-01-16",
@@ -685,7 +714,8 @@ class TestPortfolioActualQueryFacadeComputePnl:
         )
         from ditto_execution.models import PositionRecord
 
-        mock_service = _make_mock_trade_service()
+        fill_port = _make_mock_fill_port()
+        position_port = _make_mock_position_port()
         record = PositionRecord(
             snapshot_id="snap-1",
             strategy_id="strat-001",
@@ -699,9 +729,11 @@ class TestPortfolioActualQueryFacadeComputePnl:
             realized_pnl=0.0,
             total_fees=10.0,
         )
-        mock_service.list_positions.return_value = [record]
+        position_port.list_positions.return_value = [record]
 
-        facade = PortfolioActualQueryFacade(trade_service=mock_service)
+        facade = PortfolioActualQueryFacade(
+            fill_port=fill_port, position_port=position_port
+        )
         result = facade.compute_pnl(
             strategy_id="strat-001",
             snapshot_date="2024-01-16",

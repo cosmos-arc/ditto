@@ -9,17 +9,17 @@ All functions are pure (module-level) — no facade or service dependencies.
 
 from __future__ import annotations
 
+from ditto_features.derived_types import DerivedRole, MaterializationProfile
 from ditto_features.publication_safety import (
     CertificationCheckResult,
     CertificationStage,
     CompatibilityManifest,
     PublicationSafetySeverity,
 )
-from ditto_kernel.publication_safety import (
+from ditto_features.publication_safety_records import (
     DerivedMinimalDQSummaryRecord,
     ShadowDiffReportRecord,
 )
-from ditto_kernel.strategy import DerivedRole, MaterializationProfile
 
 __all__ = ["build_certification_checks"]
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ditto_kernel.strategy import RiskScope
-from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting import AccountView
 
 from ditto_risk._validation import validate_weight
 from ditto_risk.errors import RiskConfigurationError

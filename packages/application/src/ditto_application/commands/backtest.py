@@ -15,9 +15,7 @@ from typing import cast
 
 import orjson
 from ditto_kernel.strategy import RunStatus
-from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
-    StrategyCatalogService,
-)
+from ditto_strategy.contracts import StrategyCatalogReader
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.contracts import CostConfig
@@ -74,7 +72,7 @@ class BacktestRunHandler:
     def __init__(
         self,
         *,
-        catalog_service: StrategyCatalogService,
+        catalog_service: StrategyCatalogReader,
         run_service: RunLifecycleService,
         factor_bridge: FactorBridge,
     ) -> None:

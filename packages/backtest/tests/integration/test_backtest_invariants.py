@@ -16,7 +16,19 @@ from ditto_backtest.simulation import (
     BrokerageModel,
 )
 from ditto_backtest.statistics import ExecutionAuditCollector
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
 from ditto_execution.brokerage import ProcessInput
+from ditto_execution.errors import OrderStateError
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.event import OrderEvent
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.orders.trigger import OrderTrigger
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -28,17 +40,11 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account, AccountView
-from ditto_portfolio.accounting.buying_power import CashAccountBuyingPower
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import (
-    Order,
-    OrderBook,
-    OrderBookReadOnly,
-    OrderEvent,
-    OrderStatus,
-    OrderTicket,
-    StateTransitionError,
+from ditto_portfolio.accounting import (
+    Account,
+    AccountView,
+    CashAccountBuyingPower,
+    CashBook,
 )
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
@@ -55,6 +61,12 @@ _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
 INITIAL_CASH = _mod.INITIAL_CASH
+
+
+def _ob() -> OrderBook:
+    """构造默认 OrderBook（含 InMemoryOrderEventJournal）。"""
+    return OrderBook(journal=InMemoryOrderEventJournal())
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -168,7 +180,7 @@ class TestFrozenImmutability:
     def test_order_ticket_frozen(self) -> None:
         """OrderTicket frozen 不可直接修改。"""
         order = Order(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -180,7 +192,7 @@ class TestFrozenImmutability:
 
     def test_account_view_positions_readonly(self) -> None:
         """AccountView.positions 是 MappingProxyType — 不可通过 view 修改。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -198,8 +210,6 @@ class TestFrozenImmutability:
             total_value=501_000.0,
             nav=501_000.0,
             exposure=1000.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         with pytest.raises(TypeError):
             view.positions[2] = pos  # type: ignore[index]
@@ -216,7 +226,7 @@ class TestTerminalState:
     def test_filled_ticket_cannot_cancel(self) -> None:
         """FILLED 状态的 OrderTicket 不能撤销。"""
         order = Order(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -225,7 +235,8 @@ class TestTerminalState:
         ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
 
         fill_evt = OrderEvent(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
+            trigger=OrderTrigger.FILL,
             status=OrderStatus.FILLED,
             fill_price=10.0,
             fill_quantity=100,
@@ -236,17 +247,18 @@ class TestTerminalState:
         assert filled_ticket.status == OrderStatus.FILLED
 
         cancel_evt = OrderEvent(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
+            trigger=OrderTrigger.CANCEL,
             status=OrderStatus.CANCELED,
             timestamp=datetime(2026, 1, 5),
         )
-        with pytest.raises(StateTransitionError):
+        with pytest.raises(OrderStateError):
             filled_ticket.with_cancel(cancel_evt)
 
     def test_invalid_ticket_cannot_cancel(self) -> None:
         """INVALID 状态也不能撤销。"""
         order = Order(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -255,7 +267,8 @@ class TestTerminalState:
         ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED)
 
         invalid_evt = OrderEvent(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
+            trigger=OrderTrigger.INVALIDATE,
             status=OrderStatus.INVALID,
             message="test",
             timestamp=datetime(2026, 1, 5),
@@ -263,11 +276,12 @@ class TestTerminalState:
         invalid_ticket = ticket.with_invalid(invalid_evt)
 
         cancel_evt = OrderEvent(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
+            trigger=OrderTrigger.CANCEL,
             status=OrderStatus.CANCELED,
             timestamp=datetime(2026, 1, 5),
         )
-        with pytest.raises(StateTransitionError):
+        with pytest.raises(OrderStateError):
             invalid_ticket.with_cancel(cancel_evt)
 
 
@@ -288,10 +302,10 @@ class TestNoFillNoFillEvent:
                 frozen=0.0,
             ),
         )
-        brokerage = BacktestBrokerage(account=account)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob())
 
         order = Order(
-            order_id="o-missing",
+            client_id=ClientOrderId(value="o-missing"),
             instrument_id=999,  # 不存在
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -352,8 +366,6 @@ class TestRollingPreTradeContext:
             total_value=500_000.0,
             nav=500_000.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = _make_pre_trade_context(
             account_view=view,
@@ -361,7 +373,7 @@ class TestRollingPreTradeContext:
         )
 
         order1 = Order(
-            order_id="o-1",
+            client_id=ClientOrderId(value="o-1"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -371,7 +383,7 @@ class TestRollingPreTradeContext:
         assert ctx1.account_view.cash.available < ctx.account_view.cash.available
 
         order2 = Order(
-            order_id="o-2",
+            client_id=ClientOrderId(value="o-2"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -391,7 +403,7 @@ class TestPendingAwarePlanner:
 
     def test_no_duplicate_sell_with_pending(self) -> None:
         """已有 pending sell → planner 不再生成同标的 sell。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -403,20 +415,6 @@ class TestPendingAwarePlanner:
             realized_pnl=0.0,
             total_fees=0.0,
         )
-        # OrderBook with a pending sell of 500 ETF-001
-        ob = OrderBook()
-        sell_order = Order(
-            order_id="pending-sell",
-            instrument_id=1,
-            order_type=OrderType.MARKET,
-            direction=OrderSide.SELL,
-            quantity=500,
-        )
-        sell_ticket = OrderTicket(
-            order=sell_order,
-            status=OrderStatus.SUBMITTED,
-        )
-        ob.submit(sell_ticket)
 
         view = AccountView(
             positions=MappingProxyType({1: pos}),
@@ -424,8 +422,6 @@ class TestPendingAwarePlanner:
             total_value=505_000.0,
             nav=505_000.0,
             exposure=5000.0,
-            pending_buy_value=0.0,
-            order_book=ob.readonly_view(),
         )
 
         from ditto_strategy.alpha.models import TargetPortfolio
@@ -438,12 +434,24 @@ class TestPendingAwarePlanner:
             positions={},
         )
 
+        # 提交 pending sell — 500 股
+        ob = _ob()
+        pending_sell = Order(
+            client_id=ClientOrderId(value="pending-sell-1"),
+            instrument_id=1,
+            order_type=OrderType.MARKET,
+            direction=OrderSide.SELL,
+            quantity=500,
+        )
+        ob.submit(pending_sell)
+
         planner = SimpleExecutionPlanner()
 
         plan = planner.plan(
             target=target,
             account_view=view,
             trade_date="2026-01-05",
+            order_book=ob,
         )
 
         # effective_qty = 500 (current) + (-500) (pending delta) = 0
@@ -468,8 +476,6 @@ class TestPlannerLock:
             total_value=500_000.0,
             nav=500_000.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
 
         from ditto_strategy.alpha.models import TargetPortfolio
@@ -518,8 +524,6 @@ class TestResizeRecheck:
             total_value=3_500.0,
             nav=3_500.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = _make_pre_trade_context(
             account_view=view,
@@ -531,7 +535,7 @@ class TestResizeRecheck:
 
         # 350 → resize to 400 → cost 4000 + fee > 3500 → reject
         order = Order(
-            order_id="o-resize",
+            client_id=ClientOrderId(value="o-resize"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -560,13 +564,13 @@ class TestCashConservation:
                 frozen=0.0,
             ),
         )
-        brokerage = BacktestBrokerage(account=account)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob())
 
         view_before = brokerage.get_account()
         nav_before = view_before.nav
 
         order = Order(
-            order_id="o-buy",
+            client_id=ClientOrderId(value="o-buy"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -606,7 +610,7 @@ class TestCashConservation:
 
     def test_sell_fill_cash_conservation(self) -> None:
         """卖出 fill 后: cash 增加 = price * qty - fee。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -622,13 +626,13 @@ class TestCashConservation:
             positions={1: pos},
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
         )
-        brokerage = BacktestBrokerage(account=account)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob())
 
         view_before = brokerage.get_account()
         nav_before = view_before.nav
 
         order = Order(
-            order_id="o-sell",
+            client_id=ClientOrderId(value="o-sell"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -668,7 +672,7 @@ class TestNoOversell:
 
     def test_sell_does_not_exceed_position(self) -> None:
         """卖出不超过持仓。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -684,11 +688,11 @@ class TestNoOversell:
             positions={1: pos},
             cash=CashBook(available=500_000.0, settled=500_000.0, frozen=0.0),
         )
-        brokerage = BacktestBrokerage(account=account)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob())
 
         # Try to sell 200 — only 100 available
         order = Order(
-            order_id="o-oversell",
+            client_id=ClientOrderId(value="o-oversell"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -714,7 +718,7 @@ class TestNoOversell:
 
     def test_pre_trade_context_prevents_oversell_in_batch(self) -> None:
         """PreTradeContext.with_order_accepted 防止批内超卖。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -732,8 +736,6 @@ class TestNoOversell:
             total_value=501_000.0,
             nav=501_000.0,
             exposure=1000.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = _make_pre_trade_context(
             account_view=view,
@@ -741,7 +743,7 @@ class TestNoOversell:
         )
 
         sell = Order(
-            order_id="o-sell",
+            client_id=ClientOrderId(value="o-sell"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -774,7 +776,7 @@ class TestStatsPostFillSnapshot:
                 frozen=0.0,
             ),
         )
-        brokerage = BacktestBrokerage(account=account)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob())
         collector = ExecutionAuditCollector()
 
         # Record pre-fill view
@@ -783,7 +785,7 @@ class TestStatsPostFillSnapshot:
 
         # Execute a buy
         order = Order(
-            order_id="o-buy",
+            client_id=ClientOrderId(value="o-buy"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -860,11 +862,11 @@ class TestPriceLimitInvariants:
                 frozen=0.0,
             ),
         )
-        brokerage = BacktestBrokerage(account=account, model=model)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob(), model=model)
 
         # ETF-001: close=11.0 = limit_up (prev=10.0, +10%)
         order = Order(
-            order_id="o-buy",
+            client_id=ClientOrderId(value="o-buy"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -887,7 +889,7 @@ class TestPriceLimitInvariants:
     def test_limit_down_blocks_sell(self) -> None:
         """跌停卖出不成交 — close <= limit_down。"""
         from ditto_backtest.simulation import AShareFillModel
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -908,11 +910,11 @@ class TestPriceLimitInvariants:
             ),
         )
         model = BrokerageModel(fill_model=AShareFillModel())
-        brokerage = BacktestBrokerage(account=account, model=model)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob(), model=model)
 
         # ETF-001: close=9.0 = limit_down (prev=10.0, -10%)
         order = Order(
-            order_id="o-sell",
+            client_id=ClientOrderId(value="o-sell"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -935,7 +937,7 @@ class TestPriceLimitInvariants:
     def test_limit_up_allows_sell(self) -> None:
         """涨停可以卖出 — close >= limit_up + SELL → 正常成交。"""
         from ditto_backtest.simulation import AShareFillModel
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -956,10 +958,10 @@ class TestPriceLimitInvariants:
             ),
         )
         model = BrokerageModel(fill_model=AShareFillModel())
-        brokerage = BacktestBrokerage(account=account, model=model)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob(), model=model)
 
         order = Order(
-            order_id="o-sell",
+            client_id=ClientOrderId(value="o-sell"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -992,10 +994,10 @@ class TestPriceLimitInvariants:
                 frozen=0.0,
             ),
         )
-        brokerage = BacktestBrokerage(account=account, model=model)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob(), model=model)
 
         order = Order(
-            order_id="o-buy",
+            client_id=ClientOrderId(value="o-buy"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -1019,7 +1021,7 @@ class TestPriceLimitInvariants:
     def test_no_limit_allows_both_directions(self) -> None:
         """无涨跌停限制 — 买卖均可成交。"""
         from ditto_backtest.simulation import AShareFillModel
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -1040,17 +1042,17 @@ class TestPriceLimitInvariants:
             ),
         )
         model = BrokerageModel(fill_model=AShareFillModel())
-        brokerage = BacktestBrokerage(account=account, model=model)
+        brokerage = BacktestBrokerage(account=account, order_book=_ob(), model=model)
 
         sell_order = Order(
-            order_id="o-sell",
+            client_id=ClientOrderId(value="o-sell"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
             quantity=100,
         )
         buy_order = Order(
-            order_id="o-buy",
+            client_id=ClientOrderId(value="o-buy"),
             instrument_id=2,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -1099,8 +1101,6 @@ class TestLotSizeRounding:
             total_value=100_000.0,
             nav=100_000.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = _make_pre_trade_context(
             account_view=view,
@@ -1110,7 +1110,7 @@ class TestLotSizeRounding:
 
         # 50 股 → resize to 100
         order = Order(
-            order_id="o-resize",
+            client_id=ClientOrderId(value="o-resize"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -1132,8 +1132,6 @@ class TestLotSizeRounding:
             total_value=500_000.0,
             nav=500_000.0,
             exposure=0.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = _make_pre_trade_context(
             account_view=view,
@@ -1142,7 +1140,7 @@ class TestLotSizeRounding:
         composite = CompositePreTradeCheck(checks=(LotSizeCheck(),))
 
         order = Order(
-            order_id="o-ok",
+            client_id=ClientOrderId(value="o-ok"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -1154,7 +1152,7 @@ class TestLotSizeRounding:
 
     def test_sell_not_affected_by_lot_size(self) -> None:
         """卖出不受 lot_size 限制（零股可卖）。"""
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
 
         pos = Position(
             instrument_id=1,
@@ -1176,8 +1174,6 @@ class TestLotSizeRounding:
             total_value=503_500.0,
             nav=503_500.0,
             exposure=3500.0,
-            pending_buy_value=0.0,
-            order_book=OrderBookReadOnly({}),
         )
         ctx = _make_pre_trade_context(
             account_view=view,
@@ -1187,7 +1183,7 @@ class TestLotSizeRounding:
 
         # 卖出 350（含零股）→ 不被 resize
         order = Order(
-            order_id="o-sell-350",
+            client_id=ClientOrderId(value="o-sell-350"),
             instrument_id=1,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -1285,6 +1281,7 @@ class TestSuspendedE2E:
         )
         brokerage = BacktestBrokerage(
             account=account,
+            order_book=_ob(),
             model=BrokerageModel(fee_model=fee_model),
         )
         planner = SimpleExecutionPlanner()
@@ -1293,6 +1290,12 @@ class TestSuspendedE2E:
         )
         collector = ExecutionAuditCollector()
 
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+        synchronizer = BacktestSynchronizer(
+            data_feed=data_feed,
+            clock=clock,
+            start_date="2026-01-05",
+        )
         engine = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1300,8 +1303,8 @@ class TestSuspendedE2E:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=synchronizer,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 audit_collector=collector,
             ),
@@ -1339,7 +1342,7 @@ class TestExitOrderRules:
             EngineOptions,
         )
         from ditto_execution.rules import InMemoryRuleProvider
-        from ditto_portfolio.accounting.position import Position
+        from ditto_portfolio.accounting import Position
         from ditto_strategy.alpha.templates.etf_rotation import (
             ETFRotationConfig,
             build_etf_rotation_pipeline,
@@ -1419,6 +1422,7 @@ class TestExitOrderRules:
         fee_model = SimpleFeeModel()
         brokerage = BacktestBrokerage(
             account=account,
+            order_book=_ob(),
             model=BrokerageModel(fee_model=fee_model),
         )
         planner = SimpleExecutionPlanner()
@@ -1436,6 +1440,12 @@ class TestExitOrderRules:
             strategy_run_id="run-exit",
         )
 
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+        synchronizer = BacktestSynchronizer(
+            data_feed=data_feed,
+            clock=clock,
+            start_date="2026-01-05",
+        )
         engine = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1443,8 +1453,8 @@ class TestExitOrderRules:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=synchronizer,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
                 audit_collector=collector,
@@ -1567,6 +1577,7 @@ class TestRuleRefsPreserved:
         )
         brokerage = BacktestBrokerage(
             account=account,
+            order_book=_ob(),
             model=BrokerageModel(fee_model=fee_model),
         )
         planner = SimpleExecutionPlanner()
@@ -1583,6 +1594,12 @@ class TestRuleRefsPreserved:
             strategy_run_id="run-rule-refs",
         )
 
+        clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+        synchronizer = BacktestSynchronizer(
+            data_feed=data_feed,
+            clock=clock,
+            start_date="2026-01-05",
+        )
         engine = EngineLoop(
             config=config,
             pipeline=pipeline,
@@ -1590,8 +1607,8 @@ class TestRuleRefsPreserved:
             brokerage=brokerage,
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
+            synchronizer=synchronizer,
             options=EngineOptions(
-                clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
                 fee_model=fee_model,
                 rule_provider=rule_provider,
             ),

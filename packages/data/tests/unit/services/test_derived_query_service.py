@@ -9,18 +9,24 @@ from unittest.mock import MagicMock
 
 import polars as pl
 import pytest
-from ditto_features.errors import FactorValidationError
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
+from ditto_features.errors import DerivedNotFoundError, FactorValidationError
 from ditto_features.materialization.models import DerivedVersionStatus
 from ditto_features.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
 )
-from ditto_features.services.derived import (
+from ditto_features.services import (
     COMPARE_RESULT_COLUMNS,
     LATEST_RESULT_COLUMNS,
     SERIES_RESULT_COLUMNS,
     DerivedArtifactReader,
+    DerivedCatalogService,
     DerivedCompareQuery,
     DerivedLatestQuery,
     DerivedQueryService,
@@ -30,13 +36,10 @@ from ditto_features.services.derived import (
     empty_latest_result,
     empty_series_result,
 )
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
 from ditto_features.storage.sqlite.derived import (
     SQLiteDerivedCatalogReader,
     SQLiteDerivedCatalogWriter,
 )
-from ditto_kernel.exceptions import DerivedNotFoundError
-from ditto_kernel.strategy import DerivedRole, DerivedSpec, MaterializationProfile
 
 
 def _state_record(active_version: int | None = 3) -> DerivedStateRecord:

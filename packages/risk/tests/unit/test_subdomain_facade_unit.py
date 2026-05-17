@@ -45,9 +45,6 @@ def test_package_init_exports_all_types() -> None:
     """Verify package public API exposes core risk symbols."""
     import ditto_risk
 
-    assert hasattr(ditto_risk, "RiskMetrics")
-    assert hasattr(ditto_risk, "ExposureData")
-    assert hasattr(ditto_risk, "DrawdownStats")
     assert hasattr(ditto_risk, "MaxDrawdownRule")
     assert hasattr(ditto_risk, "SingleLossLimitRule")
     assert hasattr(ditto_risk, "ConcentrationLimitRule")

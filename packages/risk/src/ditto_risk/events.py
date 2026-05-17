@@ -3,20 +3,33 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from ditto_kernel import DomainEvent
+from ditto_kernel.events import EventName
+
+from ditto_risk.post_trade import RiskSeverity
 
 __all__ = [
+    "RiskGuardDetails",
     "RiskGuardTriggered",
 ]
+
+
+@dataclass(frozen=True)
+class RiskGuardDetails:
+    """风控触发详情 — 类型化的审计载荷 (RISK-P1-03)."""
+
+    instrument_id: int | None = None
+    current_value: float | None = None
+    limit_value: float | None = None
+    description: str = ""
 
 
 @dataclass(frozen=True, kw_only=True)
 class RiskGuardTriggered(DomainEvent):
     """风控触发事件."""
 
-    event_type: str = field(default="risk_guard_triggered", init=False)
+    event_type: str = field(default=EventName.RISK_GUARD_TRIGGERED, init=False)
     rule_name: str
-    severity: str
-    details: dict[str, Any] = field(default_factory=dict)
+    severity: RiskSeverity
+    details: RiskGuardDetails = field(default_factory=RiskGuardDetails)

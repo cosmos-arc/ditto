@@ -27,10 +27,12 @@ from ditto_backtest.engine import (
 )
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import build_report
+from ditto_backtest.synchronizer import BacktestSynchronizer
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_kernel.clock import SimulatedClock
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from inline_snapshot import snapshot
 
 _conftest_path = Path(__file__).parent / "conftest.py"
@@ -69,25 +71,32 @@ def _build_engine_with_audit(
         strategy_id="golden-baseline",
         strategy_run_id="golden-baseline",
     )
+    clock = SimulatedClock(
+        initial=datetime(
+            int(start_date[:4]),
+            int(start_date[5:7]),
+            int(start_date[8:10]),
+            tzinfo=UTC,
+        ),
+    )
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=start_date,
+    )
     engine = EngineLoop(
         config=config,
         pipeline=pipeline,
         planner=SimpleExecutionPlanner(),
         brokerage=BacktestBrokerage(
             account=account,
+            order_book=OrderBook(journal=InMemoryOrderEventJournal()),
             model=BrokerageModel(fee_model=fee_model),
         ),
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(
-                initial=datetime(
-                    int(start_date[:4]),
-                    int(start_date[5:7]),
-                    int(start_date[8:10]),
-                    tzinfo=UTC,
-                ),
-            ),
             fee_model=fee_model,
             audit_collector=audit,
         ),

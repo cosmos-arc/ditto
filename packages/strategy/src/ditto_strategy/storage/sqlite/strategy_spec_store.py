@@ -197,8 +197,8 @@ class SQLiteStrategySpecReader:
     def __init__(self, pool: SQLitePool) -> None:
         self._pool = pool
 
-    @traced("store.spec_reader.get")
-    def get(
+    @traced("store.spec_reader.get_spec")
+    def get_spec(
         self, strategy_id: str, version: int | None = None
     ) -> StrategySpecRecord | None:
         """Get a strategy spec. version=None returns the latest version."""
@@ -212,8 +212,8 @@ class SQLiteStrategySpecReader:
             return None
         return _row_to_record(row)
 
-    @traced("store.spec_reader.list_all")
-    def list_all(self) -> list[StrategySpecRecord]:
+    @traced("store.spec_reader.list_specs")
+    def list_specs(self) -> list[StrategySpecRecord]:
         """List all strategy specs (latest version per strategy_id)."""
         conn = self._pool.get_connection()
         rows = conn.execute(_LIST_ALL_LATEST_SQL).fetchall()

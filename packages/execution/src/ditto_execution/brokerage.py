@@ -15,9 +15,11 @@ from typing import Protocol
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import Order, OrderTicket
+from ditto_portfolio.accounting import AccountView, FillEvent
+
+from ditto_execution.orders.book import OrderBookReadOnly
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.ticket import OrderTicket
 
 __all__ = ["Brokerage", "ProcessInput"]
 
@@ -52,6 +54,10 @@ class Brokerage(Protocol):
 
     def get_account(self) -> AccountView:
         """Return the current read-only account view."""
+        ...
+
+    def get_order_book(self) -> OrderBookReadOnly:
+        """Return a read-only snapshot of the current order book."""
         ...
 
     def place_order(self, order: Order) -> OrderTicket:

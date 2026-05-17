@@ -6,13 +6,13 @@ from unittest.mock import MagicMock
 
 import orjson
 import pytest
-from ditto_analysis.storage.sqlite.research.reader import SQLiteResearchCatalogReader
-from ditto_kernel.research import (
+from ditto_analysis.research.domain import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
     ResearchSpineSnapshotRecord,
     ResearchSpineSpecRecord,
 )
+from ditto_analysis.storage.sqlite.research.reader import SQLiteResearchCatalogReader
 
 
 @pytest.fixture

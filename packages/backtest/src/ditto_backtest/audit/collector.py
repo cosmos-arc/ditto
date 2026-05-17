@@ -8,8 +8,7 @@ ExecutionAuditCollector — 回测审计数据收集器.
 from __future__ import annotations
 
 from ditto_execution.trade_builder import TradeRecord
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting import AccountView, FillEvent
 
 from ditto_backtest.audit.records import (
     PreTradeDecisionRecord,

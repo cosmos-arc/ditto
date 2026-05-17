@@ -220,7 +220,7 @@ forbidden_modules =
 unmatched_ignore_imports_alerting = warn
 
 # ═══════════════════════════════════════════════════════════════════
-# Risk 层隔离：禁止依赖 execution/backtest/application/apps
+# Risk 层隔离：禁止依赖 data/features/strategy/execution/backtest/analysis/application/apps
 # ═══════════════════════════════════════════════════════════════════
 [importlinter:contract:risk-boundary]
 name = Risk must not depend on data/features/strategy/execution/backtest/analysis/application/apps
@@ -357,6 +357,9 @@ ignore_imports =
     ditto_apps.registry.** -> ditto_data.config.**
     ditto_apps.jobs.context -> ditto_data.quality
     ditto_apps.jobs.context -> ditto_data.quality.protocols
+    # intentional debt: DQ types consumed by apps.jobs context (tracked for kernel candidacy)
+    ditto_apps.jobs.tasks.dq_batch -> ditto_data.quality.quality_types
+    ditto_apps.jobs.tasks.monitoring -> ditto_data.quality.quality_types
 allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn
 
@@ -382,9 +385,6 @@ source_modules =
     ditto_application.**
 forbidden_modules =
     ditto_platform.config.**
-ignore_imports =
-    ditto_application.** -> ditto_platform.foundation.**
-    ditto_application.** -> ditto_platform.services.**
 
 # ═══════════════════════════════════════════════════════════════════
 # R8 — Application 内部互斥规则（Use Case 间职责隔离）

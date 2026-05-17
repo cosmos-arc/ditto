@@ -6,8 +6,7 @@ from pathlib import Path
 
 import polars as pl
 from ditto_data.services.market_service import MarketService
-from ditto_features.services.derived import DerivedArtifactReader
-from ditto_features.services.derived_catalog_service import DerivedCatalogService
+from ditto_features.services import DerivedArtifactReader, DerivedCatalogService
 
 from ditto_application.processes.materialization.dependencies import (
     classify_dependencies,

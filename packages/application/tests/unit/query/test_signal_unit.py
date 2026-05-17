@@ -45,7 +45,7 @@ class TestGetLatestIntents:
             _make_intent_record("i-3", signal_date="2024-01-15"),
         ]
         service.list_intents.return_value = records
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_latest_intents("s-1")
 
@@ -60,7 +60,7 @@ class TestGetLatestIntents:
     def test_returns_empty_when_no_intents(self) -> None:
         service = MagicMock(spec=["list_intents"])
         service.list_intents.return_value = []
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_latest_intents("s-1")
 
@@ -70,7 +70,7 @@ class TestGetLatestIntents:
         service = MagicMock(spec=["list_intents"])
         records = [_make_intent_record("i-1", signal_date="2024-01-15")]
         service.list_intents.return_value = records
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_latest_intents("s-1")
 
@@ -85,7 +85,7 @@ class TestGetLatestIntents:
             _make_intent_record("i-1", signal_date="2024-01-10"),
         ]
         service.list_intents.return_value = records
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_latest_intents("s-1")
 
@@ -103,7 +103,7 @@ class TestGetIntentsByDate:
             _make_intent_record("i-2", signal_date="2024-01-15"),
         ]
         service.list_intents.return_value = records
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_intents_by_date("s-1", "2024-01-15")
 
@@ -117,7 +117,7 @@ class TestGetIntentsByDate:
     def test_returns_empty_when_no_intents(self) -> None:
         service = MagicMock(spec=["list_intents"])
         service.list_intents.return_value = []
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_intents_by_date("s-1", "2024-01-15")
 
@@ -133,7 +133,7 @@ class TestGetIntentsByDate:
             delta_weight=-0.2,
         )
         service.list_intents.return_value = [record]
-        facade = SignalQueryFacade(trade_service=service)
+        facade = SignalQueryFacade(intent_port=service)
 
         result = facade.get_intents_by_date("s-1", "2024-01-15")
 

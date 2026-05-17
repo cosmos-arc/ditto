@@ -207,7 +207,7 @@ class TestSqliteTableReader:
     def test_satisfies_sqlite_reader_protocol(
         self, balance_sheet_spec: SqliteTableSpec, mock_client: MagicMock
     ) -> None:
-        from ditto_platform.foundation.storage.protocols import SqliteReader
+        from ditto_platform.foundation import SqliteReader
 
         reader = SqliteTableReader(balance_sheet_spec, mock_client)
         _: SqliteReader = reader

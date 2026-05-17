@@ -5,8 +5,7 @@ from __future__ import annotations
 import math
 from datetime import date, timedelta
 
-from ditto_kernel.strategy import DerivedSpec
-
+from ditto_features.derived_types import DerivedSpec
 from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_features.materialization.contracts import (
     DerivedExecutionPlan,

@@ -38,6 +38,11 @@ from ditto_backtest.statistics import (
     PreTradeDecisionRecord,
     build_report,
 )
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel, SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -48,9 +53,7 @@ from ditto_kernel.trading import (
     RulesGetter,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
+from ditto_portfolio.accounting import Account, CashBook, FillEvent
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -178,12 +181,20 @@ def _build_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=BrokerageModel(fee_model=fee_model),
         rules_getter=rules_getter,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=config.start_date,
+    )
 
     return EngineLoop(
         config=config,
@@ -192,8 +203,8 @@ def _build_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
         ),
     )
@@ -226,12 +237,20 @@ def _build_audited_engine_loop(
             frozen=0.0,
         ),
     )
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=order_book,
         model=BrokerageModel(fee_model=fee_model),
         rules_getter=rules_getter,
     )
     planner = SimpleExecutionPlanner()
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=config.start_date,
+    )
 
     return _AuditedEngineLoop(
         config=config,
@@ -240,8 +259,8 @@ def _build_audited_engine_loop(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
             audit_collector=collector,
         ),

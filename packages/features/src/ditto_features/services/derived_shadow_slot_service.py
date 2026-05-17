@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ditto_kernel.publication_safety import DerivedShadowSlotRecord
+from ditto_features.publication_safety_records import DerivedShadowSlotRecord
 
 
 class DerivedShadowSlotReaderProtocol(Protocol):

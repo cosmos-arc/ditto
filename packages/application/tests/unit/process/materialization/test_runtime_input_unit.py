@@ -15,16 +15,16 @@ from ditto_application.processes.materialization.runtime_input_provider import (
     RuntimeDerivedInputProvider,
 )
 from ditto_application.processes.materialization.types import InputContext
+from ditto_features.derived_types import (
+    DerivedRole,
+    DerivedSpec,
+    MaterializationProfile,
+)
 from ditto_features.materialization.contracts import (
     DerivedExecutionPlan,
     DerivedRunMode,
 )
-from ditto_kernel.strategy import (
-    DerivedRole,
-    DerivedSpec,
-    ExecutionPolicy,
-    MaterializationProfile,
-)
+from ditto_kernel.strategy import ExecutionPolicy
 
 
 def _make_spec(**overrides: object) -> DerivedSpec:

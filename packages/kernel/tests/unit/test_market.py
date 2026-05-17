@@ -7,7 +7,6 @@ from ditto_kernel.market import (
     CalendarId,
     GrainId,
     MacroCategory,
-    MacroDataProvider,
     MacroFrequency,
     TimeSpec,
 )
@@ -94,27 +93,3 @@ class TestTimeSpec:
     def test_default_no_availability(self) -> None:
         spec = TimeSpec(event_time_key="trade_date")
         assert spec.availability_time_key is None
-
-
-class TestMacroDataProvider:
-    """MacroDataProvider Protocol 测试."""
-
-    def test_concrete_implementation_satisfies(self) -> None:
-        class FakeProvider:
-            def fetch_indicator(
-                self, code: str, start: str, end: str
-            ) -> list[dict[str, str | float]]:
-                return [{"code": code, "value": 1.0}]
-
-            def list_indicators(
-                self, category: str | None = None
-            ) -> list[dict[str, str]]:
-                return [{"code": "GDP", "name": "GDP"}]
-
-        provider: MacroDataProvider = FakeProvider()
-        result = provider.fetch_indicator("GDP", "2024-01-01", "2024-12-31")
-        assert len(result) == 1
-        assert result[0]["code"] == "GDP"
-
-        indicators = provider.list_indicators("economic")
-        assert len(indicators) == 1

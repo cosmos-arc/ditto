@@ -11,8 +11,7 @@ from ditto_data.storage.capital.margin.margin_trading_writer import (
     MarginTradingWriter,
 )
 from ditto_data.storage.capital.specs import MARGIN_TRADING_SPEC
-from ditto_platform.foundation import SQLitePool
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 
 @pytest.fixture

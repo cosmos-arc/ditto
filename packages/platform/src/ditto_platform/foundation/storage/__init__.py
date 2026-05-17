@@ -1,6 +1,7 @@
 """Generic storage infrastructure shared across packages."""
 
-from ditto_platform.foundation.storage.parquet_store import MergeResult, ParquetStore
+from ditto_platform.foundation.storage.parquet_store import ParquetStore
+from ditto_platform.foundation.storage.parquet_write import MergeResult
 from ditto_platform.foundation.storage.partition_strategy import (
     PartitionStrategy,
     YearlyPartition,

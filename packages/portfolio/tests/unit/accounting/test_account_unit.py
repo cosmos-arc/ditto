@@ -70,48 +70,44 @@ class TestAccount:
     def test_account_is_mutable(self) -> None:
         account = Account(
             cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
+            positions={
+                1: Position(
+                    instrument_id=1,
+                    quantity=100,
+                    available_quantity=0,
+                    average_cost=0.452,
+                    market_value=45.2,
+                    unrealized_pnl=0.0,
+                    realized_pnl=0.0,
+                    total_fees=0.0,
+                ),
+            },
         )
-        # Account 本身不是 frozen — 可以修改 positions
-        account.positions[1] = Position(
-            instrument_id=1,
-            quantity=100,
-            available_quantity=0,
-            average_cost=0.452,
-            market_value=45.2,
-            unrealized_pnl=0.0,
-            realized_pnl=0.0,
-            total_fees=0.0,
-        )
+        # Account 本身不是 frozen — positions 可通过构造器传入
         assert 1 in account.positions
 
     def test_get_view_returns_frozen_snapshot(self) -> None:
         account = Account(
             cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
-        )
-        account.positions[1] = Position(
-            instrument_id=1,
-            quantity=100,
-            available_quantity=0,
-            average_cost=0.452,
-            market_value=45.2,
-            unrealized_pnl=0.0,
-            realized_pnl=0.0,
-            total_fees=0.0,
+            positions={
+                1: Position(
+                    instrument_id=1,
+                    quantity=100,
+                    available_quantity=0,
+                    average_cost=0.452,
+                    market_value=45.2,
+                    unrealized_pnl=0.0,
+                    realized_pnl=0.0,
+                    total_fees=0.0,
+                ),
+            },
         )
         view = account.get_view()
         assert view.nav == pytest.approx(1000045.2)
         assert view.total_value == pytest.approx(1000045.2)
-        # view 是 frozen — 修改 Account 不影响已有 view
-        account.positions[2] = Position(
-            instrument_id=2,
-            quantity=200,
-            available_quantity=0,
-            average_cost=4.0,
-            market_value=820.0,
-            unrealized_pnl=20.0,
-            realized_pnl=0.0,
-            total_fees=0.0,
-        )
+        # view 是 frozen — 通过 apply_fill 修改 Account 不影响已有 view
+        fill = _make_fill(instrument_id=2, filled_quantity=200, fill_price=4.0, fee=0.0)
+        account.apply_fill(fill, settle_date="2026-03-02")
         assert 2 not in view.positions
 
 
@@ -132,16 +128,18 @@ class TestAccountView:
     def test_view_positions_readonly(self) -> None:
         account = Account(
             cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
-        )
-        account.positions[1] = Position(
-            instrument_id=1,
-            quantity=100,
-            available_quantity=0,
-            average_cost=0.452,
-            market_value=45.2,
-            unrealized_pnl=0.0,
-            realized_pnl=0.0,
-            total_fees=0.0,
+            positions={
+                1: Position(
+                    instrument_id=1,
+                    quantity=100,
+                    available_quantity=0,
+                    average_cost=0.452,
+                    market_value=45.2,
+                    unrealized_pnl=0.0,
+                    realized_pnl=0.0,
+                    total_fees=0.0,
+                ),
+            },
         )
         view = account.get_view()
         # positions 通过 MappingProxyType 暴露，不可写
@@ -156,13 +154,6 @@ class TestAccountView:
                 realized_pnl=0.0,
                 total_fees=0.0,
             )
-
-    def test_view_order_book_readonly(self) -> None:
-        account = Account(
-            cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
-        )
-        view = account.get_view()
-        assert view.order_book.get("NONEXISTENT") is None
 
 
 # ---------------------------------------------------------------------------
@@ -478,16 +469,22 @@ class TestAccountApplyFillEdgeCases:
 
         account.apply_fill(buy_fill, settle_date="2026-03-02")
         # T+0: 模拟 Brokerage 立即解冻 (settle_date <= trade_date)
+        # 通过重新构造 Account 模拟解冻（外部 positions 属性不可直接赋值）
         pos = account.positions[1]
-        account.positions[1] = Position(
-            instrument_id=pos.instrument_id,
-            quantity=pos.quantity,
-            available_quantity=pos.quantity,  # 解冻
-            average_cost=pos.average_cost,
-            market_value=pos.market_value,
-            unrealized_pnl=pos.unrealized_pnl,
-            realized_pnl=pos.realized_pnl,
-            total_fees=pos.total_fees,
+        account = Account(
+            cash=account.cash,
+            positions={
+                1: Position(
+                    instrument_id=pos.instrument_id,
+                    quantity=pos.quantity,
+                    available_quantity=pos.quantity,  # 解冻
+                    average_cost=pos.average_cost,
+                    market_value=pos.market_value,
+                    unrealized_pnl=pos.unrealized_pnl,
+                    realized_pnl=pos.realized_pnl,
+                    total_fees=pos.total_fees,
+                ),
+            },
         )
 
         account.apply_fill(sell_fill, settle_date="2026-03-02")
@@ -523,3 +520,70 @@ class TestAccountApplyFillEdgeCases:
         assert pos.total_fees == 0.0
         assert account.cash.available == pytest.approx(1_000_000.0 - 10000.0)
         assert account.cash.settled == pytest.approx(1_000_000.0)
+
+
+class TestAccountApplyFillAtomicity:
+    """apply_fill 原子性 — 计算失败时不产生部分更新。"""
+
+    def test_positions_rollback_when_cash_calc_fails(self) -> None:
+        """_calculate_new_cash 抛异常时，持仓不被修改。"""
+        account = _make_account(cash=100000.0)
+        fill = _make_fill(filled_quantity=1000, fill_price=10.0, fee=5.0)
+
+        # Patch _calculate_new_cash to raise after position is calculated
+        original_calc_cash = account._calculate_new_cash
+
+        def _failing_calc_cash(f: FillEvent) -> CashBook:
+            # Simulate an error during cash calculation
+            raise RuntimeError("cash calc boom")
+
+        account._calculate_new_cash = _failing_calc_cash  # type: ignore[assignment]
+
+        with pytest.raises(RuntimeError, match="cash calc boom"):
+            account.apply_fill(fill, settle_date="2026-03-02")
+
+        # Position should NOT have been modified
+        assert 1 not in account.positions
+        # Cash should be unchanged
+        assert account.cash.available == pytest.approx(100000.0)
+
+        # Restore to verify normal flow still works
+        account._calculate_new_cash = original_calc_cash  # type: ignore[assignment]
+
+    def test_cash_rollback_when_position_calc_fails(self) -> None:
+        """_calculate_new_position 抛异常时，现金不被修改。"""
+        account = _make_account(cash=100000.0)
+        fill = _make_fill(filled_quantity=1000, fill_price=10.0, fee=5.0)
+
+        original_calc_pos = account._calculate_new_position
+
+        def _failing_calc_pos(f: FillEvent) -> dict[str, tuple[int, Position | None]]:
+            raise RuntimeError("position calc boom")
+
+        account._calculate_new_position = _failing_calc_pos  # type: ignore[assignment]
+
+        with pytest.raises(RuntimeError, match="position calc boom"):
+            account.apply_fill(fill, settle_date="2026-03-02")
+
+        # Cash should NOT have been modified
+        assert account.cash.available == pytest.approx(100000.0)
+        # Position should be empty
+        assert len(account.positions) == 0
+
+        # Restore to verify normal flow still works
+        account._calculate_new_position = original_calc_pos  # type: ignore[assignment]
+
+    def test_positions_property_is_readonly(self) -> None:
+        """外部通过 account.positions 无法直接修改持仓。"""
+        account = _make_account(cash=100000.0)
+        with pytest.raises(TypeError):
+            account.positions[1] = Position(  # type: ignore[index]
+                instrument_id=1,
+                quantity=100,
+                available_quantity=0,
+                average_cost=10.0,
+                market_value=1000.0,
+                unrealized_pnl=0.0,
+                realized_pnl=0.0,
+                total_fees=0.0,
+            )

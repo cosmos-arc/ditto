@@ -22,7 +22,6 @@ class EngineMode(StrEnum):
     """引擎运行模式。"""
 
     BACKTEST = "backtest"
-    LIVE = "live"
 
 
 @dataclass(frozen=True)
@@ -44,6 +43,8 @@ class EngineConfig:
         rebalance_freq: 调仓频率 (daily / weekly / monthly)
         engine_version: 引擎版本号 (用于 manifest/diff 追踪)
         execution_delay: 信号延迟执行天数 (T+N)，尾部信号自动 flush
+        knowledge_lag_days: 知识延迟天数
+            （PIT 语义：knowledge_date = decision_date - lag）
 
     """
 
@@ -60,3 +61,4 @@ class EngineConfig:
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
     execution_delay: int = 0
+    knowledge_lag_days: int = 1

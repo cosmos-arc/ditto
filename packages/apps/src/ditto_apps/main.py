@@ -23,14 +23,15 @@ import orjson
 # Local imports - using editable packages
 from dishka.integrations.fastapi import setup_dishka
 from ditto_kernel.exceptions import DataError, DittoError
-from ditto_platform.foundation.config import ConfigInitError
-from ditto_platform.foundation.config.environment import get_environment
-from ditto_platform.foundation.config.initializer import (
+from ditto_platform.foundation import (
     ConfigInitCoordinator,
+    ConfigInitError,
     InitScope,
+    Metrics,
+    Settings,
+    get_environment,
+    logger,
 )
-from ditto_platform.foundation.config.settings import Settings
-from ditto_platform.foundation.observability import Metrics, logger
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware

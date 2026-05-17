@@ -194,6 +194,25 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             "composition instead of direct capability imports."
         ),
     ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/jobs/tasks/dq_batch.py",
+        allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
+        owner="apps DQ batch task",
+        reason=(
+            "DQ batch task uses DQIssue type annotations for task signatures; "
+            "types are frozen dataclasses from the quality migration (B8.1)."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/jobs/tasks/monitoring.py",
+        allowed_modules=frozenset({"ditto_data.quality.quality_types"}),
+        owner="apps ingestion monitoring task",
+        reason=(
+            "Ingestion monitoring task uses DQResult type annotations for "
+            "task signatures; types are frozen dataclasses from the quality "
+            "migration (B8.1)."
+        ),
+    ),
 )
 
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
@@ -311,7 +330,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
                 "ditto_data.config.data_store",
                 "ditto_data.observability.metrics",
                 "ditto_features.observability.metrics",
-                "ditto_portfolio.observability.metrics",
+                "ditto_portfolio.observability",
                 "ditto_risk.observability.metrics",
                 "ditto_strategy.observability.metrics",
             }
@@ -375,9 +394,24 @@ PRODUCTION_ANALYSIS_WIRING_ALLOWANCES = (
             "instead of importing analysis directly."
         ),
     ),
+    ProductionAnalysisWiringAllowance(
+        path="packages/application/src/ditto_application/queries/research_helpers.py",
+        owner="application research query facade (extracted helpers)",
+        reason=(
+            "Extracted helper functions for the research query facade; same "
+            "analysis import allowance as the parent facade module."
+        ),
+    ),
 )
 
 GENERIC_HELPER_NAMESPACE_ALLOWANCES = (
+    GenericHelperNamespaceAllowance(
+        path="packages/application/src/ditto_application/config/helpers.py",
+        owner="application config",
+        reason=(
+            "Extracted now_iso() helper; pure utility re-exported by config barrel."
+        ),
+    ),
     GenericHelperNamespaceAllowance(
         path="packages/application/src/ditto_application/processes/materialization/helpers.py",
         owner="application materialization process",
@@ -1918,6 +1952,45 @@ def _collect(errors: list[str], new: list[str], ok_msg: str, verbose: bool) -> N
         print(ok_msg)
 
 
+# ============ Route Maturity Annotations ============
+
+# Non-initial-focus routes must declare maturity in their module docstring.
+_ROUTE_MATURITY_EXPECTED: dict[str, str] = {
+    "capital.py": "experimental",
+    "commodity.py": "experimental",
+    "fundamental.py": "experimental",
+    "fx.py": "experimental",
+    "macro.py": "experimental",
+    "trade.py": "experimental",
+    "ingestion.py": "infrastructure",
+    "source.py": "infrastructure",
+    "debug.py": "debug",
+}
+
+_ROUTES_DIR = "packages/apps/src/ditto_apps/api/routes"
+
+
+def check_route_maturity_annotations(root: Path = ROOT) -> list[str]:
+    """Check non-initial-focus route modules declare maturity in docstring."""
+    errors: list[str] = []
+    for filename, expected_level in _ROUTE_MATURITY_EXPECTED.items():
+        path = root / _ROUTES_DIR / filename
+        if not path.exists():
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+            errors.append(f"{_ROUTES_DIR}/{filename}: cannot parse ({exc})")
+            continue
+        docstring = ast.get_docstring(tree, clean=False) or ""
+        if f"maturity: {expected_level}" not in docstring:
+            errors.append(
+                f"{_ROUTES_DIR}/{filename}: module docstring must declare "
+                + f"'maturity: {expected_level}' (capability-maturity.md)",
+            )
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Architecture smell checks for Ditto")
     parser.add_argument(
@@ -2000,6 +2073,14 @@ def main() -> int:
         errors,
         check_external_package_metadata(ROOT),
         "[OK] Package metadata declares external runtime imports",
+        args.verbose,
+    )
+
+    # Check: Route maturity annotations
+    _collect(
+        errors,
+        check_route_maturity_annotations(ROOT),
+        "[OK] API route maturity annotations are present and consistent",
         args.verbose,
     )
 

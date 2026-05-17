@@ -1,6 +1,6 @@
 # ditto-kernel
 
-**版本**: v0.3.0 | **日期**: 2026-04-27 | **状态**: 稳定
+**版本**: v0.3.1 | **日期**: 2026-05-10 | **状态**: 稳定
 
 ## 概要
 
@@ -13,18 +13,17 @@
 ```
 ditto_kernel/
 ├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
-├── order.py               # Order 子域 — OrderSide
+├── order.py               # Order 子域 — OrderSide / OrderType
 ├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
-├── strategy.py            # Strategy 子域 — DerivedRole / DerivedSpec / MaterializationProfile / ExecutionPolicy / ImpactModel / RiskScope / RunStatus / DecisionFrame Protocol
+├── strategy.py            # Strategy 子域 — ExecutionPolicy / ImpactModel / RiskScope / RunStatus
 ├── identity.py            # 共享身份类型（NewType）
 ├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
-├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus
+├── time_context.py        # TimeContext 值对象 — PIT 语义统一入口
+├── synchronizer.py        # Synchronizer Protocol + TimeSlice 值对象 — 回测/实盘切换 seam
+├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
 ├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
 ├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
-├── research.py            # 研究数据集记录类型（frozen dataclass x 4）
-├── quality.py             # 数据质量值对象（DQLevel / DQSeverity / DQIssue / DQResult）
-├── publication_safety.py  # 发布安全运行时记录（frozen dataclass x 6，含结构转换方法）
 ├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
@@ -50,39 +49,24 @@ instrument / order / market / identity: 无子域间依赖
 | `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
 | `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
 | `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
-| `DerivedRole` | strategy.py | `StrEnum`（FEATURE/FACTOR/SIGNAL/LABEL） | Analysis, Strategy |
-| `DerivedSpec` | strategy.py | frozen dataclass | Analysis, Strategy |
-| `MaterializationProfile` | strategy.py | `StrEnum`（SERIES/STATE/DERIVE/OFFLINE） | Analysis, Strategy |
 | `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `DecisionFrame` | strategy.py | `Protocol`（零依赖签名，Sequence-based） | Strategy, Application |
 | `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
 | `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
 | `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
+| `EventName` | events.py | `StrEnum` catalog（领域事件类型常量） | Backtest, Application |
+| `TimeContext` | time_context.py | frozen dataclass（含 `pit_cutoff` property） | Backtest, Application |
+| `TimeSlice` | synchronizer.py | frozen dataclass | Backtest, Application |
+| `Synchronizer` | synchronizer.py | `Protocol`（回测/实盘切换 seam） | Backtest, Application |
 | `MarketSnapshot` | trading.py | frozen dataclass | Execution, Backtest |
 | `InstrumentDefinition` | trading.py | frozen dataclass | Execution, Backtest |
 | `TradingRuleSet` | trading.py | frozen dataclass | Execution, Backtest |
 | `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
 | `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
 | `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
-| `default_price_limit_pct` | trading.py | 纯函数 | Execution |
-| `CompatibilityManifestRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
-| `DerivedMinimalDQSummaryRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Features, Application |
-| `ShadowDiffReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
-| `ShadowTraceRecordRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
-| `CertificationReportRecord` | publication_safety.py | frozen dataclass（含结构转换） | Data, Application |
-| `DerivedShadowSlotRecord` | publication_safety.py | frozen dataclass | Data, Features, Application |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
-| `ResearchSpineSpecRecord` | research.py | frozen dataclass | Data, App |
-| `ResearchDatasetSpecRecord` | research.py | frozen dataclass | Data, App |
-| `ResearchSpineSnapshotRecord` | research.py | frozen dataclass | Data, App |
-| `ResearchDatasetSnapshotRecord` | research.py | frozen dataclass | Data, App |
-| `DQLevel` | quality.py | `Enum`（TECHNICAL/BUSINESS/STATISTICAL） | Data, Apps, Application |
-| `DQSeverity` | quality.py | `Enum`（ERROR/WARNING/ALERT） | Data, Apps, Application |
-| `DQIssue` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
-| `DQResult` | quality.py | frozen dataclass（含纯计算型 `@property`） | Data, Apps, Application |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
 | `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
 | `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
@@ -118,9 +102,8 @@ from ditto_kernel import AssetClass, OrderSide, InstrumentId, DittoError
 
 # 从叶模块导入（低频或子域内聚符号）
 from ditto_kernel.instrument import AssetClass, Exchange, InstrumentIngestParams
-from ditto_kernel.strategy import DerivedSpec, DerivedRole, ExecutionPolicy, DecisionFrame
+from ditto_kernel.strategy import ExecutionPolicy, ImpactModel, RiskScope, RunStatus
 from ditto_kernel.identity import InstrumentId
-from ditto_kernel.quality import DQIssue, DQLevel, DQResult, DQSeverity
 
 # StrEnum 直接支持字符串比较
 assert AssetClass.STOCK == "stock"
@@ -141,16 +124,21 @@ pixi run -e dev pytest packages/kernel/tests/
 
 ## 变更记录
 
+### v0.3.1 (2026-05-10)
+- 迁移 `quality.py` → `ditto_data.quality.quality_types`（DQLevel / DQSeverity / DQIssue / DQResult）
+- 迁移 `research.py` → `ditto_analysis.research.domain`（4 frozen dataclass）
+- 迁移 `publication_safety.py` → `ditto_features.publication_safety_records`（6 frozen dataclass）
+
 ### v0.3.0 (2026-04-27)
 - Phase 1 子域重组：`enums.py` / `specs.py` 拆分为 11 个子域文件
 - 新增 `quality.py`（DQLevel / DQSeverity / DQIssue / DQResult）
 - 新增 `research.py`（4 frozen dataclass）
 - 新增 `exceptions.py`（5 异常类）
 - 新增 `math.py`（pearson_correlation）
-- 新增 `DerivedSpec` / `ExecutionPolicy` / `ImpactModel` / `RiskScope` / `DecisionFrame` Protocol
+- 新增 `DerivedSpec` / `ExecutionPolicy` / `ImpactModel` / `RiskScope`（DerivedSpec 已在 v0.3.1 迁出）
 - `RunStatus` 新增 `CANCELLED` 成员
-- `DerivedRole` 更新为 `FEATURE/FACTOR/SIGNAL/LABEL`
-- `MaterializationProfile` 更新为 `SERIES/STATE/DERIVE/OFFLINE`
+- `DerivedRole` 更新为 `FEATURE/FACTOR/SIGNAL/LABEL`（已在 v0.3.1 迁出）
+- `MaterializationProfile` 更新为 `SERIES/STATE/DERIVE/OFFLINE`（已在 v0.3.1 迁出）
 
 ### v0.2.0 (2026-04-04)
 - 新增 clock.py（Clock Protocol + SimulatedClock + RealtimeClock）

@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
 from ditto_execution.models import SignalRecord
-from ditto_execution.storage.sqlite.trade.service import TradeService
 
 from ditto_application.exceptions import AppCommandError
 from ditto_application.execution_dto import (
@@ -67,14 +67,18 @@ class UpdateIntentStatusCommand:
 
 
 class RecordFillHandler:
-    """录入人工成交 — Command Handler."""
+    """录入人工成交 — Command Handler（跨聚合编排：Intent + Fill + Position）."""
 
     def __init__(
         self,
-        trade_service: TradeService,
+        intent_port: IntentDataPort,
+        fill_port: FillDataPort,
+        position_port: PositionDataPort,
         manual_tracker: ManualTracker,
     ) -> None:
-        self._service = trade_service
+        self._intent = intent_port
+        self._fill = fill_port
+        self._position = position_port
         self._tracker = manual_tracker
 
     def handle(self, command: RecordFillCommand) -> ManualExecutionFill:
@@ -89,14 +93,14 @@ class RecordFillHandler:
         5. 触发 ManualTracker 重新聚合 -> 更新持仓
         """
         # 0. 幂等性: 检查是否已有相同 intent_id + trade_date 的成交
-        existing_fill_record = self._service.find_fill(
+        existing_fill_record = self._fill.find_fill(
             command.intent_id, command.trade_date
         )
         if existing_fill_record is not None:
             return record_to_fill(existing_fill_record)
 
         # 1. Validate
-        intent_record = self._service.get_intent(command.intent_id)
+        intent_record = self._intent.get_intent(command.intent_id)
         self._validate_intent_match(intent_record, command)
         # _validate_intent_match raises when None; narrow for type checker
         if intent_record is None:
@@ -107,13 +111,13 @@ class RecordFillHandler:
 
         # 3. Persist
         record = fill_to_record(fill)
-        self._service.save_fill(record)
+        self._fill.save_fill(record)
 
         # 4. Update intent status (累积同 intent 所有 fill 后判断)
         new_status = self._determine_fill_status(
             intent_record.quantity, command.intent_id, intent_record.strategy_id
         )
-        self._service.update_intent_status(
+        self._intent.update_intent_status(
             command.intent_id,
             new_status,
             expected_current=("pending", "partially_filled"),
@@ -195,7 +199,7 @@ class RecordFillHandler:
         当 intent_quantity 为 None（未指定目标数量）时，始终返回
         partially_filled，由调用方通过 UpdateIntentStatusHandler 显式标记终态。
         """
-        fills = self._service.list_fills(strategy_id=strategy_id, intent_id=intent_id)
+        fills = self._fill.list_fills(strategy_id=strategy_id, intent_id=intent_id)
         cumulative_qty = sum(f.quantity for f in fills)
         if intent_quantity is not None and cumulative_qty >= intent_quantity:
             return "filled"
@@ -203,7 +207,7 @@ class RecordFillHandler:
 
     def _recompute_positions(self, strategy_id: str, snapshot_date: str) -> None:
         """重新聚合持仓并持久化."""
-        fill_records = self._service.list_fills(
+        fill_records = self._fill.list_fills(
             strategy_id=strategy_id, end_date=snapshot_date
         )
         fills = [record_to_fill(r) for r in fill_records]
@@ -215,18 +219,18 @@ class RecordFillHandler:
         )
 
         for snapshot in snapshots:
-            self._service.save_position(snapshot_to_record(snapshot))
+            self._position.save_position(snapshot_to_record(snapshot))
 
 
 class UpdateIntentStatusHandler:
     """更新意图状态 — Command Handler."""
 
-    def __init__(self, trade_service: TradeService) -> None:
-        self._service = trade_service
+    def __init__(self, intent_port: IntentDataPort) -> None:
+        self._intent = intent_port
 
     def handle(self, command: UpdateIntentStatusCommand) -> bool:
         """验证 intent 存在后更新状态（含合法性校验）."""
-        intent = self._service.get_intent(command.intent_id)
+        intent = self._intent.get_intent(command.intent_id)
         if intent is None:
             msg = f"Intent not found: {command.intent_id}"
             raise AppCommandError(msg)
@@ -253,7 +257,7 @@ class UpdateIntentStatusHandler:
         # 终态（空转换集）时，用当前状态作为守卫条件以防止 lost-update
         if not expected:
             expected = (intent.status,)
-        updated = self._service.update_intent_status(
+        updated = self._intent.update_intent_status(
             command.intent_id,
             command.status,
             expected_current=tuple(expected),

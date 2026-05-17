@@ -1,7 +1,6 @@
 """FillModel unit tests — SimpleFill, AShare, ClosingAuction."""
 
 from dataclasses import dataclass
-from datetime import datetime
 
 import pytest
 from ditto_backtest.simulation.fill import (
@@ -10,9 +9,11 @@ from ditto_backtest.simulation.fill import (
     SimpleFillModel,
 )
 from ditto_execution.fills import Filled, FillOutcome, NoFill
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import InstrumentDefinition, MarketSnapshot, TradingRuleSet
-from ditto_portfolio.accounting.order_book import Order
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -24,17 +25,16 @@ def _order(
     direction: OrderSide = OrderSide.BUY,
     quantity: int = 100,
     price: float | None = None,
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = InstrumentId(1),
     order_id: str = "ORD-001",
 ) -> Order:
     return Order(
-        order_id=order_id,
+        client_id=ClientOrderId(order_id),
         instrument_id=instrument_id,
         order_type=order_type,
         direction=direction,
         quantity=quantity,
         price=price,
-        created_at=datetime(2026, 3, 1),
     )
 
 

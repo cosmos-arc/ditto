@@ -6,16 +6,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 
+from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 
 from ditto_portfolio.accounting.cash import CashBook
 from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import (
-    OrderBook,
-    OrderBookReadOnly,
-)
 from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.events import PositionChanged
 
 __all__ = ["Account", "AccountView"]
 
@@ -33,8 +31,6 @@ class AccountView:
         total_value: 总资产 = cash.total + exposure
         nav: 净资产值 = cash.total + sum(market_value + unrealized_pnl)
         exposure: 持仓总市值 = sum(market_value)
-        pending_buy_value: 未完成买入订单的预计金额
-        order_book: 订单簿只读视图
 
     """
 
@@ -43,8 +39,6 @@ class AccountView:
     total_value: float
     nav: float
     exposure: float
-    pending_buy_value: float
-    order_book: OrderBookReadOnly
 
 
 @dataclass
@@ -61,19 +55,18 @@ class Account:
 
     """
 
-    positions: dict[InstrumentId, Position] = field(default_factory=dict, init=False)
+    _positions: dict[InstrumentId, Position] = field(default_factory=dict, init=False)
     _cash: CashBook = field(
         default_factory=lambda: CashBook(available=0.0, settled=0.0, frozen=0.0),
         init=False,
         repr=False,
     )
-    order_book: OrderBook = field(default_factory=OrderBook, init=False)
 
     def __init__(
         self,
         positions: dict[InstrumentId, Position] | None = None,
         cash: CashBook | None = None,
-        order_book: OrderBook | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         """
         初始化账户。
@@ -81,13 +74,13 @@ class Account:
         Args:
             positions: 持仓映射
             cash: 现金账本
-            order_book: 订单簿
+            event_bus: 事件总线（可选，用于发布 PositionChanged 事件）
 
         """
         # 绕过 dataclass 自动生成的 __init__，直接设置属性
         object.__setattr__(
             self,
-            "positions",
+            "_positions",
             positions if positions is not None else {},
         )
         object.__setattr__(
@@ -101,11 +94,12 @@ class Account:
                 frozen=0.0,
             ),
         )
-        object.__setattr__(
-            self,
-            "order_book",
-            order_book if order_book is not None else OrderBook(),
-        )
+        self._event_bus = event_bus
+
+    @property
+    def positions(self) -> MappingProxyType[InstrumentId, Position]:
+        """获取持仓的只读视图（外部不可直接修改）。"""
+        return MappingProxyType(self._positions)
 
     @property
     def cash(self) -> CashBook:
@@ -119,28 +113,18 @@ class Account:
 
     def _calc_exposure(self) -> float:
         """计算持仓总市值 (exposure = sum(market_value))。"""
-        return sum(p.market_value for p in self.positions.values())
-
-    def _calc_pending_buy_value(self) -> float:
-        """计算未完成买入订单的预计金额 (leaves_quantity * price)。"""
-        total = 0.0
-        for ticket in self.order_book.get_pending():
-            if ticket.order.direction == OrderSide.BUY:
-                total += ticket.leaves_quantity * (ticket.order.price or 0.0)
-        return total
+        return sum(p.market_value for p in self._positions.values())
 
     def get_view(self) -> AccountView:
         """生成只读账户快照。"""
         exposure = self._calc_exposure()
         return AccountView(
-            positions=MappingProxyType(dict(self.positions)),
+            positions=MappingProxyType(dict(self._positions)),
             cash=self.cash,
             total_value=self.cash.total + exposure,
             nav=self.cash.total
-            + sum(p.market_value + p.unrealized_pnl for p in self.positions.values()),
+            + sum(p.market_value + p.unrealized_pnl for p in self._positions.values()),
             exposure=exposure,
-            pending_buy_value=self._calc_pending_buy_value(),
-            order_book=self.order_book.readonly_view(),
         )
 
     # -- fill application ----------------------------------------------------
@@ -153,11 +137,14 @@ class Account:
         on_frozen: Callable[[InstrumentId, str, int], None] | None = None,
     ) -> None:
         """
-        应用成交事件，更新持仓和现金。
+        应用成交事件，原子更新持仓和现金。
 
         从 BacktestBrokerage 提取的持仓/资金更新逻辑。
         BUY 时通过 on_frozen 回调注册冻结份额（T+1 交收），
         SELL 时扣减 available_quantity 并计算已实现盈亏。
+
+        计算优先，原子赋值：先计算新的持仓状态和现金状态，
+        再一次性赋值，避免部分更新导致状态不一致。
 
         Args:
             fill: 成交事件
@@ -166,18 +153,51 @@ class Account:
                 BUY 时调用，由 Brokerage 实现 T+1 冻结注册逻辑。
 
         """
-        self._update_position_from_fill(fill, settle_date, on_frozen)
-        self._update_cash_from_fill(fill)
+        # Calculate new state first (may raise) — no mutation yet
+        position_updates = self._calculate_new_position(fill)
+        new_cash = self._calculate_new_cash(fill)
+        # Atomic assignment — both succeed or neither
+        self._apply_position_updates(position_updates)
+        object.__setattr__(self, "_cash", new_cash)
+        # Fire callback after state is committed
+        if fill.direction == OrderSide.BUY and on_frozen is not None:
+            on_frozen(fill.instrument_id, settle_date, fill.filled_quantity)
+        if self._event_bus is not None and position_updates:
+            if "upsert" in position_updates:
+                new_pos = position_updates["upsert"][1]
+                new_quantity = new_pos.quantity if new_pos is not None else 0
+            else:
+                new_quantity = 0
+            quantity_change = (
+                fill.filled_quantity
+                if fill.direction == OrderSide.BUY
+                else -fill.filled_quantity
+            )
+            self._event_bus.publish(
+                PositionChanged(
+                    timestamp=fill.event_time,
+                    instrument_id=fill.instrument_id,
+                    quantity_change=quantity_change,
+                    new_quantity=new_quantity,
+                ),
+            )
 
-    def _update_position_from_fill(
+    # -- calculation helpers (pure, no mutation) -----------------------------
+
+    def _calculate_new_position(
         self,
         fill: FillEvent,
-        settle_date: str,
-        on_frozen: Callable[[InstrumentId, str, int], None] | None,
-    ) -> None:
-        """更新持仓 — BUY 时注册冻结, SELL 时扣减 available_quantity。"""
+    ) -> dict[str, tuple[InstrumentId, Position | None]]:
+        """
+        计算成交后的持仓变更，返回待应用的更新列表。
+
+        Returns:
+            dict with key "upsert" for add/update or "remove" for delete.
+            Each entry maps instrument_id to new Position (upsert) or None (remove).
+
+        """
         iid = fill.instrument_id
-        existing = self.positions.get(iid)
+        existing = self._positions.get(iid)
         price = fill.fill_price
         qty = fill.filled_quantity
 
@@ -205,50 +225,79 @@ class Account:
                     realized_pnl=0.0,
                     total_fees=fill.fee,
                 )
-            self.positions[iid] = new_pos
-            # 注册冻结: settle_date 到期后解冻
-            if on_frozen is not None:
-                on_frozen(iid, settle_date, qty)
+            return {"upsert": (iid, new_pos)}
 
-        elif fill.direction == OrderSide.SELL:
-            if existing is not None:
-                new_qty = existing.quantity - qty
-                new_avail = existing.available_quantity - qty
-                realized = (price - existing.average_cost) * qty
-                if new_qty <= 0:
-                    del self.positions[iid]
-                else:
-                    new_pos = replace(
-                        existing,
-                        quantity=new_qty,
-                        available_quantity=new_avail,
-                        market_value=existing.average_cost * new_qty,
-                        realized_pnl=existing.realized_pnl + realized,
-                        total_fees=existing.total_fees + fill.fee,
-                    )
-                    self.positions[iid] = new_pos
+        # SELL
+        if existing is not None:
+            new_qty = existing.quantity - qty
+            new_avail = existing.available_quantity - qty
+            realized = (price - existing.average_cost) * qty
+            if new_qty <= 0:
+                return {"remove": (iid, None)}
+            new_pos = replace(
+                existing,
+                quantity=new_qty,
+                available_quantity=new_avail,
+                market_value=existing.average_cost * new_qty,
+                realized_pnl=existing.realized_pnl + realized,
+                total_fees=existing.total_fees + fill.fee,
+            )
+            return {"upsert": (iid, new_pos)}
 
-    def _update_cash_from_fill(self, fill: FillEvent) -> None:
-        """更新现金。"""
-        cash = self.cash
+        return {}
+
+    def _apply_position_updates(
+        self,
+        updates: dict[str, tuple[InstrumentId, Position | None]],
+    ) -> None:
+        """将计算好的持仓变更应用到内部 dict。"""
+        if "upsert" in updates:
+            iid, pos = updates["upsert"]
+            if pos is None:
+                raise ValueError(f"upsert entry for {iid} must have a Position")
+            self._positions[iid] = pos
+        elif "remove" in updates:
+            iid = updates["remove"][0]
+            self._positions.pop(iid, None)
+
+    def _calculate_new_cash(self, fill: FillEvent) -> CashBook:
+        """计算成交后的新现金状态（纯计算，无副作用）。"""
+        cash = self._cash
         price = fill.fill_price
         qty = fill.filled_quantity
         fee = fill.fee
         amount = price * qty
 
         if fill.direction == OrderSide.BUY:
-            new_available = cash.available - amount - fee
-            new_settled = cash.settled - fee
-            self.cash = CashBook(
-                available=new_available,
-                settled=new_settled,
+            return CashBook(
+                available=cash.available - amount - fee,
+                settled=cash.settled - fee,
                 frozen=cash.frozen,
             )
-        elif fill.direction == OrderSide.SELL:
-            new_available = cash.available + amount - fee
-            new_settled = cash.settled + amount - fee
-            self.cash = CashBook(
-                available=new_available,
-                settled=new_settled,
-                frozen=cash.frozen,
+        # SELL
+        return CashBook(
+            available=cash.available + amount - fee,
+            settled=cash.settled + amount - fee,
+            frozen=cash.frozen,
+        )
+
+    # -- thaw (解冻 available_quantity, 由 Brokerage 调用) -------------------
+
+    def thaw_position(self, instrument_id: InstrumentId, quantity: int) -> None:
+        """
+        解冻持仓的 available_quantity — T+N 交收后由 Brokerage 调用.
+
+        仅更新 available_quantity，不改变持仓数量/成本等字段。
+        当仓位不存在时静默跳过（仓位已清空的边缘场景）。
+
+        Args:
+            instrument_id: 标的 ID
+            quantity: 解冻数量
+
+        """
+        pos = self._positions.get(instrument_id)
+        if pos is not None:
+            self._positions[instrument_id] = replace(
+                pos,
+                available_quantity=pos.available_quantity + quantity,
             )

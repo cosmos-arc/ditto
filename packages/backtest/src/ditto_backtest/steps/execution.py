@@ -40,9 +40,9 @@ class ExecutionStep:
 
         # 构建 ProcessInput
         process_input = ProcessInput(
-            step_time=ctx.slice_.step_time,
-            trade_date=ctx.date,
-            bars=ctx.slice_.bars,
+            step_time=ctx.time_context.decision_time,
+            trade_date=ctx.time_context.trade_date,
+            bars=ctx.bars,
         )
 
         # 处理成交

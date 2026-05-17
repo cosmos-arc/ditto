@@ -11,8 +11,7 @@ from datetime import date
 from typing import Any
 
 import polars as pl
-from ditto_platform.foundation import logger, traced
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient, logger, traced
 
 
 class IndicatorWriter:

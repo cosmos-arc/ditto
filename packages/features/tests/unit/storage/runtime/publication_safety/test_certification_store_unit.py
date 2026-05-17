@@ -2,11 +2,11 @@
 
 from pathlib import Path
 
+from ditto_features.publication_safety_records import CertificationReportRecord
 from ditto_features.storage.runtime.publication_safety import (
     CertificationReader,
     CertificationWriter,
 )
-from ditto_kernel.publication_safety import CertificationReportRecord
 
 
 class TestCertificationStore:

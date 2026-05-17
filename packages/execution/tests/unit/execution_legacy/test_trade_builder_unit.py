@@ -11,10 +11,11 @@ from ditto_execution.trade_builder import (
     TradeRecord,
 )
 from ditto_kernel.order import OrderSide
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.fills import FillEvent
-from ditto_portfolio.accounting.order_book import OrderBookReadOnly
+from ditto_portfolio.accounting import (
+    AccountView,
+    CashBook,
+    FillEvent,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -30,8 +31,6 @@ def account_view() -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
-        pending_buy_value=0.0,
-        order_book=OrderBookReadOnly({}),
     )
 
 

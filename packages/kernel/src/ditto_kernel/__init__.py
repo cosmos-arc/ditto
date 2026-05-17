@@ -6,7 +6,7 @@ Ditto 共享内核 — 跨层领域原语 + Protocol 抽象 + 薄实现.
 """
 
 from ditto_kernel.clock import Clock, RealtimeClock, SimulatedClock
-from ditto_kernel.events import DomainEvent, EventBus, SimpleEventBus
+from ditto_kernel.events import DomainEvent, EventBus, EventName, SimpleEventBus
 from ditto_kernel.exceptions import (
     AmbiguousTickerError,
     DittoError,
@@ -22,14 +22,12 @@ from ditto_kernel.market import (
 )
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.strategy import (
-    DecisionFrame,
-    DerivedRole,
-    DerivedSpec,
     ExecutionPolicy,
     ImpactModel,
-    MaterializationProfile,
     RiskScope,
 )
+from ditto_kernel.synchronizer import Synchronizer, TimeSlice
+from ditto_kernel.time_context import TimeContext
 from ditto_kernel.tracing import traced
 from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
@@ -44,12 +42,10 @@ __all__ = [
     "AmbiguousTickerError",
     "AssetClass",
     "Clock",
-    "DecisionFrame",
-    "DerivedRole",
-    "DerivedSpec",
     "DittoError",
     "DomainEvent",
     "EventBus",
+    "EventName",
     "Exchange",
     "ExecutionPolicy",
     "IdentifierError",
@@ -58,7 +54,6 @@ __all__ = [
     "InstrumentIngestParams",
     "MacroCategory",
     "MacroFrequency",
-    "MaterializationProfile",
     "NoIdentifierProvidedError",
     "OrderSide",
     "OrderType",
@@ -66,6 +61,9 @@ __all__ = [
     "RiskScope",
     "SimpleEventBus",
     "SimulatedClock",
+    "Synchronizer",
+    "TimeContext",
+    "TimeSlice",
     "TimeSpec",
     "traced",
 ]

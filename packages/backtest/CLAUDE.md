@@ -66,6 +66,7 @@ ditto_backtest/
 │   ├── settlement.py     # 交收规则（SettlementModel / AShareSettlementModel / SimpleSettlementModel）
 │   └── slippage.py       # 滑点模型（SlippageModel / FixedBpsSlippage / VolumeShareSlippage）
 ├── data_feed.py          # 数据回放接口
+├── synchronizer.py       # 回测时间同步器（BacktestSynchronizer — 桥接 DataFeed 到 Synchronizer Protocol）
 ├── replay.py             # 回放控制器
 ├── statistics.py         # 绩效统计计算
 ├── _statistics_types.py  # 统计类型定义
@@ -93,6 +94,7 @@ packages/backtest/tests/
 │   ├── test_manifest_unit.py
 │   ├── test_provider_data_feed_unit.py
 │   ├── test_data_feed_history_unit.py
+│   ├── test_backtest_synchronizer_unit.py
 │   ├── test_trading_loop_protocol_unit.py
 │   ├── test_step_types_unit.py
 │   ├── test_data_fetch_step.py
@@ -130,6 +132,7 @@ from ditto_backtest.steps.execution import ExecutionStep
 
 # 数据回放
 from ditto_backtest.data_feed import DataFeed
+from ditto_backtest.synchronizer import BacktestSynchronizer
 from ditto_backtest.replay import ReplayController
 
 # 统计与报告

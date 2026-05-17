@@ -235,7 +235,7 @@ class TestResearchFacadeBuildDatasetNotFound:
     def test_raises_when_spec_missing(self) -> None:
         """验证 catalog 返回 None 时抛出 DerivedNotFoundError."""
         import pytest
-        from ditto_kernel.exceptions import DerivedNotFoundError
+        from ditto_features.errors import DerivedNotFoundError
 
         facade = _make_facade()
         facade._research_catalog_service.get_dataset_spec.return_value = None  # type: ignore[attr-defined]

@@ -11,6 +11,7 @@ from ditto_strategy.alpha.context import StrategyContext
 from packages.backtest.tests.unit._helpers import (
     IID_1,
     _make_account_view,
+    _make_ctx,
     _make_slice,
     _make_snapshot,
 )
@@ -21,7 +22,7 @@ class TestStrategyStep:
 
     def _make_ctx_with_data(self) -> StepContext:
         """构建包含 slice_ 和 account_view 的 StepContext。"""
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.slice_ = _make_slice()
         ctx.account_view = _make_account_view()
         return ctx
@@ -35,7 +36,7 @@ class TestStrategyStep:
             strategy_run_id="run-1",
         )
 
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=False)
+        ctx = _make_ctx(is_rebalance_day=False)
         ctx.slice_ = _make_slice()
         result = step.execute(ctx)
 
@@ -73,7 +74,7 @@ class TestStrategyStep:
         )
 
         bars = {IID_1: _make_snapshot(IID_1, close=10.0)}
-        ctx = StepContext(date="2026-03-01", is_rebalance_day=True)
+        ctx = _make_ctx()
         ctx.slice_ = _make_slice(bars=bars)
         ctx.account_view = _make_account_view()
 

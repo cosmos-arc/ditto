@@ -5,6 +5,8 @@ from __future__ import annotations
 from types import MappingProxyType
 from unittest.mock import MagicMock
 
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.model import Order
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import (
@@ -17,11 +19,12 @@ from ditto_kernel.trading import (
     MarketSnapshot,
     TradingRuleSet,
 )
-from ditto_portfolio.accounting.account import AccountView
-from ditto_portfolio.accounting.buying_power import BuyingPowerModel
-from ditto_portfolio.accounting.cash import CashBook
-from ditto_portfolio.accounting.order_book import Order
-from ditto_portfolio.accounting.position import Position
+from ditto_portfolio.accounting import (
+    AccountView,
+    BuyingPowerModel,
+    CashBook,
+    Position,
+)
 from ditto_risk.pre_trade import PreTradeContext
 
 IID_A = InstrumentId(1)
@@ -120,8 +123,6 @@ def _make_account_view(
         total_value=actual_total,
         nav=nav,
         exposure=actual_exposure,
-        pending_buy_value=0.0,
-        order_book=MagicMock(),
     )
 
 
@@ -183,7 +184,7 @@ class TestEstimateOrderCost:
         fee_model.estimate.return_value = 15.0
         ctx = _make_context(fee_model=fee_model)
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -196,7 +197,7 @@ class TestEstimateOrderCost:
         """无价格时返回 0。"""
         ctx = _make_context(market_snapshots={})
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -208,7 +209,7 @@ class TestEstimateOrderCost:
         """无 fee_model 时 cost = quantity * price。"""
         ctx = _make_context(fee_model=None)
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -219,7 +220,7 @@ class TestEstimateOrderCost:
 
 class TestWithOrderAccepted:
     def test_with_order_accepted_buy(self) -> None:
-        """BUY: 扣减可用现金，增加冻结和 pending_buy_value。"""
+        """BUY: 扣减可用现金，增加冻结。"""
         fee_model = MagicMock()
         fee_model.estimate.return_value = 10.0
         ctx = _make_context(
@@ -229,7 +230,7 @@ class TestWithOrderAccepted:
             ),
         )
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,
@@ -239,7 +240,6 @@ class TestWithOrderAccepted:
         estimated_cost = 100 * 10.0 + 10.0
         assert new_ctx.account_view.cash.available == 50_000.0 - estimated_cost
         assert new_ctx.account_view.cash.frozen == 0.0 + estimated_cost
-        assert new_ctx.account_view.pending_buy_value == estimated_cost
 
     def test_with_order_accepted_sell(self) -> None:
         """SELL: 减少 available_quantity。"""
@@ -248,7 +248,7 @@ class TestWithOrderAccepted:
             account_view=_make_account_view(positions={IID_A: pos}),
         )
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -265,7 +265,7 @@ class TestWithOrderAccepted:
             account_view=_make_account_view(positions={IID_A: pos}),
         )
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -279,7 +279,7 @@ class TestWithOrderAccepted:
         """SELL 无持仓时 account_view 不变（position 不存在跳过修改）。"""
         ctx = _make_context()
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.SELL,
@@ -293,7 +293,7 @@ class TestWithOrderAccepted:
         """无价格时返回原上下文。"""
         ctx = _make_context(market_snapshots={})
         order = Order(
-            order_id="o1",
+            client_id=ClientOrderId("o1"),
             instrument_id=IID_A,
             order_type=OrderType.MARKET,
             direction=OrderSide.BUY,

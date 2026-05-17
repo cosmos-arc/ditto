@@ -26,11 +26,15 @@ from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.statistics import (
     ExecutionAuditCollector,
 )
+from ditto_backtest.synchronizer import (
+    BacktestSynchronizer,
+)
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
-from ditto_portfolio.accounting.account import Account
-from ditto_portfolio.accounting.cash import CashBook
+from ditto_portfolio.accounting import Account, CashBook
 from ditto_risk.drawdown.rules import SingleLossLimitRule
 from ditto_risk.exposure.rules import ConcentrationLimitRule, MarketAnomalyRule
 from ditto_risk.post_trade import CompositePostTradeGuard
@@ -186,6 +190,7 @@ def _build_engine_with_risk_and_audit(
 
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=OrderBook(journal=InMemoryOrderEventJournal()),
         model=BrokerageModel(fee_model=SimpleFeeModel()),
     )
 
@@ -204,6 +209,13 @@ def _build_engine_with_risk_and_audit(
 
     planner = SimpleExecutionPlanner()
 
+    clock = SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC))
+    synchronizer = BacktestSynchronizer(
+        data_feed=data_feed,
+        clock=clock,
+        start_date=start_date,
+    )
+
     engine = EngineLoop(
         config=config,
         pipeline=pipeline,
@@ -211,8 +223,8 @@ def _build_engine_with_risk_and_audit(
         brokerage=brokerage,
         pre_trade_check=pre_trade_check,
         data_feed=data_feed,
+        synchronizer=synchronizer,
         options=EngineOptions(
-            clock=SimulatedClock(initial=datetime(2026, 1, 5, tzinfo=UTC)),
             fee_model=fee_model,
             post_trade_guard=post_trade_guard,
             audit_collector=audit_collector,

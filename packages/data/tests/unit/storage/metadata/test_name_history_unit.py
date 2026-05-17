@@ -11,7 +11,7 @@ from ditto_data.storage.metadata.instrument.name_history_reader import (
 from ditto_data.storage.metadata.instrument.name_history_writer import (
     NameHistoryWriter,
 )
-from ditto_platform.foundation.storage.sqlite_client import SQLiteClient
+from ditto_platform.foundation import SQLiteClient
 
 
 def _mock_cache() -> MagicMock:

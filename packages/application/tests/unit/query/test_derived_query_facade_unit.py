@@ -15,7 +15,7 @@ from ditto_application.queries.derived import (
     SeriesDerivedRequest,
     SourceCompareRequest,
 )
-from ditto_features.services.derived import DerivedSourceScope
+from ditto_features.services import DerivedSourceScope
 
 
 class TestDerivedQueryFacadeGetLatest:

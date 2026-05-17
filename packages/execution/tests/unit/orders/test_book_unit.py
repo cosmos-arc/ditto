@@ -1,0 +1,193 @@
+"""T5: OrderBook + OrderBookReadOnly 单元测试。"""
+
+from __future__ import annotations
+
+import pytest
+from ditto_execution.orders.book import OrderBook, OrderBookReadOnly
+from ditto_execution.orders.event import OrderEvent
+from ditto_execution.orders.ids import ClientOrderId
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order, OrderSide, OrderType
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.trigger import OrderTrigger
+from ditto_kernel.identity import InstrumentId
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+def _make_order(cid: str = "ord-1") -> Order:
+    return Order(
+        client_id=ClientOrderId(value=cid),
+        instrument_id=InstrumentId(1),
+        order_type=OrderType.LIMIT,
+        direction=OrderSide.BUY,
+        quantity=100,
+        price=10.0,
+    )
+
+
+def _make_event(
+    cid: ClientOrderId, trigger: OrderTrigger, status: OrderStatus
+) -> OrderEvent:
+    return OrderEvent(client_id=cid, trigger=trigger, status=status)
+
+
+# ---------------------------------------------------------------------------
+# OrderBook
+# ---------------------------------------------------------------------------
+
+
+class TestOrderBookSubmit:
+    def test_submit_creates_submitted_ticket(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        order = _make_order("sub-1")
+        cid = order.client_id
+        ticket = book.submit(order)
+
+        assert ticket.status == OrderStatus.SUBMITTED
+        assert book.get(cid) is ticket
+
+
+class TestOrderBookUpdate:
+    def test_update_replaces_ticket(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        order = _make_order("upd-1")
+        cid = order.client_id
+        original = book.submit(order)
+
+        filled = original.with_fill(
+            quantity=100,
+            price=10.0,
+            event=_make_event(cid, OrderTrigger.FILL, OrderStatus.FILLED),
+        )
+        book.update(filled)
+        assert book.get(cid) is filled
+        assert book.get(cid).status == OrderStatus.FILLED
+
+    def test_update_with_event_appends_journal(self) -> None:
+        """update(ticket, event) 应将 fill 事件写入 journal."""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("fill-j-1")
+        cid = order.client_id
+        original = book.submit(order)
+
+        fill_evt = _make_event(cid, OrderTrigger.FILL, OrderStatus.FILLED)
+        filled = original.with_fill(quantity=100, price=10.0, event=fill_evt)
+        book.update(filled, event=fill_evt)
+
+        events = journal.events_for(cid)
+        assert len(events) == 2  # SUBMIT + FILL
+        assert events[1].trigger == OrderTrigger.FILL
+
+
+class TestOrderBookCancel:
+    def test_cancel_sets_canceled_and_appends_journal(self) -> None:
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("can-1")
+        cid = order.client_id
+        book.submit(order)
+
+        book.cancel(cid)
+        assert book.get(cid).status == OrderStatus.CANCELED
+        assert len(journal.events_for(cid)) == 2  # SUBMIT + CANCEL
+
+    def test_cancel_unknown_raises(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        with pytest.raises(KeyError):
+            book.cancel(ClientOrderId(value="ghost"))
+
+    def test_cancel_terminal_is_noop(self) -> None:
+        """终态订单 cancel 是 no-op — 不抛异常、不追加 journal。"""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("can-term")
+        cid = order.client_id
+        ticket = book.submit(order)
+        book.update(
+            ticket.with_fill(
+                quantity=100,
+                price=10.0,
+                event=_make_event(cid, OrderTrigger.FILL, OrderStatus.FILLED),
+            )
+        )
+        events_before = len(journal.events_for(cid))
+        book.cancel(cid)  # no-op
+        assert book.get(cid).status == OrderStatus.FILLED
+        assert len(journal.events_for(cid)) == events_before
+
+    def test_cancel_canceled_order_is_noop(self) -> None:
+        """T9: 对已取消的终态订单再次 cancel 是 no-op。"""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("can-can")
+        cid = order.client_id
+        book.submit(order)
+        book.cancel(cid)  # 第一次 cancel
+        assert book.get(cid).status == OrderStatus.CANCELED
+        events_after_first = len(journal.events_for(cid))
+
+        book.cancel(cid)  # 第二次 cancel — no-op
+        assert book.get(cid).status == OrderStatus.CANCELED
+        assert len(journal.events_for(cid)) == events_after_first
+
+
+class TestOrderBookGetPending:
+    def test_returns_non_terminal(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        o1 = _make_order("pen-1")
+        o2 = _make_order("pen-2")
+        book.submit(o1)
+        ticket2 = book.submit(o2)
+
+        # Fill o2 completely
+        book.update(
+            ticket2.with_fill(
+                quantity=100,
+                price=10.0,
+                event=_make_event(o2.client_id, OrderTrigger.FILL, OrderStatus.FILLED),
+            )
+        )
+
+        pending = book.get_pending()
+        assert len(pending) == 1
+        assert pending[0].order.client_id == o1.client_id
+
+    def test_empty_book_returns_empty(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        assert book.get_pending() == ()
+
+
+class TestOrderBookReadonlyView:
+    def test_readonly_view_snapshot(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        order = _make_order("ro-1")
+        cid = order.client_id
+        book.submit(order)
+
+        view = book.readonly_view()
+        assert isinstance(view, OrderBookReadOnly)
+        assert view.get(cid) is not None
+        assert view.get(cid).status == OrderStatus.SUBMITTED
+
+    def test_readonly_view_reflects_mutable_state(self) -> None:
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        view = book.readonly_view()
+        assert view.get(ClientOrderId(value="nope")) is None
+
+    def test_readonly_view_isolation(self) -> None:
+        """T8: 修改传入的 dict 后 readonly view 不受影响。"""
+        book = OrderBook(journal=InMemoryOrderEventJournal())
+        order = _make_order("iso-1")
+        cid = order.client_id
+        book.submit(order)
+
+        view = book.readonly_view()
+        assert view.get(cid) is not None
+
+        # 清空 book 内部状态，view 应不受影响
+        book._tickets.clear()
+        assert view.get(cid) is not None
