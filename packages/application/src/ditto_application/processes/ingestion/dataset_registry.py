@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Literal
 
 import polars as pl
-from ditto_data.models import Dataset
+from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset
 from ditto_kernel.instrument import InstrumentIngestParams
 
 from ditto_application.processes.ingestion.types import SourceFetchers
@@ -23,6 +23,7 @@ __all__ = [
     "InstrumentFetchFactory",
     "InstrumentFetchHandler",
     "WriteKind",
+    "default_dataset_registry",
 ]
 
 
@@ -168,3 +169,278 @@ class DatasetRegistry:
                     ctx
                 )
         return handlers
+
+
+def _by_instrument(
+    method: Callable[..., pl.DataFrame],
+    ctx: InstrumentFetchContext,
+) -> pl.DataFrame:
+    return method(
+        source_ticker=ctx.source_ticker,
+        start_date=ctx.params.start_date,
+        end_date=ctx.params.end_date,
+    )
+
+
+def default_dataset_registry() -> DatasetRegistry:
+    """Build the default application ingestion registry."""
+    registry = DatasetRegistry()
+
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.CALENDAR,
+            write_kind=WriteKind.CALENDAR,
+            metadata_dataset=True,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.metadata.fetch_calendar(
+                    ctx.trade_date[:4] + "-01-01",
+                    ctx.trade_date[:4] + "-12-31",
+                )
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.STOCK_BASIC,
+            write_kind=WriteKind.BASIC,
+            basic_asset_class="stock",
+            metadata_dataset=True,
+            daily_fetch_factory=lambda ctx: ctx.fetchers.metadata.fetch_stock_basic,
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.ETF_BASIC,
+            write_kind=WriteKind.BASIC,
+            basic_asset_class="etf",
+            metadata_dataset=True,
+            daily_fetch_factory=lambda ctx: ctx.fetchers.metadata.fetch_etf_basic,
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.INDEX_BASIC,
+            write_kind=WriteKind.BASIC,
+            basic_asset_class="index",
+            metadata_dataset=True,
+            daily_fetch_factory=lambda ctx: ctx.fetchers.metadata.fetch_index_basic,
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.STOCK_DAILY,
+            write_kind=WriteKind.TRADED_BARS,
+            write_dataset="stock_daily",
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_stock_daily(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.market.fetch_stock_daily, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.ETF_DAILY,
+            write_kind=WriteKind.TRADED_BARS,
+            write_dataset="etf_daily",
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_etf_daily(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.market.fetch_etf_daily, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.INDEX_DAILY,
+            write_kind=WriteKind.TRADED_BARS,
+            write_dataset="index_daily",
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_index_daily(
+                    ctx.trade_date,
+                    ts_codes=ctx.get_cached_index_codes(),
+                )
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.market.fetch_index_daily, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.STOCK_STATUS,
+            write_kind=WriteKind.STOCK_STATUS,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_stock_status(ctx.trade_date)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.ADJ_FACTOR,
+            write_kind=WriteKind.ADJ_FACTOR,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_adj_factor(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_adj_factor_by_ticker(
+                    ts_code=ctx.source_ticker,
+                    start_date=ctx.params.start_date.replace("-", ""),
+                    end_date=ctx.params.end_date.replace("-", ""),
+                )
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.FUND_ADJ,
+            write_kind=WriteKind.ADJ_FACTOR,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.market.fetch_fund_adj(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.market.fetch_fund_adj, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.BALANCE_SHEET,
+            write_kind=WriteKind.FUNDAMENTAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.fundamental.fetch_balance_sheet(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(
+                    ctx.fetchers.fundamental.fetch_balance_sheet, ctx
+                )
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.INCOME_STATEMENT,
+            write_kind=WriteKind.FUNDAMENTAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.fundamental.fetch_income_statement(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(
+                    ctx.fetchers.fundamental.fetch_income_statement, ctx
+                )
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.CASH_FLOW,
+            write_kind=WriteKind.FUNDAMENTAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.fundamental.fetch_cash_flow(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.fundamental.fetch_cash_flow, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.DIVIDEND,
+            write_kind=WriteKind.FUNDAMENTAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.fundamental.fetch_dividend(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.fundamental.fetch_dividend, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.CORPORATE_ACTIONS,
+            write_kind=WriteKind.FUNDAMENTAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.fundamental.fetch_corporate_actions(ctx.trade_date)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.VALUATION_METRICS,
+            write_kind=WriteKind.CAPITAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.capital.fetch_valuation_metrics(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(
+                    ctx.fetchers.capital.fetch_valuation_metrics, ctx
+                )
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.MARGIN_TRADING,
+            write_kind=WriteKind.CAPITAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.capital.fetch_margin_trading(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.capital.fetch_margin_trading, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.PLEDGE_RATIO,
+            write_kind=WriteKind.CAPITAL,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.capital.fetch_pledge_ratio(ctx.trade_date)
+            ),
+            instrument_fetch_factory=lambda ctx: (
+                lambda: _by_instrument(ctx.fetchers.capital.fetch_pledge_ratio, ctx)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.MACRO_INDICATORS,
+            write_kind=WriteKind.MACRO,
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.macro.fetch_macro_indicators(ctx.trade_date)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.FX_DAILY,
+            write_kind=WriteKind.INSTRUMENT_CODE_BARS,
+            write_dataset="fx_daily",
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetchers.macro.fetch_fx_daily(
+                    ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
+                    start_date=ctx.trade_date,
+                    end_date=ctx.trade_date,
+                )
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.COMMODITY_DAILY,
+            write_kind=WriteKind.INSTRUMENT_CODE_BARS,
+            write_dataset="commodity_daily",
+            daily_fetch_factory=lambda ctx: (
+                lambda: ctx.fetch_commodity_daily(ctx.trade_date)
+            ),
+        )
+    )
+    registry.register(
+        DatasetRegistration(
+            dataset=Dataset.INDEX_WEIGHT,
+            write_kind=WriteKind.UNSUPPORTED,
+        )
+    )
+    return registry
