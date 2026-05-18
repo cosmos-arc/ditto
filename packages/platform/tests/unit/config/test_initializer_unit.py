@@ -28,7 +28,7 @@ class MockInitScope(StrEnum):
 
 
 @final
-class MockInitProvider(ConfigInitProvider):
+class MockInitProvider:
     """测试用的模拟提供者."""
 
     def __init__(
@@ -98,7 +98,7 @@ class MockInitProvider(ConfigInitProvider):
         return self._init_result
 
 
-class FailingMockProvider(ConfigInitProvider):
+class FailingMockProvider:
     """测试用的失败提供者."""
 
     @property
@@ -193,12 +193,15 @@ class TestInitResult:
 
 
 class TestConfigInitProvider:
-    """ConfigInitProvider 抽象基类测试."""
+    """ConfigInitProvider Protocol 测试."""
 
-    def test_provider_is_abstract(self) -> None:
-        """ConfigInitProvider 应该是抽象类，不能直接实例化."""
-        with pytest.raises(TypeError):
-            ConfigInitProvider()  # type: ignore[abstract]
+    def test_provider_is_protocol(self) -> None:
+        """ConfigInitProvider 应该是 Protocol 类型."""
+        from typing import Protocol as TypingProtocol
+
+        assert issubclass(ConfigInitProvider, TypingProtocol) or hasattr(
+            ConfigInitProvider, "_is_protocol"
+        )
 
     def test_mock_provider_implementation(self) -> None:
         """模拟提供者应该正确实现接口."""

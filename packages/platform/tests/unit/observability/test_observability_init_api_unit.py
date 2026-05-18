@@ -12,7 +12,13 @@ import pytest
 from ditto_platform.foundation.config.environment import Environment
 from ditto_platform.foundation.observability import init, shutdown
 from ditto_platform.foundation.observability._registry import (
-    ObservabilityRegistry as _ObservabilityRegistry,
+    is_initialized as _is_initialized,
+)
+from ditto_platform.foundation.observability._registry import (
+    reset as _reset,
+)
+from ditto_platform.foundation.observability._registry import (
+    set_initialized as _set_initialized,
 )
 from ditto_platform.foundation.observability.config import ObservabilityConfig
 
@@ -23,7 +29,7 @@ class TestInitFunction:
 
     def setup_method(self) -> None:
         """每个测试前重置初始化状态."""
-        _ObservabilityRegistry.reset()
+        _reset()
 
     @patch("ditto_platform.foundation.observability._lifecycle.configure_logging")
     @patch("ditto_platform.foundation.observability._lifecycle.configure_tracing")
@@ -49,7 +55,7 @@ class TestInitFunction:
         """测试 init 设置 initialized 标志."""
         init(ObservabilityConfig(), force=True)
 
-        assert _ObservabilityRegistry.is_initialized()
+        assert _is_initialized()
 
     @patch("ditto_platform.foundation.observability._lifecycle.configure_logging")
     @patch("ditto_platform.foundation.observability._lifecycle.configure_tracing")
@@ -189,11 +195,11 @@ class TestShutdownFunction:
 
     def setup_method(self) -> None:
         """每个测试前设置初始化状态."""
-        _ObservabilityRegistry.set_initialized(True)
+        _set_initialized(True)
 
     def teardown_method(self) -> None:
         """每个测试后重置状态."""
-        _ObservabilityRegistry.reset()
+        _reset()
 
     @patch(
         "ditto_platform.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
@@ -234,7 +240,7 @@ class TestShutdownFunction:
 
         shutdown()
 
-        assert not _ObservabilityRegistry.is_initialized()
+        assert not _is_initialized()
 
     @patch(
         "ditto_platform.foundation.observability._lifecycle.otel_trace.get_tracer_provider"
@@ -256,7 +262,7 @@ class TestShutdownFunction:
         # 不应该抛出异常
         shutdown()
 
-        assert not _ObservabilityRegistry.is_initialized()
+        assert not _is_initialized()
 
     @patch(
         "ditto_platform.foundation.observability._lifecycle.otel_trace.get_tracer_provider"

@@ -1043,6 +1043,80 @@ class TestIngestRange:
         assert len(results) == 1
         assert results[0].status == "success"
 
+    def test_ingest_range_uses_natural_days_for_fx_daily(
+        self,
+        coordinator,
+        mock_metadata_service,
+        mock_ingestion_log_store,
+        mock_source,
+        mock_macro_service,
+        mocker,
+    ) -> None:
+        """fx_daily 使用自然日而非交易日列表。"""
+        # Arrange
+        mock_metadata_service.reset_mock()
+        # 不应调用 list_trading_days，因为是自然日调度
+        mock_ingestion_log_store.get_log.return_value = None
+
+        mock_source.fetch_fx_daily.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["USDCNY"],
+                "trade_date": [date(2024, 12, 25)],
+                "open": [7.1],
+                "close": [7.12],
+                "high": [7.15],
+                "low": [7.09],
+            }
+        )
+        mock_macro_service.write.return_value = mocker.Mock(records_written=1)
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
+            dataset="fx_daily",
+            source="tushare",
+            trade_date="2024-12-25",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_fx",
+            rows=1,
+        )
+
+        # Act
+        results = coordinator.ingest_range("fx_daily", "2024-12-25", "2024-12-27")
+
+        # Assert — 3 个自然日（25, 26, 27）
+        assert len(results) == 3
+        mock_metadata_service.list_trading_days.assert_not_called()
+
+    def test_ingest_range_uses_natural_days_for_commodity_daily(
+        self,
+        coordinator,
+        mock_metadata_service,
+        mock_ingestion_log_store,
+        mock_source,
+        mock_macro_service,
+        mocker,
+    ) -> None:
+        """commodity_daily 使用自然日（SOURCE_DEFINED 调度走自然日路径）。"""
+        # Arrange
+        mock_metadata_service.reset_mock()
+        mock_ingestion_log_store.get_log.return_value = None
+
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
+            dataset="commodity_daily",
+            source="tushare",
+            trade_date="2024-12-25",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_commodity",
+            rows=1,
+        )
+
+        # Act
+        results = coordinator.ingest_range(
+            "commodity_daily", "2024-12-25", "2024-12-27"
+        )
+
+        # Assert — 3 个自然日
+        assert len(results) == 3
+        mock_metadata_service.list_trading_days.assert_not_called()
+
 
 @pytest.mark.unit
 class TestWriteT0Data:

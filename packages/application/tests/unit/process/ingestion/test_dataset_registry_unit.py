@@ -10,7 +10,7 @@ from ditto_application.processes.ingestion.dataset_registry import (
     WriteKind,
     default_dataset_registry,
 )
-from ditto_data.models import Dataset
+from ditto_data.models import Dataset, DateScheduleType
 
 
 @pytest.mark.unit
@@ -155,3 +155,42 @@ class TestDatasetRegistryConformance:
         assert registration.daily_fetch_factory is None
         assert registration.instrument_fetch_factory is None
         assert registration.write_kind is WriteKind.UNSUPPORTED
+
+
+@pytest.mark.unit
+class TestDateScheduleField:
+    """date_schedule field on DatasetRegistration."""
+
+    def test_default_date_schedule_is_trading_days(self) -> None:
+        registration = DatasetRegistration(
+            dataset=Dataset.STOCK_DAILY,
+            write_kind=WriteKind.TRADED_BARS,
+            write_dataset="stock_daily",
+        )
+
+        assert registration.date_schedule is DateScheduleType.TRADING_DAYS
+
+    def test_stock_daily_has_trading_days_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.STOCK_DAILY)
+
+        assert registration.date_schedule is DateScheduleType.TRADING_DAYS
+
+    def test_fx_daily_has_natural_days_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.FX_DAILY)
+
+        assert registration.date_schedule is DateScheduleType.NATURAL_DAYS
+
+    def test_commodity_daily_has_source_defined_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.COMMODITY_DAILY)
+
+        assert registration.date_schedule is DateScheduleType.SOURCE_DEFINED
+
+    def test_macro_indicators_has_source_defined_schedule(self) -> None:
+        registration = default_dataset_registry().require(Dataset.MACRO_INDICATORS)
+
+        assert registration.date_schedule is DateScheduleType.SOURCE_DEFINED
+
+    def test_calendar_defaults_to_trading_days(self) -> None:
+        registration = default_dataset_registry().require(Dataset.CALENDAR)
+
+        assert registration.date_schedule is DateScheduleType.TRADING_DAYS

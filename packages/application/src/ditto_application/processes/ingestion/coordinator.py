@@ -29,6 +29,9 @@ from ditto_application.processes.ingestion.coordinator_constants import (
     get_all_index_codes,
 )
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.dataset_registry import (
+    default_dataset_registry,
+)
 from ditto_application.processes.ingestion.fetch_handlers import (
     build_daily_fetch_handlers,
 )
@@ -151,6 +154,7 @@ class IngestionCoordinator:
         )
 
         self._index_codes_cache: list[str] | None = None
+        self._registry = default_dataset_registry()
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
         """获取商品数据（原油、贵金属、VIX），委托至 ``commodity_fetcher``。"""
@@ -353,11 +357,15 @@ class IngestionCoordinator:
         """摄取日期范围数据，根据 date_schedule 类型选择日期序列。"""
         try:
             dataset_enum = Dataset(dataset)
-        except ValueError:
-            dataset_enum = None
+            registration = self._registry.require(dataset_enum)
+        except (ValueError, AppProcessError):
+            registration = None
 
-        default_schedule = DateScheduleType.TRADING_DAYS
-        schedule_type = dataset_enum.date_schedule if dataset_enum else default_schedule
+        schedule_type = (
+            registration.date_schedule
+            if registration
+            else DateScheduleType.TRADING_DAYS
+        )
 
         match schedule_type:
             case DateScheduleType.TRADING_DAYS:

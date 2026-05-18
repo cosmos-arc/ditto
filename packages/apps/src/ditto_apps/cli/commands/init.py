@@ -15,7 +15,7 @@ from ditto_apps.registry.infra.config import (
     data_root_init_directories_from_data_store,
     load_data_store_settings,
 )
-from ditto_apps.registry.init_providers import MetadataDbInitProvider
+from ditto_apps.registry.infra.init_providers import MetadataDbInitProvider
 
 app = typer.Typer(help="配置初始化命令")
 

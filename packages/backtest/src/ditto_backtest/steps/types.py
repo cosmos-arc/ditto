@@ -22,6 +22,7 @@ from ditto_portfolio.accounting import AccountView, FillEvent
 
 from ditto_backtest.audit.records import PreTradeDecisionRecord
 from ditto_backtest.data_feed import Slice
+from ditto_backtest.errors import SimulationError
 
 __all__ = [
     "StepContext",
@@ -113,6 +114,36 @@ class StepContext:
     step_orders: list[Order] = field(default_factory=list)
     step_fills: list[FillEvent] = field(default_factory=list)
     pre_trade_decisions: list[PreTradeDecisionRecord] = field(default_factory=list)
+
+    # -- 类型安全 getter（require_*）--
+    # Steps 通过这些方法断言前置条件已满足，否则抛出 SimulationError。
+    # 适用于步骤必须某字段非 None 才能继续的场景。
+    # 对于"可选跳过"场景（如 execution_plan 为 None 则 skipped），
+    # 仍应直接检查 `if ctx.xxx is None: skipped()`。
+
+    def require_slice(self) -> Slice:
+        """断言 slice_ 已设置，否则抛出 SimulationError。"""
+        if self.slice_ is None:
+            raise SimulationError("slice_ required before this step")
+        return self.slice_
+
+    def require_account_view(self) -> AccountView:
+        """断言 account_view 已设置，否则抛出 SimulationError。"""
+        if self.account_view is None:
+            raise SimulationError("account_view required before this step")
+        return self.account_view
+
+    def require_execution_plan(self) -> ExecutionPlan:
+        """断言 execution_plan 已设置，否则抛出 SimulationError。"""
+        if self.execution_plan is None:
+            raise SimulationError("execution_plan required before this step")
+        return self.execution_plan
+
+    def require_target_portfolio(self) -> TargetPortfolioLike:
+        """断言 target_portfolio 已设置，否则抛出 SimulationError。"""
+        if self.target_portfolio is None:
+            raise SimulationError("target_portfolio required before this step")
+        return self.target_portfolio
 
 
 # ---------------------------------------------------------------------------

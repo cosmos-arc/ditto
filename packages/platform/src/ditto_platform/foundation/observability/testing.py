@@ -24,7 +24,7 @@ def reset_for_testing() -> None:
     metrics.reset_metrics()
 
     # 重置注册表状态（通过 shutdown 已经重置，但确保状态一致）
-    # shutdown() 会调用 _ObservabilityRegistry.set_initialized(False)
+    # shutdown() 会调用 _registry.reset()
 
 
 def get_recorded_spans() -> list[Any]:

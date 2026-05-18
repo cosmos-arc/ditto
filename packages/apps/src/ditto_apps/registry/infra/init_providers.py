@@ -6,7 +6,6 @@ from importlib.resources import files
 from pathlib import Path
 
 from ditto_platform.foundation import (
-    ConfigInitProvider,
     InitResult,
     InitScope,
     SQLitePool,
@@ -14,7 +13,7 @@ from ditto_platform.foundation import (
 )
 
 
-class MetadataDbInitProvider(ConfigInitProvider):
+class MetadataDbInitProvider:
     """
     元数据库 Schema 初始化.
 

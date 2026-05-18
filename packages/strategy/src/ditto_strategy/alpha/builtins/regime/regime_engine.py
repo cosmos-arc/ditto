@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import polars as pl
 
-from ditto_strategy.alpha.builtins.regime_types import (
+from ditto_strategy.alpha.builtins.regime.regime_types import (
     RegimeConfig,
     RegimeLabel,
     RegimeMethod,

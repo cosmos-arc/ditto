@@ -13,17 +13,17 @@ RegimeStage -- 市场状态检测 DecisionStage.
 
 from __future__ import annotations
 
-from ditto_strategy.alpha.builtins.regime_engine import (
+from ditto_strategy.alpha.builtins.regime.regime_engine import (
     RegimeScoreEngine,
     RegimeStage,
 )
-from ditto_strategy.alpha.builtins.regime_indicators import (
+from ditto_strategy.alpha.builtins.regime.regime_indicators import (
     BreadthIndicator,
     MomentumIndicator,
     TrendIndicator,
     VolatilityIndicator,
 )
-from ditto_strategy.alpha.builtins.regime_types import (
+from ditto_strategy.alpha.builtins.regime.regime_types import (
     RegimeConfig,
     RegimeIndicator,
     RegimeLabel,

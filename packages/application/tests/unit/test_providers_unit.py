@@ -34,6 +34,7 @@ from ditto_application.providers_market import AppMarketQueryProvider
 from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
 from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.source import SourceDataPort
 from ditto_application.settings import TradingSettings
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
@@ -46,11 +47,17 @@ from ditto_data.di import (
     RuntimeProvider,
 )
 from ditto_data.quality.golden import GoldenDatasetSpec
+from ditto_data.quality.protocols import (
+    ComparisonStoreProtocol,
+    InstrumentStoreProtocol,
+    TdxSourceProtocol,
+)
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
+from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import DataCache, Environment
 from ditto_platform.services.notification import AlertManager
 
@@ -173,6 +180,32 @@ class _GoldenNoneProvider(Provider):
     @provide
     def golden_dataset_spec(self) -> GoldenDatasetSpec | None:
         return None
+
+
+class _ProtocolAdapterProvider(Provider):
+    """测试用 Protocol 适配器 — 桥接 concrete mock → Protocol 接口."""
+
+    scope = Scope.APP
+
+    @provide
+    def tdx_source_protocol(self, source: TdxSource) -> TdxSourceProtocol:
+        return source
+
+    @provide
+    def comparison_store_protocol(self) -> ComparisonStoreProtocol:
+        return MagicMock(spec=ComparisonStoreProtocol)
+
+    @provide
+    def instrument_store_protocol(self) -> InstrumentStoreProtocol:
+        return MagicMock(spec=InstrumentStoreProtocol)
+
+    @provide
+    def compile_cache_backend(self) -> SQLiteCompileCacheBackend:
+        return MagicMock(spec=SQLiteCompileCacheBackend)
+
+    @provide
+    def source_data_port(self) -> SourceDataPort:
+        return MagicMock(spec=SourceDataPort)
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +348,7 @@ class TestAppProviderIntegration:
             ExecutionStorageProvider(),
             StrategyStorageProvider(),
             _notification_provider(),
+            _ProtocolAdapterProvider(),
             *get_app_providers(),
             _runtime_deps_provider(),
         )

@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Literal
 
 import polars as pl
-from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset
+from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset, DateScheduleType
 from ditto_kernel.instrument import InstrumentIngestParams
 
 from ditto_application.exceptions import AppProcessError  # noqa: RUF100
@@ -74,6 +74,7 @@ class DatasetRegistration:
 
     dataset: Dataset
     write_kind: WriteKind
+    date_schedule: DateScheduleType = DateScheduleType.TRADING_DAYS
     write_dataset: str | None = None
     daily_fetch_factory: DailyFetchFactory | None = None
     instrument_fetch_factory: InstrumentFetchFactory | None = None
@@ -423,6 +424,7 @@ def default_dataset_registry() -> DatasetRegistry:
         DatasetRegistration(
             dataset=Dataset.MACRO_INDICATORS,
             write_kind=WriteKind.MACRO,
+            date_schedule=DateScheduleType.SOURCE_DEFINED,
             daily_fetch_factory=lambda ctx: (
                 lambda: ctx.fetchers.macro.fetch_macro_indicators(ctx.trade_date)
             ),
@@ -433,6 +435,7 @@ def default_dataset_registry() -> DatasetRegistry:
             dataset=Dataset.FX_DAILY,
             write_kind=WriteKind.INSTRUMENT_CODE_BARS,
             write_dataset="fx_daily",
+            date_schedule=DateScheduleType.NATURAL_DAYS,
             daily_fetch_factory=lambda ctx: (
                 lambda: ctx.fetchers.macro.fetch_fx_daily(
                     ts_codes=list(FX_CODE_TO_INSTRUMENT_ID.keys()),
@@ -447,6 +450,7 @@ def default_dataset_registry() -> DatasetRegistry:
             dataset=Dataset.COMMODITY_DAILY,
             write_kind=WriteKind.INSTRUMENT_CODE_BARS,
             write_dataset="commodity_daily",
+            date_schedule=DateScheduleType.SOURCE_DEFINED,
             daily_fetch_factory=lambda ctx: (
                 lambda: ctx.fetch_commodity_daily(ctx.trade_date)
             ),

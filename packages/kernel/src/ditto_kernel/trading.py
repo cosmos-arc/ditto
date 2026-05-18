@@ -39,6 +39,11 @@ DEFAULT_SLIPPAGE_BPS: float = 1.0
 
 # ── 市场快照 ──────────────────────────────────────────────────
 
+# Initial focus: A-share (XSHE/XSHG) market microstructure.
+# Fields like is_suspended, limit_up, limit_down are A-share specific.
+# Global market extension: subclasses or Protocol-based snapshots for
+# markets without price limits or suspension rules.
+
 
 @dataclass(frozen=True)
 class MarketSnapshot:

@@ -126,46 +126,6 @@ class Dataset(StrEnum):
             return AssetClass.INDEX
         return None
 
-    @property
-    def date_schedule(self) -> DateScheduleType:
-        """
-        获取数据集的日期调度类型.
-
-        Returns:
-            日期调度类型枚举。
-
-        """
-        # A 股交易日驱动
-        if self in (
-            Dataset.STOCK_DAILY,
-            Dataset.ETF_DAILY,
-            Dataset.INDEX_DAILY,
-            Dataset.INDEX_WEIGHT,
-            Dataset.STOCK_STATUS,
-            Dataset.ADJ_FACTOR,
-            Dataset.FUND_ADJ,
-            Dataset.VALUATION_METRICS,
-            Dataset.BALANCE_SHEET,
-            Dataset.INCOME_STATEMENT,
-            Dataset.CASH_FLOW,
-            Dataset.DIVIDEND,
-            Dataset.MARGIN_TRADING,
-            Dataset.PLEDGE_RATIO,
-            Dataset.CORPORATE_ACTIONS,
-        ):
-            return DateScheduleType.TRADING_DAYS
-
-        # 自然日驱动
-        if self == Dataset.FX_DAILY:
-            return DateScheduleType.NATURAL_DAYS
-
-        # 数据源决定
-        if self in (Dataset.COMMODITY_DAILY, Dataset.MACRO_INDICATORS):
-            return DateScheduleType.SOURCE_DEFINED
-
-        # 默认：交易日驱动
-        return DateScheduleType.TRADING_DAYS
-
     def supports_instrument_ingestion(self) -> bool:
         """
         判断数据集是否支持按标的（instrument）进行数据摄取。

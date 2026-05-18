@@ -1,6 +1,8 @@
 """Features error hierarchy unit tests."""
 
+import pytest
 from ditto_features.errors import (
+    DerivedError,
     EvaluationError,
     FactorValidationError,
     FeaturesError,
@@ -15,6 +17,7 @@ def test_features_error_hierarchy() -> None:
     assert issubclass(EvaluationError, FeaturesError)
     assert issubclass(FactorValidationError, FeaturesError)
     assert issubclass(FeatureStorageError, FeaturesError)
+    assert issubclass(DerivedError, FeaturesError)
     assert not issubclass(FactorValidationError, ValueError)
     assert not issubclass(FeatureStorageError, ValueError)
 
@@ -48,3 +51,17 @@ def test_feature_storage_error_carries_details() -> None:
     """FeatureStorageError carries storage context."""
     err = FeatureStorageError("write failed", path="/data/factors/alpha.parquet")
     assert err.details["path"] == "/data/factors/alpha.parquet"
+
+
+def test_derived_error_catchable_via_features_error() -> None:
+    """DerivedError and subclasses are catchable via FeaturesError."""
+    from ditto_features.errors import (
+        DerivedNotFoundError,
+        DerivedVersionError,
+    )
+
+    with pytest.raises(FeaturesError):
+        raise DerivedNotFoundError(derived_id="test")
+
+    with pytest.raises(FeaturesError):
+        raise DerivedVersionError(derived_id="test", reason="test")

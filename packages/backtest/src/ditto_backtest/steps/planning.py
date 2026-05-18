@@ -15,7 +15,6 @@ from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRuleProvider, InstrumentRules
 from ditto_strategy.alpha.context import StrategyContext
 
-from ditto_backtest.errors import SimulationError
 from ditto_backtest.manifest import RuleRefCollector
 from ditto_backtest.steps.types import StepContext, StepResult
 
@@ -42,14 +41,8 @@ class PlanningStep:
         if not ctx.is_rebalance_day:
             return StepResult.skipped()
 
-        if (
-            ctx.slice_ is None
-            or ctx.account_view is None
-            or ctx.target_portfolio is None
-        ):
-            return StepResult.fail(
-                "slice_, account_view, and target_portfolio required",
-            )
+        account_view = ctx.require_account_view()
+        target = ctx.require_target_portfolio()
 
         # 获取三层规则
         rules = self._fetch_rules(ctx)
@@ -63,8 +56,8 @@ class PlanningStep:
 
         # 生成执行计划
         plan = self._planner.plan(
-            target=ctx.target_portfolio,
-            account_view=ctx.account_view,
+            target=target,
+            account_view=account_view,
             trade_date=ctx.time_context.trade_date,
             market_snapshots=ctx.bars,
             rules=rules,
@@ -83,10 +76,7 @@ class PlanningStep:
         """通过 RuleProvider 获取三层规则，无 provider 返回 None。"""
         if self._rule_provider is None:
             return None
-        slice_ = ctx.slice_
-        if slice_ is None:  # guarded by execute() -- unreachable in practice
-            msg = "slice_ required"
-            raise SimulationError(msg, step="planning")
+        ctx.require_slice()
         instrument_ids = list(ctx.bars.keys())
         return self._rule_provider.get_rules(
             ctx.time_context.trade_date,

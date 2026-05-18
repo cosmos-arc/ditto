@@ -11,12 +11,14 @@ import pytest
 from ditto_features.evaluation.evaluator import (
     EvaluationConfig,
     FactorEvaluator,
-    _compute_ic_decay_safe,
-    _compute_quantile_annual_returns,
-    _empty_report,
-    _estimate_avg_turnover,
-    _prepare_data,
-    _resolve_period,
+)
+from ditto_features.evaluation.evaluator._helpers import (
+    compute_ic_decay_safe,
+    compute_quantile_annual_returns,
+    empty_report,
+    estimate_avg_turnover,
+    prepare_data,
+    resolve_period,
 )
 from ditto_features.evaluation.report import (
     FactorEvaluationReport,
@@ -265,7 +267,7 @@ class TestFactorEvaluatorEvaluate:
 
         datetime.fromisoformat(report.computed_at)
 
-    def test_empty_factor_df_returns_empty_report(
+    def test_empty_factor_df_returnsempty_report(
         self,
         evaluator: FactorEvaluator,
     ) -> None:
@@ -301,7 +303,7 @@ class TestFactorEvaluatorEvaluate:
     ) -> None:
         """Factor dates with no overlap in returns should produce zero ICs.
 
-        The evaluator checks factor_df_clean.height after _prepare_data, but
+        The evaluator checks factor_df_clean.height after prepare_data, but
         at that point the data has not been joined with returns yet.  When the
         inner join in rank_ic/pearson_ic produces no matches, IC summaries are
         zero.
@@ -690,12 +692,12 @@ class TestFactorEvaluatorEvaluateOrthogonal:
 
 
 # ---------------------------------------------------------------------------
-# Test _resolve_period
+# Test resolve_period
 # ---------------------------------------------------------------------------
 
 
 class TestResolvePeriod:
-    """Tests for the _resolve_period helper."""
+    """Tests for the resolve_period helper."""
 
     def test_infers_period_from_data(self) -> None:
         """Period is inferred from the trade_date column range."""
@@ -705,7 +707,7 @@ class TestResolvePeriod:
                 "value": [1.0, 2.0],
             },
         )
-        start, end = _resolve_period(df, None, None)
+        start, end = resolve_period(df, None, None)
         assert start == "2024-01-05"
         assert end == "2024-03-15"
 
@@ -717,7 +719,7 @@ class TestResolvePeriod:
                 "value": [1.0, 2.0],
             },
         )
-        start, end = _resolve_period(df, start="2024-02-01", end=None)
+        start, end = resolve_period(df, start="2024-02-01", end=None)
         assert start == "2024-02-01"
         assert end == "2024-03-15"
 
@@ -729,7 +731,7 @@ class TestResolvePeriod:
                 "value": [1.0, 2.0],
             },
         )
-        start, end = _resolve_period(df, start=None, end="2024-02-28")
+        start, end = resolve_period(df, start=None, end="2024-02-28")
         assert start == "2024-01-05"
         assert end == "2024-02-28"
 
@@ -741,32 +743,32 @@ class TestResolvePeriod:
                 "value": [1.0, 2.0],
             },
         )
-        start, end = _resolve_period(df, start="2024-01-01", end="2024-12-31")
+        start, end = resolve_period(df, start="2024-01-01", end="2024-12-31")
         assert start == "2024-01-01"
         assert end == "2024-12-31"
 
     def test_no_trade_date_column_uses_defaults(self) -> None:
         """When trade_date column is absent, uses default fallback dates."""
         df = pl.DataFrame({"value": [1.0, 2.0]})
-        start, end = _resolve_period(df, None, None)
+        start, end = resolve_period(df, None, None)
         assert start == "1970-01-01"
         assert end == "2099-12-31"
 
     def test_no_trade_date_with_explicit_bounds(self) -> None:
         """Explicit bounds are used even without trade_date column."""
         df = pl.DataFrame({"value": [1.0, 2.0]})
-        start, end = _resolve_period(df, start="2024-01-01", end="2024-06-30")
+        start, end = resolve_period(df, start="2024-01-01", end="2024-06-30")
         assert start == "2024-01-01"
         assert end == "2024-06-30"
 
 
 # ---------------------------------------------------------------------------
-# Test _prepare_data
+# Test prepare_data
 # ---------------------------------------------------------------------------
 
 
 class TestPrepareData:
-    """Tests for the _prepare_data helper."""
+    """Tests for the prepare_data helper."""
 
     def test_filters_by_start_date(self) -> None:
         """Data before the start date should be filtered out."""
@@ -793,7 +795,7 @@ class TestPrepareData:
             },
         )
 
-        f_clean, _ = _prepare_data(factor_df, return_df, start="2024-02-15")
+        f_clean, _ = prepare_data(factor_df, return_df, start="2024-02-15")
         # Only March 1 >= Feb 15
         assert f_clean.height == 1
         assert f_clean["trade_date"][0] == date(2024, 3, 1)
@@ -823,7 +825,7 @@ class TestPrepareData:
             },
         )
 
-        f_clean, _ = _prepare_data(factor_df, return_df, end="2024-02-15")
+        f_clean, _ = prepare_data(factor_df, return_df, end="2024-02-15")
         assert f_clean.height == 2
         assert f_clean["trade_date"].max() <= date(2024, 2, 15)
 
@@ -852,7 +854,7 @@ class TestPrepareData:
             },
         )
 
-        f_clean, r_clean = _prepare_data(factor_df, return_df)
+        f_clean, r_clean = prepare_data(factor_df, return_df)
         assert f_clean.height == 2  # drops null value row
         assert r_clean.height == 2  # drops null forward_return row
 
@@ -873,12 +875,12 @@ class TestPrepareData:
             },
         )
 
-        f_clean, r_clean = _prepare_data(factor_df, return_df)
+        f_clean, r_clean = prepare_data(factor_df, return_df)
         assert f_clean.height == 1
         assert r_clean.height == 1
 
     def test_null_drop_only(self) -> None:
-        """With no start/end bounds, _prepare_data only drops nulls."""
+        """With no start/end bounds, prepare_data only drops nulls."""
         factor_df = pl.DataFrame(
             {
                 "trade_date": [
@@ -902,7 +904,7 @@ class TestPrepareData:
             },
         )
 
-        f_clean, r_clean = _prepare_data(factor_df, return_df)
+        f_clean, r_clean = prepare_data(factor_df, return_df)
         assert f_clean.height == 2
         assert r_clean.height == 2
 
@@ -931,22 +933,22 @@ class TestPrepareData:
             },
         )
 
-        f_clean, r_clean = _prepare_data(factor_df, return_df)
+        f_clean, r_clean = prepare_data(factor_df, return_df)
         assert f_clean.height == 3
         assert r_clean.height == 3
 
 
 # ---------------------------------------------------------------------------
-# Test _empty_report
+# Test empty_report
 # ---------------------------------------------------------------------------
 
 
 class TestEmptyReport:
-    """Tests for the _empty_report helper."""
+    """Tests for the empty_report helper."""
 
     def test_returns_valid_factor_evaluation_report(self) -> None:
-        """_empty_report should return a valid FactorEvaluationReport."""
-        report = _empty_report(
+        """empty_report should return a valid FactorEvaluationReport."""
+        report = empty_report(
             factor_id="test_factor",
             factor_version=3,
             period=("2024-01-01", "2024-06-30"),
@@ -957,7 +959,7 @@ class TestEmptyReport:
 
     def test_zero_values(self) -> None:
         """Empty report should have zero values for all numeric fields."""
-        report = _empty_report(
+        report = empty_report(
             factor_id="test",
             factor_version=1,
             period=("2024-01-01", "2024-12-31"),
@@ -983,7 +985,7 @@ class TestEmptyReport:
 
     def test_correct_metadata(self) -> None:
         """Empty report should preserve the passed metadata."""
-        report = _empty_report(
+        report = empty_report(
             factor_id="momentum",
             factor_version=7,
             period=("2023-01-01", "2023-12-31"),
@@ -998,7 +1000,7 @@ class TestEmptyReport:
 
     def test_empty_collections(self) -> None:
         """Empty report should have empty collections."""
-        report = _empty_report(
+        report = empty_report(
             factor_id="test",
             factor_version=1,
             period=("2024-01-01", "2024-12-31"),
@@ -1012,7 +1014,7 @@ class TestEmptyReport:
 
     def test_none_half_life(self) -> None:
         """Empty report should have None half_life."""
-        report = _empty_report(
+        report = empty_report(
             factor_id="test",
             factor_version=1,
             period=("2024-01-01", "2024-12-31"),
@@ -1023,7 +1025,7 @@ class TestEmptyReport:
 
     def test_computed_at_is_valid_iso(self) -> None:
         """computed_at should be a valid ISO timestamp."""
-        report = _empty_report(
+        report = empty_report(
             factor_id="test",
             factor_version=1,
             period=("2024-01-01", "2024-12-31"),
@@ -1036,24 +1038,24 @@ class TestEmptyReport:
 
 
 # ---------------------------------------------------------------------------
-# Test _compute_ic_decay_safe
+# Test compute_ic_decay_safe
 # ---------------------------------------------------------------------------
 
 
 class TestComputeICDecaySafe:
-    """Tests for the _compute_ic_decay_safe helper."""
+    """Tests for the compute_ic_decay_safe helper."""
 
     def test_returns_list_and_half_life(self) -> None:
         """Should return a tuple of (list, optional half_life)."""
         factor_df, _ = _make_factor_and_return(n_dates=50, n_entities=50)
-        result, half_life = _compute_ic_decay_safe(factor_df, [1, 5])
+        result, half_life = compute_ic_decay_safe(factor_df, [1, 5])
         assert isinstance(result, list)
         assert half_life is None or isinstance(half_life, float)
 
     def test_respects_lag_parameter(self) -> None:
         """Should produce one entry per lag."""
         factor_df, _ = _make_factor_and_return(n_dates=50, n_entities=50)
-        result, _ = _compute_ic_decay_safe(factor_df, [1, 2, 3, 5])
+        result, _ = compute_ic_decay_safe(factor_df, [1, 2, 3, 5])
         assert len(result) == 4
         lags = [lag for lag, _ in result]
         assert lags == [1, 2, 3, 5]
@@ -1067,7 +1069,7 @@ class TestComputeICDecaySafe:
                 "value": pl.Float64,
             },
         )
-        result, half_life = _compute_ic_decay_safe(empty_df, [1, 5])
+        result, half_life = compute_ic_decay_safe(empty_df, [1, 5])
         # ic_decay on empty data produces zero ICs per lag
         assert len(result) == 2
         assert all(ic == 0.0 for _, ic in result)
@@ -1123,7 +1125,7 @@ class TestComputeICDecaySafe:
         close_df = pl.DataFrame(rows_c)
 
         # With close_df: IC decay should be well-defined
-        result_with_close, _ = _compute_ic_decay_safe(
+        result_with_close, _ = compute_ic_decay_safe(
             factor_df,
             [5, 10, 20],
             close_df=close_df,
@@ -1134,7 +1136,7 @@ class TestComputeICDecaySafe:
             assert math.isfinite(ic), f"IC at lag {lag} should be finite"
 
         # Without close_df (old pseudo-close behavior)
-        result_without, _ = _compute_ic_decay_safe(
+        result_without, _ = compute_ic_decay_safe(
             factor_df,
             [5, 10, 20],
         )
@@ -1158,7 +1160,7 @@ class TestComputeICDecaySafe:
                 "value": pl.Float64,
             },
         )
-        result, half_life = _compute_ic_decay_safe(
+        result, half_life = compute_ic_decay_safe(
             empty_df,
             [1, 5],
             close_df=None,
@@ -1263,17 +1265,17 @@ class TestClosePriceProvider:
 
 
 # ---------------------------------------------------------------------------
-# Test _compute_quantile_annual_returns
+# Test compute_quantile_annual_returns
 # ---------------------------------------------------------------------------
 
 
 class TestComputeQuantileAnnualReturns:
-    """Tests for the _compute_quantile_annual_returns helper."""
+    """Tests for the compute_quantile_annual_returns helper."""
 
     def test_returns_dict_of_int_to_float(self) -> None:
         """Should return {quantile: annualized_return} mapping."""
         q_ret_df = _make_quantile_return_df()
-        result = _compute_quantile_annual_returns(q_ret_df)
+        result = compute_quantile_annual_returns(q_ret_df)
         assert isinstance(result, dict)
         for key, val in result.items():
             assert isinstance(key, int)
@@ -1282,7 +1284,7 @@ class TestComputeQuantileAnnualReturns:
     def test_correct_number_of_quantiles(self) -> None:
         """Should produce entries for all quantiles."""
         q_ret_df = _make_quantile_return_df(n_quantiles=5)
-        result = _compute_quantile_annual_returns(q_ret_df)
+        result = compute_quantile_annual_returns(q_ret_df)
         assert len(result) == 5
 
     def test_empty_dataframe_returns_empty_dict(self) -> None:
@@ -1294,34 +1296,34 @@ class TestComputeQuantileAnnualReturns:
                 "mean_return": pl.Float64,
             },
         )
-        result = _compute_quantile_annual_returns(empty_df)
+        result = compute_quantile_annual_returns(empty_df)
         assert result == {}
 
 
 # ---------------------------------------------------------------------------
-# Test _estimate_avg_turnover
+# Test estimate_avg_turnover
 # ---------------------------------------------------------------------------
 
 
 class TestEstimateAvgTurnover:
-    """Tests for the _estimate_avg_turnover helper."""
+    """Tests for the estimate_avg_turnover helper."""
 
     def test_returns_float(self) -> None:
         """Should return a float."""
         q_ret_df = _make_quantile_return_df()
-        result = _estimate_avg_turnover(q_ret_df)
+        result = estimate_avg_turnover(q_ret_df)
         assert isinstance(result, float)
 
     def test_nonnegative(self) -> None:
         """Turnover estimate should be non-negative."""
         q_ret_df = _make_quantile_return_df()
-        result = _estimate_avg_turnover(q_ret_df)
+        result = estimate_avg_turnover(q_ret_df)
         assert result >= 0
 
     def test_single_date_returns_zero(self) -> None:
         """Single date should return 0 turnover (need 2+ dates)."""
         q_ret_df = _make_quantile_return_df(n_dates=1)
-        result = _estimate_avg_turnover(q_ret_df)
+        result = estimate_avg_turnover(q_ret_df)
         assert result == 0.0
 
     def test_empty_dataframe_returns_zero(self) -> None:
@@ -1333,5 +1335,5 @@ class TestEstimateAvgTurnover:
                 "mean_return": pl.Float64,
             },
         )
-        result = _estimate_avg_turnover(empty_df)
+        result = estimate_avg_turnover(empty_df)
         assert result == 0.0

@@ -27,7 +27,6 @@ from loguru import logger
 
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.data_feed import Slice
-from ditto_backtest.errors import SimulationError
 from ditto_backtest.manifest import RuleRefCollector, RunManifest
 from ditto_backtest.result import EngineResult
 from ditto_backtest.statistics import ExecutionAuditCollector
@@ -49,7 +48,6 @@ __all__ = [
     "assemble_engine_result",
     "build_steps",
     "is_rebalance_day",
-    "require_slice",
 ]
 
 
@@ -110,14 +108,6 @@ class StepDeps:
     build_input_bundle_fn: Callable[[str, Slice], StrategyInputBundle]
 
 
-def require_slice(slice_: Slice | None) -> Slice:
-    """断言 slice_ 非 None — 用于 lambda 中类型收窄."""
-    if slice_ is None:
-        msg = "slice_ required"
-        raise SimulationError(msg, step="engine")
-    return slice_
-
-
 def assemble_engine_result(  # noqa: PLR0913
     *,
     run_id: str,
@@ -136,8 +126,8 @@ def assemble_engine_result(  # noqa: PLR0913
         period=(start, end),
         final_nav=account_view.nav,
         total_trades=len(fills),
-        orders=list(orders),
-        fills=list(fills),
+        orders=tuple(orders),
+        fills=tuple(fills),
         account_view=account_view,
         manifest=manifest,
         skipped_dates=tuple(skipped),
@@ -221,7 +211,7 @@ def _build_strategy_step(deps: StepDeps) -> StrategyStep:
         def _default_bundle_builder(ctx: StepContext) -> StrategyInputBundle:
             return deps.build_input_bundle_fn(
                 ctx.time_context.trade_date,
-                require_slice(ctx.slice_),
+                ctx.require_slice(),
             )
 
         builder = _default_bundle_builder

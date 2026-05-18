@@ -16,7 +16,6 @@ from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_accessor import SourceAccessor
 from ditto_features.services import (
     DerivedArtifactReader,
     DerivedCatalogService,
@@ -34,7 +33,7 @@ from ditto_application.queries.macro import MacroQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
 from ditto_application.queries.research import ResearchDatasetFacade
-from ditto_application.queries.source import SourceQueryFacade
+from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
 from ditto_application.queries.universe import UniverseQueryFacade
 
 __all__ = ["AppMarketQueryProvider"]
@@ -74,12 +73,12 @@ class AppMarketQueryProvider(Provider):
     @provide
     def source_query_facade(
         self,
-        source_accessor: SourceAccessor,
+        source_data: SourceDataPort,
         metadata_service: MetadataService,
     ) -> SourceQueryFacade:
-        """数据源查询 facade — 隐藏 Dataset 枚举和服务接线."""
+        """数据源查询 facade — 通过 Protocol 获取 source 数据."""
         return SourceQueryFacade(
-            source_accessor=source_accessor,
+            source_data=source_data,
             metadata_service=metadata_service,
         )
 

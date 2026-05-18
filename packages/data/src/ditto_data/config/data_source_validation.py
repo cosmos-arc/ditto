@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 
 from ditto_platform.foundation import (
-    ConfigInitProvider,
     InitResult,
     InitScope,
 )
@@ -15,7 +14,7 @@ from loguru import logger
 __all__ = ["DataSourceValidationProvider"]
 
 
-class DataSourceValidationProvider(ConfigInitProvider):
+class DataSourceValidationProvider:
     """
     数据源配置校验.
 

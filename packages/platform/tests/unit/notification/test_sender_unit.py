@@ -1,10 +1,9 @@
 """Notification sender unit tests."""
 
-import pytest
 from ditto_platform.services.notification.sender import NotificationSender
 
 
-class MockNotificationSender(NotificationSender):
+class MockNotificationSender:
     """Mock implementation for testing."""
 
     def __init__(self, channel_name: str = "mock") -> None:
@@ -22,12 +21,15 @@ class MockNotificationSender(NotificationSender):
 
 
 class TestNotificationSender:
-    """NotificationSender abstract base class tests."""
+    """NotificationSender Protocol tests."""
 
-    def test_cannot_instantiate_abstract(self) -> None:
-        """Test that NotificationSender cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            NotificationSender()  # type: ignore[abstract]
+    def test_is_protocol(self) -> None:
+        """Test that NotificationSender is a Protocol."""
+        from typing import Protocol as TypingProtocol
+
+        assert issubclass(NotificationSender, TypingProtocol) or hasattr(
+            NotificationSender, "_is_protocol"
+        )
 
     def test_mock_implementation(self) -> None:
         """Test that mock implementation works correctly."""

@@ -48,7 +48,7 @@ class FeatureStorageError(FeaturesError):
 # ---------------------------------------------------------------------------
 
 
-class DerivedError(DittoError):
+class DerivedError(FeaturesError):
     """衍生数据域基础异常."""
 
     def __init__(self, message: str, *, derived_id: str | None = None) -> None:

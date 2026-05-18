@@ -13,6 +13,7 @@ from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
 from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.source import SourceDataPort
 from ditto_apps.registry import ConfigProvider
 from ditto_apps.registry.infra import NotificationProvider
 from ditto_data.di import (
@@ -25,9 +26,15 @@ from ditto_data.di import (
     RuntimeProvider,
 )
 from ditto_data.quality.golden import GoldenDatasetSpec
+from ditto_data.quality.protocols import (
+    ComparisonStoreProtocol,
+    InstrumentStoreProtocol,
+    TdxSourceProtocol,
+)
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 from ditto_data.sources.source import DataSources
 from ditto_data.sources.tdx.source import TdxSource
+from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_features.di import FeaturesStorageProvider
 from ditto_features.services import DerivedQueryService
 
@@ -68,6 +75,32 @@ class _GoldenNoneProvider(Provider):
         return None
 
 
+class _ProtocolAdapterProvider(Provider):
+    """测试用 Protocol 适配器 — 桥接 concrete mock → Protocol 接口."""
+
+    scope = Scope.APP
+
+    @provide
+    def tdx_source_protocol(self, source: TdxSource) -> TdxSourceProtocol:
+        return source
+
+    @provide
+    def comparison_store_protocol(self) -> ComparisonStoreProtocol:
+        return MagicMock(spec=ComparisonStoreProtocol)
+
+    @provide
+    def instrument_store_protocol(self) -> InstrumentStoreProtocol:
+        return MagicMock(spec=InstrumentStoreProtocol)
+
+    @provide
+    def compile_cache_backend(self) -> SQLiteCompileCacheBackend:
+        return MagicMock(spec=SQLiteCompileCacheBackend)
+
+    @provide
+    def source_data_port(self) -> SourceDataPort:
+        return MagicMock(spec=SourceDataPort)
+
+
 def _make_full_container():
     """构建包含 Data + App 层 Provider 的完整容器。"""
     from ditto_application.providers import get_app_providers
@@ -80,6 +113,7 @@ def _make_full_container():
         _sources_provider(),
         _TdxMockProvider(),
         _GoldenNoneProvider(),
+        _ProtocolAdapterProvider(),
         RuntimeProvider(),
         MetadataProvider(),
         MarketProvider(),

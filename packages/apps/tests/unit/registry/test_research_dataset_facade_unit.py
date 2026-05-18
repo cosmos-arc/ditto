@@ -20,6 +20,7 @@ from ditto_analysis.research.domain import (
 )
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.research import ResearchDatasetFacade
+from ditto_application.queries.source import SourceDataPort
 from ditto_apps.registry import ConfigProvider
 from ditto_data.di import (
     CapitalProvider,
@@ -62,6 +63,19 @@ def _sources_provider() -> Provider:
     return SourcesProvider()
 
 
+def _protocol_adapter_provider() -> Provider:
+    """测试用 Protocol 适配器."""
+
+    class _Adapter(Provider):
+        scope = Scope.APP
+
+        @provide
+        def source_data_port(self) -> SourceDataPort:
+            return MagicMock(spec=SourceDataPort)
+
+    return _Adapter()
+
+
 def _make_container(*, monkeypatch, tmp_path: Path):
     from ditto_analysis.di import AnalysisStorageProvider
     from ditto_application.providers_market import AppMarketQueryProvider
@@ -73,6 +87,7 @@ def _make_container(*, monkeypatch, tmp_path: Path):
     return make_container(
         ConfigProvider(),
         _sources_provider(),
+        _protocol_adapter_provider(),
         RuntimeProvider(),
         MetadataProvider(),
         MarketProvider(),

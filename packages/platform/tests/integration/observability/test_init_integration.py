@@ -13,7 +13,9 @@ from ditto_platform.foundation import (
     shutdown,
 )
 from ditto_platform.foundation.config.environment import Environment
-from ditto_platform.foundation.observability import _ObservabilityRegistry
+from ditto_platform.foundation.observability._registry import (
+    is_initialized as _is_initialized,
+)
 from ditto_platform.foundation.observability.config import ObservabilityConfig
 
 
@@ -35,20 +37,20 @@ class TestInit:
     def test_init_sets_registry_flag(self) -> None:
         """测试 init() 设置注册表标志."""
         reset_for_testing()
-        assert _ObservabilityRegistry.is_initialized() is False
+        assert _is_initialized() is False
 
         init(_test_config(), force=True)
-        assert _ObservabilityRegistry.is_initialized() is True
+        assert _is_initialized() is True
 
     def test_init_idempotent_without_force(self) -> None:
         """测试无 force 参数时 init() 幂等."""
         reset_for_testing()
         init(_test_config(), force=True)
-        first_registry_state = _ObservabilityRegistry.is_initialized()
+        first_registry_state = _is_initialized()
 
         # [REVIEW] force，应该被忽略
         init(_test_config())
-        second_registry_state = _ObservabilityRegistry.is_initialized()
+        second_registry_state = _is_initialized()
 
         assert first_registry_state is True
         assert second_registry_state is True
@@ -63,7 +65,7 @@ class TestInit:
         )
         init(config, force=True)
 
-        assert _ObservabilityRegistry.is_initialized() is True
+        assert _is_initialized() is True
 
     def test_init_environment_alias_dev(self) -> None:
         """测试环境简写 'dev' 映射到 'development'."""
@@ -77,13 +79,13 @@ class TestInit:
         reset_for_testing()
         init(_test_config(), force=True)
         init(_test_config(), force=True)
-        assert _ObservabilityRegistry.is_initialized() is True
+        assert _is_initialized() is True
 
     def test_init_environment_alias_prod(self) -> None:
         """测试环境简写 'prod' 映射到 'production'."""
         reset_for_testing()
         init(_test_config(), force=True)
-        assert _ObservabilityRegistry.is_initialized() is True
+        assert _is_initialized() is True
 
 
 @pytest.mark.integration
@@ -94,10 +96,10 @@ class TestShutdown:
         """测试 shutdown() 清除注册表标志."""
         reset_for_testing()
         init(_test_config(), force=True)
-        assert _ObservabilityRegistry.is_initialized() is True
+        assert _is_initialized() is True
 
         shutdown()
-        assert _ObservabilityRegistry.is_initialized() is False
+        assert _is_initialized() is False
 
     def test_shutdown_idempotent(self) -> None:
         """测试多次 shutdown() 幂等."""
@@ -106,20 +108,20 @@ class TestShutdown:
 
         # [REVIEW] shutdown
         shutdown()
-        assert _ObservabilityRegistry.is_initialized() is False
+        assert _is_initialized() is False
 
         # [REVIEW] shutdown 不应该报错
         shutdown()
-        assert _ObservabilityRegistry.is_initialized() is False
+        assert _is_initialized() is False
 
     def test_shutdown_without_init(self) -> None:
         """测试未初始化时 shutdown() 不报错."""
         reset_for_testing()
-        assert _ObservabilityRegistry.is_initialized() is False
+        assert _is_initialized() is False
 
         # [REVIEW]
         shutdown()
-        assert _ObservabilityRegistry.is_initialized() is False
+        assert _is_initialized() is False
 
     def test_shutdown_logs_debug_message(
         self, caplog: pytest.LogCaptureFixture

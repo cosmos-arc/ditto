@@ -49,10 +49,10 @@ class RiskScanStep:
         if self._post_trade_guard is None:
             return StepResult.skipped()
 
-        if ctx.slice_ is None or ctx.account_view is None:
-            return StepResult.fail("slice_ and account_view required")
+        slice_ = ctx.require_slice()
+        account_view = ctx.require_account_view()
 
-        risk_actions = self._post_trade_guard.scan(ctx.account_view, ctx.slice_)
+        risk_actions = self._post_trade_guard.scan(account_view, slice_)
 
         # 审计日志: 记录风控扫描结果
         if risk_actions and self._audit_collector is not None:

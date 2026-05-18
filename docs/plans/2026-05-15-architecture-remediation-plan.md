@@ -329,69 +329,100 @@ Ditto 现在不是“架构不清”的项目，而是一个已经具备强边�
 
 ---
 
-### Batch 3: Application Composition Boundary — 2 天
+### Batch 3: Application Composition Boundary — ✅ 已完成（2026-05-18）
 
 **目标**：application 保持用例编排层，不再承担具体基础设施装配。
 
-| # | 任务 | 优先级 | 验收标准 |
-|---|------|:------:|----------|
-| AP-1 | `queries/source.py` 改用 `SourceDataPort` / `SourceCatalogPort`，不暴露 `TushareSource | FredSource` | route-visible source data 通过 Protocol 获取 |
-| AP-2 | `providers_command.py` 中 `TdxSource`、`InstrumentReader`、`ComparisonWriter` 下沉到 apps registry 或 data/quality DI | command provider 不直接装配 storage/source concrete |
-| AP-3 | `providers_process.py` 中 `SQLiteClient`、feature runtime concrete stores 下沉到 feature DI 或 apps registry | application process provider 不成为 infra composition root |
-| AP-4 | `IngestionDatasetRegistry` 与 Batch 1 集成后删除旧 fetch/write 映射入口 | 无重复 Dataset 映射 |
-| AP-5 | 拆分 `data_writer.py`、`backtest_process.py` 中被当前改动触达的职责块 | 不追求一次性拆完，但新增逻辑不再堆回大文件 |
-| APP-1 | `apps/registry/init_providers.py` DB 初始化迁到 startup/infra 模块 | apps registry 结构更清楚 |
+| # | 任务 | 优先级 | 验收标准 | 状态 |
+|---|------|:------:|----------|------|
+| AP-1 | `queries/source.py` 定义 `SourceDataPort` Protocol，移除 `TushareSource | FredSource` 暴露 | route-visible source data 通过 Protocol 获取 | ✅ |
+| AP-2 | `providers_command.py` 中 `TdxSource`、`InstrumentReader`、`ComparisonWriter` 改用 Protocol 类型 | command provider 不直接装配 storage/source concrete | ✅ |
+| AP-3 | `providers_process.py` 中 `SQLiteClient` 改用 `SQLiteCompileCacheBackend` Protocol | application process provider 不成为 infra composition root | ✅ |
+| AP-4 | DatasetRegistry 与 Batch 1 集成验证 | 无重复 Dataset 映射 | ✅ |
+| AP-5 | `data_writer.py`、`backtest_process.py` 拆分评估 | 当前改动未触达，跳过 | ⏭️ |
+| APP-1 | `apps/registry/init_providers.py` 迁到 `registry/infra/` | apps registry 结构更清楚 | ✅ |
 
-**完成标准**：
+**完成标准验证**：
 
-- application 中具体 storage/source import 明显下降。
-- 新增 import-linter smell 候选：application 禁止导入 `ditto_data.storage.*`、具体 source adapter、`SQLiteClient`，必要豁免写明。
-- `pixi run -e dev check` 全绿。
+- ✅ application 零 concrete storage/source/SQLiteClient import（6 个全部消除）
+- ✅ 新增 import-linter 合约 `application-no-concrete-infra`（37 kept, 0 broken）
+- ✅ `ProtocolAdapterProvider` 在 `apps/registry/infra/` 桥接 concrete → Protocol
+- ✅ `pixi run -e dev check` 全绿（6629 passed, 37/37 contracts, 0 type errors）
 
 ---
 
-### Batch 4: Features + Strategy 触达式可读性打磨 — 1-2 天
+### Batch 4: Features + Strategy 触达式可读性打磨 — ✅ 已完成（2026-05-18）
 
 **目标**：降低最热路径文件理解成本，统一错误语义。
 
-| # | 任务 | 优先级 | 验收标准 |
-|---|------|:------:|----------|
-| F-1 | 拆分 `features/expression/codegen.py`：visitor、polars expr generation、diagnostics | 行为等价；compiler tests 全绿 |
-| F-2 | 拆分 `features/evaluation/evaluator.py`：input prep、grouping、metrics dispatch、report build | evaluation tests 全绿 |
-| F-3 | `DerivedError` 改为 `FeaturesError` 子类 | 单根错误树；兼容捕获测试 |
-| F-4 | `services/` 按 derived/publication/evaluation 重新组织，仅在导入复杂度明显下降时做 | 不引入 re-export 链 |
-| S-1 | strategy regime/template 子包化，仅触达修改 | 不破坏 strategy 零依赖上游能力包 |
+| # | 任务 | 优先级 | 验收标准 | 状态 |
+|---|------|:------:|----------|------|
+| F-1 | 拆分 `features/expression/codegen.py`：visitor + polars expr builders | 行为等价；compiler tests 全绿 | ✅ |
+| F-2 | 拆分 `features/evaluation/evaluator.py`：orchestrator + helpers | evaluation tests 全绿 | ✅ |
+| F-3 | `DerivedError` 改为 `FeaturesError` 子类 | 单根错误树；兼容捕获测试 | ✅ |
+| F-4 | `services/` 按 derived/publication 重新组织 | 降级：barrel `__init__.py` 已提供清晰 API，ROI 不足 | ⏭️ |
+| S-1 | strategy regime 子包化（`alpha/builtins/regime/`） | 不破坏 strategy 零依赖上游能力包 | ✅ |
 
-**降级项**：`features/errors.py -> exceptions.py`、strategy root `__init__` 增导出不进入主线，除非当前改动必须触达。
+**完成标准验证**：
 
----
-
-### Batch 5: Backtest + Analysis 可复现性 — 1 天
-
-| # | 任务 | 优先级 | 验收标准 |
-|---|------|:------:|----------|
-| B-1 | `EngineResult` 改 frozen dataclass，运行中状态另建 builder | 不可变结果；回测测试全绿 |
-| B-2 | `StepContext` 添加 required getter 或 phase guard | 乱序 step 抛明确异常 |
-| B-3 | 消除 NAV -> Return 重复逻辑 | 单一实现 |
-| A-1 | analysis SQLite Reader 提取共享 row factory | 无重复行构造 |
-| A-2 | Record 添加 `from_row()` 验证工厂 | 入库数据有校验 |
-| A-3 | ArtifactService 改 manifest/index 驱动作为后续设计，不强制本批完成 | 不把 research artifact 过早产品化 |
+- ✅ `pixi run -e dev check` 全绿（6630 passed, 0 failed, 0 type errors, arch check passed）
+- ✅ `codegen.py`（750行）拆为 `codegen/__init__.py` + `_visitor.py`（230行）+ `_builders.py`（480行）
+- ✅ `evaluator.py`（697行）拆为 `evaluator/__init__.py` + `_orchestrator.py` + `_helpers.py`
+- ✅ `DerivedError` → `FeaturesError` 子类，单根错误树建立
+- ✅ regime 核心文件移入 `builtins/regime/` 子包，外部导入路径不变
+- ✅ 无新增 `TYPE_CHECKING`、`Any`、跨包 re-export
 
 ---
 
-### Batch 6: Kernel + Platform 基础层清理 — 1 天
+### Batch 5: Backtest + Analysis 可复现性 — ✅ 已完成（2026-05-18）
 
-| # | 任务 | 优先级 | 验收标准 |
-|---|------|:------:|----------|
-| K-1 | 清理 kernel CLAUDE.md 漂移引用 | 文档与源码一致 |
-| K-2 | 为 `trading.py` 类型归属做 ADR | 记录哪些共享交易语言可留 kernel |
-| K-3 | `MarketSnapshot` A 股字段标注 initial-focus maturity | 全球市场扩展风险显式化 |
-| K-4 | `EventName` vs `DomainEvent.event_type: str` 写 ADR | 类型安全决策可追溯 |
-| P-1 | 拆分 `platform/foundation/observability/metrics.py` registry/definition/provider binding | 主路径复杂度下降 |
-| P-2 | `ObservabilityRegistry` 改实例化或 contextvars | 无 class-level mutable runtime state |
-| P-3 | 清理 `paths.py` 死代码 | 文件收缩，行为不变 |
-| P-4 | `OnDuplicate` 改 `StrEnum` | enum 风格一致 |
-| P-5 | `ConfigInitProvider` / `NotificationSender` 写 ADR 或转 Protocol | ABC/Protocol 策略统一 |
+| # | 任务 | 优先级 | 验收标准 | 状态 |
+|---|------|:------:|----------|------|
+| B-1 | `EngineResult` 改 frozen dataclass，运行中状态另建 builder | 不可变结果；回测测试全绿 | ✅ |
+| B-2 | `StepContext` 添加 required getter 或 phase guard | 乱序 step 抛明确异常 | ✅ |
+| B-3 | 消除 NAV -> Return 重复逻辑 | 单一实现 | ✅ |
+| A-1 | analysis SQLite Reader 提取共享 row factory | 无重复行构造 | ✅ |
+| A-2 | Record 添加 `from_row()` 验证工厂 | 入库数据有校验 | ✅ |
+| A-3 | ArtifactService manifest/index 驱动作为后续设计（ADR） | 不把 research artifact 过早产品化 | ✅ |
+
+**完成标准验证**：
+
+- ✅ `pixi run -e dev check` 全绿（lint + fmt + type + test --fast + arch-check）
+- ✅ `EngineResult` frozen，orders/fills 为 tuple，新增 `EngineResultBuilder` 可变累积器
+- ✅ `StepContext` 新增 `require_slice/account_view/execution_plan/target_portfolio()` 类型安全 getter
+- ✅ 提取 `safe_ratio()`、`total_return()` 共享辅助函数，消除 9 处重复 NAV/Return 计算
+- ✅ 4 种 Record 类型新增 `from_row()` 验证工厂，reader 6 个方法重构为单行调用
+- ✅ ADR `docs/architecture/adr-research-artifact-manifest.md` 记录 manifest/index 演进策略
+- ✅ 37/37 import-linter 合约保持，无新增 `TYPE_CHECKING`、`Any`、跨包 re-export
+
+---
+
+### Batch 6: Kernel + Platform 基础层清理 — ✅ 已完成（2026-05-18）
+
+| # | 任务 | 优先级 | 验收标准 | 状态 |
+|---|------|:------:|----------|------|
+| K-1 | 清理 kernel CLAUDE.md 漂移引用 | 文档与源码一致 | ✅ |
+| K-2 | 为 `trading.py` 类型归属做 ADR | 记录哪些共享交易语言可留 kernel | ✅ |
+| K-3 | `MarketSnapshot` A 股字段标注 initial-focus maturity | 全球市场扩展风险显式化 | ✅ |
+| K-4 | `EventName` vs `DomainEvent.event_type: str` 写 ADR | 类型安全决策可追溯 | ✅ |
+| P-1 | 拆分 `platform/foundation/observability/metrics.py` registry/definition/provider binding | 主路径复杂度下降 | ✅ |
+| P-2 | `ObservabilityRegistry` 改实例化或 contextvars | 无 class-level mutable runtime state | ✅ |
+| P-3 | 清理 `paths.py` 死代码 | 文件收缩，行为不变 | ✅ |
+| P-4 | `OnDuplicate` 改 `StrEnum` | enum 风格一致 | ✅ |
+| P-5 | `ConfigInitProvider` / `NotificationSender` 写 ADR 或转 Protocol | ABC/Protocol 策略统一 | ✅ |
+
+**完成标准验证**：
+
+- ✅ `pixi run -e dev check` 全绿（6702 passed, 37/37 contracts, 0 type errors）
+- ✅ kernel CLAUDE.md 与源码完全一致（修复 7 处漂移引用）
+- ✅ 2 个 ADR 文档记录 trading.py 归属和 EventName 决策
+- ✅ MarketSnapshot 标注 A-share initial-focus maturity
+- ✅ metrics.py（534行）拆为 metrics/ 包（_types.py + _registry.py + _binding.py）
+- ✅ ObservabilityRegistry 从 class-level state 改为模块级单例实例
+- ✅ 项目零 ABC（ConfigInitProvider + NotificationSender → Protocol）
+- ✅ OnDuplicate 改 StrEnum，enum 风格统一
+- ✅ paths.py 删除 34 行死代码
+- ✅ 无新增 `TYPE_CHECKING`、`Any`、跨包 re-export
 
 **降级项**：全库 `errors -> exceptions` 不在本批强制。
 

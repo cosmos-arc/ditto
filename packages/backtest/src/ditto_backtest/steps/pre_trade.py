@@ -30,7 +30,6 @@ from ditto_risk.pre_trade import (
 )
 
 from ditto_backtest.audit.records import PreTradeDecisionRecord
-from ditto_backtest.errors import SimulationError
 from ditto_backtest.steps.types import StepContext, StepResult
 
 __all__ = ["PreTradeStep"]
@@ -67,8 +66,8 @@ class PreTradeStep:
         if ctx.execution_plan is None:
             return StepResult.skipped()
 
-        if ctx.slice_ is None or ctx.account_view is None:
-            return StepResult.fail("slice_ and account_view required")
+        ctx.require_slice()
+        ctx.require_account_view()
 
         # 构建 PreTradeContext
         pre_trade_context = self._build_pre_trade_context(ctx)
@@ -133,12 +132,8 @@ class PreTradeStep:
 
     def _build_pre_trade_context(self, ctx: StepContext) -> PreTradeContext:
         """构建 PreTrade 校验上下文。"""
-        # Narrowing: execute() guards ensure non-None
-        account_view = ctx.account_view
-        slice_ = ctx.slice_
-        if account_view is None or slice_ is None:
-            msg = "account_view and slice_ required"
-            raise SimulationError(msg, step="pre_trade")
+        # require_*() 已在 execute() 中调用，此处一定非 None
+        account_view = ctx.require_account_view()
 
         return PreTradeContext(
             account_view=account_view,

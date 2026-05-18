@@ -6,10 +6,9 @@ from email.message import EmailMessage
 from loguru import logger
 
 from ditto_platform.services.notification.config import NotificationSettings
-from ditto_platform.services.notification.sender import NotificationSender
 
 
-class EmailSender(NotificationSender):
+class EmailSender:
     """
     Email notification sender via SMTP.
 

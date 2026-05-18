@@ -8,10 +8,12 @@ from ditto_data.ingestion.quality_record_store import (
 )
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
+from ditto_data.quality.protocols import (
+    ComparisonStoreProtocol,
+    InstrumentStoreProtocol,
+    TdxSourceProtocol,
+)
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.tdx.source import TdxSource
-from ditto_data.storage.metadata.instrument import InstrumentReader
-from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
@@ -67,9 +69,9 @@ class AppCommandProvider(Provider):
     def reconcile_sources_handler(
         self,
         dq_engine: QualityEngine,
-        tdx_source: TdxSource,
-        comparison_store: ComparisonWriter,
-        instrument_store: InstrumentReader,
+        tdx_source: TdxSourceProtocol,
+        comparison_store: ComparisonStoreProtocol,
+        instrument_store: InstrumentStoreProtocol,
         golden_dataset: GoldenDatasetSpec | None = None,
     ) -> ReconcileSourcesHandler:
         """数据源对账 Handler."""

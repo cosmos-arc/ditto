@@ -1,35 +1,53 @@
-"""Source query facade — 封装 SourceAccessor + MetadataService."""
+"""Source query facade — 封装 source 数据获取 + MetadataService."""
 
 from __future__ import annotations
+
+from typing import Protocol
 
 import polars as pl
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_accessor import SourceAccessor
-from ditto_data.sources.fred.fred_source import FredSource
-from ditto_data.sources.tushare.tushare_source import TushareSource
 
 from ditto_application.exceptions import AppQueryError
 
-__all__ = ["SourceQueryFacade"]
+__all__ = ["SourceDataPort", "SourceQueryFacade"]
 
 SUPPORTED_SOURCE_DATASETS: frozenset[str] = frozenset({"stock_daily"})
+
+
+class SourceDataPort(Protocol):
+    """
+    窄 Protocol：route-visible source 数据获取的 application-level port.
+
+    消费者（SourceQueryFacade）只关心 fetch_stock_daily 这一个方法；
+    具体 source adapter（TushareSource / FredSource）通过 composition root 注入。
+    """
+
+    def fetch_stock_daily(
+        self,
+        *,
+        source_ticker: str,
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """Fetch daily stock bars for a single ticker."""
+        ...
 
 
 class SourceQueryFacade:
     """
     Source 数据查询 facade.
 
-    封装 SourceAccessor 和 MetadataService 的联合操作，
-    隐藏 Dataset 枚举和内部服务依赖。
+    通过 SourceDataPort Protocol 获取 source 数据，通过 MetadataService 解析标识符。
+    不暴露任何 concrete source 类型。
     """
 
     def __init__(
         self,
-        source_accessor: SourceAccessor,
+        source_data: SourceDataPort,
         metadata_service: MetadataService,
     ) -> None:
-        self._source = source_accessor
+        self._source = source_data
         self._metadata = metadata_service
 
     def get_dataset_asset_class(self, dataset: str) -> str | None:
@@ -84,24 +102,6 @@ class SourceQueryFacade:
             source=source,
         )
 
-    def get_source(self, name: str) -> TushareSource | FredSource:
-        """
-        获取数据源实例.
-
-        Args:
-            name: 数据源名称（如 "tushare"）
-
-        Returns:
-            TushareSource 或 FredSource 实例
-
-        """
-        return self._source.get_source(name)
-
-    @property
-    def tushare(self) -> TushareSource:
-        """获取 Tushare 数据源."""
-        return self._source.tushare
-
     def fetch_source_data(
         self,
         *,
@@ -121,7 +121,7 @@ class SourceQueryFacade:
             raise AppQueryError(f"不支持的数据源: {source}")
 
         if dataset == "stock_daily":
-            return self.tushare.fetch_stock_daily(
+            return self._source.fetch_stock_daily(
                 source_ticker=source_ticker,
                 start_date=start_date,
                 end_date=end_date,

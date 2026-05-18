@@ -6,6 +6,7 @@ import warnings
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+import orjson
 import polars as pl
 from ditto_kernel.market import CalendarId, GrainId
 
@@ -250,6 +251,29 @@ class ResearchSpineSpecRecord:
     created_at: str
     version: int = 1
 
+    @classmethod
+    def from_row(cls, row: dict[str, object]) -> ResearchSpineSpecRecord:
+        """从数据库行字典构造记录，验证必填字段."""
+        spine_id = row.get("spine_id")
+        if not spine_id or not isinstance(spine_id, str):
+            raise ResearchDatasetError(
+                f"from_row: spine_id is required, got {spine_id!r}",
+            )
+        _version: object = row.get("version", 1)
+        version = _version if isinstance(_version, int) else 1
+        return cls(
+            spine_id=spine_id,
+            universe_id=str(row["universe_id"]),
+            calendar=str(row["calendar"]),
+            grain=str(row["grain"]),
+            entity_key=str(row["entity_key"]),
+            description=(
+                str(row["description"]) if row.get("description") is not None else None
+            ),
+            created_at=str(row["created_at"]),
+            version=version,
+        )
+
 
 @dataclass(frozen=True)
 class ResearchDatasetSpecRecord:
@@ -265,6 +289,40 @@ class ResearchDatasetSpecRecord:
     created_at: str
     version: int = 1
 
+    @classmethod
+    def from_row(cls, row: dict[str, object]) -> ResearchDatasetSpecRecord:
+        """从数据库行字典构造记录，含 orjson 反序列化."""
+        dataset_id = row.get("dataset_id")
+        if not dataset_id or not isinstance(dataset_id, str):
+            raise ResearchDatasetError(
+                f"from_row: dataset_id is required, got {dataset_id!r}",
+            )
+        derived_ids_raw: object = row.get("derived_ids", "[]")
+        derived_ids: tuple[str, ...]
+        if isinstance(derived_ids_raw, str):
+            _di: list[str] = orjson.loads(derived_ids_raw)
+            derived_ids = tuple(_di)
+        elif isinstance(derived_ids_raw, (tuple, list)):
+            _di2: list[str] = orjson.loads(orjson.dumps(derived_ids_raw))
+            derived_ids = tuple(_di2)
+        else:
+            derived_ids = ()
+        _version: object = row.get("version", 1)
+        version = _version if isinstance(_version, int) else 1
+        return cls(
+            dataset_id=dataset_id,
+            spine_id=str(row["spine_id"]),
+            derived_ids=derived_ids,
+            join_policy=str(row["join_policy"]),
+            known_at_policy=str(row["known_at_policy"]),
+            late_arrival_policy=str(row["late_arrival_policy"]),
+            description=(
+                str(row["description"]) if row.get("description") is not None else None
+            ),
+            created_at=str(row["created_at"]),
+            version=version,
+        )
+
 
 @dataclass(frozen=True)
 class ResearchSpineSnapshotRecord:
@@ -279,6 +337,30 @@ class ResearchSpineSnapshotRecord:
     manifest_hash: str
     created_at: str
     version: int = 1
+
+    @classmethod
+    def from_row(cls, row: dict[str, object]) -> ResearchSpineSnapshotRecord:
+        """从数据库行字典构造记录，验证必填字段."""
+        spine_snapshot_id = row.get("spine_snapshot_id")
+        if not spine_snapshot_id or not isinstance(spine_snapshot_id, str):
+            raise ResearchDatasetError(
+                f"from_row: spine_snapshot_id is required, got {spine_snapshot_id!r}",
+            )
+        _row_count: object = row["row_count"]
+        row_count = _row_count if isinstance(_row_count, int) else 0
+        _version: object = row.get("version", 1)
+        version = _version if isinstance(_version, int) else 1
+        return cls(
+            spine_snapshot_id=spine_snapshot_id,
+            spine_id=str(row["spine_id"]),
+            snapshot_start=str(row["snapshot_start"]),
+            snapshot_end=str(row["snapshot_end"]),
+            row_count=row_count,
+            data_path=str(row["data_path"]),
+            manifest_hash=str(row["manifest_hash"]),
+            created_at=str(row["created_at"]),
+            version=version,
+        )
 
 
 @dataclass(frozen=True)
@@ -302,3 +384,76 @@ class ResearchDatasetSnapshotRecord:
     source_snapshot_ids: tuple[str, ...] = field(default_factory=tuple)
     builder_version: str = ""
     created_at: str = ""
+
+    @classmethod
+    def from_row(cls, row: dict[str, object]) -> ResearchDatasetSnapshotRecord:
+        """从数据库行字典构造记录，含 orjson 反序列化."""
+        snapshot_id = row.get("snapshot_id")
+        if not snapshot_id or not isinstance(snapshot_id, str):
+            raise ResearchDatasetError(
+                f"from_row: snapshot_id is required, got {snapshot_id!r}",
+            )
+        resolved_versions_raw: object = row.get("resolved_versions", "{}")
+        resolved_versions: dict[str, int]
+        if isinstance(resolved_versions_raw, str):
+            _rv: dict[str, int] = orjson.loads(resolved_versions_raw)
+            resolved_versions = _rv
+        elif isinstance(resolved_versions_raw, dict):
+            _rv2: dict[str, int] = orjson.loads(orjson.dumps(resolved_versions_raw))
+            resolved_versions = _rv2
+        else:
+            resolved_versions = {}
+
+        resolved_inputs_raw: object = row.get("resolved_inputs", "[]")
+        resolved_inputs: tuple[dict[str, str | int], ...]
+        if isinstance(resolved_inputs_raw, str):
+            _ri: list[dict[str, str | int]] = orjson.loads(resolved_inputs_raw)
+            resolved_inputs = tuple(_ri)
+        elif isinstance(resolved_inputs_raw, (tuple, list)):
+            _ri2: list[dict[str, str | int]] = orjson.loads(
+                orjson.dumps(resolved_inputs_raw),
+            )
+            resolved_inputs = tuple(_ri2)
+        else:
+            resolved_inputs = ()
+
+        source_snapshot_ids_raw: object = row.get("source_snapshot_ids", "[]")
+        source_snapshot_ids: tuple[str, ...]
+        if isinstance(source_snapshot_ids_raw, str):
+            _ss: list[str] = orjson.loads(source_snapshot_ids_raw)
+            source_snapshot_ids = tuple(_ss)
+        elif isinstance(source_snapshot_ids_raw, (tuple, list)):
+            _ss2: list[str] = orjson.loads(orjson.dumps(source_snapshot_ids_raw))
+            source_snapshot_ids = tuple(_ss2)
+        else:
+            source_snapshot_ids = ()
+
+        _spec_ver: object = row["dataset_spec_version"]
+        dataset_spec_version = _spec_ver if isinstance(_spec_ver, int) else 0
+        _row_count: object = row["row_count"]
+        row_count = _row_count if isinstance(_row_count, int) else 0
+        _spine_spec_ver: object = row.get("spine_spec_version", 1)
+        spine_spec_version = _spine_spec_ver if isinstance(_spine_spec_ver, int) else 1
+        return cls(
+            snapshot_id=snapshot_id,
+            dataset_id=str(row["dataset_id"]),
+            dataset_spec_version=dataset_spec_version,
+            spine_snapshot_id=str(row["spine_snapshot_id"]),
+            snapshot_start=str(row["snapshot_start"]),
+            snapshot_end=str(row["snapshot_end"]),
+            row_count=row_count,
+            data_path=str(row["data_path"]),
+            manifest_hash=str(row["manifest_hash"]),
+            known_at_policy=str(row["known_at_policy"]),
+            effective_cutoff=(
+                str(row["effective_cutoff"])
+                if row.get("effective_cutoff") is not None
+                else None
+            ),
+            spine_spec_version=spine_spec_version,
+            resolved_versions=resolved_versions,
+            resolved_inputs=resolved_inputs,
+            source_snapshot_ids=source_snapshot_ids,
+            builder_version=str(row.get("builder_version", "")),
+            created_at=str(row.get("created_at", "")),
+        )

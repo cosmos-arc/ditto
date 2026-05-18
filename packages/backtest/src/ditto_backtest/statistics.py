@@ -40,7 +40,9 @@ from ditto_backtest.statistics_returns import (
     compute_portfolio_statistics,
     daily_returns_from_navs,
     drawdown_analysis,
+    safe_ratio,
     sortino_ratio,
+    total_return,
 )
 from ditto_backtest.statistics_trades import (
     compute_aggregated_trade_statistics,
@@ -73,5 +75,7 @@ __all__ = [
     "drawdown_analysis",
     "empty_aggregated_trade_statistics",
     "empty_alpha_statistics",
+    "safe_ratio",
     "sortino_ratio",
+    "total_return",
 ]

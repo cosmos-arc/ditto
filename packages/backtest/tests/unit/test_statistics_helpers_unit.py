@@ -25,7 +25,9 @@ from ditto_backtest.statistics import (
     drawdown_analysis,
     empty_aggregated_trade_statistics,
     empty_alpha_statistics,
+    safe_ratio,
     sortino_ratio,
+    total_return,
 )
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting import (
@@ -34,6 +36,70 @@ from ditto_portfolio.accounting import (
     FillEvent,
     Position,
 )
+
+# ---------------------------------------------------------------------------
+# safe_ratio
+# ---------------------------------------------------------------------------
+
+
+class TestSafeRatio:
+    """safe_ratio 精确值验证."""
+
+    def test_normal_division(self) -> None:
+        assert safe_ratio(10.0, 2.0) == pytest.approx(5.0)
+
+    def test_zero_denominator(self) -> None:
+        assert safe_ratio(10.0, 0.0) == 0.0
+
+    def test_zero_numerator(self) -> None:
+        assert safe_ratio(0.0, 5.0) == pytest.approx(0.0)
+
+    def test_negative_values(self) -> None:
+        assert safe_ratio(-10.0, 2.0) == pytest.approx(-5.0)
+
+    def test_both_zero(self) -> None:
+        assert safe_ratio(0.0, 0.0) == 0.0
+
+    def test_small_denominator(self) -> None:
+        assert safe_ratio(1.0, 0.001) == pytest.approx(1000.0)
+
+
+# ---------------------------------------------------------------------------
+# total_return
+# ---------------------------------------------------------------------------
+
+
+class TestTotalReturn:
+    """total_return 精确值验证."""
+
+    def test_positive_return(self) -> None:
+        # 110/100 - 1 = 0.10
+        assert total_return([100.0, 110.0]) == pytest.approx(0.10)
+
+    def test_negative_return(self) -> None:
+        # 90/100 - 1 = -0.10
+        assert total_return([100.0, 90.0]) == pytest.approx(-0.10)
+
+    def test_zero_return(self) -> None:
+        assert total_return([100.0, 100.0]) == pytest.approx(0.0)
+
+    def test_multi_period(self) -> None:
+        # 121/100 - 1 = 0.21
+        assert total_return([100.0, 110.0, 121.0]) == pytest.approx(0.21)
+
+    def test_empty_list(self) -> None:
+        assert total_return([]) == 0.0
+
+    def test_single_element(self) -> None:
+        assert total_return([100.0]) == pytest.approx(0.0)
+
+    def test_zero_initial_nav(self) -> None:
+        assert total_return([0.0, 100.0]) == pytest.approx(0.0)
+
+    def test_large_return(self) -> None:
+        # 300/100 - 1 = 2.0
+        assert total_return([100.0, 200.0, 300.0]) == pytest.approx(2.0)
+
 
 # ---------------------------------------------------------------------------
 # daily_returns_from_navs

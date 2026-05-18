@@ -280,8 +280,9 @@ class TestNoBareExceptionInheritance:
 
     def test_ditto_error_only_bare_exception_root(self) -> None:
         """DittoError 是唯一允许直接继承 Exception 的类."""
-        from ditto_features.errors import DerivedError
+        from ditto_features.errors import DerivedError, FeaturesError
 
         assert DittoError.__bases__ == (Exception,)
         assert DataError.__bases__ == (DittoError,)
-        assert DerivedError.__bases__ == (DittoError,)
+        assert FeaturesError.__bases__ == (DittoError,)
+        assert DerivedError.__bases__ == (FeaturesError,)
