@@ -23,6 +23,7 @@ __all__ = [
 ]
 
 
+# 延迟导出内部符号，仅供测试访问内部状态。
 def __getattr__(name: str) -> object:
     """延迟导出内部符号，供测试使用。"""
     if name == "_MetricsRegistry":

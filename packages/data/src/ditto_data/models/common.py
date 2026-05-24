@@ -126,16 +126,6 @@ class Dataset(StrEnum):
             return AssetClass.INDEX
         return None
 
-    def supports_instrument_ingestion(self) -> bool:
-        """
-        判断数据集是否支持按标的（instrument）进行数据摄取。
-
-        Returns:
-            如果支持按标的摄取返回 True，否则返回 False。
-
-        """
-        return self.asset_class is not None
-
     @classmethod
     def all_datasets(cls) -> list[str]:
         """返回所有已注册数据集的值列表。"""

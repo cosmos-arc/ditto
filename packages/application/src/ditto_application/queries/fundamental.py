@@ -1,24 +1,70 @@
-"""Fundamental query facade — 封装 FundamentalStore，隐藏内部端口类型."""
+"""Fundamental query facade — 封装 fundamental 数据端口，隐藏内部端口类型."""
 
 from __future__ import annotations
 
 from datetime import date
+from typing import Protocol
 
 import polars as pl
-from ditto_data.services.fundamental_store import FundamentalStore
 
-__all__ = ["FundamentalQueryFacade"]
+__all__ = ["FundamentalDataPort", "FundamentalQueryFacade"]
+
+
+class FundamentalDataPort(Protocol):
+    """窄 Protocol：FundamentalQueryFacade 所需的 fundamental 数据获取能力."""
+
+    def get_balance_sheet(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame | None:
+        """查询资产负债表."""
+        ...
+
+    def get_income_statement(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame | None:
+        """查询利润表."""
+        ...
+
+    def get_cash_flow(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame | None:
+        """查询现金流量表."""
+        ...
+
+    def get_dividend(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame | None:
+        """查询股息数据."""
+        ...
+
+    def list_corporate_actions(
+        self,
+        instrument_id: int,
+        start_date: date,
+        end_date: date,
+        as_of_date: date | None = None,
+    ) -> pl.DataFrame:
+        """查询公司行动数据."""
+        ...
 
 
 class FundamentalQueryFacade:
     """
     Fundamental 域查询 facade.
 
-    封装 FundamentalStore，隐藏 CQRS 端口类型，
+    通过 FundamentalDataPort Protocol 获取 fundamental 数据，
     对外只暴露原始参数和 pl.DataFrame 返回值。
     """
 
-    def __init__(self, fundamental_store: FundamentalStore) -> None:
+    def __init__(self, fundamental_store: FundamentalDataPort) -> None:
         self._service = fundamental_store
 
     def get_balance_sheet(

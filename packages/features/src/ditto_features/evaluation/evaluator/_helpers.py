@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 import polars as pl
 import polars.exceptions as pl_exc
+from ditto_platform.foundation import logger
 
 from ditto_features.evaluation.metrics import ic_decay
 from ditto_features.evaluation.report import (
@@ -101,6 +102,7 @@ def compute_ic_decay_safe(
             factor_col="close",
         )
     except (pl_exc.ColumnNotFoundError, pl_exc.ComputeError, ValueError):
+        logger.debug("IC decay 计算失败, 返回空结果", exc_info=True)
         return [], None
 
 
@@ -144,6 +146,7 @@ def estimate_avg_turnover(
 
         return float(migrations.select(pl.col("mean_return").mean()).item()) or 0.0
     except (pl_exc.ComputeError, TypeError, IndexError):
+        logger.debug("换手率估算失败, 返回默认值", exc_info=True)
         return 0.0
 
 

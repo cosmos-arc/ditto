@@ -239,7 +239,11 @@ class MomentumIndicator:
     momentum_high: float = 0.10
 
     def compute(self, frame: pl.DataFrame) -> float:
-        """从 frame 的 close 列计算动量分位 (0-1)."""
+        """
+        从 frame 的 close 列计算动量分位 (0-1).
+
+        调用方须确保 frame.close 列仅含 T 时刻及之前数据（PIT 约束）。
+        """
         if self.close_column not in frame.columns or frame.is_empty():
             return 0.5
 

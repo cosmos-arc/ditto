@@ -131,8 +131,8 @@ def reconcile(
                     )
                 )
 
-    unmatched_count = len(diffs)
-    status = "matched" if unmatched_count == 0 else "mismatch"
+    diff_count = len(diffs)
+    status = "matched" if diff_count == 0 else "mismatch"
 
     return ReconciliationReport(
         report_id=report_id,
@@ -140,7 +140,7 @@ def reconcile(
         trade_date=trade_date,
         expected_count=len(expected),
         actual_count=len(actual),
-        unmatched_count=unmatched_count,
+        diff_count=diff_count,
         status=status,
         diffs=tuple(diffs),
     )

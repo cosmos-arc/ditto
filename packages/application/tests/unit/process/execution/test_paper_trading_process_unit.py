@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+from unittest.mock import Mock
+
 from ditto_application.processes.execution.paper_trading_process import (
     PaperTradingRuntime,
 )
+from ditto_execution.broker.contracts import BrokerGateway
 from ditto_execution.broker.gateways.paper import PaperBrokerGateway
+from ditto_execution.orders.event import OrderEvent
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_portfolio.accounting import FillEvent
 from ditto_portfolio.accounting.account import Account, AccountView
 from ditto_portfolio.accounting.cash import CashBook
 
@@ -139,3 +145,87 @@ class TestPaperTradingRuntimeExecuteOrder:
         assert "slippage" not in source
         assert "matching" not in source
         assert "fee_calc" not in source
+
+
+def _make_stub_gateway(order: Order) -> Mock:
+    """构建满足 BrokerGateway Protocol 的 Mock stub."""
+    from datetime import UTC, datetime
+
+    gateway = Mock(spec=BrokerGateway)
+    fill_price = order.price if order.price is not None else 0.0
+    ticket = OrderTicket(order=order, status=OrderStatus.SUBMITTED).with_fill(
+        quantity=order.quantity,
+        price=fill_price,
+        event=OrderEvent(
+            client_id=order.client_id,
+            trigger=OrderTrigger.FILL,
+            status=OrderStatus.FILLED,
+            fill_price=fill_price,
+            fill_quantity=order.quantity,
+        ),
+    )
+    gateway.submit_order.return_value = ticket
+    fill = FillEvent(
+        fill_id="stub-fill-001",
+        order_id=order.order_id,
+        instrument_id=order.instrument_id,
+        direction=order.direction,
+        filled_quantity=order.quantity,
+        fill_price=fill_price,
+        fee=0.0,
+        slippage=0.0,
+        event_time=datetime.now(tz=UTC),
+        cumulative_quantity=order.quantity,
+        leaves_quantity=0,
+    )
+    gateway.query_fills.return_value = (fill,)
+    return gateway
+
+
+class TestPaperTradingRuntimeAcceptsBrokerGatewayProtocol:
+    """PaperTradingRuntime 必须接受任何 BrokerGateway Protocol 实现者."""
+
+    def test_constructs_with_mock_gateway(self) -> None:
+        """接受满足 BrokerGateway Protocol 的 Mock 对象."""
+        order = _make_order(OrderSide.BUY)
+        gateway = _make_stub_gateway(order)
+        cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
+        account = Account(cash=cash)
+
+        runtime = PaperTradingRuntime(gateway=gateway, account=account)
+        assert runtime is not None
+
+    def test_execute_order_with_mock_gateway(self) -> None:
+        """通过 Mock gateway 执行订单应正常返回 ticket 并应用成交."""
+        order = _make_order(OrderSide.BUY, quantity=100, price=10.0)
+        gateway = _make_stub_gateway(order)
+        cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
+        account = Account(cash=cash)
+        runtime = PaperTradingRuntime(gateway=gateway, account=account)
+
+        ticket = runtime.execute_order(order)
+
+        assert isinstance(ticket, OrderTicket)
+        assert ticket.status == OrderStatus.FILLED
+        assert ticket.filled_quantity == 100
+        gateway.submit_order.assert_called_once_with(order)
+        gateway.query_fills.assert_called_once_with(order.order_id)
+
+    def test_mock_gateway_reduces_cash(self) -> None:
+        """Mock gateway 成交应正确减少账户现金."""
+        order = _make_order(OrderSide.BUY, quantity=100, price=10.0)
+        gateway = _make_stub_gateway(order)
+        initial_cash = 100_000.0
+        cash = CashBook(available=initial_cash, settled=initial_cash, frozen=0.0)
+        account = Account(cash=cash)
+        runtime = PaperTradingRuntime(gateway=gateway, account=account)
+
+        runtime.execute_order(order)
+
+        view = account.get_view()
+        assert view.cash.available == initial_cash - 1000.0
+
+    def test_paper_broker_gateway_satisfies_protocol(self) -> None:
+        """PaperBrokerGateway 应满足 BrokerGateway Protocol."""
+        gateway = PaperBrokerGateway(initial_cash=100_000.0)
+        assert isinstance(gateway, BrokerGateway)

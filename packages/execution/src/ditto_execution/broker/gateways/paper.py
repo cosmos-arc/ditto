@@ -53,6 +53,8 @@ class PaperBrokerGateway:
     def submit_order(self, order: Order) -> OrderTicket:
         """Submit order, fill immediately at order price, return ticket."""
         ticket = self._book.submit(order)
+        # NOTE: 市价单 fill_price=0.0 是最小冒烟测试实现的简化；
+        # 生产级实现应以 last close price 成交。
         fill_price = order.price if order.price is not None else 0.0
 
         # Apply fill

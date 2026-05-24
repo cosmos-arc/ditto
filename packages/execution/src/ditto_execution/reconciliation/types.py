@@ -1,9 +1,8 @@
 """对账数据类型 — 差异枚举、差异条目、对账报告。"""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Literal
 
 from ditto_execution.orders.status import OrderStatus
 
@@ -44,6 +43,6 @@ class ReconciliationReport:
     trade_date: str
     expected_count: int
     actual_count: int
-    unmatched_count: int = 0
-    status: str = "pending"
+    diff_count: int = 0
+    status: Literal["matched", "mismatch", "pending"] = "pending"
     diffs: tuple[ReconciliationDiff, ...] = ()

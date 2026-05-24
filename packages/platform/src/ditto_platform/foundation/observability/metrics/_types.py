@@ -165,7 +165,7 @@ class SafeGauge:
 
     def __init__(self) -> None:
         self._value = 0.0
-        self._gauge: Any = None
+        self._gauge: object | None = None
 
     def set(self, value: float) -> None:
         """设置 Gauge 值。"""
@@ -179,7 +179,7 @@ class SafeGauge:
         """减少 Gauge 值。"""
         self._value = max(0.0, self._value - delta)
 
-    def _callback(self, options: object) -> list[metrics.Observation]:
+    def _callback(self, _options: object) -> list[metrics.Observation]:
         """ObservableGauge 回调函数。"""
         return [metrics.Observation(self._value, {})]
 

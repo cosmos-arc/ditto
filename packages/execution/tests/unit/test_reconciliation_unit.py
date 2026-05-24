@@ -85,13 +85,13 @@ class TestReconciliationReportBackwardCompat:
             trade_date="2026-03-01",
             expected_count=3,
             actual_count=2,
-            unmatched_count=1,
-            status="partial",
+            diff_count=1,
+            status="mismatch",
         )
         assert report.expected_count == 3
         assert report.actual_count == 2
-        assert report.unmatched_count == 1
-        assert report.status == "partial"
+        assert report.diff_count == 1
+        assert report.status == "mismatch"
 
     def test_default_diffs_is_empty_tuple(self) -> None:
         report = ReconciliationReport(
@@ -114,7 +114,7 @@ class TestReconciliationReportBackwardCompat:
             trade_date="2026-03-01",
             expected_count=1,
             actual_count=0,
-            unmatched_count=1,
+            diff_count=1,
             diffs=(diff,),
         )
         assert len(report.diffs) == 1
@@ -208,7 +208,7 @@ class TestReconcilePerfectMatch:
         assert report.diffs == ()
         assert report.expected_count == 2
         assert report.actual_count == 2
-        assert report.unmatched_count == 0
+        assert report.diff_count == 0
         assert report.status == "matched"
 
 
@@ -228,7 +228,7 @@ class TestReconcileMissingFill:
         assert len(report.diffs) == 1
         assert report.diffs[0].mismatch_type is MismatchType.MISSING_FILL
         assert report.diffs[0].order_id == "ord-1"
-        assert report.unmatched_count == 1
+        assert report.diff_count == 1
         assert report.status == "mismatch"
 
 

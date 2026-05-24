@@ -59,5 +59,5 @@ class ProtocolAdapterProvider(Provider):
 
     @provide
     def source_data_port(self, accessor: SourceAccessor) -> SourceDataPort:
-        """TushareSource → SourceDataPort."""
+        """SourceAccessor.tushare → SourceDataPort."""
         return accessor.tushare

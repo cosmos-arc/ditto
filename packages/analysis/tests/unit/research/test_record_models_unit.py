@@ -401,6 +401,12 @@ class TestSpineSpecFromRow:
         rec = ResearchSpineSpecRecord.from_row(row)
         assert rec.version == 5
 
+    def test_raises_on_non_int_version(self) -> None:
+        """version 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _spine_spec_row(version="bad")
+        with pytest.raises(ResearchDatasetError, match="version"):
+            ResearchSpineSpecRecord.from_row(row)
+
 
 # ---------------------------------------------------------------------------
 # ResearchDatasetSpecRecord.from_row
@@ -463,6 +469,12 @@ class TestDatasetSpecFromRow:
         with pytest.raises(ResearchDatasetError, match="dataset_id"):
             ResearchDatasetSpecRecord.from_row(row)
 
+    def test_raises_on_non_int_version(self) -> None:
+        """version 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _dataset_spec_row(version="bad")
+        with pytest.raises(ResearchDatasetError, match="version"):
+            ResearchDatasetSpecRecord.from_row(row)
+
 
 # ---------------------------------------------------------------------------
 # ResearchSpineSnapshotRecord.from_row
@@ -511,6 +523,18 @@ class TestSpineSnapshotFromRow:
         """spine_snapshot_id 为非字符串类型时抛出 ResearchDatasetError."""
         row = _spine_snapshot_row(spine_snapshot_id=99)
         with pytest.raises(ResearchDatasetError, match="spine_snapshot_id"):
+            ResearchSpineSnapshotRecord.from_row(row)
+
+    def test_raises_on_non_int_row_count(self) -> None:
+        """row_count 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _spine_snapshot_row(row_count="bad")
+        with pytest.raises(ResearchDatasetError, match="row_count"):
+            ResearchSpineSnapshotRecord.from_row(row)
+
+    def test_raises_on_non_int_version(self) -> None:
+        """version 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _spine_snapshot_row(version="bad")
+        with pytest.raises(ResearchDatasetError, match="version"):
             ResearchSpineSnapshotRecord.from_row(row)
 
 
@@ -609,4 +633,22 @@ class TestDatasetSnapshotFromRow:
         """snapshot_id 为非字符串类型时抛出 ResearchDatasetError."""
         row = _dataset_snapshot_row(snapshot_id=100)
         with pytest.raises(ResearchDatasetError, match="snapshot_id"):
+            ResearchDatasetSnapshotRecord.from_row(row)
+
+    def test_raises_on_non_int_dataset_spec_version(self) -> None:
+        """dataset_spec_version 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _dataset_snapshot_row(dataset_spec_version="bad")
+        with pytest.raises(ResearchDatasetError, match="dataset_spec_version"):
+            ResearchDatasetSnapshotRecord.from_row(row)
+
+    def test_raises_on_non_int_row_count(self) -> None:
+        """row_count 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _dataset_snapshot_row(row_count="bad")
+        with pytest.raises(ResearchDatasetError, match="row_count"):
+            ResearchDatasetSnapshotRecord.from_row(row)
+
+    def test_raises_on_non_int_spine_spec_version(self) -> None:
+        """spine_spec_version 为非 int 类型时抛出 ResearchDatasetError."""
+        row = _dataset_snapshot_row(spine_spec_version="bad")
+        with pytest.raises(ResearchDatasetError, match="spine_spec_version"):
             ResearchDatasetSnapshotRecord.from_row(row)

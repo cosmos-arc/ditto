@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import assert_never, cast
 
 import orjson
 import polars as pl
@@ -185,7 +186,7 @@ def _detect_late_arrivals(frame: pl.DataFrame, derived_id: str) -> pl.DataFrame:
 
 def _apply_late_arrival_policy(
     frame: pl.DataFrame,
-    policy: str,
+    policy: LateArrivalPolicy,
     late_flags: pl.Series,
 ) -> pl.DataFrame:
     """
@@ -227,15 +228,19 @@ def _apply_late_arrival_policy(
             f"Late arrival detected ({late_count} rows), snapshot must be rebuilt"
         )
 
-    raise ResearchDatasetError(
-        f"Unknown late arrival policy: {policy}",
-        policy=policy,
-        supported=tuple(item.value for item in LateArrivalPolicy),
-        supported_policies=tuple(item.value for item in LateArrivalPolicy),
-    )
+    assert_never(policy)
 
 
 # ============ Runtime Record Models (migrated from ditto_kernel.research) ============
+
+
+def _require_int(value: object, field_name: str) -> int:
+    """验证值为 int 类型（排除 bool），否则抛出 ResearchDatasetError."""
+    if type(value) is not int:
+        raise ResearchDatasetError(
+            f"{field_name} 必须是 int, 实际: {type(value).__name__}",
+        )
+    return value
 
 
 @dataclass(frozen=True)
@@ -259,8 +264,7 @@ class ResearchSpineSpecRecord:
             raise ResearchDatasetError(
                 f"from_row: spine_id is required, got {spine_id!r}",
             )
-        _version: object = row.get("version", 1)
-        version = _version if isinstance(_version, int) else 1
+        version = _require_int(row.get("version", 1), "version")
         return cls(
             spine_id=spine_id,
             universe_id=str(row["universe_id"]),
@@ -303,12 +307,10 @@ class ResearchDatasetSpecRecord:
             _di: list[str] = orjson.loads(derived_ids_raw)
             derived_ids = tuple(_di)
         elif isinstance(derived_ids_raw, (tuple, list)):
-            _di2: list[str] = orjson.loads(orjson.dumps(derived_ids_raw))
-            derived_ids = tuple(_di2)
+            derived_ids = tuple(str(x) for x in cast("list[str]", derived_ids_raw))
         else:
             derived_ids = ()
-        _version: object = row.get("version", 1)
-        version = _version if isinstance(_version, int) else 1
+        version = _require_int(row.get("version", 1), "version")
         return cls(
             dataset_id=dataset_id,
             spine_id=str(row["spine_id"]),
@@ -346,10 +348,8 @@ class ResearchSpineSnapshotRecord:
             raise ResearchDatasetError(
                 f"from_row: spine_snapshot_id is required, got {spine_snapshot_id!r}",
             )
-        _row_count: object = row["row_count"]
-        row_count = _row_count if isinstance(_row_count, int) else 0
-        _version: object = row.get("version", 1)
-        version = _version if isinstance(_version, int) else 1
+        row_count = _require_int(row["row_count"], "row_count")
+        version = _require_int(row.get("version", 1), "version")
         return cls(
             spine_snapshot_id=spine_snapshot_id,
             spine_id=str(row["spine_id"]),
@@ -399,8 +399,10 @@ class ResearchDatasetSnapshotRecord:
             _rv: dict[str, int] = orjson.loads(resolved_versions_raw)
             resolved_versions = _rv
         elif isinstance(resolved_versions_raw, dict):
-            _rv2: dict[str, int] = orjson.loads(orjson.dumps(resolved_versions_raw))
-            resolved_versions = _rv2
+            resolved_versions = {
+                str(k): int(v)
+                for k, v in cast("dict[str, int]", resolved_versions_raw).items()
+            }
         else:
             resolved_versions = {}
 
@@ -410,10 +412,10 @@ class ResearchDatasetSnapshotRecord:
             _ri: list[dict[str, str | int]] = orjson.loads(resolved_inputs_raw)
             resolved_inputs = tuple(_ri)
         elif isinstance(resolved_inputs_raw, (tuple, list)):
-            _ri2: list[dict[str, str | int]] = orjson.loads(
-                orjson.dumps(resolved_inputs_raw),
+            resolved_inputs = tuple(
+                {str(k): v for k, v in d.items()}
+                for d in cast("list[dict[str, str | int]]", resolved_inputs_raw)
             )
-            resolved_inputs = tuple(_ri2)
         else:
             resolved_inputs = ()
 
@@ -423,17 +425,21 @@ class ResearchDatasetSnapshotRecord:
             _ss: list[str] = orjson.loads(source_snapshot_ids_raw)
             source_snapshot_ids = tuple(_ss)
         elif isinstance(source_snapshot_ids_raw, (tuple, list)):
-            _ss2: list[str] = orjson.loads(orjson.dumps(source_snapshot_ids_raw))
-            source_snapshot_ids = tuple(_ss2)
+            source_snapshot_ids = tuple(
+                str(x) for x in cast("list[str]", source_snapshot_ids_raw)
+            )
         else:
             source_snapshot_ids = ()
 
-        _spec_ver: object = row["dataset_spec_version"]
-        dataset_spec_version = _spec_ver if isinstance(_spec_ver, int) else 0
-        _row_count: object = row["row_count"]
-        row_count = _row_count if isinstance(_row_count, int) else 0
-        _spine_spec_ver: object = row.get("spine_spec_version", 1)
-        spine_spec_version = _spine_spec_ver if isinstance(_spine_spec_ver, int) else 1
+        dataset_spec_version = _require_int(
+            row["dataset_spec_version"],
+            "dataset_spec_version",
+        )
+        row_count = _require_int(row["row_count"], "row_count")
+        spine_spec_version = _require_int(
+            row.get("spine_spec_version", 1),
+            "spine_spec_version",
+        )
         return cls(
             snapshot_id=snapshot_id,
             dataset_id=str(row["dataset_id"]),

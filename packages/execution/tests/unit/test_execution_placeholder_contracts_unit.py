@@ -65,8 +65,8 @@ def test_reconciliation_report_captures_summary_counts() -> None:
         trade_date="2026-05-05",
         expected_count=3,
         actual_count=2,
-        unmatched_count=1,
+        diff_count=1,
     )
 
-    assert report.unmatched_count == 1
+    assert report.diff_count == 1
     assert report.status == "pending"
