@@ -72,6 +72,43 @@ class TestPaperGatewayGetAccount:
         view = gw.get_account()
         assert view.cash.available == 1_000_000.0
 
+    def test_buy_reduces_cash(self) -> None:
+        gw = PaperBrokerGateway(initial_cash=100_000.0)
+        gw.submit_order(_order("buy-cash-1", quantity=100, price=10.0))
+        view = gw.get_account()
+        assert view.cash.available == 100_000.0 - 100 * 10.0
+
+    def test_sell_increases_cash(self) -> None:
+        gw = PaperBrokerGateway(initial_cash=100_000.0)
+        gw.submit_order(
+            _order("sell-cash-1", side=OrderSide.BUY, quantity=100, price=10.0),
+        )
+        gw.submit_order(
+            _order("sell-cash-2", side=OrderSide.SELL, quantity=100, price=12.0),
+        )
+        view = gw.get_account()
+        assert view.cash.available == 100_000.0 - 100 * 10.0 + 100 * 12.0
+
+    def test_buy_creates_position(self) -> None:
+        gw = PaperBrokerGateway(initial_cash=100_000.0)
+        order = _order("pos-1", quantity=200, price=5.0)
+        gw.submit_order(order)
+        view = gw.get_account()
+        assert order.instrument_id in view.positions
+        pos = view.positions[order.instrument_id]
+        assert pos.quantity == 200
+        assert pos.average_cost == 5.0
+
+    def test_sell_removes_position_when_flat(self) -> None:
+        gw = PaperBrokerGateway(initial_cash=100_000.0)
+        order = _order("flat-1", quantity=100, price=10.0)
+        gw.submit_order(order)
+        gw.submit_order(
+            _order("flat-2", side=OrderSide.SELL, quantity=100, price=11.0),
+        )
+        view = gw.get_account()
+        assert order.instrument_id not in view.positions
+
 
 # ---------------------------------------------------------------------------
 # E2A-2: submit_order — writes to book, returns OrderTicket, fills immediately

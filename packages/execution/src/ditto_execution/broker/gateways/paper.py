@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from types import MappingProxyType
 from uuid import uuid4
 
 from ditto_portfolio.accounting import FillEvent
-from ditto_portfolio.accounting.account import AccountView
+from ditto_portfolio.accounting.account import Account, AccountView
 from ditto_portfolio.accounting.cash import CashBook
 
 from ditto_execution.orders.book import OrderBook
@@ -28,7 +27,9 @@ class PaperBrokerGateway:
     def __init__(self, initial_cash: float = 0.0) -> None:
         self._book = OrderBook(journal=InMemoryOrderEventJournal())
         self._fills: dict[str, list[FillEvent]] = {}
-        self._initial_cash = initial_cash
+        self._account = Account(
+            cash=CashBook(available=initial_cash, settled=initial_cash, frozen=0.0),
+        )
 
     # -- BrokerGateway Protocol ------------------------------------------------
 
@@ -37,18 +38,7 @@ class PaperBrokerGateway:
 
     def get_account(self) -> AccountView:
         """Return a snapshot of the paper account state."""
-        cash = CashBook(
-            available=self._initial_cash,
-            settled=self._initial_cash,
-            frozen=0.0,
-        )
-        return AccountView(
-            positions=MappingProxyType({}),
-            cash=cash,
-            total_value=cash.total,
-            nav=cash.total,
-            exposure=0.0,
-        )
+        return self._account.get_view()
 
     def submit_order(self, order: Order) -> OrderTicket:
         """Submit order, fill immediately at order price, return ticket."""
@@ -87,6 +77,10 @@ class PaperBrokerGateway:
             leaves_quantity=0,
         )
         self._fills.setdefault(order.order_id, []).append(gw_fill)
+        self._account.apply_fill(
+            gw_fill,
+            settle_date=gw_fill.event_time.strftime("%Y-%m-%d"),
+        )
 
         return filled_ticket
 

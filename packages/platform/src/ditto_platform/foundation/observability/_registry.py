@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextvars
 from dataclasses import dataclass
 
 from .config import ObservabilityConfig
@@ -10,44 +9,30 @@ from .config import ObservabilityConfig
 
 @dataclass(frozen=True)
 class _RegistryState:
-    """Immutable registry state stored in ContextVar."""
+    """Immutable registry state."""
 
     initialized: bool = False
     config: ObservabilityConfig | None = None
 
 
-_UNSET: object = object()
-
-_var: contextvars.ContextVar[_RegistryState | object] = contextvars.ContextVar(
-    "observability_registry",
-    default=_UNSET,
-)
-
-
-def _get_state() -> _RegistryState:
-    state = _var.get()
-    if state is _UNSET:
-        return _RegistryState()
-    return state  # type: ignore[return-value]
+_state: list[_RegistryState] = [_RegistryState()]
 
 
 def is_initialized() -> bool:
-    return _get_state().initialized
+    return _state[0].initialized
 
 
 def set_initialized(value: bool) -> None:
-    state = _get_state()
-    _var.set(_RegistryState(initialized=value, config=state.config))
+    _state[0] = _RegistryState(initialized=value, config=_state[0].config)
 
 
 def get_config() -> ObservabilityConfig | None:
-    return _get_state().config
+    return _state[0].config
 
 
 def set_config(config: ObservabilityConfig) -> None:
-    state = _get_state()
-    _var.set(_RegistryState(initialized=state.initialized, config=config))
+    _state[0] = _RegistryState(initialized=_state[0].initialized, config=config)
 
 
 def reset() -> None:
-    _var.set(_RegistryState())
+    _state[0] = _RegistryState()
