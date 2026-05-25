@@ -11,16 +11,16 @@ from ditto_application.processes.ingestion.coordinator_factory import (
 )
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.queries.metadata import MetadataQueryFacade
-from ditto_data.ingestion.freeze_service import FreezeService
-from ditto_data.ingestion.ingestion_cursor_service import IngestionCursorService
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.ingestion.freeze_store import FreezeStore
+from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
+from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_data.services.capital_store import CapitalStore
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.services.source_service import SourceService
+from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
 
 from ditto_apps.registry.container import make_app_container
@@ -55,15 +55,15 @@ def create_ingestion_bundle(
         metadata_service = container.get(MetadataService)
         market_service = container.get(MarketService)
         market_write_service = container.get(MarketWriteService)
-        fundamental_service = container.get(FundamentalService)
-        capital_service = container.get(CapitalService)
+        fundamental_store = container.get(FundamentalStore)
+        capital_store = container.get(CapitalStore)
         macro_service = container.get(MacroService)
-        source_service = container.get(SourceService)
-        ingestion_log_service = container.get(IngestionLogService)
-        ingestion_cursor_service = container.get(IngestionCursorService)
+        source_accessor = container.get(SourceAccessor)
+        ingestion_log_store = container.get(IngestionLogStore)
+        ingestion_cursor_store = container.get(IngestionCursorStore)
         exchange_transformers = container.get(ExchangeTransformers)
         quality_checker = container.get(CheckDataQualityHandler)
-        freeze_service = container.get(FreezeService)
+        freeze_store = container.get(FreezeStore)
 
         # 创建协调器
         with create_coordinator(
@@ -71,26 +71,26 @@ def create_ingestion_bundle(
                 metadata_service=metadata_service,
                 market_service=market_service,
                 market_write_service=market_write_service,
-                fundamental_service=fundamental_service,
-                capital_service=capital_service,
+                fundamental_store=fundamental_store,
+                capital_store=capital_store,
                 macro_service=macro_service,
-                source_service=source_service,
-                ingestion_log_service=ingestion_log_service,
+                source_accessor=source_accessor,
+                ingestion_log_store=ingestion_log_store,
             ),
             source_name=source,
-            ingestion_cursor_service=ingestion_cursor_service,
+            ingestion_cursor_store=ingestion_cursor_store,
             quality_checker=quality_checker,
-            freeze_service=freeze_service,
+            freeze_store=freeze_store,
         ) as coordinator:
             # 创建管理器
             backfill_manager = BackfillManager(
                 coordinator=coordinator,
                 metadata_service=metadata_service,
-                ingestion_log_service=ingestion_log_service,
+                ingestion_log_store=ingestion_log_store,
             )
             retry_manager = RetryManager(
                 coordinator=coordinator,
-                ingestion_log_service=ingestion_log_service,
+                ingestion_log_store=ingestion_log_store,
                 source=source,
             )
             # 创建查询 facade

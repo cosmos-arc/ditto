@@ -43,9 +43,5 @@ def __getattr__(name: str) -> object:
         from . import testing  # noqa: PLC0415
 
         return getattr(testing, name)
-    if name == "_ObservabilityRegistry":
-        from ._registry import ObservabilityRegistry  # noqa: PLC0415
-
-        return ObservabilityRegistry
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

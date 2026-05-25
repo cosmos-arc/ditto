@@ -9,7 +9,7 @@ from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
-from ditto_features.compile_cache import SQLiteCompileCache
+from ditto_features.compile_cache import SQLiteCompileCache, SQLiteCompileCacheBackend
 from ditto_features.services import (
     ArtifactPersistenceService,
     DerivedArtifactReader,
@@ -28,7 +28,6 @@ from ditto_features.storage.runtime.publication_safety import (
     ShadowReportReader,
     ShadowReportWriter,
 )
-from ditto_platform.foundation import SQLiteClient
 from ditto_platform.services import AlertManager
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
@@ -63,7 +62,7 @@ class AppProcessProvider(Provider):
     @provide
     def compile_cache_service(
         self,
-        sqlite_client: SQLiteClient,
+        sqlite_client: SQLiteCompileCacheBackend,
     ) -> SQLiteCompileCache:
         """编译缓存服务."""
         return SQLiteCompileCache(sqlite_client)

@@ -96,16 +96,16 @@ def mock_market_write_service():
 
 
 @pytest.fixture
-def mock_fundamental_service():
-    """创建 Mock FundamentalService."""
+def mock_fundamental_store():
+    """创建 Mock FundamentalStore."""
     service = MagicMock()
     service.write.return_value = MagicMock(records_written=1)
     return service
 
 
 @pytest.fixture
-def mock_capital_service():
-    """创建 Mock CapitalService."""
+def mock_capital_store():
+    """创建 Mock CapitalStore."""
     service = MagicMock()
     service.write.return_value = MagicMock(records_written=1)
     return service
@@ -120,8 +120,8 @@ def mock_macro_service():
 
 
 @pytest.fixture
-def mock_ingestion_log_service():
-    """创建 Mock IngestionLogService."""
+def mock_ingestion_log_store():
+    """创建 Mock IngestionLogStore."""
     service = MagicMock()
     service.get_log = MagicMock(return_value=None)
     service.save_log = MagicMock(return_value=None)
@@ -140,10 +140,10 @@ def mock_source():
 def coordinator(
     mock_metadata_service,
     mock_market_write_service,
-    mock_fundamental_service,
-    mock_capital_service,
+    mock_fundamental_store,
+    mock_capital_store,
     mock_macro_service,
-    mock_ingestion_log_service,
+    mock_ingestion_log_store,
     mock_source,
 ):
     """创建 IngestionCoordinator 实例."""
@@ -154,8 +154,8 @@ def coordinator(
                 query=mock_market_write_service,
                 write=mock_market_write_service,
             ),
-            fundamental=mock_fundamental_service,
-            capital=mock_capital_service,
+            fundamental=mock_fundamental_store,
+            capital=mock_capital_store,
             macro=mock_macro_service,
         ),
         fetchers=SourceFetchers(
@@ -166,7 +166,7 @@ def coordinator(
             macro=mock_source,
         ),
         config=IngestionCoordinatorConfig(
-            ingestion_log_service=mock_ingestion_log_service,
+            ingestion_log_store=mock_ingestion_log_store,
         ),
     )
 
@@ -181,7 +181,7 @@ class TestIngestByInstrument:
         mock_metadata_service,
         mock_source,
         mock_market_write_service,
-        mock_ingestion_log_service,
+        mock_ingestion_log_store,
     ) -> None:
         """成功通过 ticker 按标的摄取数据."""
         # Arrange
@@ -210,7 +210,7 @@ class TestIngestByInstrument:
         )
         mock_source.fetch_stock_daily.return_value = source_df
         mock_market_write_service.save_bars.return_value = 3
-        mock_ingestion_log_service.save_log.return_value = IngestionLog(
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-01-01",
@@ -245,7 +245,7 @@ class TestIngestByInstrument:
         mock_metadata_service,
         mock_source,
         mock_market_write_service,
-        mock_ingestion_log_service,
+        mock_ingestion_log_store,
     ) -> None:
         """成功通过 instrument_id 按标的摄取数据."""
         # Arrange
@@ -265,7 +265,7 @@ class TestIngestByInstrument:
         )
         mock_source.fetch_stock_daily.return_value = source_df
         mock_market_write_service.save_bars.return_value = 1
-        mock_ingestion_log_service.save_log.return_value = IngestionLog(
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-01-01",
@@ -293,7 +293,7 @@ class TestIngestByInstrument:
         mock_metadata_service,
         mock_source,
         mock_market_write_service,
-        mock_ingestion_log_service,
+        mock_ingestion_log_store,
     ) -> None:
         """成功通过 standard_ticker 按标的摄取数据."""
         # Arrange
@@ -313,7 +313,7 @@ class TestIngestByInstrument:
         )
         mock_source.fetch_stock_daily.return_value = source_df
         mock_market_write_service.save_bars.return_value = 1
-        mock_ingestion_log_service.save_log.return_value = IngestionLog(
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-01-01",
@@ -336,7 +336,7 @@ class TestIngestByInstrument:
         )
 
     def test_ingest_by_instrument_empty_data(
-        self, coordinator, mock_source, mock_ingestion_log_service
+        self, coordinator, mock_source, mock_ingestion_log_store
     ) -> None:
         """数据源返回空数据时返回失败结果."""
         # Arrange
@@ -346,7 +346,7 @@ class TestIngestByInstrument:
             end_date="2024-01-31",
         )
         mock_source.fetch_stock_daily.return_value = pl.DataFrame()
-        mock_ingestion_log_service.save_log.return_value = IngestionLog(
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-01-01",
@@ -377,7 +377,7 @@ class TestIngestByInstrument:
             coordinator.ingest_by_instrument("calendar", params)
 
     def test_ingest_by_instrument_fetch_error(
-        self, coordinator, mock_source, mock_ingestion_log_service
+        self, coordinator, mock_source, mock_ingestion_log_store
     ) -> None:
         """数据源获取失败时返回失败结果."""
         # Arrange
@@ -387,7 +387,7 @@ class TestIngestByInstrument:
             end_date="2024-01-31",
         )
         mock_source.fetch_stock_daily.side_effect = Exception("Network error")
-        mock_ingestion_log_service.save_log.return_value = IngestionLog(
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
             dataset="stock_daily",
             source="tushare",
             trade_date="2024-01-01",

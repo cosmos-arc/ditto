@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from types import MappingProxyType
 
 from ditto_kernel.events import EventBus
@@ -41,7 +41,6 @@ class AccountView:
     exposure: float
 
 
-@dataclass
 class Account:
     """
     可变账户状态 — state owner (Brokerage) 持有此实例。
@@ -55,12 +54,9 @@ class Account:
 
     """
 
-    _positions: dict[InstrumentId, Position] = field(default_factory=dict, init=False)
-    _cash: CashBook = field(
-        default_factory=lambda: CashBook(available=0.0, settled=0.0, frozen=0.0),
-        init=False,
-        repr=False,
-    )
+    _positions: dict[InstrumentId, Position]
+    _cash: CashBook
+    _event_bus: EventBus | None
 
     def __init__(
         self,
@@ -77,7 +73,6 @@ class Account:
             event_bus: 事件总线（可选，用于发布 PositionChanged 事件）
 
         """
-        # 绕过 dataclass 自动生成的 __init__，直接设置属性
         object.__setattr__(
             self,
             "_positions",
@@ -238,7 +233,7 @@ class Account:
                 existing,
                 quantity=new_qty,
                 available_quantity=new_avail,
-                market_value=existing.average_cost * new_qty,
+                market_value=price * new_qty,
                 realized_pnl=existing.realized_pnl + realized,
                 total_fees=existing.total_fees + fill.fee,
             )

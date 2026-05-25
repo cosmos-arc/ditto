@@ -6,6 +6,7 @@ from dataclasses import FrozenInstanceError
 from datetime import datetime
 
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
@@ -16,9 +17,13 @@ from ditto_portfolio.accounting.position import Position
 # Helpers
 # ---------------------------------------------------------------------------
 
+_INSTRUMENT: InstrumentId = InstrumentId(600_000)
+_INSTRUMENT_2: InstrumentId = InstrumentId(600_001)
+_INSTRUMENT_OTHER: InstrumentId = InstrumentId(600_099)
+
 
 def _make_fill(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = _INSTRUMENT,
     direction: OrderSide = OrderSide.BUY,
     filled_quantity: int = 1000,
     fill_price: float = 10.5,
@@ -45,7 +50,7 @@ def _make_fill(
 
 def _make_account(
     cash: float = 1_000_000.0,
-    positions: dict[int, Position] | None = None,
+    positions: dict[InstrumentId, Position] | None = None,
 ) -> Account:
     """创建测试用 Account。"""
     return Account(
@@ -71,8 +76,8 @@ class TestAccount:
         account = Account(
             cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
             positions={
-                1: Position(
-                    instrument_id=1,
+                _INSTRUMENT: Position(
+                    instrument_id=_INSTRUMENT,
                     quantity=100,
                     available_quantity=0,
                     average_cost=0.452,
@@ -84,14 +89,14 @@ class TestAccount:
             },
         )
         # Account 本身不是 frozen — positions 可通过构造器传入
-        assert 1 in account.positions
+        assert _INSTRUMENT in account.positions
 
     def test_get_view_returns_frozen_snapshot(self) -> None:
         account = Account(
             cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
             positions={
-                1: Position(
-                    instrument_id=1,
+                _INSTRUMENT: Position(
+                    instrument_id=_INSTRUMENT,
                     quantity=100,
                     available_quantity=0,
                     average_cost=0.452,
@@ -106,9 +111,14 @@ class TestAccount:
         assert view.nav == pytest.approx(1000045.2)
         assert view.total_value == pytest.approx(1000045.2)
         # view 是 frozen — 通过 apply_fill 修改 Account 不影响已有 view
-        fill = _make_fill(instrument_id=2, filled_quantity=200, fill_price=4.0, fee=0.0)
+        fill = _make_fill(
+            instrument_id=_INSTRUMENT_2,
+            filled_quantity=200,
+            fill_price=4.0,
+            fee=0.0,
+        )
         account.apply_fill(fill, settle_date="2026-03-02")
-        assert 2 not in view.positions
+        assert _INSTRUMENT_2 not in view.positions
 
 
 # ---------------------------------------------------------------------------
@@ -129,8 +139,8 @@ class TestAccountView:
         account = Account(
             cash=CashBook(available=1000000.0, settled=1000000.0, frozen=0.0),
             positions={
-                1: Position(
-                    instrument_id=1,
+                _INSTRUMENT: Position(
+                    instrument_id=_INSTRUMENT,
                     quantity=100,
                     available_quantity=0,
                     average_cost=0.452,
@@ -144,8 +154,8 @@ class TestAccountView:
         view = account.get_view()
         # positions 通过 MappingProxyType 暴露，不可写
         with pytest.raises(TypeError):
-            view.positions[99] = Position(  # type: ignore[index]
-                instrument_id=99,
+            view.positions[_INSTRUMENT_OTHER] = Position(  # type: ignore[index]
+                instrument_id=_INSTRUMENT_OTHER,
                 quantity=1,
                 available_quantity=1,
                 average_cost=1.0,
@@ -171,8 +181,8 @@ class TestAccountApplyFillBuy:
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        assert 1 in account.positions
-        pos = account.positions[1]
+        assert _INSTRUMENT in account.positions
+        pos = account.positions[_INSTRUMENT]
         assert pos.quantity == 1000
         assert pos.available_quantity == 0
         assert pos.average_cost == pytest.approx(10.5)
@@ -184,7 +194,7 @@ class TestAccountApplyFillBuy:
     def test_buy_adds_to_existing_position(self) -> None:
         """BUY: 加仓, 加权平均成本正确。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -193,12 +203,12 @@ class TestAccountApplyFillBuy:
             realized_pnl=0.0,
             total_fees=3.0,
         )
-        account = _make_account(positions={1: existing})
+        account = _make_account(positions={_INSTRUMENT: existing})
         fill = _make_fill(filled_quantity=500, fill_price=12.0, fee=4.0)
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        pos = account.positions[1]
+        pos = account.positions[_INSTRUMENT]
         assert pos.quantity == 1000
         # 加权平均: (10.0 * 500 + 12.0 * 500) / 1000 = 11.0
         assert pos.average_cost == pytest.approx(11.0)
@@ -226,9 +236,13 @@ class TestAccountApplyFillBuy:
         """BUY: on_frozen 回调被正确调用。"""
         account = _make_account()
         fill = _make_fill(filled_quantity=800, fill_price=10.0, fee=3.0)
-        frozen_calls: list[tuple[int, str, int]] = []
+        frozen_calls: list[tuple[InstrumentId, str, int]] = []
 
-        def on_frozen(instrument_id: int, settle_date: str, quantity: int) -> None:
+        def on_frozen(
+            instrument_id: InstrumentId,
+            settle_date: str,
+            quantity: int,
+        ) -> None:
             frozen_calls.append((instrument_id, settle_date, quantity))
 
         account.apply_fill(
@@ -238,7 +252,7 @@ class TestAccountApplyFillBuy:
         )
 
         assert len(frozen_calls) == 1
-        assert frozen_calls[0] == (1, "2026-03-03", 800)
+        assert frozen_calls[0] == (_INSTRUMENT, "2026-03-03", 800)
 
     def test_buy_no_callback_does_not_error(self) -> None:
         """BUY: 不传 on_frozen 不报错 (T+0 场景)。"""
@@ -248,7 +262,7 @@ class TestAccountApplyFillBuy:
         account.apply_fill(fill, settle_date="2026-03-02")
 
         # Position created, available_quantity = 0 (no callback to thaw)
-        pos = account.positions[1]
+        pos = account.positions[_INSTRUMENT]
         assert pos.available_quantity == 0
 
 
@@ -258,7 +272,7 @@ class TestAccountApplyFillSell:
     def test_sell_reduces_position(self) -> None:
         """SELL: 部分卖出, quantity 和 available_quantity 减少。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -267,7 +281,7 @@ class TestAccountApplyFillSell:
             realized_pnl=0.0,
             total_fees=5.0,
         )
-        account = _make_account(positions={1: existing})
+        account = _make_account(positions={_INSTRUMENT: existing})
         fill = _make_fill(
             direction=OrderSide.SELL,
             filled_quantity=400,
@@ -277,18 +291,18 @@ class TestAccountApplyFillSell:
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        pos = account.positions[1]
+        pos = account.positions[_INSTRUMENT]
         assert pos.quantity == 600
         assert pos.available_quantity == 600
         # realized_pnl = (12.0 - 10.0) * 400 = 800
         assert pos.realized_pnl == pytest.approx(800.0)
-        assert pos.market_value == pytest.approx(10.0 * 600)
+        assert pos.market_value == pytest.approx(12.0 * 600)
         assert pos.total_fees == pytest.approx(8.0)
 
     def test_sell_complete_exit_removes_position(self) -> None:
         """SELL: 全部卖出, 仓位被移除。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -297,7 +311,7 @@ class TestAccountApplyFillSell:
             realized_pnl=0.0,
             total_fees=5.0,
         )
-        account = _make_account(positions={1: existing})
+        account = _make_account(positions={_INSTRUMENT: existing})
         fill = _make_fill(
             direction=OrderSide.SELL,
             filled_quantity=1000,
@@ -307,12 +321,12 @@ class TestAccountApplyFillSell:
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        assert 1 not in account.positions
+        assert _INSTRUMENT not in account.positions
 
     def test_sell_credits_cash(self) -> None:
         """SELL: 现金增加 = amount - fee。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -321,7 +335,7 @@ class TestAccountApplyFillSell:
             realized_pnl=0.0,
             total_fees=5.0,
         )
-        account = _make_account(cash=100000.0, positions={1: existing})
+        account = _make_account(cash=100000.0, positions={_INSTRUMENT: existing})
         fill = _make_fill(
             direction=OrderSide.SELL,
             filled_quantity=500,
@@ -340,7 +354,7 @@ class TestAccountApplyFillSell:
     def test_sell_realized_pnl_calculation(self) -> None:
         """SELL: 已实现盈亏 = (卖出价 - 平均成本) * 数量。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -349,7 +363,7 @@ class TestAccountApplyFillSell:
             realized_pnl=50.0,  # 之前有已实现盈亏
             total_fees=5.0,
         )
-        account = _make_account(positions={1: existing})
+        account = _make_account(positions={_INSTRUMENT: existing})
         fill = _make_fill(
             direction=OrderSide.SELL,
             filled_quantity=300,
@@ -359,14 +373,14 @@ class TestAccountApplyFillSell:
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        pos = account.positions[1]
+        pos = account.positions[_INSTRUMENT]
         # realized = 50.0 + (12.0 - 10.0) * 300 = 50.0 + 600.0
         assert pos.realized_pnl == pytest.approx(650.0)
 
     def test_sell_at_loss(self) -> None:
         """SELL: 亏损卖出, realized_pnl 为负。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=500,
             available_quantity=500,
             average_cost=10.0,
@@ -375,7 +389,7 @@ class TestAccountApplyFillSell:
             realized_pnl=0.0,
             total_fees=2.0,
         )
-        account = _make_account(positions={1: existing})
+        account = _make_account(positions={_INSTRUMENT: existing})
         fill = _make_fill(
             direction=OrderSide.SELL,
             filled_quantity=500,
@@ -386,7 +400,7 @@ class TestAccountApplyFillSell:
         account.apply_fill(fill, settle_date="2026-03-02")
 
         # 全部卖出, 仓位移除
-        assert 1 not in account.positions
+        assert _INSTRUMENT not in account.positions
         # 但在移除前, realized_pnl = (8.0 - 10.0) * 500 = -1000
         # 验证通过 cash 变化间接确认
         amount = 8.0 * 500
@@ -396,7 +410,7 @@ class TestAccountApplyFillSell:
     def test_sell_does_not_call_frozen_callback(self) -> None:
         """SELL: on_frozen 回调不被调用。"""
         existing = Position(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             quantity=1000,
             available_quantity=1000,
             average_cost=10.0,
@@ -405,16 +419,20 @@ class TestAccountApplyFillSell:
             realized_pnl=0.0,
             total_fees=5.0,
         )
-        account = _make_account(positions={1: existing})
+        account = _make_account(positions={_INSTRUMENT: existing})
         fill = _make_fill(
             direction=OrderSide.SELL,
             filled_quantity=500,
             fill_price=12.0,
             fee=3.0,
         )
-        frozen_calls: list[tuple[int, str, int]] = []
+        frozen_calls: list[tuple[InstrumentId, str, int]] = []
 
-        def on_frozen(instrument_id: int, settle_date: str, quantity: int) -> None:
+        def on_frozen(
+            instrument_id: InstrumentId,
+            settle_date: str,
+            quantity: int,
+        ) -> None:
             frozen_calls.append((instrument_id, settle_date, quantity))
 
         account.apply_fill(
@@ -433,7 +451,7 @@ class TestAccountApplyFillEdgeCases:
         """多次买入不同标的, 各自独立。"""
         account = _make_account()
         fill1 = _make_fill(
-            instrument_id=1,
+            instrument_id=_INSTRUMENT,
             filled_quantity=500,
             fill_price=10.0,
             fee=3.0,
@@ -441,7 +459,7 @@ class TestAccountApplyFillEdgeCases:
         fill2 = _make_fill(
             fill_id="fill-2",
             order_id="ORD-002",
-            instrument_id=2,
+            instrument_id=_INSTRUMENT_2,
             filled_quantity=300,
             fill_price=20.0,
             fee=4.0,
@@ -451,8 +469,8 @@ class TestAccountApplyFillEdgeCases:
         account.apply_fill(fill2, settle_date="2026-03-02")
 
         assert len(account.positions) == 2
-        assert account.positions[1].quantity == 500
-        assert account.positions[2].quantity == 300
+        assert account.positions[_INSTRUMENT].quantity == 500
+        assert account.positions[_INSTRUMENT_2].quantity == 300
 
     def test_buy_sell_sequence(self) -> None:
         """买入后卖出完整序列。"""
@@ -470,11 +488,11 @@ class TestAccountApplyFillEdgeCases:
         account.apply_fill(buy_fill, settle_date="2026-03-02")
         # T+0: 模拟 Brokerage 立即解冻 (settle_date <= trade_date)
         # 通过重新构造 Account 模拟解冻（外部 positions 属性不可直接赋值）
-        pos = account.positions[1]
+        pos = account.positions[_INSTRUMENT]
         account = Account(
             cash=account.cash,
             positions={
-                1: Position(
+                _INSTRUMENT: Position(
                     instrument_id=pos.instrument_id,
                     quantity=pos.quantity,
                     available_quantity=pos.quantity,  # 解冻
@@ -489,7 +507,7 @@ class TestAccountApplyFillEdgeCases:
 
         account.apply_fill(sell_fill, settle_date="2026-03-02")
 
-        assert 1 not in account.positions
+        assert _INSTRUMENT not in account.positions
         # Cash: 100000 - 10*1000 - 5 + 11*1000 - 5 = 100990
         assert account.cash.available == pytest.approx(100990.0)
 
@@ -505,7 +523,7 @@ class TestAccountApplyFillEdgeCases:
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        assert 1 not in account.positions
+        assert _INSTRUMENT not in account.positions
         # Cash 仍应更新 (SELL credits cash)
         assert account.cash.available == pytest.approx(1_000_000.0 + 10000.0 - 5.0)
 
@@ -516,7 +534,7 @@ class TestAccountApplyFillEdgeCases:
 
         account.apply_fill(fill, settle_date="2026-03-02")
 
-        pos = account.positions[1]
+        pos = account.positions[_INSTRUMENT]
         assert pos.total_fees == 0.0
         assert account.cash.available == pytest.approx(1_000_000.0 - 10000.0)
         assert account.cash.settled == pytest.approx(1_000_000.0)
@@ -533,7 +551,7 @@ class TestAccountApplyFillAtomicity:
         # Patch _calculate_new_cash to raise after position is calculated
         original_calc_cash = account._calculate_new_cash
 
-        def _failing_calc_cash(f: FillEvent) -> CashBook:
+        def _failing_calc_cash(_f: FillEvent) -> CashBook:
             # Simulate an error during cash calculation
             raise RuntimeError("cash calc boom")
 
@@ -543,7 +561,7 @@ class TestAccountApplyFillAtomicity:
             account.apply_fill(fill, settle_date="2026-03-02")
 
         # Position should NOT have been modified
-        assert 1 not in account.positions
+        assert _INSTRUMENT not in account.positions
         # Cash should be unchanged
         assert account.cash.available == pytest.approx(100000.0)
 
@@ -557,7 +575,9 @@ class TestAccountApplyFillAtomicity:
 
         original_calc_pos = account._calculate_new_position
 
-        def _failing_calc_pos(f: FillEvent) -> dict[str, tuple[int, Position | None]]:
+        def _failing_calc_pos(
+            _f: FillEvent,
+        ) -> dict[str, tuple[InstrumentId, Position | None]]:
             raise RuntimeError("position calc boom")
 
         account._calculate_new_position = _failing_calc_pos  # type: ignore[assignment]
@@ -577,8 +597,8 @@ class TestAccountApplyFillAtomicity:
         """外部通过 account.positions 无法直接修改持仓。"""
         account = _make_account(cash=100000.0)
         with pytest.raises(TypeError):
-            account.positions[1] = Position(  # type: ignore[index]
-                instrument_id=1,
+            account.positions[_INSTRUMENT] = Position(  # type: ignore[index]
+                instrument_id=_INSTRUMENT,
                 quantity=100,
                 available_quantity=0,
                 average_cost=10.0,

@@ -6,6 +6,7 @@ from datetime import datetime
 
 from ditto_kernel import DomainEvent
 from ditto_kernel.events import EventName, SimpleEventBus
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide
 from ditto_portfolio.accounting.account import Account
 from ditto_portfolio.accounting.cash import CashBook
@@ -17,9 +18,11 @@ from ditto_portfolio.events import PositionChanged
 # Helpers
 # ---------------------------------------------------------------------------
 
+_INSTRUMENT: InstrumentId = InstrumentId(600_000)
+
 
 def _make_fill(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = _INSTRUMENT,
     direction: OrderSide = OrderSide.BUY,
     filled_quantity: int = 1000,
     fill_price: float = 10.5,
@@ -44,7 +47,7 @@ def _make_fill(
 
 
 def _make_position(
-    instrument_id: int = 1,
+    instrument_id: InstrumentId = _INSTRUMENT,
     quantity: int = 1000,
     available_quantity: int = 1000,
     average_cost: float = 10.0,
@@ -86,7 +89,7 @@ class TestAccountEventPublishing:
         assert len(received) == 1
         event = received[0]
         assert isinstance(event, PositionChanged)
-        assert event.instrument_id == 1
+        assert event.instrument_id == _INSTRUMENT
         assert event.quantity_change == 500.0
         assert event.new_quantity == 500.0
 
@@ -98,7 +101,7 @@ class TestAccountEventPublishing:
 
         account = Account(
             cash=CashBook(available=1_000_000.0, settled=1_000_000.0, frozen=0.0),
-            positions={1: _make_position(quantity=1000)},
+            positions={_INSTRUMENT: _make_position(quantity=1000)},
             event_bus=bus,
         )
         fill = _make_fill(
@@ -112,7 +115,7 @@ class TestAccountEventPublishing:
         assert len(received) == 1
         event = received[0]
         assert isinstance(event, PositionChanged)
-        assert event.instrument_id == 1
+        assert event.instrument_id == _INSTRUMENT
         assert event.quantity_change == -400.0
         assert event.new_quantity == 600.0
 
@@ -124,7 +127,7 @@ class TestAccountEventPublishing:
 
         account = Account(
             cash=CashBook(available=1_000_000.0, settled=1_000_000.0, frozen=0.0),
-            positions={1: _make_position(quantity=1000)},
+            positions={_INSTRUMENT: _make_position(quantity=1000)},
             event_bus=bus,
         )
         fill = _make_fill(
@@ -182,7 +185,7 @@ class TestAccountEventPublishing:
 
         account = Account(
             cash=CashBook(available=1_000_000.0, settled=1_000_000.0, frozen=0.0),
-            positions={1: _make_position(quantity=500, average_cost=10.0)},
+            positions={_INSTRUMENT: _make_position(quantity=500, average_cost=10.0)},
             event_bus=bus,
         )
         fill = _make_fill(filled_quantity=300, fill_price=12.0)

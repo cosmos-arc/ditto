@@ -30,20 +30,30 @@ class TestSupportedInstrumentDatasets:
             assert member in valid_values, f"{member!r} 不在 Dataset 枚举中"
 
     def test_is_frozen_set(self) -> None:
-        """SUPPORTED_INSTRUMENT_DATASETS 是 set 类型."""
-        assert isinstance(SUPPORTED_INSTRUMENT_DATASETS, set)
+        """SUPPORTED_INSTRUMENT_DATASETS 是不可变集合."""
+        assert isinstance(SUPPORTED_INSTRUMENT_DATASETS, frozenset)
 
     def test_contains_expected_datasets(self) -> None:
-        """包含关键预期数据集."""
+        """包含支持按标的摄取的数据集."""
         expected = {
             Dataset.STOCK_DAILY,
             Dataset.ETF_DAILY,
             Dataset.INDEX_DAILY,
             Dataset.ADJ_FACTOR,
             Dataset.FUND_ADJ,
-            Dataset.STOCK_STATUS,
+            Dataset.VALUATION_METRICS,
+            Dataset.BALANCE_SHEET,
+            Dataset.INCOME_STATEMENT,
+            Dataset.CASH_FLOW,
+            Dataset.DIVIDEND,
+            Dataset.MARGIN_TRADING,
+            Dataset.PLEDGE_RATIO,
         }
-        assert expected.issubset(SUPPORTED_INSTRUMENT_DATASETS)
+        assert expected == SUPPORTED_INSTRUMENT_DATASETS
+
+    def test_stock_status_is_not_instrument_supported(self) -> None:
+        """Stock status 不支持按标的摄取."""
+        assert Dataset.STOCK_STATUS not in SUPPORTED_INSTRUMENT_DATASETS
 
     def test_does_not_contain_non_instrument_datasets(self) -> None:
         """不应包含非按标的摄取的数据集（如 calendar、stock_basic）."""

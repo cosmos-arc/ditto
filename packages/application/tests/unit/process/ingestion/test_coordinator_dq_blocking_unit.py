@@ -34,14 +34,14 @@ class TestDQBlockingBehavior:
         # Mock services
         mock_metadata_service = mocker.MagicMock()
         mock_market_service = mocker.MagicMock()
-        mock_fundamental_service = mocker.MagicMock()
-        mock_capital_service = mocker.MagicMock()
+        mock_fundamental_store = mocker.MagicMock()
+        mock_capital_store = mocker.MagicMock()
         mock_macro_service = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_ingestion_log_service = mocker.MagicMock()
+        mock_ingestion_log_store = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_ingestion_log_service.get_log.return_value = None
+        mock_ingestion_log_store.get_log.return_value = None
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -51,8 +51,8 @@ class TestDQBlockingBehavior:
                     query=mock_market_service,
                     write=mock_market_service,
                 ),
-                fundamental=mock_fundamental_service,
-                capital=mock_capital_service,
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
                 macro=mock_macro_service,
             ),
             fetchers=SourceFetchers(
@@ -63,7 +63,7 @@ class TestDQBlockingBehavior:
                 macro=mock_source,
             ),
             config=IngestionCoordinatorConfig(
-                ingestion_log_service=mock_ingestion_log_service,
+                ingestion_log_store=mock_ingestion_log_store,
             ),
         )
 
@@ -121,14 +121,14 @@ class TestDQBlockingBehavior:
         # Mock services
         mock_metadata_service = mocker.MagicMock()
         mock_market_service = mocker.MagicMock()
-        mock_fundamental_service = mocker.MagicMock()
-        mock_capital_service = mocker.MagicMock()
+        mock_fundamental_store = mocker.MagicMock()
+        mock_capital_store = mocker.MagicMock()
         mock_macro_service = mocker.MagicMock()
         mock_source = mocker.MagicMock()
-        mock_ingestion_log_service = mocker.MagicMock()
+        mock_ingestion_log_store = mocker.MagicMock()
 
         # Mock metadata manager to not skip
-        mock_ingestion_log_service.get_log.return_value = None
+        mock_ingestion_log_store.get_log.return_value = None
 
         # Create coordinator
         coordinator = IngestionCoordinator(
@@ -138,8 +138,8 @@ class TestDQBlockingBehavior:
                     query=mock_market_service,
                     write=mock_market_service,
                 ),
-                fundamental=mock_fundamental_service,
-                capital=mock_capital_service,
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
                 macro=mock_macro_service,
             ),
             fetchers=SourceFetchers(
@@ -150,7 +150,7 @@ class TestDQBlockingBehavior:
                 macro=mock_source,
             ),
             config=IngestionCoordinatorConfig(
-                ingestion_log_service=mock_ingestion_log_service,
+                ingestion_log_store=mock_ingestion_log_store,
             ),
         )
 
@@ -184,9 +184,9 @@ class TestDQBlockingBehavior:
         coordinator.ingest_date("stock_daily", "2024-01-02")
 
         # Verify log was saved with FAIL status
-        mock_ingestion_log_service.save_log.assert_called_once()
+        mock_ingestion_log_store.save_log.assert_called_once()
         # 获取位置参数中的 IngestionLog 对象
-        call_args = mock_ingestion_log_service.save_log.call_args.args
+        call_args = mock_ingestion_log_store.save_log.call_args.args
         log_entry = call_args[0]
 
         assert isinstance(log_entry, IngestionLog)

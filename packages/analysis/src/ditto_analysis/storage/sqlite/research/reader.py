@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import orjson
 from ditto_platform.foundation import SQLiteClient
 
 from ditto_analysis.research.domain import (
@@ -34,16 +33,7 @@ class SQLiteResearchCatalogReader:
         )
         if row is None:
             return None
-        return ResearchSpineSpecRecord(
-            spine_id=row["spine_id"],
-            universe_id=row["universe_id"],
-            calendar=row["calendar"],
-            grain=row["grain"],
-            entity_key=row["entity_key"],
-            description=row["description"],
-            created_at=row["created_at"],
-            version=row["version"],
-        )
+        return ResearchSpineSpecRecord.from_row(row)
 
     def read_dataset_spec(
         self,
@@ -62,17 +52,7 @@ class SQLiteResearchCatalogReader:
         )
         if row is None:
             return None
-        return ResearchDatasetSpecRecord(
-            dataset_id=row["dataset_id"],
-            spine_id=row["spine_id"],
-            derived_ids=tuple(orjson.loads(row["derived_ids"])),
-            join_policy=row["join_policy"],
-            known_at_policy=row["known_at_policy"],
-            late_arrival_policy=row["late_arrival_policy"],
-            description=row["description"],
-            created_at=row["created_at"],
-            version=row["version"],
-        )
+        return ResearchDatasetSpecRecord.from_row(row)
 
     def read_spine_snapshot(
         self,
@@ -90,17 +70,7 @@ class SQLiteResearchCatalogReader:
         )
         if row is None:
             return None
-        return ResearchSpineSnapshotRecord(
-            spine_snapshot_id=row["spine_snapshot_id"],
-            spine_id=row["spine_id"],
-            snapshot_start=row["snapshot_start"],
-            snapshot_end=row["snapshot_end"],
-            row_count=row["row_count"],
-            data_path=row["data_path"],
-            manifest_hash=row["manifest_hash"],
-            created_at=row["created_at"],
-            version=row["version"],
-        )
+        return ResearchSpineSnapshotRecord.from_row(row)
 
     def read_dataset_snapshot(
         self,
@@ -121,28 +91,7 @@ class SQLiteResearchCatalogReader:
         )
         if row is None:
             return None
-        return ResearchDatasetSnapshotRecord(
-            snapshot_id=row["snapshot_id"],
-            dataset_id=row["dataset_id"],
-            dataset_spec_version=row["dataset_spec_version"],
-            spine_snapshot_id=row["spine_snapshot_id"],
-            snapshot_start=row["snapshot_start"],
-            snapshot_end=row["snapshot_end"],
-            row_count=row["row_count"],
-            data_path=row["data_path"],
-            manifest_hash=row["manifest_hash"],
-            known_at_policy=row["known_at_policy"],
-            effective_cutoff=row["effective_cutoff"],
-            spine_spec_version=row["spine_spec_version"],
-            resolved_versions={
-                str(key): int(value)
-                for key, value in orjson.loads(row["resolved_versions"]).items()
-            },
-            resolved_inputs=tuple(orjson.loads(row["resolved_inputs"])),
-            source_snapshot_ids=tuple(orjson.loads(row["source_snapshot_ids"])),
-            builder_version=row["builder_version"],
-            created_at=row["created_at"],
-        )
+        return ResearchDatasetSnapshotRecord.from_row(row)
 
     def get_latest_spine_snapshot(
         self,
@@ -162,17 +111,7 @@ class SQLiteResearchCatalogReader:
         )
         if row is None:
             return None
-        return ResearchSpineSnapshotRecord(
-            spine_snapshot_id=row["spine_snapshot_id"],
-            spine_id=row["spine_id"],
-            snapshot_start=row["snapshot_start"],
-            snapshot_end=row["snapshot_end"],
-            row_count=row["row_count"],
-            data_path=row["data_path"],
-            manifest_hash=row["manifest_hash"],
-            created_at=row["created_at"],
-            version=row["version"],
-        )
+        return ResearchSpineSnapshotRecord.from_row(row)
 
     def get_latest_dataset_snapshot(
         self,
@@ -195,25 +134,4 @@ class SQLiteResearchCatalogReader:
         )
         if row is None:
             return None
-        return ResearchDatasetSnapshotRecord(
-            snapshot_id=row["snapshot_id"],
-            dataset_id=row["dataset_id"],
-            dataset_spec_version=row["dataset_spec_version"],
-            spine_snapshot_id=row["spine_snapshot_id"],
-            snapshot_start=row["snapshot_start"],
-            snapshot_end=row["snapshot_end"],
-            row_count=row["row_count"],
-            data_path=row["data_path"],
-            manifest_hash=row["manifest_hash"],
-            known_at_policy=row["known_at_policy"],
-            effective_cutoff=row["effective_cutoff"],
-            spine_spec_version=row["spine_spec_version"],
-            resolved_versions={
-                str(key): int(value)
-                for key, value in orjson.loads(row["resolved_versions"]).items()
-            },
-            resolved_inputs=tuple(orjson.loads(row["resolved_inputs"])),
-            source_snapshot_ids=tuple(orjson.loads(row["source_snapshot_ids"])),
-            builder_version=row["builder_version"],
-            created_at=row["created_at"],
-        )
+        return ResearchDatasetSnapshotRecord.from_row(row)

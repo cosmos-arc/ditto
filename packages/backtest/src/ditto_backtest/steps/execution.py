@@ -35,8 +35,7 @@ class ExecutionStep:
 
     def execute(self, ctx: StepContext) -> StepResult:
         """处理成交。"""
-        if ctx.slice_ is None:
-            return StepResult.fail("slice_ required")
+        ctx.require_slice()
 
         # 构建 ProcessInput
         process_input = ProcessInput(

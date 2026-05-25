@@ -7,13 +7,12 @@ from pathlib import Path
 from loguru import logger
 
 from ditto_platform.foundation.config.initializer import (
-    ConfigInitProvider,
     InitResult,
     InitScope,
 )
 
 
-class ConfigValidationProvider(ConfigInitProvider):
+class ConfigValidationProvider:
     """
     启动配置校验.
 

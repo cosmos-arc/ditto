@@ -18,7 +18,6 @@ FORBIDDEN_IMPORT_PREFIXES = (
     "ditto_data.ingestion",
     "ditto_data.models",
     "ditto_data.observability",
-    "ditto_data.providers",
     "ditto_data.quality",
     "ditto_data.runtime",
     "ditto_data.services",

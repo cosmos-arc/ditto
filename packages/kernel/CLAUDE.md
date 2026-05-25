@@ -26,8 +26,6 @@ Kernel 层是 **Shared Kernel — 类型 + Protocol 抽象 + 薄实现**，提�
 frozen dataclass 可包含 `to_json_dict()` / `from_json_dict()` 类方法，前提：
 - 仅做 dict ↔ dataclass 的内存结构转换
 - 不涉及文件 I/O、网络请求、数据库操作
-- 仅依赖同包内的 `json_types` 辅助函数
-- 示例：`publication_safety.py` 中的 6 个记录类型
 
 ### Protocol / 薄实现准入标准
 
@@ -60,16 +58,15 @@ frozen dataclass 可包含 `to_json_dict()` / `from_json_dict()` 类方法，前
 ditto_kernel/
 ├── instrument.py          # Instrument 子域 — AssetClass / Exchange / InstrumentIngestParams
 ├── order.py               # Order 子域 — OrderSide / OrderType
-├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / MacroDataProvider Protocol
+├── market.py              # Market 子域 — CalendarId / GrainId / TimeSpec / MacroCategory / MacroFrequency / GRAIN_TO_TIME_KEYS / CALENDAR_TO_TIMEZONE
 ├── strategy.py            # Strategy 子域 — ExecutionPolicy / ImpactModel / RiskScope / RunStatus
 ├── identity.py            # 共享身份类型（NewType）
 ├── clock.py               # Clock Protocol + 薄实现（SimulatedClock / RealtimeClock）
 ├── time_context.py        # TimeContext 值对象 — PIT 语义统一入口（decision_time / knowledge_date / trade_date）
 ├── synchronizer.py        # Synchronizer Protocol + TimeSlice 值对象 — 回测/实盘切换 seam
 ├── events.py              # DomainEvent + EventBus Protocol + SimpleEventBus + EventName catalog
-├── json_types.py          # JSON 类型别名与字段校验器（JsonDict / JsonValue / require_str 等）
 ├── tracing.py             # 可插拔追踪装饰器（traced / install_trace_handler / reset_trace_handler）
-├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider 等）
+├── trading.py             # A 股交易领域常量、值对象与规则 Protocol（FeeModel / InstrumentRuleProvider / InstrumentRules / RulesGetter 等）
 ├── exceptions.py          # 共享异常层级（DittoError / DataError / IdentifierError / NoIdentifierProvidedError / AmbiguousTickerError）
 └── math.py                # 共享数学工具（pearson_correlation 等纯计算函数）
 ```
@@ -92,16 +89,15 @@ instrument / order / market / identity: 无子域间依赖
 | `OrderType` | order.py | `StrEnum`（MARKET/LIMIT/STOP_MARKET/MARKET_ON_CLOSE） | Execution, Risk, Portfolio, Backtest |
 | `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
 | `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
+| `GRAIN_TO_TIME_KEYS` | market.py | `dict[GrainId, tuple[str, ...]]` 常量 | Data, Analysis |
+| `CALENDAR_TO_TIMEZONE` | market.py | `dict[CalendarId, str]` 常量 | Data |
 | `TimeSpec` | market.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
 | `MacroCategory` | market.py | `StrEnum`（6 成员） | Data, Apps |
 | `MacroFrequency` | market.py | `StrEnum`（DAILY/MONTHLY/QUARTERLY） | Data, Apps |
-| `MacroDataProvider` | market.py | `Protocol`（零依赖签名） | Data |
 | `ExecutionPolicy` | strategy.py | frozen dataclass（含纯计算型 `@property`） | Analysis, Strategy |
 | `ImpactModel` | strategy.py | `StrEnum`（NONE/VOLUME_SHARE） | Execution, App |
 | `RiskScope` | strategy.py | `StrEnum`（INSTRUMENT/PORTFOLIO） | Risk, Data, Apps, Application |
 | `RunStatus` | strategy.py | `StrEnum`（PENDING/RUNNING/COMPLETED/FAILED/CANCELLED） | Data |
-| `JsonDict` / `JsonValue` / `JsonPrimitive` | json_types.py | 类型别名 | Data, Features |
-| `require_str` / `require_int` / `require_bool` / `require_payload` | json_types.py | 纯函数（字段校验） | Data, Features |
 | `traced` / `install_trace_handler` / `reset_trace_handler` | tracing.py | 可插拔追踪装饰器 | Strategy, Execution, Backtest |
 | `TimeContext` | time_context.py | frozen dataclass（含 `pit_cutoff` property） | Backtest, Application |
 | `TimeSlice` | synchronizer.py | frozen dataclass | Backtest, Application |
@@ -112,12 +108,15 @@ instrument / order / market / identity: 无子域间依赖
 | `FeeSchedule` | trading.py | frozen dataclass | Execution, Backtest |
 | `FeeModel` | trading.py | `Protocol`（费用计算契约） | Execution, Backtest |
 | `InstrumentRuleProvider` | trading.py | `Protocol`（三层规则查询） | Execution, Backtest |
+| `InstrumentRules` | trading.py | `type` 别名（`tuple[InstrumentDefinition, TradingRuleSet, FeeSchedule]`） | Execution, Backtest |
+| `RulesGetter` | trading.py | `type` 别名（`Callable[[InstrumentId, str], InstrumentRules]`） | Execution, Backtest |
+| `DEFAULT_SLIPPAGE_BPS` | trading.py | `float` 常量（1.0） | Execution, Backtest |
 | `InstrumentId` | identity.py | `NewType("InstrumentId", int)` | 预留（后续统一计划） |
 | `DittoError` | exceptions.py | `Exception`（全局根） | 所有包 |
 | `DataError` | exceptions.py | `DittoError`（数据域根） | Data, Apps, Application |
-| `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, App |
-| `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | App |
-| `AmbiguousTickerError` | exceptions.py | `IdentifierError` | App |
+| `IdentifierError` | exceptions.py | `DataError`（标识符异常基类） | Data, Apps |
+| `NoIdentifierProvidedError` | exceptions.py | `IdentifierError` | Apps |
+| `AmbiguousTickerError` | exceptions.py | `IdentifierError` | Apps |
 | `pearson_correlation` | math.py | 纯函数 | Backtest, App |
 
 ## 导入规范

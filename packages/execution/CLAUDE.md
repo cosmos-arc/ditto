@@ -43,7 +43,8 @@ ditto_execution → ditto_apps ❌
 ditto_execution/
 ├── broker/               # 券商网关抽象
 │   ├── contracts.py      # BrokerGateway Protocol
-│   └── gateways/         # 具体券商实现（placeholder-only, no concrete gateway）
+│   └── gateways/         # 具体券商实现
+│       └── paper.py      # PaperBrokerGateway（冒烟测试级别模拟网关）
 ├── orders/               # 订单管理（OMS Lite — FSM + Journal + 双 ID）
 │   ├── ids.py            # ClientOrderId / BrokerOrderId 值对象
 │   ├── status.py         # OrderStatus(StrEnum) — 7 状态 + is_terminal
@@ -77,7 +78,7 @@ ditto_execution/
 ├── di/                   # 依赖注入 Provider
 │   ├── _factory.py       # Execution Provider 工厂
 │   └── storage.py        # 存储层 DI Provider
-├── reconciliation/       # 对账（minimal dataclass only）
+├── reconciliation/       # 对账（reconcile() 纯函数 + typed diff entries）
 ├── brokerage.py          # 券商模拟入口
 ├── storage.py            # 存储入口
 ├── planner.py            # 执行计划器
@@ -97,7 +98,8 @@ packages/execution/tests/
 ├── unit/
 │   ├── test_order_events_unit.py
 │   ├── broker/
-│   │   └── test_contracts_unit.py
+│   │   ├── test_contracts_unit.py
+│   │   └── test_gateway_conformance_unit.py
 │   ├── orders/                # OMS Lite 测试
 │   │   ├── test_ids_unit.py
 │   │   ├── test_fsm_unit.py
@@ -144,8 +146,8 @@ from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 ## Known Gaps / Planned Work
 
 - **~~OMS Lite（EXEC-P1-01）~~**：✅ 已实现（Phase 2）。`orders/` 包含完整 FSM、Journal、双 ID、OrderBook、OrderTicket。
-- **Broker Gateways（EXEC-P1-02）**：`broker/gateways/` 仅有占位文件，无具体网关实现。确定性 paper/mock gateway 是下一步补救目标。
-- **Reconciliation（EXEC-P1-03）**：`reconciliation/` 仅包含最小化的 count-summary dataclass，无 service 或 store。
+- **~~Broker Gateways（EXEC-P1-02）~~**：✅ 已实现（PaperBrokerGateway）。`broker/gateways/paper.py` 提供冒烟测试级别的模拟网关，支持 order submit/fill/account/connect。`BrokerGateway` Protocol 定义在 `broker/contracts.py`。
+- **~~Reconciliation（EXEC-P1-03）~~**：✅ 已实现。`reconciliation/` 导出 `reconcile()` 纯函数（无副作用）+ `ReconciliationReport` / `ReconciliationDiff` 类型定义。状态字段使用 `Literal["matched", "mismatch", "pending"]` 类型。
 - **Audit Spine（EXEC-P1-04）**：存储表（`execution_fills`、`trade_intents`、`actual_positions`、`execution_audit`）缺乏统一关联键（broker order ID、client ID、journal sequence）。
 - **Planner Decomposition（EXEC-P2-01）**：`planner.py` 约 530 LOC 混合 target diff / market precheck / rounding / cost 逻辑，计划拆分为聚焦模块。
 - **A-Share Rules（EXEC-P2-02）**：规则行为散布在 execution、backtest、kernel 中，需要跨包协调收拢。

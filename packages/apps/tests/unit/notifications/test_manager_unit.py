@@ -5,12 +5,11 @@ from pathlib import Path
 
 from ditto_platform.services.notification import (
     NotificationLevel,
-    NotificationSender,
     TemplateEngine,
 )
 
 
-class MockNotificationSender(NotificationSender):
+class MockNotificationSender:
     """Mock implementation for testing."""
 
     def __init__(self, channel_name: str = "mock", send_result: bool = True) -> None:

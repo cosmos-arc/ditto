@@ -123,11 +123,11 @@ def mock_services() -> dict[str, MagicMock]:
     return {
         "metadata_service": MagicMock(),
         "market_service": MagicMock(),
-        "fundamental_service": MagicMock(),
-        "capital_service": MagicMock(),
+        "fundamental_store": MagicMock(),
+        "capital_store": MagicMock(),
         "macro_service": MagicMock(),
-        "source_service": MagicMock(),
-        "ingestion_log_service": MagicMock(),
+        "source_accessor": MagicMock(),
+        "ingestion_log_store": MagicMock(),
     }
 
 
@@ -144,15 +144,15 @@ def mock_market_service(mock_services: dict[str, MagicMock]) -> MagicMock:
 
 
 @pytest.fixture
-def mock_fundamental_service(mock_services: dict[str, MagicMock]) -> MagicMock:
-    """FundamentalService mock."""
-    return mock_services["fundamental_service"]
+def mock_fundamental_store(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """FundamentalStore mock."""
+    return mock_services["fundamental_store"]
 
 
 @pytest.fixture
-def mock_capital_service(mock_services: dict[str, MagicMock]) -> MagicMock:
-    """CapitalService mock."""
-    return mock_services["capital_service"]
+def mock_capital_store(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """CapitalStore mock."""
+    return mock_services["capital_store"]
 
 
 @pytest.fixture
@@ -162,12 +162,12 @@ def mock_macro_service(mock_services: dict[str, MagicMock]) -> MagicMock:
 
 
 @pytest.fixture
-def mock_source_service(mock_services: dict[str, MagicMock]) -> MagicMock:
-    """SourceService mock."""
-    return mock_services["source_service"]
+def mock_source_accessor(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """SourceAccessor mock."""
+    return mock_services["source_accessor"]
 
 
 @pytest.fixture
-def mock_ingestion_log_service(mock_services: dict[str, MagicMock]) -> MagicMock:
-    """IngestionLogService mock."""
-    return mock_services["ingestion_log_service"]
+def mock_ingestion_log_store(mock_services: dict[str, MagicMock]) -> MagicMock:
+    """IngestionLogStore mock."""
+    return mock_services["ingestion_log_store"]

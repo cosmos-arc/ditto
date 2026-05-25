@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import threading
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Protocol
 
 from loguru import logger
 
@@ -31,27 +31,23 @@ class InitResult:
     skipped: bool = False
 
 
-class ConfigInitProvider(ABC):
-    """初始化提供者基类。"""
+class ConfigInitProvider(Protocol):
+    """初始化提供者协议。"""
 
     @property
-    @abstractmethod
     def name(self) -> str:
         """返回初始化提供者名称。"""
         ...
 
     @property
-    @abstractmethod
     def scope(self) -> InitScope:
         """返回初始化作用域。"""
         ...
 
-    @abstractmethod
     def check(self, data_root: Path) -> bool:
         """检查是否需要初始化。"""
         ...
 
-    @abstractmethod
     def initialize(self, data_root: Path) -> InitResult:
         """执行初始化。"""
         ...

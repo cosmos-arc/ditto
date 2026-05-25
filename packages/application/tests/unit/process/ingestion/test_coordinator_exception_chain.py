@@ -63,16 +63,16 @@ def mock_market_service():
 
 
 @pytest.fixture
-def mock_fundamental_service():
-    """创建 Mock FundamentalService."""
+def mock_fundamental_store():
+    """创建 Mock FundamentalStore."""
     service = MagicMock()
     service.write.return_value = MagicMock(records_written=1)
     return service
 
 
 @pytest.fixture
-def mock_capital_service():
-    """创建 Mock CapitalService."""
+def mock_capital_store():
+    """创建 Mock CapitalStore."""
     service = MagicMock()
     service.write.return_value = MagicMock(records_written=1)
     return service
@@ -87,8 +87,8 @@ def mock_macro_service():
 
 
 @pytest.fixture
-def mock_ingestion_log_service():
-    """创建 Mock IngestionLogService."""
+def mock_ingestion_log_store():
+    """创建 Mock IngestionLogStore."""
     service = MagicMock()
     service.get_log = MagicMock(return_value=None)
     service.save_log = MagicMock(return_value=None)
@@ -107,10 +107,10 @@ def mock_source():
 def coordinator(
     mock_metadata_service,
     mock_market_service,
-    mock_fundamental_service,
-    mock_capital_service,
+    mock_fundamental_store,
+    mock_capital_store,
     mock_macro_service,
-    mock_ingestion_log_service,
+    mock_ingestion_log_store,
     mock_source,
 ):
     """创建 IngestionCoordinator 实例."""
@@ -121,8 +121,8 @@ def coordinator(
                 query=mock_market_service,
                 write=mock_market_service,
             ),
-            fundamental=mock_fundamental_service,
-            capital=mock_capital_service,
+            fundamental=mock_fundamental_store,
+            capital=mock_capital_store,
             macro=mock_macro_service,
         ),
         fetchers=SourceFetchers(
@@ -133,7 +133,7 @@ def coordinator(
             macro=mock_source,
         ),
         config=IngestionCoordinatorConfig(
-            ingestion_log_service=mock_ingestion_log_service,
+            ingestion_log_store=mock_ingestion_log_store,
         ),
     )
 

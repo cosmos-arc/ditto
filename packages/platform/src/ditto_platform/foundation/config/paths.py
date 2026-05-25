@@ -482,39 +482,3 @@ class XDGPaths:
     def __repr__(self) -> str:
         """返回路径管理器的字符串表示."""
         return f"XDGPaths(data={self.data_home})"
-
-
-def get_paths() -> XDGPaths:
-    """
-    获取全局路径管理器实例.
-
-    使用单例模式，避免重复创建.
-
-    Returns:
-        XDGPaths: 路径管理器实例.
-
-    """
-    msg = "get_paths() 已移除, 全局单例不再支持, 请通过 DI 注入 XDGPaths."
-    raise RuntimeError(msg)
-
-
-def reload_paths() -> XDGPaths:
-    """
-    重新加载路径管理器（主要用于测试）.
-
-    Returns:
-        XDGPaths: 新的路径管理器实例.
-
-    """
-    msg = "reload_paths() 已移除, 全局单例不再支持, 请通过 DI 注入 XDGPaths."
-    raise RuntimeError(msg)
-
-
-def reset_paths_for_testing() -> None:
-    """
-    Reset the singleton paths (for testing purposes only).
-
-    This function allows tests to reset the global state between test runs.
-    """
-    msg = "reset_paths_for_testing() 已移除, 全局单例不再支持, 请通过 DI 注入 XDGPaths."
-    raise RuntimeError(msg)

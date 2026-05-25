@@ -29,7 +29,7 @@ from ditto_platform.foundation import (
 from ditto_platform.services import NotificationSettings
 
 from ditto_apps.config import load_env_file
-from ditto_apps.registry.init_providers import MetadataDbInitProvider
+from ditto_apps.registry.infra.init_providers import MetadataDbInitProvider
 
 __all__ = [
     "ConfigProvider",

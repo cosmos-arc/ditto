@@ -7,13 +7,12 @@ from pathlib import Path
 import pytest
 from ditto_platform.foundation.config.initializer import (
     ConfigInitCoordinator,
-    ConfigInitProvider,
     InitResult,
     InitScope,
 )
 
 
-class FailingProvider(ConfigInitProvider):
+class FailingProvider:
     """测试用的失败提供者."""
 
     @property
@@ -39,7 +38,7 @@ class FailingProvider(ConfigInitProvider):
         )
 
 
-class ExceptionProvider(ConfigInitProvider):
+class ExceptionProvider:
     """测试用的抛出异常的提供者."""
 
     @property
@@ -61,7 +60,7 @@ class ExceptionProvider(ConfigInitProvider):
         raise RuntimeError("Unexpected error during initialization")
 
 
-class SuccessProvider(ConfigInitProvider):
+class SuccessProvider:
     """测试用的成功提供者."""
 
     @property
@@ -87,7 +86,7 @@ class SuccessProvider(ConfigInitProvider):
         )
 
 
-class ManualScopeFailingProvider(ConfigInitProvider):
+class ManualScopeFailingProvider:
     """测试用的 MANUAL 作用域失败提供者."""
 
     @property

@@ -7,22 +7,14 @@ from typing import Literal, Protocol
 import polars as pl
 from ditto_data.models import Dataset
 
-# 支持按标的摄取的数据集
-SUPPORTED_INSTRUMENT_DATASETS: set[Dataset] = {
-    Dataset.STOCK_DAILY,
-    Dataset.ETF_DAILY,
-    Dataset.INDEX_DAILY,
-    Dataset.ADJ_FACTOR,
-    Dataset.FUND_ADJ,
-    Dataset.STOCK_STATUS,
-    Dataset.VALUATION_METRICS,
-    Dataset.BALANCE_SHEET,
-    Dataset.INCOME_STATEMENT,
-    Dataset.CASH_FLOW,
-    Dataset.DIVIDEND,
-    Dataset.MARGIN_TRADING,
-    Dataset.PLEDGE_RATIO,
-}
+from ditto_application.processes.ingestion.dataset_registry import (
+    default_dataset_registry,
+)
+
+# 支持按标的摄取的数据集，由 DatasetRegistry 中的 instrument_fetch_factory 决定。
+SUPPORTED_INSTRUMENT_DATASETS: frozenset[Dataset] = (
+    default_dataset_registry().supported_instrument_datasets()
+)
 
 # A股交易所代码前缀映射
 A_SHARE_CODE_LENGTH = 6

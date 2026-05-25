@@ -14,7 +14,7 @@ from collections.abc import Callable
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 
-from ditto_backtest.errors import SimulationError
+from ditto_backtest.data_feed import Slice
 from ditto_backtest.steps.input_bundle import build_input_bundle
 from ditto_backtest.steps.types import StepContext, StepResult
 
@@ -45,14 +45,13 @@ class StrategyStep:
         if not ctx.is_rebalance_day:
             return StepResult.skipped()
 
-        if ctx.slice_ is None:
-            return StepResult.fail("slice_ required")
+        slice_ = ctx.require_slice()
 
         # 从 slice_.bars 构建 StrategyInputBundle
         if self._input_bundle_builder is not None:
             input_bundle = self._input_bundle_builder(ctx)
         else:
-            input_bundle = self._build_input_bundle(ctx)
+            input_bundle = self._build_input_bundle(ctx, slice_)
 
         # 运行 Pipeline
         target = self._pipeline.run(self._strategy_context, input_bundle)
@@ -62,13 +61,12 @@ class StrategyStep:
 
         return StepResult.ok()
 
-    def _build_input_bundle(self, ctx: StepContext) -> StrategyInputBundle:
+    def _build_input_bundle(
+        self,
+        ctx: StepContext,
+        slice_: Slice,
+    ) -> StrategyInputBundle:
         """从 Slice 构建 StrategyInputBundle（默认实现）。"""
-        slice_ = ctx.slice_
-        if slice_ is None:  # guarded by execute() -- unreachable in practice
-            msg = "slice_ required"
-            raise SimulationError(msg, step="strategy")
-
         return build_input_bundle(
             trade_date=ctx.time_context.trade_date,
             strategy_id=self._strategy_id,

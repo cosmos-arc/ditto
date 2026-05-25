@@ -19,10 +19,34 @@ __all__ = [
     "compute_portfolio_statistics",
     "daily_returns_from_navs",
     "drawdown_analysis",
+    "safe_ratio",
     "sortino_ratio",
+    "total_return",
 ]
 
 TRADING_DAYS_PER_YEAR = 252
+
+
+# ---------------------------------------------------------------------------
+# 共享辅助函数（decimal 内部、调用方按需转 percentage）
+# ---------------------------------------------------------------------------
+
+
+def safe_ratio(numerator: float, denominator: float) -> float:
+    """Guarded division: returns 0.0 when denominator is 0."""
+    return numerator / denominator if denominator != 0 else 0.0
+
+
+def total_return(navs: list[float]) -> float:
+    """Compute total return from NAV series in decimal: navs[-1]/navs[0] - 1."""
+    if not navs:
+        return 0.0
+    return safe_ratio(navs[-1], navs[0]) - (1.0 if navs[0] != 0 else 0.0)
+
+
+# ---------------------------------------------------------------------------
+# 公共 API
+# ---------------------------------------------------------------------------
 
 
 def compute_portfolio_statistics(
@@ -47,28 +71,22 @@ def compute_portfolio_statistics(
         if inception_nav is None:
             inception_nav = view.nav
 
-        # Daily return
+        # Daily return — reuse daily_returns_from_navs logic (decimal → * 100)
         if i > 0:
             prev_nav = snapshots[i - 1][1].nav
-            daily_return = (
-                (view.nav - prev_nav) / prev_nav * 100 if prev_nav != 0 else 0.0
-            )
+            daily_return = safe_ratio(view.nav - prev_nav, prev_nav) * 100
         else:
             daily_return = 0.0
 
-        # Cumulative return
-        cumulative_return = (
-            (view.nav - inception_nav) / inception_nav * 100
-            if inception_nav != 0
-            else 0.0
-        )
+        # Cumulative return — decimal → * 100
+        cumulative_return = safe_ratio(view.nav - inception_nav, inception_nav) * 100
 
-        # Drawdown
+        # Drawdown — decimal → * 100
         peak_nav = max(peak_nav, view.nav)
-        drawdown = (view.nav - peak_nav) / peak_nav * 100 if peak_nav != 0 else 0.0
+        drawdown = safe_ratio(view.nav - peak_nav, peak_nav) * 100
 
         # Cash ratio
-        cash_ratio = view.cash.total / view.nav * 100 if view.nav != 0 else 0.0
+        cash_ratio = safe_ratio(view.cash.total, view.nav) * 100
 
         # Position count
         position_count = len(view.positions)
@@ -101,10 +119,8 @@ def daily_returns_from_navs(navs: list[float]) -> list[float]:
     """Convert NAV series to daily returns (decimal)."""
     result: list[float] = []
     for i in range(1, len(navs)):
-        if navs[i - 1] != 0:
-            result.append(navs[i] / navs[i - 1] - 1)
-        else:
-            result.append(0.0)
+        adjustment = 1.0 if navs[i - 1] != 0 else 0.0
+        result.append(safe_ratio(navs[i], navs[i - 1]) - adjustment)
     return result
 
 
@@ -146,6 +162,9 @@ def drawdown_analysis(
     navs: list[float],
 ) -> tuple[float, int]:
     """Compute max drawdown (%) and max drawdown duration (days)."""
+    if not navs:
+        return 0.0, 0
+
     max_dd = 0.0
     max_dd_dur = 0
     cur_dur = 0
@@ -156,7 +175,7 @@ def drawdown_analysis(
             peak = nav
             cur_dur = 0
         else:
-            dd = (nav - peak) / peak if peak != 0 else 0.0
+            dd = safe_ratio(nav - peak, peak)
             max_dd = min(max_dd, dd)
             if dd < 0:
                 cur_dur += 1

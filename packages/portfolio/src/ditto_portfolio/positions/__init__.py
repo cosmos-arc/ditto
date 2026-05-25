@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from ditto_kernel.identity import InstrumentId
+
 __all__ = ["PositionReader", "PositionSnapshot"]
 
 
@@ -14,7 +16,7 @@ class PositionSnapshot:
 
     portfolio_id: str
     snapshot_date: str
-    instrument_id: int
+    instrument_id: InstrumentId
     quantity: int
     average_cost: float
     market_value: float
@@ -27,7 +29,7 @@ class PositionReader(Protocol):
     def get_position(
         self,
         portfolio_id: str,
-        instrument_id: int,
+        instrument_id: InstrumentId,
         snapshot_date: str,
     ) -> PositionSnapshot | None:
         """Return one position snapshot if available."""

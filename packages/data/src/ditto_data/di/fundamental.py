@@ -6,7 +6,7 @@ from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient
 
 from ditto_data.services.deps import FundamentalReaders, FundamentalWriters
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.storage.fundamental.corporate.corporate_actions_reader import (
     CorporateActionsReader,
 )
@@ -106,13 +106,13 @@ class FundamentalProvider(Provider):
         )
 
     @provide
-    def fundamental_service(
+    def fundamental_store(
         self,
         read_ports: FundamentalReaders,
         write_ports: FundamentalWriters,
-    ) -> FundamentalService:
+    ) -> FundamentalStore:
         """Fundamental domain unified service."""
-        return FundamentalService(
+        return FundamentalStore(
             read_ports=read_ports,
             write_ports=write_ports,
         )

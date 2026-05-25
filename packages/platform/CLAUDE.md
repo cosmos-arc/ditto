@@ -21,6 +21,7 @@ ditto_platform/
 │   │   └── providers/            # 配置提供者（校验、数据根路径）
 │   ├── db/                       # 数据库连接（SQLitePool）
 │   ├── observability/            # 可观测性（日志、追踪、指标、生命周期）
+│   │   ├── metrics/              # 指标子包（SafeCounter / SafeGauge / SafeHistogram + 注册表 + 绑定）
 │   └── storage/                  # 通用存储基础设施（ParquetStore、SQLiteClient、分区策略、存储类型）
 │   └── util/                     # 通用工具（日期、IO、校验和、Ticker）
 └── services/                     # 基础服务

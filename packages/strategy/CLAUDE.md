@@ -40,6 +40,7 @@ ditto_strategy → ditto_apps ❌
 ditto_strategy/
 ├── alpha/              # Alpha pipeline（从 engine 提取）
 │   ├── builtins/       # 内置 Stage（Universe/Signal/Scoring/Selection/Filtering/Regime）
+│   │   ├── regime/     # Regime 子系统（regime_engine / regime_indicators / regime_types）
 │   ├── templates/      # 策略模板（ETF轮动/趋势摆动/选股/行业轮动）
 │   ├── pipeline.py     # StrategyPipeline + StrategyInputBundle
 │   ├── protocols.py    # DecisionStage Protocol + DecisionFrame

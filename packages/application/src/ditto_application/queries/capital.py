@@ -1,25 +1,45 @@
-"""Capital query facade — 封装 CapitalService，隐藏内部端口类型."""
+"""Capital query facade — 封装 capital 数据端口，隐藏内部端口类型."""
 
 from __future__ import annotations
 
 from datetime import date
+from typing import Protocol
 
 import polars as pl
-from ditto_data.services.capital_service import CapitalService
 
-__all__ = ["CapitalQueryFacade"]
+__all__ = ["CapitalDataPort", "CapitalQueryFacade"]
+
+
+class CapitalDataPort(Protocol):
+    """窄 Protocol：CapitalQueryFacade 所需的 capital 数据获取能力."""
+
+    def get_margin_trading(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """查询融资融券数据."""
+        ...
+
+    def get_valuation_metrics(
+        self,
+        instrument_id: int,
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """查询估值指标数据."""
+        ...
 
 
 class CapitalQueryFacade:
     """
     Capital 域查询 facade.
 
-    封装 CapitalService，隐藏 CQRS 端口类型，
+    通过 CapitalDataPort Protocol 获取 capital 数据，
     对外只暴露原始参数和 pl.DataFrame 返回值。
     """
 
-    def __init__(self, capital_service: CapitalService) -> None:
-        self._service = capital_service
+    def __init__(self, capital_store: CapitalDataPort) -> None:
+        self._service = capital_store
 
     def get_margin_trading(self, instrument_id: int, as_of_date: date) -> pl.DataFrame:
         """

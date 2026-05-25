@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
-from ditto_data.ingestion.quality_record_service import QualityRecordService
+from ditto_data.ingestion.quality_record_store import (
+    QualityRecordStore,
+)
 from ditto_data.quality import QualityEngine
 from ditto_data.quality.golden import GoldenDatasetSpec
+from ditto_data.quality.protocols import (
+    ComparisonStoreProtocol,
+    InstrumentStoreProtocol,
+    TdxSourceProtocol,
+)
 from ditto_data.services.metadata_service import MetadataService
-from ditto_data.sources.tdx.source import TdxSource
-from ditto_data.storage.metadata.instrument import InstrumentReader
-from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_execution.contracts import FillDataPort, IntentDataPort, PositionDataPort
 from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
@@ -53,21 +57,21 @@ class AppCommandProvider(Provider):
     def check_data_quality_handler(
         self,
         dq_engine: QualityEngine,
-        quality_record_service: QualityRecordService,
+        quality_record_store: QualityRecordStore,
     ) -> CheckDataQualityHandler:
         """数据质量检查 Handler."""
         return CheckDataQualityHandler(
             engine=dq_engine,
-            quarantine_writer=quality_record_service,
+            quarantine_writer=quality_record_store,
         )
 
     @provide
     def reconcile_sources_handler(
         self,
         dq_engine: QualityEngine,
-        tdx_source: TdxSource,
-        comparison_store: ComparisonWriter,
-        instrument_store: InstrumentReader,
+        tdx_source: TdxSourceProtocol,
+        comparison_store: ComparisonStoreProtocol,
+        instrument_store: InstrumentStoreProtocol,
         golden_dataset: GoldenDatasetSpec | None = None,
     ) -> ReconcileSourcesHandler:
         """数据源对账 Handler."""

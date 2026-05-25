@@ -88,6 +88,7 @@ ditto_application/
 │   │   ├── range_process.py         # IngestRangeProcess + BackfillRangeProcess
 │   │   ├── commodity_fetcher.py     # 商品数据获取
 │   │   ├── coordinator_constants.py # 共享常量
+│   │   ├── dataset_registry.py     # Dataset 摄取路由注册表
 │   │   └── fetch_handlers.py        # 获取处理器构建
 │   ├── materialization/ # 因子物化流程
 │   │   ├── orchestrator.py          # DerivedMaterializationOrchestrator
@@ -148,6 +149,14 @@ ditto_application/
 | `AppPortfolioQueryProvider` | 组合/交易查询 | TradeQueryFacade, PortfolioActualQueryFacade, SignalQueryFacade |
 | `AppProcessProvider` | 编排/物化/质量/执行 | SQLiteCompileCache, RuntimeDerivedInputProvider, DerivedMaterializationOrchestrator, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, ManualTracker, ReplayProcess, FactorBridge |
 | `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, ServiceBackedDataProvider, BacktestRuntimeBuilder, StrategySliceBuilder, StrategyServiceFactory, StrategyFacade |
+
+## DatasetRegistry 摄取路由规则
+
+- `ditto_application.processes.ingestion.dataset_registry` 是 application ingestion 的唯一数据集运行时路由表。
+- 新增数据集时，先在 `ditto_data.models.Dataset` 增加稳定 ID，再在 `default_dataset_registry()` 增加 `DatasetRegistration`。
+- `fetch_handlers.py`、`data_writer.py`、`coordinator_constants.py` 不允许新增独立的 `Dataset -> handler` 映射。
+- 如果数据源 Protocol 没有按标的方法，不要把该数据集加入 instrument fetch route。
+- `Dataset` enum 只保留稳定 ID；运行时 fetch/write/support 能力由 registry 表达。
 
 ## R8 互斥规则（importlinter 强制）
 

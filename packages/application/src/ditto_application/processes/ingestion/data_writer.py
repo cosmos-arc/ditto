@@ -3,19 +3,25 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Literal, cast
+from dataclasses import dataclass
+from typing import ClassVar, Literal, cast
 
 import polars as pl
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.models import Dataset
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.capital_store import CapitalStore
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_platform.foundation import ChecksumCompute, OnDuplicate, WriteResult, logger
 
 from ditto_application.exceptions import AppProcessError
+from ditto_application.processes.ingestion.dataset_registry import (
+    DatasetRegistration,
+    WriteKind,
+    default_dataset_registry,
+)
 
 
 def _enrich_with_instrument_id(
@@ -92,6 +98,20 @@ def _to_write_result(
     )
 
 
+@dataclass(frozen=True)
+class _WriteContext:
+    """Packed parameters for write handler dispatch."""
+
+    registration: DatasetRegistration
+    dataset: str
+    dataset_enum: Dataset
+    df: pl.DataFrame
+    year: int
+    on_duplicate: OnDuplicate
+    source_ticker_col: str
+    trade_date: str
+
+
 class IngestionDataWriter:
     """统一数据写入器。"""
 
@@ -99,8 +119,8 @@ class IngestionDataWriter:
         self,
         metadata_service: MetadataService,
         market_write_service: MarketWriteService,
-        fundamental_service: FundamentalService,
-        capital_service: CapitalService,
+        fundamental_store: FundamentalStore,
+        capital_store: CapitalStore,
         macro_service: MacroService,
         source_name: str,
     ) -> None:
@@ -110,16 +130,16 @@ class IngestionDataWriter:
         Args:
             metadata_service: MetadataService 实例
             market_write_service: MarketWriteService 实例
-            fundamental_service: FundamentalService 实例
-            capital_service: CapitalService 实例
+            fundamental_store: FundamentalStore 实例
+            capital_store: CapitalStore 实例
             macro_service: MacroService 实例
             source_name: 数据源名称
 
         """
         self._metadata_service = metadata_service
         self._market_write_service = market_write_service
-        self._fundamental_service = fundamental_service
-        self._capital_service = capital_service
+        self._fundamental_store = fundamental_store
+        self._capital_store = capital_store
         self._macro_service = macro_service
         self._source_name = source_name
 
@@ -147,7 +167,7 @@ class IngestionDataWriter:
 
         """
         try:
-            dataset_enum = Dataset(dataset)  # 转换为枚举进行比较
+            dataset_enum = Dataset(dataset)
         except ValueError as e:
             raise AppProcessError(
                 f"不支持写入数据集: {dataset}",
@@ -155,161 +175,118 @@ class IngestionDataWriter:
                 value=dataset,
             ) from e
 
-        # 元数据类型数据集不需要年份分区
-        metadata_datasets = {
-            Dataset.CALENDAR,
-            Dataset.STOCK_BASIC,
-            Dataset.ETF_BASIC,
-            Dataset.INDEX_BASIC,
-        }
+        registration = default_dataset_registry().require(dataset_enum)
+        year = int(trade_date[:4]) if registration.requires_year_partition else 0
 
-        # 只有非元数据类型才需要提取年份
-        year = int(trade_date[:4]) if dataset_enum not in metadata_datasets else 0
-
-        source_ticker_col = "source_ticker"
-        handlers = self._build_dataset_handlers(
+        ctx = _WriteContext(
+            registration=registration,
             dataset=dataset,
             dataset_enum=dataset_enum,
             df=df,
             year=year,
             on_duplicate=on_duplicate,
-            source_ticker_col=source_ticker_col,
+            source_ticker_col="source_ticker",
             trade_date=trade_date,
         )
+        handler = self._build_write_handler(ctx)
+        return handler()
 
-        if dataset_enum not in handlers:
+    def _build_write_handler(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        """Build the writer callable from registry metadata."""
+        if ctx.registration.write_kind == WriteKind.UNSUPPORTED:
             raise AppProcessError(
-                f"不支持写入数据集: {dataset}",
+                f"不支持写入数据集: {ctx.dataset}",
                 field="dataset",
-                value=dataset,
+                value=ctx.dataset,
             )
+        handler_name = self._HANDLER_NAMES.get(ctx.registration.write_kind)
+        if handler_name is None:
+            raise AppProcessError(
+                f"未知写入路由: {ctx.registration.write_kind.value}",
+                field="dataset",
+                value=ctx.dataset,
+            )
+        handler = getattr(self, handler_name)
+        return handler(ctx)
 
-        return handlers[dataset_enum]()
+    _HANDLER_NAMES: ClassVar[dict[WriteKind, str]] = {
+        WriteKind.TRADED_BARS: "_handler_traded_bars",
+        WriteKind.INSTRUMENT_CODE_BARS: "_handler_instrument_code_bars",
+        WriteKind.STOCK_STATUS: "_handler_stock_status",
+        WriteKind.ADJ_FACTOR: "_handler_adj_factor",
+        WriteKind.FUNDAMENTAL: "_handler_fundamental",
+        WriteKind.CAPITAL: "_handler_capital",
+        WriteKind.MACRO: "_handler_macro",
+        WriteKind.CALENDAR: "_handler_calendar",
+        WriteKind.BASIC: "_handler_basic",
+    }
 
-    def _build_dataset_handlers(
-        self,
-        *,
-        dataset: str,
-        dataset_enum: Dataset,
-        df: pl.DataFrame,
-        year: int,
-        on_duplicate: OnDuplicate,
-        source_ticker_col: str,
-        trade_date: str,
-    ) -> dict[Dataset, Callable[[], WriteResult]]:
-        """Build the dataset-to-writer handler mapping."""
-        return {
-            Dataset.ETF_DAILY: lambda: self._write_traded_bars(
-                dataset,
-                df,
-                year,
-                on_duplicate,
-                source_ticker_col,
-                "etf_daily",
-            ),
-            Dataset.STOCK_DAILY: lambda: self._write_traded_bars(
-                dataset,
-                df,
-                year,
-                on_duplicate,
-                source_ticker_col,
+    def _handler_traded_bars(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        bars_dataset = cast(
+            Literal[
                 "stock_daily",
-            ),
-            Dataset.STOCK_STATUS: lambda: self._write_stock_status(
-                dataset,
-                df,
-                year,
-                source_ticker_col,
-            ),
-            Dataset.ADJ_FACTOR: lambda: self._write_adj_factor(
-                dataset,
-                df,
-                year,
-                on_duplicate,
-                source_ticker_col,
-            ),
-            Dataset.FUND_ADJ: lambda: self._write_adj_factor(
-                dataset,
-                df,
-                year,
-                on_duplicate,
-                source_ticker_col,
-            ),
-            Dataset.BALANCE_SHEET: lambda: self._write_fundamental(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.INCOME_STATEMENT: lambda: self._write_fundamental(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.CASH_FLOW: lambda: self._write_fundamental(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.DIVIDEND: lambda: self._write_fundamental(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.VALUATION_METRICS: lambda: self._write_capital(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.MARGIN_TRADING: lambda: self._write_capital(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.PLEDGE_RATIO: lambda: self._write_capital(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.MACRO_INDICATORS: lambda: self._write_macro(
-                dataset,
-                df,
-                year,
-            ),
-            Dataset.CORPORATE_ACTIONS: lambda: self._write_fundamental(
-                dataset,
-                dataset_enum,
-                df,
-                year,
-            ),
-            Dataset.CALENDAR: lambda: self._write_calendar(df, trade_date),
-            Dataset.STOCK_BASIC: lambda: self._write_basic(df, trade_date, "stock"),
-            Dataset.ETF_BASIC: lambda: self._write_basic(df, trade_date, "etf"),
-            Dataset.INDEX_BASIC: lambda: self._write_basic(df, trade_date, "index"),
-            Dataset.INDEX_DAILY: lambda: self._write_traded_bars(
-                dataset, df, year, on_duplicate, source_ticker_col, "index_daily"
-            ),
-            Dataset.FX_DAILY: lambda: self._write_instrument_code_bars(
-                dataset,
-                df,
-                year,
-                on_duplicate,
+                "etf_daily",
+                "index_daily",
                 "fx_daily",
-            ),
-            Dataset.COMMODITY_DAILY: lambda: self._write_instrument_code_bars(
-                dataset,
-                df,
-                year,
-                on_duplicate,
                 "commodity_daily",
-            ),
-        }
+            ],
+            ctx.registration.write_dataset,
+        )
+        return lambda: self._write_traded_bars(
+            ctx.dataset,
+            ctx.df,
+            ctx.year,
+            ctx.on_duplicate,
+            ctx.source_ticker_col,
+            bars_dataset,
+        )
+
+    def _handler_instrument_code_bars(
+        self, ctx: _WriteContext
+    ) -> Callable[[], WriteResult]:
+        bars_dataset = cast(
+            Literal["fx_daily", "commodity_daily"],
+            ctx.registration.write_dataset,
+        )
+        return lambda: self._write_instrument_code_bars(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, bars_dataset
+        )
+
+    def _handler_stock_status(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_stock_status(
+            ctx.dataset, ctx.df, ctx.year, ctx.source_ticker_col
+        )
+
+    def _handler_adj_factor(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_adj_factor(
+            ctx.dataset, ctx.df, ctx.year, ctx.on_duplicate, ctx.source_ticker_col
+        )
+
+    def _handler_fundamental(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_fundamental(
+            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year
+        )
+
+    def _handler_capital(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_capital(
+            ctx.dataset, ctx.dataset_enum, ctx.df, ctx.year
+        )
+
+    def _handler_macro(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_macro(ctx.dataset, ctx.df, ctx.year)
+
+    def _handler_calendar(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        return lambda: self._write_calendar(ctx.df, ctx.trade_date)
+
+    def _handler_basic(self, ctx: _WriteContext) -> Callable[[], WriteResult]:
+        asset_class = ctx.registration.basic_asset_class
+        if asset_class is None:
+            raise AppProcessError(
+                f"数据集 {ctx.dataset} 缺少 basic_asset_class 定义",
+                field="dataset",
+                value=ctx.dataset,
+            )
+        return lambda: self._write_basic(ctx.df, ctx.trade_date, asset_class)
 
     def _resolve_and_enrich_instrument_id(
         self,
@@ -470,11 +447,11 @@ class IngestionDataWriter:
 
         # Map dataset enum to the appropriate save method
         save_methods = {
-            Dataset.BALANCE_SHEET: self._fundamental_service.save_balance_sheet,
-            Dataset.INCOME_STATEMENT: self._fundamental_service.save_income_statement,
-            Dataset.CASH_FLOW: self._fundamental_service.save_cash_flow,
-            Dataset.DIVIDEND: self._fundamental_service.save_dividend,
-            Dataset.CORPORATE_ACTIONS: self._fundamental_service.save_corporate_actions,
+            Dataset.BALANCE_SHEET: self._fundamental_store.save_balance_sheet,
+            Dataset.INCOME_STATEMENT: self._fundamental_store.save_income_statement,
+            Dataset.CASH_FLOW: self._fundamental_store.save_cash_flow,
+            Dataset.DIVIDEND: self._fundamental_store.save_dividend,
+            Dataset.CORPORATE_ACTIONS: self._fundamental_store.save_corporate_actions,
         }
         save_method = save_methods[dataset_enum]
         records_written = save_method(enriched_df)
@@ -505,9 +482,9 @@ class IngestionDataWriter:
             dataset_enum.value,
         )
         capital_methods = {
-            "valuation_metrics": self._capital_service.save_valuation_metrics,
-            "margin_trading": self._capital_service.save_margin_trading,
-            "pledge_ratio": self._capital_service.save_pledge_ratio,
+            "valuation_metrics": self._capital_store.save_valuation_metrics,
+            "margin_trading": self._capital_store.save_margin_trading,
+            "pledge_ratio": self._capital_store.save_pledge_ratio,
         }
         save_method = capital_methods.get(capital_dataset)
         if save_method is None:

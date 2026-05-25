@@ -17,7 +17,9 @@ from ditto_backtest.statistics_returns import (
     annualized_volatility,
     daily_returns_from_navs,
     drawdown_analysis,
+    safe_ratio,
     sortino_ratio,
+    total_return,
 )
 from ditto_backtest.statistics_trades import cost_metrics
 
@@ -66,9 +68,9 @@ def compute_alpha_statistics(
     initial_nav = navs[0]
     daily_returns = daily_returns_from_navs(navs)
     total_days = len(daily_returns)
-    total_return = navs[-1] / initial_nav - 1 if initial_nav != 0 else 0.0
+    total_ret = total_return(navs)
 
-    ann_ret = annualized_return(total_return, total_days)
+    ann_ret = annualized_return(total_ret, total_days)
     ann_vol = annualized_volatility(daily_returns)
     sharpe = ann_ret / ann_vol if ann_vol > 0 else 0.0
     sortino = sortino_ratio(daily_returns, ann_ret)
@@ -84,7 +86,7 @@ def compute_alpha_statistics(
 
     cost = cost_metrics(list(fills), initial_nav, navs)
 
-    net_return_after_cost = total_return * 100 - cost.cost_drag
+    net_return_after_cost = total_ret * 100 - cost.cost_drag
 
     return AlphaStatistics(
         annualized_return=ann_ret,
@@ -169,10 +171,9 @@ def compute_beta_and_bench_ann(
     var_b = sum((bench_returns[i] - mean_b) ** 2 for i in range(min_len)) / (
         min_len - 1
     )
-    beta = cov / var_b if var_b > 0 else 0.0
+    beta = safe_ratio(cov, var_b)
 
-    bench_initial = benchmark_navs[0]
-    bench_total = benchmark_navs[-1] / bench_initial - 1 if bench_initial != 0 else 0.0
+    bench_total = total_return(list(benchmark_navs))
     bench_annualized = (
         (1 + bench_total) ** (TRADING_DAYS_PER_YEAR / max(min_len, 1)) - 1
     ) * 100

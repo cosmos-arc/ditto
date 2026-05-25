@@ -4,10 +4,9 @@ import httpx
 from loguru import logger
 
 from ditto_platform.services.notification.config import NotificationSettings
-from ditto_platform.services.notification.sender import NotificationSender
 
 
-class WebhookSender(NotificationSender):
+class WebhookSender:
     """
     Generic webhook notification sender via HTTP POST.
 

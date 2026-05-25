@@ -213,6 +213,25 @@ APPS_HOST_COMPOSITION_ALLOWANCES = (
             "migration (B8.1)."
         ),
     ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/infra/protocol_adapters.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.quality.protocols",
+                "ditto_data.services.source_accessor",
+                "ditto_data.sources.tdx.source",
+                "ditto_data.storage.metadata.instrument",
+                "ditto_data.storage.runtime.quality",
+                "ditto_features.compile_cache",
+            }
+        ),
+        owner="apps registry Protocol adapter provider",
+        reason=(
+            "ProtocolAdapterProvider bridges concrete infrastructure types "
+            "to Protocol interfaces for DI resolution. This is the composition "
+            "root's responsibility — concrete imports are intentional."
+        ),
+    ),
 )
 
 APPS_HOST_COMPOSITION_IMPORT_ALLOWLIST: dict[str, frozenset[str]] = {
@@ -256,16 +275,16 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="packages/apps/src/ditto_apps/registry/contexts/ingestion.py",
         allowed_modules=frozenset(
             {
-                "ditto_data.ingestion.freeze_service",
-                "ditto_data.ingestion.ingestion_cursor_service",
-                "ditto_data.ingestion.ingestion_log_service",
-                "ditto_data.services.capital_service",
-                "ditto_data.services.fundamental_service",
+                "ditto_data.ingestion.freeze_store",
+                "ditto_data.ingestion.ingestion_cursor_store",
+                "ditto_data.ingestion.ingestion_log_store",
+                "ditto_data.services.capital_store",
+                "ditto_data.services.fundamental_store",
                 "ditto_data.services.macro_service",
                 "ditto_data.services.market_service",
                 "ditto_data.services.market_write_service",
                 "ditto_data.services.metadata_service",
-                "ditto_data.services.source_service",
+                "ditto_data.services.source_accessor",
                 "ditto_data.sources.exchange_transformers",
             }
         ),
@@ -279,8 +298,8 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="packages/apps/src/ditto_apps/registry/contexts/query.py",
         allowed_modules=frozenset(
             {
-                "ditto_data.services.capital_service",
-                "ditto_data.services.fundamental_service",
+                "ditto_data.services.capital_store",
+                "ditto_data.services.fundamental_store",
                 "ditto_data.services.macro_service",
                 "ditto_data.services.market_service",
                 "ditto_data.services.metadata_service",
@@ -304,6 +323,25 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         reason=(
             "Strategy registry context owns concrete strategy storage wiring for "
             "application execution facades."
+        ),
+    ),
+    CompositionImportAllowance(
+        path="packages/apps/src/ditto_apps/registry/infra/protocol_adapters.py",
+        allowed_modules=frozenset(
+            {
+                "ditto_data.quality.protocols",
+                "ditto_data.services.source_accessor",
+                "ditto_data.sources.tdx.source",
+                "ditto_data.storage.metadata.instrument",
+                "ditto_data.storage.runtime.quality",
+                "ditto_features.compile_cache",
+            }
+        ),
+        owner="apps registry Protocol adapter provider",
+        reason=(
+            "ProtocolAdapterProvider bridges concrete infrastructure types "
+            "to Protocol interfaces for DI resolution. This is the composition "
+            "root's responsibility — concrete imports are intentional."
         ),
     ),
     CompositionImportAllowance(

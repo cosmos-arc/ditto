@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
 from ditto_data.models.ingestion import BackfillResult, IngestionResult
 from ditto_data.services.metadata_service import MetadataService
 from ditto_platform.foundation import logger
@@ -21,7 +23,7 @@ class BackfillManager:
         self,
         coordinator: IngestionCoordinator,
         metadata_service: MetadataService,
-        ingestion_log_service: IngestionLogService,
+        ingestion_log_store: IngestionLogStore,
     ) -> None:
         """
         初始化 BackfillManager。
@@ -29,12 +31,12 @@ class BackfillManager:
         Args:
             coordinator: IngestionCoordinator 实例。
             metadata_service: MetadataService 实例。
-            ingestion_log_service: IngestionLogService 实例。
+            ingestion_log_store: IngestionLogStore 实例。
 
         """
         self._coordinator = coordinator
         self._metadata_service = metadata_service
-        self._ingestion_log_service = ingestion_log_service
+        self._ingestion_log_store = ingestion_log_store
 
     def backfill_range(
         self,
@@ -141,7 +143,7 @@ class BackfillManager:
                 results=(),
             )
 
-        ingested_dates = self._ingestion_log_service.list_ingested_dates(
+        ingested_dates = self._ingestion_log_store.list_ingested_dates(
             dataset,
             source,
         )

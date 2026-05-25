@@ -56,7 +56,7 @@ ditto_backtest/
 │   ├── audit.py          # 审计收集 step
 │   ├── planning.py       # 计划编排 step
 │   ├── input_bundle.py   # 输入数据包
-│   └── types.py          # Step 类型定义
+│   └── types.py          # Step 类型定义（StepResult / StepContext / TradingStep Protocol）
 ├── audit/                # 审计子系统
 │   ├── collector.py      # 审计收集器
 │   └── records.py        # 审计记录
@@ -72,7 +72,7 @@ ditto_backtest/
 ├── _statistics_types.py  # 统计类型定义
 ├── report_renderer.py    # 报告渲染器
 ├── manifest.py           # 回测清单（RunManifest）
-├── result.py             # 引擎运行结果（EngineResult）
+├── result.py             # 引擎运行结果（EngineResult / EngineResultBuilder）
 ├── brokerage.py          # 回测层 brokerage 入口
 ├── errors.py             # 回测领域错误（BacktestError / EngineConfigError / ReplayError / SimulationError）
 ├── config.py             # 回测配置

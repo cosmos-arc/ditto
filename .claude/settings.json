@@ -15,7 +15,6 @@
       "Bash(git *)",
       "Bash(gh *)"
     ],
-    "ask": ["Bash(rm -rf *)"],
     "deny": [
       "Bash(sudo *)",
       "Bash(chmod 777 *)",
@@ -24,6 +23,9 @@
       "Bash(git push --force *)",
       "Bash(git reset --hard *)",
       "Bash(*prisma reset*)"
+    ],
+    "ask": [
+      "Bash(rm -rf *)"
     ],
     "defaultMode": "bypassPermissions"
   },
@@ -36,6 +38,7 @@
     "quantitative-trading@claude-code-workflows": true,
     "claude-md-management@claude-plugins-official": false,
     "pyright-lsp@claude-plugins-official": true,
-    "compound-engineering@compound-engineering-plugin": false
+    "compound-engineering@compound-engineering-plugin": false,
+    "codex@openai-codex": true
   }
 }

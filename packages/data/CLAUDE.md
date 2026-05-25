@@ -27,12 +27,12 @@ ditto_data/
 ├── helpers/             # 辅助工具（复权调整/PIT 策略与 DataFrame）
 │   ├── adjustment.py    # 复权调整辅助
 │   └── pit/             # PIT（Point-in-Time）辅助
-├── ingestion/           # 摄入服务（游标/日志/冻结/晚到数据/质量记录）
-│   ├── freeze_service.py                  # 冻结服务
-│   ├── ingestion_cursor_service.py        # 摄入游标服务
-│   ├── ingestion_log_service.py           # 摄入日志服务
-│   ├── late_arrival.py                    # 晚到数据处理
-│   └── quality_record_service.py          # 质量记录服务
+├── ingestion/           # 摄入存储（游标/日志/冻结/晚到数据/质量记录）
+│   ├── freeze_store.py                     # 冻结存储
+│   ├── ingestion_cursor_store.py           # 摄入游标存储
+│   ├── ingestion_log_store.py              # 摄入日志存储
+│   ├── late_arrival.py                     # 晚到数据处理
+│   └── quality_record_store.py             # 质量记录存储
 ├── models/              # 数据模型（市场/元数据/宏观/摄入/存储等；策略/交易/衍生/发布安全模型已迁移至各能力包或 kernel）
 │   ├── common.py               # 公共模型
 │   ├── market.py               # 行情模型
@@ -42,8 +42,6 @@ ditto_data/
 │   ├── storage.py              # 存储相关模型
 │   └── source_codes.py         # 数据源代码
 ├── provider.py          # DataProvider Protocol 定义
-├── providers/           # DataProvider 实现
-│   └── provider.py      # ServiceBackedDataProvider 实现
 ├── quality/             # 数据质量引擎
 │   ├── checkers/        # L1-L4 检查器（技术/业务/统计/跨源）
 │   ├── quality_types.py # DQ 类型（DQLevel / DQSeverity / DQIssue / DQResult）
@@ -58,16 +56,16 @@ ditto_data/
 │   ├── instrument_id_allocator.py # 工具 ID 分配器
 │   └── sql_engine.py             # SQL 引擎
 ├── scripts/             # 工具脚本
-├── services/            # 域服务（market/metadata/fundamental/macro/capital/source + metadata 子目录）
+├── services/            # 域服务/存储（market/metadata/fundamental/macro/capital/source + metadata 子目录）
 │   ├── deps.py          # 服务依赖聚合（DI 参数分组）
 │   ├── _enrichment.py   # 数据富化辅助
 │   ├── market_service.py         # 行情服务
 │   ├── market_write_service.py   # 行情写入服务
 │   ├── metadata_service.py       # 元数据服务
-│   ├── fundamental_service.py    # 基本面服务
+│   ├── fundamental_store.py      # 基本面存储（Reader/Writer 组合）
 │   ├── macro_service.py          # 宏观服务
-│   ├── capital_service.py        # 资金服务
-│   ├── source_service.py         # 数据源服务
+│   ├── capital_store.py          # 资金存储（Reader/Writer 组合）
+│   ├── source_accessor.py        # 数据源访问器
 │   └── metadata/        # 元数据子服务（日历/工具/Universe）
 │       ├── calendar.py   # 日历服务
 │       ├── instrument.py # 工具服务
@@ -139,10 +137,9 @@ ditto_data/
 | 层级 | 职责 | 禁止 | 必须 |
 |------|------|------|------|
 | storage (Reader/Writer) | 数据读写操作（CQRS 分离） | 包含业务逻辑 | 类型注解 |
-| services | 域服务（market/metadata/fundamental/macro/capital/source + metadata 子目录） | 直接访问文件系统 | 通过 storage |
+| services | 域服务/存储（market/metadata/fundamental/macro/capital/source + metadata 子目录） | 直接访问文件系统 | 通过 storage |
 | sources | 外部数据源接入 | 包含业务逻辑 | 重试、限流、监控埋点 |
-| providers | ServiceBackedDataProvider 实现 | 包含业务逻辑 | 通过 services |
-| ingestion | 数据摄入编排 | 绕过质量检查 | 游标管理 |
+| ingestion | 数据摄入存储（游标/日志/冻结/质量记录） | 绕过质量检查 | 游标管理 |
 | quality | 数据质量引擎（含 protocols.py） | 包含业务逻辑 | L1-L4 检查 |
 | runtime | 运行时基础设施（SQL 引擎/冻结管理/ID 分配） | 包含业务逻辑 | SQL/PIT/Freeze |
 | models | 数据模型定义（市场/元数据/宏观/摄入/存储等；策略/交易/衍生/发布安全模型已迁移至各能力包或 kernel） | 包含行为方法 | 纯数据类 |
@@ -165,8 +162,17 @@ ditto_data/
 ### 命名约定
 - 查询类：`*_reader.py`（如 `instrument_reader.py`）
 - 写入类：`*_writer.py`（如 `instrument_writer.py`）
-- 服务类：`*_service.py`（如 `metadata_service.py`）
+- 存储类（Reader/Writer 组合）：`*_store.py`（如 `capital_store.py`、`fundamental_store.py`）
+- 访问器（外部资源查找/访问）：`*_accessor.py`（如 `source_accessor.py`）
+- 服务类（有非平凡业务编排）：`*_service.py`（如 `metadata_service.py`、`market_service.py`）
 - 存储基础设施：`storage/base/` 保留 data-specific SQLiteStore / DatasetWriter / TableReader / TableWriter；ParquetStore / PartitionStrategy / SQLiteClient 等共享基类位于 `platform.foundation.storage`
+
+命名决策依据（详见架构攻坚计划 §3.3）：
+| 名称 | 使用条件 | 禁止 |
+|------|----------|------|
+| `*Store` | Reader/Writer 组合、集合式数据访问 | 混入校验、富化、跨表工作流 |
+| `*Service` | 有非平凡业务/应用内编排 | 只有 1-line pass-through |
+| `*Accessor` | 外部资源查找/访问 | 承担业务编排 |
 
 ## 层级访问规则（2026-02-10 更新）
 

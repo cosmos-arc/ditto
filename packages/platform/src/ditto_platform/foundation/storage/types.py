@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 __all__ = [
     "OnDuplicate",
@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-class OnDuplicate(Enum):
+class OnDuplicate(StrEnum):
     """Strategy for handling duplicate data during writes."""
 
     ERROR = "error"  # Raise on duplicate (default, safest)

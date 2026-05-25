@@ -325,6 +325,9 @@ forbidden_modules =
     ditto_data.runtime.**
 # 只检查直接导入，允许通过 hub 的间接使用
 allow_indirect_imports = true
+# Registry Protocol Adapters 豁免：桥接 concrete → Protocol 的 DI 适配器
+ignore_imports =
+    ditto_apps.registry.infra.protocol_adapters -> ditto_data.storage.**
 
 # ═══════════════════════════════════════════════════════════════════
 # Apps 层边界：禁止直接依赖 Data 服务/模型（逐步收紧）
@@ -597,4 +600,23 @@ ancestors =
     ditto_application
     ditto_apps
 depth = 10
+unmatched_ignore_imports_alerting = warn
+
+# ═══════════════════════════════════════════════════════════════════
+# Application Composition Boundary Smell Guard
+# ═══════════════════════════════════════════════════════════════════
+# application 层禁止直接导入 concrete storage、source adapter、SQLiteClient。
+# 这些具体实现应通过 Protocol 由 apps/registry 注入。
+[importlinter:contract:application-no-concrete-infra]
+name = Application must not import concrete storage/source/infra
+type = forbidden
+source_modules =
+    ditto_application
+forbidden_modules =
+    ditto_data.storage
+    ditto_data.sources.tushare
+    ditto_data.sources.fred
+    ditto_data.sources.tdx
+# 只检查直接导入；间接通过 service 的导入不违规
+allow_indirect_imports = true
 unmatched_ignore_imports_alerting = warn

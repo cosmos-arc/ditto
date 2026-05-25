@@ -8,8 +8,8 @@ from typing import NamedTuple
 import polars as pl
 from ditto_data.models import Dataset, DateScheduleType
 from ditto_data.models.ingestion import IngestionResult
-from ditto_data.services.capital_service import CapitalService
-from ditto_data.services.fundamental_service import FundamentalService
+from ditto_data.services.capital_store import CapitalStore
+from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.market_write_service import MarketWriteService
@@ -29,6 +29,9 @@ from ditto_application.processes.ingestion.coordinator_constants import (
     get_all_index_codes,
 )
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.dataset_registry import (
+    default_dataset_registry,
+)
 from ditto_application.processes.ingestion.fetch_handlers import (
     build_daily_fetch_handlers,
 )
@@ -98,8 +101,8 @@ class IngestionServices(NamedTuple):
 
     metadata: MetadataService
     market: MarketServices
-    fundamental: FundamentalService
-    capital: CapitalService
+    fundamental: FundamentalStore
+    capital: CapitalStore
     macro: MacroService
 
 
@@ -120,26 +123,26 @@ class IngestionCoordinator:
         self._metadata_service = services.metadata
         self._market_service = services.market.query
         self._market_write_service = services.market.write
-        self._fundamental_service = services.fundamental
-        self._capital_service = services.capital
+        self._fundamental_store = services.fundamental
+        self._capital_store = services.capital
         self._macro_service = services.macro
         self._fetchers = fetchers
         self._source_name = cfg.source_name
         self._fred_source = fred_source
-        self._ingestion_log_service = cfg.ingestion_log_service
-        self._ingestion_cursor_service = cfg.ingestion_cursor_service
+        self._ingestion_log_store = cfg.ingestion_log_store
+        self._ingestion_cursor_store = cfg.ingestion_cursor_store
         self._quality_checker = cfg.quality_checker
-        self._freeze_service = cfg.freeze_service
+        self._freeze_store = cfg.freeze_store
 
-        self._metadata_manager = MetadataManager(cfg.ingestion_log_service)
+        self._metadata_manager = MetadataManager(cfg.ingestion_log_store)
         self._result_handler = IngestionResultHandler(
-            cfg.ingestion_log_service, cfg.source_name
+            cfg.ingestion_log_store, cfg.source_name
         )
         self._data_writer = IngestionDataWriter(
             metadata_service=services.metadata,
             market_write_service=services.market.write,
-            fundamental_service=services.fundamental,
-            capital_service=services.capital,
+            fundamental_store=services.fundamental,
+            capital_store=services.capital,
             macro_service=services.macro,
             source_name=cfg.source_name,
         )
@@ -151,6 +154,7 @@ class IngestionCoordinator:
         )
 
         self._index_codes_cache: list[str] | None = None
+        self._registry = default_dataset_registry()
 
     def _fetch_commodity_daily(self, trade_date: str) -> pl.DataFrame:
         """获取商品数据（原油、贵金属、VIX），委托至 ``commodity_fetcher``。"""
@@ -275,8 +279,8 @@ class IngestionCoordinator:
             data_writer=self._data_writer,
             quality_checker=self._quality_checker,
             list_date_inference=self._list_date_inference,
-            cursor_service=self._ingestion_cursor_service,
-            freeze_service=self._freeze_service,
+            cursor_store=self._ingestion_cursor_store,
+            freeze_store=self._freeze_store,
             source_name=self._source_name,
         )
 
@@ -353,11 +357,15 @@ class IngestionCoordinator:
         """摄取日期范围数据，根据 date_schedule 类型选择日期序列。"""
         try:
             dataset_enum = Dataset(dataset)
-        except ValueError:
-            dataset_enum = None
+            registration = self._registry.require(dataset_enum)
+        except (ValueError, AppProcessError):
+            registration = None
 
-        default_schedule = DateScheduleType.TRADING_DAYS
-        schedule_type = dataset_enum.date_schedule if dataset_enum else default_schedule
+        schedule_type = (
+            registration.date_schedule
+            if registration
+            else DateScheduleType.TRADING_DAYS
+        )
 
         match schedule_type:
             case DateScheduleType.TRADING_DAYS:

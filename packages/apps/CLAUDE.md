@@ -44,6 +44,12 @@ ditto_apps/
 │   ├── contexts/      # DI 上下文（bundle/ingestion/materialization/query/strategy）
 │   └── infra/         # 基础设施配置（config/notification/observability/signal_delivery）
 │       ├── _factory.py                # Provider 工厂
+│       ├── config.py                  # 基础设施配置
+│       ├── init_providers.py          # Provider 初始化
+│       ├── notification.py            # 通知模块
+│       ├── observability.py           # 可观测性模块
+│       ├── protocol_adapters.py       # Protocol 适配器（SourceAccessor → DataPort）
+│       ├── signal_delivery.py         # 信号推送
 │       └── notification_templates/    # 通知模板（dq_failure/signal_trading × email/telegram/webhook）
 ├── config/            # 配置加载
 │   └── loader.py      # 环境配置加载器

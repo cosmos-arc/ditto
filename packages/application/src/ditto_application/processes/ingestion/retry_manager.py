@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from ditto_data.ingestion.ingestion_log_service import IngestionLogService
+from ditto_data.ingestion.ingestion_log_store import (
+    IngestionLogStore,
+)
 from ditto_data.models.ingestion import IngestionResult, RetryResult
 from ditto_platform.foundation import logger
 
@@ -16,7 +18,7 @@ class RetryManager:
     def __init__(
         self,
         coordinator: IngestionCoordinator,
-        ingestion_log_service: IngestionLogService,
+        ingestion_log_store: IngestionLogStore,
         source: str = "tushare",
     ) -> None:
         """
@@ -26,7 +28,7 @@ class RetryManager:
         Args:
             coordinator: 摄取协调器
 
-            ingestion_log_service: 摄取日志服务
+            ingestion_log_store: 摄取日志服务
 
             source: 数据源标识符
 
@@ -35,7 +37,7 @@ class RetryManager:
         """
         self._coordinator = coordinator
 
-        self._ingestion_log_service = ingestion_log_service
+        self._ingestion_log_store = ingestion_log_store
 
         self._source = source
 
@@ -64,7 +66,7 @@ class RetryManager:
 
 
         """
-        failed_dates = self._ingestion_log_service.list_failed_dates(
+        failed_dates = self._ingestion_log_store.list_failed_dates(
             dataset=dataset,
             source=self._source,
             limit=limit,

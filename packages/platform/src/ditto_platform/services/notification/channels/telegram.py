@@ -4,10 +4,9 @@ import httpx
 from loguru import logger
 
 from ditto_platform.services.notification.config import NotificationSettings
-from ditto_platform.services.notification.sender import NotificationSender
 
 
-class TelegramSender(NotificationSender):
+class TelegramSender:
     """
     Telegram Bot API notification sender.
 

@@ -553,27 +553,6 @@ class TestApplyLateArrivalPolicy:
 
         assert result.is_empty()
 
-    def test_apply_late_arrival_policy_unknown_raises(self) -> None:
-        """未知策略应抛出 ResearchDatasetError."""
-
-        frame = pl.DataFrame(
-            {
-                "instrument_id": [1, 2],
-                "factor.alpha": [1.0, 2.0],
-            }
-        )
-        late_flags = pl.Series([True, False])
-
-        with pytest.raises(
-            ResearchDatasetError, match="Unknown late arrival policy"
-        ) as exc_info:
-            _apply_late_arrival_policy(frame, "unknown_policy", late_flags)
-        assert exc_info.value.details == {
-            "policy": "unknown_policy",
-            "supported": tuple(item.value for item in LateArrivalPolicy),
-            "supported_policies": tuple(item.value for item in LateArrivalPolicy),
-        }
-
     def test_apply_late_arrival_no_late_returns_unchanged(self) -> None:
         """无延迟行时所有策略都应原样返回."""
 

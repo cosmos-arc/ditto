@@ -5,7 +5,7 @@ from __future__ import annotations
 from dishka import Provider, Scope, provide
 from ditto_platform.foundation import SQLiteClient
 
-from ditto_data.services.capital_service import CapitalService
+from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.deps import CapitalReaders, CapitalWriters
 from ditto_data.storage.capital.index_composition.index_composition_reader import (
     IndexCompositionReader,
@@ -87,13 +87,13 @@ class CapitalProvider(Provider):
         )
 
     @provide
-    def capital_service(
+    def capital_store(
         self,
         capital_read_ports: CapitalReaders,
         capital_write_ports: CapitalWriters,
-    ) -> CapitalService:
-        """Capital domain unified service."""
-        return CapitalService(
+    ) -> CapitalStore:
+        """Capital domain unified store."""
+        return CapitalStore(
             read_ports=capital_read_ports,
             write_ports=capital_write_ports,
         )

@@ -1,13 +1,12 @@
 """通知渠道发送器."""
 
-from abc import ABC, abstractmethod
+from typing import Protocol
 
 
-class NotificationSender(ABC):
-    """Abstract base class for notification senders."""
+class NotificationSender(Protocol):
+    """Protocol for notification senders."""
 
     @property
-    @abstractmethod
     def channel_name(self) -> str:
         """
         Get channel identifier.
@@ -18,7 +17,6 @@ class NotificationSender(ABC):
         """
         ...
 
-    @abstractmethod
     def send(self, rendered_content: str) -> bool:
         """
         Send rendered notification content.
