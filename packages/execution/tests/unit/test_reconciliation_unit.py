@@ -331,6 +331,48 @@ class TestReconcileStatusMismatch:
         assert diff.actual_status is OrderStatus.PARTIALLY_FILLED
 
 
+class TestReconcileStatusMismatchQtyMatch:
+    """Codex review catch: status != FILLED but fills sum to expected quantity."""
+
+    def test_submitted_with_full_qty_still_flags_status(self) -> None:
+        ticket = _ticket("ord-1", 100, 100, 4.50, status=OrderStatus.SUBMITTED)
+        fills = [_fill("fill-1", "ord-1", 100, 4.50)]
+        report = reconcile(
+            report_id="r-status-qty-match",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[ticket],
+            actual=fills,
+        )
+        status_diffs = [
+            d for d in report.diffs if d.mismatch_type is MismatchType.STATUS_MISMATCH
+        ]
+        assert len(status_diffs) == 1
+        assert status_diffs[0].actual_status is OrderStatus.SUBMITTED
+        qty_diffs = [
+            d for d in report.diffs if d.mismatch_type is MismatchType.QTY_MISMATCH
+        ]
+        assert len(qty_diffs) == 0
+
+    def test_partially_filled_with_full_qty_still_flags_status(self) -> None:
+        ticket = _ticket("ord-1", 200, 200, 4.50, status=OrderStatus.PARTIALLY_FILLED)
+        fills = [
+            _fill("fill-1", "ord-1", 100, 4.50),
+            _fill("fill-2", "ord-1", 100, 4.50),
+        ]
+        report = reconcile(
+            report_id="r-status-qty-match-2",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[ticket],
+            actual=fills,
+        )
+        status_diffs = [
+            d for d in report.diffs if d.mismatch_type is MismatchType.STATUS_MISMATCH
+        ]
+        assert len(status_diffs) == 1
+
+
 class TestReconcileMultipleMismatches:
     """Mix of missing, extra, and mismatched items in one report."""
 

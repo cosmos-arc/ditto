@@ -81,8 +81,8 @@ def reconcile(
         total_value = sum(f.filled_quantity * f.fill_price for f in matched_fills)
         avg_price = total_value / total_qty if total_qty > 0 else 0.0
 
-        # 状态检查：期望 FILLED 但实际非 FILLED
-        if ticket.status != OrderStatus.FILLED and total_qty < ticket.order.quantity:
+        # 状态检查：实际非 FILLED 即为偏差（无论 qty 是否匹配）
+        if ticket.status != OrderStatus.FILLED:
             diffs.append(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.STATUS_MISMATCH,
