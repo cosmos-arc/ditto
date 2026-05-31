@@ -23,6 +23,15 @@ from ditto_features.evaluation.report import (
     RegimeICResult,
 )
 
+__all__ = [
+    "EvaluationConfig",
+    "ICMetricsData",
+    "OptionalAnalysisData",
+    "QuantileMetricsData",
+    "assemble_report",
+    "compute_optional_analysis",
+]
+
 
 @dataclass(frozen=True)
 class EvaluationConfig:

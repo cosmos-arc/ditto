@@ -109,13 +109,15 @@ class SqliteOrderEventJournal:
         """关闭数据库连接。"""
         self._conn.close()
 
-    def __enter__(self) -> SqliteOrderEventJournal:  # noqa: D105
+    def __enter__(self) -> SqliteOrderEventJournal:
+        """进入上下文管理器。"""
         return self
 
-    def __exit__(  # noqa: D105
+    def __exit__(
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        """退出上下文管理器，关闭数据库连接。"""
         self.close()

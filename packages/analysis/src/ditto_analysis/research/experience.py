@@ -12,7 +12,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+__all__ = ["DecisionLog", "ExperienceMemory", "MarkdownExperienceMemory"]
+
 _HEADER = "# Experience Memory\n\n"
+
+# 摘要中展示的最近决策条数
+_SUMMARY_RECENT_COUNT = 5
 
 
 @dataclass(frozen=True)
@@ -142,6 +147,13 @@ class MarkdownExperienceMemory:
     """
 
     def __init__(self, path: Path) -> None:
+        """
+        初始化 Markdown 经验记忆。
+
+        Args:
+            path: Markdown 文件存储路径。文件不存在时首次写入自动创建。
+
+        """
         self._path = path
 
     # -- record ---------------------------------------------------------------
@@ -199,7 +211,7 @@ class MarkdownExperienceMemory:
     # -- summarize ------------------------------------------------------------
 
     def summarize(self) -> str:
-        """返回结构化摘要：总记录数、tag 统计、最近 5 条决策。"""
+        """返回结构化摘要：总记录数、tag 统计、最近 N 条决策。"""
         if not self._path.exists():
             return "总记录数: 0\n"
 
@@ -219,8 +231,8 @@ class MarkdownExperienceMemory:
             f"  {tag}: {count}" for tag, count in sorted(tag_counts.items())
         )
 
-        # 最近 5 条（最新在前）
-        recent = tuple(reversed(all_logs))[:5]
+        # 最近 N 条（最新在前）
+        recent = tuple(reversed(all_logs))[:_SUMMARY_RECENT_COUNT]
         recent_lines = "\n".join(
             f"  [{log.timestamp}] {log.decision}" for log in recent
         )

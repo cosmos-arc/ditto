@@ -43,6 +43,7 @@ ditto_execution → ditto_apps ❌
 ditto_execution/
 ├── broker/               # 券商网关抽象
 │   ├── contracts.py      # BrokerGateway Protocol
+│   ├── runtime.py        # PaperRuntimeKernel（继承 BaseRuntimeKernel，RealtimeClock + SimpleEventBus）
 │   └── gateways/         # 具体券商实现
 │       └── paper.py      # PaperBrokerGateway（冒烟测试级别模拟网关）
 ├── orders/               # 订单管理（OMS Lite — FSM + Journal + 双 ID）
@@ -69,19 +70,26 @@ ditto_execution/
 ├── storage/              # 持久化
 │   ├── deps.py           # 依赖注入（ExecutionReaders / ExecutionWriters）
 │   └── sqlite/
-│       └── trade/        # 交易数据存储
-│           ├── service.py    # 读写服务
-│           ├── fills.py      # 成交存储
-│           ├── intents.py    # 意图存储
-│           ├── positions.py  # 持仓快照存储
-│           └── _sql.py       # SQL 工具（allowlists / WHERE 构建）
+│       ├── __init__.py
+│       ├── trade/        # 交易数据存储
+│       │   ├── service.py    # 读写服务
+│       │   ├── fills.py      # 成交存储
+│       │   ├── intents.py    # 意图存储
+│       │   ├── positions.py  # 持仓快照存储
+│       │   └── _sql.py       # SQL 工具（allowlists / WHERE 构建）
+│       └── reconciliation.py # 对账 repair workflow 状态存储
 ├── di/                   # 依赖注入 Provider
 │   ├── _factory.py       # Execution Provider 工厂
 │   └── storage.py        # 存储层 DI Provider
-├── reconciliation/       # 对账（reconcile() 纯函数 + typed diff entries）
+├── reconciliation/       # 对账（reconcile()/plan_repair() 纯函数 + executor orchestration）
 ├── brokerage.py          # 券商模拟入口
 ├── storage.py            # 存储入口
 ├── planner.py            # 执行计划器
+├── _planner_types.py     # 计划器内部类型
+├── cost_estimate.py      # 成本估算
+├── market_precheck.py    # 市场预检
+├── quantity_rounding.py  # 数量取整
+├── target_diff.py        # 目标差分计算
 ├── trade_builder.py      # 交易构建器
 ├── targets.py            # 目标持仓计算
 ├── rules.py              # execution-owned 规则提供器；交易规则类型来自 ditto_kernel.trading
@@ -147,7 +155,7 @@ from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 
 - **~~OMS Lite（EXEC-P1-01）~~**：✅ 已实现（Phase 2）。`orders/` 包含完整 FSM、Journal、双 ID、OrderBook、OrderTicket。
 - **~~Broker Gateways（EXEC-P1-02）~~**：✅ 已实现（PaperBrokerGateway）。`broker/gateways/paper.py` 提供冒烟测试级别的模拟网关，支持 order submit/fill/account/connect。`BrokerGateway` Protocol 定义在 `broker/contracts.py`。
-- **~~Reconciliation（EXEC-P1-03）~~**：✅ 已实现。`reconciliation/` 导出 `reconcile()` 纯函数（无副作用）+ `ReconciliationReport` / `ReconciliationDiff` 类型定义。状态字段使用 `Literal["matched", "mismatch", "pending"]` 类型。
+- **~~Reconciliation（EXEC-P1-03）~~**：✅ 已实现。`reconciliation/` 导出 `reconcile()` 纯函数（无副作用）+ `plan_repair()` 纯函数（无副作用 repair action planning）+ `RepairActionExecutor`（审批状态门禁、handler dispatch、执行结果落库、audit sink 端口）+ `ReconciliationReport` / `ReconciliationDiff` / `RepairPlan` / `RepairActionRecord` / `RepairExecutionResult` 类型定义。状态字段使用 `Literal["matched", "mismatch", "pending"]` 类型；`SQLiteRepairWorkflowStore` 持久化 action 审批/执行状态并阻止未审批写操作执行；当前默认 handler 只覆盖 read-only broker refresh，真正会修改订单/成交/账户状态的 mutating handler 仍是后续工作。
 - **Audit Spine（EXEC-P1-04）**：存储表（`execution_fills`、`trade_intents`、`actual_positions`、`execution_audit`）缺乏统一关联键（broker order ID、client ID、journal sequence）。
 - **Planner Decomposition（EXEC-P2-01）**：`planner.py` 约 530 LOC 混合 target diff / market precheck / rounding / cost 逻辑，计划拆分为聚焦模块。
 - **A-Share Rules（EXEC-P2-02）**：规则行为散布在 execution、backtest、kernel 中，需要跨包协调收拢。

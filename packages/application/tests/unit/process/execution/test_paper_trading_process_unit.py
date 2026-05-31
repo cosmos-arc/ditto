@@ -43,55 +43,64 @@ def _make_order(
 
 def _make_runtime(
     initial_cash: float = 100_000.0,
-) -> tuple[PaperBrokerGateway, Account, PaperTradingRuntime]:
+) -> tuple[PaperBrokerGateway, PaperTradingRuntime]:
     """构建测试用 PaperTradingRuntime 及其依赖."""
-    cash = CashBook(
-        available=initial_cash,
-        settled=initial_cash,
-        frozen=0.0,
-    )
     gateway = PaperBrokerGateway(initial_cash=initial_cash)
-    account = Account(cash=cash)
-    runtime = PaperTradingRuntime(gateway=gateway, account=account)
-    return gateway, account, runtime
+    runtime = PaperTradingRuntime(gateway=gateway)
+    return gateway, runtime
 
 
 class TestPaperTradingRuntimeConstruction:
     """PaperTradingRuntime 构造."""
 
-    def test_constructs_with_gateway_and_account(self) -> None:
-        """接受 PaperBrokerGateway 和 Account."""
-        _, _, runtime = _make_runtime()
+    def test_constructs_with_gateway(self) -> None:
+        """只接受 BrokerGateway；账户状态由 gateway 拥有."""
+        gateway = PaperBrokerGateway(initial_cash=100_000.0)
+
+        runtime = PaperTradingRuntime(gateway=gateway)
+
         assert runtime is not None
 
 
 class TestPaperTradingRuntimeExecuteOrder:
-    """execute_order 完整路径：gateway -> fill -> account."""
+    """execute_order 路径：runtime 提交订单，gateway 拥有成交和账户状态."""
+
+    def test_account_state_is_owned_by_gateway(self) -> None:
+        """执行订单后 runtime 应读取 gateway 账户，不能另行应用同一笔成交."""
+        gateway = PaperBrokerGateway(initial_cash=100_000.0)
+        runtime = PaperTradingRuntime(gateway=gateway)
+
+        runtime.execute_order(_make_order(OrderSide.BUY, quantity=100, price=10.0))
+
+        view = runtime.get_account()
+        assert view == gateway.get_account()
+        assert view.cash.available == 99_000.0
+        assert view.positions[IID].quantity == 100
 
     def test_buy_order_reduces_cash(self) -> None:
         """BUY 订单应减少账户现金."""
         initial_cash = 100_000.0
-        _, account, runtime = _make_runtime(initial_cash)
+        _, runtime = _make_runtime(initial_cash)
         runtime.execute_order(_make_order(OrderSide.BUY, quantity=100, price=10.0))
 
         # 现金应减少: 100 * 10.0 = 1000.0
-        view = account.get_view()
+        view = runtime.get_account()
         assert view.cash.available == initial_cash - 1000.0
 
     def test_buy_order_creates_position(self) -> None:
         """BUY 订单应创建持仓."""
-        _, account, runtime = _make_runtime()
+        _, runtime = _make_runtime()
         runtime.execute_order(_make_order(OrderSide.BUY))
 
         # 持仓应存在
-        view = account.get_view()
+        view = runtime.get_account()
         assert IID in view.positions
         assert view.positions[IID].quantity == 100
         assert view.positions[IID].average_cost == 10.0
 
     def test_buy_order_returns_ticket_with_filled_status(self) -> None:
         """execute_order 应返回 FILLED 状态的 ticket."""
-        _, _, runtime = _make_runtime()
+        _, runtime = _make_runtime()
 
         ticket = runtime.execute_order(_make_order(OrderSide.BUY))
 
@@ -103,25 +112,25 @@ class TestPaperTradingRuntimeExecuteOrder:
     def test_sell_order_increases_cash(self) -> None:
         """SELL 订单应增加账户现金."""
         initial_cash = 50_000.0
-        _, account, runtime = _make_runtime(initial_cash)
+        _, runtime = _make_runtime(initial_cash)
 
         # 先买入
         runtime.execute_order(_make_order(OrderSide.BUY, quantity=200, price=10.0))
         # 再卖出
         runtime.execute_order(_make_order(OrderSide.SELL, quantity=100, price=12.0))
 
-        view = account.get_view()
+        view = runtime.get_account()
         # 买入后现金: 50000 - 200*10 = 48000
         # 卖出后现金: 48000 + 100*12 = 49200
         assert view.cash.available == initial_cash - 2000.0 + 1200.0
 
     def test_account_view_snapshot_after_fills(self) -> None:
         """多次成交后 AccountView 应反映正确的 cash/position/exposure."""
-        _, account, runtime = _make_runtime()
+        _, runtime = _make_runtime()
 
         runtime.execute_order(_make_order(OrderSide.BUY, quantity=100, price=10.0))
 
-        view: AccountView = account.get_view()
+        view: AccountView = runtime.get_account()
 
         # 现金: 100000 - 1000 = 99000
         assert view.cash.available == 99_000.0
@@ -189,19 +198,15 @@ class TestPaperTradingRuntimeAcceptsBrokerGatewayProtocol:
         """接受满足 BrokerGateway Protocol 的 Mock 对象."""
         order = _make_order(OrderSide.BUY)
         gateway = _make_stub_gateway(order)
-        cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
-        account = Account(cash=cash)
 
-        runtime = PaperTradingRuntime(gateway=gateway, account=account)
+        runtime = PaperTradingRuntime(gateway=gateway)
         assert runtime is not None
 
     def test_execute_order_with_mock_gateway(self) -> None:
-        """通过 Mock gateway 执行订单应正常返回 ticket 并应用成交."""
+        """通过 Mock gateway 执行订单应返回 gateway ticket."""
         order = _make_order(OrderSide.BUY, quantity=100, price=10.0)
         gateway = _make_stub_gateway(order)
-        cash = CashBook(available=100_000.0, settled=100_000.0, frozen=0.0)
-        account = Account(cash=cash)
-        runtime = PaperTradingRuntime(gateway=gateway, account=account)
+        runtime = PaperTradingRuntime(gateway=gateway)
 
         ticket = runtime.execute_order(order)
 
@@ -209,21 +214,22 @@ class TestPaperTradingRuntimeAcceptsBrokerGatewayProtocol:
         assert ticket.status == OrderStatus.FILLED
         assert ticket.filled_quantity == 100
         gateway.submit_order.assert_called_once_with(order)
-        gateway.query_fills.assert_called_once_with(order.order_id)
+        gateway.query_fills.assert_not_called()
 
-    def test_mock_gateway_reduces_cash(self) -> None:
-        """Mock gateway 成交应正确减少账户现金."""
+    def test_get_account_delegates_to_gateway(self) -> None:
+        """账户状态由 gateway 提供，runtime 不维护独立账户."""
         order = _make_order(OrderSide.BUY, quantity=100, price=10.0)
         gateway = _make_stub_gateway(order)
-        initial_cash = 100_000.0
-        cash = CashBook(available=initial_cash, settled=initial_cash, frozen=0.0)
-        account = Account(cash=cash)
-        runtime = PaperTradingRuntime(gateway=gateway, account=account)
+        account = Account(
+            cash=CashBook(available=99_000.0, settled=99_000.0, frozen=0.0)
+        )
+        gateway.get_account.return_value = account.get_view()
+        runtime = PaperTradingRuntime(gateway=gateway)
 
-        runtime.execute_order(order)
+        view = runtime.get_account()
 
-        view = account.get_view()
-        assert view.cash.available == initial_cash - 1000.0
+        assert view.cash.available == 99_000.0
+        gateway.get_account.assert_called_once_with()
 
     def test_paper_broker_gateway_satisfies_protocol(self) -> None:
         """PaperBrokerGateway 应满足 BrokerGateway Protocol."""

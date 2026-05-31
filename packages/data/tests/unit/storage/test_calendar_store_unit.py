@@ -1,8 +1,9 @@
 """Tests for CalendarReader and CalendarWriter (CQRS pattern)."""
 
 import pytest
+from ditto_data.errors import TradingDateNotFoundError
 from ditto_data.storage.metadata.calendar import CalendarReader, CalendarWriter
-from ditto_platform.foundation import SQLiteClient
+from ditto_platform.foundation import DataCache, SQLiteClient
 from pytest_mock import MockerFixture
 
 
@@ -197,11 +198,13 @@ class TestCalendarReader:
         """Test getting previous trading day."""
         assert self.reader.get_prev("2024-01-03") == "2024-01-02"
         assert self.reader.get_prev("2024-01-08") == "2024-01-05"  # After weekend
+        assert self.reader.get_prev("2099-01-01") is None
 
     def test_get_next_trading_day(self) -> None:
         """Test getting next trading day."""
         assert self.reader.get_next("2024-01-02") == "2024-01-03"
         assert self.reader.get_next("2024-01-05") == "2024-01-08"  # Friday to Monday
+        assert self.reader.get_next("2099-01-01") is None
 
     @pytest.mark.parametrize(
         ("date", "offset", "expected"),
@@ -227,6 +230,19 @@ class TestCalendarReader:
         assert self.reader.offset("2024-01-02", -10) is None
         # After last trading day
         assert self.reader.offset("2024-01-10", 10) is None
+
+    def test_offset_non_trading_date_boundaries(self) -> None:
+        """Test offset behavior when the start date is not a trading day."""
+        assert self.reader.offset("2024-01-06", 0) is None
+        assert self.reader.offset("2024-01-06", 1) == "2024-01-08"
+        assert self.reader.offset("2024-01-06", -1) == "2024-01-05"
+
+    def test_offset_safe_returns_result_and_raises_out_of_range(self) -> None:
+        """Test safe offset success and failure paths."""
+        assert self.reader.offset_safe("2024-01-02", 1) == "2024-01-03"
+
+        with pytest.raises(TradingDateNotFoundError, match="Cannot offset"):
+            self.reader.offset_safe("2024-01-10", 1)
 
     def test_get_range(self) -> None:
         """Test getting trading days in a range."""
@@ -315,8 +331,6 @@ class TestCalendarReader:
 
     def test_get_range_returns_immutable_copy(self) -> None:
         """Test that get_range returns a copy to prevent cache pollution."""
-        from ditto_platform.foundation import DataCache
-
         # Create reader with DataCache
         data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
         reader_with_cache = CalendarReader(self.client, data_cache=data_cache)
@@ -345,6 +359,87 @@ class TestCalendarReader:
         assert len(result3) == 4
         assert "2024-01-02" in result3
         assert "2024-01-15" not in result3
+
+    def test_get_range_uses_empty_data_cache_when_present(self) -> None:
+        """Reader should use an empty DataCache instead of treating it as absent."""
+        data_cache = DataCache[list[str]](
+            ttl_seconds=300,
+            max_size=1000,
+            enable_metrics=False,
+        )
+        reader_with_cache = CalendarReader(self.client, data_cache=data_cache)
+
+        result1 = reader_with_cache.get_range("2024-01-02", "2024-01-05")
+        assert result1 == ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
+        assert len(data_cache) == 1
+
+        result1.append("2024-01-15")
+        result2 = reader_with_cache.get_range("2024-01-02", "2024-01-05")
+
+        assert result2 == ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]
+        assert data_cache.get_stats().hit_count >= 1
+
+    def test_reload_invalidates_data_cache_when_present(self) -> None:
+        """Reload should invalidate range cache even if the cache object was empty."""
+        data_cache = DataCache[list[str]](
+            ttl_seconds=300,
+            max_size=1000,
+            enable_metrics=False,
+        )
+        reader_with_cache = CalendarReader(self.client, data_cache=data_cache)
+
+        reader_with_cache.get_range("2024-01-02", "2024-01-05")
+        assert len(data_cache) == 1
+
+        reader_with_cache.reload()
+
+        assert len(data_cache) == 0
+
+    def test_empty_calendar_returns_empty_or_none_boundaries(self) -> None:
+        """Empty calendar cache should return empty collections and None boundaries."""
+        self.client.execute("DELETE FROM trading_calendar")
+        self.client.commit()
+        self.reader.reload()
+
+        assert self.reader.offset("2024-01-02", 1) is None
+        assert self.reader.get_range("2024-01-01", "2024-01-10") == []
+        assert self.reader.get_range_df("2024-01-01", "2024-01-10").is_empty()
+        assert self.reader.get_range_df(
+            "2024-01-01", "2024-01-10", only_open=False
+        ).is_empty()
+        assert self.reader.get_first_trading_day() is None
+        assert self.reader.get_last_trading_day() is None
+        assert self.reader.get_latest_before("2024-01-10") is None
+        assert self.reader.get_earliest_after("2024-01-01") is None
+
+    def test_get_range_df_skips_missing_cache_entries_defensively(self) -> None:
+        """Range DataFrame should skip dates missing from the calendar cache."""
+        del self.reader._cache["2024-01-03"]
+
+        df = self.reader.get_range_df("2024-01-02", "2024-01-04")
+
+        assert df["trade_date"].to_list() == ["2024-01-02", "2024-01-04"]
+
+    def test_get_quarter_ends(self) -> None:
+        """Test getting quarter-end trading days."""
+        self.client.execute(
+            """INSERT INTO trading_calendar
+            (trade_date, is_open, prev_trade_date, next_trade_date,
+             week_of_year, month, quarter, year,
+             is_week_end, is_month_end, is_quarter_end)
+            VALUES ('2024-03-29', TRUE, '2024-03-28', '2024-04-01',
+                    13, 3, 1, 2024, TRUE, TRUE, TRUE)"""
+        )
+        self.client.commit()
+        self.reader.reload()
+
+        assert self.reader.get_quarter_ends("2024-03-01", "2024-03-31") == [
+            "2024-03-29"
+        ]
+
+    def test_get_period_ends_returns_empty_for_period_without_entries(self) -> None:
+        """Period-end queries should return an empty list when no entries exist."""
+        assert self.reader.get_quarter_ends("2024-01-01", "2024-01-31") == []
 
 
 class TestCalendarWriter:

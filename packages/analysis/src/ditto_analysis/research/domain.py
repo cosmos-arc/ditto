@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from .late_arrival import (
-    _apply_late_arrival_policy,
-    _detect_late_arrivals,
-)
 from .records import (
     ResearchDatasetSnapshotRecord,
     ResearchDatasetSpecRecord,
@@ -34,6 +30,4 @@ __all__ = [
     "ResearchSpineSpecRecord",
     "SpineSnapshot",
     "SpineSpec",
-    "_apply_late_arrival_policy",
-    "_detect_late_arrivals",
 ]

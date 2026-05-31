@@ -16,6 +16,7 @@ from ditto_features.derived_types import (
     DerivedSpec,
     MaterializationProfile,
 )
+from ditto_features.errors import DerivedNotFoundError, DerivedValidationError
 from ditto_features.materialization.models import (
     DerivedRunMode,
     DerivedRunStatus,
@@ -272,6 +273,359 @@ def _write_artifact(
             "availability_time": [date(2026, 3, 10), date(2026, 3, 11)],
         }
     ).write_parquet(version_root / "2026.parquet")
+
+
+def _facade(
+    *,
+    catalog_service: DerivedCatalogService,
+    publication_record_service: PublicationSafetyRecordService,
+    shadow_slot_service: DerivedShadowSlotService,
+    artifact_root: Path,
+) -> DerivedPublicationFacade:
+    return DerivedPublicationFacade(
+        catalog_service=catalog_service,
+        artifact_reader=DerivedArtifactReader(
+            catalog_service=catalog_service,
+            artifact_root=artifact_root,
+        ),
+        publication_record_service=publication_record_service,
+        shadow_slot_service=shadow_slot_service,
+    )
+
+
+class TestDerivedPublicationFacadeFailureBranches:
+    """Focused negative-path coverage for publication safety gates."""
+
+    def test_shadow_compare_requires_active_slot_when_versions_are_omitted(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=_publication_record_service(tmp_path),
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+
+        with pytest.raises(DerivedNotFoundError):
+            facade.run_shadow_compare(
+                derived_id="factor.no_slot",
+                start="2026-03-10",
+                end="2026-03-11",
+            )
+
+    def test_shadow_compare_requires_candidate_when_baseline_is_explicit(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=_publication_record_service(tmp_path),
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+
+        with pytest.raises(DerivedValidationError, match="candidate_version"):
+            facade.run_shadow_compare(
+                derived_id="factor.no_candidate",
+                baseline_version=2,
+                start="2026-03-10",
+                end="2026-03-11",
+            )
+
+    def test_shadow_compare_requires_resolved_baseline(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=_publication_record_service(tmp_path),
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.no_baseline",
+            version=3,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+
+        with pytest.raises(DerivedNotFoundError):
+            facade.run_shadow_compare(
+                derived_id="factor.no_baseline",
+                candidate_version=3,
+                start="2026-03-10",
+                end="2026-03-11",
+            )
+
+    def test_certify_accepts_stage_string_without_shadow_slot(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        publication_record_service = _publication_record_service(tmp_path)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=publication_record_service,
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.stage_string",
+            version=3,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+        _save_manifest(
+            publication_record_service,
+            derived_id="factor.stage_string",
+            version=3,
+            manifest_hash="manifest-v3",
+        )
+        _save_minimal_dq_summary(
+            publication_record_service,
+            derived_id="factor.stage_string",
+            version=3,
+            passed=True,
+        )
+
+        report = facade.certify(
+            derived_id="factor.stage_string",
+            version=3,
+            stage="shadow_ready",
+        )
+
+        assert report.pack.stage == CertificationStage.SHADOW_READY
+        assert report.shadow_diff_report_id is None
+        assert report.is_passed() is True
+
+    def test_promote_requires_successful_materialization(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=_publication_record_service(tmp_path),
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.not_materialized",
+            version=3,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+
+        with pytest.raises(DerivedValidationError, match="not materialized"):
+            facade.promote(
+                derived_id="factor.not_materialized",
+                candidate_version=3,
+            )
+
+    def test_promote_requires_complete_manifest(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        publication_record_service = _publication_record_service(tmp_path)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=publication_record_service,
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.incomplete_manifest",
+            version=3,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+        _save_success_run(
+            catalog_service,
+            derived_id="factor.incomplete_manifest",
+            version=3,
+        )
+        _save_manifest(
+            publication_record_service,
+            derived_id="factor.incomplete_manifest",
+            version=3,
+            manifest_hash="manifest-v3",
+            complete=False,
+        )
+
+        with pytest.raises(DerivedValidationError, match="manifest is incomplete"):
+            facade.promote(
+                derived_id="factor.incomplete_manifest",
+                candidate_version=3,
+            )
+
+    def test_promote_requires_active_shadow_slot_with_baseline(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        publication_record_service = _publication_record_service(tmp_path)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=publication_record_service,
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.no_shadow_slot",
+            version=3,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+        _save_success_run(
+            catalog_service,
+            derived_id="factor.no_shadow_slot",
+            version=3,
+        )
+        _save_manifest(
+            publication_record_service,
+            derived_id="factor.no_shadow_slot",
+            version=3,
+            manifest_hash="manifest-v3",
+        )
+
+        with pytest.raises(DerivedValidationError, match="active shadow slot missing"):
+            facade.promote(
+                derived_id="factor.no_shadow_slot",
+                candidate_version=3,
+            )
+
+        facade.shadow_publish(derived_id="factor.no_shadow_slot", candidate_version=3)
+        with pytest.raises(DerivedValidationError, match="shadow baseline missing"):
+            facade.promote(
+                derived_id="factor.no_shadow_slot",
+                candidate_version=3,
+            )
+
+    def test_promote_requires_shadow_compare_and_publish_ready_gate(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        publication_record_service = _publication_record_service(tmp_path)
+        shadow_slot_service = _shadow_slot_service(sqlite_client)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=publication_record_service,
+            shadow_slot_service=shadow_slot_service,
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.gated",
+            version=2,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=True,
+            is_primary=True,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.gated",
+            version=3,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+        _save_success_run(catalog_service, derived_id="factor.gated", version=3)
+        _save_manifest(
+            publication_record_service,
+            derived_id="factor.gated",
+            version=2,
+            manifest_hash="manifest-v2",
+        )
+        _save_manifest(
+            publication_record_service,
+            derived_id="factor.gated",
+            version=3,
+            manifest_hash="manifest-v3",
+        )
+        _write_artifact(
+            tmp_path,
+            derived_id="factor.gated",
+            version=2,
+            values=[1.0, 2.0],
+        )
+        _write_artifact(
+            tmp_path,
+            derived_id="factor.gated",
+            version=3,
+            values=[1.0, 2.0],
+        )
+
+        facade.shadow_publish(derived_id="factor.gated", candidate_version=3)
+        with pytest.raises(DerivedValidationError, match="shadow compare"):
+            facade.promote(derived_id="factor.gated", candidate_version=3)
+
+        facade.run_shadow_compare(
+            derived_id="factor.gated",
+            start="2026-03-10",
+            end="2026-03-11",
+        )
+        with pytest.raises(DerivedValidationError, match="publish_ready"):
+            facade.promote(derived_id="factor.gated", candidate_version=3)
+
+    def test_rollback_and_deprecate_reject_invalid_version_states(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        catalog_service = _catalog_service(sqlite_client)
+        facade = _facade(
+            catalog_service=catalog_service,
+            publication_record_service=_publication_record_service(tmp_path),
+            shadow_slot_service=_shadow_slot_service(sqlite_client),
+            artifact_root=tmp_path,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.invalid_state",
+            version=1,
+            status=DerivedVersionStatus.DRAFT,
+            is_online=False,
+            is_primary=False,
+        )
+        _seed_version(
+            catalog_service,
+            derived_id="factor.invalid_state",
+            version=2,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=True,
+            is_primary=True,
+        )
+
+        with pytest.raises(DerivedValidationError, match="rollback target"):
+            facade.rollback(derived_id="factor.invalid_state", target_version=1)
+        with pytest.raises(DerivedValidationError, match="only published"):
+            facade.deprecate(derived_id="factor.invalid_state", version=1)
+        with pytest.raises(DerivedValidationError, match="primary"):
+            facade.deprecate(derived_id="factor.invalid_state", version=2)
 
 
 class TestDerivedPublicationFacade:

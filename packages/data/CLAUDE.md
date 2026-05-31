@@ -24,6 +24,12 @@ ditto_data/
 │   └── runtime.py       # 运行时 Provider
 ├── errors.py            # DataError 异常层级
 ├── events.py            # 数据事件定义
+├── catalog/             # DataCatalog 运行时（Protocol contracts / metadata / store）
+│   ├── contracts.py     # DataCatalog Protocol
+│   ├── metadata.py      # 目录元数据
+│   └── store.py         # 目录存储
+├── lineage/             # 数据血缘（contracts 占位）
+│   └── contracts.py     # 血缘 Protocol contracts
 ├── helpers/             # 辅助工具（复权调整/PIT 策略与 DataFrame）
 │   ├── adjustment.py    # 复权调整辅助
 │   └── pit/             # PIT（Point-in-Time）辅助
@@ -55,6 +61,8 @@ ditto_data/
 │   ├── freeze_manager.py         # 冻结管理器
 │   ├── instrument_id_allocator.py # 工具 ID 分配器
 │   └── sql_engine.py             # SQL 引擎
+├── observability/       # 可观测性
+│   └── metrics.py       # 数据层指标
 ├── scripts/             # 工具脚本
 ├── services/            # 域服务/存储（market/metadata/fundamental/macro/capital/source + metadata 子目录）
 │   ├── deps.py          # 服务依赖聚合（DI 参数分组）

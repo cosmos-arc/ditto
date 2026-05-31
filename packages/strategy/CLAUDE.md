@@ -67,6 +67,7 @@ ditto_strategy/
 ├── di/                 # 依赖注入
 │   └── storage.py
 ├── contracts.py        # 包级公共契约
+├── _internal.py        # 内部共享工具（非公共 API）
 ├── errors.py           # StrategyError 异常层级
 └── models.py           # 策略域模型
 ```

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ditto_platform.foundation import SQLiteClient
+
 from ditto_execution.models import FillRecord
 from ditto_execution.storage.sqlite.trade._sql import build_where_clause
-from ditto_platform.foundation import SQLiteClient
 
 __all__ = [
     "FILLS_DDL",

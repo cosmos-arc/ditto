@@ -202,7 +202,7 @@ class SQLiteStore:
         where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
 
         before_count = self._count_rows(dataset)
-        self.execute(f"DELETE FROM {dataset}{where_clause}", params)  # noqa: S608
+        self.execute(f"DELETE FROM {dataset}{where_clause}", params)  # noqa: S608 - dataset 是受控的表名
         self.commit()
         deleted_count = before_count - self._count_rows(dataset)
 
@@ -273,7 +273,7 @@ class SQLiteStore:
 
     def _count_rows(self, table: str) -> int:
         """统计表的行数."""
-        result = self.fetchone(f"SELECT COUNT(*) as count FROM {table}")  # noqa: S608
+        result = self.fetchone(f"SELECT COUNT(*) as count FROM {table}")  # noqa: S608 - table 是受控的表名
         if result is None:
             return 0
         return cast(int, result["count"])

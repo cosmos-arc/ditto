@@ -22,6 +22,9 @@ __all__ = [
     "rank_ic",
 ]
 
+# ic_decay 默认前向收益率滞后天数列表
+_DEFAULT_IC_DECAY_LAGS = [1, 2, 3, 5, 10, 20]
+
 
 # ---------------------------------------------------------------------------
 # IC computation
@@ -234,12 +237,16 @@ def ic_decay(
 
     """
     if lags is None:
-        lags = [1, 2, 3, 5, 10, 20]
+        lags = _DEFAULT_IC_DECAY_LAGS
 
     close_sorted = close_df.sort([entity_col, date_col])
 
     decay_results: list[tuple[int, float]] = []
     for lag in lags:
+        # PIT 注意：maintain_order=True 保证 group_by 结果保持排序后的行序，
+        # 从而 pct_change(lag).shift(-lag) 的行对齐依赖于输入已按
+        # [entity, date] 排序。若排序不稳定或 maintain_order=False，
+        # 前向收益率行索引会错位，导致 IC 计算静默出错。
         return_df = (
             close_sorted.group_by(entity_col, maintain_order=True)
             .agg(

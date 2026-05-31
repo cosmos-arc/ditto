@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -26,10 +27,34 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 )
 
 __all__ = [
+    "ArtifactPersistConfig",
+    "ArtifactPersistContext",
     "persist_artifact",
     "persist_audit",
     "resolve_run_id",
 ]
+
+
+@dataclass(frozen=True)
+class ArtifactPersistContext:
+    """调用上下文（每次调用不同）。"""
+
+    run_id: str
+    report: BacktestReport
+    manifest: RunManifest | None = None
+
+
+@dataclass(frozen=True)
+class ArtifactPersistConfig:
+    """持久化配置（BacktestService 级别不变）。"""
+
+    strategy_id: str
+    initial_cash: float
+    rebalance_freq: str
+    artifact_service: StrategyArtifactService
+    write_fn: Callable[..., dict[str, Path]]
+    artifact_dir: str | None = None
+    display_map: dict[InstrumentId, str] | None = None
 
 
 def resolve_run_id(configured_run_id: str) -> str:
@@ -99,46 +124,29 @@ def persist_audit(
     audit_service.save_pre_trade_log(run_id, pre_trade_payloads)
 
 
-def persist_artifact(  # noqa: PLR0913
-    *,
-    run_id: str,
-    report: BacktestReport,
-    manifest: RunManifest | None,
-    strategy_id: str,
-    initial_cash: float,
-    rebalance_freq: str,
-    artifact_service: StrategyArtifactService,
-    artifact_dir: str | None,
-    display_map: dict[InstrumentId, str] | None,
-    write_fn: Callable[..., dict[str, Path]],
+def persist_artifact(
+    ctx: ArtifactPersistContext,
+    config: ArtifactPersistConfig,
 ) -> None:
     """
     持久化回测报告到磁盘 + StrategyArtifactService.
 
     Args:
-        run_id: 运行标识。
-        report: 回测报告。
-        manifest: 引擎运行清单（可选）。
-        strategy_id: 策略 ID。
-        initial_cash: 初始资金。
-        rebalance_freq: 调仓频率。
-        artifact_service: 策略产物持久化服务。
-        artifact_dir: 产物输出目录（None = 临时目录）。
-        display_map: InstrumentId → 标的代码展示映射。
-        write_fn: 产物序列化函数（由调用方注入，支持 test monkeypatch）。
+        ctx: 调用上下文（run_id、report、manifest）。
+        config: 持久化配置（策略信息、服务、输出设置）。
 
     """
     # 始终将产物序列化到磁盘
     output_dir: Path | None = None
-    if artifact_dir is not None:
-        output_dir = Path(artifact_dir) / run_id
+    if config.artifact_dir is not None:
+        output_dir = Path(config.artifact_dir) / ctx.run_id
 
-    artifacts_map = write_fn(
-        report,
+    artifacts_map = config.write_fn(
+        ctx.report,
         output_dir=output_dir,
-        manifest=manifest,
-        display_map=display_map,
-        rebalance_freq=rebalance_freq,
+        manifest=ctx.manifest,
+        display_map=config.display_map,
+        rebalance_freq=config.rebalance_freq,
     )
     # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
     # 从返回值推导实际目录（artifact_dir=None 时内部解析到系统临时目录）
@@ -148,20 +156,20 @@ def persist_artifact(  # noqa: PLR0913
     file_path = str(resolved_dir)
 
     artifact = StrategyArtifactRecord(
-        artifact_id=f"artifact-{run_id}",
-        strategy_id=strategy_id,
-        run_id=run_id,
+        artifact_id=f"artifact-{ctx.run_id}",
+        strategy_id=config.strategy_id,
+        run_id=ctx.run_id,
         artifact_type=ArtifactKind.BACKTEST_REPORT,
         file_path=file_path,
         metadata={
-            "initial_cash": initial_cash,
-            "final_nav": report.final_nav,
-            "total_trades": report.aggregated_trade_stats.total_trades,
-            "sharpe_ratio": report.alpha_stats.sharpe_ratio,
-            "max_drawdown": report.alpha_stats.max_drawdown,
-            "period_start": report.period[0],
-            "period_end": report.period[1],
+            "initial_cash": config.initial_cash,
+            "final_nav": ctx.report.final_nav,
+            "total_trades": ctx.report.aggregated_trade_stats.total_trades,
+            "sharpe_ratio": ctx.report.alpha_stats.sharpe_ratio,
+            "max_drawdown": ctx.report.alpha_stats.max_drawdown,
+            "period_start": ctx.report.period[0],
+            "period_end": ctx.report.period[1],
         },
         created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
-    artifact_service.save_artifact(artifact)
+    config.artifact_service.save_artifact(artifact)

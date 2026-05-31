@@ -10,6 +10,11 @@ from ditto_features.expression.codegen._helpers import (
     read_int_literal,
 )
 
+__all__ = ["compile_cross_section", "compile_grouped_cross_section"]
+
+# cs_winsorize sigma 模式默认标准差倍数
+_DEFAULT_WINSORIZE_SIGMA = 3
+
 # ---------------------------------------------------------------------------
 # Cross-section operators
 # ---------------------------------------------------------------------------
@@ -60,7 +65,7 @@ def _compile_cs_winsorize(
     # Sigma mode (default)
     mean = arguments[0].mean().over(time_keys)
     std = arguments[0].std().over(time_keys)
-    n_sigma = 3  # default
+    n_sigma = _DEFAULT_WINSORIZE_SIGMA
     if remaining:
         n_sigma = read_int_literal(raw_arguments, 1, source=source)
     return arguments[0].clip(mean - n_sigma * std, mean + n_sigma * std)

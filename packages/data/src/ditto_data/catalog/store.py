@@ -14,7 +14,11 @@ class InMemoryDataCatalog:
     """In-memory DataCatalog for testing and development."""
 
     def __init__(self) -> None:
-        """Initialize empty catalog."""
+        """
+        初始化空的内存数据目录。
+
+        所有 catalog entry 存储在进程内字典中，适用于测试和开发环境。
+        """
         self._entries: dict[DataAssetRef, DataCatalogEntry] = {}
 
     def upsert_asset(self, entry: DataCatalogEntry) -> None:

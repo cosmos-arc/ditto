@@ -26,6 +26,8 @@ from ditto_backtest.simulation import (
 )
 from ditto_backtest.synchronizer import BacktestSynchronizer
 from ditto_data.provider import BarQuery, InstrumentQuery
+from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.planner import SimpleExecutionPlanner
 from ditto_execution.reality import SimpleFeeModel
 from ditto_kernel.clock import SimulatedClock
@@ -419,6 +421,7 @@ def build_snapshot_engine(
     _fee_model = fee_model or SimpleFeeModel()
     brokerage = BacktestBrokerage(
         account=account,
+        order_book=OrderBook(journal=InMemoryOrderEventJournal()),
         model=BrokerageModel(fee_model=_fee_model),
     )
 

@@ -47,6 +47,7 @@ ditto_backtest → ditto_platform ❌
 ```
 ditto_backtest/
 ├── engine.py             # 回测主循环（EngineLoop）
+├── engine_steps.py       # 引擎步骤编排
 ├── steps/                # Step chain
 │   ├── data_fetch.py     # 数据获取 step
 │   ├── strategy.py       # 策略计算 step
@@ -70,9 +71,16 @@ ditto_backtest/
 ├── replay.py             # 回放控制器
 ├── statistics.py         # 绩效统计计算
 ├── _statistics_types.py  # 统计类型定义
+├── statistics_alpha.py   # Alpha 统计
+├── statistics_report.py  # 统计报告
+├── statistics_returns.py # 收益统计
+├── statistics_trades.py  # 交易统计
 ├── report_renderer.py    # 报告渲染器
 ├── manifest.py           # 回测清单（RunManifest）
+├── manifest_build.py     # 清单构建
+├── manifest_types.py     # 清单类型定义
 ├── result.py             # 引擎运行结果（EngineResult / EngineResultBuilder）
+├── runtime.py            # 回测运行时内核（BacktestRuntimeKernel — 继承 BaseRuntimeKernel）
 ├── brokerage.py          # 回测层 brokerage 入口
 ├── errors.py             # 回测领域错误（BacktestError / EngineConfigError / ReplayError / SimulationError）
 ├── config.py             # 回测配置

@@ -219,9 +219,6 @@ def fetch_dividend(
         compact_date = to_compact_date(trade_date)
         return fundamental.fetch_dividend(ex_date=compact_date)
 
-    # 按标的查询
-    if not source_ticker:
-        raise ValueError("按标的查询必须指定 source_ticker")
     compact_start = to_compact_date(start_date) if start_date else None
     compact_end = to_compact_date(end_date) if end_date else None
     return fundamental.fetch_dividend(

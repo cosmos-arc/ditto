@@ -88,7 +88,11 @@ MARGIN_TRADING_MAPPING = ColumnMapping(
 )
 
 # Pledge Ratio - PIT data
-# Note: Tushare pledge_stat API returns end_date as report date
+# Note: Tushare pledge_stat API returns end_date as report date.
+# PIT 语义：knowledge_date = report_date，即质押比率的"知晓日期"等于报告期本身
+# （非公告日）。这与财报类数据使用 ann_date 作为 knowledge_date 不同。
+# 原因：Tushare pledge_stat API 不提供 ann_date 字段，end_date 是唯一可用的时间锚点。
+# 消费方应按 knowledge_date 进行 PIT 查询，确保 T 日只能看到 report_date <= T 的记录。
 PLEDGE_RATIO_MAPPING = ColumnMapping(
     rename={
         "ts_code": "source_ticker",

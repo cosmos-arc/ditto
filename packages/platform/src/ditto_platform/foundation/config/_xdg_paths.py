@@ -116,16 +116,11 @@ class XDGPaths:
                     temp = str(Path("~").expanduser() / self.APP_NAME / "temp")
                 self._runtime_dir = Path(temp) / self.APP_NAME
             else:
-                # Unix: 使用 XDG_RUNTIME_DIR 或 /tmp 降级方案
-                xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
-                if xdg_runtime:
-                    self._runtime_dir = Path(xdg_runtime) / self.APP_NAME
-                else:
-                    # 回退方案：使用 /tmp（符合测试期望）
-                    uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
-                    runtime_dir = Path(f"/tmp/{self.APP_NAME}-{uid}").expanduser()  # noqa: S108
-                    runtime_dir.mkdir(parents=True, exist_ok=True)
-                    self._runtime_dir = runtime_dir
+                # Unix: /tmp 降级方案（XDG_RUNTIME_DIR 已在上方处理）
+                uid = os.getuid() if hasattr(os, "getuid") else os.getpid()
+                runtime_dir = Path(f"/tmp/{self.APP_NAME}-{uid}").expanduser()  # noqa: S108
+                runtime_dir.mkdir(parents=True, exist_ok=True)
+                self._runtime_dir = runtime_dir
         return self._runtime_dir
 
     # ==================== 子目录访问器 ====================

@@ -52,6 +52,17 @@ class PaperBrokerGateway:
         last_prices: Mapping[InstrumentId, float] | None = None,
         risk_check: OrderPreSubmitCheck | None = None,
     ) -> None:
+        """
+        初始化 PaperBrokerGateway。
+
+        Args:
+            initial_cash: 初始可用资金（默认 0.0）。
+            last_prices: 最新价格映射，用于市价单成交价解析。
+                键为 ``InstrumentId``，值为最新价格。
+            risk_check: 可选的预提交风控检查钩子，实现
+                :class:`OrderPreSubmitCheck` Protocol。传入 ``None`` 跳过风控。
+
+        """
         self._book = OrderBook(journal=InMemoryOrderEventJournal())
         self._fills: dict[str, list[FillEvent]] = {}
         self._account = Account(
@@ -84,19 +95,7 @@ class PaperBrokerGateway:
 
         # BUY order cash check
         if order.direction == OrderSide.BUY:
-            available_cash = self._account.get_view().cash.available
-            cost = order.quantity * fill_price
-            if cost > available_cash:
-                msg = (
-                    f"资金不足: 订单 {order.order_id} 需要"
-                    f" {cost:.2f} 元, 可用余额 {available_cash:.2f} 元"
-                )
-                raise InsufficientFundsError(
-                    msg,
-                    order_id=order.order_id,
-                    required=cost,
-                    available=available_cash,
-                )
+            self._validate_buying_power(order, fill_price)
 
         ticket = self._book.submit(order)
 
@@ -201,6 +200,22 @@ class PaperBrokerGateway:
         return filled_ticket
 
     # -- Private helpers -------------------------------------------------------
+
+    def _validate_buying_power(self, order: Order, fill_price: float) -> None:
+        """检查买单是否有足够的可用资金，不足则抛出 InsufficientFundsError。"""
+        available_cash = self._account.get_view().cash.available
+        cost = order.quantity * fill_price
+        if cost > available_cash:
+            msg = (
+                f"资金不足: 订单 {order.order_id} 需要"
+                f" {cost:.2f} 元, 可用余额 {available_cash:.2f} 元"
+            )
+            raise InsufficientFundsError(
+                msg,
+                order_id=order.order_id,
+                required=cost,
+                available=available_cash,
+            )
 
     def _reject_on_submit(self, order: Order) -> OrderTicket:
         """Submit then immediately reject — risk gate blocked."""

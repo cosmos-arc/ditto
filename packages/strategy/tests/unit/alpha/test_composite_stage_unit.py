@@ -28,7 +28,7 @@ class _ScoringStub:
 
     scores: dict[int, float]
 
-    def process(self, frame: pl.DataFrame, _context: StrategyContext) -> pl.DataFrame:
+    def process(self, frame: pl.DataFrame, context: StrategyContext) -> pl.DataFrame:
         return frame.with_columns(
             pl.col("instrument_id")
             .map_elements(
@@ -45,7 +45,7 @@ class _SignalValueStub:
 
     signals: dict[int, float]
 
-    def process(self, frame: pl.DataFrame, _context: StrategyContext) -> pl.DataFrame:
+    def process(self, frame: pl.DataFrame, context: StrategyContext) -> pl.DataFrame:
         return frame.with_columns(
             pl.col("instrument_id")
             .map_elements(
@@ -241,3 +241,181 @@ class TestCompositeDecisionStage:
         # 两个 stage rank 结果镜像，等权下 id=1 和 id=2 score 相等
         assert abs(scores[0] - scores[1]) < 1e-6
         assert "score" in result.columns
+
+
+# ---------------------------------------------------------------------------
+# Instrument-alignment tests (Codex P2 bug fix)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _FilteringStub:
+    """测试用: 模拟过滤 stage，只保留白名单中的 instrument_id。"""
+
+    allowed_ids: frozenset[int]
+
+    def process(self, frame: pl.DataFrame, context: StrategyContext) -> pl.DataFrame:
+        return frame.filter(pl.col("instrument_id").is_in(list(self.allowed_ids)))
+
+
+@dataclass(frozen=True)
+class _ReorderingStub:
+    """测试用: 模拟重排 stage，反转行顺序并添加 score 列。"""
+
+    def process(self, frame: pl.DataFrame, context: StrategyContext) -> pl.DataFrame:
+        # 反转行顺序，赋予递增 score
+        reversed_frame = frame.reverse()
+        n = reversed_frame.height
+        scores = pl.Series(
+            "score",
+            list(range(n, 0, -1)),
+            dtype=pl.Float64,
+        )
+        return reversed_frame.with_columns(scores)
+
+
+class TestCompositeInstrumentAlignment:
+    """CompositeDecisionStage instrument_id 对齐测试。
+
+    验证子 stage 过滤或重排行后，composite 仍能按 instrument_id 正确对齐 score。
+    """
+
+    def test_filtering_child_fill_zero_for_missing(
+        self,
+        three_instruments: pl.DataFrame,
+        ctx: StrategyContext,
+    ) -> None:
+        """过滤型子 stage — 被 filter 的 instrument score 应填充 0.0。
+
+        Stage A (正常): id=1→1.0, id=2→0.0, id=3→0.5
+        Stage B (过滤): 只保留 id=1, id=3, score 各 1.0
+
+        两个 stage 等权。id=2 被 stage B 过滤，其 stage B rank 应为 0.0。
+        """
+        stage_a = _ScoringStub(scores={1: 1.0, 2: 0.0, 3: 0.5})
+        stage_b = _FilteringStub(allowed_ids=frozenset({1, 3}))
+
+        composite = CompositeDecisionStage(
+            stages=(stage_a, stage_b),
+            weights=(1.0, 1.0),
+        )
+        result = composite.process(three_instruments, ctx)
+
+        # 结果应保持原始 3 行
+        assert result.height == 3
+        instrument_ids = result["instrument_id"].to_list()
+        assert instrument_ids == [1, 2, 3]
+
+        scores = {
+            row["instrument_id"]: row["score"] for row in result.iter_rows(named=True)
+        }
+
+        # id=2 只被 stage_a 评分（stage_b 过滤掉了它）
+        # stage_a rank: id=1→1.0, id=2→0.333, id=3→0.667
+        # stage_b: id=2 filtered→fill 0.0; rank: id=1→1.0, id=2→0.0
+        #   id=3→0.5→rank=0.5
+        # 等权 composite:
+        #   id=1: 0.5*1.0 + 0.5*1.0 = 1.0
+        #   id=2: 0.5*0.333 + 0.5*0.0 = 0.167
+        #   id=3: 0.5*0.667 + 0.5*0.5 = 0.583
+        assert scores[1] > scores[3] > scores[2]
+
+    def test_reordering_child_preserves_correct_instrument_scores(
+        self,
+        three_instruments: pl.DataFrame,
+        ctx: StrategyContext,
+    ) -> None:
+        """重排型子 stage — score 应按 instrument_id 正确映射，而非按位置。
+
+        Stage A (正常): id=1→1.0, id=2→0.5, id=3→0.0
+        Stage B (重排): 反转行顺序 → id=3(score=3), id=2(score=2), id=1(score=1)
+
+        如果位置对齐（BUG），id=1 会拿到 id=3 的 score。
+        按 instrument_id 对齐（正确），id=1 应拿到 id=1 的 score。
+        """
+        stage_a = _ScoringStub(scores={1: 1.0, 2: 0.5, 3: 0.0})
+        stage_b = _ReorderingStub()
+
+        composite = CompositeDecisionStage(
+            stages=(stage_a, stage_b),
+            weights=(0.5, 0.5),
+        )
+        result = composite.process(three_instruments, ctx)
+
+        assert result.height == 3
+        scores = {
+            row["instrument_id"]: row["score"] for row in result.iter_rows(named=True)
+        }
+
+        # stage_a rank: id=1→1.0, id=2→0.667, id=3→0.333
+        # stage_b (反转行, score 3,2,1 按 id=3,2,1):
+        #   正确对齐后: id=1→score=1, id=2→score=2, id=3→score=3
+        #   rank: id=1→0.333, id=2→0.667, id=3→1.0
+        # composite (w=0.5 each):
+        #   id=1: 0.5*1.0 + 0.5*0.333 = 0.667
+        #   id=2: 0.5*0.667 + 0.5*0.667 = 0.667
+        #   id=3: 0.5*0.333 + 0.5*1.0 = 0.667
+        # 所有 instrument composite score 相等（对称设计）
+        assert abs(scores[1] - scores[2]) < 1e-6
+        assert abs(scores[2] - scores[3]) < 1e-6
+
+    def test_mixed_filtering_and_normal_children(
+        self,
+        ctx: StrategyContext,
+    ) -> None:
+        """混合型子 stage — 一个正常一个过滤，验证最终对齐。
+
+        4 个 instrument: id=1,2,3,4
+        Stage A (正常): id=1→1.0, id=2→0.8, id=3→0.6, id=4→0.4
+        Stage B (过滤): 只保留 id=1,4, 其 score 为 10.0 和 1.0
+        """
+        frame = pl.DataFrame({"instrument_id": [1, 2, 3, 4]})
+
+        stage_a = _ScoringStub(scores={1: 1.0, 2: 0.8, 3: 0.6, 4: 0.4})
+
+        # stage_b 只保留 id=1 和 id=4，并给它们高分
+        @dataclass(frozen=True)
+        class _PartialScorer:
+            def process(
+                self,
+                frame: pl.DataFrame,
+                context: StrategyContext,
+            ) -> pl.DataFrame:
+                filtered = frame.filter(
+                    pl.col("instrument_id").is_in([1, 4]),
+                )
+                return filtered.with_columns(
+                    pl.col("instrument_id")
+                    .map_elements(
+                        lambda x: {1: 10.0, 4: 1.0}.get(x, 0.0),
+                        return_dtype=pl.Float64,
+                    )
+                    .alias("score"),
+                )
+
+        composite = CompositeDecisionStage(
+            stages=(stage_a, _PartialScorer()),
+            weights=(0.5, 0.5),
+        )
+        result = composite.process(frame, ctx)
+
+        # 结果应保持 4 行
+        assert result.height == 4
+        instrument_ids = result["instrument_id"].to_list()
+        assert instrument_ids == [1, 2, 3, 4]
+
+        scores = {
+            row["instrument_id"]: row["score"] for row in result.iter_rows(named=True)
+        }
+
+        # stage_a rank(4 items): id=1→1.0, id=2→0.75, id=3→0.5, id=4→0.25
+        # stage_b: id=2,3 filtered→fill 0.0; id=1→10.0, id=4→1.0
+        #   rank(4 items with zeros): id=1→1.0, id=2→0.0, id=3→0.0, id=4→0.5
+        # composite (w=0.5 each):
+        #   id=1: 0.5*1.0 + 0.5*1.0 = 1.0 (最高)
+        #   id=4: 0.5*0.25 + 0.5*0.5 = 0.375
+        #   id=2: 0.5*0.75 + 0.5*0.0 = 0.375
+        #   id=3: 0.5*0.5 + 0.5*0.0 = 0.25
+        assert scores[1] > scores[4]
+        assert scores[1] > scores[2]
+        assert scores[1] > scores[3]

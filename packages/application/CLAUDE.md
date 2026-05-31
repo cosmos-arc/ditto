@@ -128,10 +128,13 @@ ditto_application/
 │   ├── _resolution.py       # 依赖解析工具
 │   └── _spec_deserializer.py # 衍生规格反序列化
 ├── runtime/             # 运行时工具（预留）
-├── providers.py            # DI Provider 聚合入口（6 个 Provider）
+├── providers.py            # DI Provider 聚合入口
 ├── providers_market.py     # 市场数据查询 Provider（13 个 @provide）
 ├── providers_strategy.py   # 策略/回测查询 Provider（7 个 @provide）
 ├── providers_portfolio.py  # 组合/交易查询 Provider（3 个 @provide）
+├── providers_command.py    # Command Handler DI Provider
+├── providers_process.py    # Process 层 DI Provider（编排/物化/质量）
+├── providers_builder.py    # Builder 层 DI Provider（策略运行时装配）
 ├── settings.py             # 应用层设置
 ├── config/               # 数据集配置（__init__.py + helpers.py + queries.py + specs.py）
 ├── contracts.py        # 跨 CQRS 子模块共享契约（Command DTO + ReadModel）
@@ -139,7 +142,7 @@ ditto_application/
 └── exceptions.py       # 应用层自定义异常
 ```
 
-## DI Provider（6 个）
+## DI Provider（9 个）
 
 | Provider | 职责 | 注册的服务 |
 |----------|------|-----------|

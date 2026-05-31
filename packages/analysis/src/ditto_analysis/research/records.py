@@ -26,6 +26,48 @@ def _require_int(value: object, field_name: str) -> int:
     return value
 
 
+def _json_to_tuple_str(
+    raw: object,
+    *,
+    default: str = "[]",
+) -> tuple[str, ...]:
+    """将 JSON 字符串 / 序列 / 其他 反序列化为 ``tuple[str, ...]``."""
+    if isinstance(raw, str):
+        return tuple(orjson.loads(raw))
+    if isinstance(raw, (tuple, list)):
+        return tuple(str(x) for x in cast("list[str]", raw))
+    return ()
+
+
+def _json_to_dict_str_int(
+    raw: object,
+    *,
+    default: str = "{}",
+) -> dict[str, int]:
+    """将 JSON 字符串 / dict / 其他 反序列化为 ``dict[str, int]``."""
+    if isinstance(raw, str):
+        return orjson.loads(raw)
+    if isinstance(raw, dict):
+        return {str(k): int(v) for k, v in cast("dict[str, int]", raw).items()}
+    return {}
+
+
+def _json_to_tuple_dicts(
+    raw: object,
+    *,
+    default: str = "[]",
+) -> tuple[dict[str, str | int], ...]:
+    """将 JSON 字符串 / 序列 / 其他 反序列化为 ``tuple[dict[str, str | int], ...]``."""
+    if isinstance(raw, str):
+        return tuple(orjson.loads(raw))
+    if isinstance(raw, (tuple, list)):
+        return tuple(
+            {str(k): v for k, v in d.items()}
+            for d in cast("list[dict[str, str | int]]", raw)
+        )
+    return ()
+
+
 @dataclass(frozen=True)
 class ResearchSpineSpecRecord:
     """Stored research spine spec record."""
@@ -84,20 +126,11 @@ class ResearchDatasetSpecRecord:
             raise ResearchDatasetError(
                 f"from_row: dataset_id is required, got {dataset_id!r}",
             )
-        derived_ids_raw: object = row.get("derived_ids", "[]")
-        derived_ids: tuple[str, ...]
-        if isinstance(derived_ids_raw, str):
-            _di: list[str] = orjson.loads(derived_ids_raw)
-            derived_ids = tuple(_di)
-        elif isinstance(derived_ids_raw, (tuple, list)):
-            derived_ids = tuple(str(x) for x in cast("list[str]", derived_ids_raw))
-        else:
-            derived_ids = ()
         version = _require_int(row.get("version", 1), "version")
         return cls(
             dataset_id=dataset_id,
             spine_id=str(row["spine_id"]),
-            derived_ids=derived_ids,
+            derived_ids=_json_to_tuple_str(row.get("derived_ids", "[]")),
             join_policy=str(row["join_policy"]),
             known_at_policy=str(row["known_at_policy"]),
             late_arrival_policy=str(row["late_arrival_policy"]),
@@ -176,61 +209,17 @@ class ResearchDatasetSnapshotRecord:
             raise ResearchDatasetError(
                 f"from_row: snapshot_id is required, got {snapshot_id!r}",
             )
-        resolved_versions_raw: object = row.get("resolved_versions", "{}")
-        resolved_versions: dict[str, int]
-        if isinstance(resolved_versions_raw, str):
-            _rv: dict[str, int] = orjson.loads(resolved_versions_raw)
-            resolved_versions = _rv
-        elif isinstance(resolved_versions_raw, dict):
-            resolved_versions = {
-                str(k): int(v)
-                for k, v in cast("dict[str, int]", resolved_versions_raw).items()
-            }
-        else:
-            resolved_versions = {}
-
-        resolved_inputs_raw: object = row.get("resolved_inputs", "[]")
-        resolved_inputs: tuple[dict[str, str | int], ...]
-        if isinstance(resolved_inputs_raw, str):
-            _ri: list[dict[str, str | int]] = orjson.loads(resolved_inputs_raw)
-            resolved_inputs = tuple(_ri)
-        elif isinstance(resolved_inputs_raw, (tuple, list)):
-            resolved_inputs = tuple(
-                {str(k): v for k, v in d.items()}
-                for d in cast("list[dict[str, str | int]]", resolved_inputs_raw)
-            )
-        else:
-            resolved_inputs = ()
-
-        source_snapshot_ids_raw: object = row.get("source_snapshot_ids", "[]")
-        source_snapshot_ids: tuple[str, ...]
-        if isinstance(source_snapshot_ids_raw, str):
-            _ss: list[str] = orjson.loads(source_snapshot_ids_raw)
-            source_snapshot_ids = tuple(_ss)
-        elif isinstance(source_snapshot_ids_raw, (tuple, list)):
-            source_snapshot_ids = tuple(
-                str(x) for x in cast("list[str]", source_snapshot_ids_raw)
-            )
-        else:
-            source_snapshot_ids = ()
-
-        dataset_spec_version = _require_int(
-            row["dataset_spec_version"],
-            "dataset_spec_version",
-        )
-        row_count = _require_int(row["row_count"], "row_count")
-        spine_spec_version = _require_int(
-            row.get("spine_spec_version", 1),
-            "spine_spec_version",
-        )
         return cls(
             snapshot_id=snapshot_id,
             dataset_id=str(row["dataset_id"]),
-            dataset_spec_version=dataset_spec_version,
+            dataset_spec_version=_require_int(
+                row["dataset_spec_version"],
+                "dataset_spec_version",
+            ),
             spine_snapshot_id=str(row["spine_snapshot_id"]),
             snapshot_start=str(row["snapshot_start"]),
             snapshot_end=str(row["snapshot_end"]),
-            row_count=row_count,
+            row_count=_require_int(row["row_count"], "row_count"),
             data_path=str(row["data_path"]),
             manifest_hash=str(row["manifest_hash"]),
             known_at_policy=str(row["known_at_policy"]),
@@ -239,10 +228,19 @@ class ResearchDatasetSnapshotRecord:
                 if row.get("effective_cutoff") is not None
                 else None
             ),
-            spine_spec_version=spine_spec_version,
-            resolved_versions=resolved_versions,
-            resolved_inputs=resolved_inputs,
-            source_snapshot_ids=source_snapshot_ids,
+            spine_spec_version=_require_int(
+                row.get("spine_spec_version", 1),
+                "spine_spec_version",
+            ),
+            resolved_versions=_json_to_dict_str_int(
+                row.get("resolved_versions", "{}"),
+            ),
+            resolved_inputs=_json_to_tuple_dicts(
+                row.get("resolved_inputs", "[]"),
+            ),
+            source_snapshot_ids=_json_to_tuple_str(
+                row.get("source_snapshot_ids", "[]"),
+            ),
             builder_version=str(row.get("builder_version", "")),
             created_at=str(row.get("created_at", "")),
         )

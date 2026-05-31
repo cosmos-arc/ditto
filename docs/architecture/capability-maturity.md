@@ -1,7 +1,7 @@
 # Ditto Capability Maturity Manifest
 
-> Date: 2026-05-25
-> Status: V2 evaluation synced
+> Date: 2026-05-31
+> Status: V2 evaluation synced with Batch B execution/reconciliation hardening
 > Purpose: prevent global-market roadmap language from being mistaken for current production readiness.
 
 ## Maturity Levels
@@ -31,9 +31,9 @@
 | Backtest engine | initial-focus | Engine loop and simulation exist; Backtest review confirms shared paper seam and replay recovery beyond NAV are open. | Backtest/paper seam remediation. |
 | Execution OMS FSM | initial-focus | OMS Lite 完整实现：7 状态（NEW/SUBMITTED/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED/INVALID）+ 5 触发器 FSM + OrderBook + OrderTicket + 双 ID（ClientOrderId / BrokerOrderId）。 | Execution remediation — durable journal, conformance tests. |
 | PaperBrokerGateway | experimental | Paper 撮合网关完整行为矩阵：submit/fill/cancel/reject/partial fill + last_prices 注入解决 fill_price=0.0 + RiskGate 集成 + 18 conformance tests。 | Live adapter seam + conformance test expansion. |
-| ExecutionReconciler | experimental | reconcile() 纯函数，5 种 MismatchType。ReconciliationDiff 含 client_order_id/broker_order_id 可追溯 journal event。 | Reconciliation persistence. |
+| ExecutionReconciler | experimental | reconcile() 纯函数，5 种 MismatchType。ReconciliationDiff 含 client_order_id/broker_order_id 可追溯 journal event。plan_repair() 纯函数把 diff 转成 typed repair actions，写操作默认需人工 review；SQLiteRepairWorkflowStore 持久化审批/执行状态；RepairActionExecutor 已提供状态门禁、handler dispatch 和 audit sink 端口，默认只实现 read-only broker refresh handler。 | Concrete mutating repair handlers and broker conformance expansion. |
 | OrderEventJournal | experimental | Protocol + InMemoryOrderEventJournal + SqliteOrderEventJournal（append-only 持久化，重启不丢失）。append/events_for/all_events API 完整。 | Multi-journal orchestration. |
-| Paper trading runtime | experimental | PaperBrokerGateway 完整行为矩阵 + PaperRuntimeKernel（RealtimeClock + SimpleEventBus）实现 TradingRuntimeKernel Protocol。 | Live adapter seam. |
+| Paper trading runtime | experimental | PaperBrokerGateway 完整行为矩阵 + PaperRuntimeKernel（RealtimeClock + SimpleEventBus）实现 TradingRuntimeKernel Protocol；PaperTradingRuntime 账户视图委托 gateway.get_account()，避免重复本地记账。 | Live adapter seam + broker conformance expansion. |
 | Live trading adapters | reserved | BrokerGateway has no production adapter; do not treat live trading as available. | Execution remediation after OMS Lite. |
 | Research dataset control-plane | initial-focus | Analysis services/storage exist, but Analysis/Application reviews confirm application-owned research ports and late-arrival policy honesty remain open. | Research port/policy remediation. |
 | Analysis experiments | reserved | Package docs and guards mark this namespace as reserved/future and `__all__=[]`; no runtime API exists. Reserved list: `ditto_analysis.experiments`. | Reserved namespace guard source-of-truth remediation. |

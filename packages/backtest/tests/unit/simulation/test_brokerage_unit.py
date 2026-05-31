@@ -27,6 +27,7 @@ from ditto_kernel.trading import (
 from ditto_portfolio.accounting import (
     Account,
     CashBook,
+    Position,
 )
 
 # ---------------------------------------------------------------------------
@@ -135,6 +136,47 @@ class TestConnectGetAccount:
         pending = view.get_pending()
         assert len(pending) == 1
         assert pending[0].order.order_id == "ORD-001"
+
+
+# ---------------------------------------------------------------------------
+# mark-to-market
+# ---------------------------------------------------------------------------
+
+
+class TestMarkToMarket:
+    def test_process_pending_marks_existing_position_without_fills(self) -> None:
+        account = Account(
+            cash=CashBook(available=1000.0, settled=1000.0, frozen=0.0),
+            positions={
+                1: Position(
+                    instrument_id=1,
+                    quantity=100,
+                    available_quantity=100,
+                    average_cost=10.0,
+                    market_value=1000.0,
+                    unrealized_pnl=0.0,
+                    realized_pnl=0.0,
+                    total_fees=0.0,
+                ),
+            },
+        )
+        brokerage = BacktestBrokerage(
+            account=account,
+            order_book=_order_book(),
+            model=BrokerageModel(
+                slippage_model=FixedBpsSlippage(bps=0),
+            ),
+        )
+
+        fills = brokerage.process_pending(
+            _process_input(bars={1: _market_snapshot(close=9.0, low=8.9, high=9.1)})
+        )
+
+        assert fills == ()
+        view = brokerage.get_account()
+        assert view.positions[1].market_value == pytest.approx(900.0)
+        assert view.positions[1].unrealized_pnl == pytest.approx(-100.0)
+        assert view.nav == pytest.approx(1900.0)
 
 
 # ---------------------------------------------------------------------------

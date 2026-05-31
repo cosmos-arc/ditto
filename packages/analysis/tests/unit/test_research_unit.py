@@ -16,6 +16,8 @@ from ditto_analysis.research.domain import (
     ResearchDatasetSpec,
     SpineSnapshot,
     SpineSpec,
+)
+from ditto_analysis.research.late_arrival import (
     _apply_late_arrival_policy,
     _detect_late_arrivals,
 )

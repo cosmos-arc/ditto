@@ -90,6 +90,8 @@ ditto_features/
 │   ├── features.py       # Feature 模型
 │   ├── factors.py        # Factor 模型
 │   └── derived.py        # 衍生数据模型
+├── derived_types.py      # 衍生实体类型（role / materialization profile / unified spec）
+├── publication_safety_records.py  # 发布安全运行时记录（certification/shadow/DQ frozen dataclass）
 ├── services/             # 衍生数据服务
 │   ├── derived_catalog_service.py
 │   ├── derived_shadow_slot_service.py

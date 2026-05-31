@@ -103,6 +103,7 @@
 |---|---|---|
 | [agent-context-pack.md](agent-context-pack.md) | Active | Agent 快速参考：依赖图、边界规则、关键路径 |
 | [boundaries-and-abstraction-standards.md](boundaries-and-abstraction-standards.md) | Active | 分层、模块化、命名、抽象层级一致性与扩展方式规范 |
+| [2026-05-31-current-architecture-review.md](2026-05-31-current-architecture-review.md) | Active | 当前源码全局及分模块架构 review、评分、产品差距与逐模块攻克路线 |
 
 ## 各包规范索引
 

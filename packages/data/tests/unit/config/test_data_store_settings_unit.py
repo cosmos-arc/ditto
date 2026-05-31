@@ -187,78 +187,44 @@ class TestPathGroupsStructure:
 
 
 class TestBackwardCompatibility:
-    """旧 property 向后兼容测试 — 确保委托到嵌套对象后值不变."""
+    """路径访问测试 — 确保 paths.* 委托正确."""
 
-    def test_market_properties_match_paths(self) -> None:
-        """顶层市场 property 应与 paths.market 一致."""
+    def test_paths_market_direct_access(self) -> None:
+        """paths.market.* 直接访问应正确."""
         root = Path("/data")
         settings = DataStoreSettings(data_root=root)
 
-        assert settings.market_stock_bars_path == settings.paths.market.stock_bars
-        assert settings.market_etf_bars_path == settings.paths.market.etf_bars
-        assert settings.market_index_bars_path == settings.paths.market.index_bars
-        assert settings.market_stock_status_path == settings.paths.market.stock_status
-        assert settings.market_etf_status_path == settings.paths.market.etf_status
-        assert settings.market_stock_adj_path == settings.paths.market.stock_adj
-        assert settings.market_etf_adj_path == settings.paths.market.etf_adj
-        assert settings.market_etf_nav_path == settings.paths.market.etf_nav
+        assert settings.paths.market.stock_bars == (
+            root / "market" / "stock" / "bars" / "daily"
+        )
+        assert settings.paths.market.etf_bars == (
+            root / "market" / "etf" / "bars" / "daily"
+        )
 
-    def test_capital_properties_match_paths(self) -> None:
-        """顶层资金流 property 应与 paths.capital 一致."""
+    def test_paths_utility_direct_access(self) -> None:
+        """paths.utility.* 直接访问应正确."""
         root = Path("/data")
         settings = DataStoreSettings(data_root=root)
 
-        assert settings.capital_flow_path == settings.paths.capital.flow
-        assert settings.capital_margin_path == settings.paths.capital.margin
-        assert settings.capital_top_board_path == settings.paths.capital.top_board
-        assert settings.capital_limit_board_path == settings.paths.capital.limit_board
-        assert settings.capital_chip_path == settings.paths.capital.chip
+        assert settings.paths.utility.logs == root / "logs"
+        assert settings.paths.utility.backups == root / "backups"
+        assert settings.paths.utility.temp == root / "temp"
 
-    def test_fundamental_properties_match_paths(self) -> None:
-        """顶层基本面 property 应与 paths.fundamental 一致."""
-        root = Path("/data")
-        settings = DataStoreSettings(data_root=root)
-
-        paths_fund = settings.paths.fundamental
-        assert settings.fundamental_financial_path == paths_fund.financial
-        assert settings.fundamental_indicator_path == paths_fund.indicator
-        assert settings.fundamental_forecast_path == paths_fund.forecast
-        assert settings.fundamental_holding_path == paths_fund.holding
-
-    def test_macro_property_matches_paths(self) -> None:
-        """顶层宏观 property 应与 paths.macro 一致."""
-        root = Path("/data")
-        settings = DataStoreSettings(data_root=root)
-
-        assert settings.macro_indicators_path == settings.paths.macro.indicators
-
-    def test_utility_properties_match_paths(self) -> None:
-        """顶层通用 property 应与 paths.utility 一致."""
-        root = Path("/data")
-        settings = DataStoreSettings(data_root=root)
-
-        assert settings.logs_path == settings.paths.utility.logs
-        assert settings.backups_path == settings.paths.utility.backups
-        assert settings.temp_path == settings.paths.utility.temp
-        assert settings.db_path == settings.paths.utility.db
-
-    def test_logs_path_with_override(self) -> None:
-        """logs_path 覆盖时应正确传播到 paths.utility.logs."""
+    def test_logs_path_override_propagates_to_paths(self) -> None:
+        """logs_path_override 应正确传播到 paths.utility.logs."""
         root = Path("/data")
         override = Path("/var/log/app")
         settings = DataStoreSettings(data_root=root, logs_path_override=override)
 
-        assert settings.logs_path == override
         assert settings.paths.utility.logs == override
 
     def test_database_paths_unchanged(self) -> None:
-        """数据库路径（resolved_sqlite/duckdb/metadata_db）应保持不变."""
+        """数据库路径（resolved_sqlite/duckdb）应保持不变."""
         root = Path("/data")
         settings = DataStoreSettings(data_root=root)
 
         assert settings.resolved_sqlite_path == root / "metadata" / "metadata.sqlite"
         assert settings.resolved_duckdb_path == root / "db" / "ditto.duckdb"
-        assert settings.metadata_db_path == settings.resolved_sqlite_path
 
     def test_sqlite_path_override(self) -> None:
         """sqlite_path 覆盖时应正确传播到 resolved_sqlite_path."""
@@ -267,7 +233,6 @@ class TestBackwardCompatibility:
         settings = DataStoreSettings(data_root=root, sqlite_path=override)
 
         assert settings.resolved_sqlite_path == override
-        assert settings.metadata_db_path == override
 
     def test_default_data_root(self) -> None:
         """默认 data_root 应为 Path('data')."""

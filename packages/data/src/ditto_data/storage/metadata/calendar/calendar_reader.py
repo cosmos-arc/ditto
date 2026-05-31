@@ -187,7 +187,7 @@ class CalendarReader:
             )
 
             # Invalidate DataCache calendar-related cache
-            if self._data_cache:
+            if self._data_cache is not None:
                 self._data_cache.invalidate_pattern("trading_days:*")
 
             # Atomic replacement of all references (Python assignment is atomic)
@@ -357,7 +357,7 @@ class CalendarReader:
             return []
 
         # 尝试从 DataCache 获取
-        if self._data_cache:
+        if self._data_cache is not None:
             cache_key = f"trading_days:{start}:{end}"
             cached = self._data_cache.get(cache_key)
             if cached is not None:
@@ -370,7 +370,7 @@ class CalendarReader:
         result = self._trading_days[start_idx:end_idx]
 
         # 缓存结果（缓存原始列表）
-        if self._data_cache:
+        if self._data_cache is not None:
             cache_key = f"trading_days:{start}:{end}"
             self._data_cache.set(cache_key, result)
 

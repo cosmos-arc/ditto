@@ -134,6 +134,29 @@ def compile_call(
     source: str,
     span: Span,
 ) -> pl.Expr:
+    """
+    表达式算子编译主调度入口。
+
+    按优先级依次尝试：特殊时序算子 → 滚动窗口算子 → 截面算子 →
+    分组截面算子 → 标量算子。若均不匹配则抛出
+    ``E021_UNKNOWN_OPERATOR`` 编译错误。
+
+    Args:
+        name: 算子名称（如 ``"ts_mean"``、``"cs_rank"``）。
+        arguments: 已编译的 Polars 表达式参数列表。
+        raw_arguments: 原始 AST 节点参数列表（用于提取字面量）。
+        entity_keys: 实体分组键（如 ``["instrument_id"]``）。
+        time_keys: 时间分组键（如 ``["trade_date"]``）。
+        source: 源表达式文本（用于错误信息）。
+        span: 当前调用在源文本中的位置范围。
+
+    Returns:
+        编译后的 Polars 表达式。
+
+    Raises:
+        CompileError: 算子未知或参数不合法时。
+
+    """
     ts_special = compile_time_series_special(
         name=name,
         arguments=arguments,

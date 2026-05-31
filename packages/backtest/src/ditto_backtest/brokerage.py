@@ -207,6 +207,9 @@ class BacktestBrokerage:
             if fill is not None:
                 events.append(fill)
 
+        self._account.mark_to_market(
+            {iid: market.close for iid, market in bars.items()}
+        )
         return tuple(events)
 
     def _process_single_ticket(

@@ -12,6 +12,10 @@ from ditto_execution.contracts import (
     PositionDataPort,
 )
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
+from ditto_execution.storage.sqlite.reconciliation import (
+    REPAIR_WORKFLOW_DDL,
+    SQLiteRepairWorkflowStore,
+)
 from ditto_execution.storage.sqlite.trade import (
     FILLS_DDL,
     INTENTS_DDL,
@@ -70,8 +74,19 @@ class ExecutionStorageProvider(Provider):
     @provide
     def init_schema(self, sqlite_client: SQLiteClient) -> None:
         """执行 execution 域 DDL（应用级单次初始化）。"""
-        sqlite_client.executescript(INTENTS_DDL + FILLS_DDL + POSITIONS_DDL)
+        sqlite_client.executescript(
+            INTENTS_DDL + FILLS_DDL + POSITIONS_DDL + REPAIR_WORKFLOW_DDL
+        )
         sqlite_client.commit()
+
+    @provide
+    def repair_workflow_store(
+        self,
+        sqlite_client: SQLiteClient,
+        _schema_initialized: None,
+    ) -> SQLiteRepairWorkflowStore:
+        """对账修复审批/执行状态存储."""
+        return SQLiteRepairWorkflowStore(sqlite_client)
 
     @provide
     def trade_service(

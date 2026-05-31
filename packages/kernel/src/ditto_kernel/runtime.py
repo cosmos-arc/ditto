@@ -1,5 +1,5 @@
 """
-RuntimeLifecycle FSM + RuntimeSnapshot + TradingRuntimeKernel Protocol.
+RuntimeLifecycle FSM + BaseRuntimeKernel + TradingRuntimeKernel Protocol.
 
 满足 kernel Protocol/薄实现准入标准：
 1. 预期跨层使用：backtest + execution（Phase 0）
@@ -13,14 +13,19 @@ RuntimeLifecycle FSM + RuntimeSnapshot + TradingRuntimeKernel Protocol.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 
-__all__ = ["RuntimeLifecycle", "RuntimeSnapshot", "TradingRuntimeKernel"]
+__all__ = [
+    "BaseRuntimeKernel",
+    "RuntimeLifecycle",
+    "RuntimeSnapshot",
+    "TradingRuntimeKernel",
+]
 
 
 class RuntimeLifecycle(StrEnum):
@@ -127,6 +132,54 @@ def validate_transition(current: RuntimeLifecycle, target: RuntimeLifecycle) -> 
     if target not in allowed:
         msg = f"非法状态转换: {current.value} → {target.value}"
         raise RuntimeError(msg)
+
+
+class BaseRuntimeKernel:
+    """
+    参数化运行时内核基类 — 共享 lifecycle / transition / snapshot 逻辑.
+
+    子类仅需提供 Clock 构造逻辑和窄类型 clock property.
+    满足 kernel 薄实现准入标准：跨层使用（backtest + execution）、
+    零业务逻辑、无外部依赖、无 I/O.
+    """
+
+    def __init__(
+        self,
+        clock: Clock,
+        event_bus: EventBus,
+        mode: str,
+    ) -> None:
+        self._clock = clock
+        self._event_bus = event_bus
+        self._mode = mode
+        self._lifecycle = RuntimeLifecycle.PRE_INITIALIZED
+        self._started_at: datetime | None = None
+
+    @property
+    def event_bus(self) -> EventBus:
+        """事件总线."""
+        return self._event_bus
+
+    @property
+    def lifecycle(self) -> RuntimeLifecycle:
+        """当前生命周期状态."""
+        return self._lifecycle
+
+    @property
+    def state(self) -> RuntimeSnapshot:
+        """不可变状态快照."""
+        return RuntimeSnapshot(
+            state=self._lifecycle,
+            mode=self._mode,
+            started_at=self._started_at,
+        )
+
+    def transition_to(self, target: RuntimeLifecycle) -> None:
+        """转换到目标生命周期状态."""
+        validate_transition(self._lifecycle, target)
+        if target == RuntimeLifecycle.RUNNING and self._started_at is None:
+            self._started_at = datetime.now(UTC)
+        self._lifecycle = target
 
 
 @runtime_checkable

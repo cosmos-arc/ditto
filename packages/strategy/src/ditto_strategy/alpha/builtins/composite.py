@@ -5,6 +5,8 @@ CompositeDecisionStage -- 多信号聚合 Stage.
 的输出合并为统一评分。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -27,18 +29,46 @@ class FusionMethod(StrEnum):
     EQUAL = "equal"  # 等权（Rank 后简单平均）
 
 
-def _extract_score_column(frame: pl.DataFrame) -> pl.Series:
+def _extract_aligned_scores(
+    frame: pl.DataFrame,
+    result: pl.DataFrame,
+) -> pl.Series:
     """
-    从子 stage 输出中提取评分列。
+    从子 stage 输出中提取评分，按 ``instrument_id`` 对齐回原始 frame。
 
-    优先使用 ``score`` 列，fallback 到 ``signal_value``，
-    都不存在则用 0.0 填充。
+    子 stage 可能过滤或重排行，因此必须按 key join 而非位置对齐。
+    缺失的 instrument 以 0.0 填充（表示该子 stage 未对其评分）。
+
+    Args:
+        frame: 原始输入 frame（对齐基准）。
+        result: 子 stage 返回的结果 frame。
+
+    Returns:
+        与原始 frame 等长、按 instrument_id 对齐的 score Series。
+
     """
-    if FrameCol.SCORE in frame.columns:
-        return frame[FrameCol.SCORE]
-    if FrameCol.SIGNAL in frame.columns:
-        return frame[FrameCol.SIGNAL]
-    return pl.Series(FrameCol.SCORE, [0.0] * frame.height, dtype=pl.Float64)
+    # 确定子 stage 产出的评分列
+    if FrameCol.SCORE in result.columns:
+        score_col = FrameCol.SCORE
+    elif FrameCol.SIGNAL in result.columns:
+        score_col = FrameCol.SIGNAL
+    else:
+        return pl.Series(FrameCol.SCORE, [0.0] * frame.height, dtype=pl.Float64)
+
+    # 按 instrument_id left join 回原始 frame，缺失填 0.0
+    aligned = (
+        frame.select(FrameCol.INSTRUMENT_ID)
+        .join(
+            result.select(
+                FrameCol.INSTRUMENT_ID,
+                pl.col(score_col).alias(FrameCol.SCORE),
+            ),
+            on=FrameCol.INSTRUMENT_ID,
+            how="left",
+        )
+        .fill_null(0.0)
+    )
+    return aligned[FrameCol.SCORE]
 
 
 def _rank_normalize(series: pl.Series) -> pl.Series:
@@ -90,11 +120,11 @@ class CompositeDecisionStage:
         if len(self.stages) == 1:
             return self.stages[0].process(frame, context)
 
-        # ---- 并行独立执行各子 stage ----
+        # ---- 独立执行各子 stage ----
         score_columns: list[pl.Series] = []
         for stage in self.stages:
             result = stage.process(frame.clone(), context)
-            score_columns.append(_extract_score_column(result))
+            score_columns.append(_extract_aligned_scores(frame, result))
 
         # ---- Rank 标准化 ----
         ranked_columns = [_rank_normalize(col) for col in score_columns]
@@ -103,7 +133,7 @@ class CompositeDecisionStage:
         normalized_weights = self._normalize_weights()
 
         # ---- 加权求和 ----
-        composite_score = pl.Series(
+        composite_score: pl.Series = pl.Series(
             FrameCol.SCORE,
             [0.0] * frame.height,
             dtype=pl.Float64,

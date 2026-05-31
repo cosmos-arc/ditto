@@ -9,6 +9,8 @@ import polars as pl
 from ditto_features.expression.ast import ExpressionNode
 from ditto_features.expression.codegen._helpers import read_window_at
 
+__all__ = ["compile_time_series_special"]
+
 # ---------------------------------------------------------------------------
 # Time-series special operators
 # ---------------------------------------------------------------------------

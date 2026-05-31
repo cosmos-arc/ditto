@@ -13,6 +13,7 @@ known datasets.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cache
 from typing import Literal
 
 __all__ = [
@@ -220,7 +221,8 @@ class DatasetMetadata:
     schedule: DatasetSchedule
     quality_profile: str = "default"
 
-    def __post_init__(self) -> None:  # noqa: D105
+    def __post_init__(self) -> None:
+        """验证域字段合法性。"""
         if self.domain not in _VALID_DOMAINS:
             msg = f"Invalid domain: {self.domain!r}"
             raise ValueError(msg)
@@ -268,19 +270,15 @@ _ALL_DATASET_IDS: tuple[str, ...] = (
     "index_weight",
 )
 
-_cached_metadata: dict[str, DatasetMetadata] | None = None
 
-
+@cache
 def default_dataset_metadata() -> dict[str, DatasetMetadata]:
     """
     Return the authoritative metadata registry for all known datasets.
 
     Cached on first call; subsequent calls return the same dict.
     """
-    global _cached_metadata  # noqa: PLW0603
-    if _cached_metadata is not None:
-        return _cached_metadata
-    _cached_metadata = {
+    return {
         dataset_id: DatasetMetadata(
             dataset_id=dataset_id,
             domain=_resolve_domain(dataset_id),
@@ -289,4 +287,3 @@ def default_dataset_metadata() -> dict[str, DatasetMetadata]:
         )
         for dataset_id in _ALL_DATASET_IDS
     }
-    return _cached_metadata

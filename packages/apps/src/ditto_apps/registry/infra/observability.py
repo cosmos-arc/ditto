@@ -55,7 +55,7 @@ class ObservabilityProvider(Provider):
         return ObservabilityConfig(
             service_name="ditto-server",
             environment=env,
-            log_dir=str(data_store_settings.logs_path),
+            log_dir=str(data_store_settings.paths.utility.logs),
             log_level=obs.log_level,
             log_format=obs.log_format,
             log_to_console=obs.log_to_console,

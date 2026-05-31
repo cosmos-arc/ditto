@@ -91,7 +91,7 @@ class BacktestRunHandler:
             BacktestRunResult 包含 run_id 和状态.
 
         Raises:
-            ValueError: 策略不存在、日期非法、因子编译失败.
+            AppCommandError: 策略不存在、日期非法、因子编译失败.
 
         """
         # 1. 校验日期

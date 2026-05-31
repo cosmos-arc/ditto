@@ -3,11 +3,15 @@
 import polars as pl
 import pytest
 from ditto_data.storage.metadata.instrument import (
+    ETFExtension,
+    IndexExtension,
     InstrumentReader,
     InstrumentRegistration,
     InstrumentWriter,
     SecurityQuery,
+    StockExtension,
 )
+from ditto_data.storage.metadata.instrument.instrument_reader import _build_in_clause
 from ditto_platform.foundation import DataCache, SQLiteClient
 from pytest_mock import MockerFixture
 
@@ -115,6 +119,59 @@ class TestInstrumentReader:
         )
         assert sid3 == 100000001
 
+    def test_resolve_instrument_id_uses_empty_cache_from_first_lookup(self) -> None:
+        """The first lookup should populate an empty configured DataCache."""
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        reader_with_cache = InstrumentReader(self.client, cache=data_cache)
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from)
+            VALUES (100000001, 'tushare', '600000.SH', '1999-11-10')
+        """)
+        self.client.commit()
+
+        sid = reader_with_cache.resolve_instrument_id("600000.SH", "tushare")
+
+        assert sid == 100000001
+        assert "instrument_id:600000.SH:tushare:current" in data_cache
+
+        self.client.execute(
+            "UPDATE instrument_mapping SET effective_to = '2020-01-01'"
+            " WHERE source = 'tushare' AND source_ticker = '600000.SH'"
+        )
+        self.client.commit()
+
+        assert reader_with_cache.resolve_instrument_id("600000.SH", "tushare") == sid
+
+    def test_resolve_instrument_id_caches_negative_lookup(self) -> None:
+        """Missing instrument lookups should cache as None until invalidated."""
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        reader_with_cache = InstrumentReader(self.client, cache=data_cache)
+
+        assert reader_with_cache.resolve_instrument_id("600999.SH", "tushare") is None
+        assert "instrument_id:600999.SH:tushare:current" in data_cache
+
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100999001, '600999', 'Late Insert', 'SSE', 'stock', '2020-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from)
+            VALUES (100999001, 'tushare', '600999.SH', '2020-01-01')
+        """)
+        self.client.commit()
+
+        assert reader_with_cache.resolve_instrument_id("600999.SH", "tushare") is None
+
     def test_resolve_instrument_ids_batch(self) -> None:
         """Test batch resolution of source_tickers to instrument_ids."""
         # Insert test data
@@ -189,6 +246,35 @@ class TestInstrumentReader:
         source_ticker = self.reader.get_source_ticker(100000001, "tushare", asof=None)
         assert source_ticker == "600000.SH"
 
+    def test_get_source_ticker_with_pit_window(self) -> None:
+        """Reverse lookup respects historical mapping windows."""
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '000022', 'Old Code', 'SZSE', 'stock', '1990-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, effective_to)
+            VALUES (100000001, 'tushare', '000022.SZ', '1990-01-01', '2018-12-25')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from)
+            VALUES (100000001, 'tushare', '001872.SZ', '2018-12-25')
+        """)
+        self.client.commit()
+
+        assert (
+            self.reader.get_source_ticker(100000001, "tushare", asof="2018-12-24")
+            == "000022.SZ"
+        )
+        assert (
+            self.reader.get_source_ticker(100000001, "tushare", asof="2018-12-25")
+            == "001872.SZ"
+        )
+
     def test_list_instrument_ids(self) -> None:
         """Test listing all instrument_ids with filters."""
         # Insert test data
@@ -216,6 +302,10 @@ class TestInstrumentReader:
         assert len(sse_sids) == 2
         assert 100000001 in sse_sids
         assert 100000002 in sse_sids
+
+        # Filter by asset class
+        stock_sids = self.reader.list_instrument_ids(asset_class="stock")
+        assert len(stock_sids) == 3
 
     def test_list_instrument_ids_with_is_active_none(self) -> None:
         """Test listing with is_active=None returns active and inactive rows."""
@@ -287,6 +377,32 @@ class TestInstrumentReader:
         assert mapping[100000001] == "600000"
         assert mapping[100000002] == "600001"
 
+    def test_get_instrument_id_ticker_map_uses_empty_cache_from_first_lookup(
+        self,
+    ) -> None:
+        """Explicit ticker map queries should populate an empty configured DataCache."""
+        data_cache = DataCache(ttl_seconds=300, max_size=1000, enable_metrics=False)
+        reader_with_cache = InstrumentReader(self.client, cache=data_cache)
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date, is_active
+            )
+            VALUES (100000001, '600000', 'Test', 'SSE', 'stock', '1999-11-10', TRUE)
+        """)
+        self.client.commit()
+
+        mapping = reader_with_cache.get_instrument_id_ticker_map([100000001])
+
+        assert mapping == {100000001: "600000"}
+        assert "instrument_id_ticker_map:100000001" in data_cache
+
+        self.client.execute(
+            "UPDATE instrument SET ticker = '600001' WHERE instrument_id = 100000001"
+        )
+        self.client.commit()
+
+        assert reader_with_cache.get_instrument_id_ticker_map([100000001]) == mapping
+
     def test_enrich_with_ticker(self) -> None:
         """Test enriching DataFrame with symbol column."""
         # Insert test data
@@ -343,6 +459,273 @@ class TestInstrumentReader:
         # Find by asset_class
         result = self.reader.find_securities(SecurityQuery(asset_class="stock"))
         assert len(result) == 1
+
+        # Find by exchange
+        result = self.reader.find_securities(SecurityQuery(exchange="SSE"))
+        assert len(result) == 1
+
+    def test_resolve_instrument_ids_batch_empty_input(self) -> None:
+        """Batch resolution should short-circuit empty requests."""
+        assert self.reader.resolve_instrument_ids_batch([], source="tushare") == {}
+
+    def test_resolve_instrument_ids_batch_with_pit_window(self) -> None:
+        """Batch resolution applies PIT mapping windows."""
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '000022', 'Old Code', 'SZSE', 'stock', '1990-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from, effective_to)
+            VALUES (100000001, 'tushare', '000022.SZ', '1990-01-01', '2018-12-25')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument_mapping
+            (instrument_id, source, source_ticker, effective_from)
+            VALUES (100000001, 'tushare', '001872.SZ', '2018-12-25')
+        """)
+        self.client.commit()
+
+        result = self.reader.resolve_instrument_ids_batch(
+            ["000022.SZ", "001872.SZ"],
+            source="tushare",
+            asof="2018-12-24",
+        )
+
+        assert result == {"000022.SZ": 100000001}
+
+    def test_find_securities_returns_empty_dataframe_for_no_rows(self) -> None:
+        """No matching securities should return an empty Polars DataFrame."""
+        result = self.reader.find_securities(
+            SecurityQuery(source_tickers=["missing"], is_active=None)
+        )
+
+        assert result.is_empty()
+
+    def test_find_securities_with_pit_and_min_list_days(self) -> None:
+        """Security query applies source PIT and minimum listing age together."""
+        for instrument_id, ticker, source_ticker, list_date in [
+            (100000001, "600000", "600000.SH", "1999-11-10"),
+            (100000002, "600001", "600001.SH", "2024-01-15"),
+        ]:
+            self.client.execute(
+                """INSERT INTO instrument (
+                    instrument_id, ticker, name, exchange, asset_class, list_date
+                )
+                VALUES (?, ?, ?, 'SSE', 'stock', ?)""",
+                [instrument_id, ticker, ticker, list_date],
+            )
+            self.client.execute(
+                """INSERT INTO instrument_mapping
+                (instrument_id, source, source_ticker, effective_from)
+                VALUES (?, 'tushare', ?, ?)""",
+                [instrument_id, source_ticker, list_date],
+            )
+        self.client.commit()
+
+        result = self.reader.find_securities(
+            SecurityQuery(
+                source_tickers=["600000.SH", "600001.SH"],
+                source="tushare",
+                asof="2024-01-20",
+                min_list_days=30,
+                is_active=None,
+            )
+        )
+
+        assert result["instrument_id"].to_list() == [100000001]
+
+    def test_get_with_extension_merges_known_extension(self) -> None:
+        """Full instrument lookup merges extension fields for known asset classes."""
+        writer = InstrumentWriter(self.client)
+        writer.register(
+            100000001,
+            InstrumentRegistration(
+                source_ticker="600000.SH",
+                ticker="600000",
+                name="Test Bank",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="1999-11-10",
+                extension=StockExtension(
+                    instrument_id=100000001,
+                    list_status="L",
+                    industry_id=801010,
+                ),
+            ),
+        )
+
+        result = self.reader.get_with_extension(100000001)
+
+        assert result is not None
+        assert result["instrument_id"] == 100000001
+        assert result["list_status"] == "L"
+        assert result["industry_id"] == 801010
+
+    def test_get_with_extension_merges_etf_and_index_extensions(self) -> None:
+        """Full instrument lookup also merges ETF and index extension fields."""
+        writer = InstrumentWriter(self.client)
+        writer.register(
+            200000001,
+            InstrumentRegistration(
+                source_ticker="510300.SH",
+                ticker="510300",
+                name="ETF",
+                exchange="SSE",
+                asset_class="etf",
+                list_date="2012-05-28",
+                extension=ETFExtension(
+                    instrument_id=200000001,
+                    fund_type="equity",
+                    fund_manager="Manager",
+                    establish_date="2012-05-28",
+                    tracking_index="000300.SH",
+                ),
+            ),
+        )
+        writer.register(
+            300000001,
+            InstrumentRegistration(
+                source_ticker="000300.SH",
+                ticker="000300",
+                name="Index",
+                exchange="SSE",
+                asset_class="index",
+                list_date="2005-04-08",
+                extension=IndexExtension(
+                    instrument_id=300000001,
+                    base_date="2004-12-31",
+                    base_point=1000.0,
+                    num_constituents=300,
+                ),
+            ),
+        )
+
+        etf = self.reader.get_with_extension(200000001)
+        index = self.reader.get_with_extension(300000001)
+
+        assert etf is not None
+        assert etf["fund_type"] == "equity"
+        assert etf["tracking_index"] == "000300.SH"
+        assert index is not None
+        assert index["base_point"] == 1000.0
+        assert index["num_constituents"] == 300
+
+    def test_get_with_extension_handles_missing_or_unknown_extension(self) -> None:
+        """Full instrument lookup remains useful without a matching extension row."""
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (900000001, 'X001', 'Unknown', 'SSE', 'commodity', '2020-01-01')
+        """)
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date
+            )
+            VALUES (100000001, '600000', 'No Extension', 'SSE', 'stock', '1999-11-10')
+        """)
+        self.client.commit()
+
+        assert self.reader.get_with_extension(999999999) is None
+        unknown = self.reader.get_with_extension(900000001)
+        stock_without_extension = self.reader.get_with_extension(100000001)
+
+        assert unknown is not None
+        assert unknown["asset_class"] == "commodity"
+        assert stock_without_extension is not None
+        assert "list_status" not in stock_without_extension
+
+    def test_find_securities_with_extensions_for_supported_asset_classes(
+        self,
+    ) -> None:
+        """Extension query joins the requested extension table."""
+        writer = InstrumentWriter(self.client)
+        writer.register(
+            100000001,
+            InstrumentRegistration(
+                source_ticker="600000.SH",
+                ticker="600000",
+                name="Stock",
+                exchange="SSE",
+                asset_class="stock",
+                list_date="1999-11-10",
+                extension=StockExtension(
+                    instrument_id=100000001,
+                    list_status="L",
+                    industry_id=801010,
+                ),
+            ),
+        )
+        writer.register(
+            200000001,
+            InstrumentRegistration(
+                source_ticker="510300.SH",
+                ticker="510300",
+                name="ETF",
+                exchange="SSE",
+                asset_class="etf",
+                list_date="2012-05-28",
+                extension=ETFExtension(
+                    instrument_id=200000001,
+                    fund_type="equity",
+                    fund_manager="Manager",
+                    establish_date="2012-05-28",
+                    tracking_index="000300.SH",
+                ),
+            ),
+        )
+        writer.register(
+            300000001,
+            InstrumentRegistration(
+                source_ticker="000300.SH",
+                ticker="000300",
+                name="Index",
+                exchange="SSE",
+                asset_class="index",
+                list_date="2005-04-08",
+                extension=IndexExtension(
+                    instrument_id=300000001,
+                    base_date="2004-12-31",
+                    base_point=1000.0,
+                    num_constituents=300,
+                ),
+            ),
+        )
+
+        stock = self.reader.find_securities_with_extensions(asset_class="stock")
+        etf = self.reader.find_securities_with_extensions(
+            asset_class="etf",
+            exchange="SSE",
+        )
+        index = self.reader.find_securities_with_extensions(
+            asset_class="index",
+            is_active=None,
+        )
+
+        assert stock["list_status"].to_list() == ["L"]
+        assert etf["fund_type"].to_list() == ["equity"]
+        assert index["base_point"].to_list() == [1000.0]
+
+    def test_find_securities_with_extensions_without_join_and_empty_result(
+        self,
+    ) -> None:
+        """Extension query handles no asset class and no matching rows."""
+        self.client.execute("""
+            INSERT INTO instrument (
+                instrument_id, ticker, name, exchange, asset_class, list_date, is_active
+            )
+            VALUES (100000001, '600000', 'Stock', 'SSE', 'stock', '1999-11-10', TRUE)
+        """)
+        self.client.commit()
+
+        all_rows = self.reader.find_securities_with_extensions(asset_class=None)
+        missing = self.reader.find_securities_with_extensions(asset_class="bond")
+
+        assert len(all_rows) == 1
+        assert missing.is_empty()
 
     def teardown_method(self) -> None:
         """Clean up after test."""
@@ -510,6 +893,22 @@ class TestSqlInjectionProtection:
         """使用 fixture 自动注入已初始化的数据库客户端."""
         self.client = sqlite_client
         self.reader = InstrumentReader(self.client)
+
+    def test_build_in_clause_empty_and_chunked(self) -> None:
+        """IN clause helper should be safe for empty and chunked inputs."""
+        empty_clause, empty_params = _build_in_clause("instrument_id", [])
+        chunked_clause, chunked_params = _build_in_clause(
+            "instrument_id",
+            [1, 2, 3, 4, 5],
+            chunk_size=2,
+        )
+
+        assert empty_clause == "1=0"
+        assert empty_params == []
+        assert chunked_clause == (
+            "(instrument_id IN (?,?) OR instrument_id IN (?,?) OR instrument_id IN (?))"
+        )
+        assert chunked_params == [1, 2, 3, 4, 5]
 
     def test_in_clause_with_many_sids(self) -> None:
         """Test IN clause handles large list of SIDs safely."""

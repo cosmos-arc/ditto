@@ -47,6 +47,8 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.processes.execution.backtest_audit import (
+    ArtifactPersistConfig,
+    ArtifactPersistContext,
     persist_artifact,
     persist_audit,
     resolve_run_id,
@@ -406,14 +408,18 @@ class BacktestService:
         if self._options.artifact_service is None:
             return
         persist_artifact(
-            run_id=run_id,
-            report=report,
-            manifest=manifest,
-            strategy_id=self._config.strategy_id,
-            initial_cash=self._config.initial_cash,
-            rebalance_freq=self._config.rebalance_freq,
-            artifact_service=self._options.artifact_service,
-            artifact_dir=self._options.artifact_dir,
-            display_map=self._options.display_map,
-            write_fn=write_backtest_artifacts,
+            ArtifactPersistContext(
+                run_id=run_id,
+                report=report,
+                manifest=manifest,
+            ),
+            ArtifactPersistConfig(
+                strategy_id=self._config.strategy_id,
+                initial_cash=self._config.initial_cash,
+                rebalance_freq=self._config.rebalance_freq,
+                artifact_service=self._options.artifact_service,
+                write_fn=write_backtest_artifacts,
+                artifact_dir=self._options.artifact_dir,
+                display_map=self._options.display_map,
+            ),
         )

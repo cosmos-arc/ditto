@@ -200,6 +200,9 @@ def list_corporate_actions(
     ),
     start_date: str = typer.Option(..., "--start-date", help="开始日期"),
     end_date: str = typer.Option(..., "--end-date", "-e", help="结束日期"),
+    as_of_date: str | None = typer.Option(
+        None, "--as-of-date", help="PIT 查询日期, 可选"
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -209,12 +212,13 @@ def list_corporate_actions(
         ditto query fundamental corporate-actions -i 1
             --start-date 2024-01-01 -e 2024-12-31
         ditto query fundamental corporate-actions -t 000001
-            --start-date 2024-01-01 -e 2024-12-31
+            --start-date 2024-01-01 -e 2024-12-31 --as-of-date 2024-06-30
 
     """
     validate_date_range(start_date, end_date)
     start = parse_date(start_date).date()
     end = parse_date(end_date).date()
+    as_of = parse_date(as_of_date).date() if as_of_date is not None else None
 
     with _get_facades() as (facade, metadata_facade):
         resolved_id = resolve_identifier_for_cli(
@@ -222,12 +226,13 @@ def list_corporate_actions(
             instrument_id=instrument_id,
             ticker=ticker,
             standard_ticker=standard_ticker,
+            as_of_date=as_of_date,
         )
         if resolved_id is None:
             typer.echo("未找到匹配的标的")
             return
 
-        df = facade.list_corporate_actions(resolved_id, start, end)
+        df = facade.list_corporate_actions(resolved_id, start, end, as_of)
 
         if df.is_empty():
             typer.echo("未找到公司行动数据")

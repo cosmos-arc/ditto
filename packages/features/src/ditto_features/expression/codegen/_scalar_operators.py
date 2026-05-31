@@ -9,6 +9,8 @@ import polars as pl
 from ditto_features.expression.ast import ExpressionNode
 from ditto_features.expression.codegen._helpers import read_int_literal
 
+__all__ = ["compile_scalar"]
+
 # ---------------------------------------------------------------------------
 # Scalar operator tables
 # ---------------------------------------------------------------------------
