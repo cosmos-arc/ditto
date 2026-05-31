@@ -11,6 +11,15 @@ from ditto_data.sources.tushare.adapters.bond_yield import (
 )
 from ditto_data.sources.tushare.adapters.calendar import CalendarTushareAdapter
 from ditto_data.sources.tushare.adapters.capital import CapitalTushareAdapter
+from ditto_data.sources.tushare.adapters.capital_corporate import (
+    CapitalCorporateTushareAdapter,
+)
+from ditto_data.sources.tushare.adapters.capital_index import (
+    CapitalIndexTushareAdapter,
+)
+from ditto_data.sources.tushare.adapters.capital_market import (
+    CapitalMarketTushareAdapter,
+)
 from ditto_data.sources.tushare.adapters.etf import ETFTushareAdapter
 from ditto_data.sources.tushare.adapters.fx import (
     FX_CODE_TO_INSTRUMENT_ID,
@@ -26,6 +35,9 @@ __all__ = [
     "BaseTushareAdapter",
     "BondYieldTushareAdapter",
     "CalendarTushareAdapter",
+    "CapitalCorporateTushareAdapter",
+    "CapitalIndexTushareAdapter",
+    "CapitalMarketTushareAdapter",
     "CapitalTushareAdapter",
     "CnBondYieldIndicator",
     "ETFTushareAdapter",

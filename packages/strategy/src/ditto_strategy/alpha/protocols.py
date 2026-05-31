@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import polars as pl
 
@@ -14,6 +14,7 @@ __all__ = ["DecisionFrame", "DecisionStage", "FrameCol"]
 type DecisionFrame = pl.DataFrame
 
 
+@runtime_checkable
 class DecisionStage(Protocol):
     """
     Pipeline 阶段 — 每个 Stage 实现此接口。

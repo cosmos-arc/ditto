@@ -86,7 +86,7 @@ instrument / order / market / identity: 无子域间依赖
 | `Exchange` | instrument.py | `StrEnum`（XSHE/XSHG/XBSE） | Data |
 | `InstrumentIngestParams` | instrument.py | frozen dataclass（含纯计算型 `@property`） | Data, App |
 | `OrderSide` | order.py | `StrEnum`（BUY/SELL） | Data, Execution |
-| `OrderType` | order.py | `StrEnum`（MARKET/LIMIT/STOP_MARKET/MARKET_ON_CLOSE） | Execution, Risk, Portfolio, Backtest |
+| `OrderType` | order.py | `StrEnum`（7 成员：MARKET/LIMIT/STOP_MARKET/MARKET_ON_CLOSE/FAK/FAB/GTD） | Execution, Risk, Portfolio, Backtest |
 | `CalendarId` | market.py | `Literal["cn_stock"]` | Analysis |
 | `GrainId` | market.py | `Literal["1d", "1m"]` | Analysis |
 | `GRAIN_TO_TIME_KEYS` | market.py | `dict[GrainId, tuple[str, ...]]` 常量 | Data, Analysis |

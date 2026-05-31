@@ -22,7 +22,7 @@ class TestCreateCustomUniverseHandler:
     def test_create_custom_universe(self) -> None:
         """创建自定义 universe."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "name": "我的组合",
             "universe_type": "custom",
@@ -36,7 +36,7 @@ class TestCreateCustomUniverseHandler:
         result = handler.handle(cmd)
         assert result["universe_id"] == "my-portfolio"
         assert result["name"] == "我的组合"
-        service.create_universe.assert_called_once_with(
+        service.universe.create_universe.assert_called_once_with(
             universe_id="my-portfolio",
             name="我的组合",
             description="自定义持仓",
@@ -47,7 +47,7 @@ class TestCreateCustomUniverseHandler:
     def test_create_returns_detail(self) -> None:
         """创建后返回 universe 详情."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "test",
             "name": "Test",
             "universe_type": "custom",
@@ -65,7 +65,7 @@ class TestUpdateCustomUniverseHandler:
         """更新 universe 名称和描述."""
         service = MagicMock()
         # 首次调用返回旧数据（用于 existence check），再次调用返回新数据
-        service.get_universe_detail.side_effect = [
+        service.universe.get_universe_detail.side_effect = [
             {
                 "universe_id": "my-portfolio",
                 "name": "旧名称",
@@ -79,7 +79,7 @@ class TestUpdateCustomUniverseHandler:
                 "universe_type": "custom",
             },
         ]
-        service.update_universe.return_value = True
+        service.universe.update_universe.return_value = True
         handler = UpdateCustomUniverseHandler(metadata_service=service)
         cmd = UpdateCustomUniverseCommand(
             universe_id="my-portfolio",
@@ -89,7 +89,7 @@ class TestUpdateCustomUniverseHandler:
         result = handler.handle(cmd)
         assert result["universe_id"] == "my-portfolio"
         assert result["name"] == "新名称"
-        service.update_universe.assert_called_once_with(
+        service.universe.update_universe.assert_called_once_with(
             "my-portfolio",
             "新名称",
             "新描述",
@@ -100,14 +100,14 @@ class TestUpdateCustomUniverseHandler:
     ) -> None:
         """更新应调用 update_universe 而非 create_universe."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "name": "旧名称",
             "universe_type": "custom",
             "description": "旧描述",
         }
-        service.update_universe.return_value = True
-        service.get_universe_detail.return_value = {
+        service.universe.update_universe.return_value = True
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "name": "新名称",
             "description": "新描述",
@@ -121,19 +121,19 @@ class TestUpdateCustomUniverseHandler:
         )
         handler.handle(cmd)
         # 应调用 update_universe 而非 create_universe
-        service.update_universe.assert_called_once_with(
+        service.universe.update_universe.assert_called_once_with(
             "my-portfolio",
             "新名称",
             "新描述",
         )
-        service.create_universe.assert_not_called()
+        service.universe.create_universe.assert_not_called()
 
     def test_update_preset_universe_raises_permission_error(
         self,
     ) -> None:
         """更新预设 universe 应抛 PermissionError."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "csi300",
             "name": "沪深300",
             "universe_type": "preset",
@@ -154,12 +154,12 @@ class TestUpdateCustomUniverseHandler:
             "universe_type": "preset",
             "operation": "update",
         }
-        service.update_universe.assert_not_called()
+        service.universe.update_universe.assert_not_called()
 
     def test_update_nonexistent_raises(self) -> None:
         """更新不存在的 universe 抛 ValueError."""
         service = MagicMock()
-        service.get_universe_detail.return_value = None
+        service.universe.get_universe_detail.return_value = None
         handler = UpdateCustomUniverseHandler(metadata_service=service)
         cmd = UpdateCustomUniverseCommand(
             universe_id="missing",
@@ -175,13 +175,13 @@ class TestUpdateCustomUniverseHandler:
     def test_update_with_members_calls_replace_constituents(self) -> None:
         """更新时传入 members 应调用 replace_constituents."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "name": "新名称",
             "universe_type": "custom",
         }
-        service.update_universe.return_value = True
-        service.replace_constituents.return_value = 3
+        service.universe.update_universe.return_value = True
+        service.universe.replace_constituents.return_value = 3
         handler = UpdateCustomUniverseHandler(metadata_service=service)
         cmd = UpdateCustomUniverseCommand(
             universe_id="my-portfolio",
@@ -191,8 +191,8 @@ class TestUpdateCustomUniverseHandler:
         )
         handler.handle(cmd)
 
-        service.replace_constituents.assert_called_once()
-        call_args = service.replace_constituents.call_args
+        service.universe.replace_constituents.assert_called_once()
+        call_args = service.universe.replace_constituents.call_args
         assert call_args[0][0] == "my-portfolio"
         records = call_args[0][1]
         assert len(records) == 3
@@ -203,7 +203,7 @@ class TestUpdateCustomUniverseHandler:
     def test_update_with_invalid_member_raises_app_command_error(self) -> None:
         """Invalid member ids raise typed command errors."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "name": "新名称",
             "universe_type": "custom",
@@ -225,17 +225,17 @@ class TestUpdateCustomUniverseHandler:
             "index": 0,
             "value": "abc",
         }
-        service.replace_constituents.assert_not_called()
+        service.universe.replace_constituents.assert_not_called()
 
     def test_update_without_members_skips_replace(self) -> None:
         """未传 members 时不应调用 replace_constituents."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "name": "新名称",
             "universe_type": "custom",
         }
-        service.update_universe.return_value = True
+        service.universe.update_universe.return_value = True
         handler = UpdateCustomUniverseHandler(metadata_service=service)
         cmd = UpdateCustomUniverseCommand(
             universe_id="my-portfolio",
@@ -243,7 +243,7 @@ class TestUpdateCustomUniverseHandler:
         )
         handler.handle(cmd)
 
-        service.replace_constituents.assert_not_called()
+        service.universe.replace_constituents.assert_not_called()
 
 
 class TestDeleteCustomUniverseHandler:
@@ -252,7 +252,7 @@ class TestDeleteCustomUniverseHandler:
     def test_delete_custom_universe_calls_delete(self) -> None:
         """删除自定义 universe 应调用 delete_universe."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "my-portfolio",
             "universe_type": "custom",
         }
@@ -260,12 +260,12 @@ class TestDeleteCustomUniverseHandler:
         cmd = DeleteCustomUniverseCommand(universe_id="my-portfolio")
         result = handler.handle(cmd)
         assert result is True
-        service.delete_universe.assert_called_once_with("my-portfolio")
+        service.universe.delete_universe.assert_called_once_with("my-portfolio")
 
     def test_delete_preset_universe_raises(self) -> None:
         """删除预设 universe 抛 ValueError (403)."""
         service = MagicMock()
-        service.get_universe_detail.return_value = {
+        service.universe.get_universe_detail.return_value = {
             "universe_id": "csi300",
             "universe_type": "index",
         }
@@ -279,12 +279,12 @@ class TestDeleteCustomUniverseHandler:
             "universe_type": "index",
             "operation": "delete",
         }
-        service.delete_universe.assert_not_called()
+        service.universe.delete_universe.assert_not_called()
 
     def test_delete_nonexistent_raises(self) -> None:
         """删除不存在的 universe 抛 ValueError (404)."""
         service = MagicMock()
-        service.get_universe_detail.return_value = None
+        service.universe.get_universe_detail.return_value = None
         handler = DeleteCustomUniverseHandler(metadata_service=service)
         cmd = DeleteCustomUniverseCommand(universe_id="missing")
         with pytest.raises(AppCommandError, match="Universe not found") as exc_info:
@@ -293,4 +293,4 @@ class TestDeleteCustomUniverseHandler:
             "universe_id": "missing",
             "reason": "not_found",
         }
-        service.delete_universe.assert_not_called()
+        service.universe.delete_universe.assert_not_called()

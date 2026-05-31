@@ -1,16 +1,21 @@
 """
-因子桥接 — 字符串表达式 → 编译 → 信号计算.
+因子桥接 — 字符串表达式 → 编译 → 信号计算 + 回测因子 bundle 构建.
 
 FactorBridge 将声明式因子表达式字符串桥接到回测引擎的信号流中：
   1. 字符串表达式 → DerivedSpec → ExpressionCompiler → pl.Expr
   2. 多因子 rank 归一化 + 加权合成 → signal_value 列
+
+同时提供模块级函数用于构建因子感知的 StrategyInputBundle。
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import polars as pl
+from ditto_backtest.data_feed import DataFeed
+from ditto_backtest.steps import StepContext
 from ditto_features.derived_types import (
     DerivedRole,
     DerivedSpec,
@@ -20,12 +25,16 @@ from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_features.expression.diagnostics import ExpressionCompileError
 from ditto_kernel.strategy import ExecutionPolicy
+from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
+from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppProcessError
 
 __all__ = [
     "CompiledExpressions",
     "FactorBridge",
+    "build_factor_aware_bundle_builder",
+    "build_factor_bundle",
     "build_signal_spec",
 ]
 
@@ -203,3 +212,138 @@ class FactorBridge:
             "instrument_id",
             (weighted_sum / weight_sum).alias("signal_value"),
         )
+
+
+# ---------------------------------------------------------------------------
+# Module-level functions for backtest factor bundle building
+# ---------------------------------------------------------------------------
+
+
+def build_factor_aware_bundle_builder(
+    *,
+    bridge: FactorBridge,
+    compiled: CompiledExpressions,
+    data_feed: DataFeed,
+    strategy_id: str,
+    run_id: str,
+) -> Callable[[StepContext], StrategyInputBundle]:
+    """
+    构建含因子信号注入的 input_bundle_builder.
+
+    当 data_feed 可用时，会在 market_data 中包含历史窗口，
+    使 ts_* 时间序列表达式（如 ts_mean, shift）能正确计算。
+
+    Args:
+        bridge: 因子桥接器实例。
+        compiled: 编译后的因子表达式。
+        data_feed: 市场数据源。
+        strategy_id: 策略标识。
+        run_id: 由 run() 统一生成的运行标识，确保 bundle.run_id 与 run record 一致。
+
+    Returns:
+        接收 StepContext、返回 StrategyInputBundle 的可调用对象。
+
+    """
+    lookback_days = max(
+        (expr.analysis.lookback for expr in compiled.expressions),
+        default=REGIME_DEFAULT_LOOKBACK,
+    )
+
+    def _build(ctx: StepContext) -> StrategyInputBundle:
+        return build_factor_bundle(
+            ctx=ctx,
+            strategy_id=strategy_id,
+            run_id=run_id,
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=lookback_days,
+        )
+
+    return _build
+
+
+def build_factor_bundle(
+    *,
+    ctx: StepContext,
+    strategy_id: str,
+    run_id: str,
+    bridge: FactorBridge,
+    compiled: CompiledExpressions,
+    data_feed: DataFeed,
+    lookback_days: int,
+) -> StrategyInputBundle:
+    """
+    构建单日因子感知的 StrategyInputBundle.
+
+    从 StepContext 提取当日行情，可选追加历史窗口数据，
+    通过 FactorBridge 计算信号值并组装完整的输入包。
+
+    Args:
+        ctx: 引擎步骤上下文（含 date 和 slice_）。
+        strategy_id: 策略标识。
+        run_id: 运行标识。
+        bridge: 因子桥接器。
+        compiled: 编译后的因子表达式。
+        data_feed: 市场数据源（需支持 get_history）。
+        lookback_days: 历史回溯天数。
+
+    """
+    slice_ = ctx.slice_
+    if slice_ is None:
+        msg = "slice_ required"
+        raise AppProcessError(msg)
+    bars = slice_.bars
+    instrument_ids = list(bars.keys())
+
+    instruments = pl.DataFrame({"instrument_id": instrument_ids})
+
+    # 构建当日 OHLCV
+    market_rows: list[dict[str, object]] = []
+    for iid, bar in bars.items():
+        market_rows.append(
+            {
+                "instrument_id": int(iid),
+                "open": bar.open,
+                "high": bar.high,
+                "low": bar.low,
+                "close": bar.close,
+                "volume": bar.volume,
+                "trade_date": ctx.time_context.trade_date,
+            },
+        )
+
+    # 追加历史窗口 — 支持 ts_* 时间序列表达式
+    history_df = data_feed.get_history(
+        instrument_ids,
+        ctx.time_context.trade_date,
+        lookback_days,
+    )
+    if not history_df.is_empty():
+        hist_rows = history_df.select(
+            "instrument_id",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "trade_date",
+        ).to_dicts()
+        for row in hist_rows:
+            market_rows.append(row)
+
+    market_data = pl.DataFrame(market_rows)
+    if "trade_date" in market_data.columns:
+        market_data = market_data.sort("trade_date")
+
+    signal_values = bridge.compute_signals(market_data, compiled)
+
+    return StrategyInputBundle(
+        trade_date=ctx.time_context.trade_date,
+        strategy_id=strategy_id,
+        run_id=run_id,
+        instruments=instruments,
+        market_data=market_data,
+        signal_values=signal_values,
+        benchmark_close=getattr(slice_, "benchmark_close", None),
+    )

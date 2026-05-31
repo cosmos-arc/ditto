@@ -38,9 +38,9 @@ def mock_metadata_service(mocker):
     service.is_trading_day.return_value = True
 
     # Instrument 相关方法
-    service.register_instruments_batch = mocker.Mock()
-    service.resolve_or_create_instruments_batch = mocker.Mock()
-    service.resolve_instrument_ids_batch = mocker.Mock(return_value={})
+    service.instrument.register_instruments_batch = mocker.Mock()
+    service.instrument.resolve_or_create_instruments_batch = mocker.Mock()
+    service.instrument.resolve_instrument_ids_batch = mocker.Mock(return_value={})
 
     def register_side_effect(df, source, asset_class, **kwargs):
         _ = df, source, kwargs
@@ -51,8 +51,10 @@ def mock_metadata_service(mocker):
         source_tickers = df["source_ticker"].to_list()
         return {source_tickers[0]: 1_000_000}
 
-    service.register_instruments_batch.side_effect = register_side_effect
-    service.resolve_or_create_instruments_batch.side_effect = resolve_side_effect
+    service.instrument.register_instruments_batch.side_effect = register_side_effect
+    service.instrument.resolve_or_create_instruments_batch.side_effect = (
+        resolve_side_effect
+    )
 
     return service
 

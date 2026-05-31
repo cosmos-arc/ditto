@@ -39,7 +39,7 @@ def _make_metadata_service() -> MagicMock:
         2_000_002: {"ticker": "159919", "exchange": "XSHE", "asset_class": "etf"},
         3_000_001: {"ticker": "000300", "exchange": "XSHG", "asset_class": "index"},
     }
-    service.get_instrument.side_effect = _instrument_map.get
+    service.instrument.get_instrument.side_effect = _instrument_map.get
     return service
 
 

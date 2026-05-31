@@ -430,3 +430,76 @@ class TestReconcileDefaultPriceTolerance:
             actual=fills,
         )
         assert report.diffs == ()
+
+
+# ---------------------------------------------------------------------------
+# B1B-2: ReconciliationDiff audit link fields
+# ---------------------------------------------------------------------------
+
+
+class TestReconciliationDiffAuditLinks:
+    """ReconciliationDiff 应包含 client_order_id / broker_order_id 审计链接。"""
+
+    def test_diff_accepts_client_order_id(self) -> None:
+        diff = ReconciliationDiff(
+            mismatch_type=MismatchType.MISSING_FILL,
+            order_id="ord-1",
+            client_order_id="ditto-abc123",
+        )
+        assert diff.client_order_id == "ditto-abc123"
+
+    def test_diff_accepts_broker_order_id(self) -> None:
+        diff = ReconciliationDiff(
+            mismatch_type=MismatchType.EXTRA_FILL,
+            order_id="ord-x",
+            broker_order_id="broker-xyz",
+        )
+        assert diff.broker_order_id == "broker-xyz"
+
+    def test_diff_defaults_none(self) -> None:
+        diff = ReconciliationDiff(
+            mismatch_type=MismatchType.QTY_MISMATCH,
+            order_id="ord-2",
+        )
+        assert diff.client_order_id is None
+        assert diff.broker_order_id is None
+
+    def test_reconcile_populates_client_order_id(self) -> None:
+        ticket = _ticket("ord-1", 100, 100, 4.50)
+        fills: list[FillEvent] = []
+        report = reconcile(
+            report_id="r-audit",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[ticket],
+            actual=fills,
+        )
+        assert len(report.diffs) == 1
+        diff = report.diffs[0]
+        assert diff.mismatch_type is MismatchType.MISSING_FILL
+        assert diff.client_order_id == "ord-1"
+
+    def test_reconcile_populates_client_order_id_on_qty_mismatch(self) -> None:
+        tickets = [_ticket("ord-2", 100, 100, 4.50)]
+        fills = [_fill("fill-1", "ord-2", 80, 4.50)]
+        report = reconcile(
+            report_id="r-audit-qty",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=tickets,
+            actual=fills,
+        )
+        qty_diff = next(
+            d for d in report.diffs if d.mismatch_type is MismatchType.QTY_MISMATCH
+        )
+        assert qty_diff.client_order_id == "ord-2"
+
+    def test_report_trade_date_present(self) -> None:
+        report = reconcile(
+            report_id="r-trade-date",
+            account_id="acct-1",
+            trade_date="2026-05-25",
+            expected=[],
+            actual=[],
+        )
+        assert report.trade_date == "2026-05-25"

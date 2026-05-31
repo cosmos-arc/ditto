@@ -95,6 +95,7 @@ class TradeFillPayload:
         fill_price: 成交价格
         fee: 手续费
         slippage: 滑点
+        correlation_id: 关联 ID（可追溯 order → fill → account）
 
     """
 
@@ -107,11 +108,40 @@ class TradeFillPayload:
     fill_price: float
     fee: float
     slippage: float
+    correlation_id: str | None = None
+
+
+@dataclass(frozen=True)
+class RiskDecisionPayload:
+    """
+    风控决策审计记录 — accept/reject/modify 决策链.
+
+    Attributes:
+        trade_date: 交易日期 (YYYY-MM-DD)
+        order_id: 关联订单 ID
+        instrument_id: 标的 ID
+        decision: 决策结果 (accepted/rejected/modified)
+        reason: 决策原因
+        original_quantity: 原始数量
+        final_quantity: 最终数量
+        rule_id: 触发的风控规则 ID
+
+    """
+
+    trade_date: str
+    order_id: str
+    instrument_id: int
+    decision: str
+    reason: str
+    original_quantity: int
+    final_quantity: int
+    rule_id: str = ""
 
 
 __all__ = [
     "AuditRecordType",
     "PreTradeDecisionPayload",
+    "RiskDecisionPayload",
     "RiskScanPayload",
     "TradeFillPayload",
 ]

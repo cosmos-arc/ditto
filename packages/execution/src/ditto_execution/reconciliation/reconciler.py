@@ -62,6 +62,7 @@ def reconcile(
 
     for ticket in expected:
         order_id = ticket.order.order_id
+        client_order_id = ticket.order.client_id.value
         matched_order_ids.add(order_id)
         matched_fills = fills_by_order.get(order_id, [])
 
@@ -70,6 +71,7 @@ def reconcile(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.MISSING_FILL,
                     order_id=order_id,
+                    client_order_id=client_order_id,
                     expected_quantity=ticket.order.quantity,
                     expected_status=ticket.status,
                 )
@@ -87,6 +89,7 @@ def reconcile(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.STATUS_MISMATCH,
                     order_id=order_id,
+                    client_order_id=client_order_id,
                     expected_status=OrderStatus.FILLED,
                     actual_status=ticket.status,
                 )
@@ -98,6 +101,7 @@ def reconcile(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.QTY_MISMATCH,
                     order_id=order_id,
+                    client_order_id=client_order_id,
                     expected_quantity=ticket.order.quantity,
                     actual_quantity=total_qty,
                 )
@@ -112,6 +116,7 @@ def reconcile(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.PRICE_MISMATCH,
                     order_id=order_id,
+                    client_order_id=client_order_id,
                     expected_price=expected_price,
                     actual_price=avg_price,
                 )

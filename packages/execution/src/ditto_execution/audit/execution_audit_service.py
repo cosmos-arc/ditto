@@ -18,6 +18,7 @@ from ditto_platform.foundation import SQLitePool, logger, traced
 
 from ditto_execution.audit.models import (
     PreTradeDecisionPayload,
+    RiskDecisionPayload,
     RiskScanPayload,
     TradeFillPayload,
 )
@@ -231,6 +232,50 @@ class ExecutionAuditService:
         )
         return count
 
+    @traced("audit.save_risk_decision")
+    def save_risk_decision(
+        self,
+        run_id: str,
+        records: tuple[RiskDecisionPayload, ...],
+    ) -> int:
+        """
+        批量保存风控决策审计记录（accept/reject/modify）.
+
+        Args:
+            run_id: 回测运行 ID.
+            records: RiskDecisionPayload 不可变元组.
+
+        Returns:
+            成功插入的记录数.
+
+        """
+        if not records:
+            return 0
+        conn = self._pool.get_connection()
+        count = 0
+        for rec in records:
+            payload = self._serialize_record(rec, run_id=run_id)
+            conn.execute(
+                _INSERT_SQL,
+                (
+                    run_id,
+                    rec.trade_date,
+                    "risk_decision",
+                    rec.instrument_id,
+                    "instrument",
+                    payload,
+                ),
+            )
+            count += 1
+        self._pool.commit()
+        logger.debug(
+            "risk decision records saved",
+            event="audit_risk_decision_save",
+            run_id=run_id,
+            count=count,
+        )
+        return count
+
     @traced("audit.query")
     def query(
         self,
@@ -280,9 +325,16 @@ class ExecutionAuditService:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    _PayloadT = (
+        RiskScanPayload
+        | PreTradeDecisionPayload
+        | TradeFillPayload
+        | RiskDecisionPayload
+    )
+
     @staticmethod
     def _serialize_record(
-        record: RiskScanPayload | PreTradeDecisionPayload | TradeFillPayload,
+        record: _PayloadT,
         *,
         run_id: str,
     ) -> str:

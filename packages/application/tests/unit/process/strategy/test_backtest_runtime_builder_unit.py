@@ -60,7 +60,7 @@ class TestBacktestRuntimeBuilder:
         metadata_service = MagicMock(spec=MetadataService)
         metadata_service.resolve_instrument_id.return_value = 3_000_001
         metadata_service.get_universe.return_value = [2_000_001, 2_000_002]
-        metadata_service.get_instrument.return_value = {
+        metadata_service.instrument.get_instrument.return_value = {
             "ticker": "510300",
             "exchange": "XSHG",
         }

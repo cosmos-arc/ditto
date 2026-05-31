@@ -4,16 +4,15 @@ MetadataService - Metadata 域统一查询服务（门面模式）.
 整合 Metadata 域所有 Reader/Writer 的功能，提供统一的访问入口。
 内部委托到三个子服务：CalendarService、InstrumentService、UniverseService。
 
+子服务通过 public property 暴露（``svc.calendar``, ``svc.instrument``,
+``svc.universe``），同时保留少量高频便捷方法以降低调用方认知负载。
+
 CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
 """
 
 from __future__ import annotations
 
-from datetime import date
-from typing import Any, Literal
-
 import polars as pl
-from ditto_kernel.identity import InstrumentId as _InstrumentId
 from ditto_platform.foundation import logger
 
 from ditto_data.models.metadata import InstrumentRegistration
@@ -59,6 +58,9 @@ class MetadataService:
     整合 Metadata 域所有 Reader/Writer 的功能，提供统一的访问入口。
     内部委托到三个子服务：CalendarService、InstrumentService、UniverseService。
 
+    通过 ``calendar``, ``instrument``, ``universe`` 三个 public property
+    暴露子服务的完整能力，同时保留高频便捷方法。
+
     CQRS 架构：使用 Reader 处理查询，Writer 处理写入。
     """
 
@@ -86,7 +88,7 @@ class MetadataService:
         初始化 MetadataService（门面模式）.
 
         保留原始 17 个参数以保证 DI 注册和测试的向后兼容性。
-        内部构建三个子服务实例，所有方法委托到对应子服务。
+        内部构建三个子服务实例。
 
         Args:
             instrument_reader: 证券主数据读取器.
@@ -133,31 +135,29 @@ class MetadataService:
             rebalance_writer=rebalance_writer,
         )
 
-        # 保留原始属性引用以支持直接访问（测试兼容性）
-        self._instrument_reader = instrument_reader
-        self._instrument_writer = instrument_writer
-        self._name_history_reader = name_history_reader
-        self._name_history_writer = name_history_writer
-        self._calendar_reader = calendar_reader
-        self._calendar_writer = calendar_writer
-        self._industry_reader = industry_reader
-        self._industry_writer = industry_writer
-        self._industry_mapping_reader = industry_mapping_reader
-        self._industry_mapping_writer = industry_mapping_writer
-        self._universe_reader = universe_reader
-        self._universe_writer = universe_writer
-        self._rebalance_reader = rebalance_reader
-        self._rebalance_writer = rebalance_writer
-        self._instrument_id_allocator = instrument_id_allocator
-        self._index_composition_reader = index_composition_reader
-        self._exchange_transformers = exchange_transformers
-
         logger.debug(
             "MetadataService initialized (facade)",
             event="metadata_query_service_init_complete",
         )
 
-    # ============ 交易日历查询（→ CalendarService） ============
+    # ============ 子服务 property ============
+
+    @property
+    def calendar(self) -> CalendarService:
+        """交易日历子服务."""
+        return self._calendar
+
+    @property
+    def instrument(self) -> InstrumentService:
+        """证券/工具子服务."""
+        return self._instrument
+
+    @property
+    def universe(self) -> UniverseService:
+        """标的池子服务."""
+        return self._universe
+
+    # ============ 高频便捷方法（< 10） ============
 
     def list_trading_days(
         self,
@@ -168,19 +168,6 @@ class MetadataService:
         """查询交易日列表。委托到 CalendarService."""
         return self._calendar.list_trading_days(start, end, only_open)
 
-    def list_calendar_range(
-        self,
-        start: str,
-        end: str,
-        only_open: bool = True,
-    ) -> pl.DataFrame:
-        """查询日历数据（DataFrame 格式）。委托到 CalendarService."""
-        return self._calendar.list_calendar_range(start, end, only_open)
-
-    def save_calendar(self, records: list[dict[str, Any]]) -> int:
-        """插入或更新日历记录。委托到 CalendarService."""
-        return self._calendar.save_calendar(records)
-
     def is_trading_day(self, date: str) -> bool:
         """判断是否为交易日。委托到 CalendarService."""
         return self._calendar.is_trading_day(date)
@@ -188,48 +175,6 @@ class MetadataService:
     def get_last_trading_day(self) -> str | None:
         """获取最后一个交易日。委托到 CalendarService."""
         return self._calendar.get_last_trading_day()
-
-    def get_first_trading_day(self) -> str | None:
-        """获取第一个交易日。委托到 CalendarService."""
-        return self._calendar.get_first_trading_day()
-
-    def update_half_days(self, half_days: list[str]) -> int:
-        """批量更新半日交易标记。委托到 CalendarService."""
-        return self._calendar.update_half_days(half_days)
-
-    def enrich_calendar(self, start: str, end: str) -> int:
-        """丰富日历数据。委托到 CalendarService."""
-        return self._calendar.enrich_calendar(start, end)
-
-    def auto_enrich_calendar(self) -> int:
-        """自动丰富所有未处理的日历数据。委托到 CalendarService."""
-        return self._calendar.auto_enrich_calendar()
-
-    # ============ Identity 解析（→ InstrumentService） ============
-
-    def resolve_instrument_id(
-        self,
-        identifier: str,
-        source: str,
-        asof: str | None,
-    ) -> int | None:
-        """解析标识符到 instrument_id。委托到 InstrumentService."""
-        return self._instrument.resolve_instrument_id(identifier, source, asof)
-
-    def resolve_instrument_ids_batch(
-        self,
-        identifiers: list[str],
-        source: str,
-        asof: str | None,
-    ) -> dict[str, int]:
-        """批量解析标识符到 instrument_id。委托到 InstrumentService."""
-        return self._instrument.resolve_instrument_ids_batch(identifiers, source, asof)
-
-    # ============ 证券查询（→ InstrumentService） ============
-
-    def get_instrument(self, instrument_id: int) -> dict[str, Any] | None:
-        """获取单个证券信息。委托到 InstrumentService."""
-        return self._instrument.get_instrument(instrument_id)
 
     def find_securities(
         self,
@@ -274,215 +219,18 @@ class MetadataService:
             is_active=is_active,
         )
 
-    def get_ticker(self, instrument_id: int) -> str | None:
-        """根据 instrument_id 获取裸代码。委托到 InstrumentService."""
-        return self._instrument.get_ticker(instrument_id)
-
-    def get_source_ticker(
-        self,
-        instrument_id: int,
-        source: str = "tushare",
-        asof: str | None = None,
-    ) -> str | None:
-        """根据 instrument_id 获取源代码。委托到 InstrumentService."""
-        return self._instrument.get_source_ticker(instrument_id, source, asof)
-
-    # ============ 行业查询（→ InstrumentService） ============
-
-    def find_industries(
-        self,
-        is_active: bool = True,
-        industry_level: str | None = None,
-    ) -> pl.DataFrame:
-        """多维查询行业数据。委托到 InstrumentService."""
-        return self._instrument.find_industries(is_active, industry_level)
-
-    def list_industry_stocks(
-        self,
-        industry_id: str,
-        asof: str | None = None,
-    ) -> list[int]:
-        """查询行业成分股。委托到 InstrumentService."""
-        return self._instrument.list_industry_stocks(industry_id, asof)
-
-    def get_stock_industry(
-        self,
-        instrument_id: int,
-        asof: str | None = None,
-    ) -> dict[str, Any] | None:
-        """查询股票所属行业。委托到 InstrumentService."""
-        return self._instrument.get_stock_industry(instrument_id, asof)
-
-    # ============ 状态查询 PIT（→ InstrumentService） ============
-
-    def get_stock_status(
-        self,
-        instrument_id: int,
-        asof: str,
-    ) -> dict[str, Any]:
-        """获取股票在指定时间点的状态（PIT 查询）。委托到 InstrumentService."""
-        return self._instrument.get_stock_status(instrument_id, asof)
-
-    # ============ 标的池查询（→ UniverseService） ============
-
-    def get_universe(
-        self,
-        universe_id: str,
-        asof: str | None = None,
-    ) -> list[int]:
-        """查询标的池成分股。委托到 UniverseService."""
-        return self._universe.get_universe(universe_id, asof)
-
-    def get_filtered_universe(
-        self,
-        universe_id: str,
-        asof: str | None = None,
-        volume_map: dict[int, float] | None = None,
-        min_avg_volume: float | None = None,
-        min_list_days: int = 0,
-    ) -> list[int]:
-        """获取过滤后的标的池成分股。委托到 UniverseService."""
-        return self._universe.get_filtered_universe(
-            universe_id,
-            asof,
-            volume_map,
-            min_avg_volume,
-            min_list_days,
-        )
-
-    def universe_intersection(
-        self,
-        id_a: str,
-        id_b: str,
-        asof: str | None = None,
-    ) -> list[int]:
-        """两个标的池的交集。委托到 UniverseService."""
-        return self._universe.universe_intersection(id_a, id_b, asof)
-
-    def universe_union(
-        self,
-        id_a: str,
-        id_b: str,
-        asof: str | None = None,
-    ) -> list[int]:
-        """两个标的池的并集。委托到 UniverseService."""
-        return self._universe.universe_union(id_a, id_b, asof)
-
-    def universe_subtract(
-        self,
-        id_a: str,
-        id_b: str,
-        asof: str | None = None,
-    ) -> list[int]:
-        """标的池 A 减去 B 的差集。委托到 UniverseService."""
-        return self._universe.universe_subtract(id_a, id_b, asof)
-
-    def sync_index_universe(self, index_code: str, asof_date: date) -> int:
-        """从指数成分数据同步到标的池。委托到 UniverseService."""
-        return self._universe.sync_index_universe(index_code, asof_date)
-
-    # ============ Universe CRUD（→ reader/writer） ============
-
-    def create_universe(
-        self,
-        universe_id: str,
-        name: str,
-        description: str | None = None,
-        universe_type: str = "custom",
-        source_ref: str | None = None,
-    ) -> None:
-        """创建新的证券域."""
-        self._universe_writer.create_universe(
-            universe_id=universe_id,
-            name=name,
-            description=description,
-            universe_type=universe_type,
-            source_ref=source_ref,
-        )
-
-    def delete_universe(self, universe_id: str) -> None:
-        """删除证券域及其所有成分股."""
-        self._universe_writer.delete_universe(universe_id)
-
-    def update_universe(
-        self,
-        universe_id: str,
-        name: str,
-        description: str | None = None,
-    ) -> bool:
-        """更新证券域元数据。返回是否成功更新."""
-        return self._universe_writer.update_metadata(universe_id, name, description)
-
-    def replace_constituents(
-        self,
-        universe_id: str,
-        records: list[dict[str, Any]],
-        effective_date: str,
-    ) -> int:
-        """原子替换证券域所有当前成分股。返回新增成分数量。"""
-        return self._universe_writer.replace_constituents(
-            universe_id, records, effective_date
-        )
-
-    def get_universe_detail(self, universe_id: str) -> dict[str, Any] | None:
-        """获取证券域定义。不存在时返回 None."""
-        return self._universe_reader.get_universe(universe_id)
-
-    def list_universes_df(self, universe_type: str | None = None) -> pl.DataFrame:
-        """列出所有证券域。可选按类型过滤."""
-        return self._universe_reader.list_universes(universe_type)
-
-    # ============ 证券注册（→ InstrumentService） ============
-
     def register_instrument(self, registration: InstrumentRegistration) -> int:
         """注册新证券。委托到 InstrumentService."""
         return self._instrument.register_instrument(registration)
 
-    def register_instruments_batch(
+    def resolve_instrument_id(
         self,
-        df: pl.DataFrame,
+        identifier: str,
         source: str,
-        asset_class: Literal["stock", "etf", "index"],
-        source_ticker_col: str = "source_ticker",
-    ) -> tuple[str, str]:
-        """批量注册证券（跳过已存在的）。委托到 InstrumentService."""
-        return self._instrument.register_instruments_batch(
-            df, source, asset_class, source_ticker_col
-        )
-
-    def resolve_or_create_instruments_batch(
-        self,
-        df: pl.DataFrame,
-        source: str,
-        asset_class: Literal["stock", "etf", "index"],
-        source_ticker_col: str = "source_ticker",
-    ) -> dict[str, int]:
-        """批量解析 source_ticker，不存在则自动创建证券。委托到 InstrumentService."""
-        return self._instrument.resolve_or_create_instruments_batch(
-            df, source, asset_class, source_ticker_col
-        )
-
-    # ============ 标识符解析（→ InstrumentService） ============
-
-    def resolve_instrument_identifier(
-        self,
-        *,
-        instrument_id: int | None = None,
-        standard_ticker: str | None = None,
-        ticker: str | None = None,
-        asset_class: str | None = None,
-        source: str,
-        asof: str | None = None,
-    ) -> _InstrumentId | None:
-        """统一标识符解析入口。委托到 InstrumentService。"""
-        return self._instrument.resolve_instrument_identifier(
-            instrument_id=instrument_id,
-            standard_ticker=standard_ticker,
-            ticker=ticker,
-            asset_class=asset_class,
-            source=source,
-            asof=asof,
-        )
+        asof: str | None,
+    ) -> int | None:
+        """解析标识符到 instrument_id。委托到 InstrumentService."""
+        return self._instrument.resolve_instrument_id(identifier, source, asof)
 
     def resolve_source_ticker(
         self,
@@ -503,54 +251,10 @@ class MetadataService:
             asof,
         )
 
-    # ============ list_date 更新（→ InstrumentService） ============
-
-    def update_list_date(
-        self, instrument_id: int, list_date: date | str | None
-    ) -> None:
-        """更新证券的上市日期。委托到 InstrumentService."""
-        return self._instrument.update_list_date(instrument_id, list_date)
-
-    def find_instruments_without_list_date(
-        self,
-        asset_class: str | None = None,
-    ) -> pl.DataFrame:
-        """查找没有上市日期的证券。委托到 InstrumentService."""
-        return self._instrument.find_instruments_without_list_date(asset_class)
-
-    # ============ 证券名称查询（→ InstrumentService） ============
-
-    def get_stock_name(
-        self,
-        instrument_id: int,
-        asof: str | None = None,
-    ) -> str | None:
-        """获取证券名称（支持 PIT 查询）。委托到 InstrumentService."""
-        return self._instrument.get_stock_name(instrument_id, asof)
-
-    # ============ 行业多级查询（→ InstrumentService） ============
-
-    def get_stock_industries_all_levels(
-        self,
-        instrument_id: int,
-        asof: str | None = None,
-        source: str = "sw",
-    ) -> list[dict[str, Any]]:
-        """获取股票所有级别的行业分类。委托到 InstrumentService."""
-        return self._instrument.get_stock_industries_all_levels(
-            instrument_id, asof, source
-        )
-
-    # ============ 标的池调仓日程（→ UniverseService） ============
-
-    def get_next_rebalance(
+    def get_universe(
         self,
         universe_id: str,
-        after_date: str,
-    ) -> dict[str, Any] | None:
-        """获取标的池下一次调仓日程。委托到 UniverseService."""
-        return self._universe.get_next_rebalance(universe_id, after_date)
-
-    def list_rebalances(self, universe_id: str) -> list[dict[str, Any]]:
-        """列出标的池所有调仓日程。委托到 UniverseService."""
-        return self._universe.list_rebalances(universe_id)
+        asof: str | None = None,
+    ) -> list[int]:
+        """查询标的池成分股。委托到 UniverseService."""
+        return self._universe.get_universe(universe_id, asof)

@@ -259,7 +259,7 @@ class ResearchDatasetFacade:
         start: str,
         end: str,
     ) -> SpineSnapshot:
-        calendar_frame = self._metadata_service.list_calendar_range(
+        calendar_frame = self._metadata_service.calendar.list_calendar_range(
             start=start,
             end=end,
             only_open=True,

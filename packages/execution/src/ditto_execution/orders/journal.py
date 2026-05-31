@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from ditto_execution.orders.event import OrderEvent
 from ditto_execution.orders.ids import ClientOrderId
@@ -11,6 +11,7 @@ from ditto_execution.orders.ids import ClientOrderId
 __all__ = ["InMemoryOrderEventJournal", "OrderEventJournal"]
 
 
+@runtime_checkable
 class OrderEventJournal(Protocol):
     """订单事件日志 — 追踪订单生命周期事件。"""
 

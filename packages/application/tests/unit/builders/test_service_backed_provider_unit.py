@@ -35,7 +35,7 @@ class TestServiceBackedDataProvider:
         provider, mocks = self._make_provider()
 
         # ticker -> id 映射
-        mocks["metadata"].resolve_instrument_ids_batch.return_value = {
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {
             "000001.SZ": 1,
             "600000.SH": 2,
         }
@@ -51,7 +51,9 @@ class TestServiceBackedDataProvider:
         result = provider.get_bars(query)
 
         assert result.equals(expected_df)
-        mocks["metadata"].resolve_instrument_ids_batch.assert_called_once_with(
+        mocks[
+            "metadata"
+        ].instrument.resolve_instrument_ids_batch.assert_called_once_with(
             identifiers=["000001.SZ", "600000.SH"],
             source="tushare",
             asof=None,
@@ -61,7 +63,7 @@ class TestServiceBackedDataProvider:
         """get_bars 在无 ticker 映射时应返回空 DataFrame."""
         provider, mocks = self._make_provider()
 
-        mocks["metadata"].resolve_instrument_ids_batch.return_value = {}
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {}
 
         query = BarQuery(
             instruments=["INVALID.XX"],
@@ -77,7 +79,7 @@ class TestServiceBackedDataProvider:
         """get_bars 应正确传递复权参数."""
         provider, mocks = self._make_provider()
 
-        mocks["metadata"].resolve_instrument_ids_batch.return_value = {
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {
             "000001.SZ": 1,
         }
         mocks["market"].find_bars.return_value = pl.DataFrame()
@@ -99,7 +101,7 @@ class TestServiceBackedDataProvider:
         """get_bars 只解析到部分 ticker 时应只查询已解析的."""
         provider, mocks = self._make_provider()
 
-        mocks["metadata"].resolve_instrument_ids_batch.return_value = {
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {
             "000001.SZ": 1,
             # 600000.SH 未解析到
         }
@@ -174,12 +176,12 @@ class TestServiceBackedDataProvider:
         provider, mocks = self._make_provider()
 
         expected = pl.DataFrame({"trade_date": ["2024-01-02", "2024-01-03"]})
-        mocks["metadata"].list_calendar_range.return_value = expected
+        mocks["metadata"].calendar.list_calendar_range.return_value = expected
 
         result = provider.get_schedule("2024-01-01", "2024-01-31")
 
         assert result.equals(expected)
-        mocks["metadata"].list_calendar_range.assert_called_once_with(
+        mocks["metadata"].calendar.list_calendar_range.assert_called_once_with(
             "2024-01-01", "2024-01-31", only_open=True
         )
 
@@ -189,7 +191,7 @@ class TestServiceBackedDataProvider:
         """get_factor 应委托给 DerivedQueryService."""
         provider, mocks = self._make_provider()
 
-        mocks["metadata"].resolve_instrument_ids_batch.return_value = {
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {
             "000001.SZ": 1,
         }
         expected = pl.DataFrame(
@@ -220,7 +222,7 @@ class TestServiceBackedDataProvider:
         """get_factor 在无 ticker 映射时应返回空 DataFrame."""
         provider, mocks = self._make_provider()
 
-        mocks["metadata"].resolve_instrument_ids_batch.return_value = {}
+        mocks["metadata"].instrument.resolve_instrument_ids_batch.return_value = {}
 
         result = provider.get_factor(
             name="momentum_20d",

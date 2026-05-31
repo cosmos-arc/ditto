@@ -207,6 +207,18 @@ class Source(StrEnum):
     FRED = "fred"  # Federal Reserve Economic Data (美国宏观数据)
 
 
+_RANGES: dict[AssetClassType, tuple[int, int]] = {
+    "stock": (1_000_000, 1_999_999),
+    "etf": (2_000_000, 2_999_999),
+    "index": (3_000_000, 3_999_999),
+    "fx": (4_000_000, 4_999_999),
+    "commodity": (5_000_000, 5_999_999),
+    "bond": (6_000_000, 6_999_999),
+    "futures": (7_000_000, 7_999_999),
+    "option": (8_000_000, 8_999_999),
+}
+
+
 class InstrumentIdRange(NamedTuple):
     """
     Instrument ID range definition.
@@ -234,21 +246,11 @@ class InstrumentIdRange(NamedTuple):
     @classmethod
     def get_range(cls, asset_class: str) -> InstrumentIdRange:
         """Get ID range for asset class."""
-        ranges = {
-            "stock": cls(1_000_000, 1_999_999),
-            "etf": cls(2_000_000, 2_999_999),
-            "index": cls(3_000_000, 3_999_999),
-            "fx": cls(4_000_000, 4_999_999),
-            "commodity": cls(5_000_000, 5_999_999),
-            "bond": cls(6_000_000, 6_999_999),
-            "futures": cls(7_000_000, 7_999_999),
-            "option": cls(8_000_000, 8_999_999),
-        }
-
-        if asset_class not in ranges:
+        if asset_class not in _RANGES:
             raise ValueError(f"Unknown asset class: {asset_class}")
 
-        return ranges[asset_class]
+        lo, hi = _RANGES[asset_class]
+        return cls(lo, hi)
 
     @classmethod
     def detect_asset_class(cls, ids: list[int]) -> AssetClassType:
@@ -275,35 +277,13 @@ class InstrumentIdRange(NamedTuple):
         if not ids:
             raise ValueError("无法推断空 instrument_id 列表的资产类别")
 
-        # 定义所有资产类别范围（与 AssetClassType 保持一致）
-        asset_classes: list[AssetClassType] = [
-            "stock",
-            "etf",
-            "index",
-            "fx",
-            "commodity",
-            "bond",
-            "futures",
-            "option",
-        ]
-        ranges: list[tuple[AssetClassType, int, int]] = [
-            ("stock", 1_000_000, 1_999_999),
-            ("etf", 2_000_000, 2_999_999),
-            ("index", 3_000_000, 3_999_999),
-            ("fx", 4_000_000, 4_999_999),
-            ("commodity", 5_000_000, 5_999_999),
-            ("bond", 6_000_000, 6_999_999),
-            ("futures", 7_000_000, 7_999_999),
-            ("option", 8_000_000, 8_999_999),
-        ]
-
         # 统计各范围命中次数
-        hits: dict[AssetClassType, int] = dict.fromkeys(asset_classes, 0)
+        hits: dict[AssetClassType, int] = dict.fromkeys(_RANGES, 0)
         unknown_ids: list[int] = []
 
         for instrument_id in ids:
             matched = False
-            for ac, lo, hi in ranges:
+            for ac, (lo, hi) in _RANGES.items():
                 if lo <= instrument_id <= hi:
                     hits[ac] += 1
                     matched = True

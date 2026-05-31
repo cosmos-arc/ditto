@@ -189,3 +189,13 @@ class OrderCheckResult:
     resized_quantity: int | None = None
     reason: str | None = None
     triggered_checks: tuple[str, ...] = ()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def accept_order(order_id: str) -> OrderCheckResult:
+    """构建 accept 结果的简写 — constraints/exposure 共享。"""
+    return OrderCheckResult(decision=Decision.ACCEPT, order_id=order_id)

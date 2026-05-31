@@ -7,6 +7,11 @@ from ditto_data.catalog.contracts import (
     DataCatalogWriter,
     DataSchemaFingerprint,
 )
+from ditto_data.catalog.metadata import (
+    DatasetMetadata,
+    default_dataset_metadata,
+)
+from ditto_data.catalog.store import InMemoryDataCatalog
 
 __all__ = [
     "DataAssetRef",
@@ -14,4 +19,7 @@ __all__ = [
     "DataCatalogReader",
     "DataCatalogWriter",
     "DataSchemaFingerprint",
+    "DatasetMetadata",
+    "InMemoryDataCatalog",
+    "default_dataset_metadata",
 ]

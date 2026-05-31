@@ -1,7 +1,7 @@
 # Ditto Capability Maturity Manifest
 
-> Date: 2026-05-08
-> Status: Initial review baseline
+> Date: 2026-05-25
+> Status: V2 evaluation synced
 > Purpose: prevent global-market roadmap language from being mistaken for current production readiness.
 
 ## Maturity Levels
@@ -29,14 +29,17 @@
 | Portfolio accounting/rebalancing | experimental | Core accounting/rebalancing models exist; Portfolio review confirms positions/holdings/target portfolio runtime/store and event publication are incomplete. | Portfolio state projection remediation. |
 | Risk checks | experimental | Pre/post checks exist; Risk review confirms continuous risk gate, typed audit payloads, and state recovery are incomplete. | Risk gate/state remediation. |
 | Backtest engine | initial-focus | Engine loop and simulation exist; Backtest review confirms shared paper seam and replay recovery beyond NAV are open. | Backtest/paper seam remediation. |
-| Execution OMS and broker gateway | experimental / reserved | Execution review confirms protocols, CRUD storage, and audit exist; OMS Lite identity/journal, paper/mock gateway, reconciliation, and idempotency are incomplete. | Execution remediation. |
-| Paper trading runtime | reserved | Target runtime path is discussed but not implemented as a first-class path; execution has no concrete paper gateway yet. | W1 Runtime Spine / Execution remediation. |
+| Execution OMS FSM | initial-focus | OMS Lite 完整实现：7 状态（NEW/SUBMITTED/PARTIALLY_FILLED/FILLED/CANCELED/REJECTED/INVALID）+ 5 触发器 FSM + OrderBook + OrderTicket + 双 ID（ClientOrderId / BrokerOrderId）。 | Execution remediation — durable journal, conformance tests. |
+| PaperBrokerGateway | experimental | Paper 撮合网关完整行为矩阵：submit/fill/cancel/reject/partial fill + last_prices 注入解决 fill_price=0.0 + RiskGate 集成 + 18 conformance tests。 | Live adapter seam + conformance test expansion. |
+| ExecutionReconciler | experimental | reconcile() 纯函数，5 种 MismatchType。ReconciliationDiff 含 client_order_id/broker_order_id 可追溯 journal event。 | Reconciliation persistence. |
+| OrderEventJournal | experimental | Protocol + InMemoryOrderEventJournal + SqliteOrderEventJournal（append-only 持久化，重启不丢失）。append/events_for/all_events API 完整。 | Multi-journal orchestration. |
+| Paper trading runtime | experimental | PaperBrokerGateway 完整行为矩阵 + PaperRuntimeKernel（RealtimeClock + SimpleEventBus）实现 TradingRuntimeKernel Protocol。 | Live adapter seam. |
 | Live trading adapters | reserved | BrokerGateway has no production adapter; do not treat live trading as available. | Execution remediation after OMS Lite. |
 | Research dataset control-plane | initial-focus | Analysis services/storage exist, but Analysis/Application reviews confirm application-owned research ports and late-arrival policy honesty remain open. | Research port/policy remediation. |
-| Analysis reports/diagnostics/experiments/screeners | reserved | Package docs and guards mark these namespaces as reserved/future and `__all__=[]`; no runtime API exists. Reserved list: `ditto_analysis.reports`, `ditto_analysis.diagnostics`, `ditto_analysis.experiments`, `ditto_analysis.screeners`. | Reserved namespace guard source-of-truth remediation. |
+| Analysis experiments | reserved | Package docs and guards mark this namespace as reserved/future and `__all__=[]`; no runtime API exists. Reserved list: `ditto_analysis.experiments`. | Reserved namespace guard source-of-truth remediation. |
 | Analysis SHIFT_TO_NEXT_SNAPSHOT late-arrival policy | reserved | Enum member exists but has no implementation; warns and returns frame unchanged. Must not be relied upon until promoted. | Late-arrival policy implementation. |
 | Platform config/observability/storage foundations | infrastructure | Platform is business-agnostic and guarded; Platform review found one P1 SQL helper validation gap and P2 storage/API polish items. | Platform SQL remediation. |
-| DataCatalog runtime | experimental | Data review confirms contracts exist but no runtime store/integration; do not treat catalog/lineage as active enforcement yet. | DataCatalog runtime remediation. |
+| DataCatalog runtime | experimental | InMemoryDataCatalog + DatasetMetadata 已实现（contracts 有 runtime 落地）。Lineage 仍为 contract-only。 | DataCatalog lineage remediation. |
 | Runtime event/time/state/OMS spine | experimental | All W1 runtime reviews confirm EventBus/Clock exist. Typed events (B4), risk state snapshot/restore (B5), portfolio state projection (B5) are complete. TimeContext integration, OMS Lite remain incomplete. | Runtime spine remediation. |
 
 ## Guard Rules
@@ -52,18 +55,15 @@ These namespaces exist as placeholder packages (`__all__ = []`) and must not be 
 
 | Namespace | Package | Since |
 |-----------|---------|-------|
-| `ditto_analysis.reports` | analysis | 2026-05-08 |
-| `ditto_analysis.diagnostics` | analysis | 2026-05-08 |
 | `ditto_analysis.experiments` | analysis | 2026-05-08 |
-| `ditto_analysis.screeners` | analysis | 2026-05-08 |
 
 ### Reserved API Surface
 
 | Surface | Package | Since | Notes |
 |---------|---------|-------|-------|
 | `LateArrivalPolicy.SHIFT_TO_NEXT_SNAPSHOT` | analysis | 2026-05-09 | Enum member exists, warns on use, no shift semantics |
-| `DataCatalogReader` / `DataCatalogWriter` | data | 2026-05-09 | Protocol contracts only, no concrete implementation |
-| `BrokerGateway` (production adapters) | execution | 2026-05-08 | No production adapter exists |
+| `DataCatalogReader` / `DataCatalogWriter` | data | 2026-05-09 | Protocol contracts + InMemoryDataCatalog runtime implementation |
+| `BrokerGateway` (production adapters) | execution | 2026-05-08 | No production adapter exists; PaperBrokerGateway is experimental |
 
 ### API Route Maturity (enforcement source of truth)
 

@@ -2,7 +2,7 @@
 
 from ditto_data.config.data_source import DataSourceSettings
 from ditto_data.config.data_source_validation import DataSourceValidationProvider
-from ditto_data.config.data_store import DataStoreSettings, SqlEngineConfig
+from ditto_data.config.data_store import DataStoreSettings, PathGroups, SqlEngineConfig
 from ditto_data.config.storage import FileStorageSettings
 
 __all__ = [
@@ -10,5 +10,6 @@ __all__ = [
     "DataSourceValidationProvider",
     "DataStoreSettings",
     "FileStorageSettings",
+    "PathGroups",
     "SqlEngineConfig",
 ]

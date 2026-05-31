@@ -44,6 +44,10 @@ class BrokerGateway(Protocol):
         """取消已提交的订单，返回是否成功."""
         ...
 
+    def reject_order(self, order_id: str, reason: str) -> bool:
+        """拒绝订单并记录原因，返回是否成功."""
+        ...
+
     def query_fills(self, order_id: str) -> tuple[FillEvent, ...]:
         """query_fills returns broker-reported fills for an order."""
         ...

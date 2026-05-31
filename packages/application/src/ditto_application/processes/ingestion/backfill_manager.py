@@ -117,7 +117,7 @@ class BackfillManager:
             parallel=parallel,
         )
 
-        first_date = self._metadata_service.get_first_trading_day()
+        first_date = self._metadata_service.calendar.get_first_trading_day()
         last_date = self._metadata_service.get_last_trading_day()
         if not first_date or not last_date:
             return BackfillResult(

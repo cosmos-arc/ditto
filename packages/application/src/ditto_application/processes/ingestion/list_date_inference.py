@@ -76,8 +76,10 @@ class ListDateInferenceService:
         )
 
         # 查找 list_date 为 NULL 的证券
-        instruments = self._metadata_service.find_instruments_without_list_date(
-            asset_class=asset_class
+        instruments = (
+            self._metadata_service.instrument.find_instruments_without_list_date(
+                asset_class=asset_class
+            )
         )
 
         if instruments.is_empty():
@@ -110,7 +112,7 @@ class ListDateInferenceService:
                     asset_class=asset_class,
                 )
                 if inferred_date is not None:
-                    self._metadata_service.update_list_date(
+                    self._metadata_service.instrument.update_list_date(
                         instrument_id, inferred_date
                     )
                     success_count += 1

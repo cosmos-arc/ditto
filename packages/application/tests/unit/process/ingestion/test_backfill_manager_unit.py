@@ -42,7 +42,7 @@ def mock_metadata_service(mocker):
     """创建 Mock MetadataService。"""
     service = mocker.Mock()
     service.list_trading_days = mocker.Mock(return_value=[])
-    service.get_first_trading_day = mocker.Mock(return_value="2020-01-02")
+    service.calendar.get_first_trading_day = mocker.Mock(return_value="2020-01-02")
     service.get_last_trading_day = mocker.Mock(return_value="2024-12-31")
     return service
 
@@ -409,7 +409,7 @@ class TestBackfillMissing:
     ) -> None:
         """使用日历的完整日期范围查找缺失。"""
         # Arrange
-        mock_metadata_service.get_first_trading_day.return_value = "2024-12-01"
+        mock_metadata_service.calendar.get_first_trading_day.return_value = "2024-12-01"
         mock_metadata_service.get_last_trading_day.return_value = "2024-12-31"
 
         # 模拟 get_range 调用
@@ -578,7 +578,7 @@ class TestBackfillMissing:
     ) -> None:
         """测试当日历没有数据时的处理。"""
         # Arrange - 日历为空
-        mock_metadata_service.get_first_trading_day.return_value = None
+        mock_metadata_service.calendar.get_first_trading_day.return_value = None
         mock_metadata_service.get_last_trading_day.return_value = None
 
         # Act
@@ -597,7 +597,7 @@ class TestBackfillMissing:
     ) -> None:
         """测试当日历有首尾日期但没有交易日时的处理。"""
         # Arrange - 有首尾日期，但没有交易日
-        mock_metadata_service.get_first_trading_day.return_value = "2024-12-01"
+        mock_metadata_service.calendar.get_first_trading_day.return_value = "2024-12-01"
         mock_metadata_service.get_last_trading_day.return_value = "2024-12-31"
         mock_metadata_service.list_trading_days.return_value = []
 

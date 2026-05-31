@@ -297,10 +297,12 @@ class IngestionDataWriter:
         if "instrument_id" in df.columns:
             return df
         source_tickers = df[source_ticker_col].unique().to_list()
-        instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
-            identifiers=source_tickers,
-            source=self._source_name,
-            asof=None,
+        instrument_id_mapping = (
+            self._metadata_service.instrument.resolve_instrument_ids_batch(
+                identifiers=source_tickers,
+                source=self._source_name,
+                asof=None,
+            )
         )
         return _enrich_with_instrument_id(
             df, instrument_id_mapping, source_ticker_col, self._source_name
@@ -407,10 +409,12 @@ class IngestionDataWriter:
         """
         if "instrument_id" not in df.columns:
             source_tickers = df[source_ticker_col].unique().to_list()
-            instrument_id_mapping = self._metadata_service.resolve_instrument_ids_batch(
-                identifiers=source_tickers,
-                source=self._source_name,
-                asof=None,
+            instrument_id_mapping = (
+                self._metadata_service.instrument.resolve_instrument_ids_batch(
+                    identifiers=source_tickers,
+                    source=self._source_name,
+                    asof=None,
+                )
             )
             enriched_df = _enrich_with_instrument_id(
                 df,
@@ -519,7 +523,7 @@ class IngestionDataWriter:
 
     def _write_calendar(self, df: pl.DataFrame, trade_date: str) -> WriteResult:
         records = df.to_dicts()
-        self._metadata_service.save_calendar(records=records)
+        self._metadata_service.calendar.save_calendar(records=records)
         file_path = f"calendar_store:{trade_date}"
         checksum = ChecksumCompute.from_dataframe(df, dataset_sort_keys("calendar"))
         return WriteResult(
@@ -561,7 +565,7 @@ class IngestionDataWriter:
             tuple[str, str]: (file_path, checksum)
 
         """
-        return self._metadata_service.register_instruments_batch(
+        return self._metadata_service.instrument.register_instruments_batch(
             df=df,
             source=self._source_name,
             asset_class=asset_class,

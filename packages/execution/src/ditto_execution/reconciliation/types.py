@@ -26,6 +26,8 @@ class ReconciliationDiff:
     mismatch_type: MismatchType
     order_id: str
     fill_id: str | None = None
+    client_order_id: str | None = None
+    broker_order_id: str | None = None
     expected_quantity: int | None = None
     actual_quantity: int | None = None
     expected_price: float | None = None

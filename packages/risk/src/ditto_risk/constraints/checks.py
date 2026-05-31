@@ -11,6 +11,7 @@ from ditto_risk.constraints.context import (
     Decision,
     OrderCheckResult,
     PreTradeContext,
+    accept_order,
 )
 from ditto_risk.contracts import PreTradeOrder
 
@@ -43,16 +44,6 @@ class PreTradeRiskCheck(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _accept(order_id: str) -> OrderCheckResult:
-    """构建 accept 结果的简写。"""
-    return OrderCheckResult(decision=Decision.ACCEPT, order_id=order_id)
-
-
-# ---------------------------------------------------------------------------
 # NoShortSellCheck
 # ---------------------------------------------------------------------------
 
@@ -67,7 +58,7 @@ class NoShortSellCheck:
     ) -> OrderCheckResult:
         """卖出时检查持仓数量是否充足。"""
         if order.direction == OrderSide.BUY:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         position = context.account_view.positions.get(order.instrument_id)
         if position is None or position.available_quantity < order.quantity:
@@ -82,7 +73,7 @@ class NoShortSellCheck:
                 triggered_checks=("no_short_sell",),
             )
 
-        return _accept(order.order_id)
+        return accept_order(order.order_id)
 
 
 # ---------------------------------------------------------------------------
@@ -100,19 +91,19 @@ class PriceValidityCheck:
     ) -> OrderCheckResult:
         """检查 LIMIT 单价格是否在涨跌停范围内。"""
         if order.order_type != OrderType.LIMIT or order.price is None:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         snapshot = context.market_snapshots.get(order.instrument_id)
         if snapshot is None:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         limit_up = snapshot.limit_up
         limit_down = snapshot.limit_down
         if limit_up is None or limit_down is None:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         if limit_down <= order.price <= limit_up:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         return OrderCheckResult(
             decision=Decision.REJECT,
@@ -141,14 +132,14 @@ class LotSizeCheck:
     ) -> OrderCheckResult:
         """检查数量是否满足手数要求，不满足则 resize。"""
         if order.direction == OrderSide.SELL:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         lot_size = context.lot_size_for(order.instrument_id)
         if lot_size <= 0:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         if order.quantity > 0 and order.quantity % lot_size == 0:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         # Resize to next lot_size multiple
         resized = ((order.quantity // lot_size) + 1) * lot_size
@@ -182,7 +173,7 @@ class BuyingPowerCheck:
     ) -> OrderCheckResult:
         """检查购买力是否充足。"""
         if order.direction == OrderSide.SELL:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         cost = context.estimate_order_cost(order)
         available = context.buying_power_model.available_buying_power(
@@ -191,7 +182,7 @@ class BuyingPowerCheck:
         )
 
         if available >= cost:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         return OrderCheckResult(
             decision=Decision.REJECT,
@@ -222,11 +213,11 @@ class DailyTurnoverPreCheck:
     ) -> OrderCheckResult:
         """检查日累计换手率是否超限。"""
         if order.direction == OrderSide.SELL:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         nav = context.account_view.nav
         if nav <= 0:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         # 累计已提交买入金额
         pending_amount = 0.0
@@ -238,7 +229,7 @@ class DailyTurnoverPreCheck:
 
         price = context.price_for(order.instrument_id)
         if price is None:
-            return _accept(order.order_id)
+            return accept_order(order.order_id)
 
         turnover = (pending_amount + order.quantity * price) / nav
 
@@ -253,7 +244,7 @@ class DailyTurnoverPreCheck:
                 triggered_checks=("daily_turnover",),
             )
 
-        return _accept(order.order_id)
+        return accept_order(order.order_id)
 
 
 # ---------------------------------------------------------------------------

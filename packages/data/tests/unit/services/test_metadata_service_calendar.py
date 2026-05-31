@@ -265,7 +265,7 @@ class TestUpdateHalfDays:
         half_days = ["2024-12-31", "2025-01-01"]
         mock_dependencies["calendar_writer"].upsert.return_value = 2
 
-        count = service.update_half_days(half_days)
+        count = service.calendar.update_half_days(half_days)
 
         assert count == 2
         mock_dependencies["calendar_writer"].upsert.assert_called_once()
@@ -283,7 +283,7 @@ class TestUpdateHalfDays:
         mock_dependencies: dict[str, MagicMock],
     ) -> None:
         """空列表应返回 0 且不调用 writer."""
-        count = service.update_half_days([])
+        count = service.calendar.update_half_days([])
         assert count == 0
         mock_dependencies["calendar_writer"].upsert.assert_not_called()
 
@@ -310,7 +310,7 @@ class TestEnrichCalendar:
         mock_dependencies["calendar_reader"].offset.return_value = None
         mock_dependencies["calendar_writer"].upsert.return_value = 1
 
-        count = service.enrich_calendar("2024-01-01", "2024-01-31")
+        count = service.calendar.enrich_calendar("2024-01-01", "2024-01-31")
 
         # Only one row should be enriched (the one with prev_trade_date=None)
         assert count == 1
@@ -339,7 +339,7 @@ class TestEnrichCalendar:
             }
         )
 
-        count = service.enrich_calendar("2024-01-01", "2024-01-31")
+        count = service.calendar.enrich_calendar("2024-01-01", "2024-01-31")
         assert count == 0
         mock_dependencies["calendar_writer"].upsert.assert_not_called()
 
@@ -373,7 +373,7 @@ class TestAutoEnrichCalendar:
         mock_dependencies["calendar_reader"].offset.return_value = None
         mock_dependencies["calendar_writer"].upsert.return_value = 1
 
-        count = service.auto_enrich_calendar()
+        count = service.calendar.auto_enrich_calendar()
 
         assert count == 1
         mock_dependencies["calendar_reader"].get_first_trading_day.assert_called_once()
@@ -392,7 +392,7 @@ class TestAutoEnrichCalendar:
         mock_dependencies["calendar_reader"].get_first_trading_day.return_value = None
         mock_dependencies["calendar_reader"].get_last_trading_day.return_value = None
 
-        count = service.auto_enrich_calendar()
+        count = service.calendar.auto_enrich_calendar()
 
         assert count == 0
         mock_dependencies["calendar_reader"].get_range_df.assert_not_called()
@@ -409,7 +409,7 @@ class TestAutoEnrichCalendar:
             "calendar_reader"
         ].get_last_trading_day.return_value = "2024-12-31"
 
-        count = service.auto_enrich_calendar()
+        count = service.calendar.auto_enrich_calendar()
 
         assert count == 0
         mock_dependencies["calendar_reader"].get_range_df.assert_not_called()
@@ -425,7 +425,7 @@ class TestAutoEnrichCalendar:
         ].get_first_trading_day.return_value = "2024-01-02"
         mock_dependencies["calendar_reader"].get_last_trading_day.return_value = None
 
-        count = service.auto_enrich_calendar()
+        count = service.calendar.auto_enrich_calendar()
 
         assert count == 0
         mock_dependencies["calendar_reader"].get_range_df.assert_not_called()

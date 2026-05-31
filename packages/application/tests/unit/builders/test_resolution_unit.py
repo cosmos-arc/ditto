@@ -16,7 +16,7 @@ class TestResolveInstrumentDisplay:
 
     def test_normal_case(self) -> None:
         metadata = MagicMock()
-        metadata.get_instrument.side_effect = [
+        metadata.instrument.get_instrument.side_effect = [
             {"ticker": "510300", "exchange": "SH"},
             {"ticker": "159919", "exchange": "SZ"},
         ]
@@ -40,7 +40,7 @@ class TestResolveInstrumentDisplay:
 
     def test_no_instrument(self) -> None:
         metadata = MagicMock()
-        metadata.get_instrument.return_value = None
+        metadata.instrument.get_instrument.return_value = None
         result = resolve_instrument_display([42], metadata)
         assert result.tickers == ("42",)
         assert result.id_map == {"42": InstrumentId(42)}
@@ -48,7 +48,10 @@ class TestResolveInstrumentDisplay:
 
     def test_no_exchange(self) -> None:
         metadata = MagicMock()
-        metadata.get_instrument.return_value = {"ticker": "510300", "exchange": ""}
+        metadata.instrument.get_instrument.return_value = {
+            "ticker": "510300",
+            "exchange": "",
+        }
         result = resolve_instrument_display([1], metadata)
         assert result.tickers == ("1",)
         assert result.id_map == {"1": InstrumentId(1)}

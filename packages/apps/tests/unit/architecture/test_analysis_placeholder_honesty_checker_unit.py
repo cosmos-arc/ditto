@@ -48,7 +48,7 @@ __all__: list[str] = []
 
     errors = check(tmp_path)
 
-    assert len(errors) == 4
+    assert len(errors) == 1
     assert all(
         "missing required reserved placeholder phrase "
         "'Production code must not import this namespace for behavior'" in error
@@ -75,7 +75,7 @@ __all__: list[str] = []
 
     errors = check(tmp_path)
 
-    assert len(errors) >= 4
+    assert len(errors) >= 1
     assert all("misleading availability phrase" in error for error in errors)
     assert any("'handles'" in error for error in errors)
     assert any("'负责'" in error for error in errors)

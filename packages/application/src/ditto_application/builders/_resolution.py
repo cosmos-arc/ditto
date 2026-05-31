@@ -28,7 +28,7 @@ def resolve_instrument_display(
 
     for iid in instrument_ids:
         instrument_id = InstrumentId(iid)
-        instrument = metadata_service.get_instrument(iid)
+        instrument = metadata_service.instrument.get_instrument(iid)
         if instrument is not None:
             ticker = instrument.get("ticker", str(iid))
             exchange = instrument.get("exchange", "")

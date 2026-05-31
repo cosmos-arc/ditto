@@ -49,7 +49,7 @@ def mock_metadata_service():
     service.list_trading_days.return_value = []
     service.resolve_source_ticker.return_value = "000001.SZ"
     # IngestionDataWriter._write_adj_factor 需要 resolve_instrument_ids_batch
-    service.resolve_instrument_ids_batch.return_value = {
+    service.instrument.resolve_instrument_ids_batch.return_value = {
         "000001.SZ": 1,
     }
     return service

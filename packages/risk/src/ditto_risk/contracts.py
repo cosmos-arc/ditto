@@ -18,6 +18,8 @@ from typing import Protocol, runtime_checkable
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 
+from ditto_risk.post_trade import RiskAction
+
 __all__ = [
     "PreTradeOrder",
     "PreTradeTicket",
@@ -92,6 +94,6 @@ class RiskGate(Protocol):
         """成交后更新风控状态。"""
         ...
 
-    def daily_scan(self) -> list[object]:
+    def daily_scan(self) -> list[RiskAction]:
         """每日风控扫描 — 返回风控行为列表。"""
         ...

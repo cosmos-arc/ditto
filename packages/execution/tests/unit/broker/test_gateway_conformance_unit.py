@@ -23,6 +23,7 @@ def assert_gateway_conformance(gateway_cls: type) -> None:
         "get_account",
         "submit_order",
         "cancel_order",
+        "reject_order",
         "query_fills",
     ]
     for method_name in required:
@@ -82,7 +83,7 @@ def test_paper_gateway_submit_order_returns_ticket() -> None:
     from ditto_kernel.identity import InstrumentId
     from ditto_kernel.order import OrderSide, OrderType
 
-    gw = PaperBrokerGateway()
+    gw = PaperBrokerGateway(initial_cash=100_000.0)
     order = Order(
         client_id=ClientOrderId(value="test-001"),
         instrument_id=InstrumentId(510300),

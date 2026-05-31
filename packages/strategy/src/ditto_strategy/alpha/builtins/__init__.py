@@ -10,6 +10,7 @@ Built-in Pipeline stages.
 - RiskLockFilter: 风控锁定过滤
 - TrendFilterStage: 趋势方向过滤
 - SelectionStage: top K 选取
+- CompositeDecisionStage + FusionMethod: 多信号聚合
 
 Regime 相关符号（RegimeStage / RegimeMethod / RegimeLabel / RegimeConfig 等）
 请直接从子模块导入::
@@ -21,6 +22,10 @@ Regime 相关符号（RegimeStage / RegimeMethod / RegimeLabel / RegimeConfig �
     from ditto_strategy.alpha.builtins.regime_scoring import RegimeScoringStep
 """
 
+from ditto_strategy.alpha.builtins.composite import (
+    CompositeDecisionStage,
+    FusionMethod,
+)
 from ditto_strategy.alpha.builtins.filtering import (
     FilterCondition,
     FilteringStage,
@@ -33,8 +38,10 @@ from ditto_strategy.alpha.builtins.signal import SignalStage
 from ditto_strategy.alpha.builtins.universe import UniverseStage
 
 __all__ = [
+    "CompositeDecisionStage",
     "FilterCondition",
     "FilteringStage",
+    "FusionMethod",
     "RiskLockFilter",
     "ScoringMethod",
     "ScoringStage",

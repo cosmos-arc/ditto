@@ -631,10 +631,7 @@ STALE_SOURCE_ARCHITECTURE_TERMS = (
 )
 
 ANALYSIS_PLACEHOLDER_INIT_PATHS = (
-    "packages/analysis/src/ditto_analysis/reports/__init__.py",
-    "packages/analysis/src/ditto_analysis/diagnostics/__init__.py",
     "packages/analysis/src/ditto_analysis/experiments/__init__.py",
-    "packages/analysis/src/ditto_analysis/screeners/__init__.py",
 )
 
 ANALYSIS_PLACEHOLDER_ACTIVE_DOC_PATHS = (
@@ -672,10 +669,7 @@ ANALYSIS_DOC_CONTEXT_ANCHORS = (
 
 ANALYSIS_DOC_RESERVED_NAMESPACE_CLAIMS = (
     "evaluation/",
-    "reports/",
-    "diagnostics/",
     "experiments/",
-    "screeners/",
 )
 
 ANALYSIS_DOC_RESERVED_CONTEXT_MARKERS = (

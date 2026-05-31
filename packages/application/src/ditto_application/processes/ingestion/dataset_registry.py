@@ -198,11 +198,57 @@ def _by_instrument(
     )
 
 
-def default_dataset_registry() -> DatasetRegistry:
-    """Build the default application ingestion registry."""
-    registry = DatasetRegistry()
+# ---------------------------------------------------------------------------
+# Fetch-factory helpers — eliminate the double-lambda boilerplate
+# ---------------------------------------------------------------------------
 
-    registry.register(
+
+def _daily_fetch(group: str, method: str) -> DailyFetchFactory:
+    """``ctx.fetchers.<group>.<method>(ctx.trade_date)``."""
+
+    def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
+        fetcher = getattr(ctx.fetchers, group)
+        fn = getattr(fetcher, method)
+        return lambda: fn(ctx.trade_date)
+
+    return factory
+
+
+def _instrument_fetch(group: str, method: str) -> InstrumentFetchFactory:
+    """Instrument route via ``_by_instrument``."""
+
+    def factory(ctx: InstrumentFetchContext) -> InstrumentFetchHandler:
+        fetcher = getattr(ctx.fetchers, group)
+        return lambda: _by_instrument(getattr(fetcher, method), ctx)
+
+    return factory
+
+
+def _property_fetch(group: str, method: str) -> DailyFetchFactory:
+    """``ctx.fetchers.<group>.<method>`` — no call, just a property ref."""
+
+    def factory(ctx: DailyFetchContext) -> DailyFetchHandler:
+        return getattr(getattr(ctx.fetchers, group), method)
+
+    return factory
+
+
+# ---------------------------------------------------------------------------
+# Registration table — one row per dataset
+# ---------------------------------------------------------------------------
+
+_default_registry: DatasetRegistry | None = None
+
+
+def default_dataset_registry() -> DatasetRegistry:
+    """Build (once) and return the default application ingestion registry."""
+    global _default_registry  # noqa: PLW0603
+    if _default_registry is not None:
+        return _default_registry
+
+    # fmt: off
+    _REGISTRATIONS: list[DatasetRegistration] = [
+        # ── Metadata ──────────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.CALENDAR,
             write_kind=WriteKind.CALENDAR,
@@ -213,62 +259,43 @@ def default_dataset_registry() -> DatasetRegistry:
                     ctx.trade_date[:4] + "-12-31",
                 )
             ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.STOCK_BASIC,
             write_kind=WriteKind.BASIC,
             basic_asset_class="stock",
             metadata_dataset=True,
-            daily_fetch_factory=lambda ctx: ctx.fetchers.metadata.fetch_stock_basic,
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_property_fetch("metadata", "fetch_stock_basic"),
+        ),
         DatasetRegistration(
             dataset=Dataset.ETF_BASIC,
             write_kind=WriteKind.BASIC,
             basic_asset_class="etf",
             metadata_dataset=True,
-            daily_fetch_factory=lambda ctx: ctx.fetchers.metadata.fetch_etf_basic,
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_property_fetch("metadata", "fetch_etf_basic"),
+        ),
         DatasetRegistration(
             dataset=Dataset.INDEX_BASIC,
             write_kind=WriteKind.BASIC,
             basic_asset_class="index",
             metadata_dataset=True,
-            daily_fetch_factory=lambda ctx: ctx.fetchers.metadata.fetch_index_basic,
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_property_fetch("metadata", "fetch_index_basic"),
+        ),
+        # ── Traded Bars ──────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.STOCK_DAILY,
             write_kind=WriteKind.TRADED_BARS,
             write_dataset="stock_daily",
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.market.fetch_stock_daily(ctx.trade_date)
-            ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.market.fetch_stock_daily, ctx)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("market", "fetch_stock_daily"),
+            instrument_fetch_factory=_instrument_fetch("market", "fetch_stock_daily"),
+        ),
         DatasetRegistration(
             dataset=Dataset.ETF_DAILY,
             write_kind=WriteKind.TRADED_BARS,
             write_dataset="etf_daily",
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.market.fetch_etf_daily(ctx.trade_date)
-            ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.market.fetch_etf_daily, ctx)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("market", "fetch_etf_daily"),
+            instrument_fetch_factory=_instrument_fetch("market", "fetch_etf_daily"),
+        ),
         DatasetRegistration(
             dataset=Dataset.INDEX_DAILY,
             write_kind=WriteKind.TRADED_BARS,
@@ -279,27 +306,19 @@ def default_dataset_registry() -> DatasetRegistry:
                     ts_codes=ctx.get_cached_index_codes(),
                 )
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.market.fetch_index_daily, ctx)
-            ),
-        )
-    )
-    registry.register(
+            instrument_fetch_factory=_instrument_fetch("market", "fetch_index_daily"),
+        ),
+        # ── Market ───────────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.STOCK_STATUS,
             write_kind=WriteKind.STOCK_STATUS,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.market.fetch_stock_status(ctx.trade_date)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("market", "fetch_stock_status"),
+        ),
+        # ── Adj Factor ───────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.ADJ_FACTOR,
             write_kind=WriteKind.ADJ_FACTOR,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.market.fetch_adj_factor(ctx.trade_date)
-            ),
+            daily_fetch_factory=_daily_fetch("market", "fetch_adj_factor"),
             instrument_fetch_factory=lambda ctx: (
                 lambda: ctx.fetchers.market.fetch_adj_factor_by_ticker(
                     ts_code=ctx.source_ticker,
@@ -307,130 +326,82 @@ def default_dataset_registry() -> DatasetRegistry:
                     end_date=ctx.params.end_date.replace("-", ""),
                 )
             ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.FUND_ADJ,
             write_kind=WriteKind.ADJ_FACTOR,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.market.fetch_fund_adj(ctx.trade_date)
-            ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.market.fetch_fund_adj, ctx)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("market", "fetch_fund_adj"),
+            instrument_fetch_factory=_instrument_fetch("market", "fetch_fund_adj"),
+        ),
+        # ── Fundamental ──────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.BALANCE_SHEET,
             write_kind=WriteKind.FUNDAMENTAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.fundamental.fetch_balance_sheet(ctx.trade_date)
+            daily_fetch_factory=_daily_fetch("fundamental", "fetch_balance_sheet"),
+            instrument_fetch_factory=_instrument_fetch(
+                "fundamental", "fetch_balance_sheet"
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(
-                    ctx.fetchers.fundamental.fetch_balance_sheet, ctx
-                )
-            ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.INCOME_STATEMENT,
             write_kind=WriteKind.FUNDAMENTAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.fundamental.fetch_income_statement(ctx.trade_date)
+            daily_fetch_factory=_daily_fetch("fundamental", "fetch_income_statement"),
+            instrument_fetch_factory=_instrument_fetch(
+                "fundamental", "fetch_income_statement"
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(
-                    ctx.fetchers.fundamental.fetch_income_statement, ctx
-                )
-            ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.CASH_FLOW,
             write_kind=WriteKind.FUNDAMENTAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.fundamental.fetch_cash_flow(ctx.trade_date)
+            daily_fetch_factory=_daily_fetch("fundamental", "fetch_cash_flow"),
+            instrument_fetch_factory=_instrument_fetch(
+                "fundamental", "fetch_cash_flow"
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.fundamental.fetch_cash_flow, ctx)
-            ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.DIVIDEND,
             write_kind=WriteKind.FUNDAMENTAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.fundamental.fetch_dividend(ctx.trade_date)
+            daily_fetch_factory=_daily_fetch("fundamental", "fetch_dividend"),
+            instrument_fetch_factory=_instrument_fetch(
+                "fundamental", "fetch_dividend"
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.fundamental.fetch_dividend, ctx)
-            ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.CORPORATE_ACTIONS,
             write_kind=WriteKind.FUNDAMENTAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.fundamental.fetch_corporate_actions(ctx.trade_date)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("fundamental", "fetch_corporate_actions"),
+        ),
+        # ── Capital ──────────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.VALUATION_METRICS,
             write_kind=WriteKind.CAPITAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.capital.fetch_valuation_metrics(ctx.trade_date)
+            daily_fetch_factory=_daily_fetch("capital", "fetch_valuation_metrics"),
+            instrument_fetch_factory=_instrument_fetch(
+                "capital", "fetch_valuation_metrics"
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(
-                    ctx.fetchers.capital.fetch_valuation_metrics, ctx
-                )
-            ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.MARGIN_TRADING,
             write_kind=WriteKind.CAPITAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.capital.fetch_margin_trading(ctx.trade_date)
+            daily_fetch_factory=_daily_fetch("capital", "fetch_margin_trading"),
+            instrument_fetch_factory=_instrument_fetch(
+                "capital", "fetch_margin_trading"
             ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.capital.fetch_margin_trading, ctx)
-            ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.PLEDGE_RATIO,
             write_kind=WriteKind.CAPITAL,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.capital.fetch_pledge_ratio(ctx.trade_date)
-            ),
-            instrument_fetch_factory=lambda ctx: (
-                lambda: _by_instrument(ctx.fetchers.capital.fetch_pledge_ratio, ctx)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("capital", "fetch_pledge_ratio"),
+            instrument_fetch_factory=_instrument_fetch("capital", "fetch_pledge_ratio"),
+        ),
+        # ── Macro ────────────────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.MACRO_INDICATORS,
             write_kind=WriteKind.MACRO,
             date_schedule=DateScheduleType.SOURCE_DEFINED,
-            daily_fetch_factory=lambda ctx: (
-                lambda: ctx.fetchers.macro.fetch_macro_indicators(ctx.trade_date)
-            ),
-        )
-    )
-    registry.register(
+            daily_fetch_factory=_daily_fetch("macro", "fetch_macro_indicators"),
+        ),
+        # ── FX / Commodity ───────────────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.FX_DAILY,
             write_kind=WriteKind.INSTRUMENT_CODE_BARS,
@@ -443,9 +414,7 @@ def default_dataset_registry() -> DatasetRegistry:
                     end_date=ctx.trade_date,
                 )
             ),
-        )
-    )
-    registry.register(
+        ),
         DatasetRegistration(
             dataset=Dataset.COMMODITY_DAILY,
             write_kind=WriteKind.INSTRUMENT_CODE_BARS,
@@ -454,12 +423,18 @@ def default_dataset_registry() -> DatasetRegistry:
             daily_fetch_factory=lambda ctx: (
                 lambda: ctx.fetch_commodity_daily(ctx.trade_date)
             ),
-        )
-    )
-    registry.register(
+        ),
+        # ── Unsupported placeholder ──────────────────────────────────────
         DatasetRegistration(
             dataset=Dataset.INDEX_WEIGHT,
             write_kind=WriteKind.UNSUPPORTED,
-        )
-    )
+        ),
+    ]
+    # fmt: on
+
+    registry = DatasetRegistry()
+    for registration in _REGISTRATIONS:
+        registry.register(registration)
+
+    _default_registry = registry
     return registry

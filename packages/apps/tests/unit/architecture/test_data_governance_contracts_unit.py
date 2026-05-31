@@ -52,6 +52,9 @@ LOCAL_CONTRACT_EXPORTS = {
         "DataCatalogReader",
         "DataCatalogWriter",
         "DataSchemaFingerprint",
+        "DatasetMetadata",
+        "InMemoryDataCatalog",
+        "default_dataset_metadata",
     },
     "packages/data/src/ditto_data/lineage/__init__.py": {
         "DataLineageReader",
@@ -65,6 +68,8 @@ LOCAL_CONTRACT_EXPORTS = {
 LOCAL_CONTRACT_IMPORTS = {
     "packages/data/src/ditto_data/catalog/__init__.py": {
         "ditto_data.catalog.contracts",
+        "ditto_data.catalog.metadata",
+        "ditto_data.catalog.store",
     },
     "packages/data/src/ditto_data/lineage/__init__.py": {
         "ditto_data.lineage.contracts",

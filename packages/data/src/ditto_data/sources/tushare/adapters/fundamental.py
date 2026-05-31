@@ -16,7 +16,29 @@ from ditto_data.sources.tushare.processors.mappings import (
     DIVIDEND_MAPPING,
     INCOME_STATEMENT_MAPPING,
 )
-from ditto_data.sources.tushare.processors.transformer import TushareDataTransformer
+from ditto_data.sources.tushare.processors.transformer import (
+    ColumnMapping,
+    TushareDataTransformer,
+)
+
+# ── 财务报表字段定义 ──────────────────────────────────────────────
+_BALANCE_SHEET_FIELDS = (
+    "ts_code,end_date,ann_date,total_assets,total_liab,"
+    "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,"
+    "inventory,fixed_assets,cash_equivalents,accounts_receivable,"
+    "short_term_debt,long_term_debt,money_cap,total_share"
+)
+_INCOME_STATEMENT_FIELDS = (
+    "ts_code,end_date,ann_date,total_revenue,"
+    "operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,"
+    "operate_profit,total_profit,income_tax,n_income,"
+    "basic_eps,diluted_eps"
+)
+_CASH_FLOW_FIELDS = (
+    "ts_code,end_date,ann_date,n_cashflow_act,"
+    "n_cash_flows_inv_act,n_cash_flows_fnc_act,"
+    "depreciation,interest_paid,tax_paid"
+)
 
 
 class FundamentalTushareAdapter(BaseTushareAdapter):
@@ -28,6 +50,83 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
     - 分红数据：股息分红
     - 公司行为：分红、配股、拆股等
     """
+
+    # ── 通用财报获取 ──────────────────────────────────────────────
+
+    def _fetch_financial(
+        self,
+        *,
+        dataset: str,
+        api_name: str,
+        fields: str,
+        mapping: ColumnMapping,
+        log_name: str,
+        extra_params: dict[str, str | None] | None = None,
+        add_pit: bool = True,
+    ) -> pl.DataFrame:
+        """
+        通用财报数据获取方法.
+
+        统一处理参数构建、API 调用、列映射、PIT 列添加、日志和指标记录。
+        公开方法（标准 + VIP）通过传入不同的 api_name/params 复用此方法。
+
+        Args:
+            dataset: 数据集名称（用于日志、指标、error handler）
+            api_name: Tushare API 名称（如 "balancesheet"、"balancesheet_vip"）
+            fields: 请求字段列表（逗号分隔字符串）
+            mapping: 列名映射字典
+            log_name: 日志标识（如 "balance sheet"、"income statement (VIP)"）
+            extra_params: 额外查询参数（ts_code/period/ann_date/start_date/end_date）
+            add_pit: 是否添加 PIT 列（effective_from/effective_to）
+
+        Returns:
+            转换后的 Polars DataFrame
+
+        """
+        # 构建日志上下文
+        log_ctx = {}
+        if extra_params:
+            log_ctx = {k: v for k, v in extra_params.items() if v}
+
+        logger.info(
+            f"Fetching Tushare {log_name}",
+            event=f"tushare_{dataset}_fetch_start",
+            **log_ctx,
+        )
+
+        with tushare_fetch_error_handler(dataset, api_name):
+            params: dict[str, str] = {
+                "api_name": api_name,
+                "fields": fields,
+            }
+            if extra_params:
+                params.update({k: v for k, v in extra_params.items() if v})
+
+            response = self._client.query(**params)
+
+            result = TushareDataTransformer.transform(response, dataset, mapping)
+
+            # 添加 PIT 列
+            if add_pit:
+                result = result.with_columns(
+                    pl.col("knowledge_date").alias("effective_from"),
+                    pl.lit(None, dtype=pl.Date).alias("effective_to"),
+                )
+
+            row_count = len(result)
+            logger.info(
+                f"Tushare {log_name} fetched",
+                event=f"tushare_{dataset}_fetch_complete",
+                row_count=row_count,
+            )
+            Metrics.data_records.add(
+                row_count,
+                {"source": "tushare", "dataset": dataset, "status": "success"},
+            )
+
+            return result
+
+    # ── 非财报方法（结构差异大，不复用 _fetch_financial）─────────
 
     @traced("source.tushare.fetch_dividend")
     def fetch_dividend(
@@ -138,6 +237,8 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
 
             return result
 
+    # ── 标准财报方法 ────────────────────────────────────────────
+
     @traced("source.tushare.fetch_balance_sheet")
     def fetch_balance_sheet(
         self,
@@ -146,55 +247,18 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取资产负债表数据."""
-        logger.info(
-            "Fetching Tushare balance sheet",
-            event="tushare_balance_sheet_fetch_start",
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
+        return self._fetch_financial(
+            dataset="balance_sheet",
+            api_name="balancesheet",
+            fields=_BALANCE_SHEET_FIELDS,
+            mapping=BALANCE_SHEET_MAPPING,
+            log_name="balance sheet",
+            extra_params={
+                "ts_code": ts_code,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
         )
-
-        with tushare_fetch_error_handler("balance_sheet", "balancesheet"):
-            params: dict[str, str] = {
-                "api_name": "balancesheet",
-                "fields": (
-                    "ts_code,end_date,ann_date,total_assets,total_liab,"
-                    "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,"
-                    "inventory,fixed_assets,cash_equivalents,accounts_receivable,"
-                    "short_term_debt,long_term_debt,money_cap,total_share"
-                ),
-            }
-            if ts_code:
-                params["ts_code"] = ts_code
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "balance_sheet", BALANCE_SHEET_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare balance sheet fetched",
-                event="tushare_balance_sheet_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "balance_sheet", "status": "success"},
-            )
-
-            return result
 
     @traced("source.tushare.fetch_income_statement")
     def fetch_income_statement(
@@ -204,59 +268,18 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取利润表数据."""
-        logger.info(
-            "Fetching Tushare income statement",
-            event="tushare_income_statement_fetch_start",
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
+        return self._fetch_financial(
+            dataset="income_statement",
+            api_name="income",
+            fields=_INCOME_STATEMENT_FIELDS,
+            mapping=INCOME_STATEMENT_MAPPING,
+            log_name="income statement",
+            extra_params={
+                "ts_code": ts_code,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
         )
-
-        with tushare_fetch_error_handler("income_statement", "income"):
-            params: dict[str, str] = {
-                "api_name": "income",
-                "fields": (
-                    "ts_code,end_date,ann_date,total_revenue,"
-                    "operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,"
-                    "operate_profit,total_profit,income_tax,n_income,"
-                    "basic_eps,diluted_eps"
-                ),
-            }
-            if ts_code:
-                params["ts_code"] = ts_code
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "income_statement", INCOME_STATEMENT_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare income statement fetched",
-                event="tushare_income_statement_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {
-                    "source": "tushare",
-                    "dataset": "income_statement",
-                    "status": "success",
-                },
-            )
-
-            return result
 
     @traced("source.tushare.fetch_cash_flow")
     def fetch_cash_flow(
@@ -266,54 +289,18 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
         end_date: str | None = None,
     ) -> pl.DataFrame:
         """获取现金流量表数据."""
-        logger.info(
-            "Fetching Tushare cash flow",
-            event="tushare_cash_flow_fetch_start",
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
+        return self._fetch_financial(
+            dataset="cash_flow",
+            api_name="cashflow",
+            fields=_CASH_FLOW_FIELDS,
+            mapping=CASH_FLOW_MAPPING,
+            log_name="cash flow",
+            extra_params={
+                "ts_code": ts_code,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
         )
-
-        with tushare_fetch_error_handler("cash_flow", "cashflow"):
-            params: dict[str, str] = {
-                "api_name": "cashflow",
-                "fields": (
-                    "ts_code,end_date,ann_date,n_cashflow_act,"
-                    "n_cash_flows_inv_act,n_cash_flows_fnc_act,"
-                    "depreciation,interest_paid,tax_paid"
-                ),
-            }
-            if ts_code:
-                params["ts_code"] = ts_code
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "cash_flow", CASH_FLOW_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare cash flow fetched",
-                event="tushare_cash_flow_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "cash_flow", "status": "success"},
-            )
-
-            return result
 
     # ========== VIP API 方法（需要 5000+ 积分）==========
     # VIP API 可以按 period 或 ann_date 批量获取全部股票数据，无需 ts_code
@@ -342,62 +329,19 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             全部股票的资产负债表数据
 
         """
-        logger.info(
-            "Fetching Tushare balance sheet (VIP)",
-            event="tushare_balance_sheet_vip_fetch_start",
-            period=period,
-            ann_date=ann_date,
-            start_date=start_date,
-            end_date=end_date,
+        return self._fetch_financial(
+            dataset="balance_sheet_vip",
+            api_name="balancesheet_vip",
+            fields=_BALANCE_SHEET_FIELDS,
+            mapping=BALANCE_SHEET_MAPPING,
+            log_name="balance sheet (VIP)",
+            extra_params={
+                "period": period,
+                "ann_date": ann_date,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
         )
-
-        with tushare_fetch_error_handler("balance_sheet_vip", "balancesheet_vip"):
-            params: dict[str, str] = {
-                "api_name": "balancesheet_vip",
-                "fields": (
-                    "ts_code,end_date,ann_date,total_assets,total_liab,"
-                    "total_hldr_eqy_exc_min_int,total_cur_assets,total_cur_liab,"
-                    "inventory,fixed_assets,cash_equivalents,accounts_receivable,"
-                    "short_term_debt,long_term_debt,money_cap,total_share"
-                ),
-            }
-            if period:
-                params["period"] = period
-            if ann_date:
-                params["ann_date"] = ann_date
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "balance_sheet", BALANCE_SHEET_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare balance sheet (VIP) fetched",
-                event="tushare_balance_sheet_vip_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {
-                    "source": "tushare",
-                    "dataset": "balance_sheet_vip",
-                    "status": "success",
-                },
-            )
-
-            return result
 
     @traced("source.tushare.fetch_income_statement_vip")
     def fetch_income_statement_vip(
@@ -423,62 +367,19 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             全部股票的利润表数据
 
         """
-        logger.info(
-            "Fetching Tushare income statement (VIP)",
-            event="tushare_income_statement_vip_fetch_start",
-            period=period,
-            ann_date=ann_date,
-            start_date=start_date,
-            end_date=end_date,
+        return self._fetch_financial(
+            dataset="income_statement_vip",
+            api_name="income_vip",
+            fields=_INCOME_STATEMENT_FIELDS,
+            mapping=INCOME_STATEMENT_MAPPING,
+            log_name="income statement (VIP)",
+            extra_params={
+                "period": period,
+                "ann_date": ann_date,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
         )
-
-        with tushare_fetch_error_handler("income_statement_vip", "income_vip"):
-            params: dict[str, str] = {
-                "api_name": "income_vip",
-                "fields": (
-                    "ts_code,end_date,ann_date,total_revenue,"
-                    "operate_cost,sale_exp,admin_exp,fin_exp,rd_exp,"
-                    "operate_profit,total_profit,income_tax,n_income,"
-                    "basic_eps,diluted_eps"
-                ),
-            }
-            if period:
-                params["period"] = period
-            if ann_date:
-                params["ann_date"] = ann_date
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "income_statement", INCOME_STATEMENT_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare income statement (VIP) fetched",
-                event="tushare_income_statement_vip_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {
-                    "source": "tushare",
-                    "dataset": "income_statement_vip",
-                    "status": "success",
-                },
-            )
-
-            return result
 
     @traced("source.tushare.fetch_cash_flow_vip")
     def fetch_cash_flow_vip(
@@ -504,54 +405,16 @@ class FundamentalTushareAdapter(BaseTushareAdapter):
             全部股票的现金流量表数据
 
         """
-        logger.info(
-            "Fetching Tushare cash flow (VIP)",
-            event="tushare_cash_flow_vip_fetch_start",
-            period=period,
-            ann_date=ann_date,
-            start_date=start_date,
-            end_date=end_date,
+        return self._fetch_financial(
+            dataset="cash_flow_vip",
+            api_name="cashflow_vip",
+            fields=_CASH_FLOW_FIELDS,
+            mapping=CASH_FLOW_MAPPING,
+            log_name="cash flow (VIP)",
+            extra_params={
+                "period": period,
+                "ann_date": ann_date,
+                "start_date": start_date,
+                "end_date": end_date,
+            },
         )
-
-        with tushare_fetch_error_handler("cash_flow_vip", "cashflow_vip"):
-            params: dict[str, str] = {
-                "api_name": "cashflow_vip",
-                "fields": (
-                    "ts_code,end_date,ann_date,n_cashflow_act,"
-                    "n_cash_flows_inv_act,n_cash_flows_fnc_act,"
-                    "depreciation,interest_paid,tax_paid"
-                ),
-            }
-            if period:
-                params["period"] = period
-            if ann_date:
-                params["ann_date"] = ann_date
-            if start_date:
-                params["start_date"] = start_date
-            if end_date:
-                params["end_date"] = end_date
-
-            response = self._client.query(**params)
-
-            result = TushareDataTransformer.transform(
-                response, "cash_flow", CASH_FLOW_MAPPING
-            )
-
-            # 添加 PIT 列
-            result = result.with_columns(
-                pl.col("knowledge_date").alias("effective_from"),
-                pl.lit(None, dtype=pl.Date).alias("effective_to"),
-            )
-
-            row_count = len(result)
-            logger.info(
-                "Tushare cash flow (VIP) fetched",
-                event="tushare_cash_flow_vip_fetch_complete",
-                row_count=row_count,
-            )
-            Metrics.data_records.add(
-                row_count,
-                {"source": "tushare", "dataset": "cash_flow_vip", "status": "success"},
-            )
-
-            return result
