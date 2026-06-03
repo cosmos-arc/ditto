@@ -397,6 +397,9 @@ class TestQuery:
             "record_type",
             "instrument_id",
             "instrument_scope",
+            "correlation_id",
+            "order_id",
+            "fill_id",
             "payload",
             "created_at",
         }

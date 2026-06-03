@@ -65,6 +65,11 @@ def query_indicators(
     ),
     start_date: str | None = typer.Option(None, "--start-date", "-s", help="开始日期"),
     end_date: str | None = typer.Option(None, "--end-date", "-e", help="结束日期"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -80,12 +85,21 @@ def query_indicators(
     freq_value = _validate_value(frequency, _VALID_FREQUENCIES, "频率")
 
     with _get_macro_facade() as facade:
-        df = facade.find_indicators(
-            start=start_date,
-            end=end_date,
-            category=cat_value,
-            frequency=freq_value,
-        )
+        if allow_experimental_data:
+            df = facade.find_indicators(
+                start=start_date,
+                end=end_date,
+                category=cat_value,
+                frequency=freq_value,
+                allow_experimental_data=True,
+            )
+        else:
+            df = facade.find_indicators(
+                start=start_date,
+                end=end_date,
+                category=cat_value,
+                frequency=freq_value,
+            )
 
         if df.is_empty():
             typer.echo("未找到宏观指标数据")
@@ -123,6 +137,11 @@ def list_metadata(
         "-c",
         help="类别过滤 (economic/interest_rate/exchange_rate/money_supply)",
     ),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -136,9 +155,13 @@ def list_metadata(
     cat_value = _validate_value(category, _VALID_CATEGORIES, "类别")
 
     with _get_macro_facade() as facade:
-        df = facade.find_indicators(
-            category=cat_value,
-        )
+        if allow_experimental_data:
+            df = facade.find_indicators(
+                category=cat_value,
+                allow_experimental_data=True,
+            )
+        else:
+            df = facade.find_indicators(category=cat_value)
 
         if df.is_empty():
             typer.echo("未找到宏观指标元数据")

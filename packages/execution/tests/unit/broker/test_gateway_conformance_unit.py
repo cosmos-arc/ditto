@@ -57,6 +57,12 @@ def test_paper_gateway_satisfies_broker_gateway_protocol() -> None:
     assert_gateway_conformance(PaperBrokerGateway)
 
 
+def test_broker_event_recording_gateway_satisfies_broker_gateway_protocol() -> None:
+    from ditto_execution.broker.recording import BrokerEventRecordingGateway
+
+    assert_gateway_conformance(BrokerEventRecordingGateway)
+
+
 def test_paper_gateway_instance_check() -> None:
     from ditto_execution.broker.gateways.paper import PaperBrokerGateway
 

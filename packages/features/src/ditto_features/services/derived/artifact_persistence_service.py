@@ -84,7 +84,7 @@ class ArtifactPersistenceService:
         """Write run metadata as artifact_metadata.json."""
         self._writer.write_artifact_metadata(params)
 
-    def update_artifact_metadata(
+    def update_artifact_metadata(  # noqa: PLR0913
         self,
         *,
         spec: DerivedSpecRecord,
@@ -94,14 +94,18 @@ class ArtifactPersistenceService:
         source_snapshot_id: str | None,
         manifest_record: CompatibilityManifestRecord,
         minimal_dq_record: DerivedMinimalDQSummaryRecord,
+        source_snapshot_ids: tuple[str, ...] = (),
     ) -> None:
         """Read existing metadata JSON and inject publication safety info."""
-        self._writer.update_artifact_metadata(
-            spec=spec,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            partitions=partitions,
-            source_snapshot_id=source_snapshot_id,
-            manifest_record=manifest_record,
-            minimal_dq_record=minimal_dq_record,
-        )
+        kwargs: dict[str, Any] = {
+            "spec": spec,
+            "run_id": run_id,
+            "compile_identity": compile_identity,
+            "partitions": partitions,
+            "source_snapshot_id": source_snapshot_id,
+            "manifest_record": manifest_record,
+            "minimal_dq_record": minimal_dq_record,
+        }
+        if source_snapshot_ids:
+            kwargs["source_snapshot_ids"] = source_snapshot_ids
+        self._writer.update_artifact_metadata(**kwargs)

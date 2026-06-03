@@ -13,6 +13,8 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointStore,
+    StrategyRunCheckpointWriterProtocol,
     StrategyRunLifecycleStore,
     StrategyRunWriterProtocol,
 )
@@ -21,6 +23,8 @@ from ditto_strategy.storage.sqlite.strategy_artifact_store import (
     SQLiteStrategyArtifactWriter,
 )
 from ditto_strategy.storage.sqlite.strategy_run_store import (
+    SQLiteStrategyRunCheckpointReader,
+    SQLiteStrategyRunCheckpointWriter,
     SQLiteStrategyRunReader,
     SQLiteStrategyRunWriter,
 )
@@ -78,12 +82,28 @@ class StrategyStorageProvider(Provider):
         return SQLiteStrategyRunReader(sqlite_pool)
 
     @provide
+    def strategy_run_checkpoint_reader(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> SQLiteStrategyRunCheckpointReader:
+        """提供策略运行 checkpoint 读取器."""
+        return SQLiteStrategyRunCheckpointReader(sqlite_pool)
+
+    @provide
     def strategy_run_writer(
         self,
         sqlite_pool: SQLitePool,
     ) -> StrategyRunWriterProtocol:
         """提供策略运行写入器."""
         return SQLiteStrategyRunWriter(sqlite_pool)
+
+    @provide
+    def strategy_run_checkpoint_writer(
+        self,
+        sqlite_pool: SQLitePool,
+    ) -> StrategyRunCheckpointWriterProtocol:
+        """提供策略运行 checkpoint 写入器."""
+        return SQLiteStrategyRunCheckpointWriter(sqlite_pool)
 
     @provide
     def strategy_catalog_service(
@@ -127,4 +147,16 @@ class StrategyStorageProvider(Provider):
         return StrategyRunLifecycleStore(
             reader=strategy_run_reader,
             writer=strategy_run_writer,
+        )
+
+    @provide
+    def strategy_run_checkpoint_store(
+        self,
+        strategy_run_checkpoint_reader: SQLiteStrategyRunCheckpointReader,
+        strategy_run_checkpoint_writer: StrategyRunCheckpointWriterProtocol,
+    ) -> StrategyRunCheckpointStore:
+        """提供策略运行 checkpoint 服务."""
+        return StrategyRunCheckpointStore(
+            reader=strategy_run_checkpoint_reader,
+            writer=strategy_run_checkpoint_writer,
         )

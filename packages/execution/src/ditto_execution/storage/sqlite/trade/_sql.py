@@ -36,6 +36,7 @@ ALLOWED_COLUMNS: frozenset[str] = frozenset(
         "snapshot_date",
         "trade_date",
         "intent_id",
+        "run_id",
     }
 )
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
 from ditto_backtest.engine import EngineLoop
 from ditto_strategy.alpha.pipeline import StrategyPipeline
 from ditto_strategy.alpha.templates.stock_selection_trend import (
@@ -29,6 +30,7 @@ _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 INITIAL_CASH = _mod.INITIAL_CASH
 STOCK_INSTRUMENT_IDS = _mod.STOCK_INSTRUMENT_IDS
 TRADE_DATES_10 = _mod.TRADE_DATES_10
+account_position_signature = _mod.account_position_signature
 assert_cash_conservation = _mod.assert_cash_conservation
 build_snapshot_engine = _mod.build_snapshot_engine
 make_stock_10day_data = _mod.make_stock_10day_data
@@ -147,6 +149,18 @@ class TestTenDaySnapshot:
         assert result.account_view is not None
         # 由于 lot size 取整和调仓，实际持仓数可能略少于 top_k
         assert len(result.account_view.positions) <= 3
+
+    def test_daily_golden_signature(self, tmp_path: Path) -> None:
+        """Daily snapshot has an explicit promotion-style output signature."""
+        engine = _build_daily_engine(tmp_path)
+        result = engine.run()
+
+        assert result.final_nav == pytest.approx(1_073_013.1855980002)
+        assert result.total_trades == 26
+        assert account_position_signature(result) == (
+            (13, 22_800, 22_800, 15.5031, 344_280.0, -9_190.68),
+            (15, 27_200, 27_200, 12.80256, 353_600.0, 5_370.368),
+        )
 
 
 class TestWeeklyRebalance:

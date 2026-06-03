@@ -20,6 +20,8 @@ class AuditRecordType(StrEnum):
     RISK_SCAN = "risk_scan"
     PRE_TRADE_DECISION = "pre_trade_decision"
     TRADE_FILL = "trade_fill"
+    RISK_DECISION = "risk_decision"
+    REPAIR_EXECUTION = "repair_execution"
 
 
 @dataclass(frozen=True)
@@ -138,9 +140,49 @@ class RiskDecisionPayload:
     rule_id: str = ""
 
 
+@dataclass(frozen=True)
+class RepairExecutionPayload:
+    """
+    Reconciliation repair execution audit record.
+
+    Captures the repair action result in the same audit table used by risk,
+    pre-trade and trade-fill records.
+    """
+
+    trade_date: str
+    report_id: str
+    action_id: str
+    action_type: str
+    order_id: str
+    status: str
+    message: str
+    effect_count: int
+    fill_id: str | None = None
+    correlation_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ExecutionTimelineEntry:
+    """Normalized audit entry with top-level execution correlation keys."""
+
+    id: int
+    run_id: str
+    trade_date: str
+    record_type: str
+    instrument_id: int | None
+    instrument_scope: str
+    order_id: str | None
+    fill_id: str | None
+    correlation_id: str | None
+    payload: dict[str, object]
+    created_at: str
+
+
 __all__ = [
     "AuditRecordType",
+    "ExecutionTimelineEntry",
     "PreTradeDecisionPayload",
+    "RepairExecutionPayload",
     "RiskDecisionPayload",
     "RiskScanPayload",
     "TradeFillPayload",

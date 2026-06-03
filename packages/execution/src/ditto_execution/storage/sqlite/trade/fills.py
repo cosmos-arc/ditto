@@ -50,6 +50,23 @@ INSERT OR IGNORE INTO execution_fills
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
+_UPDATE_FILL = """
+UPDATE execution_fills
+SET intent_id = ?,
+    strategy_id = ?,
+    trade_date = ?,
+    instrument_id = ?,
+    direction = ?,
+    quantity = ?,
+    fill_price = ?,
+    fee = ?,
+    slippage = ?,
+    notes = ?,
+    settlement_date = ?,
+    created_at = ?
+WHERE fill_id = ?
+"""
+
 _SELECT_FILL_BY_ID = "SELECT * FROM execution_fills WHERE fill_id = ?"
 
 _FIND_FILL_BY_INTENT_AND_DATE = (
@@ -140,3 +157,27 @@ class FillWriter:
             ),
         )
         self._client.commit()
+
+    def replace(self, record: FillRecord) -> bool:
+        """Replace an existing fill record by ``fill_id``."""
+        cursor = self._client.execute(
+            _UPDATE_FILL,
+            (
+                record.intent_id,
+                record.strategy_id,
+                record.trade_date,
+                record.instrument_id,
+                record.direction,
+                record.quantity,
+                record.fill_price,
+                record.fee,
+                record.slippage,
+                record.notes,
+                record.settlement_date,
+                record.created_at,
+                record.fill_id,
+            ),
+        )
+        replaced = cursor.rowcount > 0
+        self._client.commit()
+        return replaced

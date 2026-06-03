@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import FrozenInstanceError
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.errors import StrategySpecError
 
 # ---------------------------------------------------------------------------
 # Helpers: lightweight DecisionStage fakes for testing
@@ -92,6 +95,20 @@ class _CheckSignalStage:
         return frame
 
 
+class _ReplaceFrameStage:
+    """返回指定 frame 的 Stage，用于验证 Pipeline 边界校验。"""
+
+    def __init__(self, result: pl.DataFrame) -> None:
+        self._result = result
+
+    def process(
+        self,
+        frame: pl.DataFrame,
+        context: StrategyContext,
+    ) -> pl.DataFrame:
+        return self._result
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -141,6 +158,8 @@ def _make_input_bundle(
     run_id: str = "RUN-001",
     parameters: dict[str, object] | None = None,
     benchmark_close: float | None = None,
+    instrument_id_map: Mapping[object, InstrumentId] | None = None,
+    require_canonical_target_ids: bool = False,
 ) -> StrategyInputBundle:
     return StrategyInputBundle(
         trade_date=trade_date,
@@ -151,6 +170,8 @@ def _make_input_bundle(
         signal_values=signal_values,
         parameters=parameters or {},
         benchmark_close=benchmark_close,
+        instrument_id_map=instrument_id_map or {},
+        require_canonical_target_ids=require_canonical_target_ids,
     )
 
 
@@ -352,6 +373,43 @@ class TestStrategyPipeline:
         assert target.positions[2] == pytest.approx(0.35)
         assert target.positions[3] == pytest.approx(0.25)
 
+    def test_target_portfolio_resolves_string_ids_with_input_bundle_identity_map(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        instruments = pl.DataFrame({"instrument_id": ["ETF001", "ETF002"]})
+        market_data = pl.DataFrame(
+            {
+                "instrument_id": ["ETF001", "ETF002"],
+                "close": [1.0, 2.0],
+            },
+        )
+        stage = _ReplaceFrameStage(
+            pl.DataFrame(
+                {
+                    "instrument_id": ["ETF001", "ETF002"],
+                    "weight": [0.65, 0.35],
+                },
+            ),
+        )
+        pipeline = StrategyPipeline(stages=[stage])
+        bundle = _make_input_bundle(
+            instruments=instruments,
+            market_data=market_data,
+            instrument_id_map={
+                "ETF001": InstrumentId(1001),
+                "ETF002": InstrumentId(1002),
+            },
+            require_canonical_target_ids=True,
+        )
+
+        target = pipeline.run(empty_context, bundle)
+
+        assert target.positions[InstrumentId(1001)] == pytest.approx(0.65)
+        assert target.positions[InstrumentId(1002)] == pytest.approx(0.35)
+        assert "ETF001" not in target.positions
+        assert "ETF002" not in target.positions
+
     def test_target_portfolio_equal_weight_fallback(
         self,
         empty_context: StrategyContext,
@@ -371,6 +429,57 @@ class TestStrategyPipeline:
         expected_weight = 1.0 / 3.0
         for weight in target.positions.values():
             assert weight == pytest.approx(expected_weight)
+
+    def test_equal_weight_target_resolves_string_ids_with_identity_map(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        instruments = pl.DataFrame({"instrument_id": ["ETF001", "ETF002"]})
+        market_data = pl.DataFrame(
+            {
+                "instrument_id": ["ETF001", "ETF002"],
+                "close": [1.0, 2.0],
+            },
+        )
+        pipeline = StrategyPipeline(stages=[])
+        bundle = _make_input_bundle(
+            instruments=instruments,
+            market_data=market_data,
+            instrument_id_map={
+                "ETF001": InstrumentId(1001),
+                "ETF002": InstrumentId(1002),
+            },
+            require_canonical_target_ids=True,
+        )
+
+        target = pipeline.run(empty_context, bundle)
+
+        assert target.positions[InstrumentId(1001)] == pytest.approx(0.5)
+        assert target.positions[InstrumentId(1002)] == pytest.approx(0.5)
+        assert "ETF001" not in target.positions
+        assert "ETF002" not in target.positions
+
+    def test_strict_target_portfolio_rejects_unmapped_string_ids(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        instruments = pl.DataFrame({"instrument_id": ["ETF001"]})
+        market_data = pl.DataFrame({"instrument_id": ["ETF001"], "close": [1.0]})
+        pipeline = StrategyPipeline(stages=[])
+        bundle = _make_input_bundle(
+            instruments=instruments,
+            market_data=market_data,
+            require_canonical_target_ids=True,
+        )
+
+        with pytest.raises(
+            StrategySpecError,
+            match="TargetPortfolio contains non-canonical instrument IDs",
+        ) as exc_info:
+            pipeline.run(empty_context, bundle)
+
+        assert exc_info.value.details["boundary"] == "target_portfolio"
+        assert exc_info.value.details["non_canonical_instrument_ids"] == ("ETF001",)
 
     def test_target_portfolio_preserves_metadata(
         self,
@@ -460,3 +569,51 @@ class TestStrategyPipeline:
         assert isinstance(target, TargetPortfolio)
         assert target.positions == {}
         assert target.trade_date == "2026-01-15"
+
+    def test_stage_output_missing_instrument_id_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        stage = _ReplaceFrameStage(pl.DataFrame({"weight": [1.0]}))
+        pipeline = StrategyPipeline(stages=[stage])
+        bundle = _make_input_bundle(
+            instruments=sample_instruments,
+            market_data=sample_market_data,
+        )
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame missing required columns",
+        ) as exc_info:
+            pipeline.run(empty_context, bundle)
+
+        assert exc_info.value.details["missing_columns"] == ("instrument_id",)
+        assert exc_info.value.details["stage_name"] == "_ReplaceFrameStage"
+
+    def test_stage_output_weight_must_be_numeric(
+        self,
+        empty_context: StrategyContext,
+        sample_instruments: pl.DataFrame,
+        sample_market_data: pl.DataFrame,
+    ) -> None:
+        stage = _ReplaceFrameStage(
+            pl.DataFrame({"instrument_id": [1], "weight": ["full"]}),
+        )
+        pipeline = StrategyPipeline(stages=[stage])
+        bundle = _make_input_bundle(
+            instruments=sample_instruments,
+            market_data=sample_market_data,
+        )
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame column has invalid dtype",
+        ) as exc_info:
+            pipeline.run(empty_context, bundle)
+
+        assert exc_info.value.details["column_name"] == "weight"
+        assert exc_info.value.details["expected_dtype"] == "numeric"
+        assert exc_info.value.details["actual_dtype"] == "String"
+        assert exc_info.value.details["stage_name"] == "_ReplaceFrameStage"

@@ -7,13 +7,47 @@ Data 层存储交易意图、人工成交、实际持仓所需的本地数据传
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Literal
 
 __all__ = [
+    "STANDARD_BROKER_EVENT_TYPES",
+    "AccountSnapshotRecord",
+    "BrokerEventRecord",
+    "BrokerEventType",
     "FillRecord",
     "PositionRecord",
     "SignalRecord",
+    "require_standard_broker_event_type",
 ]
+
+type BrokerEventType = Literal[
+    "connect",
+    "order_ack",
+    "fill",
+    "fill_query_error",
+    "cancel",
+    "reject",
+    "account_update",
+]
+
+STANDARD_BROKER_EVENT_TYPES: tuple[BrokerEventType, ...] = (
+    "connect",
+    "order_ack",
+    "fill",
+    "fill_query_error",
+    "cancel",
+    "reject",
+    "account_update",
+)
+
+
+def require_standard_broker_event_type(event_type: str) -> BrokerEventType:
+    """Return a standard broker event type or fail closed for adapter drift."""
+    if event_type not in STANDARD_BROKER_EVENT_TYPES:
+        msg = f"Unsupported broker event type: {event_type}"
+        raise ValueError(msg)
+    return event_type
 
 
 # ===========================================================================
@@ -97,6 +131,89 @@ class FillRecord:
 
 
 # ===========================================================================
+# AccountSnapshotRecord — 账户快照
+# ===========================================================================
+
+
+@dataclass(frozen=True)
+class AccountSnapshotRecord:
+    """
+    账户快照持久化记录.
+
+    Attributes:
+        snapshot_id: 快照唯一标识.
+        run_id: 运行 ID，用于把账户状态归属到一次执行/回测运行.
+        strategy_id: 策略 ID.
+        account_id: 账户 ID.
+        snapshot_date: 快照日期 (YYYY-MM-DD).
+        cash_available: 可用现金.
+        cash_settled: 已结算现金.
+        cash_frozen: 冻结现金.
+        total_value: 总资产.
+        nav: 净值.
+        exposure: 持仓总市值.
+        created_at: 创建时间 (RFC3339).
+
+    """
+
+    snapshot_id: str
+    run_id: str
+    strategy_id: str
+    account_id: str
+    snapshot_date: str
+    cash_available: float
+    cash_settled: float
+    cash_frozen: float
+    total_value: float
+    nav: float
+    exposure: float
+    created_at: str = ""
+
+
+# ===========================================================================
+# BrokerEventRecord — 标准化券商网关事件
+# ===========================================================================
+
+
+@dataclass(frozen=True)
+class BrokerEventRecord:
+    """
+    标准化券商事件持久化记录.
+
+    Attributes:
+        event_id: 事件唯一标识.
+        run_id: 运行 ID，用于把 live/paper 事件归属到一次执行运行.
+        broker: 券商或模拟网关标识.
+        event_type: 标准事件类型，如 order_ack/fill/fill_query_error/
+            cancel/reject/account_update.
+        event_time: 券商事件时间 (RFC3339).
+        order_id: 本地订单 ID.
+        broker_order_id: 券商侧订单 ID.
+        fill_id: 成交 ID（成交事件时可用）.
+        instrument_id: 标的 ID.
+        status: 券商侧状态标准化值.
+        correlation_id: 跨审计/订单/券商事件的关联键.
+        payload: 保留的网关原始/扩展字段.
+        created_at: 本地写入时间 (RFC3339).
+
+    """
+
+    event_id: str
+    run_id: str
+    broker: str
+    event_type: str
+    event_time: str
+    order_id: str | None = None
+    broker_order_id: str | None = None
+    fill_id: str | None = None
+    instrument_id: int | None = None
+    status: str | None = None
+    correlation_id: str | None = None
+    payload: dict[str, object] = field(default_factory=dict)
+    created_at: str = ""
+
+
+# ===========================================================================
 # PositionRecord — 持仓快照
 # ===========================================================================
 
@@ -108,6 +225,7 @@ class PositionRecord:
 
     Attributes:
         snapshot_id: 快照唯一标识 (UUID).
+        run_id: 运行 ID，用于把持仓快照归属到一次执行/回测运行.
         strategy_id: 策略 ID.
         snapshot_date: 快照日期 (YYYY-MM-DD).
         instrument_id: 标的 ID.
@@ -133,4 +251,5 @@ class PositionRecord:
     unrealized_pnl: float
     realized_pnl: float
     total_fees: float
+    run_id: str = ""
     created_at: str = ""

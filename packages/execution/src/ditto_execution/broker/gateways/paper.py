@@ -113,7 +113,13 @@ class PaperBrokerGateway:
         )
         self._book.update(filled_ticket, event=fill_event)
 
-        gw_fill = self._build_gw_fill(order, fill_price, order.quantity, 0)
+        gw_fill = self._build_gw_fill(
+            order,
+            fill_price,
+            fill_quantity=order.quantity,
+            cumulative_quantity=order.quantity,
+            leaves_quantity=0,
+        )
         self._account.apply_fill(
             gw_fill,
             settle_date=gw_fill.event_time.strftime("%Y-%m-%d"),
@@ -189,8 +195,9 @@ class PaperBrokerGateway:
         gw_fill = self._build_gw_fill(
             ticket.order,
             price,
-            actual_fill_qty,
-            filled_ticket.leaves_quantity,
+            fill_quantity=actual_fill_qty,
+            cumulative_quantity=filled_ticket.filled_quantity,
+            leaves_quantity=filled_ticket.leaves_quantity,
         )
         self._account.apply_fill(
             gw_fill,
@@ -253,6 +260,7 @@ class PaperBrokerGateway:
         order: Order,
         fill_price: float,
         fill_quantity: int,
+        cumulative_quantity: int,
         leaves_quantity: int,
     ) -> FillEvent:
         gw_fill = FillEvent(
@@ -265,7 +273,7 @@ class PaperBrokerGateway:
             fee=0.0,
             slippage=0.0,
             event_time=datetime.now(tz=UTC),
-            cumulative_quantity=fill_quantity,
+            cumulative_quantity=cumulative_quantity,
             leaves_quantity=leaves_quantity,
         )
         self._fills.setdefault(order.order_id, []).append(gw_fill)

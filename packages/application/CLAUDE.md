@@ -8,6 +8,7 @@ Application 层是 **Application Layer（应用层）**，负责 Use Case 编排
 - 纯编排层，不包含核心业务逻辑
 - 通过 CQRS 模式分离读写职责
 - 协调 capability packages（领域计算）+ Data（数据服务）
+- 回测 checkpoint 只能在 Application 层转换为运行控制面记录并通过端口写入；Backtest 引擎保持 storage-free；Application 可以持久化并透传 account-state、settlement-state 与 runtime-state（pending OMS orders + delayed signal queue）JSON/hash，但 `ResumeRunHandler` 仍只能创建 checkpoint-backed child run，恢复器消费 account/settlement/runtime state 的完整状态恢复与 replay proof 不得伪装成已完成能力
 
 ## 允许依赖
 
@@ -146,20 +147,37 @@ ditto_application/
 
 | Provider | 职责 | 注册的服务 |
 |----------|------|-----------|
-| `AppCommandProvider` | Command Handler | CheckDataQualityHandler, CreateStrategyHandler, UpdateStrategyHandler, PublishStrategyHandler, RecordFillHandler, UpdateIntentStatusHandler, BacktestRunHandler, CancelRunHandler, RetryRunHandler, RunLifecycleService, CreateCustomUniverseHandler, UpdateCustomUniverseHandler, DeleteCustomUniverseHandler |
-| `AppMarketQueryProvider` | 市场数据查询 | ForwardReturnService, DerivedQueryFacade, MarketQueryFacade, SourceQueryFacade, ResearchDatasetFacade, MetadataQueryFacade, CapitalQueryFacade, FundamentalQueryFacade, MacroQueryFacade, FXQueryFacade, CommodityQueryFacade, UniverseQueryFacade, IngestionStatusQueryFacade |
+| `AppCommandProvider` | Command Handler | CheckDataQualityHandler, ReviewDatasetPromotionEvidenceHandler, CreateStrategyHandler, UpdateStrategyHandler, PublishStrategyHandler, RecordFillHandler, UpdateIntentStatusHandler, BacktestRunHandler, CancelRunHandler, RetryRunHandler, RunLifecycleService, CreateCustomUniverseHandler, UpdateCustomUniverseHandler, DeleteCustomUniverseHandler |
+| `AppMarketQueryProvider` | 市场数据查询 | ForwardReturnService, DerivedQueryFacade, CatalogQueryFacade, MarketQueryFacade, SourceQueryFacade, ResearchDatasetFacade, MetadataQueryFacade, CapitalQueryFacade, FundamentalQueryFacade, MacroQueryFacade, FXQueryFacade, CommodityQueryFacade, UniverseQueryFacade, IngestionStatusQueryFacade |
 | `AppStrategyQueryProvider` | 策略/回测查询 | BacktestTradeQueryFacade, BacktestArtifactReader, RunReadModel, StrategyQueryFacade, BacktestQueryFacade, LineageQueryFacade, ComparisonQueryFacade |
 | `AppPortfolioQueryProvider` | 组合/交易查询 | TradeQueryFacade, PortfolioActualQueryFacade, SignalQueryFacade |
-| `AppProcessProvider` | 编排/物化/质量/执行 | SQLiteCompileCache, RuntimeDerivedInputProvider, DerivedMaterializationOrchestrator, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, ManualTracker, ReplayProcess, FactorBridge |
+| `AppProcessProvider` | 编排/物化/质量/执行 | SQLiteCompileCache, RuntimeDerivedInputProvider, DerivedMaterializationOrchestrator（注入 DataLineageRecorder）, InvalidationCascadeOrchestrator, DerivedPublicationFacade, QualityPatrolService, ManualTracker, ReplayProcess, FactorBridge |
 | `AppBuilderFactory` | 策略运行时装配 | StrategyRuntimeBuilder, ServiceBackedDataProvider, BacktestRuntimeBuilder, StrategySliceBuilder, StrategyServiceFactory, StrategyFacade |
 
 ## DatasetRegistry 摄取路由规则
 
 - `ditto_application.processes.ingestion.dataset_registry` 是 application ingestion 的唯一数据集运行时路由表。
-- 新增数据集时，先在 `ditto_data.models.Dataset` 增加稳定 ID，再在 `default_dataset_registry()` 增加 `DatasetRegistration`。
+- 新增数据集时，先在 `ditto_data.models.Dataset` 增加稳定 ID，再在 `ditto_data.catalog.default_dataset_metadata()` 声明 domain/maturity/schedule/source/granularity/freshness SLA，然后在 `default_dataset_registry()` 增加 `DatasetRegistration`。
 - `fetch_handlers.py`、`data_writer.py`、`coordinator_constants.py` 不允许新增独立的 `Dataset -> handler` 映射。
 - 如果数据源 Protocol 没有按标的方法，不要把该数据集加入 instrument fetch route。
-- `Dataset` enum 只保留稳定 ID；运行时 fetch/write/support 能力由 registry 表达。
+- `Dataset` enum 只保留稳定 ID；source capability、auxiliary source、date/instrument granularity、freshness SLA 由 data-owned catalog metadata 表达，application registry 只保留 fetch/write callback wiring 并在默认 registry 构建时校验 route capability 一致。
+- Date-level 和 instrument-level ingestion 必须通过 `source_capability.ensure_source_supported(...)` 在 fetch/identifier resolution 前校验 `source_name`；不得产生 `source=<X>` 但实际走未声明 fetcher 的审计记录。
+- `create_coordinator(...)` 通过 registry-like Protocol 按 `source_name + Fetcher Protocol` 组装 `SourceFetchers`；`source=fred` 对 `macro_indicators` 的 macro fetcher 是显式动态路由；`source=auto` 会构建 source-consistent concrete coordinators，再按 catalog freshness/SLA 进行 date/range-level delegation；range 必须复用普通 ingestion 的 date schedule helper。Instrument-level `source=auto` 先按请求 `end_date` / `start_date` 做 source selection，尚不是完整 per-date instrument-range failover。非 macro fetchers 保持 Tushare 默认路径并依赖 catalog guard 阻止误用。
+- Date-level、instrument-level 与 adj-factor backfill ingestion 成功写入后通过 `DataLineageRecorder` 记录 source asset/range → data-domain asset/range 的 lineage；该依赖必须由 `IngestionCoordinatorConfig` / composition root 注入，不允许在流程内直接构造具体 store。
+- Date-level 与 instrument-level ingestion 成功写入后通过 `DataCatalogWriter` upsert 输出资产 catalog entry（storage URI、schema fingerprint、row count、source、freshness）；该依赖同样必须由 `IngestionCoordinatorConfig` / composition root 注入，不允许在流程内直接构造具体 store。Catalog 尚未成为 routing/freshness source-of-truth 前，不得删除 registry 兼容路径。
+- Backtest 成功运行并完成后处理后通过 `DataLineageRecorder` 记录 strategy/version + manifest input refs → `backtest_report` 的 lineage；该 recorder 必须由 `StrategyServiceFactory` / composition root 注入。
+- Catalog-backed `BacktestRuntimeBuilder` 与 `StrategySliceBuilder` 必须在解析 universe/benchmark/provider 数据前调用 application-owned `catalog_maturity` gate，并以 data-owned `DatasetMetadata.maturity` 加 persisted `DatasetMaturityPromotionReader` override 为真相源；experimental 数据集默认 fail-closed，只能通过显式 `allow_experimental_data=True` 进入研究路径，或通过 data-owned maturity promotion override 进入默认 runtime。Backtest command/service config JSON 必须持久化 research opt-in，保证 retry/audit 可见。
+- Backtest service、artifact writer 与 report serialization 必须把 manifest 中的 PIT policy/time column/unsafe policy/knowledge lag 写入 config/report/artifact metadata；materialization manifest builder 必须把 request `source_snapshot_id` 写入 publication-safety manifest。
+- Factor-aware backtest input bundle 的历史窗口必须使用 `ctx.time_context.knowledge_date.isoformat()` 调用 `DataFeed.get_history(...)`，不得使用 `trade_date` 作为历史 as-of；当前交易日 bar 只能来自当前 `StepContext` / `Slice`。
+- `MarketQueryFacade.find_bars(...)` / `MarketQueryFacade.list_bars(...)`、`SourceQueryFacade.fetch_source_data(...)`、`FundamentalQueryFacade`、`CapitalQueryFacade` 与 `MacroQueryFacade` 在调用 data service/source service 前，必须对显式 `asset_class`、可识别 `instrument_id` 范围或方法已知的 `dataset` 使用同一 `catalog_maturity` gate；`stock`/`fx`/`commodity`/`stock_daily`/`balance_sheet`/`valuation_metrics`/`macro_indicators` 等 experimental dataset 默认 fail-closed，只能通过显式 `allow_experimental_data=True` 或 persisted maturity promotion override 放行。`instrument_id` 推断必须复用 data-owned `InstrumentIdRange.detect_asset_class(...)` 和 shared maturity helper，不得在 application 复制 maturity policy 或 ID range。
+- `LineageQueryFacade` 通过 `DataLineageReader` 暴露 asset-level lineage events、run-level lineage summary 与 upstream/downstream asset graph，并只返回 application DTO；API 层不得直接消费 data-layer lineage DTO。
+- `CatalogQueryFacade` 通过 `DataCatalogReader` 暴露 catalog freshness/storage/schema 和 source-health 读模型；source-health report 必须顶层暴露 selected source、其 freshness status 以及稳定 attention reason codes，summary 必须聚合 attention reason counts；attention reason 必须组合 freshness reason 与 governance reason，不得因为 selected source 为 fresh 而隐藏 unsupported source 或 latest maturity-promotion revocation；通过 `DatasetMaturityPromotionHistoryReader` 暴露 promotion governance history；只返回 application DTO，API 层不得直接消费 data-layer catalog/promotion DTO 或具体 runtime store。
+- `IngestionStatusQueryFacade` 通过 `DataCatalogReader` 在现有摄取状态读模型中叠加 catalog freshness/storage/schema 字段，并通过 `DatasetMaturityPromotionReader` 应用 persisted metadata maturity override，再通过 `DatasetPromotionEvidenceReader` 读取持久 promotion evidence，从 data-owned `DatasetMetadata.maturity` / `promotion_criteria` 与 `ditto_data.catalog.promotion.assess_dataset_promotion(...)` 暴露 `dataset_maturity`、`dataset_maturity_warning`、`dataset_promotion_criteria`、promotion status 与 missing/satisfied/rejected criteria，同时基于 data-owned `freshness_sla_hours` 输出 `fresh` / `stale` / `missing` / `not_applicable`；`summarize_status_by_maturity(...)` 只负责把这些 read-model rows 聚合成 maturity-aware 运维报告摘要、warning count 与 promotion ready/blocked count，不得在此处重新实现 dataset routing、source capability、promotion criteria、promotion evidence policy 或 maturity gating policy。
+- `ReviewDatasetPromotionEvidenceHandler` 是 reviewer evidence 的唯一 application command 写路径：它必须用 data-owned metadata 校验 dataset/criterion，通过 `DatasetPromotionEvidenceWriter` 持久化，再用 `DatasetPromotionEvidenceReader` 重新 assessment；当 assessment ready 时，必须通过 `DatasetMaturityPromotionWriter` 写入 data-owned metadata promotion override，并返回 `metadata_promoted` / maturity before-after 字段；不得在 apps 层直接写 store 或自行判定 promotion ready。
+- `RevokeDatasetMaturityPromotionHandler` 是 maturity promotion reversal 的唯一 application command 写路径：它必须先用 `DatasetMaturityPromotionReader` 验证 current override，再通过 `DatasetMaturityPromotionRevoker` 撤销并记录 data-owned governance event；不得在 apps 层直接删除 override 或写 history。
+- `MetadataManager.should_skip()` 可通过 `DataCatalogReader` 在无 log 历史时使用 exact-date catalog entry 作为 fallback skip signal；`force=True`、历史失败重试、source mismatch 必须优先于 catalog skip；stale catalog asset 不得跳过，应进入修复/重摄取路径。
+- `RetryManager` 可通过 `DataCatalogReader` 对失败日期进行 repair 优先级排序：missing exact-date catalog asset 优先，其次 stale，fresh 最后；不得绕过 ingestion log 的 source/max_attempts/limit 筛选。
+- `AutoSourceIngestionCoordinator` 只做 source selection + delegation；不得在已有 `IngestionCoordinator` 上动态替换 fetchers/source_name/result_handler/data_writer，否则会破坏审计和 catalog lineage 一致性。
 
 ## R8 互斥规则（importlinter 强制）
 

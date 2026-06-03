@@ -6,13 +6,20 @@ from typing import Protocol, runtime_checkable
 
 from ditto_execution.audit.models import (
     PreTradeDecisionPayload,
+    RepairExecutionPayload,
     RiskDecisionPayload,
     RiskScanPayload,
     TradeFillPayload,
 )
-from ditto_execution.models import FillRecord, PositionRecord, SignalRecord
+from ditto_execution.models import (
+    BrokerEventRecord,
+    FillRecord,
+    PositionRecord,
+    SignalRecord,
+)
 
 __all__ = [
+    "BrokerEventDataPort",
     "FillDataPort",
     "IntentDataPort",
     "OrderRouter",
@@ -60,6 +67,14 @@ class TradeAuditor(Protocol):
         records: tuple[RiskDecisionPayload, ...],
     ) -> int:
         """保存风控决策审计记录（accept/reject/modify）."""
+        ...
+
+    def save_repair_execution_log(
+        self,
+        run_id: str,
+        records: tuple[RepairExecutionPayload, ...],
+    ) -> int:
+        """保存对账修复执行审计记录."""
         ...
 
 
@@ -132,6 +147,29 @@ class PositionDataPort(Protocol):
         self,
         strategy_id: str,
         snapshot_date: str | None = None,
+        run_id: str | None = None,
     ) -> list[PositionRecord]:
         """按条件查询持仓快照列表."""
+        ...
+
+
+class BrokerEventDataPort(Protocol):
+    """券商事件窄 Port — 标准化 broker gateway event CRUD."""
+
+    def save_broker_event(self, record: BrokerEventRecord) -> None:
+        """保存标准化券商事件."""
+        ...
+
+    def list_broker_events(
+        self,
+        run_id: str,
+        *,
+        event_type: str | None = None,
+        order_id: str | None = None,
+        broker_order_id: str | None = None,
+        fill_id: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[BrokerEventRecord]:
+        """按运行、事件类型、关联键和日期查询标准化券商事件."""
         ...

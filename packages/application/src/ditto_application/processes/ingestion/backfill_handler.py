@@ -6,12 +6,14 @@ from dataclasses import dataclass
 from datetime import date
 
 import polars as pl
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.sources.protocols import MarketFetcher
-from ditto_platform.foundation import OnDuplicate, logger
+from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
+from ditto_application.processes.ingestion.post_ingest import record_ingestion_lineage
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,15 @@ class BackfillContext:
     source: MarketFetcher
     source_name: str
     data_writer: IngestionDataWriter
+    lineage_recorder: DataLineageRecorder | None = None
+
+
+@dataclass(frozen=True)
+class BackfillWriteOutcome:
+    """单段回补写入结果."""
+
+    filled_dates: int
+    write_result: WriteResult
 
 
 def backfill_adj_factor(
@@ -93,7 +104,19 @@ def backfill_adj_factor(
         )
         if gap_df.is_empty():
             continue
-        total_filled += write_adj_factor_range(ctx.data_writer, gap_df, range_start)
+        write_outcome = write_adj_factor_range(ctx.data_writer, gap_df, range_start)
+        if write_outcome is None:
+            continue
+        total_filled += write_outcome.filled_dates
+        record_ingestion_lineage(
+            "adj_factor",
+            range_start,
+            source_name=ctx.source_name,
+            lineage_recorder=ctx.lineage_recorder,
+            write_result=write_outcome.write_result,
+            source_ticker=source_ticker,
+            end_date=range_end,
+        )
 
     logger.info(
         "智能回补复权因子完成",
@@ -165,11 +188,16 @@ def write_adj_factor_range(
     data_writer: IngestionDataWriter,
     gap_df: pl.DataFrame,
     range_start: str,
-) -> int:
-    """写入单段复权因子数据，返回写入行数，失败时返回 0."""
+) -> BackfillWriteOutcome | None:
+    """写入单段复权因子数据，失败时返回 None."""
     try:
-        data_writer.write_data("adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST)
-        return len(gap_df)
+        write_result = data_writer.write_data(
+            "adj_factor", gap_df, range_start, OnDuplicate.KEEP_LAST
+        )
+        return BackfillWriteOutcome(
+            filled_dates=len(gap_df),
+            write_result=write_result,
+        )
     except Exception as e:
         logger.warning(
             "回补写入失败",
@@ -177,7 +205,7 @@ def write_adj_factor_range(
             range_start=range_start,
             error=str(e),
         )
-        return 0
+        return None
 
 
 def group_contiguous_dates(dates: list[str]) -> list[tuple[str, str]]:
@@ -216,6 +244,7 @@ def group_contiguous_dates(dates: list[str]) -> list[tuple[str, str]]:
 
 __all__ = [
     "BackfillContext",
+    "BackfillWriteOutcome",
     "backfill_adj_factor",
     "detect_adj_factor_gaps",
     "fetch_adj_factor_range",

@@ -28,6 +28,12 @@ app = typer.Typer(help="基本面数据查询")
 console = Console()
 
 
+def _experimental_kwargs(allow_experimental_data: bool) -> dict[str, bool]:
+    if allow_experimental_data:
+        return {"allow_experimental_data": True}
+    return {}
+
+
 @contextmanager
 def _get_facades() -> Generator[tuple[FundamentalQueryFacade, MetadataQueryFacade]]:
     """获取 FundamentalQueryFacade 和 MetadataQueryFacade 实例."""
@@ -51,6 +57,11 @@ def get_financials(
         help="报表类型 (balance_sheet/income_statement/cash_flow)",
     ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -95,12 +106,13 @@ def get_financials(
             return
 
         df = None
+        kwargs = _experimental_kwargs(allow_experimental_data)
         if financial_type == FinancialType.BALANCE_SHEET:
-            df = facade.get_balance_sheet(resolved_id, as_of)
+            df = facade.get_balance_sheet(resolved_id, as_of, **kwargs)
         elif financial_type == FinancialType.INCOME_STATEMENT:
-            df = facade.get_income_statement(resolved_id, as_of)
+            df = facade.get_income_statement(resolved_id, as_of, **kwargs)
         elif financial_type == FinancialType.CASH_FLOW:
-            df = facade.get_cash_flow(resolved_id, as_of)
+            df = facade.get_cash_flow(resolved_id, as_of, **kwargs)
 
         if df is None or df.is_empty():
             typer.echo("未找到财务数据")
@@ -138,6 +150,11 @@ def get_dividend(
         None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
     ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -162,7 +179,11 @@ def get_dividend(
             typer.echo("未找到匹配的标的")
             return
 
-        df = facade.get_dividend(resolved_id, as_of)
+        df = facade.get_dividend(
+            resolved_id,
+            as_of,
+            **_experimental_kwargs(allow_experimental_data),
+        )
 
         if df is None or df.is_empty():
             typer.echo("未找到分红数据")
@@ -190,7 +211,7 @@ def get_dividend(
 
 
 @app.command("corporate-actions")
-def list_corporate_actions(
+def list_corporate_actions(  # noqa: PLR0913
     instrument_id: int | None = typer.Option(
         None, "--instrument-id", "-i", help="Canonical 标的 ID"
     ),
@@ -202,6 +223,11 @@ def list_corporate_actions(
     end_date: str = typer.Option(..., "--end-date", "-e", help="结束日期"),
     as_of_date: str | None = typer.Option(
         None, "--as-of-date", help="PIT 查询日期, 可选"
+    ),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
     ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
@@ -232,7 +258,13 @@ def list_corporate_actions(
             typer.echo("未找到匹配的标的")
             return
 
-        df = facade.list_corporate_actions(resolved_id, start, end, as_of)
+        df = facade.list_corporate_actions(
+            resolved_id,
+            start,
+            end,
+            as_of,
+            **_experimental_kwargs(allow_experimental_data),
+        )
 
         if df.is_empty():
             typer.echo("未找到公司行动数据")

@@ -15,6 +15,10 @@ Backtest 是**回测引擎平面**，负责：
 - 不导入真实券商网关（只使用模拟执行）
 - Step chain 模式保证每步职责单一、可测试
 - 统计指标计算独立于主循环，方便扩展
+- `RunManifest` 必须记录 PIT policy/time column/unsafe policy/knowledge lag；`InputRef.source_snapshot_id` 必须保留上游快照 ID，当前 `DataFeed` 未暴露真实快照时只允许空字符串占位，不得伪造。
+- `Synchronizer` 产出的 `TimeSlice.bars` / `TimeSlice.benchmark_close` 是每步唯一 PIT 可见行情输入源。`EngineLoop` 可以再次读取 `DataFeed.get_slice()` 取得 TimeSlice 未携带字段，但写入 `StepContext.slice_` 前必须用 `TimeSlice` 的 `trade_date` / `decision_time` / `bars` / `benchmark_close` 重新对齐，普通/因子 input bundle 不得消费第二次 `get_slice()` 的行情输入。
+- `execution_delay` 的尾部 flush 必须复用主循环最后一个 `TimeSlice` 构造 `StepContext`；不得在回测结束后通过第二次 `DataFeed.get_slice()` 读取 bars/benchmark 作为执行输入。
+- `BacktestCheckpoint` 表达最后完成交易日、下一次 `resume_from` 边界、deterministic account-state snapshot（cash + positions + hash）、settlement frozen queue snapshot 以及 runtime-state snapshot（pending OMS orders + delayed signal queue）；最终 checkpoint 必须在 `execution_delay` 尾部 flush 后刷新 NAV/order/fill/account-state/settlement-state/runtime-state 统计；checkpoint 持久化由 application 转换为 strategy run checkpoint 写入端口，resume command/API 编排属于 application/apps 层，不得把存储或入口逻辑塞入 backtest 引擎；恢复器消费 account/settlement/runtime state 与 replay-proof 持久化未完成前，不得宣称完整 state-restored resume。
 
 ## 允许依赖
 

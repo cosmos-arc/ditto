@@ -73,6 +73,10 @@ class IndicatorQuery(BaseModel):
     end_date: DateField = Field(default=None, description="结束日期")
     category: CategoryField = Field(default=None, description="类别过滤")
     frequency: FrequencyField = Field(default=None, description="频率过滤")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )
 
     model_config = ConfigDict(
         strict=True,

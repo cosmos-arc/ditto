@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog import DataCatalogReader
+from ditto_data.lineage import DataLineageReader
 from ditto_execution.audit import ExecutionAuditService
 from ditto_strategy.contracts import StrategyCatalogReader
 from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
@@ -85,9 +87,15 @@ class AppStrategyQueryProvider(Provider):
     def lineage_query_facade(
         self,
         run_service: StrategyRunLifecycleStore,
+        data_lineage_reader: DataLineageReader,
+        data_catalog_reader: DataCatalogReader,
     ) -> LineageQueryFacade:
         """运行血统查询 facade — 提供 lineage chain 查询."""
-        return LineageQueryFacade(run_service=run_service)
+        return LineageQueryFacade(
+            run_service=run_service,
+            data_lineage_reader=data_lineage_reader,
+            data_catalog_reader=data_catalog_reader,
+        )
 
     @provide
     def comparison_query_facade(

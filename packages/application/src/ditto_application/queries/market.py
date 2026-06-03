@@ -3,14 +3,24 @@
 from __future__ import annotations
 
 import polars as pl
+from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
+from ditto_data.models import InstrumentIdRange
 from ditto_data.services.market_service import AdjType, MarketBarsQuery, MarketService
 
+from ditto_application.catalog_maturity import blocked_catalog_datasets
 from ditto_application.exceptions import AppQueryError
 
 __all__ = ["MarketQueryFacade"]
 
 # 支持的复权类型
 _VALID_ADJ_TYPES = frozenset({"none", "qfq", "hfq"})
+_MARKET_BAR_DATASETS: dict[str, tuple[str, ...]] = {
+    "etf": ("etf_daily",),
+    "index": ("index_daily",),
+    "stock": ("stock_daily",),
+    "fx": ("fx_daily",),
+    "commodity": ("commodity_daily",),
+}
 
 
 class MarketQueryFacade:
@@ -21,8 +31,13 @@ class MarketQueryFacade:
     对外只暴露原始参数和 pl.DataFrame 返回值。
     """
 
-    def __init__(self, market_service: MarketService) -> None:
+    def __init__(
+        self,
+        market_service: MarketService,
+        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
+    ) -> None:
         self._service = market_service
+        self._maturity_promotion_reader = maturity_promotion_reader
 
     def find_bars(
         self,
@@ -33,6 +48,7 @@ class MarketQueryFacade:
         adj: str = "none",
         market_wide: bool = False,
         asset_class: str | None = None,
+        allow_experimental_data: bool = False,
     ) -> pl.DataFrame:
         """
         查询 K 线数据（通过 MarketBarsQuery）.
@@ -45,6 +61,7 @@ class MarketQueryFacade:
             market_wide: 全市场查询模式
                 （为 True 且 instrument_ids 为空时获取所有活跃证券）
             asset_class: 资产类别过滤
+            allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
 
         Returns:
             K 线数据 DataFrame
@@ -56,6 +73,11 @@ class MarketQueryFacade:
         if adj not in _VALID_ADJ_TYPES:
             msg = f"adj must be one of {_VALID_ADJ_TYPES}, got '{adj}'"
             raise AppQueryError(msg)
+        self._assert_market_bars_allowed(
+            asset_class,
+            instrument_ids=instrument_ids,
+            allow_experimental_data=allow_experimental_data,
+        )
 
         query = MarketBarsQuery(
             instrument_ids=instrument_ids,
@@ -75,6 +97,7 @@ class MarketQueryFacade:
         end: str | None = None,
         asset_class: str | None = None,
         limit: int | None = None,
+        allow_experimental_data: bool = False,
     ) -> pl.DataFrame:
         """
         查询 K 线数据（直接参数）.
@@ -85,11 +108,17 @@ class MarketQueryFacade:
             end: 结束日期 (YYYY-MM-DD)
             asset_class: 资产类别过滤
             limit: 返回数量限制
+            allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
 
         Returns:
             K 线数据 DataFrame
 
         """
+        self._assert_market_bars_allowed(
+            asset_class,
+            instrument_ids=instrument_ids,
+            allow_experimental_data=allow_experimental_data,
+        )
         return self._service.list_bars(
             instrument_ids=instrument_ids,
             start=start,
@@ -115,3 +144,82 @@ class MarketQueryFacade:
 
         """
         return self._service.get_constituents(index_id, as_of_date)
+
+    def _assert_market_bars_allowed(
+        self,
+        asset_class: str | None,
+        *,
+        instrument_ids: list[int] | None,
+        allow_experimental_data: bool,
+    ) -> None:
+        dataset_ids = _market_bar_dataset_ids(
+            asset_class=asset_class,
+            instrument_ids=instrument_ids,
+        )
+        if not dataset_ids:
+            return
+
+        blocked = blocked_catalog_datasets(
+            dataset_ids,
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+        )
+        if not blocked:
+            return
+
+        joined = ", ".join(blocked)
+        msg = (
+            "market bars query requires experimental dataset or other "
+            f"non-initial-focus dataset maturity: {joined}. "
+            "Set allow_experimental_data=True only for explicit research use."
+        )
+        raise AppQueryError(msg)
+
+
+def _market_bar_dataset_ids(
+    *,
+    asset_class: str | None,
+    instrument_ids: list[int] | None,
+) -> tuple[str, ...]:
+    if asset_class is not None:
+        normalized_asset_class = asset_class.lower()
+        explicit_dataset_ids = _MARKET_BAR_DATASETS.get(normalized_asset_class)
+        if explicit_dataset_ids is None:
+            msg = (
+                f"Unsupported market bars asset_class for maturity gate: {asset_class}"
+            )
+            raise AppQueryError(msg)
+        return explicit_dataset_ids
+
+    inferred_asset_classes = _infer_asset_classes_from_instrument_ids(instrument_ids)
+    if not inferred_asset_classes:
+        return ()
+
+    dataset_ids: list[str] = []
+    seen: set[str] = set()
+    for inferred_asset_class in inferred_asset_classes:
+        for dataset_id in _MARKET_BAR_DATASETS.get(inferred_asset_class, ()):
+            if dataset_id not in seen:
+                seen.add(dataset_id)
+                dataset_ids.append(dataset_id)
+    return tuple(dataset_ids)
+
+
+def _infer_asset_classes_from_instrument_ids(
+    instrument_ids: list[int] | None,
+) -> tuple[str, ...]:
+    if not instrument_ids:
+        return ()
+
+    asset_classes: list[str] = []
+    seen: set[str] = set()
+    for instrument_id in sorted(set(instrument_ids)):
+        try:
+            asset_class = InstrumentIdRange.detect_asset_class([instrument_id])
+        except ValueError:
+            continue
+        if asset_class in seen:
+            continue
+        seen.add(asset_class)
+        asset_classes.append(asset_class)
+    return tuple(asset_classes)

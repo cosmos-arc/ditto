@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ditto_execution.audit.execution_audit_service import ExecutionAuditService
+from ditto_strategy.models import ArtifactKind
 from ditto_strategy.runs.models import StrategyRunRecord
 from ditto_strategy.storage.sqlite.services.backtest_artifact_reader import (
     BacktestArtifactReaderProtocol,
@@ -22,7 +23,12 @@ from ditto_application.queries.backtest_trade import (
 )
 from ditto_application.queries.run import RunReadModel
 
-__all__ = ["BacktestQueryFacade", "RunSummary", "to_run_summary"]
+__all__ = [
+    "BacktestQueryFacade",
+    "ReplayEvidenceSummary",
+    "RunSummary",
+    "to_run_summary",
+]
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,23 @@ class RunSummary:
     completed_days: int = 0
     total_days: int = 0
     config_json: str = ""
+
+
+@dataclass(frozen=True)
+class ReplayEvidenceSummary:
+    """Restored-run replay evidence summary for backend report/API surfaces."""
+
+    run_id: str
+    original_run_id: str
+    replay_run_id: str
+    is_reproducible: bool
+    input_data_match: bool
+    fill_match: bool | None = None
+    account_state_match: bool | None = None
+    report_resume_provenance: dict[str, object] | None = None
+    proof_resume_provenance: dict[str, object] | None = None
+    resume_provenance_match: bool = False
+    missing_sections: tuple[str, ...] = ()
 
 
 def to_run_summary(record: StrategyRunRecord) -> RunSummary:
@@ -66,6 +89,7 @@ def to_run_summary(record: StrategyRunRecord) -> RunSummary:
 
 
 _REPORT_FILENAME = "backtest_report.json"
+_REPLAY_PROOF_FILENAME = "replay_proof.json"
 
 
 def _build_path(base: str, filename: str) -> str:
@@ -176,12 +200,72 @@ class BacktestQueryFacade:
         if run is None:
             return None
 
-        record = find_artifact(self._artifact_service, run_id)
+        record = find_artifact(
+            self._artifact_service,
+            run_id,
+            ArtifactKind.BACKTEST_REPORT,
+        )
         if record is None:
             return None
 
         report_path = _build_path(record.file_path, _REPORT_FILENAME)
         return self._artifact_reader.read_json(report_path)
+
+    def get_replay_proof(self, run_id: str) -> dict[str, Any] | None:
+        """获取 replay proof 元数据 (从 replay_proof.json)."""
+        run = self._run_model.get_run(run_id)
+        if run is None:
+            return None
+
+        record = find_artifact(
+            self._artifact_service,
+            run_id,
+            ArtifactKind.REPLAY_PROOF,
+        )
+        if record is None:
+            return None
+
+        proof_path = _build_path(record.file_path, _REPLAY_PROOF_FILENAME)
+        return self._artifact_reader.read_json(proof_path)
+
+    def get_replay_evidence_summary(
+        self,
+        run_id: str,
+    ) -> ReplayEvidenceSummary | None:
+        """组合 replay proof 与原始 restored-run report 中的恢复证据."""
+        proof = self.get_replay_proof(run_id)
+        if proof is None:
+            return None
+
+        original_run_id = _str_field(proof, "original_run_id")
+        replay_run_id = _str_field(proof, "replay_run_id") or run_id
+        report = self.get_report(original_run_id) if original_run_id else None
+        report_resume = _dict_field(report, "resume_provenance")
+        proof_resume = _dict_field(proof, "original_resume_provenance")
+        missing_sections = _replay_evidence_missing_sections(
+            original_run_id=original_run_id,
+            report=report,
+            report_resume=report_resume,
+            proof_resume=proof_resume,
+        )
+
+        return ReplayEvidenceSummary(
+            run_id=run_id,
+            original_run_id=original_run_id,
+            replay_run_id=replay_run_id,
+            is_reproducible=bool(proof.get("is_reproducible", False)),
+            input_data_match=bool(proof.get("input_data_match", False)),
+            fill_match=_optional_bool_field(proof, "fill_match"),
+            account_state_match=_optional_bool_field(proof, "account_state_match"),
+            report_resume_provenance=report_resume,
+            proof_resume_provenance=proof_resume,
+            resume_provenance_match=(
+                report_resume is not None
+                and proof_resume is not None
+                and report_resume == proof_resume
+            ),
+            missing_sections=missing_sections,
+        )
 
     # ------------------------------------------------------------------
     # NAV 序列查询
@@ -189,7 +273,11 @@ class BacktestQueryFacade:
 
     def get_nav_series(self, run_id: str) -> list[dict[str, object]]:
         """获取回测 NAV 序列 (从 nav.parquet)."""
-        record = find_artifact(self._artifact_service, run_id)
+        record = find_artifact(
+            self._artifact_service,
+            run_id,
+            ArtifactKind.BACKTEST_REPORT,
+        )
         if record is None:
             return []
 
@@ -224,3 +312,49 @@ class BacktestQueryFacade:
     def get_benchmark_nav_series(self, run_id: str) -> list[tuple[str, float]] | None:
         """基准 NAV 序列 (当前未持久化，始终返回 None)."""
         return None
+
+
+def _str_field(payload: dict[str, Any], key: str) -> str:
+    """Read a JSON field as a string, returning empty for non-string values."""
+    value = payload.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _optional_bool_field(payload: dict[str, Any], key: str) -> bool | None:
+    """Read an optional JSON boolean field without coercing missing values."""
+    value = payload.get(key)
+    return value if isinstance(value, bool) else None
+
+
+def _dict_field(
+    payload: dict[str, Any] | None,
+    key: str,
+) -> dict[str, object] | None:
+    """Read an optional object field and normalize keys to strings."""
+    if payload is None:
+        return None
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        return None
+    raw = cast(dict[object, object], value)
+    return {str(k): v for k, v in raw.items()}
+
+
+def _replay_evidence_missing_sections(
+    *,
+    original_run_id: str,
+    report: dict[str, Any] | None,
+    report_resume: dict[str, object] | None,
+    proof_resume: dict[str, object] | None,
+) -> tuple[str, ...]:
+    """Identify absent evidence sections without hiding the available proof."""
+    missing: list[str] = []
+    if not original_run_id:
+        missing.append("original_run_id")
+    if report is None:
+        missing.append("original_report")
+    elif report_resume is None:
+        missing.append("report_resume_provenance")
+    if proof_resume is None:
+        missing.append("proof_original_resume_provenance")
+    return tuple(missing)

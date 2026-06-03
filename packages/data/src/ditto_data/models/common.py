@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from enum import Enum, StrEnum
 from typing import Literal, NamedTuple
 
@@ -95,15 +96,8 @@ class Dataset(StrEnum):
     # Index 域（参考类数据）
     INDEX_WEIGHT = "index_weight"
 
-    @property
-    def asset_class(self) -> AssetClass | None:
-        """
-        获取数据集对应的资产类型。
-
-        Returns:
-            资产类型枚举，如果数据集不关联特定资产类型则返回 None。
-
-        """
+    def _legacy_asset_class(self) -> AssetClass | None:
+        """Return legacy Dataset-owned asset-class mapping without warnings."""
         # Stock 数据集
         if self in (
             Dataset.STOCK_DAILY,
@@ -125,6 +119,23 @@ class Dataset(StrEnum):
         if self in (Dataset.INDEX_DAILY, Dataset.INDEX_WEIGHT):
             return AssetClass.INDEX
         return None
+
+    @property
+    def asset_class(self) -> AssetClass | None:
+        """
+        获取数据集对应的资产类型。
+
+        Returns:
+            资产类型枚举，如果数据集不关联特定资产类型则返回 None。
+
+        """
+        warnings.warn(
+            "Dataset.asset_class is a deprecated compatibility helper; use "
+            + "DatasetMetadata.asset_class or an application catalog boundary instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._legacy_asset_class()
 
     @classmethod
     def all_datasets(cls) -> list[str]:
@@ -159,14 +170,20 @@ class Dataset(StrEnum):
             资产类别: "stock" | "etf" | "index" | "other"
 
         Note:
-            此方法为兼容性方法，推荐使用 ``dataset.asset_class`` 属性。
+            此方法为兼容性方法，推荐使用 ``DatasetMetadata.asset_class``。
 
         """
+        warnings.warn(
+            "Dataset.get_asset_class is a deprecated compatibility helper; use "
+            + "DatasetMetadata.asset_class or an application catalog boundary instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # 转换为 Dataset 枚举
         dataset_enum = dataset if isinstance(dataset, Dataset) else cls(dataset)
 
         # 使用 asset_class 属性获取类型
-        asset_class = dataset_enum.asset_class
+        asset_class = dataset_enum._legacy_asset_class()
 
         # 转换为字符串字面量（保持向后兼容）
         if asset_class is None:

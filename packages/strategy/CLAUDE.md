@@ -7,7 +7,11 @@ Strategy 层是 **策略定义与信号生成** 能力包，负责 alpha pipelin
 **核心原则**：
 - 纯策略定义，不含交易执行逻辑
 - 通过 Pipeline + Stage 模式组合策略行为
+- Pipeline 输入、signal join、每个 Stage 输出和最终组合边界必须通过 `validate_frame()` 校验 `DecisionFrame` 必需列与已知语义列 dtype
+- 实验模板可临时使用字符串 `instrument_id`，但晋级前必须通过 `StrategyInputBundle.instrument_id_map` + `require_canonical_target_ids=True` 证明 `TargetPortfolio.positions` 已解析为 canonical `InstrumentId`，且未映射字符串会 fail closed
+- `stock_sector_rotation` 的非空 stage 输入必须显式携带 `is_sector` / `sector_id` 等结构列；缺列应抛 `StrategySpecError`，不得泄漏 Polars 异常或静默放行
 - 信号存储通过 Protocol 注入，不持有具体实现
+- 运行控制面存储可持久化 `StrategyRunRecord` / `StrategyRunCheckpointRecord` 等通用记录，但不得导入 backtest 引擎 DTO；checkpoint 语义转换属于 application
 
 ## 允许依赖
 
@@ -42,12 +46,12 @@ ditto_strategy/
 │   ├── builtins/       # 内置 Stage（Universe/Signal/Scoring/Selection/Filtering/Regime）
 │   │   ├── regime/     # Regime 子系统（regime_engine / regime_indicators / regime_types）
 │   ├── templates/      # 策略模板（ETF轮动/趋势摆动/选股/行业轮动）
-│   ├── pipeline.py     # StrategyPipeline + StrategyInputBundle
+│   ├── pipeline.py     # StrategyPipeline + StrategyInputBundle + TargetPortfolio identity mapping
 │   ├── protocols.py    # DecisionStage Protocol + DecisionFrame
 │   ├── context.py      # StrategyContext（风险锁/持仓/冷却）
 │   ├── models.py       # StrategyRun/Template/Version/SignalSnapshot/TargetPortfolio
 │   ├── specs.py        # StrategySpec + CostModel/Execution/Constraint/Scorer/Selector
-│   ├── frame.py        # FrameCol 常量 + validate_frame
+│   ├── frame.py        # FrameCol 常量 + DecisionFrame schema validate_frame
 │   ├── seeds.py        # 预定义 StrategySpec
 │   └── validation.py   # validate_spec_params
 ├── signals/            # 信号契约（Protocol 定义）
@@ -79,9 +83,9 @@ ditto_strategy/
 | `etf_rotation` | initial-focus | ETF 轮动，有完整测试和 seed spec |
 | `etf_trend_swing` | initial-focus | ETF 趋势摆动，含 TrailingStopStage |
 | `stock_selection_trend` | experimental | 多因子选股，有单元测试 |
-| `stock_sector_rotation` | experimental | 行业轮动，5 自定义 stage，有快照集成测试 |
+| `stock_sector_rotation` | experimental | 行业轮动，自定义 stage 有结构列 fail-closed 契约和快照集成测试 |
 
-成熟度定义见 `docs/architecture/capability-maturity.md`。stock/sector 模板在通过独立测试审查前不得标注为 initial-focus。
+成熟度定义见 `docs/architecture/capability-maturity.md`。stock/sector 模板在通过独立测试审查、canonical identity 映射证据、模板结构列 fail-closed 证据和 golden snapshot 输出签名前不得标注为 initial-focus。
 
 ## 测试位置
 

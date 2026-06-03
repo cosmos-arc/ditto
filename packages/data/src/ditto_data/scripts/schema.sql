@@ -283,6 +283,31 @@ CREATE INDEX IF NOT EXISTS idx_strategy_run_status
 CREATE INDEX IF NOT EXISTS idx_strategy_run_parent_run_id
     ON strategy_run(parent_run_id);
 
+CREATE TABLE IF NOT EXISTS strategy_run_checkpoint (
+    run_id               TEXT PRIMARY KEY,
+    strategy_id          TEXT NOT NULL,
+    strategy_version     TEXT NOT NULL DEFAULT '',
+    mode                 TEXT NOT NULL DEFAULT 'backtest',
+    completed_trade_date TEXT NOT NULL,
+    resume_from          TEXT,
+    completed_days       INTEGER NOT NULL DEFAULT 0,
+    total_days           INTEGER NOT NULL DEFAULT 0,
+    nav                  REAL NOT NULL DEFAULT 0.0,
+    order_count          INTEGER NOT NULL DEFAULT 0,
+    fill_count           INTEGER NOT NULL DEFAULT 0,
+    account_state_json   TEXT NOT NULL DEFAULT '',
+    account_state_hash   TEXT NOT NULL DEFAULT '',
+    settlement_state_json TEXT NOT NULL DEFAULT '',
+    settlement_state_hash TEXT NOT NULL DEFAULT '',
+    runtime_state_json   TEXT NOT NULL DEFAULT '',
+    runtime_state_hash   TEXT NOT NULL DEFAULT '',
+    updated_at           TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_strategy_run_checkpoint_strategy_id
+    ON strategy_run_checkpoint(strategy_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_run_checkpoint_completed_trade_date
+    ON strategy_run_checkpoint(completed_trade_date);
+
 -- 指数成分股权重（PIT support）
 CREATE TABLE IF NOT EXISTS index_weight (
     index_id       TEXT NOT NULL,

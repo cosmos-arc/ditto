@@ -91,6 +91,35 @@ class TestQueryTradesReadsParquet:
 
         assert result == []
 
+    def test_uses_backtest_report_artifact_when_replay_proof_exists(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """同一 run 有 replay proof 时仍从 backtest_report 目录读取 trade_log."""
+        report_dir = tmp_path / "run-001-report"
+        report_dir.mkdir()
+        proof_dir = tmp_path / "run-001-proof"
+        proof_dir.mkdir()
+        _sample_trade_df().write_parquet(report_dir / "trade_log.parquet")
+
+        proof_record = _make_artifact_record(
+            run_id="run-001",
+            file_path=str(proof_dir),
+            artifact_type=ArtifactKind.REPLAY_PROOF,
+        )
+        report_record = _make_artifact_record(
+            run_id="run-001",
+            file_path=str(report_dir),
+            artifact_type=ArtifactKind.BACKTEST_REPORT,
+        )
+        service = MagicMock(spec=["list_artifacts"])
+        service.list_artifacts.return_value = [proof_record, report_record]
+
+        facade = BacktestTradeQueryFacade(artifact_service=service)
+        result = facade.query_trades(run_id="run-001")
+
+        assert len(result) == 4
+
 
 class TestQueryTradesWithDateFilter:
     """BacktestTradeQueryFacade.query_trades — 日期范围过滤."""

@@ -1,10 +1,11 @@
 """
-Adapter-facing broker gateway contracts.
+Broker gateway contracts.
 
-BrokerGateway is the low-level adapter-facing port for live or simulated broker
-adapters. It exposes broker-system operations such as submit_order and
+BrokerGateway is the low-level broker-system gateway port for paper or future
+external broker systems. It defines operations such as submit_order and
 query_fills; simulation-time process_pending belongs to the runtime-facing
-Brokerage port.
+Brokerage port. The protocol defines the seam and does not implement real
+broker adapters.
 """
 
 from __future__ import annotations
@@ -22,10 +23,11 @@ __all__ = ["BrokerGateway"]
 @runtime_checkable
 class BrokerGateway(Protocol):
     """
-    Adapter-facing gateway for live or simulated broker systems.
+    Broker-system gateway port for paper or future broker systems.
 
     The gateway submits orders and queries broker fills. It does not own
-    execution-loop pending-order processing.
+    execution-loop pending-order processing and does not implement real broker
+    adapters.
     """
 
     def connect(self) -> None:
@@ -37,7 +39,7 @@ class BrokerGateway(Protocol):
         ...
 
     def submit_order(self, order: Order) -> OrderTicket:
-        """submit_order sends an order to the broker adapter."""
+        """submit_order sends an order through the broker-system gateway port."""
         ...
 
     def cancel_order(self, order_id: str) -> bool:

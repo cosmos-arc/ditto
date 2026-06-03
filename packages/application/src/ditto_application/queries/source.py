@@ -5,9 +5,12 @@ from __future__ import annotations
 from typing import Protocol
 
 import polars as pl
+from ditto_data.catalog.metadata import dataset_asset_class
+from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.models import Dataset
 from ditto_data.services.metadata_service import MetadataService
 
+from ditto_application.catalog_maturity import blocked_catalog_datasets
 from ditto_application.exceptions import AppQueryError
 
 __all__ = ["SourceDataPort", "SourceQueryFacade"]
@@ -46,9 +49,11 @@ class SourceQueryFacade:
         self,
         source_data: SourceDataPort,
         metadata_service: MetadataService,
+        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._source = source_data
         self._metadata = metadata_service
+        self._maturity_promotion_reader = maturity_promotion_reader
 
     def get_dataset_asset_class(self, dataset: str) -> str | None:
         """
@@ -69,7 +74,7 @@ class SourceQueryFacade:
         except ValueError:
             msg = f"不支持的数据集: {dataset}"
             raise AppQueryError(msg) from None
-        return ds.asset_class
+        return dataset_asset_class(ds.value)
 
     def resolve_source_ticker(
         self,
@@ -110,6 +115,7 @@ class SourceQueryFacade:
         source_ticker: str,
         start_date: str,
         end_date: str,
+        allow_experimental_data: bool = False,
     ) -> pl.DataFrame:
         """
         Fetch route-visible source data through the application facade.
@@ -119,6 +125,16 @@ class SourceQueryFacade:
         """
         if source != "tushare":
             raise AppQueryError(f"不支持的数据源: {source}")
+        if dataset not in SUPPORTED_SOURCE_DATASETS:
+            supported = ", ".join(sorted(SUPPORTED_SOURCE_DATASETS))
+            raise AppQueryError(
+                f"数据集 {dataset} 暂不支持 Source API 查询, 支持: {supported}"
+            )
+
+        self._assert_source_dataset_allowed(
+            dataset,
+            allow_experimental_data=allow_experimental_data,
+        )
 
         if dataset == "stock_daily":
             return self._source.fetch_stock_daily(
@@ -127,7 +143,26 @@ class SourceQueryFacade:
                 end_date=end_date,
             )
 
-        supported = ", ".join(sorted(SUPPORTED_SOURCE_DATASETS))
-        raise AppQueryError(
-            f"数据集 {dataset} 暂不支持 Source API 查询, 支持: {supported}"
+        raise AssertionError("unreachable supported source dataset")
+
+    def _assert_source_dataset_allowed(
+        self,
+        dataset: str,
+        *,
+        allow_experimental_data: bool,
+    ) -> None:
+        blocked = blocked_catalog_datasets(
+            (dataset,),
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
         )
+        if not blocked:
+            return
+
+        joined = ", ".join(blocked)
+        msg = (
+            "source data query requires experimental dataset or other "
+            f"non-initial-focus dataset maturity: {joined}. "
+            "Set allow_experimental_data=True only for explicit research use."
+        )
+        raise AppQueryError(msg)

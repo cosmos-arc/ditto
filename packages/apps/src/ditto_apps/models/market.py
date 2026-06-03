@@ -56,6 +56,8 @@ class BarsQuery(BaseModel):
         start_date: 开始日期 (可选)
         end_date: 结束日期 (可选)
         adjustment: 复权类型, 默认 none
+        asset_class: 资产类别过滤 (可选)
+        allow_experimental_data: 显式允许 experimental 数据集进入研究态查询
         limit: 返回数量限制, 默认 1000, 范围 1-10000
 
     """
@@ -64,6 +66,11 @@ class BarsQuery(BaseModel):
     start_date: DateField = Field(default=None, description="开始日期")
     end_date: DateField = Field(default=None, description="结束日期")
     adjustment: AdjustmentField = Field(default=Adjustment.NONE, description="复权类型")
+    asset_class: str | None = Field(default=None, description="资产类别过滤")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )
     limit: int = Field(default=1000, ge=1, le=10000, description="返回数量限制")
 
     model_config = ConfigDict(

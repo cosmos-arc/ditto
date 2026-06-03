@@ -12,9 +12,19 @@ from unittest.mock import Mock
 import pytest
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineOptions
+from ditto_backtest.result import (
+    BacktestDelayedSignalSnapshot,
+    BacktestFrozenQuantitySnapshot,
+    BacktestRuntimeStateSnapshot,
+    BacktestSettlementStateSnapshot,
+    BacktestTargetWeightSnapshot,
+)
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_kernel.clock import SimulatedClock
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.synchronizer import Synchronizer, TimeSlice
 from ditto_kernel.time_context import TimeContext
@@ -22,6 +32,7 @@ from ditto_kernel.trading import MarketSnapshot
 from ditto_portfolio.accounting import (
     AccountView,
     CashBook,
+    Position,
 )
 from ditto_risk.pre_trade import (
     Decision,
@@ -49,6 +60,28 @@ def _make_account_view(cash: CashBook | None = None) -> AccountView:
         total_value=1_000_000.0,
         nav=1_000_000.0,
         exposure=0.0,
+    )
+
+
+def _make_account_view_with_position() -> AccountView:
+    """构建带持仓的账户快照，用于 checkpoint state 断言。"""
+    cash = CashBook(available=700_000.0, settled=680_000.0, frozen=20_000.0)
+    position = Position(
+        instrument_id=InstrumentId(2),
+        quantity=300,
+        available_quantity=200,
+        average_cost=100.0,
+        market_value=33_000.0,
+        unrealized_pnl=3_000.0,
+        realized_pnl=500.0,
+        total_fees=12.5,
+    )
+    return AccountView(
+        positions=MappingProxyType({InstrumentId(2): position}),
+        cash=cash,
+        total_value=733_000.0,
+        nav=733_000.0,
+        exposure=33_000.0,
     )
 
 
@@ -198,13 +231,15 @@ class _WiredMocks(NamedTuple):
 
 def _make_wired_engine_loop(
     should_stop: Callable[[], bool] | None = None,
+    on_checkpoint: Callable[[object], None] | None = None,
+    execution_delay: int = 0,
 ) -> _WiredMocks:
     """构建完整 mock 的 EngineLoop（3 天回测 + pipeline/planner/brokerage 配置）.
 
     集中管理 TestThreeDayStep 和 TestCooperativeCancellation 共享的
     mock setup，消除重复。
     """
-    config = _make_config()
+    config = replace(_make_config(), execution_delay=execution_delay)
     data_feed = Mock()
     data_feed.trading_days.return_value = DAYS
     data_feed.get_slice.side_effect = [_make_slice(d) for d in DAYS]
@@ -250,6 +285,7 @@ def _make_wired_engine_loop(
         options=EngineOptions(
             fee_model=fee_model,
             should_stop=should_stop,
+            on_checkpoint=on_checkpoint,
         ),
     )
     return _WiredMocks(
@@ -277,6 +313,231 @@ class TestThreeDayStep:
         assert result.run_id == "run-001"
         assert wired.pipeline.run.call_count == 3
         assert wired.brokerage.place_order.call_count == 3
+
+
+class TestDefaultInputBundlePitBoundary:
+    """Default input bundle must use the synchronizer's frozen market bars."""
+
+    def test_default_bundle_uses_synchronizer_bars_not_second_slice_read(self) -> None:
+        """普通策略输入不得从 EngineLoop 的第二次 get_slice 读取污染 bar."""
+        config = replace(
+            _make_config(),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+        )
+        iid = InstrumentId(1)
+        synchronizer_bar = _make_snapshot(iid=1, close=10.0)
+        polluted_second_read_bar = _make_snapshot(iid=1, close=99.0)
+
+        data_feed = Mock()
+        data_feed.trading_days.return_value = ["2026-03-01"]
+        data_feed.get_slice.return_value = Slice(
+            trade_date="2026-03-01",
+            step_time=datetime(2026, 3, 1, 15, 0),
+            bars={iid: polluted_second_read_bar},
+            benchmark_close=None,
+        )
+
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = _make_clock()
+        sync.stream.return_value = iter(
+            [
+                TimeSlice(
+                    time_context=tc,
+                    bars={iid: synchronizer_bar},
+                ),
+            ],
+        )
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        planner.plan.return_value = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.get_order_book.return_value = Mock()
+        brokerage.process_pending.return_value = ()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=Mock(),
+            data_feed=data_feed,
+            synchronizer=sync,
+            options=EngineOptions(fee_model=Mock()),
+        )
+
+        loop.run()
+
+        input_bundle = pipeline.run.call_args.args[1]
+        assert input_bundle.market_data["close"].to_list() == [10.0]
+
+    def test_default_bundle_uses_synchronizer_benchmark_not_second_slice_read(
+        self,
+    ) -> None:
+        """普通策略输入不得从 EngineLoop 的第二次 get_slice 读取污染 benchmark."""
+        config = replace(
+            _make_config(),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+        )
+        iid = InstrumentId(1)
+        synchronizer_bar = _make_snapshot(iid=1, close=10.0)
+        polluted_second_read_bar = _make_snapshot(iid=1, close=99.0)
+
+        data_feed = Mock()
+        data_feed.trading_days.return_value = ["2026-03-01"]
+        data_feed.get_slice.return_value = Slice(
+            trade_date="2026-03-01",
+            step_time=datetime(2026, 3, 1, 15, 0),
+            bars={iid: polluted_second_read_bar},
+            benchmark_close=9999.0,
+        )
+
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = _make_clock()
+        sync.stream.return_value = iter(
+            [
+                TimeSlice(
+                    time_context=tc,
+                    bars={iid: synchronizer_bar},
+                    benchmark_close=3000.0,
+                ),
+            ],
+        )
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        planner.plan.return_value = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.get_order_book.return_value = Mock()
+        brokerage.process_pending.return_value = ()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=Mock(),
+            data_feed=data_feed,
+            synchronizer=sync,
+            options=EngineOptions(fee_model=Mock()),
+        )
+
+        loop.run()
+
+        input_bundle = pipeline.run.call_args.args[1]
+        assert input_bundle.benchmark_close == 3000.0
+
+
+class TestRunManifestSourceSnapshots:
+    """RunManifest input refs should use synchronizer-carried provenance."""
+
+    def test_manifest_uses_synchronizer_source_snapshot_ids(self) -> None:
+        """Manifest 不应从 EngineLoop 的第二次 get_slice 读取 snapshot 污染值."""
+        config = replace(
+            _make_config(),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+        )
+        iid = InstrumentId(1)
+        synchronizer_bar = _make_snapshot(iid=1, close=10.0)
+        polluted_second_read_bar = _make_snapshot(iid=1, close=99.0)
+        snapshot_id = "snapshot:tushare:stock_daily:2026-03-01:sync"
+
+        data_feed = Mock()
+        data_feed.trading_days.return_value = ["2026-03-01"]
+        data_feed.get_slice.return_value = Slice(
+            trade_date="2026-03-01",
+            step_time=datetime(2026, 3, 1, 15, 0),
+            bars={iid: polluted_second_read_bar},
+            benchmark_close=None,
+            source_snapshot_ids={
+                iid: "snapshot:tushare:stock_daily:2026-03-01:polluted",
+            },
+        )
+
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = _make_clock()
+        sync.stream.return_value = iter(
+            [
+                TimeSlice(
+                    time_context=tc,
+                    bars={iid: synchronizer_bar},
+                    source_snapshot_ids={iid: snapshot_id},
+                ),
+            ],
+        )
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        planner.plan.return_value = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.get_order_book.return_value = Mock()
+        brokerage.process_pending.return_value = ()
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=Mock(),
+            data_feed=data_feed,
+            synchronizer=sync,
+            options=EngineOptions(fee_model=Mock()),
+        )
+
+        result = loop.run()
+
+        assert result.manifest.input_ref_details[0].source_snapshot_id == snapshot_id
 
 
 class TestNonRebalanceDaySkipsPipeline:
@@ -1075,6 +1336,121 @@ class TestCooperativeCancellation:
         # 第 1 天正常执行，第 2 天 should_stop 返回 True → 跳过
         assert wired.data_feed.get_slice.call_count == 1
 
+    def test_cancelled_result_carries_resume_checkpoint(self) -> None:
+        """取消前最后完成日应产生可恢复 checkpoint，resume_from 指向下一交易日。"""
+        call_count = 0
+        checkpoints: list[object] = []
+
+        def _should_stop() -> bool:
+            nonlocal call_count
+            call_count += 1
+            return call_count >= 2
+
+        wired = _make_wired_engine_loop(
+            should_stop=_should_stop,
+            on_checkpoint=checkpoints.append,
+        )
+        result = wired.loop.run()
+
+        assert result.cancelled is True
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.completed_trade_date == "2026-03-01"
+        assert result.last_checkpoint.resume_from == "2026-03-02"
+        assert result.last_checkpoint.can_resume is True
+        assert checkpoints == [result.last_checkpoint]
+
+    def test_checkpoint_carries_account_state_snapshot(self) -> None:
+        """checkpoint 应携带恢复所需的账户现金与持仓状态快照。"""
+        call_count = 0
+
+        def _should_stop() -> bool:
+            nonlocal call_count
+            call_count += 1
+            return call_count >= 2
+
+        wired = _make_wired_engine_loop(should_stop=_should_stop)
+        account_view = _make_account_view_with_position()
+        wired.brokerage.get_account.return_value = account_view
+
+        result = wired.loop.run()
+
+        assert result.last_checkpoint is not None
+        account_state = result.last_checkpoint.account_state
+        assert account_state is not None
+        assert account_state.cash_available == 700_000.0
+        assert account_state.cash_settled == 680_000.0
+        assert account_state.cash_frozen == 20_000.0
+        assert account_state.nav == 733_000.0
+        assert account_state.positions[0].instrument_id == InstrumentId(2)
+        assert account_state.positions[0].quantity == 300
+        assert account_state.state_hash.startswith("sha256:")
+
+    def test_checkpoint_carries_settlement_state_snapshot(self) -> None:
+        """checkpoint 应携带未来解冻队列，支持后续 state restore。"""
+        call_count = 0
+
+        def _should_stop() -> bool:
+            nonlocal call_count
+            call_count += 1
+            return call_count >= 2
+
+        settlement_state = BacktestSettlementStateSnapshot(
+            frozen_quantities=(
+                BacktestFrozenQuantitySnapshot(
+                    instrument_id=InstrumentId(1),
+                    settle_date="2026-03-03",
+                    quantity=1000,
+                ),
+            ),
+        )
+        wired = _make_wired_engine_loop(should_stop=_should_stop)
+        wired.brokerage.get_settlement_state_snapshot.return_value = settlement_state
+
+        result = wired.loop.run()
+
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.settlement_state == settlement_state
+        assert (
+            result.last_checkpoint.settlement_state_hash == settlement_state.state_hash
+        )
+
+    def test_checkpoint_carries_runtime_state_snapshot(self) -> None:
+        """checkpoint 应携带 pending orders 与 delayed signal queue 证据。"""
+        call_count = 0
+
+        def _should_stop() -> bool:
+            nonlocal call_count
+            call_count += 1
+            return call_count >= 2
+
+        pending_order = _make_order(qty=300)
+        pending_ticket = OrderTicket(
+            order=pending_order,
+            status=OrderStatus.SUBMITTED,
+        )
+        order_book = Mock()
+        order_book.get_pending.return_value = (pending_ticket,)
+
+        wired = _make_wired_engine_loop(
+            should_stop=_should_stop,
+            execution_delay=2,
+        )
+        wired.brokerage.get_order_book.return_value = order_book
+
+        result = wired.loop.run()
+
+        assert result.last_checkpoint is not None
+        runtime_state = result.last_checkpoint.runtime_state
+        assert isinstance(runtime_state, BacktestRuntimeStateSnapshot)
+        assert runtime_state.pending_orders[0].client_order_id == "order-001"
+        assert runtime_state.pending_orders[0].leaves_quantity == 300
+        assert runtime_state.delayed_signals[0].trade_date == "2026-03-01"
+        assert runtime_state.delayed_signals[0].positions[0].instrument_id == (
+            InstrumentId(1)
+        )
+        assert runtime_state.delayed_signals[0].positions[0].target_weight == 0.5
+        assert runtime_state.state_hash.startswith("sha256:")
+
     def test_should_stop_never_triggered(self) -> None:
         """should_stop() 始终返回 False → 正常执行全部天数."""
         wired = _make_wired_engine_loop(should_stop=lambda: False)
@@ -1104,6 +1480,8 @@ class TestExecutionDelay:
         self,
         execution_delay: int = 1,
         targets: list[TargetPortfolio] | None = None,
+        on_checkpoint: Callable[[object], None] | None = None,
+        restore_runtime_state: BacktestRuntimeStateSnapshot | None = None,
     ) -> tuple[EngineLoop, Mock, Mock, Mock]:
         """构建 execution_delay 测试用的 EngineLoop + 关键 mock。"""
         config = replace(
@@ -1153,7 +1531,11 @@ class TestExecutionDelay:
             pre_trade_check=pre_trade_check,
             data_feed=data_feed,
             synchronizer=_make_synchronizer(data_feed, config, clock),
-            options=EngineOptions(fee_model=fee_model),
+            options=EngineOptions(
+                fee_model=fee_model,
+                on_checkpoint=on_checkpoint,
+                restore_runtime_state=restore_runtime_state,
+            ),
         )
         return loop, pipeline, planner, brokerage
 
@@ -1193,6 +1575,37 @@ class TestExecutionDelay:
         first_call_target = planner.plan.call_args_list[0][1]["target"]
         assert first_call_target is targets[0]
 
+    def test_restore_runtime_state_rehydrates_delayed_signal_queue(self) -> None:
+        """resume runtime state 应先执行 checkpoint 中的 delayed signal。"""
+        restore_state = BacktestRuntimeStateSnapshot(
+            delayed_signals=(
+                BacktestDelayedSignalSnapshot(
+                    queue_index=0,
+                    trade_date="2026-02-27",
+                    strategy_id="default",
+                    run_id="parent-run",
+                    cash_target=0.25,
+                    positions=(
+                        BacktestTargetWeightSnapshot(
+                            instrument_id=InstrumentId(2),
+                            target_weight=0.75,
+                        ),
+                    ),
+                ),
+            )
+        )
+        loop, _pipeline, planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+            restore_runtime_state=restore_state,
+        )
+
+        loop.run()
+
+        first_call_target = planner.plan.call_args_list[0][1]["target"]
+        assert first_call_target.trade_date == "2026-02-27"
+        assert first_call_target.positions == {InstrumentId(2): 0.75}
+        assert first_call_target.cash_target == 0.25
+
     def test_delay_1_trailing_signal_flushed(self) -> None:
         """execution_delay=1: 回测结束后尾部信号被 flush 执行。"""
         loop, pipeline, planner, brokerage = self._make_delay_loop(
@@ -1204,6 +1617,21 @@ class TestExecutionDelay:
         assert pipeline.run.call_count == 3
         assert brokerage.place_order.call_count == 3
         assert planner.plan.call_count == 3
+
+    def test_final_checkpoint_includes_trailing_flush_orders(self) -> None:
+        """最终 checkpoint 应反映 tail flush 追加后的订单数量。"""
+        checkpoints: list[object] = []
+        loop, _pipeline, _planner, _brokerage = self._make_delay_loop(
+            execution_delay=1,
+            on_checkpoint=checkpoints.append,
+        )
+
+        result = loop.run()
+
+        assert result.last_checkpoint is not None
+        assert result.last_checkpoint.resume_from is None
+        assert result.last_checkpoint.order_count == len(result.orders)
+        assert checkpoints[-1] == result.last_checkpoint
 
     def test_delay_1_no_skipped_dates(self) -> None:
         """execution_delay=1: PlanningStep 被跳过而非 fail，无 skipped_dates."""
@@ -1432,3 +1860,75 @@ class TestExecutionDelay:
         assert len(captured_ctxs) >= 1
         ctx = captured_ctxs[0]
         assert ctx.order_book is mock_order_book  # type: ignore[attr-defined]
+
+    def test_flush_uses_last_timeslice_bars_not_second_slice_read(self) -> None:
+        """尾部 flush 不得从第二次 get_slice 读取污染 bar."""
+        config = replace(
+            _make_config(),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+            execution_delay=1,
+        )
+        iid = InstrumentId(1)
+        frozen_bar = _make_snapshot(iid=1, close=10.0)
+        polluted_bar = _make_snapshot(iid=1, close=99.0)
+
+        data_feed = Mock()
+        data_feed.trading_days.return_value = ["2026-03-01"]
+        data_feed.get_slice.return_value = Slice(
+            trade_date="2026-03-01",
+            step_time=datetime(2026, 3, 1, 15, 0),
+            bars={iid: polluted_bar},
+            benchmark_close=9999.0,
+        )
+
+        pipeline = Mock()
+        pipeline.run.return_value = _make_target()
+
+        planner = Mock()
+        planner.plan.return_value = Mock(
+            plan_id="plan-001",
+            trade_date="2026-03-01",
+            orders=(),
+            estimated_turnover=0.0,
+            estimated_cost=0.0,
+            blocked_orders=(),
+        )
+
+        brokerage = Mock()
+        brokerage.get_account.return_value = _make_account_view()
+        brokerage.get_order_book.return_value = Mock()
+        brokerage.process_pending.return_value = ()
+
+        tc = TimeContext(
+            decision_time=datetime(2026, 3, 1, 15, 0),
+            knowledge_date=datetime(2026, 2, 28).date(),
+            trade_date="2026-03-01",
+        )
+        sync = Mock(spec=Synchronizer)
+        sync.clock.return_value = _make_clock()
+        sync.stream.return_value = iter(
+            [
+                TimeSlice(
+                    time_context=tc,
+                    bars={iid: frozen_bar},
+                    benchmark_close=3000.0,
+                ),
+            ],
+        )
+
+        loop = EngineLoop(
+            config=config,
+            pipeline=pipeline,
+            planner=planner,
+            brokerage=brokerage,
+            pre_trade_check=Mock(),
+            data_feed=data_feed,
+            synchronizer=sync,
+            options=EngineOptions(fee_model=Mock()),
+        )
+
+        loop.run()
+
+        flush_input = brokerage.process_pending.call_args_list[-1].args[0]
+        assert flush_input.bars[iid].close == 10.0

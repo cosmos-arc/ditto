@@ -19,6 +19,10 @@ class PITQueryParams(InstrumentIdentifierQuery):
     """PIT（时间点）查询参数 — as_of_date 必填."""
 
     as_of_date: date = Field(..., description="PIT 查询日期")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )
 
 
 class DateRangeQueryParams(InstrumentIdentifierQuery):
@@ -27,3 +31,7 @@ class DateRangeQueryParams(InstrumentIdentifierQuery):
     start_date: date = Field(..., description="开始日期")
     end_date: date = Field(..., description="结束日期")
     as_of_date: date | None = Field(None, description="PIT 查询日期(可选)")
+    allow_experimental_data: bool = Field(
+        default=False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    )

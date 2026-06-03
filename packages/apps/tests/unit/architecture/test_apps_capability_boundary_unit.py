@@ -75,6 +75,26 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
             "ditto_data.services.metadata_service",
         }
     )
+    assert {allowance.path: allowance.allowed_modules for allowance in allowances}[
+        "packages/apps/src/ditto_apps/registry/contexts/ingestion.py"
+    ] == frozenset(
+        {
+            "ditto_data.catalog",
+            "ditto_data.ingestion.freeze_store",
+            "ditto_data.ingestion.ingestion_cursor_store",
+            "ditto_data.ingestion.ingestion_log_store",
+            "ditto_data.lineage",
+            "ditto_data.services.capital_store",
+            "ditto_data.services.fundamental_store",
+            "ditto_data.services.macro_service",
+            "ditto_data.services.market_service",
+            "ditto_data.services.market_write_service",
+            "ditto_data.services.metadata_service",
+            "ditto_data.services.source_accessor",
+            "ditto_data.sources.exchange_transformers",
+            "ditto_data.sources.registry",
+        }
+    )
 
 
 def test_apps_capability_import_guard_reports_non_registry_routes() -> None:

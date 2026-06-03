@@ -7,6 +7,12 @@ from pathlib import Path
 from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
+from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.promotion import (
+    DatasetMaturityPromotionHistoryReader,
+    DatasetMaturityPromotionReader,
+    DatasetPromotionEvidenceReader,
+)
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
@@ -23,6 +29,7 @@ from ditto_features.services import (
 )
 
 from ditto_application.queries.capital import CapitalQueryFacade
+from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
@@ -66,20 +73,26 @@ class AppMarketQueryProvider(Provider):
     def market_query_facade(
         self,
         market_service: MarketService,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> MarketQueryFacade:
         """行情数据查询 facade — 隐藏内部查询类型."""
-        return MarketQueryFacade(market_service=market_service)
+        return MarketQueryFacade(
+            market_service=market_service,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
 
     @provide
     def source_query_facade(
         self,
         source_data: SourceDataPort,
         metadata_service: MetadataService,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> SourceQueryFacade:
         """数据源查询 facade — 通过 Protocol 获取 source 数据."""
         return SourceQueryFacade(
             source_data=source_data,
             metadata_service=metadata_service,
+            maturity_promotion_reader=maturity_promotion_reader,
         )
 
     @provide
@@ -103,6 +116,18 @@ class AppMarketQueryProvider(Provider):
         )
 
     @provide
+    def catalog_query_facade(
+        self,
+        data_catalog_reader: DataCatalogReader,
+        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
+    ) -> CatalogQueryFacade:
+        """DataCatalog 查询 facade — 暴露 storage/schema/freshness 读模型."""
+        return CatalogQueryFacade(
+            data_catalog_reader=data_catalog_reader,
+            maturity_promotion_history_reader=maturity_promotion_history_reader,
+        )
+
+    @provide
     def metadata_query_facade(
         self,
         metadata_service: MetadataService,
@@ -114,25 +139,37 @@ class AppMarketQueryProvider(Provider):
     def capital_query_facade(
         self,
         capital_store: CapitalStore,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> CapitalQueryFacade:
         """资金查询 facade — 隐藏 CQRS 端口类型."""
-        return CapitalQueryFacade(capital_store=capital_store)
+        return CapitalQueryFacade(
+            capital_store=capital_store,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
 
     @provide
     def fundamental_query_facade(
         self,
         fundamental_store: FundamentalStore,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> FundamentalQueryFacade:
         """基本面查询 facade — 隐藏 CQRS 端口类型."""
-        return FundamentalQueryFacade(fundamental_store=fundamental_store)
+        return FundamentalQueryFacade(
+            fundamental_store=fundamental_store,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
 
     @provide
     def macro_query_facade(
         self,
         macro_service: MacroService,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
     ) -> MacroQueryFacade:
         """宏观查询 facade — 隐藏 MacroQuery 和枚举类型."""
-        return MacroQueryFacade(macro_service=macro_service)
+        return MacroQueryFacade(
+            macro_service=macro_service,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
 
     @provide
     def fx_query_facade(
@@ -162,6 +199,16 @@ class AppMarketQueryProvider(Provider):
     def ingestion_status_query_facade(
         self,
         ingestion_log_store: IngestionLogStore,
+        data_catalog_reader: DataCatalogReader,
+        promotion_evidence_reader: DatasetPromotionEvidenceReader,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
+        maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
     ) -> IngestionStatusQueryFacade:
-        """摄取状态查询 facade — 封装 IngestionLogStore."""
-        return IngestionStatusQueryFacade(ingestion_log_store=ingestion_log_store)
+        """摄取状态查询 facade — 封装 log 与 catalog freshness 读模型."""
+        return IngestionStatusQueryFacade(
+            ingestion_log_store=ingestion_log_store,
+            data_catalog_reader=data_catalog_reader,
+            promotion_evidence_reader=promotion_evidence_reader,
+            maturity_promotion_reader=maturity_promotion_reader,
+            maturity_promotion_history_reader=maturity_promotion_history_reader,
+        )

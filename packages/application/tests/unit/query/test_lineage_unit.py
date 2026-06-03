@@ -2,9 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from ditto_application.queries.lineage import LineageQueryFacade
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataSchemaFingerprint,
+    InMemoryDataCatalog,
+)
+from ditto_data.lineage import (
+    InMemoryDataLineage,
+    LineageEvent,
+    LineageInputRef,
+    LineageOutputRef,
+)
 from ditto_kernel.strategy import RunStatus
 from ditto_strategy.runs.models import StrategyRunRecord
 
@@ -132,3 +145,334 @@ class TestListReplays:
         result = facade.list_replays("run-001")
 
         assert result == []
+
+
+# ========== list_data_events_for_asset ==========
+
+
+class TestListDataEventsForAsset:
+    """LineageQueryFacade.list_data_events_for_asset — 查询数据资产血缘事件."""
+
+    def test_maps_reader_events_to_application_dtos(self) -> None:
+        """按 asset 查询时返回稳定的 application DTO，保留 inputs/outputs/roles。"""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        input_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+        output_asset = DataAssetRef(
+            dataset_id="backtest_report",
+            namespace="backtest",
+            partition_keys=("run_id=run-001", "strategy_id=momentum-etf"),
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="backtest",
+                inputs=(LineageInputRef(asset=input_asset, role="market_data"),),
+                outputs=(LineageOutputRef(asset=output_asset, role="backtest_report"),),
+                timestamp=datetime(2026, 1, 5, 9, 30, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+        )
+
+        result = facade.list_data_events_for_asset(
+            namespace="backtest",
+            dataset_id="backtest_report",
+            partition_keys=("run_id=run-001", "strategy_id=momentum-etf"),
+        )
+
+        assert len(result) == 1
+        event = result[0]
+        assert event.run_id == "run-001"
+        assert event.operation == "backtest"
+        assert event.timestamp == datetime(2026, 1, 5, 9, 30, tzinfo=UTC)
+        assert event.inputs[0].role == "market_data"
+        assert event.inputs[0].asset.namespace == "market"
+        assert event.outputs[0].role == "backtest_report"
+        assert event.outputs[0].asset.partition_keys == (
+            "run_id=run-001",
+            "strategy_id=momentum-etf",
+        )
+
+
+# ========== get_data_lineage_for_run ==========
+
+
+class TestGetDataLineageForRun:
+    """LineageQueryFacade.get_data_lineage_for_run — 查询运行级数据血缘摘要."""
+
+    def test_returns_run_summary_with_unique_input_and_output_assets(self) -> None:
+        """按 run_id 查询时返回事件和去重后的输入/输出资产。"""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        raw_asset = DataAssetRef(dataset_id="raw_bars", namespace="market")
+        clean_asset = DataAssetRef(dataset_id="clean_bars", namespace="market")
+        feature_asset = DataAssetRef(dataset_id="alpha_inputs", namespace="features")
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="ingest",
+                inputs=(LineageInputRef(asset=raw_asset, role="source"),),
+                outputs=(LineageOutputRef(asset=clean_asset, role="dataset"),),
+                timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
+            )
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-002",
+                operation="unrelated",
+                inputs=(LineageInputRef(asset=raw_asset, role="source"),),
+                outputs=(LineageOutputRef(asset=feature_asset, role="dataset"),),
+                timestamp=datetime(2026, 1, 5, 9, 1, tzinfo=UTC),
+            )
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="materialize",
+                inputs=(LineageInputRef(asset=clean_asset, role="market"),),
+                outputs=(LineageOutputRef(asset=feature_asset, role="derived"),),
+                timestamp=datetime(2026, 1, 5, 9, 2, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+        )
+
+        result = facade.get_data_lineage_for_run("run-001")
+
+        assert result.run_id == "run-001"
+        assert [event.operation for event in result.events] == [
+            "ingest",
+            "materialize",
+        ]
+        assert result.input_assets == (
+            result.events[0].inputs[0].asset,
+            result.events[1].inputs[0].asset,
+        )
+        assert result.output_assets == (
+            result.events[0].outputs[0].asset,
+            result.events[1].outputs[0].asset,
+        )
+
+
+# ========== get_data_lineage_catalog_report_for_run ==========
+
+
+class TestGetDataLineageCatalogReportForRun:
+    """LineageQueryFacade.get_data_lineage_catalog_report_for_run."""
+
+    def test_enriches_run_assets_with_exact_catalog_metadata(self) -> None:
+        """Run lineage catalog report should show found and missing catalog assets."""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        catalog = InMemoryDataCatalog()
+        input_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+        output_asset = DataAssetRef(
+            dataset_id="backtest_report",
+            namespace="backtest",
+            partition_keys=("run_id=run-001",),
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="backtest",
+                inputs=(LineageInputRef(asset=input_asset, role="market_data"),),
+                outputs=(LineageOutputRef(asset=output_asset, role="report"),),
+                timestamp=datetime(2026, 1, 5, 9, 30, tzinfo=UTC),
+            )
+        )
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=input_asset,
+                storage_uri="stock_daily/2026-01-05.parquet",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:stock_daily:v1",
+                    row_count=128,
+                    created_at=datetime(2026, 1, 5, 9, 31, tzinfo=UTC),
+                ),
+                source="tushare",
+                freshness_at=datetime(2026, 1, 5, 9, 32, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+            data_catalog_reader=catalog,
+        )
+
+        result = facade.get_data_lineage_catalog_report_for_run("run-001")
+
+        assert result.run_id == "run-001"
+        assert result.events[0].operation == "backtest"
+        assert result.input_assets[0].asset.dataset_id == "stock_daily"
+        assert result.input_assets[0].catalog_status == "found"
+        assert result.input_assets[0].storage_uri == "stock_daily/2026-01-05.parquet"
+        assert result.input_assets[0].schema_hash == "schema:stock_daily:v1"
+        assert result.input_assets[0].row_count == 128
+        assert result.input_assets[0].source == "tushare"
+        assert result.output_assets[0].asset.dataset_id == "backtest_report"
+        assert result.output_assets[0].catalog_status == "missing"
+        assert result.output_assets[0].storage_uri is None
+
+    def test_marks_assets_not_configured_when_catalog_reader_is_missing(self) -> None:
+        """Missing catalog reader should be visible rather than silently empty."""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2026-01-05",),
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="backtest",
+                inputs=(LineageInputRef(asset=asset, role="market_data"),),
+                outputs=(),
+                timestamp=datetime(2026, 1, 5, 9, 30, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+        )
+
+        result = facade.get_data_lineage_catalog_report_for_run("run-001")
+
+        assert result.input_assets[0].catalog_status == "not_configured"
+
+
+# ========== get_data_lineage_graph_for_asset ==========
+
+
+class TestGetDataLineageGraphForAsset:
+    """LineageQueryFacade.get_data_lineage_graph_for_asset — 查询资产血缘图."""
+
+    def test_traverses_downstream_assets_until_max_depth(self) -> None:
+        """按下游方向遍历时返回去重资产、事件和 input→output 边。"""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        raw_asset = DataAssetRef(dataset_id="raw_bars", namespace="market")
+        clean_asset = DataAssetRef(dataset_id="clean_bars", namespace="market")
+        feature_asset = DataAssetRef(dataset_id="alpha_inputs", namespace="features")
+        report_asset = DataAssetRef(dataset_id="backtest_report", namespace="backtest")
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="ingest",
+                inputs=(LineageInputRef(asset=raw_asset, role="source"),),
+                outputs=(LineageOutputRef(asset=clean_asset, role="dataset"),),
+                timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
+            )
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-002",
+                operation="materialize",
+                inputs=(LineageInputRef(asset=clean_asset, role="market"),),
+                outputs=(LineageOutputRef(asset=feature_asset, role="derived"),),
+                timestamp=datetime(2026, 1, 5, 9, 1, tzinfo=UTC),
+            )
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-003",
+                operation="backtest",
+                inputs=(LineageInputRef(asset=feature_asset, role="features"),),
+                outputs=(LineageOutputRef(asset=report_asset, role="report"),),
+                timestamp=datetime(2026, 1, 5, 9, 2, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+        )
+
+        result = facade.get_data_lineage_graph_for_asset(
+            namespace="market",
+            dataset_id="raw_bars",
+            direction="downstream",
+            max_depth=2,
+        )
+
+        assert result.root.dataset_id == "raw_bars"
+        assert result.direction == "downstream"
+        assert result.max_depth == 2
+        assert [asset.dataset_id for asset in result.assets] == [
+            "raw_bars",
+            "clean_bars",
+            "alpha_inputs",
+        ]
+        assert [event.operation for event in result.events] == [
+            "ingest",
+            "materialize",
+        ]
+        assert [
+            (edge.source.dataset_id, edge.target.dataset_id, edge.event.operation)
+            for edge in result.edges
+        ] == [
+            ("raw_bars", "clean_bars", "ingest"),
+            ("clean_bars", "alpha_inputs", "materialize"),
+        ]
+
+    def test_traverses_upstream_assets(self) -> None:
+        """按上游方向遍历时沿 output→input 发现依赖资产。"""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        raw_asset = DataAssetRef(dataset_id="raw_bars", namespace="market")
+        clean_asset = DataAssetRef(dataset_id="clean_bars", namespace="market")
+        feature_asset = DataAssetRef(dataset_id="alpha_inputs", namespace="features")
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="ingest",
+                inputs=(LineageInputRef(asset=raw_asset, role="source"),),
+                outputs=(LineageOutputRef(asset=clean_asset, role="dataset"),),
+                timestamp=datetime(2026, 1, 5, 9, 0, tzinfo=UTC),
+            )
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-002",
+                operation="materialize",
+                inputs=(LineageInputRef(asset=clean_asset, role="market"),),
+                outputs=(LineageOutputRef(asset=feature_asset, role="derived"),),
+                timestamp=datetime(2026, 1, 5, 9, 1, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+        )
+
+        result = facade.get_data_lineage_graph_for_asset(
+            namespace="features",
+            dataset_id="alpha_inputs",
+            direction="upstream",
+            max_depth=3,
+        )
+
+        assert [asset.dataset_id for asset in result.assets] == [
+            "alpha_inputs",
+            "clean_bars",
+            "raw_bars",
+        ]
+        assert [
+            (edge.source.dataset_id, edge.target.dataset_id, edge.event.operation)
+            for edge in result.edges
+        ] == [
+            ("clean_bars", "alpha_inputs", "materialize"),
+            ("raw_bars", "clean_bars", "ingest"),
+        ]

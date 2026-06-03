@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from ditto_kernel.clock import Clock
@@ -25,11 +25,15 @@ class TimeSlice:
     Attributes:
         time_context: 时间上下文（PIT 语义）
         bars: instrument_id → MarketSnapshot
+        benchmark_close: 与 bars 同一 PIT 边界下的可选基准收盘价
+        source_snapshot_ids: 与 bars 同一 PIT 边界下的上游数据快照 ID
 
     """
 
     time_context: TimeContext
     bars: dict[InstrumentId, MarketSnapshot]
+    benchmark_close: float | None = None
+    source_snapshot_ids: dict[InstrumentId, str] = field(default_factory=dict)
 
 
 class Synchronizer(Protocol):

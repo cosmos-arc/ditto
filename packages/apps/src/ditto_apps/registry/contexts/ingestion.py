@@ -11,9 +11,11 @@ from ditto_application.processes.ingestion.coordinator_factory import (
 )
 from ditto_application.processes.ingestion.retry_manager import RetryManager
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import IngestionCursorStore
 from ditto_data.ingestion.ingestion_log_store import IngestionLogStore
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.services.capital_store import CapitalStore
 from ditto_data.services.fundamental_store import FundamentalStore
 from ditto_data.services.macro_service import MacroService
@@ -22,6 +24,7 @@ from ditto_data.services.market_write_service import MarketWriteService
 from ditto_data.services.metadata_service import MetadataService
 from ditto_data.services.source_accessor import SourceAccessor
 from ditto_data.sources.exchange_transformers import ExchangeTransformers
+from ditto_data.sources.registry import SourceRegistry
 
 from ditto_apps.registry.container import make_app_container
 from ditto_apps.registry.contexts.bundle import IngestionBundle
@@ -59,11 +62,15 @@ def create_ingestion_bundle(
         capital_store = container.get(CapitalStore)
         macro_service = container.get(MacroService)
         source_accessor = container.get(SourceAccessor)
+        source_registry = container.get(SourceRegistry)
         ingestion_log_store = container.get(IngestionLogStore)
         ingestion_cursor_store = container.get(IngestionCursorStore)
         exchange_transformers = container.get(ExchangeTransformers)
         quality_checker = container.get(CheckDataQualityHandler)
         freeze_store = container.get(FreezeStore)
+        lineage_recorder = container.get(DataLineageRecorder)
+        catalog_reader = container.get(DataCatalogReader)
+        catalog_writer = container.get(DataCatalogWriter)
 
         # 创建协调器
         with create_coordinator(
@@ -76,11 +83,15 @@ def create_ingestion_bundle(
                 macro_service=macro_service,
                 source_accessor=source_accessor,
                 ingestion_log_store=ingestion_log_store,
+                source_registry=source_registry,
             ),
             source_name=source,
             ingestion_cursor_store=ingestion_cursor_store,
             quality_checker=quality_checker,
             freeze_store=freeze_store,
+            lineage_recorder=lineage_recorder,
+            catalog_reader=catalog_reader,
+            catalog_writer=catalog_writer,
         ) as coordinator:
             # 创建管理器
             backfill_manager = BackfillManager(
@@ -92,6 +103,7 @@ def create_ingestion_bundle(
                 coordinator=coordinator,
                 ingestion_log_store=ingestion_log_store,
                 source=source,
+                data_catalog_reader=catalog_reader,
             )
             # 创建查询 facade
             metadata_facade = MetadataQueryFacade(metadata_service=metadata_service)

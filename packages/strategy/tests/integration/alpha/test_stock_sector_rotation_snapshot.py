@@ -15,9 +15,10 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import polars as pl
+import pytest
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.engine import EngineLoop, EngineOptions
+from ditto_backtest.steps import build_input_bundle
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
 from ditto_strategy.alpha.templates.stock_sector_rotation import (
     StockSectorRotationConfig,
@@ -32,6 +33,7 @@ _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 INITIAL_CASH = _mod.INITIAL_CASH
 SECTOR_INSTRUMENT_IDS = _mod.SECTOR_INSTRUMENT_IDS
 TRADE_DATES_10 = _mod.TRADE_DATES_10
+account_position_signature = _mod.account_position_signature
 assert_cash_conservation = _mod.assert_cash_conservation
 build_snapshot_engine = _mod.build_snapshot_engine
 make_sector_10day_data = _mod.make_sector_10day_data
@@ -78,45 +80,16 @@ class SectorRotationEngineLoop(EngineLoop):
         sector_ids = [_SECTOR_MAP.get(iid, (iid, False))[0] for iid in instrument_ids]
         is_sectors = [_SECTOR_MAP.get(iid, (iid, False))[1] for iid in instrument_ids]
 
-        instruments = pl.DataFrame(
-            {
-                "instrument_id": instrument_ids,
-                "sector_id": sector_ids,
-                "is_sector": is_sectors,
-            },
-        )
-
-        # Build market_data and signal_values
-        market_rows: list[dict[str, object]] = []
-        signal_rows: list[dict[str, object]] = []
-        for iid, bar in slice_.bars.items():
-            market_rows.append(
-                {
-                    "instrument_id": iid,
-                    "open": bar.open,
-                    "high": bar.high,
-                    "low": bar.low,
-                    "close": bar.close,
-                    "volume": bar.volume,
-                }
-            )
-            signal_rows.append(
-                {
-                    "instrument_id": iid,
-                    "signal_value": (
-                        (bar.close / bar.prev_close - 1.0) if bar.prev_close else 0.0
-                    ),
-                }
-            )
-
-        return StrategyInputBundle(
+        return build_input_bundle(
             trade_date=date,
             strategy_id=self._config.strategy_id,
             run_id=self._config.strategy_run_id,
-            instruments=instruments,
-            market_data=pl.DataFrame(market_rows),
-            signal_values=pl.DataFrame(signal_rows),
+            bars=slice_.bars,
             benchmark_close=slice_.benchmark_close,
+            extra_instrument_columns={
+                "sector_id": sector_ids,
+                "is_sector": is_sectors,
+            },
         )
 
 
@@ -175,6 +148,21 @@ def _build_sector_engine(
 # ---------------------------------------------------------------------------
 # Test Classes
 # ---------------------------------------------------------------------------
+
+
+class TestInputBundleBoundary:
+    """快照专用 EngineLoop 覆写也必须保留 canonical target-id 门禁。"""
+
+    def test_sector_override_requires_canonical_target_ids(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        engine = _build_sector_engine(tmp_path)
+        slice_ = engine._data_feed.get_slice(TRADE_DATES_10[0])
+
+        bundle = engine._build_input_bundle(TRADE_DATES_10[0], slice_)
+
+        assert bundle.require_canonical_target_ids is True
 
 
 class TestTenDaySnapshot:
@@ -242,6 +230,19 @@ class TestTenDaySnapshot:
         assert result.account_view is not None
         # top_sectors=2, stocks_per_sector=2 → 最多 4 个持仓
         assert len(result.account_view.positions) <= 4
+
+    def test_daily_golden_signature(self, tmp_path: Path) -> None:
+        """Daily snapshot has an explicit promotion-style output signature."""
+        engine = _build_sector_engine(tmp_path)
+        result = engine.run()
+
+        assert result.final_nav == pytest.approx(1_137_233.7072486002)
+        assert result.total_trades == 40
+        assert account_position_signature(result) == (
+            (110, 14_100, 14_100, 20.004, 282_000.0, -56.4),
+            (130, 19_500, 19_500, 12.60252, 282_750.0, 37_000.86),
+            (132, 14_800, 14_800, 18.20364, 281_200.0, 11_786.128),
+        )
 
 
 class TestSectorSwitching:

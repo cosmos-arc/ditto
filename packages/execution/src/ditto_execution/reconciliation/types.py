@@ -147,6 +147,7 @@ class RepairExecutionResult:
     status: Literal["executed", "skipped", "failed"]
     message: str
     effect_count: int = 0
+    fill_id: str | None = None
 
     @classmethod
     def executed(
@@ -166,6 +167,7 @@ class RepairExecutionResult:
             status="executed",
             message=message,
             effect_count=effect_count,
+            fill_id=action.fill_id,
         )
 
     @classmethod
@@ -184,4 +186,24 @@ class RepairExecutionResult:
             order_id=action.order_id,
             status="skipped",
             message=message,
+            fill_id=action.fill_id,
+        )
+
+    @classmethod
+    def failed(
+        cls,
+        action: RepairActionRecord,
+        *,
+        message: str,
+    ) -> "RepairExecutionResult":
+        """Build a failed repair execution result that remains retriable."""
+        return cls(
+            action_id=action.action_id,
+            report_id=action.report_id,
+            trade_date=action.trade_date,
+            action_type=action.action_type,
+            order_id=action.order_id,
+            status="failed",
+            message=message,
+            fill_id=action.fill_id,
         )

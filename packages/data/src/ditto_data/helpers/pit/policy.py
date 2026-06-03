@@ -34,6 +34,17 @@ class RollingWindowClosed(StrEnum):
     NONE = "none"  # PIT 安全: 窗口 [T-window+1, T-1]
 
 
+class UnsafeResearchTimePolicy(StrEnum):
+    """
+    显式研究模式时间策略.
+
+    生产路径默认不允许用 trade_date 代替 knowledge_date。研究迁移期如果必须
+    使用非 PIT 安全的 trade_date fallback，调用方必须显式传入该策略。
+    """
+
+    ALLOW_TRADE_DATE_FALLBACK = "allow_trade_date_fallback"
+
+
 # ═══════════════════════════════════════════════════════════════════
 # PIT 核心策略常量
 # ═══════════════════════════════════════════════════════════════════
@@ -72,10 +83,32 @@ def is_pit_safe_closed(closed: RollingWindowClosed | str) -> bool:
     return closed in (RollingWindowClosed.LEFT, RollingWindowClosed.NONE)
 
 
+def is_trade_date_fallback_allowed(
+    unsafe_time_policy: UnsafeResearchTimePolicy | str | None,
+) -> bool:
+    """
+    检查调用方是否显式允许 trade_date fallback.
+
+    Args:
+        unsafe_time_policy: 研究模式 unsafe 时间策略。
+
+    Returns:
+        True 表示允许研究模式 trade_date fallback。
+
+    """
+    if unsafe_time_policy is None:
+        return False
+    if not isinstance(unsafe_time_policy, UnsafeResearchTimePolicy):
+        unsafe_time_policy = UnsafeResearchTimePolicy(unsafe_time_policy)
+    return unsafe_time_policy is UnsafeResearchTimePolicy.ALLOW_TRADE_DATE_FALLBACK
+
+
 __all__ = [
     "DEFAULT_ROLLING_WINDOW_CLOSED",
     "KNOWLEDGE_DATE_LAG_DAYS",
     "PIT_QUERY_OPERATOR",
     "RollingWindowClosed",
+    "UnsafeResearchTimePolicy",
     "is_pit_safe_closed",
+    "is_trade_date_fallback_allowed",
 ]

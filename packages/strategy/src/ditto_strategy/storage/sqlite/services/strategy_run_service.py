@@ -7,9 +7,12 @@ from typing import Protocol, runtime_checkable
 from ditto_kernel.strategy import RunStatus
 
 from ditto_strategy._internal import utc_now
-from ditto_strategy.runs.models import StrategyRunRecord
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord, StrategyRunRecord
 
 __all__ = [
+    "StrategyRunCheckpointReaderProtocol",
+    "StrategyRunCheckpointStore",
+    "StrategyRunCheckpointWriterProtocol",
     "StrategyRunLifecycleStore",
     "StrategyRunReaderProtocol",
     "StrategyRunWriterProtocol",
@@ -74,6 +77,58 @@ class StrategyRunWriterProtocol(Protocol):
     ) -> bool:
         """更新运行进度，成功返回 True."""
         ...
+
+
+@runtime_checkable
+class StrategyRunCheckpointReaderProtocol(Protocol):
+    """策略运行 checkpoint 读取协议."""
+
+    def get_latest_checkpoint(self, run_id: str) -> StrategyRunCheckpointRecord | None:
+        """获取运行最新 checkpoint."""
+        ...
+
+    def list_checkpoints_by_strategy(
+        self,
+        strategy_id: str,
+    ) -> list[StrategyRunCheckpointRecord]:
+        """按策略列出各运行最新 checkpoint."""
+        ...
+
+
+@runtime_checkable
+class StrategyRunCheckpointWriterProtocol(Protocol):
+    """策略运行 checkpoint 写入协议."""
+
+    def save_checkpoint(self, record: StrategyRunCheckpointRecord) -> None:
+        """保存运行最新 checkpoint."""
+        ...
+
+
+class StrategyRunCheckpointStore:
+    """Persistent latest-checkpoint store for strategy runs."""
+
+    def __init__(
+        self,
+        reader: StrategyRunCheckpointReaderProtocol,
+        writer: StrategyRunCheckpointWriterProtocol,
+    ) -> None:
+        self._reader = reader
+        self._writer = writer
+
+    def save_checkpoint(self, record: StrategyRunCheckpointRecord) -> None:
+        """保存运行最新 checkpoint."""
+        self._writer.save_checkpoint(record)
+
+    def get_latest_checkpoint(self, run_id: str) -> StrategyRunCheckpointRecord | None:
+        """获取运行最新 checkpoint."""
+        return self._reader.get_latest_checkpoint(run_id)
+
+    def list_checkpoints_by_strategy(
+        self,
+        strategy_id: str,
+    ) -> list[StrategyRunCheckpointRecord]:
+        """按策略列出各运行最新 checkpoint."""
+        return self._reader.list_checkpoints_by_strategy(strategy_id)
 
 
 class StrategyRunLifecycleStore:

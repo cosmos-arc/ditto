@@ -8,11 +8,19 @@ lifecycle.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import datetime
 from typing import NamedTuple, Protocol, runtime_checkable
 from uuid import uuid4
 
 import polars as pl
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.lineage.contracts import (
+    DataLineageRecorder,
+    LineageEvent,
+    LineageInputRef,
+    LineageOutputRef,
+)
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.derived_types import DerivedSpec, MaterializationProfile
 from ditto_features.expression import CompiledDerivedExpression, CompileIdentity
@@ -59,6 +67,10 @@ from ditto_application.processes.materialization.minimal_dq import (
 )
 from ditto_application.processes.materialization.runtime_input_provider import (
     RuntimeDerivedInputProvider,
+)
+from ditto_application.processes.materialization.source_snapshot_resolver import (
+    SourceSnapshotProvenance,
+    SourceSnapshotResolver,
 )
 from ditto_application.processes.materialization.types import (
     DerivedInputProvider,
@@ -134,6 +146,39 @@ def _make_run_record(  # noqa: PLR0913
     )
 
 
+def _derived_output_asset(spec: DerivedSpec) -> DataAssetRef:
+    return DataAssetRef(
+        dataset_id=spec.id,
+        namespace="derived",
+        partition_keys=(f"version={spec.version}",),
+    )
+
+
+def _dependency_asset(kind: str, ref: str) -> DataAssetRef:
+    if kind == "derived":
+        return DataAssetRef(dataset_id=ref, namespace="derived")
+    if "." in ref:
+        namespace, dataset_id = ref.split(".", maxsplit=1)
+        return DataAssetRef(dataset_id=dataset_id, namespace=namespace)
+    return DataAssetRef(dataset_id=ref, namespace=kind)
+
+
+def _lineage_inputs(dependencies: tuple[str, ...]) -> tuple[LineageInputRef, ...]:
+    return tuple(
+        LineageInputRef(asset=_dependency_asset(kind, ref), role=kind)
+        for kind, ref in dependency_refs(dependencies)
+    )
+
+
+def _request_with_source_snapshot(
+    request: DerivedMaterializationRequest,
+    source_snapshot_id: str | None,
+) -> DerivedMaterializationRequest:
+    if request.source_snapshot_id == source_snapshot_id:
+        return request
+    return replace(request, source_snapshot_id=source_snapshot_id)
+
+
 # ===========================================================================
 # DerivedMaterializationOrchestrator
 # ===========================================================================
@@ -142,22 +187,26 @@ def _make_run_record(  # noqa: PLR0913
 class DerivedMaterializationOrchestrator:
     """Compile, execute, and persist one unified derived run."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         catalog_service: DerivedCatalogService,
         compile_cache_service: SQLiteCompileCache,
         artifact_writer: ArtifactPersistenceService,
         input_provider: DerivedInputProvider,
+        source_snapshot_resolver: SourceSnapshotResolver | None = None,
         universe_provider: UniverseProvider | None = None,
         publication_record_service: PublicationSafetyRecordService | None = None,
+        lineage_recorder: DataLineageRecorder | None = None,
     ) -> None:
         self._catalog_service = catalog_service
         self._compile_cache_service = compile_cache_service
         self._artifact_writer = artifact_writer
         self._input_provider = input_provider
+        self._source_snapshot_resolver = source_snapshot_resolver
         self._universe_provider = universe_provider
         self._publication_record_service = publication_record_service
+        self._lineage_recorder = lineage_recorder
         self._planner = DerivedExecutionPlanner()
 
     def materialize(
@@ -212,15 +261,22 @@ class DerivedMaterializationOrchestrator:
                 started_at=started_at,
             )
         )
+        effective_request = request
         try:
-            input_frame = self._input_provider.load_input(
-                InputContext(
-                    spec=spec,
-                    request=request,
-                    plan=plan,
-                    dependencies=compiled.analysis.dependencies,
-                )
+            input_context = InputContext(
+                spec=spec,
+                request=request,
+                plan=plan,
+                dependencies=compiled.analysis.dependencies,
             )
+            source_snapshot_provenance = self._resolve_source_snapshot_provenance(
+                input_context
+            )
+            effective_request = _request_with_source_snapshot(
+                request,
+                source_snapshot_provenance.source_snapshot_id,
+            )
+            input_frame = self._input_provider.load_input(input_context)
             prepared_frame = prepare_input_frame(
                 frame=input_frame,
                 spec=spec,
@@ -237,11 +293,12 @@ class DerivedMaterializationOrchestrator:
             return self._persist_materialized_data(
                 spec=spec,
                 spec_record=spec_record,
-                request=request,
+                request=effective_request,
                 plan=plan,
                 compiled=compiled,
                 run=_RunIdentity(run_id, started_at),
                 materialized_frame=materialized_frame,
+                source_snapshot_ids=source_snapshot_provenance.source_snapshot_ids,
             )
         except Exception as exc:
             finished_at = now_iso()
@@ -249,7 +306,7 @@ class DerivedMaterializationOrchestrator:
                 _make_run_record(
                     run_id=run_id,
                     spec=spec,
-                    request=request,
+                    request=effective_request,
                     plan=plan,
                     status=DerivedRunStatus.FAILED,
                     error_message=str(exc),
@@ -292,7 +349,7 @@ class DerivedMaterializationOrchestrator:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _persist_materialized_data(
+    def _persist_materialized_data(  # noqa: PLR0913
         self,
         *,
         spec: DerivedSpec,
@@ -302,6 +359,7 @@ class DerivedMaterializationOrchestrator:
         compiled: CompiledDerivedExpression,
         run: _RunIdentity,
         materialized_frame: pl.DataFrame,
+        source_snapshot_ids: tuple[str, ...],
     ) -> DerivedMaterializationResult:
         """
         Persist materialized data according to the spec's profile.
@@ -342,6 +400,7 @@ class DerivedMaterializationOrchestrator:
                 request_start=request.request_start,
                 request_end=request.request_end,
                 source_snapshot_id=request.source_snapshot_id,
+                source_snapshot_ids=source_snapshot_ids,
             ),
         )
         minimal_dq_record = None
@@ -360,6 +419,7 @@ class DerivedMaterializationOrchestrator:
                 compile_identity=compiled.compile_identity,
                 partitions=partitions,
                 minimal_dq_record=minimal_dq_record,
+                source_snapshot_ids=source_snapshot_ids,
             )
         return self._finalize_durable_run(
             spec=spec,
@@ -398,6 +458,12 @@ class DerivedMaterializationOrchestrator:
             partitions_written=(),
             coverage_start=plan.compute_start,
             coverage_end=plan.compute_end,
+        )
+        self._record_materialization_lineage(
+            spec=spec,
+            run_id=run.run_id,
+            finished_at=finished_at,
+            dependencies=dependencies,
         )
         self._catalog_service.save_run(
             _make_run_record(
@@ -487,6 +553,12 @@ class DerivedMaterializationOrchestrator:
             coverage_start=plan.compute_start,
             coverage_end=plan.compute_end,
         )
+        self._record_materialization_lineage(
+            spec=spec,
+            run_id=run.run_id,
+            finished_at=finished_at,
+            dependencies=dependencies,
+        )
         self._catalog_service.save_run(
             _make_run_record(
                 run_id=run.run_id,
@@ -524,7 +596,47 @@ class DerivedMaterializationOrchestrator:
         if records:
             self._catalog_service.save_dependencies(records)
 
-    def _persist_publication_safety_records(
+    def _record_materialization_lineage(
+        self,
+        *,
+        spec: DerivedSpec,
+        run_id: str,
+        finished_at: str,
+        dependencies: tuple[str, ...],
+    ) -> None:
+        recorder = self._lineage_recorder
+        if recorder is None:
+            return
+        recorder.record_event(
+            LineageEvent(
+                run_id=run_id,
+                operation="materialize",
+                inputs=_lineage_inputs(dependencies),
+                outputs=(
+                    LineageOutputRef(
+                        asset=_derived_output_asset(spec),
+                        role="derived",
+                    ),
+                ),
+                timestamp=datetime.fromisoformat(finished_at),
+            )
+        )
+
+    def _resolve_source_snapshot_provenance(
+        self,
+        context: InputContext,
+    ) -> SourceSnapshotProvenance:
+        resolver = self._source_snapshot_resolver
+        if resolver is None:
+            return SourceSnapshotProvenance.from_ids(
+                (context.request.source_snapshot_id,)
+            )
+        provenance = resolver.resolve(context)
+        if provenance.source_snapshot_id is not None or provenance.source_snapshot_ids:
+            return provenance
+        return SourceSnapshotProvenance.from_ids((context.request.source_snapshot_id,))
+
+    def _persist_publication_safety_records(  # noqa: PLR0913
         self,
         *,
         spec: DerivedSpec,
@@ -534,6 +646,7 @@ class DerivedMaterializationOrchestrator:
         compile_identity: CompileIdentity,
         partitions: tuple[PartitionInfo, ...],
         minimal_dq_record: DerivedMinimalDQSummaryRecord,
+        source_snapshot_ids: tuple[str, ...],
     ) -> None:
         publication_record_service = self._publication_record_service
         if publication_record_service is None:
@@ -542,6 +655,8 @@ class DerivedMaterializationOrchestrator:
             spec=spec,
             version=spec.version,
             compile_identity=compile_identity,
+            source_snapshot_id=request.source_snapshot_id,
+            source_snapshot_ids=source_snapshot_ids,
         )
         publication_record_service.save_manifest(manifest_record)
         publication_record_service.save_minimal_dq_summary(minimal_dq_record)
@@ -553,6 +668,7 @@ class DerivedMaterializationOrchestrator:
             source_snapshot_id=request.source_snapshot_id,
             manifest_record=manifest_record,
             minimal_dq_record=minimal_dq_record,
+            source_snapshot_ids=source_snapshot_ids,
         )
 
     def _maybe_apply_cs_amplification(

@@ -1,7 +1,9 @@
 """Unit tests for InMemoryDataCatalog."""
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
+import pytest
 from ditto_data.catalog.contracts import (
     DataAssetRef,
     DataCatalogEntry,
@@ -68,6 +70,18 @@ class TestInMemoryDataCatalogUpsertAndGet:
         assert result is not None
         assert result.storage_uri == "v2"
         assert result.schema.schema_hash == "h2"
+
+    def test_rejects_known_dataset_outside_declared_storage_location(self) -> None:
+        catalog = InMemoryDataCatalog()
+        entry = replace(
+            _make_entry(dataset_id="stock_daily", namespace="market"),
+            storage_uri="lake://fundamental/stock_daily/2026.parquet",
+        )
+
+        with pytest.raises(ValueError, match="storage_uri"):
+            catalog.upsert_asset(entry)
+
+        assert catalog.get_asset(entry.asset) is None
 
 
 class TestInMemoryDataCatalogList:

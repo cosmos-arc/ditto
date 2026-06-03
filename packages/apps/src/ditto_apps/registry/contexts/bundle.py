@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
-from ditto_application.processes.ingestion.coordinator import IngestionCoordinator
 from ditto_application.processes.ingestion.retry_manager import RetryManager
+from ditto_application.processes.ingestion.source_selection import (
+    IngestionCoordinatorLike,
+)
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
 )
@@ -34,7 +36,7 @@ class IngestionBundle:
     解决 ARCH-003（组合逻辑分散）和 ARCH-004（重复容器）问题。
     """
 
-    coordinator: IngestionCoordinator
+    coordinator: IngestionCoordinatorLike
     backfill_manager: BackfillManager
     retry_manager: RetryManager
     metadata_facade: MetadataQueryFacade

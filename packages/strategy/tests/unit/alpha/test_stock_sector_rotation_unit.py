@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.builtins.filtering import RiskLockFilter
 from ditto_strategy.alpha.builtins.regime import RegimeConfig, TrendIndicator
 from ditto_strategy.alpha.builtins.regime_allocation import RegimeAwareAllocationStage
@@ -46,6 +47,25 @@ STOCKS = [
     ("STOCK-HEA-002", "SECTOR-HEA"),
     ("STOCK-HEA-003", "SECTOR-HEA"),
 ]
+
+_INSTRUMENT_ID_MAP: dict[str, InstrumentId] = {
+    "SECTOR-FIN": InstrumentId(100),
+    "SECTOR-TECH": InstrumentId(101),
+    "SECTOR-HEA": InstrumentId(102),
+    "STOCK-FIN-001": InstrumentId(110),
+    "STOCK-FIN-002": InstrumentId(111),
+    "STOCK-FIN-003": InstrumentId(112),
+    "STOCK-TECH-001": InstrumentId(120),
+    "STOCK-TECH-002": InstrumentId(121),
+    "STOCK-TECH-003": InstrumentId(122),
+    "STOCK-HEA-001": InstrumentId(130),
+    "STOCK-HEA-002": InstrumentId(131),
+    "STOCK-HEA-003": InstrumentId(132),
+}
+
+_SECTOR_ETF_IDS = frozenset(
+    _INSTRUMENT_ID_MAP[sector_ticker] for sector_ticker in SECTOR_ETFS
+)
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +145,8 @@ def sector_rotation_bundle(sector_rotation_frame: pl.DataFrame) -> StrategyInput
         instruments=instruments,
         market_data=market_data,
         signal_values=signal_values,
+        instrument_id_map=_INSTRUMENT_ID_MAP,
+        require_canonical_target_ids=True,
     )
 
 
@@ -310,6 +332,30 @@ class TestSectorSignalStage:
         result = stage.process(frame, empty_context)
         assert result["sector_signal"][0] is None
 
+    def test_missing_is_sector_column_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """缺少 is_sector 结构列时应抛 StrategySpecError。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["SECTOR-A"],
+                "sector_id": ["SECTOR-A"],
+                "signal_value": [0.10],
+            },
+        )
+        stage = SectorSignalStage()
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame missing required columns",
+        ) as exc_info:
+            stage.process(frame, empty_context)
+
+        assert exc_info.value.details["boundary"] == "stock_sector_rotation.stage_input"
+        assert exc_info.value.details["stage_name"] == "SectorSignalStage"
+        assert exc_info.value.details["missing_columns"] == ("is_sector",)
+
     def test_frozen(self) -> None:
         """SectorSignalStage 是 frozen dataclass。"""
         stage = SectorSignalStage()
@@ -440,6 +486,30 @@ class TestSectorScoreAndSelectStage:
         stage = SectorScoreAndSelectStage(top_k=2)
         result = stage.process(frame, empty_context)
         assert result["selected_sector"].to_list() == [False, False]
+
+    def test_missing_sector_column_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """缺少 sector_id 结构列时应抛 StrategySpecError。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["SECTOR-A", "STOCK-1"],
+                "is_sector": [True, False],
+                "sector_signal": [0.10, None],
+            },
+        )
+        stage = SectorScoreAndSelectStage(top_k=1)
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame missing required columns",
+        ) as exc_info:
+            stage.process(frame, empty_context)
+
+        assert exc_info.value.details["boundary"] == "stock_sector_rotation.stage_input"
+        assert exc_info.value.details["stage_name"] == "SectorScoreAndSelectStage"
+        assert exc_info.value.details["missing_columns"] == ("sector_id",)
 
     def test_frozen(self) -> None:
         """SectorScoreAndSelectStage 是 frozen dataclass。"""
@@ -591,6 +661,31 @@ class TestIntraSectorSelectStage:
         stage = IntraSectorSelectStage(stocks_per_sector=1)
         result = stage.process(frame, empty_context)
         assert result["intra_selected"].to_list() == [False]
+
+    def test_missing_selected_sector_column_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """缺少 selected_sector 结构列时应抛 StrategySpecError。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["STOCK-1"],
+                "sector_id": ["SECTOR-A"],
+                "is_sector": [False],
+                "signal_value": [0.99],
+            },
+        )
+        stage = IntraSectorSelectStage(stocks_per_sector=1)
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame missing required columns",
+        ) as exc_info:
+            stage.process(frame, empty_context)
+
+        assert exc_info.value.details["boundary"] == "stock_sector_rotation.stage_input"
+        assert exc_info.value.details["stage_name"] == "IntraSectorSelectStage"
+        assert exc_info.value.details["missing_columns"] == ("selected_sector",)
 
     def test_stocks_per_sector_greater_than_available(
         self,
@@ -769,6 +864,30 @@ class TestSectorWeightStage:
         result = stage.process(frame, empty_context)
         assert result["weight"].to_list() == [0.0, 0.0]
 
+    def test_missing_intra_selected_column_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """缺少 intra_selected 结构列时应抛 StrategySpecError。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["STOCK-1"],
+                "sector_id": ["SECTOR-A"],
+                "is_sector": [False],
+            },
+        )
+        stage = SectorWeightStage(cash_target=0.0)
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame missing required columns",
+        ) as exc_info:
+            stage.process(frame, empty_context)
+
+        assert exc_info.value.details["boundary"] == "stock_sector_rotation.stage_input"
+        assert exc_info.value.details["stage_name"] == "SectorWeightStage"
+        assert exc_info.value.details["missing_columns"] == ("intra_selected",)
+
     def test_empty_frame(self, empty_context: StrategyContext) -> None:
         """空 frame 返回空 frame + weight 列。"""
         frame = pl.DataFrame(
@@ -867,6 +986,30 @@ class TestFinalStockFilterStage:
         result = stage.process(frame, empty_context)
         assert result.is_empty()
 
+    def test_missing_is_sector_column_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """最终过滤缺少 is_sector 时不能静默放行。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["SECTOR-A", "STOCK-1"],
+                "sector_id": ["SECTOR-A", "SECTOR-A"],
+                "weight": [0.5, 0.5],
+            },
+        )
+        stage = FinalStockFilterStage()
+
+        with pytest.raises(
+            StrategySpecError,
+            match="DecisionFrame missing required columns",
+        ) as exc_info:
+            stage.process(frame, empty_context)
+
+        assert exc_info.value.details["boundary"] == "stock_sector_rotation.stage_input"
+        assert exc_info.value.details["stage_name"] == "FinalStockFilterStage"
+        assert exc_info.value.details["missing_columns"] == ("is_sector",)
+
     def test_frozen(self) -> None:
         """FinalStockFilterStage 是 frozen dataclass。"""
         stage = FinalStockFilterStage()
@@ -937,20 +1080,21 @@ class TestPipelineE2E:
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         # No sector ETFs in final portfolio
-        for iid in target.positions:
-            assert not iid.startswith("SECTOR-")
+        for instrument_id in target.positions:
+            assert instrument_id not in _SECTOR_ETF_IDS
 
         # TECH and FIN stocks, 2 per sector = 4 total
         assert len(target.positions) == 4
-        assert "STOCK-TECH-001" in target.positions
-        assert "STOCK-TECH-002" in target.positions
-        assert "STOCK-FIN-001" in target.positions
-        assert "STOCK-FIN-002" in target.positions
+        assert InstrumentId(120) in target.positions
+        assert InstrumentId(121) in target.positions
+        assert InstrumentId(110) in target.positions
+        assert InstrumentId(111) in target.positions
+        assert "STOCK-TECH-001" not in target.positions
 
         # HEA stocks should not be selected
-        assert "STOCK-HEA-001" not in target.positions
-        assert "STOCK-HEA-002" not in target.positions
-        assert "STOCK-HEA-003" not in target.positions
+        assert InstrumentId(130) not in target.positions
+        assert InstrumentId(131) not in target.positions
+        assert InstrumentId(132) not in target.positions
 
     def test_e2e_weight_sum(
         self,
@@ -1026,11 +1170,12 @@ class TestPipelineE2E:
         target = pipeline.run(context, sector_rotation_bundle)
 
         # Locked stock should not be in portfolio
+        assert InstrumentId(121) not in target.positions
         assert "STOCK-TECH-002" not in target.positions
 
         # Other TECH stocks should still be selected (TECH-001, TECH-003 if top 2)
         # TECH-002 was filtered out, so TECH-001 and TECH-003 fill top 2
-        assert "STOCK-TECH-001" in target.positions
+        assert InstrumentId(120) in target.positions
 
     def test_e2e_top_sectors_one(
         self,
@@ -1047,12 +1192,26 @@ class TestPipelineE2E:
         target = pipeline.run(empty_context, sector_rotation_bundle)
 
         # Only TECH sector selected (highest signal 0.08)
-        for iid in target.positions:
-            assert "TECH" in iid or "SECTOR" in iid
+        tech_stock_ids = {
+            InstrumentId(120),
+            InstrumentId(121),
+            InstrumentId(122),
+        }
+        for instrument_id in target.positions:
+            assert instrument_id in tech_stock_ids
 
         # No FIN or HEA stocks
-        assert not any("FIN" in iid for iid in target.positions)
-        assert not any("HEA" in iid for iid in target.positions)
+        assert not any(
+            instrument_id in target.positions
+            for instrument_id in (
+                InstrumentId(110),
+                InstrumentId(111),
+                InstrumentId(112),
+                InstrumentId(130),
+                InstrumentId(131),
+                InstrumentId(132),
+            )
+        )
 
     def test_e2e_stocks_per_sector_one(
         self,
@@ -1072,9 +1231,9 @@ class TestPipelineE2E:
 
         # Each sector's top stock:
         # FIN: FIN-002 (0.06), TECH: TECH-002 (0.09), HEA: HEA-001 (0.03)
-        assert "STOCK-FIN-002" in target.positions
-        assert "STOCK-TECH-002" in target.positions
-        assert "STOCK-HEA-001" in target.positions
+        assert InstrumentId(111) in target.positions
+        assert InstrumentId(121) in target.positions
+        assert InstrumentId(130) in target.positions
 
     def test_e2e_empty_positions(
         self,
@@ -1151,6 +1310,8 @@ class TestPipelineE2E:
                 },
             ),
             signal_values=signal_values,
+            instrument_id_map=_INSTRUMENT_ID_MAP,
+            require_canonical_target_ids=True,
         )
 
         config = StockSectorRotationConfig(
@@ -1164,10 +1325,11 @@ class TestPipelineE2E:
         target = pipeline.run(empty_context, bundle)
 
         assert len(target.positions) == 4
-        assert "STOCK-TECH-001" in target.positions
-        assert "STOCK-TECH-002" in target.positions
-        assert "STOCK-FIN-001" in target.positions
-        assert "STOCK-FIN-002" in target.positions
+        assert InstrumentId(120) in target.positions
+        assert InstrumentId(121) in target.positions
+        assert InstrumentId(110) in target.positions
+        assert InstrumentId(111) in target.positions
+        assert "STOCK-TECH-001" not in target.positions
 
     def test_regime_config_inserts_scoring_step(
         self,

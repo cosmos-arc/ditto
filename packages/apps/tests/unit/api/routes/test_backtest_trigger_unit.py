@@ -31,6 +31,7 @@ class TestCreateBacktestRunRequest:
         )
         assert body.initial_cash == 1_000_000.0
         assert body.parameter_overrides == []
+        assert body.allow_experimental_data is False
 
     def test_custom_values(self) -> None:
         """自定义 initial_cash 和 parameter_overrides."""
@@ -40,9 +41,11 @@ class TestCreateBacktestRunRequest:
             end_date="2025-06-30",
             initial_cash=500_000.0,
             parameter_overrides=["key1=val1", "key2=val2"],
+            allow_experimental_data=True,
         )
         assert body.initial_cash == 500_000.0
         assert body.parameter_overrides == ["key1=val1", "key2=val2"]
+        assert body.allow_experimental_data is True
 
     def test_empty_strategy_id_rejected(self) -> None:
         """空 strategy_id 被拒绝."""
@@ -80,12 +83,14 @@ class TestBodyToCommandMapping:
             end_date=body.end_date,
             initial_cash=body.initial_cash,
             parameter_overrides=tuple(body.parameter_overrides),
+            allow_experimental_data=body.allow_experimental_data,
         )
         assert command.strategy_id == "momentum-etf"
         assert command.start_date == "2025-01-01"
         assert command.end_date == "2025-03-31"
         assert command.initial_cash == 1_000_000.0
         assert command.parameter_overrides == ()
+        assert command.allow_experimental_data is False
 
     def test_list_to_tuple_overrides(self) -> None:
         """parameter_overrides list → tuple 转换."""
@@ -181,6 +186,7 @@ class TestBuildFlowParams:
         assert params["end_date"] == "2025-03-31"
         assert params["initial_cash"] == 1_000_000.0
         assert params["parameter_overrides"] == ()
+        assert params["allow_experimental_data"] is False
         assert "cost_config" not in params
 
     def test_params_with_cost_config(self) -> None:
@@ -236,6 +242,61 @@ class TestBuildFlowParams:
         params = build_flow_params(command, result)
 
         assert params["parameter_overrides"] == ("key1=val1", "key2=val2")
+
+    def test_params_with_experimental_data_opt_in(self) -> None:
+        """allow_experimental_data 正确传递到 flow 参数."""
+        from ditto_application.commands.backtest import (
+            BacktestRunCommand,
+            BacktestRunResult,
+        )
+        from ditto_apps.api.routes.backtest import build_flow_params
+
+        command = BacktestRunCommand(
+            strategy_id="stock-research",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+            allow_experimental_data=True,
+        )
+        result = BacktestRunResult(
+            run_id="run-exp",
+            strategy_id="stock-research",
+            status="pending",
+        )
+
+        params = build_flow_params(command, result)
+
+        assert params["allow_experimental_data"] is True
+
+    def test_restore_flow_params_preserves_experimental_data_opt_in(self) -> None:
+        """Retry restores the maturity opt-in from persisted run config_json."""
+        from ditto_apps.api.routes.backtest import restore_flow_params_from_config
+
+        params = restore_flow_params_from_config(
+            '{"start_date":"2025-01-01","allow_experimental_data":true}'
+        )
+
+        assert params["allow_experimental_data"] is True
+
+    def test_restore_flow_params_preserves_resume_state_evidence(self) -> None:
+        """Resume flow params must carry checkpoint state evidence to runtime."""
+        from ditto_apps.api.routes.backtest import restore_flow_params_from_config
+
+        params = restore_flow_params_from_config(
+            '{"start_date":"2025-02-03",'
+            '"resume_account_state_json":"{\\"nav\\":100.0}",'
+            '"resume_account_state_hash":"sha256:account",'
+            '"resume_settlement_state_json":"{\\"frozen_quantities\\":[]}",'
+            '"resume_settlement_state_hash":"sha256:settlement",'
+            '"resume_runtime_state_json":"{\\"pending_orders\\":[]}",'
+            '"resume_runtime_state_hash":"sha256:runtime"}'
+        )
+
+        assert params["resume_account_state_json"] == '{"nav":100.0}'
+        assert params["resume_account_state_hash"] == "sha256:account"
+        assert params["resume_settlement_state_json"] == '{"frozen_quantities":[]}'
+        assert params["resume_settlement_state_hash"] == "sha256:settlement"
+        assert params["resume_runtime_state_json"] == '{"pending_orders":[]}'
+        assert params["resume_runtime_state_hash"] == "sha256:runtime"
 
 
 class TestRaiseBusinessErrorBacktest:

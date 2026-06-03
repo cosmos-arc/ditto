@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict
 from datetime import UTC, datetime
 
@@ -27,6 +28,7 @@ from ditto_backtest.manifest_types import (
     RunManifest,
     RunMode,
 )
+from ditto_backtest.provenance import aggregate_source_snapshot_id
 
 __all__ = [
     "RuleRefCollector",
@@ -202,6 +204,7 @@ def build_run_manifest(
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
     rule_refs: tuple[RuleRef, ...],
     random_seed: int,
+    source_snapshot_ids: Mapping[InstrumentId, str | Iterable[str]] | None = None,
 ) -> RunManifest:
     """构建 RunManifest — 记录运行配置、规则引用、输入依赖等治理字段."""
     input_refs = tuple(sorted(input_instruments))
@@ -224,7 +227,10 @@ def build_run_manifest(
         strategy_version=config.strategy_version,
         mode=RunMode.BACKTEST,
         input_refs=input_refs,
-        input_ref_details=_build_input_ref_details(bar_fingerprints),
+        input_ref_details=_build_input_ref_details(
+            bar_fingerprints,
+            source_snapshot_ids=source_snapshot_ids,
+        ),
         parameter_overrides=config.parameter_overrides,
         rule_refs=rule_refs,
         config_hash=config_hash,
@@ -233,20 +239,24 @@ def build_run_manifest(
         universe_hash=hash_universe(input_instruments),
         dependency_versions=_collect_dependency_versions(),
         random_seed=random_seed,
+        knowledge_lag_days=config.knowledge_lag_days,
         created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
 
 def _build_input_ref_details(
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
+    *,
+    source_snapshot_ids: Mapping[InstrumentId, str | Iterable[str]] | None = None,
 ) -> tuple[InputRef, ...]:
     """
     从 bar_fingerprints 构建 InputRef 列表.
 
     对每个 instrument 的 sorted (date, close) 元组列表计算 SHA-256 哈希,
-    生成 InputRef(instrument_id, data_hash, date_range, source).
+    生成 InputRef(instrument_id, data_hash, date_range, source, source_snapshot_id).
     """
     refs: list[InputRef] = []
+    source_snapshot_ids = source_snapshot_ids or {}
     for iid in sorted(bar_fingerprints.keys()):
         entries = bar_fingerprints[iid]
         sorted_entries = sorted(entries, key=lambda t: t[0])
@@ -265,9 +275,28 @@ def _build_input_ref_details(
                 data_hash=data_hash,
                 date_range=date_range,
                 source="backtest:data_feed",
+                source_snapshot_id=_source_snapshot_id_for_instrument(
+                    source_snapshot_ids,
+                    iid,
+                ),
             ),
         )
     return tuple(refs)
+
+
+def _source_snapshot_id_for_instrument(
+    source_snapshot_ids: Mapping[InstrumentId, str | Iterable[str]],
+    iid: InstrumentId,
+) -> str:
+    """Return a manifest-safe single source snapshot ID for one instrument."""
+    values = source_snapshot_ids.get(iid)
+    if values is None:
+        return ""
+    if isinstance(values, str):
+        aggregate = aggregate_source_snapshot_id((values,))
+    else:
+        aggregate = aggregate_source_snapshot_id(values)
+    return aggregate or ""
 
 
 def _collect_dependency_versions() -> tuple[str, ...]:

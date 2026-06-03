@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ditto_backtest.data_feed import ProviderBackedDataFeed, Slice
+from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 
@@ -11,6 +12,7 @@ from ditto_application.builders._resolution import (
     resolve_instrument_display,
 )
 from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_application.catalog_maturity import assert_strategy_runtime_data_allowed
 from ditto_application.exceptions import AppBuilderError
 
 __all__ = [
@@ -27,10 +29,12 @@ class StrategySliceBuilder:
         strategy_runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
         data_provider: DataProvider,
+        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
         self._data_provider = data_provider
+        self._maturity_promotion_reader = maturity_promotion_reader
 
     def build_published_slice(
         self,
@@ -39,11 +43,18 @@ class StrategySliceBuilder:
         trade_date: str,
         version: int | None = None,
         source: str = "tushare",
+        allow_experimental_data: bool = False,
     ) -> Slice:
         """从 published strategy catalog 构造指定日期的市场切片。"""
         runtime = self._strategy_runtime_builder.build_published_runtime(
             strategy_id,
             version,
+        )
+        assert_strategy_runtime_data_allowed(
+            runtime.spec,
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+            context="catalog-backed strategy slice",
         )
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,

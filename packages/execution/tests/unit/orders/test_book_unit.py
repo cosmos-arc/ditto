@@ -9,6 +9,7 @@ from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.journal import InMemoryOrderEventJournal
 from ditto_execution.orders.model import Order, OrderSide, OrderType
 from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.orders.trigger import OrderTrigger
 from ditto_kernel.identity import InstrumentId
 
@@ -81,6 +82,27 @@ class TestOrderBookUpdate:
         events = journal.events_for(cid)
         assert len(events) == 2  # SUBMIT + FILL
         assert events[1].trigger == OrderTrigger.FILL
+
+    def test_restore_ticket_rehydrates_pending_state_without_journal_event(
+        self,
+    ) -> None:
+        """checkpoint restore 应能重建 pending ticket 且不伪造订单事件。"""
+        journal = InMemoryOrderEventJournal()
+        book = OrderBook(journal=journal)
+        order = _make_order("restore-1")
+        ticket = OrderTicket(
+            order=order,
+            status=OrderStatus.SUBMITTED,
+            filled_quantity=25,
+            average_fill_price=10.0,
+        )
+
+        book.restore_ticket(ticket)
+
+        restored = book.get(order.client_id)
+        assert restored is ticket
+        assert book.get_pending() == (ticket,)
+        assert journal.events_for(order.client_id) == ()
 
 
 class TestOrderBookCancel:

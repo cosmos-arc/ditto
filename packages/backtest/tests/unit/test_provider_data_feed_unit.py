@@ -257,3 +257,69 @@ class TestProviderBackedDataFeedGetSlice:
         assert hasattr(feed, "get_slice")
         assert callable(feed.trading_days)
         assert callable(feed.get_slice)
+
+
+class TestProviderBackedDataFeedSourceSnapshots:
+    """ProviderBackedDataFeed exposes upstream source snapshot provenance."""
+
+    def test_source_snapshot_ids_from_bars_column(self) -> None:
+        """source_snapshot_id 列应进入 feed 与 Slice provenance."""
+        snapshot_id = "snapshot:tushare:stock_daily:2026-03-01:abc"
+        bars = _make_bars_df(
+            instrument_id=1,
+            dates=["2026-03-01", "2026-03-02"],
+        ).with_columns(pl.lit(snapshot_id).alias("source_snapshot_id"))
+        schedule = _make_schedule_df(["2026-03-01", "2026-03-02"])
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(bars_df=bars, schedule_df=schedule),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-02",
+            id_map={"000001.SZ": InstrumentId(1)},
+        )
+
+        assert feed.source_snapshot_ids() == {InstrumentId(1): snapshot_id}
+        assert feed.get_slice("2026-03-01").source_snapshot_ids == {
+            InstrumentId(1): snapshot_id,
+        }
+
+    def test_source_snapshot_ids_empty_without_column(self) -> None:
+        """当前 provider 未暴露 snapshot 时不伪造来源 ID."""
+        bars = _make_bars_df(instrument_id=1, dates=["2026-03-01"])
+        schedule = _make_schedule_df(["2026-03-01"])
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(bars_df=bars, schedule_df=schedule),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+            id_map={"000001.SZ": InstrumentId(1)},
+        )
+
+        assert feed.source_snapshot_ids() == {}
+        assert feed.get_slice("2026-03-01").source_snapshot_ids == {}
+
+    def test_multiple_snapshot_ids_are_aggregated_stably(self) -> None:
+        """同一标的跨多源快照时使用稳定 snapshot-set 聚合 ID."""
+        bars = _make_bars_df(
+            instrument_id=1,
+            dates=["2026-03-01", "2026-03-02"],
+        ).with_columns(
+            pl.Series(
+                "source_snapshot_id",
+                (
+                    "snapshot:tushare:stock_daily:2026-03-01:abc",
+                    "snapshot:tushare:stock_daily:2026-03-02:def",
+                ),
+            ),
+        )
+        schedule = _make_schedule_df(["2026-03-01", "2026-03-02"])
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(bars_df=bars, schedule_df=schedule),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-02",
+            id_map={"000001.SZ": InstrumentId(1)},
+        )
+
+        snapshot_id = feed.source_snapshot_ids()[InstrumentId(1)]
+        assert snapshot_id.startswith("snapshot-set:sha256:")

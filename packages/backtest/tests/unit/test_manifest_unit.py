@@ -10,14 +10,21 @@ import hashlib
 
 import orjson
 import pytest
+from ditto_backtest.config import EngineConfig
 from ditto_backtest.manifest import (
     InputRef,
     RuleRef,
     RuleRefCollector,
     RunManifest,
     RunMode,
+    build_run_manifest,
     hash_spec,
     serialize_manifest,
+)
+from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_semantics import (
+    DEFAULT_PIT_TIME_COLUMN,
+    PIT_POLICY_FAIL_CLOSED,
 )
 from ditto_kernel.trading import (
     FeeSchedule,
@@ -188,6 +195,10 @@ class TestRunManifestFrozen:
         assert manifest.config_hash == ""
         assert manifest.engine_version == ""
         assert manifest.rule_resolution_policy == "as_of_date"
+        assert manifest.pit_time_column == DEFAULT_PIT_TIME_COLUMN
+        assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
+        assert manifest.unsafe_time_policy == ""
+        assert manifest.knowledge_lag_days == 1
 
 
 # ---------------------------------------------------------------------------
@@ -530,6 +541,19 @@ class TestInputRef:
         assert ref.data_hash == "sha256:deadbeef"
         assert ref.date_range == ("2025-01-01", "2025-06-30")
         assert ref.source == "parquet://data/bars/510050"
+        assert ref.source_snapshot_id == ""
+
+    def test_source_snapshot_id(self) -> None:
+        """InputRef can capture the source snapshot version used by a run."""
+        ref = InputRef(
+            instrument_id=510050,
+            data_hash="sha256:deadbeef",
+            date_range=("2025-01-01", "2025-06-30"),
+            source="tushare",
+            source_snapshot_id="tushare:stock_daily:20250630",
+        )
+
+        assert ref.source_snapshot_id == "tushare:stock_daily:20250630"
 
     def test_equality(self) -> None:
         """相同字段 → 相等."""
@@ -581,6 +605,10 @@ class TestRunManifestEnrichment:
         assert manifest.spec_hash == ""
         assert manifest.dependency_versions == ()
         assert manifest.random_seed is None
+        assert manifest.pit_time_column == DEFAULT_PIT_TIME_COLUMN
+        assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
+        assert manifest.unsafe_time_policy == ""
+        assert manifest.knowledge_lag_days == 1
 
     def test_input_ref_details_accepts_input_refs(self) -> None:
         """input_ref_details 接受 InputRef 元组."""
@@ -669,6 +697,7 @@ class TestSerializeManifestEnrichment:
             "2025-12-31",
         ]
         assert parsed["input_ref_details"][0]["source"] == "parquet://data/bars/1"
+        assert parsed["input_ref_details"][0]["source_snapshot_id"] == ""
 
     def test_new_hash_fields_in_serialized_output(self) -> None:
         """universe_hash / spec_hash 出现在序列化输出中."""
@@ -726,6 +755,24 @@ class TestSerializeManifestEnrichment:
         result = serialize_manifest(manifest)
         parsed = orjson.loads(result)
         assert parsed["random_seed"] is None
+
+    def test_pit_policy_in_serialized_output(self) -> None:
+        """PIT policy fields must be visible in manifest JSON."""
+        manifest = RunManifest(
+            run_id="run-pit",
+            strategy_id="test",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-04-11T00:00:00Z",
+            knowledge_lag_days=3,
+        )
+        result = serialize_manifest(manifest)
+        parsed = orjson.loads(result)
+
+        assert parsed["pit_time_column"] == DEFAULT_PIT_TIME_COLUMN
+        assert parsed["pit_policy"] == PIT_POLICY_FAIL_CLOSED
+        assert parsed["unsafe_time_policy"] == ""
+        assert parsed["knowledge_lag_days"] == 3
 
     def test_input_ref_details_sorted_by_instrument_id(self) -> None:
         """input_ref_details 按 instrument_id 排序."""
@@ -849,3 +896,98 @@ class TestHashSpec:
             rebalance_freq="weekly",
         )
         assert result == expected
+
+
+class TestBuildRunManifestPitPolicy:
+    """build_run_manifest should freeze PIT policy used by the engine."""
+
+    def test_build_run_manifest_records_pit_policy_from_config(self) -> None:
+        """Manifest records the engine's PIT policy and configured lag."""
+        config = EngineConfig(
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            initial_cash=1_000_000.0,
+            strategy_id="momentum-etf",
+            strategy_version="2026.01",
+            rebalance_freq="daily",
+            knowledge_lag_days=3,
+        )
+
+        manifest = build_run_manifest(
+            run_id="run-pit-policy",
+            config=config,
+            input_instruments=set(),
+            bar_fingerprints={},
+            rule_refs=(),
+            random_seed=7,
+        )
+
+        assert manifest.pit_time_column == DEFAULT_PIT_TIME_COLUMN
+        assert manifest.pit_policy == PIT_POLICY_FAIL_CLOSED
+        assert manifest.unsafe_time_policy == ""
+        assert manifest.knowledge_lag_days == 3
+
+
+class TestBuildRunManifestSourceSnapshots:
+    """build_run_manifest should preserve upstream data snapshot provenance."""
+
+    def test_build_run_manifest_records_source_snapshot_ids(self) -> None:
+        """Provider/catalog snapshot IDs should reach InputRef details."""
+        config = EngineConfig(
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+            initial_cash=1_000_000.0,
+            strategy_id="momentum-etf",
+            strategy_version="2026.03",
+            rebalance_freq="daily",
+        )
+        snapshot_id = "snapshot:tushare:stock_daily:2026-03-01:abc"
+
+        manifest = build_run_manifest(
+            run_id="run-source-snapshot",
+            config=config,
+            input_instruments={InstrumentId(1)},
+            bar_fingerprints={InstrumentId(1): [("2026-03-01", 10.2)]},
+            source_snapshot_ids={InstrumentId(1): snapshot_id},
+            rule_refs=(),
+            random_seed=7,
+        )
+
+        assert manifest.input_ref_details[0].source_snapshot_id == snapshot_id
+
+    def test_build_run_manifest_aggregates_multiple_source_snapshot_ids(
+        self,
+    ) -> None:
+        """一个 InputRef 对应多个上游快照时生成稳定聚合 ID."""
+        config = EngineConfig(
+            start_date="2026-03-01",
+            end_date="2026-03-02",
+            initial_cash=1_000_000.0,
+            strategy_id="momentum-etf",
+            strategy_version="2026.03",
+            rebalance_freq="daily",
+        )
+
+        manifest = build_run_manifest(
+            run_id="run-source-snapshot-set",
+            config=config,
+            input_instruments={InstrumentId(1)},
+            bar_fingerprints={
+                InstrumentId(1): [
+                    ("2026-03-01", 10.2),
+                    ("2026-03-02", 10.3),
+                ],
+            },
+            source_snapshot_ids={
+                InstrumentId(1): {
+                    "snapshot:tushare:stock_daily:2026-03-01:abc",
+                    "snapshot:tushare:stock_daily:2026-03-02:def",
+                },
+            },
+            rule_refs=(),
+            random_seed=7,
+        )
+
+        assert manifest.input_ref_details[0].source_snapshot_id.startswith(
+            "snapshot-set:sha256:",
+        )

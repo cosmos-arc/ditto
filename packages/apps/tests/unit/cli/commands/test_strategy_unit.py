@@ -83,6 +83,34 @@ class TestStrategyCommandIntegration:
         assert kwargs["source"] == "tushare"
         assert "run-research-1" in result.output
 
+    def test_strategy_research_allows_experimental_data_when_explicit(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """research 命令显式传递 experimental 数据 opt-in。"""
+        mock_facade = MagicMock()
+        mock_facade.run_strategy_for_date_from_catalog.return_value = Mock(
+            run_id="run-research-exp"
+        )
+        mock_create_bundle = mocker.patch(CREATE_BUNDLE_PATH)
+        mock_create_bundle.return_value.__enter__.return_value = Mock(
+            strategy_facade=mock_facade
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "strategy",
+                "research",
+                "stock.strategy",
+                "2024-01-02",
+                "--allow-experimental-data",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_facade.run_strategy_for_date_from_catalog.call_args.kwargs
+        assert kwargs["allow_experimental_data"] is True
+
     def test_strategy_recommend_delegates_to_facade(
         self, runner: CliRunner, mocker: MockerFixture
     ) -> None:
@@ -152,3 +180,35 @@ class TestStrategyCommandIntegration:
         assert kwargs["source"] == "tushare"
         assert "run-backtest-1" in result.output
         assert "1050000.0" in result.output
+
+    def test_strategy_backtest_allows_experimental_data_when_explicit(
+        self, runner: CliRunner, mocker: MockerFixture
+    ) -> None:
+        """backtest 命令通过 BacktestServiceOptions 显式传递 maturity opt-in。"""
+        mock_facade = MagicMock()
+        mock_facade.run_backtest_from_catalog.return_value = Mock(
+            run_id="run-backtest-exp",
+            final_nav=1_010_000.0,
+            period=("2024-01-02", "2024-01-31"),
+        )
+        mock_create_bundle = mocker.patch(CREATE_BUNDLE_PATH)
+        mock_create_bundle.return_value.__enter__.return_value = Mock(
+            strategy_facade=mock_facade
+        )
+
+        result = runner.invoke(
+            app,
+            [
+                "strategy",
+                "backtest",
+                "stock.strategy",
+                "2024-01-02",
+                "2024-01-31",
+                "--allow-experimental-data",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_facade.run_backtest_from_catalog.call_args.kwargs
+        options = kwargs["options"]
+        assert options.allow_experimental_data is True

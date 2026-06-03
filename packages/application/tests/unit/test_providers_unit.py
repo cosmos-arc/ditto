@@ -12,6 +12,10 @@ from ditto_application.builders import (
     StrategyServiceFactory,
     StrategySliceBuilder,
 )
+from ditto_application.commands.catalog import (
+    ReviewDatasetPromotionEvidenceHandler,
+    RevokeDatasetMaturityPromotionHandler,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.materialization.cascade_orchestrator import (
@@ -33,9 +37,13 @@ from ditto_application.providers import (
 from ditto_application.providers_market import AppMarketQueryProvider
 from ditto_application.providers_portfolio import AppPortfolioQueryProvider
 from ditto_application.providers_strategy import AppStrategyQueryProvider
+from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
+from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_application.queries.source import SourceDataPort
 from ditto_application.settings import TradingSettings
+from ditto_data.catalog import InMemoryDataCatalog
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.di import (
     CapitalProvider,
@@ -46,6 +54,7 @@ from ditto_data.di import (
     QualityProvider,
     RuntimeProvider,
 )
+from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -238,6 +247,7 @@ class TestAppProviderStructure:
             "market_query_facade",
             "source_query_facade",
             "research_dataset_facade",
+            "catalog_query_facade",
             "metadata_query_facade",
             "capital_query_facade",
             "fundamental_query_facade",
@@ -311,6 +321,167 @@ class TestAppProviderStructure:
         }
         assert expected.issubset(method_names)
 
+    def test_lineage_query_facade_receives_data_readers(self) -> None:
+        """LineageQueryFacade 应接收 data runtime 提供的 lineage/catalog reader。"""
+        provider = AppStrategyQueryProvider()
+        lineage_reader = InMemoryDataLineage()
+        catalog_reader = InMemoryDataCatalog()
+        facade = provider.lineage_query_facade(
+            run_service=MagicMock(),
+            data_lineage_reader=lineage_reader,
+            data_catalog_reader=catalog_reader,
+        )
+
+        assert isinstance(facade, LineageQueryFacade)
+        assert facade._data_lineage_reader is lineage_reader
+        assert facade._data_catalog_reader is catalog_reader
+
+    def test_catalog_query_facade_receives_data_catalog_reader(self) -> None:
+        """CatalogQueryFacade 应接收 data runtime 提供的 catalog reader。"""
+        provider = AppMarketQueryProvider()
+        reader = InMemoryDataCatalog()
+        history_reader = MagicMock()
+        facade = provider.catalog_query_facade(
+            data_catalog_reader=reader,
+            maturity_promotion_history_reader=history_reader,
+        )
+
+        assert isinstance(facade, CatalogQueryFacade)
+        assert facade._data_catalog_reader is reader
+        assert facade._maturity_promotion_history_reader is history_reader
+
+    def test_market_query_facade_receives_maturity_promotion_reader(self) -> None:
+        """MarketQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
+        provider = AppMarketQueryProvider()
+        market_service = MagicMock()
+        maturity_promotion_reader = MagicMock()
+
+        facade = provider.market_query_facade(
+            market_service=market_service,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+        assert facade._service is market_service
+        assert facade._maturity_promotion_reader is maturity_promotion_reader
+
+    def test_source_query_facade_receives_maturity_promotion_reader(self) -> None:
+        """SourceQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
+        provider = AppMarketQueryProvider()
+        source_data = MagicMock()
+        metadata_service = MagicMock()
+        maturity_promotion_reader = MagicMock()
+
+        facade = provider.source_query_facade(
+            source_data=source_data,
+            metadata_service=metadata_service,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+        assert facade._source is source_data
+        assert facade._metadata is metadata_service
+        assert facade._maturity_promotion_reader is maturity_promotion_reader
+
+    def test_fundamental_query_facade_receives_maturity_promotion_reader(self) -> None:
+        """FundamentalQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
+        provider = AppMarketQueryProvider()
+        fundamental_store = MagicMock()
+        maturity_promotion_reader = MagicMock()
+
+        facade = provider.fundamental_query_facade(
+            fundamental_store=fundamental_store,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+        assert facade._service is fundamental_store
+        assert facade._maturity_promotion_reader is maturity_promotion_reader
+
+    def test_capital_query_facade_receives_maturity_promotion_reader(self) -> None:
+        """CapitalQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
+        provider = AppMarketQueryProvider()
+        capital_store = MagicMock()
+        maturity_promotion_reader = MagicMock()
+
+        facade = provider.capital_query_facade(
+            capital_store=capital_store,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+        assert facade._service is capital_store
+        assert facade._maturity_promotion_reader is maturity_promotion_reader
+
+    def test_macro_query_facade_receives_maturity_promotion_reader(self) -> None:
+        """MacroQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
+        provider = AppMarketQueryProvider()
+        macro_service = MagicMock()
+        maturity_promotion_reader = MagicMock()
+
+        facade = provider.macro_query_facade(
+            macro_service=macro_service,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+        assert facade._service is macro_service
+        assert facade._maturity_promotion_reader is maturity_promotion_reader
+
+    def test_ingestion_status_query_facade_receives_data_catalog_reader(self) -> None:
+        """IngestionStatusQueryFacade 应接收 catalog reader 以暴露 freshness."""
+        provider = AppMarketQueryProvider()
+        reader = InMemoryDataCatalog()
+        promotion_reader = MagicMock()
+        maturity_promotion_reader = MagicMock()
+        maturity_promotion_history_reader = MagicMock()
+        facade = provider.ingestion_status_query_facade(
+            ingestion_log_store=MagicMock(),
+            data_catalog_reader=reader,
+            promotion_evidence_reader=promotion_reader,
+            maturity_promotion_reader=maturity_promotion_reader,
+            maturity_promotion_history_reader=maturity_promotion_history_reader,
+        )
+
+        assert isinstance(facade, IngestionStatusQueryFacade)
+        assert facade._data_catalog_reader is reader
+        assert facade._promotion_evidence_reader is promotion_reader
+        assert facade._maturity_promotion_reader is maturity_promotion_reader
+        assert facade._maturity_promotion_history_reader is (
+            maturity_promotion_history_reader
+        )
+
+    def test_review_dataset_promotion_handler_receives_evidence_ports(self) -> None:
+        """Promotion review handler 应接收 data-owned evidence 读写端口。"""
+        provider = AppCommandProvider()
+        evidence_reader = MagicMock()
+        evidence_writer = MagicMock()
+        maturity_promotion_reader = MagicMock()
+        maturity_promotion_writer = MagicMock()
+
+        handler = provider.review_dataset_promotion_evidence_handler(
+            promotion_evidence_writer=evidence_writer,
+            promotion_evidence_reader=evidence_reader,
+            maturity_promotion_writer=maturity_promotion_writer,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+        assert isinstance(handler, ReviewDatasetPromotionEvidenceHandler)
+        assert handler._evidence_writer is evidence_writer
+        assert handler._evidence_reader is evidence_reader
+        assert handler._maturity_promotion_writer is maturity_promotion_writer
+        assert handler._maturity_promotion_reader is maturity_promotion_reader
+
+    def test_revoke_dataset_promotion_handler_receives_reversal_ports(self) -> None:
+        """Promotion revoke handler 应接收 current reader 和 revoker 端口。"""
+        provider = AppCommandProvider()
+        maturity_promotion_reader = MagicMock()
+        maturity_promotion_revoker = MagicMock()
+
+        handler = provider.revoke_dataset_maturity_promotion_handler(
+            maturity_promotion_reader=maturity_promotion_reader,
+            maturity_promotion_revoker=maturity_promotion_revoker,
+        )
+
+        assert isinstance(handler, RevokeDatasetMaturityPromotionHandler)
+        assert handler._maturity_promotion_reader is maturity_promotion_reader
+        assert handler._maturity_promotion_revoker is maturity_promotion_revoker
+
 
 # ---------------------------------------------------------------------------
 # 集成测试:验证 App Provider 可以在完整容器中正确解析服务
@@ -358,6 +529,7 @@ class TestAppProviderIntegration:
     def test_query_services_resolved(self, app_container) -> None:
         """AppMarketQueryProvider 的服务应可从容器解析."""
         assert isinstance(app_container.get(DerivedQueryFacade), DerivedQueryFacade)
+        assert isinstance(app_container.get(CatalogQueryFacade), CatalogQueryFacade)
 
     def test_process_services_resolved(self, app_container) -> None:
         """AppProcessProvider 的服务应可从容器解析."""

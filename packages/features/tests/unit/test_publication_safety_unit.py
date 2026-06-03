@@ -50,6 +50,25 @@ class TestCompatibilityManifest:
         assert manifest.is_complete() is True
         assert manifest.missing_required_fields() == ()
 
+    def test_manifest_requires_pit_policy_fields(self) -> None:
+        """Publication manifests must make PIT semantics explicit."""
+        manifest = CompatibilityManifest(
+            engine_codegen_version="codegen-v1",
+            analysis_version="analysis-v1",
+            polars_version="1.30.0",
+            expr_serialization_format="expr-json-v1",
+            operator_fingerprint="operator-fingerprint",
+            global_compile_flags={"pushdown": True},
+            calendar_id="cn_xshg",
+            timezone="Asia/Shanghai",
+            time_semantics_version="time-v1",
+            pit_policy=None,
+            pit_time_column=None,
+        )
+
+        assert manifest.is_complete() is False
+        assert manifest.missing_required_fields() == ("pit_policy", "pit_time_column")
+
 
 class TestShadowDiffReport:
     """Tests for ShadowDiffReport."""

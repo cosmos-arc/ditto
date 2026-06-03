@@ -16,6 +16,9 @@ from typing import cast
 import orjson
 from ditto_kernel.strategy import RunStatus
 from ditto_strategy.contracts import StrategyCatalogReader
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointReaderProtocol,
+)
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
 from ditto_application.contracts import CostConfig
@@ -30,6 +33,8 @@ __all__ = [
     "CancelRunCommand",
     "CancelRunHandler",
     "CostConfig",
+    "ResumeRunCommand",
+    "ResumeRunHandler",
     "RetryRunCommand",
     "RetryRunHandler",
 ]
@@ -45,6 +50,7 @@ class BacktestRunCommand:
     initial_cash: float = DEFAULT_INITIAL_CASH
     parameter_overrides: tuple[str, ...] = ()
     cost_config: CostConfig | None = None
+    allow_experimental_data: bool = False
 
 
 @dataclass(frozen=True)
@@ -122,6 +128,7 @@ class BacktestRunHandler:
             "end_date": command.end_date,
             "initial_cash": command.initial_cash,
             "parameter_overrides": list(command.parameter_overrides),
+            "allow_experimental_data": command.allow_experimental_data,
         }
         if command.cost_config is not None:
             config_data["cost_config"] = {
@@ -213,6 +220,7 @@ def _extract_signal_weights(
 
 _CANCEL_ALLOWED = {RunStatus.PENDING, RunStatus.RUNNING}
 _RETRY_ALLOWED = {RunStatus.FAILED, RunStatus.CANCELLED}
+_RESUME_ALLOWED = {RunStatus.FAILED, RunStatus.CANCELLED}
 
 
 @dataclass(frozen=True)
@@ -225,6 +233,13 @@ class CancelRunCommand:
 @dataclass(frozen=True)
 class RetryRunCommand:
     """重试运行命令."""
+
+    run_id: str
+
+
+@dataclass(frozen=True)
+class ResumeRunCommand:
+    """从 checkpoint 恢复运行命令."""
 
     run_id: str
 
@@ -313,3 +328,101 @@ class RetryRunHandler:
             config_json=record.config_json,
         )
         return new_run_id
+
+
+class ResumeRunHandler:
+    """
+    从 checkpoint 恢复运行 Command Handler — 检查状态 + 创建子运行.
+
+    当前恢复命令负责把 latest checkpoint 转换为新的 child run 配置，并从
+    ``resume_from`` 日期开始重新提交回测。完整账户/持仓状态恢复与 replay proof
+    由后续恢复链路补齐。
+    """
+
+    def __init__(
+        self,
+        *,
+        run_service: RunLifecycleService,
+        checkpoint_reader: StrategyRunCheckpointReaderProtocol,
+    ) -> None:
+        self._run_service = run_service
+        self._checkpoint_reader = checkpoint_reader
+
+    def handle(self, command: ResumeRunCommand) -> str:
+        """
+        处理 checkpoint 恢复命令.
+
+        Args:
+            command: checkpoint 恢复命令.
+
+        Returns:
+            新运行 ID.
+
+        Raises:
+            AppCommandError: 运行不存在、状态不允许恢复或无可恢复 checkpoint.
+
+        """
+        run_id = command.run_id
+        record = self._run_service.get_run(run_id)
+        if record is None:
+            msg = f"Run not found: {run_id}"
+            raise AppCommandError(msg)
+
+        if record.status not in _RESUME_ALLOWED:
+            msg = f"Cannot resume run in '{record.status}' status"
+            raise AppCommandError(msg)
+
+        checkpoint = self._checkpoint_reader.get_latest_checkpoint(run_id)
+        if checkpoint is None or not checkpoint.can_resume:
+            msg = f"No resumable checkpoint for run: {run_id}"
+            raise AppCommandError(msg)
+
+        config_data = _load_config_json(record.config_json)
+        config_data["start_date"] = checkpoint.resume_from
+        config_data["resume_from_run_id"] = run_id
+        config_data["resume_checkpoint_trade_date"] = checkpoint.completed_trade_date
+        config_data["resume_checkpoint_completed_days"] = checkpoint.completed_days
+        config_data["resume_checkpoint_total_days"] = checkpoint.total_days
+        config_data["resume_checkpoint_nav"] = checkpoint.nav
+        config_data["resume_checkpoint_order_count"] = checkpoint.order_count
+        config_data["resume_checkpoint_fill_count"] = checkpoint.fill_count
+        if checkpoint.account_state_json:
+            config_data["resume_account_state_json"] = checkpoint.account_state_json
+        if checkpoint.account_state_hash:
+            config_data["resume_account_state_hash"] = checkpoint.account_state_hash
+        if checkpoint.settlement_state_json:
+            config_data["resume_settlement_state_json"] = (
+                checkpoint.settlement_state_json
+            )
+        if checkpoint.settlement_state_hash:
+            config_data["resume_settlement_state_hash"] = (
+                checkpoint.settlement_state_hash
+            )
+        if checkpoint.runtime_state_json:
+            config_data["resume_runtime_state_json"] = checkpoint.runtime_state_json
+        if checkpoint.runtime_state_hash:
+            config_data["resume_runtime_state_hash"] = checkpoint.runtime_state_hash
+        config_json = orjson.dumps(config_data).decode("utf-8")
+
+        new_run_id = uuid.uuid4().hex[:8]
+        self._run_service.create_run(
+            run_id=new_run_id,
+            strategy_id=record.strategy_id,
+            strategy_version=record.strategy_version,
+            mode=record.mode,
+            parent_run_id=run_id,
+            config_json=config_json,
+        )
+        return new_run_id
+
+
+def _load_config_json(config_json: str) -> dict[str, object]:
+    """Load run config JSON as a mutable dict."""
+    if not config_json:
+        return {}
+    raw = orjson.loads(config_json)
+    if not isinstance(raw, dict):
+        msg = "Run config_json must be an object"
+        raise AppCommandError(msg)
+    raw_dict = cast(dict[object, object], raw)
+    return {str(key): value for key, value in raw_dict.items()}

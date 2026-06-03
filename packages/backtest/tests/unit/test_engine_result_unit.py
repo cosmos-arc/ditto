@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from types import MappingProxyType
 
 import pytest
+from ditto_backtest import result as result_module
 from ditto_backtest.manifest_types import RunManifest, RunMode
 from ditto_backtest.result import EngineResult, EngineResultBuilder
 from ditto_execution.orders.ids import ClientOrderId
@@ -16,6 +17,11 @@ from ditto_kernel.order import OrderSide, OrderType
 from ditto_portfolio.accounting import AccountView, CashBook, FillEvent
 
 IID_1 = InstrumentId(1)
+
+
+def _checkpoint_cls() -> type:
+    """Return BacktestCheckpoint once the checkpoint API exists."""
+    return result_module.BacktestCheckpoint
 
 
 def _sample_order() -> Order:
@@ -128,6 +134,58 @@ class TestEngineResultFrozen:
         """文档字符串应标记为不可变。"""
         assert EngineResult.__doc__ is not None
         assert "不可变" in EngineResult.__doc__
+
+
+class TestBacktestCheckpoint:
+    """BacktestCheckpoint freezes the recovery boundary."""
+
+    def test_resume_from_next_trade_date(self) -> None:
+        checkpoint = _checkpoint_cls()(
+            run_id="run-001",
+            strategy_id="strategy-a",
+            completed_trade_date="2026-03-01",
+            resume_from="2026-03-02",
+            completed_days=1,
+            total_days=3,
+            nav=1_000_000.0,
+            fill_count=2,
+            order_count=2,
+        )
+
+        assert checkpoint.resume_from == "2026-03-02"
+        assert checkpoint.can_resume is True
+
+    def test_final_checkpoint_has_no_resume_date(self) -> None:
+        checkpoint = _checkpoint_cls()(
+            run_id="run-001",
+            strategy_id="strategy-a",
+            completed_trade_date="2026-03-03",
+            resume_from=None,
+            completed_days=3,
+            total_days=3,
+            nav=1_001_000.0,
+            fill_count=4,
+            order_count=4,
+        )
+
+        assert checkpoint.can_resume is False
+
+    def test_account_state_hash_survives_integer_zero_exposure_roundtrip(self) -> None:
+        """全现金账户的 int 0 exposure 不应导致 JSON/hash round-trip 漂移."""
+        snapshot = result_module.BacktestAccountStateSnapshot(
+            cash_available=1_000_000.0,
+            cash_settled=1_000_000.0,
+            cash_frozen=0.0,
+            total_value=1_000_000.0,
+            nav=1_000_000.0,
+            exposure=0,
+        )
+
+        restored = result_module.BacktestAccountStateSnapshot.from_json(
+            snapshot.to_json(),
+        )
+
+        assert restored.state_hash == snapshot.state_hash
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +314,17 @@ class TestEngineResultBuilder:
         )
         order = _sample_order()
         fill = _sample_fill()
+        checkpoint = _checkpoint_cls()(
+            run_id="run-001",
+            strategy_id="test-strategy",
+            completed_trade_date="2026-01-05",
+            resume_from="2026-01-06",
+            completed_days=1,
+            total_days=2,
+            nav=1_050_000.0,
+            fill_count=1,
+            order_count=1,
+        )
         builder = EngineResultBuilder()
         builder.add_order(order)
         builder.add_fill(fill)
@@ -266,6 +335,7 @@ class TestEngineResultBuilder:
             final_nav=1_050_000.0,
             account_view=None,
             manifest=manifest,
+            last_checkpoint=checkpoint,
             cancelled=True,
         )
         assert result.run_id == "run-001"
@@ -275,6 +345,7 @@ class TestEngineResultBuilder:
         assert result.fills == (fill,)
         assert result.skipped_dates == ("2026-01-05",)
         assert result.manifest is manifest
+        assert result.last_checkpoint is checkpoint
         assert result.cancelled is True
 
 

@@ -31,6 +31,7 @@ class ArtifactKind(StrEnum):
     NAV = "nav"
     TRADE_LOG = "trade_log"
     BACKTEST_REPORT = "backtest_report"
+    REPLAY_PROOF = "replay_proof"
     # 审计日志
     RISK_LOG = "risk_log"
     PRE_TRADE_LOG = "pre_trade_log"

@@ -221,6 +221,22 @@ class TestConformanceSubmitPartialFillFill:
         assert fills[0].filled_quantity == 40
         assert fills[1].filled_quantity == 60
 
+    def test_partial_fill_reports_cumulative_and_leaves_quantities(self) -> None:
+        gw = PaperBrokerGateway(initial_cash=1_000_000.0)
+        order = _order("spf-5", quantity=100, price=10.0)
+        gw._book.submit(order)
+        gw.simulate_fill(order.order_id, quantity=40, price=10.0)
+        gw.simulate_fill(order.order_id, quantity=60, price=10.5)
+
+        fills = gw.query_fills(order.order_id)
+        assert len(fills) == 2
+        assert fills[0].filled_quantity == 40
+        assert fills[0].cumulative_quantity == 40
+        assert fills[0].leaves_quantity == 60
+        assert fills[1].filled_quantity == 60
+        assert fills[1].cumulative_quantity == 100
+        assert fills[1].leaves_quantity == 0
+
     def test_account_reflects_total_fill(self) -> None:
         gw = PaperBrokerGateway(initial_cash=100_000.0)
         order = _order("spf-4", quantity=100, price=10.0)

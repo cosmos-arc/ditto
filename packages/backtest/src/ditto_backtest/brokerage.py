@@ -35,6 +35,7 @@ from ditto_kernel.trading import (
 )
 from ditto_portfolio.accounting import Account, AccountView, FillEvent, Position
 
+from ditto_backtest.result import BacktestSettlementStateSnapshot
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.settlement import SettlementModel
 
@@ -170,6 +171,27 @@ class BacktestBrokerage:
     def get_order_book(self) -> OrderBookReadOnly:
         """获取订单簿只读快照。"""
         return self._order_book.readonly_view()
+
+    def get_settlement_state_snapshot(self) -> BacktestSettlementStateSnapshot:
+        """获取 settlement/frozen queue checkpoint 快照。"""
+        return BacktestSettlementStateSnapshot.from_frozen_quantities(
+            self._frozen_quantities
+        )
+
+    def restore_settlement_state(
+        self,
+        snapshot: BacktestSettlementStateSnapshot,
+    ) -> None:
+        """从 checkpoint 恢复 settlement/frozen queue 状态。"""
+        restored: dict[InstrumentId, dict[str, int]] = {}
+        for frozen in snapshot.frozen_quantities:
+            if frozen.quantity <= 0:
+                continue
+            by_date = restored.setdefault(frozen.instrument_id, {})
+            by_date[frozen.settle_date] = (
+                by_date.get(frozen.settle_date, 0) + frozen.quantity
+            )
+        self._frozen_quantities = restored
 
     def place_order(self, order: Order) -> OrderTicket:
         """提交订单，返回 OrderTicket (SUBMITTED)。"""

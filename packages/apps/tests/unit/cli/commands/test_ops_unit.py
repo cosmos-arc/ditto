@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock
 
+import orjson
 import pytest
+from ditto_application.commands.catalog import (
+    DatasetMaturityPromotionRevokeResult,
+    DatasetPromotionReviewResult,
+)
+from ditto_application.queries.catalog import CatalogMaturityPromotionHistoryItem
 from ditto_apps.cli.main import app
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
@@ -29,15 +36,41 @@ def _make_dataset_status(
     latest_date: str | None = "2026-04-14",
     latest_status: str | None = "success",
     record_count: int = 5000,
+    dataset_maturity: str | None = None,
+    dataset_maturity_warning: str | None = None,
+    dataset_promotion_criteria: tuple[str, ...] = (),
+    dataset_promotion_status: str | None = None,
+    dataset_promotion_missing_criteria: tuple[str, ...] = (),
+    dataset_promotion_satisfied_criteria: tuple[str, ...] = (),
+    dataset_promotion_rejected_criteria: tuple[str, ...] = (),
     last_attempt: str | None = None,
+    catalog_freshness_at: datetime | None = None,
+    catalog_storage_uri: str | None = None,
+    catalog_schema_hash: str | None = None,
+    catalog_row_count: int | None = None,
+    catalog_freshness_status: str | None = None,
+    catalog_freshness_sla_hours: int | None = None,
 ) -> Any:
     """创建 DatasetStatus mock 对象。"""
     mock = MagicMock()
     mock.dataset = dataset
     mock.latest_date = latest_date
     mock.latest_status = latest_status
+    mock.dataset_maturity = dataset_maturity
+    mock.dataset_maturity_warning = dataset_maturity_warning
+    mock.dataset_promotion_criteria = dataset_promotion_criteria
+    mock.dataset_promotion_status = dataset_promotion_status
+    mock.dataset_promotion_missing_criteria = dataset_promotion_missing_criteria
+    mock.dataset_promotion_satisfied_criteria = dataset_promotion_satisfied_criteria
+    mock.dataset_promotion_rejected_criteria = dataset_promotion_rejected_criteria
     mock.record_count = record_count
     mock.last_attempt = last_attempt
+    mock.catalog_freshness_at = catalog_freshness_at
+    mock.catalog_storage_uri = catalog_storage_uri
+    mock.catalog_schema_hash = catalog_schema_hash
+    mock.catalog_row_count = catalog_row_count
+    mock.catalog_freshness_status = catalog_freshness_status
+    mock.catalog_freshness_sla_hours = catalog_freshness_sla_hours
     return mock
 
 
@@ -94,6 +127,20 @@ def _mock_container_for_patrol(patrol: Any) -> Any:
     """创建返回 QualityPatrolService 的 mock 容器。"""
     mock_container = MagicMock()
     mock_container.get.return_value = patrol
+    return mock_container
+
+
+def _mock_container_for_promotion_review(handler: Any) -> Any:
+    """创建返回 promotion review handler 的 mock 容器。"""
+    mock_container = MagicMock()
+    mock_container.get.return_value = handler
+    return mock_container
+
+
+def _mock_container_for_ops_object(obj: Any) -> Any:
+    """创建返回任意 ops dependency 的 mock 容器。"""
+    mock_container = MagicMock()
+    mock_container.get.return_value = obj
     return mock_container
 
 
@@ -159,7 +206,20 @@ class TestStatusCommand:
         """测试 --json 格式输出。"""
         mock_facade = MagicMock()
         mock_facade.get_status.return_value = [
-            _make_dataset_status("stock_daily", "2026-04-14", "success", 5000),
+            _make_dataset_status(
+                "stock_daily",
+                "2026-04-14",
+                "success",
+                5000,
+                dataset_maturity="experimental",
+                dataset_maturity_warning="experimental data requires research opt-in",
+                dataset_promotion_criteria=("complete PIT replay coverage",),
+                dataset_promotion_status="blocked",
+                dataset_promotion_missing_criteria=("complete PIT replay coverage",),
+                dataset_promotion_rejected_criteria=("source failover policy missing",),
+                catalog_freshness_status="fresh",
+                catalog_freshness_sla_hours=36,
+            ),
         ]
         container = _mock_container_for_status(mock_facade)
         mocker.patch(CONTAINER_PATH, return_value=container)
@@ -167,8 +227,37 @@ class TestStatusCommand:
         result = runner.invoke(app, ["ops", "status", "--json"])
 
         assert result.exit_code == 0
-        assert '"dataset"' in result.output
-        assert '"stock_daily"' in result.output
+        payload = orjson.loads(result.output)
+        assert payload["datasets"][0]["dataset"] == "stock_daily"
+        assert payload["datasets"][0]["dataset_maturity"] == "experimental"
+        assert payload["datasets"][0]["dataset_maturity_warning"] == (
+            "experimental data requires research opt-in"
+        )
+        assert payload["datasets"][0]["dataset_promotion_criteria"] == [
+            "complete PIT replay coverage"
+        ]
+        assert payload["datasets"][0]["dataset_promotion_status"] == "blocked"
+        assert payload["datasets"][0]["dataset_promotion_missing_criteria"] == [
+            "complete PIT replay coverage"
+        ]
+        assert payload["datasets"][0]["dataset_promotion_rejected_criteria"] == [
+            "source failover policy missing"
+        ]
+        assert payload["datasets"][0]["catalog_freshness_status"] == "fresh"
+        assert payload["maturity_summary"] == [
+            {
+                "maturity": "experimental",
+                "dataset_count": 1,
+                "fresh_count": 1,
+                "stale_count": 0,
+                "missing_count": 0,
+                "not_applicable_count": 0,
+                "failed_count": 0,
+                "warning_count": 1,
+                "promotion_ready_count": 0,
+                "promotion_blocked_count": 1,
+            }
+        ]
 
     def test_status_with_date_filter(
         self, runner: CliRunner, mocker: MockerFixture
@@ -186,6 +275,144 @@ class TestStatusCommand:
         assert result.exit_code == 0
         assert "stock_daily" in result.output
         assert "2026-04-14" in result.output
+
+    def test_promotion_review_writes_evidence_with_json_output(
+        self,
+        runner: CliRunner,
+        mocker: MockerFixture,
+    ) -> None:
+        """Promotion review command delegates reviewer evidence to application."""
+        handler = MagicMock()
+        handler.handle.return_value = DatasetPromotionReviewResult(
+            dataset_id="stock_daily",
+            reviewed_criterion="complete PIT replay coverage",
+            evidence_uri="ditto://evidence/stock_daily/pit",
+            reviewed_by="architecture-review",
+            passed=True,
+            reviewed_at=datetime.fromisoformat("2026-06-01T12:30:00+00:00"),
+            promotion_status="blocked",
+            missing_criteria=("source failover policy",),
+            satisfied_criteria=("complete PIT replay coverage",),
+            rejected_criteria=(),
+            metadata_promoted=False,
+            dataset_maturity_before="experimental",
+            dataset_maturity_after="experimental",
+        )
+        container = _mock_container_for_promotion_review(handler)
+        mocker.patch(CONTAINER_PATH, return_value=container)
+
+        result = runner.invoke(
+            app,
+            [
+                "ops",
+                "promotion-review",
+                "stock_daily",
+                "--criterion",
+                "complete PIT replay coverage",
+                "--evidence-uri",
+                "ditto://evidence/stock_daily/pit",
+                "--reviewed-by",
+                "architecture-review",
+                "--notes",
+                "PIT replay passed",
+                "--json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        payload = orjson.loads(result.output)
+        assert payload["dataset_id"] == "stock_daily"
+        assert payload["reviewed_criterion"] == "complete PIT replay coverage"
+        assert payload["promotion_status"] == "blocked"
+        assert payload["missing_criteria"] == ["source failover policy"]
+        assert payload["metadata_promoted"] is False
+        assert payload["dataset_maturity_after"] == "experimental"
+        assert handler.handle.call_args.args[0].dataset_id == "stock_daily"
+        assert handler.handle.call_args.args[0].reviewed_by == "architecture-review"
+        assert handler.handle.call_args.args[0].notes == "PIT replay passed"
+
+    def test_promotion_history_outputs_json(
+        self,
+        runner: CliRunner,
+        mocker: MockerFixture,
+    ) -> None:
+        """Promotion history command delegates to application catalog facade."""
+        facade = MagicMock()
+        facade.list_maturity_promotion_history.return_value = [
+            CatalogMaturityPromotionHistoryItem(
+                dataset_id="stock_daily",
+                action="promoted",
+                previous_maturity="experimental",
+                next_maturity="initial-focus",
+                actor="architecture-review",
+                action_at=datetime.fromisoformat("2026-06-01T13:00:00+00:00"),
+                evidence_uri="ditto://evidence/stock_daily/runtime-tests",
+                notes="all criteria approved",
+                revocation_reason=None,
+            )
+        ]
+        container = _mock_container_for_ops_object(facade)
+        mocker.patch(CONTAINER_PATH, return_value=container)
+
+        result = runner.invoke(
+            app,
+            ["ops", "promotion-history", "stock_daily", "--json"],
+        )
+
+        assert result.exit_code == 0
+        payload = orjson.loads(result.output)
+        assert payload["events"][0]["dataset_id"] == "stock_daily"
+        assert payload["events"][0]["action"] == "promoted"
+        assert payload["events"][0]["next_maturity"] == "initial-focus"
+        facade.list_maturity_promotion_history.assert_called_once_with("stock_daily")
+
+    def test_promotion_revoke_removes_override_with_json_output(
+        self,
+        runner: CliRunner,
+        mocker: MockerFixture,
+    ) -> None:
+        """Promotion revoke command delegates reversal to application handler."""
+        handler = MagicMock()
+        handler.handle.return_value = DatasetMaturityPromotionRevokeResult(
+            dataset_id="stock_daily",
+            revoked_by="architecture-review",
+            revoked_at=datetime.fromisoformat("2026-06-02T09:00:00+00:00"),
+            dataset_maturity_before="initial-focus",
+            dataset_maturity_after="experimental",
+            evidence_uri="ditto://evidence/stock_daily/runtime-tests",
+            revocation_reason="failed_revalidation",
+            notes="PIT regression reopened promotion",
+        )
+        container = _mock_container_for_ops_object(handler)
+        mocker.patch(CONTAINER_PATH, return_value=container)
+
+        result = runner.invoke(
+            app,
+            [
+                "ops",
+                "promotion-revoke",
+                "stock_daily",
+                "--revoked-by",
+                "architecture-review",
+                "--reason",
+                "failed_revalidation",
+                "--notes",
+                "PIT regression reopened promotion",
+                "--json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        payload = orjson.loads(result.output)
+        assert payload["dataset_id"] == "stock_daily"
+        assert payload["revoked_by"] == "architecture-review"
+        assert payload["revocation_reason"] == "failed_revalidation"
+        assert payload["dataset_maturity_after"] == "experimental"
+        assert handler.handle.call_args.args[0].dataset_id == "stock_daily"
+        assert handler.handle.call_args.args[0].revoked_by == "architecture-review"
+        assert handler.handle.call_args.args[0].revocation_reason == (
+            "failed_revalidation"
+        )
 
     def test_status_container_error(
         self, runner: CliRunner, mocker: MockerFixture

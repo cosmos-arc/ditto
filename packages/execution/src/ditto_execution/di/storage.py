@@ -7,6 +7,7 @@ from ditto_platform.foundation import SQLiteClient, SQLitePool
 
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.contracts import (
+    BrokerEventDataPort,
     FillDataPort,
     IntentDataPort,
     PositionDataPort,
@@ -17,15 +18,22 @@ from ditto_execution.storage.sqlite.reconciliation import (
     SQLiteRepairWorkflowStore,
 )
 from ditto_execution.storage.sqlite.trade import (
+    ACCOUNT_SNAPSHOTS_DDL,
+    BROKER_EVENTS_DDL,
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
+    AccountSnapshotReader,
+    AccountSnapshotWriter,
+    BrokerEventReader,
+    BrokerEventWriter,
     FillReader,
     FillWriter,
     IntentReader,
     IntentWriter,
     PositionReader,
     PositionWriter,
+    ensure_position_schema,
 )
 from ditto_execution.storage.sqlite.trade.service import TradeService
 
@@ -60,6 +68,8 @@ class ExecutionStorageProvider(Provider):
             intent=IntentReader(sqlite_client),
             fill=FillReader(sqlite_client),
             position=PositionReader(sqlite_client),
+            account=AccountSnapshotReader(sqlite_client),
+            broker_event=BrokerEventReader(sqlite_client),
         )
 
     @provide
@@ -69,14 +79,22 @@ class ExecutionStorageProvider(Provider):
             intent=IntentWriter(sqlite_client),
             fill=FillWriter(sqlite_client),
             position=PositionWriter(sqlite_client),
+            account=AccountSnapshotWriter(sqlite_client),
+            broker_event=BrokerEventWriter(sqlite_client),
         )
 
     @provide
     def init_schema(self, sqlite_client: SQLiteClient) -> None:
         """执行 execution 域 DDL（应用级单次初始化）。"""
         sqlite_client.executescript(
-            INTENTS_DDL + FILLS_DDL + POSITIONS_DDL + REPAIR_WORKFLOW_DDL
+            INTENTS_DDL
+            + FILLS_DDL
+            + POSITIONS_DDL
+            + ACCOUNT_SNAPSHOTS_DDL
+            + BROKER_EVENTS_DDL
+            + REPAIR_WORKFLOW_DDL
         )
+        ensure_position_schema(sqlite_client)
         sqlite_client.commit()
 
     @provide
@@ -113,4 +131,12 @@ class ExecutionStorageProvider(Provider):
     @provide
     def position_data_port(self, trade_service: TradeService) -> PositionDataPort:
         """持仓窄 Port."""
+        return trade_service
+
+    @provide
+    def broker_event_data_port(
+        self,
+        trade_service: TradeService,
+    ) -> BrokerEventDataPort:
+        """券商事件窄 Port."""
         return trade_service

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
+
 from ditto_features.derived_types import (
     DerivedRole as _DerivedRole,
 )
@@ -62,10 +64,23 @@ class CompatibilityManifest:
     calendar_id: str | None
     timezone: str | None
     time_semantics_version: str | None
+    pit_policy: str | None = PIT_POLICY_FAIL_CLOSED
+    pit_time_column: str | None = DEFAULT_PIT_TIME_COLUMN
+    unsafe_time_policy: str | None = ""
+    source_snapshot_id: str | None = None
+    source_snapshot_ids: tuple[str, ...] = ()
     python_version: str | None = None
     platform: str | None = None
     builder_version: str | None = None
     manifest_hash: str | None = None
+
+    def __post_init__(self) -> None:
+        """Normalize JSON-hydrated snapshot lists back to tuples."""
+        object.__setattr__(
+            self,
+            "source_snapshot_ids",
+            tuple(self.source_snapshot_ids),
+        )
 
     def missing_required_fields(self) -> tuple[str, ...]:
         """Return required fields that are missing."""
@@ -79,6 +94,8 @@ class CompatibilityManifest:
             ("calendar_id", self.calendar_id),
             ("timezone", self.timezone),
             ("time_semantics_version", self.time_semantics_version),
+            ("pit_policy", self.pit_policy),
+            ("pit_time_column", self.pit_time_column),
         )
         missing = tuple(
             field_name

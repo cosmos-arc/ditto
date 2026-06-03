@@ -9,6 +9,7 @@ from functools import cache
 from typing import Literal
 
 import polars as pl
+from ditto_data.catalog import default_dataset_metadata
 from ditto_data.models import FX_CODE_TO_INSTRUMENT_ID, Dataset, DateScheduleType
 from ditto_kernel.instrument import InstrumentIngestParams
 
@@ -135,6 +136,11 @@ class DatasetRegistry:
                 value=registration.dataset.value,
             )
         self._registrations[registration.dataset] = registration
+
+    def validate_catalog_capabilities(self) -> None:
+        """Validate all registered routes against data-owned catalog capabilities."""
+        for registration in self._registrations.values():
+            _validate_catalog_capability(registration)
 
     def require(self, dataset: Dataset) -> DatasetRegistration:
         """Return a registration or raise a clear error."""
@@ -460,4 +466,36 @@ def default_dataset_registry() -> DatasetRegistry:
     registry = DatasetRegistry()
     for registration in _ALL_REGISTRATIONS:
         registry.register(registration)
+    registry.validate_catalog_capabilities()
     return registry
+
+
+def _validate_catalog_capability(registration: DatasetRegistration) -> None:
+    """Validate app routing against data-owned catalog capabilities."""
+    metadata = default_dataset_metadata()[registration.dataset.value]
+    if registration.date_schedule.value != metadata.schedule:
+        raise AppProcessError(
+            "Dataset route schedule does not match catalog metadata",
+            field="dataset",
+            value=registration.dataset.value,
+            route_schedule=registration.date_schedule.value,
+            catalog_schedule=metadata.schedule,
+        )
+    has_date_route = registration.daily_fetch_factory is not None
+    if has_date_route != metadata.supports_date_ingestion:
+        raise AppProcessError(
+            "Dataset date route does not match catalog metadata",
+            field="dataset",
+            value=registration.dataset.value,
+            route_supports_date=has_date_route,
+            catalog_supports_date=metadata.supports_date_ingestion,
+        )
+    has_instrument_route = registration.instrument_fetch_factory is not None
+    if has_instrument_route != metadata.supports_instrument_ingestion:
+        raise AppProcessError(
+            "Dataset instrument route does not match catalog metadata",
+            field="dataset",
+            value=registration.dataset.value,
+            route_supports_instrument=has_instrument_route,
+            catalog_supports_instrument=metadata.supports_instrument_ingestion,
+        )

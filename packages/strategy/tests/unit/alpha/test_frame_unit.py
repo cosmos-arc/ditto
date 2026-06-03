@@ -73,6 +73,21 @@ class TestValidateFrameDebug:
         # 不应抛出异常
         validate_frame(frame, (FrameCol.INSTRUMENT_ID, FrameCol.SIGNAL))
 
+    def test_string_identifier_frame_passes_for_template_compatibility(self) -> None:
+        """字符串标识符用于实验模板测试，仍应被 schema 接受。"""
+        frame = pl.DataFrame({"instrument_id": ["ETF001", "ETF002"]})
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,))
+
+    def test_all_null_signal_column_passes(self) -> None:
+        """全 null signal/score 表示缺失信号，不应被 dtype guard 拒绝。"""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "signal_value": [None, None],
+            },
+        )
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID, FrameCol.SIGNAL))
+
     def test_empty_required_passes(self) -> None:
         """required 为空元组时，任何 frame 都应通过。"""
         frame = pl.DataFrame({"x": [1]})

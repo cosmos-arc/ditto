@@ -13,9 +13,15 @@ from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
     RuntimeDerivedInputProvider,
 )
+from ditto_application.processes.materialization.source_snapshot_resolver import (
+    SourceSnapshotProvenance,
+)
 from ditto_application.processes.materialization.types import (
     InMemoryDerivedInputProvider,
+    InputContext,
 )
+from ditto_data.catalog.contracts import DataAssetRef
+from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_features.compile_cache import SQLiteCompileCache
 from ditto_features.derived_types import (
     DerivedRole,
@@ -200,6 +206,17 @@ def _publication_record_service(data_root: Path) -> PublicationSafetyRecordServi
             certification_writer=CertificationWriter(base_path=data_root),
         )
     )
+
+
+class _StaticSourceSnapshotResolver:
+    """Test resolver that returns DataCatalog-derived source provenance."""
+
+    def __init__(self, snapshot_ids: tuple[str, ...]) -> None:
+        self._snapshot_ids = snapshot_ids
+
+    def resolve(self, context: InputContext) -> SourceSnapshotProvenance:
+        del context
+        return SourceSnapshotProvenance.from_ids(self._snapshot_ids)
 
 
 class TestDerivedMaterializationOrchestrator:
@@ -440,6 +457,91 @@ class TestDerivedMaterializationOrchestrator:
             .all()
         )
 
+    def test_materialization_records_persistent_data_lineage(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """Durable materialization should write lineage for inputs and output."""
+        spec = DerivedSpec(
+            id="factor.market_lineage",
+            version=3,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="market.close * market.adj_factor",
+        )
+        _write_market_truth_layers(tmp_path)
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(catalog_service, spec)
+        lineage = SQLiteDataLineage(sqlite_client)
+        mock_market = MagicMock()
+        mock_market.get_stock_bars.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "close": [10.0, 11.0],
+                "open": [9.5, 10.5],
+                "high": [10.5, 11.5],
+                "low": [9.0, 10.0],
+                "pre_close": [9.0, 10.0],
+                "volume": [100.0, 110.0],
+                "amount": [1000.0, 1100.0],
+            }
+        )
+        mock_market.get_adj_factors.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 1],
+                "trade_date": [date(2026, 3, 10), date(2026, 3, 11)],
+                "adj_factor": [1.0, 1.1],
+            }
+        )
+        service = DerivedMaterializationOrchestrator(
+            catalog_service=catalog_service,
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
+            input_provider=RuntimeDerivedInputProvider(
+                catalog_service=catalog_service,
+                market_service=mock_market,
+                artifact_root=tmp_path,
+            ),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
+            lineage_recorder=lineage,
+        )
+
+        result = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=spec.id,
+                version=spec.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id="market:20260311-001",
+            )
+        )
+
+        stock_daily_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+        )
+        output_asset = DataAssetRef(
+            dataset_id=spec.id,
+            namespace="derived",
+            partition_keys=(f"version={spec.version}",),
+        )
+        stock_daily_events = lineage.list_events_for_asset(stock_daily_asset)
+        output_events = lineage.list_events_for_asset(output_asset)
+
+        assert len(stock_daily_events) == 1
+        assert stock_daily_events == output_events
+        event = stock_daily_events[0]
+        assert event.run_id == result.run_id
+        assert event.operation == "materialize"
+        assert {ref.asset for ref in event.inputs} == {
+            stock_daily_asset,
+            DataAssetRef(dataset_id="adj_factor", namespace="market"),
+        }
+        assert event.outputs[0].asset == output_asset
+
     def test_runtime_input_provider_preserves_upstream_availability_time(
         self,
         sqlite_client,
@@ -571,6 +673,10 @@ class TestDerivedMaterializationOrchestrator:
         assert manifest_record is not None
         manifest = CompatibilityManifest(**manifest_record.payload)
         assert manifest.is_complete() is True
+        assert manifest.pit_policy == "knowledge_date_fail_closed"
+        assert manifest.pit_time_column == "knowledge_date"
+        assert manifest.unsafe_time_policy == ""
+        assert manifest.source_snapshot_id == "market:20260311-001"
 
         partition = catalog_service.list_partitions(
             candidate.id,
@@ -588,6 +694,84 @@ class TestDerivedMaterializationOrchestrator:
         assert (
             payload["publication"]["compatibility_manifest"] == manifest_record.payload
         )
+
+    def test_materialization_auto_propagates_resolved_source_snapshot_set(
+        self,
+        sqlite_client,
+        tmp_path: Path,
+    ) -> None:
+        """Resolved source snapshots should flow into run, manifest, and metadata."""
+        candidate = DerivedSpec(
+            id="factor.alpha_snapshot_set",
+            version=3,
+            role=DerivedRole.FACTOR,
+            materialization_profile=MaterializationProfile.SERIES,
+            expression="ts_delta(close, 1)",
+        )
+        catalog_service = _catalog_service(sqlite_client, tmp_path)
+        _seed_spec(
+            catalog_service,
+            candidate,
+            status=DerivedVersionStatus.PUBLISHED,
+            is_online=False,
+            is_primary=False,
+        )
+        publication_record_service = _publication_record_service(tmp_path)
+        source_snapshot_ids = (
+            "snapshot:tushare:stock_daily:2026-03-10:a",
+            "snapshot:tushare:stock_daily:2026-03-11:b",
+        )
+        service = DerivedMaterializationOrchestrator(
+            catalog_service=catalog_service,
+            compile_cache_service=SQLiteCompileCache(sqlite_client),
+            input_provider=InMemoryDerivedInputProvider({candidate.id: _input_frame()}),
+            artifact_writer=ArtifactPersistenceService(tmp_path),
+            publication_record_service=publication_record_service,
+            source_snapshot_resolver=_StaticSourceSnapshotResolver(source_snapshot_ids),
+        )
+
+        result = service.materialize(
+            DerivedMaterializationRequest(
+                derived_id=candidate.id,
+                version=candidate.version,
+                mode=DerivedRunMode.FULL,
+                request_start="2026-03-10",
+                request_end="2026-03-11",
+                trigger=DerivedRunTrigger.MANUAL,
+                source_snapshot_id=None,
+            )
+        )
+
+        run = catalog_service.get_run(candidate.id, candidate.version, result.run_id)
+        assert run is not None
+        assert run.source_snapshot_id is not None
+        assert run.source_snapshot_id.startswith("snapshot-set:sha256:")
+
+        manifest_record = publication_record_service.get_manifest(
+            candidate.id,
+            candidate.version,
+        )
+        assert manifest_record is not None
+        manifest = CompatibilityManifest(**manifest_record.payload)
+        assert manifest.source_snapshot_id == run.source_snapshot_id
+        assert manifest.source_snapshot_ids == source_snapshot_ids
+
+        partition = catalog_service.list_partitions(
+            candidate.id,
+            candidate.version,
+            result.run_id,
+        )[0]
+        metadata_path = (
+            (tmp_path / partition.partition_path).parent
+            / "_runs"
+            / result.run_id
+            / "artifact_metadata.json"
+        )
+        payload = orjson.loads(metadata_path.read_bytes())
+        assert payload["input_snapshots"] == list(source_snapshot_ids)
+        assert payload["publication"]["compatibility_manifest"][
+            "source_snapshot_ids"
+        ] == list(source_snapshot_ids)
 
     def test_durable_materialization_persists_minimal_dq_summary(
         self,

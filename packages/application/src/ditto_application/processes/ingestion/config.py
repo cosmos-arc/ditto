@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
@@ -12,6 +13,7 @@ from ditto_data.ingestion.ingestion_cursor_store import (
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
+from ditto_data.lineage import DataLineageRecorder
 from pydantic import BaseModel, ConfigDict, Field
 
 from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
@@ -39,3 +41,6 @@ class IngestionCoordinatorConfig:
     ingestion_cursor_store: IngestionCursorStore | None = None
     quality_checker: QualityCheckerProtocol | None = None
     freeze_store: FreezeStore | None = None
+    lineage_recorder: DataLineageRecorder | None = None
+    catalog_reader: DataCatalogReader | None = None
+    catalog_writer: DataCatalogWriter | None = None

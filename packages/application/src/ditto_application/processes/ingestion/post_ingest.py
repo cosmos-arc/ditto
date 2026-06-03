@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Literal, cast
 
 import httpx
 import polars as pl
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataCatalogWriter,
+    DataSchemaFingerprint,
+    default_dataset_metadata,
+)
 from ditto_data.errors import (
     NetworkError,
     SourceFetchError,
@@ -15,10 +25,17 @@ from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
 )
+from ditto_data.lineage import (
+    DataLineageRecorder,
+    LineageEvent,
+    LineageInputRef,
+    LineageOutputRef,
+)
 from ditto_data.models.ingestion import IngestionResult
 from ditto_platform.foundation import OnDuplicate, WriteResult, logger
 
 from ditto_application.contracts import CheckDataQualityCommand
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.ingestion.data_writer import IngestionDataWriter
 from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
@@ -30,6 +47,8 @@ __all__ = [
     "create_freeze_point",
     "handle_fetch_error",
     "process_fetched_data",
+    "record_data_catalog_entry",
+    "record_ingestion_lineage",
     "run_list_date_inference",
     "run_post_ingest_hooks",
     "safe_side_effect",
@@ -111,6 +130,8 @@ def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在
     list_date_inference: ListDateInferenceService,
     cursor_store: IngestionCursorStore | None,
     freeze_store: FreezeStore | None,
+    lineage_recorder: DataLineageRecorder | None,
+    catalog_writer: DataCatalogWriter | None,
     source_name: str,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
@@ -164,7 +185,266 @@ def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在
         source_name=source_name,
     )
 
-    return result_handler.handle_success(dataset, trade_date, df, write_result)
+    result = result_handler.handle_success(dataset, trade_date, df, write_result)
+    record_ingestion_lineage(
+        dataset,
+        trade_date,
+        source_name=source_name,
+        lineage_recorder=lineage_recorder,
+        write_result=write_result,
+    )
+    record_data_catalog_entry(
+        dataset,
+        trade_date,
+        source_name=source_name,
+        catalog_writer=catalog_writer,
+        write_result=write_result,
+        df=df,
+    )
+    return result
+
+
+def _dataset_namespace(dataset: str) -> str:
+    metadata = default_dataset_metadata().get(dataset)
+    if metadata is None:
+        return "data"
+    return metadata.domain
+
+
+def _source_asset(
+    dataset: str,
+    trade_date: str,
+    source_name: str,
+    *,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> DataAssetRef:
+    if source_ticker is not None:
+        range_end = end_date or trade_date
+        return DataAssetRef(
+            dataset_id=dataset,
+            namespace="source",
+            partition_keys=(
+                f"source={source_name}",
+                f"source_ticker={source_ticker}",
+                f"start_date={trade_date}",
+                f"end_date={range_end}",
+            ),
+        )
+    return DataAssetRef(
+        dataset_id=dataset,
+        namespace="source",
+        partition_keys=(f"source={source_name}", f"trade_date={trade_date}"),
+    )
+
+
+def _output_asset(
+    dataset: str,
+    trade_date: str,
+    *,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> DataAssetRef:
+    if source_ticker is not None:
+        range_end = end_date or trade_date
+        return DataAssetRef(
+            dataset_id=dataset,
+            namespace=_dataset_namespace(dataset),
+            partition_keys=(
+                f"source_ticker={source_ticker}",
+                f"start_date={trade_date}",
+                f"end_date={range_end}",
+            ),
+        )
+    return DataAssetRef(
+        dataset_id=dataset,
+        namespace=_dataset_namespace(dataset),
+        partition_keys=(f"trade_date={trade_date}",),
+    )
+
+
+def _ingestion_run_id(
+    dataset: str,
+    trade_date: str,
+    source_name: str,
+    checksum: str,
+    *,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> str:
+    if source_ticker is not None:
+        return (
+            f"ingest:{source_name}:{dataset}:{source_ticker}:"
+            f"{trade_date}:{end_date or trade_date}:{checksum}"
+        )
+    return f"ingest:{source_name}:{dataset}:{trade_date}:{checksum}"
+
+
+def _source_snapshot_id(
+    dataset: str,
+    trade_date: str,
+    source_name: str,
+    checksum: str,
+    *,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> str:
+    if source_ticker is not None:
+        return (
+            f"snapshot:{source_name}:{dataset}:{source_ticker}:"
+            f"{trade_date}:{end_date or trade_date}:{checksum}"
+        )
+    return f"snapshot:{source_name}:{dataset}:{trade_date}:{checksum}"
+
+
+def record_ingestion_lineage(
+    dataset: str,
+    trade_date: str,
+    *,
+    source_name: str,
+    lineage_recorder: DataLineageRecorder | None,
+    write_result: WriteResult,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> None:
+    """记录源数据到落库资产的 lineage（失败仅记录警告，不影响摄取成功）。"""
+    if lineage_recorder is None:
+        return
+    recorder = lineage_recorder
+    safe_side_effect(
+        lambda: recorder.record_event(
+            LineageEvent(
+                run_id=_ingestion_run_id(
+                    dataset,
+                    trade_date,
+                    source_name,
+                    write_result.checksum,
+                    source_ticker=source_ticker,
+                    end_date=end_date,
+                ),
+                operation="ingest",
+                inputs=(
+                    LineageInputRef(
+                        asset=_source_asset(
+                            dataset,
+                            trade_date,
+                            source_name,
+                            source_ticker=source_ticker,
+                            end_date=end_date,
+                        ),
+                        role="source",
+                    ),
+                ),
+                outputs=(
+                    LineageOutputRef(
+                        asset=_output_asset(
+                            dataset,
+                            trade_date,
+                            source_ticker=source_ticker,
+                            end_date=end_date,
+                        ),
+                        role="dataset",
+                    ),
+                ),
+                timestamp=datetime.now(UTC),
+            )
+        ),
+        log_tag="lineage_record_failed",
+        event="lineage_record_error",
+        dataset=dataset,
+        trade_date=trade_date,
+    )
+
+
+def _schema_hash_from_dataframe(df: pl.DataFrame) -> str:
+    fields = [
+        (name, str(dtype)) for name, dtype in zip(df.columns, df.dtypes, strict=True)
+    ]
+    payload = json.dumps(fields, ensure_ascii=True, separators=(",", ":"))
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return f"schema:sha256:{digest}"
+
+
+def _dataset_schema_version(dataset: str) -> str:
+    metadata = default_dataset_metadata().get(dataset)
+    if metadata is None or metadata.schema_version is None:
+        msg = f"Missing DataCatalog schema_version for dataset={dataset!r}"
+        raise AppProcessError(msg)
+    return metadata.schema_version
+
+
+def _data_catalog_entry(  # noqa: PLR0913 — asset/source/schema/write context is intentionally explicit
+    dataset: str,
+    trade_date: str,
+    *,
+    source_name: str,
+    write_result: WriteResult,
+    df: pl.DataFrame,
+    now: datetime,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> DataCatalogEntry:
+    return DataCatalogEntry(
+        asset=_output_asset(
+            dataset,
+            trade_date,
+            source_ticker=source_ticker,
+            end_date=end_date,
+        ),
+        storage_uri=write_result.file_path,
+        schema=DataSchemaFingerprint(
+            schema_hash=_schema_hash_from_dataframe(df),
+            row_count=write_result.rows_written,
+            created_at=now,
+            schema_version=_dataset_schema_version(dataset),
+            columns=tuple(df.columns),
+        ),
+        source=source_name,
+        freshness_at=now,
+        source_snapshot_id=_source_snapshot_id(
+            dataset,
+            trade_date,
+            source_name,
+            write_result.checksum,
+            source_ticker=source_ticker,
+            end_date=end_date,
+        ),
+    )
+
+
+def record_data_catalog_entry(  # noqa: PLR0913 — catalog entry 需要同时携带 asset/source/schema/write 上下文
+    dataset: str,
+    trade_date: str,
+    *,
+    source_name: str,
+    catalog_writer: DataCatalogWriter | None,
+    write_result: WriteResult,
+    df: pl.DataFrame,
+    source_ticker: str | None = None,
+    end_date: str | None = None,
+) -> None:
+    """记录落库资产 catalog 元数据（失败仅记录警告，不影响摄取成功）。"""
+    if catalog_writer is None:
+        return
+    writer = catalog_writer
+    safe_side_effect(
+        lambda: writer.upsert_asset(
+            _data_catalog_entry(
+                dataset,
+                trade_date,
+                source_name=source_name,
+                write_result=write_result,
+                df=df,
+                now=datetime.now(UTC),
+                source_ticker=source_ticker,
+                end_date=end_date,
+            )
+        ),
+        log_tag="catalog_upsert_failed",
+        event="catalog_upsert_error",
+        dataset=dataset,
+        trade_date=trade_date,
+    )
 
 
 def run_post_ingest_hooks(
@@ -200,7 +480,7 @@ def safe_side_effect(
     """执行副作用操作，失败仅记录警告，不影响主流程。"""
     try:
         action()
-    except (ValueError, KeyError, TypeError, OSError) as e:
+    except (AppProcessError, ValueError, KeyError, TypeError, OSError) as e:
         logger.warning(
             log_tag,
             event=event,

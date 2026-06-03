@@ -1,4 +1,4 @@
-"""Product-neutral data lineage contracts."""
+"""Product-neutral data lineage contracts and in-memory runtime."""
 
 from ditto_data.lineage.contracts import (
     DataLineageReader,
@@ -7,10 +7,12 @@ from ditto_data.lineage.contracts import (
     LineageInputRef,
     LineageOutputRef,
 )
+from ditto_data.lineage.store import InMemoryDataLineage
 
 __all__ = [
     "DataLineageReader",
     "DataLineageRecorder",
+    "InMemoryDataLineage",
     "LineageEvent",
     "LineageInputRef",
     "LineageOutputRef",

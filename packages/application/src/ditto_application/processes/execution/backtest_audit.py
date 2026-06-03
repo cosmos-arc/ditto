@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -42,6 +42,7 @@ class ArtifactPersistContext:
     run_id: str
     report: BacktestReport
     manifest: RunManifest | None = None
+    resume_provenance: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -147,6 +148,7 @@ def persist_artifact(
         manifest=ctx.manifest,
         display_map=config.display_map,
         rebalance_freq=config.rebalance_freq,
+        resume_provenance=ctx.resume_provenance,
     )
     # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
     # 从返回值推导实际目录（artifact_dir=None 时内部解析到系统临时目录）
@@ -155,21 +157,57 @@ def persist_artifact(
     resolved_dir = next(iter(artifacts_map.values())).parent
     file_path = str(resolved_dir)
 
+    metadata: dict[str, object] = {
+        "initial_cash": config.initial_cash,
+        "final_nav": ctx.report.final_nav,
+        "total_trades": ctx.report.aggregated_trade_stats.total_trades,
+        "sharpe_ratio": ctx.report.alpha_stats.sharpe_ratio,
+        "max_drawdown": ctx.report.alpha_stats.max_drawdown,
+        "period_start": ctx.report.period[0],
+        "period_end": ctx.report.period[1],
+        "pit_policy": (ctx.manifest.pit_policy if ctx.manifest is not None else ""),
+        "pit_time_column": (
+            ctx.manifest.pit_time_column if ctx.manifest is not None else ""
+        ),
+        "unsafe_time_policy": (
+            ctx.manifest.unsafe_time_policy if ctx.manifest is not None else ""
+        ),
+        "knowledge_lag_days": (
+            ctx.manifest.knowledge_lag_days if ctx.manifest is not None else None
+        ),
+    }
+    metadata.update(_resume_artifact_metadata(ctx.resume_provenance))
+
     artifact = StrategyArtifactRecord(
         artifact_id=f"artifact-{ctx.run_id}",
         strategy_id=config.strategy_id,
         run_id=ctx.run_id,
         artifact_type=ArtifactKind.BACKTEST_REPORT,
         file_path=file_path,
-        metadata={
-            "initial_cash": config.initial_cash,
-            "final_nav": ctx.report.final_nav,
-            "total_trades": ctx.report.aggregated_trade_stats.total_trades,
-            "sharpe_ratio": ctx.report.alpha_stats.sharpe_ratio,
-            "max_drawdown": ctx.report.alpha_stats.max_drawdown,
-            "period_start": ctx.report.period[0],
-            "period_end": ctx.report.period[1],
-        },
+        metadata=metadata,
         created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
     config.artifact_service.save_artifact(artifact)
+
+
+def _resume_artifact_metadata(
+    provenance: Mapping[str, object] | None,
+) -> dict[str, object]:
+    """Map normalized report provenance into searchable artifact metadata."""
+    if provenance is None:
+        return {}
+    return {
+        "resume_from_run_id": provenance.get("from_run_id", ""),
+        "resume_checkpoint_trade_date": provenance.get("checkpoint_trade_date", ""),
+        "resume_checkpoint_completed_days": provenance.get(
+            "checkpoint_completed_days",
+            0,
+        ),
+        "resume_checkpoint_total_days": provenance.get("checkpoint_total_days", 0),
+        "resume_checkpoint_nav": provenance.get("checkpoint_nav", 0.0),
+        "resume_checkpoint_order_count": provenance.get("checkpoint_order_count", 0),
+        "resume_checkpoint_fill_count": provenance.get("checkpoint_fill_count", 0),
+        "resume_account_state_hash": provenance.get("account_state_hash", ""),
+        "resume_settlement_state_hash": provenance.get("settlement_state_hash", ""),
+        "resume_runtime_state_hash": provenance.get("runtime_state_hash", ""),
+    }

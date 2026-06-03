@@ -3,12 +3,30 @@
 from __future__ import annotations
 
 from datetime import date
+from unittest.mock import MagicMock
 
 import polars as pl
+import pytest
+from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.fundamental import (
     FundamentalDataPort,
     FundamentalQueryFacade,
 )
+from ditto_data.catalog.promotion import DatasetMaturityPromotion
+
+
+class _MaturityPromotionReader:
+    def __init__(
+        self,
+        promotions_by_dataset: dict[str, DatasetMaturityPromotion] | None = None,
+    ) -> None:
+        self._promotions_by_dataset = promotions_by_dataset or {}
+
+    def get_dataset_maturity_promotion(
+        self,
+        dataset_id: str,
+    ) -> DatasetMaturityPromotion | None:
+        return self._promotions_by_dataset.get(dataset_id)
 
 
 class _StubFundamentalData:
@@ -81,7 +99,11 @@ class TestFundamentalQueryFacadeGetBalanceSheet:
         stub = _StubFundamentalData(balance_sheet=bs)
         facade = FundamentalQueryFacade(fundamental_store=stub)
 
-        result = facade.get_balance_sheet(1, date(2024, 1, 15))
+        result = facade.get_balance_sheet(
+            1,
+            date(2024, 1, 15),
+            allow_experimental_data=True,
+        )
 
         assert result is not None
         assert len(result) == 1
@@ -90,9 +112,90 @@ class TestFundamentalQueryFacadeGetBalanceSheet:
         stub = _StubFundamentalData(balance_sheet=None)
         facade = FundamentalQueryFacade(fundamental_store=stub)
 
-        result = facade.get_balance_sheet(999, date(2024, 1, 15))
+        result = facade.get_balance_sheet(
+            999,
+            date(2024, 1, 15),
+            allow_experimental_data=True,
+        )
 
         assert result is None
+
+
+class TestFundamentalQueryFacadeMaturityGate:
+    """FundamentalQueryFacade — 显式数据集 maturity read gate."""
+
+    @pytest.mark.parametrize(
+        ("method_name", "dataset_id", "args"),
+        [
+            ("get_balance_sheet", "balance_sheet", (1, date(2026, 6, 1))),
+            ("get_income_statement", "income_statement", (1, date(2026, 6, 1))),
+            ("get_cash_flow", "cash_flow", (1, date(2026, 6, 1))),
+            ("get_dividend", "dividend", (1, date(2026, 6, 1))),
+            (
+                "list_corporate_actions",
+                "corporate_actions",
+                (1, date(2026, 1, 1), date(2026, 6, 1)),
+            ),
+        ],
+    )
+    def test_experimental_datasets_require_explicit_research_opt_in(
+        self,
+        method_name: str,
+        dataset_id: str,
+        args: tuple[object, ...],
+    ) -> None:
+        store = MagicMock(
+            spec=[
+                "get_balance_sheet",
+                "get_income_statement",
+                "get_cash_flow",
+                "get_dividend",
+                "list_corporate_actions",
+            ]
+        )
+        facade = FundamentalQueryFacade(fundamental_store=store)
+
+        with pytest.raises(AppQueryError, match="allow_experimental_data=True") as exc:
+            getattr(facade, method_name)(*args)
+
+        getattr(store, method_name).assert_not_called()
+        assert dataset_id in str(exc.value)
+
+    def test_allow_experimental_data_delegates_to_port(self) -> None:
+        store = MagicMock(spec=["get_balance_sheet"])
+        store.get_balance_sheet.return_value = pl.DataFrame({"total_assets": [1e9]})
+        facade = FundamentalQueryFacade(fundamental_store=store)
+
+        result = facade.get_balance_sheet(
+            1,
+            date(2026, 6, 1),
+            allow_experimental_data=True,
+        )
+
+        assert result is not None
+        store.get_balance_sheet.assert_called_once_with(1, date(2026, 6, 1))
+
+    def test_promoted_dataset_does_not_need_research_opt_in(self) -> None:
+        store = MagicMock(spec=["get_balance_sheet"])
+        store.get_balance_sheet.return_value = pl.DataFrame({"total_assets": [1e9]})
+        facade = FundamentalQueryFacade(
+            fundamental_store=store,
+            maturity_promotion_reader=_MaturityPromotionReader(
+                {
+                    "balance_sheet": DatasetMaturityPromotion(
+                        dataset_id="balance_sheet",
+                        previous_maturity="experimental",
+                        promoted_maturity="initial-focus",
+                        promoted_by="architecture-review",
+                    )
+                }
+            ),
+        )
+
+        result = facade.get_balance_sheet(1, date(2026, 6, 1))
+
+        assert result is not None
+        store.get_balance_sheet.assert_called_once_with(1, date(2026, 6, 1))
 
 
 class TestFundamentalQueryFacadeGetIncomeStatement:
@@ -103,7 +206,11 @@ class TestFundamentalQueryFacadeGetIncomeStatement:
         stub = _StubFundamentalData(income_statement=is_df)
         facade = FundamentalQueryFacade(fundamental_store=stub)
 
-        result = facade.get_income_statement(1, date(2024, 1, 15))
+        result = facade.get_income_statement(
+            1,
+            date(2024, 1, 15),
+            allow_experimental_data=True,
+        )
 
         assert result is not None
         assert len(result) == 1
@@ -117,7 +224,11 @@ class TestFundamentalQueryFacadeGetCashFlow:
         stub = _StubFundamentalData(cash_flow=cf)
         facade = FundamentalQueryFacade(fundamental_store=stub)
 
-        result = facade.get_cash_flow(1, date(2024, 1, 15))
+        result = facade.get_cash_flow(
+            1,
+            date(2024, 1, 15),
+            allow_experimental_data=True,
+        )
 
         assert result is not None
         assert len(result) == 1
@@ -131,7 +242,11 @@ class TestFundamentalQueryFacadeGetDividend:
         stub = _StubFundamentalData(dividend=div)
         facade = FundamentalQueryFacade(fundamental_store=stub)
 
-        result = facade.get_dividend(1, date(2024, 1, 15))
+        result = facade.get_dividend(
+            1,
+            date(2024, 1, 15),
+            allow_experimental_data=True,
+        )
 
         assert result is not None
         assert len(result) == 1
@@ -149,6 +264,7 @@ class TestFundamentalQueryFacadeListCorporateActions:
             1,
             date(2024, 1, 1),
             date(2024, 12, 31),
+            allow_experimental_data=True,
         )
 
         assert len(result) == 1
@@ -163,6 +279,7 @@ class TestFundamentalQueryFacadeListCorporateActions:
             date(2024, 1, 1),
             date(2024, 12, 31),
             as_of_date=date(2024, 6, 30),
+            allow_experimental_data=True,
         )
 
         assert len(result) == 1
@@ -188,7 +305,11 @@ class TestFundamentalQueryFacadeAcceptsProtocol:
         )
 
         facade = FundamentalQueryFacade(fundamental_store=mock_store)
-        result = facade.get_balance_sheet(1, date(2024, 1, 15))
+        result = facade.get_balance_sheet(
+            1,
+            date(2024, 1, 15),
+            allow_experimental_data=True,
+        )
 
         assert result is not None
         assert len(result) == 1

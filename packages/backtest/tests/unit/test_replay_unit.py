@@ -293,6 +293,36 @@ class TestCompareManifests:
         assert diff.has_diff is True
         assert any("data_hash" in d for d in diff.data_diffs)
 
+    def test_input_ref_details_source_snapshot_mismatch(self) -> None:
+        """Replay validation must catch source snapshot drift."""
+        a = _make_manifest(
+            input_ref_details=(
+                InputRef(
+                    instrument_id=_IID_510300,
+                    data_hash="sha256:aaa",
+                    date_range=("2025-01-01", "2025-03-01"),
+                    source="tushare",
+                    source_snapshot_id="snapshot-v1",
+                ),
+            ),
+        )
+        b = _make_manifest(
+            input_ref_details=(
+                InputRef(
+                    instrument_id=_IID_510300,
+                    data_hash="sha256:aaa",
+                    date_range=("2025-01-01", "2025-03-01"),
+                    source="tushare",
+                    source_snapshot_id="snapshot-v2",
+                ),
+            ),
+        )
+
+        diff = ReplayValidator.compare_manifests(a, b)
+
+        assert diff.has_diff is True
+        assert any("source_snapshot_id" in d for d in diff.data_diffs)
+
     def test_engine_version_mismatch(self) -> None:
         a = _make_manifest(engine_version="0.1.0")
         b = _make_manifest(engine_version="0.2.0")

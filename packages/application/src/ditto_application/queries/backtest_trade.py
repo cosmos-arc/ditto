@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import polars as pl
+from ditto_strategy.models import ArtifactKind
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
@@ -87,7 +88,7 @@ class BacktestTradeQueryFacade:
             TradeRecord 列表，找不到时返回空列表
 
         """
-        record = find_artifact(self._service, run_id)
+        record = find_artifact(self._service, run_id, ArtifactKind.BACKTEST_REPORT)
         if record is None:
             return []
 

@@ -39,6 +39,7 @@ class ArtifactMetadataParams:
         request_start: 请求开始日期.
         request_end: 请求结束日期.
         source_snapshot_id: 源快照 ID.
+        source_snapshot_ids: 精确输入源快照集合.
 
     """
 
@@ -50,6 +51,7 @@ class ArtifactMetadataParams:
     request_start: str
     request_end: str
     source_snapshot_id: str | None
+    source_snapshot_ids: tuple[str, ...] = ()
 
 
 class DerivedArtifactWriter:
@@ -290,9 +292,10 @@ class DerivedArtifactWriter:
                     "run_id": params.run_id,
                     "compile_identity": params.compile_identity,
                     "analysis": params.analysis,
-                    "input_snapshots": [params.source_snapshot_id]
-                    if params.source_snapshot_id is not None
-                    else [],
+                    "input_snapshots": _input_snapshots(
+                        source_snapshot_id=params.source_snapshot_id,
+                        source_snapshot_ids=params.source_snapshot_ids,
+                    ),
                     "coverage": {
                         "start": params.request_start,
                         "end": params.request_end,
@@ -304,7 +307,7 @@ class DerivedArtifactWriter:
             metadata_path,
         )
 
-    def update_artifact_metadata(
+    def update_artifact_metadata(  # noqa: PLR0913
         self,
         *,
         spec: DerivedSpecRecord,
@@ -314,6 +317,7 @@ class DerivedArtifactWriter:
         source_snapshot_id: str | None,
         manifest_record: CompatibilityManifestRecord,
         minimal_dq_record: DerivedMinimalDQSummaryRecord,
+        source_snapshot_ids: tuple[str, ...] = (),
     ) -> None:
         """Read existing metadata JSON, inject publication safety, write atomically."""
         metadata_path = (
@@ -339,8 +343,9 @@ class DerivedArtifactWriter:
             },
         }
         payload["compile_identity"] = compile_identity
-        payload["input_snapshots"] = (
-            [source_snapshot_id] if source_snapshot_id is not None else []
+        payload["input_snapshots"] = _input_snapshots(
+            source_snapshot_id=source_snapshot_id,
+            source_snapshot_ids=source_snapshot_ids,
         )
         payload["partitions_written"] = [
             {
@@ -387,6 +392,18 @@ def extract_partition_keys(
         .sort()
     )
     return tuple(str(value) for value in partition_series.to_list())
+
+
+def _input_snapshots(
+    *,
+    source_snapshot_id: str | None,
+    source_snapshot_ids: tuple[str, ...],
+) -> list[str]:
+    if source_snapshot_ids:
+        return list(source_snapshot_ids)
+    if source_snapshot_id is None:
+        return []
+    return [source_snapshot_id]
 
 
 def _merge_partitions(

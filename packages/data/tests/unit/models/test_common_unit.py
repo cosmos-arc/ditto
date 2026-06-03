@@ -4,6 +4,7 @@ import pytest
 from ditto_data.models import Dataset, Domain
 from ditto_data.models.common import InstrumentIdRange
 from ditto_data.quality.quality_types import DQSeverity
+from ditto_kernel.instrument import AssetClass
 from ditto_platform.foundation import OnDuplicate
 
 
@@ -71,6 +72,20 @@ class TestDataset:
                 assert Dataset.ETF_DAILY.value == "etf_daily"
             case _:
                 pytest.fail("应该匹配到 ETF_DAILY")
+
+    def test_asset_class_property_is_deprecated_compatibility_helper(self) -> None:
+        """Dataset.asset_class 应保留兼容返回值但提示迁移到 catalog metadata."""
+        with pytest.warns(DeprecationWarning, match="DatasetMetadata"):
+            asset_class = Dataset.STOCK_DAILY.asset_class
+
+        assert asset_class == AssetClass.STOCK
+
+    def test_get_asset_class_is_deprecated_compatibility_helper(self) -> None:
+        """Dataset.get_asset_class 应保留兼容返回值但提示迁移到 catalog metadata."""
+        with pytest.warns(DeprecationWarning, match="DatasetMetadata"):
+            asset_class = Dataset.get_asset_class("etf_daily")
+
+        assert asset_class == "etf"
 
 
 @pytest.mark.unit

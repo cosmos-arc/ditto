@@ -14,7 +14,7 @@ import xxhash
 from ditto_platform.foundation import Metrics, logger
 
 from ditto_data.config.data_store import DataStoreSettings
-from ditto_data.helpers.pit import PitHelper
+from ditto_data.helpers.pit import PitHelper, UnsafeResearchTimePolicy
 
 
 class SqlEngine:
@@ -419,8 +419,10 @@ class SqlEngine:
         self,
         query: str,
         knowledge_date: str,
-        date_column: str = "trade_date",
+        date_column: str = "knowledge_date",
         params: list[Any] | dict[str, Any] | None = None,
+        *,
+        unsafe_time_policy: UnsafeResearchTimePolicy | str | None = None,
     ) -> pl.DataFrame:
         """
         执行 PIT 查询（便捷方法）。
@@ -430,8 +432,9 @@ class SqlEngine:
         Args:
             query: SQL 查询（可使用 $asof 占位符）
             knowledge_date: 知识日期 (PIT 时间点)
-            date_column: 日期列名，默认为 "trade_date"
+            date_column: 日期列名，默认为 "knowledge_date"
             params: 查询参数
+            unsafe_time_policy: 显式研究模式 unsafe 时间策略。
 
         Returns:
             查询结果
@@ -441,7 +444,7 @@ class SqlEngine:
             ...     "SELECT * FROM stock_daily WHERE instrument_id = 1",
             ...     "2024-01-15"
             ... )
-            # 自动添加: AND trade_date <= '2024-01-15'
+            # 自动添加: AND knowledge_date <= '2024-01-15'
 
             >>> engine.pit_query(
             ...     "SELECT * FROM stock_daily WHERE trade_date <= $asof",
@@ -451,7 +454,12 @@ class SqlEngine:
 
         """
         # 使用 PitHelper 添加 PIT 过滤条件
-        pit_query = self.pit_helper.add_pit_filter(query, knowledge_date, date_column)
+        pit_query = self.pit_helper.add_pit_filter(
+            query,
+            knowledge_date,
+            date_column,
+            unsafe_time_policy=unsafe_time_policy,
+        )
 
         # 执行查询
         return self.execute(pit_query, asof=knowledge_date, params=params)

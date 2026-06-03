@@ -1,11 +1,18 @@
 """Tests for PitHelper."""
 
 import pytest
-from ditto_data.helpers.pit import PitHelper
+from ditto_data.helpers.pit import PitHelper, UnsafeResearchTimePolicy
 
 
 class TestPitHelper:
     """Test cases for PitHelper."""
+
+    def test_unsafe_research_time_policy_is_exported(self) -> None:
+        """PIT helper facade should expose the explicit unsafe policy enum."""
+        assert (
+            UnsafeResearchTimePolicy.ALLOW_TRADE_DATE_FALLBACK
+            == "allow_trade_date_fallback"
+        )
 
     def test_add_pit_filter_no_where(self) -> None:
         """Test add_pit_filter adds WHERE clause when none exists."""
@@ -27,9 +34,23 @@ class TestPitHelper:
         assert result == expected
 
     def test_add_pit_filter_custom_date_column(self) -> None:
-        """Test add_pit_filter with custom date column."""
+        """trade_date filters require explicit research-only opt-in."""
+        with pytest.raises(ValueError, match="trade_date fallback"):
+            PitHelper.add_pit_filter(
+                "SELECT * FROM stock_daily",
+                "2024-01-15",
+                date_column="trade_date",
+            )
+
+    def test_add_pit_filter_trade_date_with_unsafe_policy(self) -> None:
+        """Explicit research policy allows trade_date fallback."""
         query = "SELECT * FROM stock_daily"
-        result = PitHelper.add_pit_filter(query, "2024-01-15", date_column="trade_date")
+        result = PitHelper.add_pit_filter(
+            query,
+            "2024-01-15",
+            date_column="trade_date",
+            unsafe_time_policy="allow_trade_date_fallback",
+        )
 
         expected = "SELECT * FROM stock_daily WHERE trade_date <= '2024-01-15'"
         assert result == expected
@@ -56,7 +77,7 @@ class TestPitHelper:
 
         expected = (
             "stock_daily s LEFT JOIN adj_factor a "
-            "ON s.instrument_id = a.instrument_id AND a.trade_date <= '2024-01-15'"
+            "ON s.instrument_id = a.instrument_id AND a.knowledge_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -72,7 +93,7 @@ class TestPitHelper:
         expected = (
             "stock_daily s LEFT JOIN adj_factor a "
             "ON s.instrument_id = a.instrument_id AND s.source = a.source "
-            "AND a.trade_date <= '2024-01-15'"
+            "AND a.knowledge_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -110,12 +131,39 @@ class TestPitHelper:
 
     def test_add_pit_join_default_date_column(self) -> None:
         """Test add_pit_join with default date_column parameter."""
-        # When date_column is not specified, should use "trade_date" (default)
         result = PitHelper.add_pit_join(
             "stock_daily s",
             "adj_factor a",
             ["s.instrument_id = a.instrument_id"],
             "2024-01-15",
+        )
+
+        expected = (
+            "stock_daily s LEFT JOIN adj_factor a "
+            "ON s.instrument_id = a.instrument_id AND a.knowledge_date <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_add_pit_join_trade_date_requires_unsafe_policy(self) -> None:
+        """PIT joins must not silently fall back to trade_date."""
+        with pytest.raises(ValueError, match="trade_date fallback"):
+            PitHelper.add_pit_join(
+                "stock_daily s",
+                "adj_factor a",
+                ["s.instrument_id = a.instrument_id"],
+                "2024-01-15",
+                date_column="trade_date",
+            )
+
+    def test_add_pit_join_trade_date_with_unsafe_policy(self) -> None:
+        """Explicit research policy keeps legacy trade_date join available."""
+        result = PitHelper.add_pit_join(
+            "stock_daily s",
+            "adj_factor a",
+            ["s.instrument_id = a.instrument_id"],
+            "2024-01-15",
+            date_column="trade_date",
+            unsafe_time_policy="allow_trade_date_fallback",
         )
 
         expected = (
@@ -142,6 +190,32 @@ class TestPitHelper:
 
         expected = (
             "WITH pit_data AS (SELECT instrument_id, close FROM stock_daily) "
+            "SELECT * FROM pit_data WHERE knowledge_date <= '2024-01-15'"
+        )
+        assert result == expected
+
+    def test_wrap_pit_cte_trade_date_requires_unsafe_policy(self) -> None:
+        """CTE PIT filters must not default to trade_date."""
+        with pytest.raises(ValueError, match="trade_date fallback"):
+            PitHelper.wrap_pit_cte(
+                "SELECT instrument_id, close FROM stock_daily",
+                "pit_data",
+                asof_date="2024-01-15",
+                date_column="trade_date",
+            )
+
+    def test_wrap_pit_cte_trade_date_with_unsafe_policy(self) -> None:
+        """Research-only opt-in keeps trade_date CTE filtering explicit."""
+        result = PitHelper.wrap_pit_cte(
+            "SELECT instrument_id, close FROM stock_daily",
+            "pit_data",
+            asof_date="2024-01-15",
+            date_column="trade_date",
+            unsafe_time_policy="allow_trade_date_fallback",
+        )
+
+        expected = (
+            "WITH pit_data AS (SELECT instrument_id, close FROM stock_daily) "
             "SELECT * FROM pit_data WHERE trade_date <= '2024-01-15'"
         )
         assert result == expected
@@ -161,7 +235,7 @@ class TestPitHelper:
         """Test get_safe_trade_date with default parameters."""
         result = PitHelper.get_safe_trade_date()
 
-        assert result == "trade_date <= $asof"
+        assert result == "knowledge_date <= $asof"
 
     def test_get_safe_trade_date_custom_column(self) -> None:
         """Test get_safe_trade_date with custom column name."""
@@ -173,7 +247,7 @@ class TestPitHelper:
         """Test get_safe_trade_date with specific date."""
         result = PitHelper.get_safe_trade_date(knowledge_date="2024-01-15")
 
-        assert result == "trade_date <= '2024-01-15'"
+        assert result == "knowledge_date <= '2024-01-15'"
 
     def test_get_safe_trade_date_custom_column_and_date(self) -> None:
         """Test get_safe_trade_date with custom column and date."""
@@ -429,7 +503,7 @@ class TestSQLInjectionProtection:
         expected = (
             "stock_daily s LEFT JOIN adj_factor "
             "ON s.instrument_id = adj_factor.instrument_id "
-            "AND adj_factor.trade_date <= '2024-01-15'"
+            "AND adj_factor.knowledge_date <= '2024-01-15'"
         )
         assert result == expected
 
@@ -445,9 +519,24 @@ class TestSQLInjectionProtection:
         # Should handle multiple spaces correctly
         expected = (
             "stock_daily s LEFT JOIN adj_factor   a "
-            "ON s.instrument_id = a.instrument_id AND a.trade_date <= '2024-01-15'"
+            "ON s.instrument_id = a.instrument_id AND a.knowledge_date <= '2024-01-15'"
         )
         assert result == expected
+
+    def test_get_safe_trade_date_trade_date_requires_unsafe_policy(self) -> None:
+        """trade_date SQL predicates are research-only opt-in."""
+        with pytest.raises(ValueError, match="trade_date fallback"):
+            PitHelper.get_safe_trade_date(base_column="trade_date")
+
+    def test_get_safe_trade_date_trade_date_with_unsafe_policy(self) -> None:
+        """Explicit policy keeps legacy trade_date predicate available."""
+        result = PitHelper.get_safe_trade_date(
+            base_column="trade_date",
+            knowledge_date="$asof",
+            unsafe_time_policy="allow_trade_date_fallback",
+        )
+
+        assert result == "trade_date <= $asof"
 
     def test_get_safe_trade_date_with_custom_placeholder(self) -> None:
         """Test get_safe_trade_date with custom placeholder."""

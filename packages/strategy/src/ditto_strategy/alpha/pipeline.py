@@ -1,13 +1,15 @@
 """
 StrategyPipeline + StrategyInputBundle — Pipeline 编排与数据容器.
 
-DecisionFrame 列名约定
-=====================
+DecisionFrame schema 约定
+========================
 DecisionFrame 是 Pipeline 各阶段间流转的 ``pl.DataFrame``，通过列名约定
-传递信息（不做运行时 schema 校验）。
+传递信息，并在 Pipeline 输入、join、stage 输出和最终组合边界做运行时
+schema 校验。
 
 必选列:
-  instrument_id: InstrumentId (int) — 标的 ID
+  instrument_id: InstrumentId-compatible identifier — 标的 ID（生产路径优先 int；
+    实验模板仍允许字符串标识符）
 
 可选列（由各 Stage 按需添加）:
   signal_value: float   — 信号值（SignalStage）
@@ -23,22 +25,71 @@ DecisionFrame 是 Pipeline 各阶段间流转的 ``pl.DataFrame``，通过列名
     -> AllocationStage.process()   (添加 weight)
     -> ConstraintStage.process()   (添加 reason_codes, 调整 weight)
     -> 提取 TargetPortfolio        (instrument_id + weight -> positions)
+
+实验模板若仍使用字符串 ``instrument_id``，可通过
+``StrategyInputBundle.instrument_id_map`` 在 TargetPortfolio 边界解析到 canonical
+``InstrumentId(int)``。未提供映射时保留字符串兼容路径，仅限实验模板继续运行；
+promotion / golden fixture 可启用 ``require_canonical_target_ids`` 让输出边界
+fail closed。
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import cast
 
 import polars as pl
 from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId as _InstrumentId
 
 from ditto_strategy.alpha.context import StrategyContext
+from ditto_strategy.alpha.frame import FrameCol, validate_frame
 from ditto_strategy.alpha.models import TargetPortfolio
 from ditto_strategy.alpha.protocols import DecisionStage
+from ditto_strategy.errors import StrategySpecError
 
 __all__ = ["StrategyInputBundle", "StrategyPipeline"]
+
+
+def _empty_instrument_id_map() -> dict[object, _InstrumentId]:
+    return {}
+
+
+def _resolve_target_instrument_id(
+    raw_id: object,
+    instrument_id_map: Mapping[object, _InstrumentId],
+) -> _InstrumentId:
+    mapped_id = instrument_id_map.get(raw_id)
+    if mapped_id is not None:
+        return mapped_id
+    if isinstance(raw_id, int) and not isinstance(raw_id, bool):
+        return _InstrumentId(raw_id)
+    return cast(_InstrumentId, raw_id)
+
+
+def _validate_canonical_target_ids(
+    positions: Mapping[_InstrumentId, float],
+    *,
+    boundary: str,
+) -> None:
+    non_canonical_ids = tuple(
+        str(instrument_id)
+        for instrument_id in positions
+        if not _is_canonical_instrument_id(instrument_id)
+    )
+    if non_canonical_ids:
+        raise StrategySpecError(
+            "TargetPortfolio contains non-canonical instrument IDs",
+            details={
+                "boundary": boundary,
+                "non_canonical_instrument_ids": non_canonical_ids,
+            },
+        )
+
+
+def _is_canonical_instrument_id(instrument_id: object) -> bool:
+    return isinstance(instrument_id, int) and not isinstance(instrument_id, bool)
 
 
 @dataclass(frozen=True)
@@ -59,6 +110,9 @@ class StrategyInputBundle:
             ``signal_value`` 列
         parameters: 参数覆盖
         benchmark_close: 基准收盘价（可选）
+        instrument_id_map: 实验模板字符串 ID 到 canonical ``InstrumentId`` 的映射
+        require_canonical_target_ids: 是否要求 TargetPortfolio 输出只包含
+            canonical ``InstrumentId(int)`` key
 
     """
 
@@ -70,6 +124,10 @@ class StrategyInputBundle:
     signal_values: pl.DataFrame | None = None
     parameters: dict[str, object] = field(default_factory=dict)
     benchmark_close: float | None = None
+    instrument_id_map: Mapping[object, _InstrumentId] = field(
+        default_factory=_empty_instrument_id_map,
+    )
+    require_canonical_target_ids: bool = False
 
 
 class StrategyPipeline:
@@ -108,18 +166,35 @@ class StrategyPipeline:
         """
         # Step 1: 初始 DecisionFrame
         frame = input_bundle.instruments.clone()
+        validate_frame(
+            frame,
+            (FrameCol.INSTRUMENT_ID,),
+            boundary="input_bundle.instruments",
+        )
 
         # Step 2: 可选 signal_values join
         if input_bundle.signal_values is not None:
+            validate_frame(
+                input_bundle.signal_values,
+                (FrameCol.INSTRUMENT_ID,),
+                boundary="input_bundle.signal_values",
+            )
             frame = frame.join(
                 input_bundle.signal_values,
-                on="instrument_id",
+                on=FrameCol.INSTRUMENT_ID,
                 how="left",
             )
+            validate_frame(frame, (FrameCol.INSTRUMENT_ID,), boundary="initial_join")
 
         # Step 3: 顺序执行 stages
         for stage in self._stages:
             frame = stage.process(frame, context)
+            validate_frame(
+                frame,
+                (FrameCol.INSTRUMENT_ID,),
+                boundary="stage_output",
+                stage_name=stage.__class__.__name__,
+            )
 
         # Step 4: 从最终 frame 提取 TargetPortfolio
         return self._build_target_portfolio(frame, input_bundle)
@@ -143,18 +218,34 @@ class StrategyPipeline:
                 positions={},
             )
 
-        if "weight" in frame.columns:
-            rows = frame.select("instrument_id", "weight").rows()
+        validate_frame(frame, (FrameCol.INSTRUMENT_ID,), boundary="target_portfolio")
+
+        if FrameCol.WEIGHT in frame.columns:
+            rows = frame.select(FrameCol.INSTRUMENT_ID, FrameCol.WEIGHT).rows()
             positions: dict[_InstrumentId, float] = {
-                _InstrumentId(row[0]): float(row[1]) for row in rows
+                _resolve_target_instrument_id(
+                    row[0],
+                    input_bundle.instrument_id_map,
+                ): float(row[1])
+                for row in rows
             }
         else:
             # Equal weight fallback
             equal_weight = 1.0 / n_rows
-            ids = frame.get_column("instrument_id").to_list()
+            ids = frame.get_column(FrameCol.INSTRUMENT_ID).to_list()
             positions = {
-                _InstrumentId(instrument_id): equal_weight for instrument_id in ids
+                _resolve_target_instrument_id(
+                    instrument_id,
+                    input_bundle.instrument_id_map,
+                ): equal_weight
+                for instrument_id in ids
             }
+
+        if input_bundle.require_canonical_target_ids:
+            _validate_canonical_target_ids(
+                positions,
+                boundary="target_portfolio",
+            )
 
         return TargetPortfolio(
             trade_date=input_bundle.trade_date,

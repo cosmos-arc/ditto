@@ -28,7 +28,11 @@ from loguru import logger
 from ditto_backtest.config import EngineConfig
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.manifest import RuleRefCollector, RunManifest
-from ditto_backtest.result import EngineResult
+from ditto_backtest.result import (
+    BacktestCheckpoint,
+    BacktestRuntimeStateSnapshot,
+    EngineResult,
+)
 from ditto_backtest.statistics import ExecutionAuditCollector
 from ditto_backtest.steps import (
     AuditStep,
@@ -69,6 +73,8 @@ class EngineOptions:
         random_seed: 随机种子（用于可复现性，默认 42）
         should_stop: 协作式取消回调 (None = 不支持取消)
         on_progress: 进度回调 (completed_days, total_days)
+        on_checkpoint: checkpoint 回调，供外层持久化恢复边界
+        restore_runtime_state: checkpoint runtime-state，用于恢复 engine 内部队列
 
     """
 
@@ -81,6 +87,8 @@ class EngineOptions:
     random_seed: int = 42
     should_stop: Callable[[], bool] | None = None
     on_progress: Callable[[int, int], None] | None = None
+    on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
+    restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
 
 
 @dataclass
@@ -102,6 +110,7 @@ class StepDeps:
     strategy_context: StrategyContext
     input_instruments: set[InstrumentId]
     bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]]
+    source_snapshot_ids: dict[InstrumentId, set[str]]
     rule_ref_collector: RuleRefCollector
     trade_builder: TradeBuilder
     recorded_trade_ids: set[str]
@@ -119,6 +128,7 @@ def assemble_engine_result(  # noqa: PLR0913
     orders: list[Order],
     skipped: list[str],
     cancelled: bool,
+    last_checkpoint: BacktestCheckpoint | None = None,
 ) -> EngineResult:
     """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
     return EngineResult(
@@ -131,6 +141,7 @@ def assemble_engine_result(  # noqa: PLR0913
         account_view=account_view,
         manifest=manifest,
         skipped_dates=tuple(skipped),
+        last_checkpoint=last_checkpoint,
         cancelled=cancelled,
     )
 
@@ -189,6 +200,7 @@ def _build_data_fetch_step(deps: StepDeps) -> DataFetchStep:
         strategy_context=deps.strategy_context,
         input_instruments=deps.input_instruments,
         bar_fingerprints=deps.bar_fingerprints,
+        source_snapshot_ids=deps.source_snapshot_ids,
     )
 
 

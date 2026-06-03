@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import UTC, datetime
+
 import polars as pl
+from ditto_data.catalog import (
+    DataCatalogEntry,
+    DataCatalogReader,
+)
 from ditto_data.config.dataset_checksum import dataset_sort_keys
 from ditto_data.ingestion.ingestion_log_store import (
     IngestionLogStore,
 )
 from ditto_data.models.ingestion import IngestionLog
 from ditto_platform.foundation import ChecksumCompute, logger
+
+from ditto_application.catalog_freshness import (
+    assess_catalog_freshness,
+    catalog_entry_for_date,
+)
 
 
 class MetadataManager:
@@ -25,15 +37,26 @@ class MetadataManager:
 
     """
 
-    def __init__(self, ingestion_log_store: IngestionLogStore | None) -> None:
+    def __init__(
+        self,
+        ingestion_log_store: IngestionLogStore | None,
+        *,
+        data_catalog_reader: DataCatalogReader | None = None,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         """
         初始化 MetadataManager。
 
         Args:
             ingestion_log_store: IngestionLogStore 实例。
+            data_catalog_reader: 可选 DataCatalog 读端口，用于无 log 历史时的
+                exact-date 落库资产跳过决策。
+            now: 可选当前时间函数，便于测试 freshness/SLA 判定。
 
         """
         self._ingestion_log_store = ingestion_log_store
+        self._data_catalog_reader = data_catalog_reader
+        self._now = now or _utcnow
 
     def should_skip(
         self,
@@ -88,14 +111,11 @@ class MetadataManager:
 
         # 无历史记录, 不跳过
         if existing is None:
-            logger.debug(
-                "No history found, not skipping",
-                event="should_skip_false",
+            return self._should_skip_without_history(
                 dataset=dataset,
                 trade_date=trade_date,
-                reason="no_history",
+                source=source,
             )
-            return False, None
 
         # 历史成功, 跳过
         if existing.status.value == "SUCCESS":
@@ -123,6 +143,77 @@ class MetadataManager:
             reason="previous_failure",
         )
         return False, None
+
+    def _should_skip_without_history(
+        self,
+        *,
+        dataset: str,
+        trade_date: str,
+        source: str,
+    ) -> tuple[bool, str | None]:
+        catalog_entry = self._catalog_entry_for_date(
+            dataset=dataset,
+            trade_date=trade_date,
+            source=source,
+        )
+        if catalog_entry is None:
+            logger.debug(
+                "No history found, not skipping",
+                event="should_skip_false",
+                dataset=dataset,
+                trade_date=trade_date,
+                reason="no_history",
+            )
+            return False, None
+
+        freshness = assess_catalog_freshness(
+            dataset=dataset,
+            catalog_entry=catalog_entry,
+            now=self._now,
+        )
+        if freshness.status == "stale":
+            logger.debug(
+                "Catalog asset stale, not skipping",
+                event="should_skip_false",
+                dataset=dataset,
+                trade_date=trade_date,
+                storage_uri=catalog_entry.storage_uri,
+                source=source,
+            )
+            return False, None
+
+        reason = (
+            f"DataCatalog asset exists({trade_date}, "
+            f"storage_uri={catalog_entry.storage_uri}, "
+            f"schema={catalog_entry.schema.schema_hash}, "
+            f"rows={catalog_entry.schema.row_count}, "
+            f"freshness_at={catalog_entry.freshness_at.isoformat()})"
+        )
+        logger.debug(
+            "Catalog asset found, skipping",
+            event="should_skip_true",
+            dataset=dataset,
+            trade_date=trade_date,
+            storage_uri=catalog_entry.storage_uri,
+            source=source,
+        )
+        return True, reason
+
+    def _catalog_entry_for_date(
+        self,
+        *,
+        dataset: str,
+        trade_date: str,
+        source: str,
+    ) -> DataCatalogEntry | None:
+        if self._data_catalog_reader is None:
+            return None
+        return catalog_entry_for_date(
+            reader=self._data_catalog_reader,
+            dataset=dataset,
+            trade_date=trade_date,
+            source=source,
+        )
 
     def compare_data(
         self,
@@ -184,3 +275,7 @@ class MetadataManager:
             rows=len(new_df),
         )
         return True
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)

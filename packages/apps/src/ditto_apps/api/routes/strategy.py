@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import Annotated
 
 from dishka import FromComponent
@@ -45,6 +46,13 @@ from ditto_apps.models.strategy import (
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 
 
+async def run_blocking[**P, R](
+    func: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs
+) -> R:
+    """Run blocking application work off the event loop."""
+    return await asyncio.to_thread(func, *args, **kwargs)
+
+
 def to_strategy_response(info: StrategySpecInfo) -> StrategyResponse:
     """将 App StrategySpecInfo 转为 API 响应."""
     return StrategyResponse(
@@ -72,7 +80,7 @@ async def create_strategy(
         spec_json=request.spec_json,
         tags=tuple(request.tags),
     )
-    info = await asyncio.to_thread(handler.handle, cmd)
+    info = await run_blocking(handler.handle, cmd)
     return APIResponse(data=to_strategy_response(info))
 
 
@@ -83,7 +91,7 @@ async def list_strategies(
     pagination: PaginationRequest = Depends(pagination_params),
 ) -> APIResponse[list[StrategyResponse]]:
     """列出策略."""
-    specs = await asyncio.to_thread(facade.list_specs)
+    specs = await run_blocking(facade.list_specs)
     return paginate([to_strategy_response(s) for s in specs], pagination)
 
 
@@ -94,7 +102,7 @@ async def get_strategy(
     facade: Annotated[StrategyQueryFacade, FromComponent()],
 ) -> APIResponse[StrategyResponse]:
     """获取策略详情."""
-    info = await asyncio.to_thread(facade.get_spec, strategy_id)
+    info = await run_blocking(facade.get_spec, strategy_id)
     if info is None:
         raise NotFoundError(f"Strategy not found: {strategy_id}")
     return APIResponse(data=to_strategy_response(info))
@@ -116,7 +124,7 @@ async def update_strategy(
         tags=tuple(request.tags),
     )
     try:
-        info = await asyncio.to_thread(handler.handle, cmd)
+        info = await run_blocking(handler.handle, cmd)
     except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=to_strategy_response(info))
@@ -135,7 +143,7 @@ async def publish_strategy(
         version=request.version,
     )
     try:
-        result = await asyncio.to_thread(handler.handle, cmd)
+        result = await run_blocking(handler.handle, cmd)
     except (AppError, ValueError) as exc:
         raise_business_error(exc, conflict_keywords=("conflict",))
     return APIResponse(data=result)

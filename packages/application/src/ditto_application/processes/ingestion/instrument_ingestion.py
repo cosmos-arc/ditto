@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import polars as pl
+from ditto_data.catalog import DataCatalogWriter
+from ditto_data.catalog.metadata import dataset_asset_class
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.models import Dataset
 from ditto_data.models.ingestion import IngestionResult
 from ditto_data.services.market_service import MarketService
@@ -29,9 +32,14 @@ from ditto_application.processes.ingestion.fetch_handlers import (
 )
 from ditto_application.processes.ingestion.post_ingest import (
     handle_fetch_error,
+    record_data_catalog_entry,
+    record_ingestion_lineage,
     write_data_safe,
 )
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
+from ditto_application.processes.ingestion.source_capability import (
+    ensure_source_supported,
+)
 from ditto_application.processes.ingestion.types import SourceFetchers
 
 __all__ = [
@@ -50,6 +58,8 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
     source_name: str,
     result_handler: IngestionResultHandler,
     data_writer: IngestionDataWriter,
+    lineage_recorder: DataLineageRecorder | None,
+    catalog_writer: DataCatalogWriter | None,
 ) -> IngestionResult:
     """按标的 + 日期范围摄取数据."""
     try:
@@ -60,6 +70,7 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
             field="dataset",
             value=dataset,
         ) from e
+    ensure_source_supported(dataset_enum, source_name)
 
     if dataset_enum not in SUPPORTED_INSTRUMENT_DATASETS:
         raise AppProcessError(
@@ -68,7 +79,7 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
             value=dataset,
         )
 
-    asset_class = dataset_enum.asset_class
+    asset_class = dataset_asset_class(dataset)
     if asset_class is None:
         raise AppProcessError(
             f"数据集 {dataset} 缺少 asset_class 定义",
@@ -105,6 +116,8 @@ def ingest_by_instrument(  # noqa: PLR0913 — 入口函数：依赖 DI 注入�
         result_handler=result_handler,
         data_writer=data_writer,
         source_name=source_name,
+        lineage_recorder=lineage_recorder,
+        catalog_writer=catalog_writer,
     )
 
 
@@ -118,6 +131,8 @@ def _fetch_and_ingest_by_instrument(  # noqa: PLR0913 — 内部编排：透传 
     result_handler: IngestionResultHandler,
     data_writer: IngestionDataWriter,
     source_name: str,
+    lineage_recorder: DataLineageRecorder | None,
+    catalog_writer: DataCatalogWriter | None,
 ) -> IngestionResult:
     """按标的获取数据并执行摄取（统一错误处理）。"""
     df_or_result = _try_fetch_data_by_instrument(
@@ -140,6 +155,9 @@ def _fetch_and_ingest_by_instrument(  # noqa: PLR0913 — 内部编排：透传 
         params,
         result_handler=result_handler,
         data_writer=data_writer,
+        source_name=source_name,
+        lineage_recorder=lineage_recorder,
+        catalog_writer=catalog_writer,
     )
 
 
@@ -168,7 +186,7 @@ def _try_fetch_data_by_instrument(
         )
 
 
-def _process_fetched_data_by_instrument(
+def _process_fetched_data_by_instrument(  # noqa: PLR0913 — instrument range lineage 需要同时携带 source/range/write 上下文
     df: pl.DataFrame,
     dataset: str,
     source_ticker: str,
@@ -176,6 +194,9 @@ def _process_fetched_data_by_instrument(
     *,
     result_handler: IngestionResultHandler,
     data_writer: IngestionDataWriter,
+    source_name: str,
+    lineage_recorder: DataLineageRecorder | None,
+    catalog_writer: DataCatalogWriter | None,
 ) -> IngestionResult:
     """按标的处理获取的数据：写入。"""
     if df.is_empty():
@@ -200,7 +221,27 @@ def _process_fetched_data_by_instrument(
         return result_handler.handle_dq_blocked(
             dataset, params.start_date, write_result
         )
-    return result_handler.handle_success(dataset, params.start_date, df, write_result)
+    result = result_handler.handle_success(dataset, params.start_date, df, write_result)
+    record_ingestion_lineage(
+        dataset,
+        params.start_date,
+        source_name=source_name,
+        lineage_recorder=lineage_recorder,
+        write_result=write_result,
+        source_ticker=source_ticker,
+        end_date=params.end_date,
+    )
+    record_data_catalog_entry(
+        dataset,
+        params.start_date,
+        source_name=source_name,
+        catalog_writer=catalog_writer,
+        write_result=write_result,
+        df=df,
+        source_ticker=source_ticker,
+        end_date=params.end_date,
+    )
+    return result
 
 
 def _fetch_by_dataset(
@@ -236,6 +277,7 @@ def backfill_adj_factor(  # noqa: PLR0913 — 回补入口：DI 服务 + Backfil
     fetchers: SourceFetchers,
     source_name: str,
     data_writer: IngestionDataWriter,
+    lineage_recorder: DataLineageRecorder | None,
 ) -> dict[str, object]:
     """按标的智能回补复权因子空洞，委托至 backfill_handler。"""
     return _backfill_adj_factor(
@@ -248,5 +290,6 @@ def backfill_adj_factor(  # noqa: PLR0913 — 回补入口：DI 服务 + Backfil
             source=fetchers.market,
             source_name=source_name,
             data_writer=data_writer,
+            lineage_recorder=lineage_recorder,
         ),
     )

@@ -1,6 +1,6 @@
 """Tests for IngestionCoordinator."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 import polars as pl
 import pytest
@@ -12,7 +12,14 @@ from ditto_application.processes.ingestion.coordinator import (
     MarketServices,
     SourceFetchers,
 )
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataSchemaFingerprint,
+    InMemoryDataCatalog,
+)
 from ditto_data.errors import SourceFetchError
+from ditto_data.lineage import InMemoryDataLineage
 from ditto_data.models.ingestion import IngestionLog, IngestionResult, IngestionStatus
 from ditto_platform.foundation import (
     Environment,
@@ -283,6 +290,66 @@ class TestIngestDate:
         # 不应该调用 source
         mock_source.fetch_stock_daily.assert_not_called()
 
+    def test_ingest_date_skipped_when_catalog_has_exact_trade_date_asset(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+    ) -> None:
+        """无 log 历史时，catalog exact-date 资产可作为跳过依据。"""
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="stock_daily",
+                    namespace="market",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="stock_daily/2024",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:stock_daily:v1",
+                    row_count=1000,
+                ),
+                source="tushare",
+                freshness_at=datetime.now(UTC),
+            )
+        )
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                ingestion_log_store=mock_ingestion_log_store,
+                catalog_reader=catalog,
+            ),
+        )
+        mock_ingestion_log_store.get_log.return_value = None
+
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        assert result.status == "skipped"
+        assert result.message is not None
+        assert "catalog" in result.message.lower()
+        mock_source.fetch_stock_daily.assert_not_called()
+
     def test_ingest_date_success_etf_daily(
         self,
         coordinator,
@@ -380,6 +447,157 @@ class TestIngestDate:
         # Assert
         assert result.status == "success"
         mock_source.fetch_stock_daily.assert_called_once_with("2024-12-27")
+
+    def test_ingest_date_success_records_data_lineage(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+    ) -> None:
+        """成功摄取后记录源数据到落库资产的 lineage。"""
+        # Arrange
+        lineage = InMemoryDataLineage()
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                ingestion_log_store=mock_ingestion_log_store,
+                lineage_recorder=lineage,
+            ),
+        )
+        mock_ingestion_log_store.get_log.return_value = None
+        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.8],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1000000],
+                "amount": [10200000],
+                "pct_change": [2.0],
+            }
+        )
+        mock_market_write_service.save_bars.return_value = 1
+
+        # Act
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        # Assert
+        assert result.status == "success"
+        source_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="source",
+            partition_keys=("source=tushare", "trade_date=2024-12-27"),
+        )
+        output_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2024-12-27",),
+        )
+        events = lineage.list_events_for_asset(output_asset)
+        assert len(events) == 1
+        event = events[0]
+        assert event.operation == "ingest"
+        assert event.run_id.startswith("ingest:tushare:stock_daily:2024-12-27:")
+        assert tuple(ref.asset for ref in event.inputs) == (source_asset,)
+        assert tuple(ref.role for ref in event.inputs) == ("source",)
+        assert tuple(ref.asset for ref in event.outputs) == (output_asset,)
+        assert tuple(ref.role for ref in event.outputs) == ("dataset",)
+
+    def test_ingest_date_success_upserts_data_catalog_entry(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+    ) -> None:
+        """成功摄取后将落库资产写入 DataCatalog runtime。"""
+        catalog = InMemoryDataCatalog()
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                ingestion_log_store=mock_ingestion_log_store,
+                catalog_writer=catalog,
+            ),
+        )
+        mock_ingestion_log_store.get_log.return_value = None
+        mock_source.fetch_stock_daily.return_value = pl.DataFrame(
+            {
+                "source_ticker": ["000001.SZ"],
+                "trade_date": [date(2024, 12, 27)],
+                "open": [10.0],
+                "high": [10.5],
+                "low": [9.8],
+                "close": [10.2],
+                "pre_close": [10.0],
+                "volume": [1000000],
+                "amount": [10200000],
+                "pct_change": [2.0],
+            }
+        )
+        mock_market_write_service.save_bars.return_value = 1
+
+        result = coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        assert result.status == "success"
+        asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2024-12-27",),
+        )
+        entry = catalog.get_asset(asset)
+        assert entry is not None
+        assert entry.asset == asset
+        assert entry.storage_uri == "stock_daily/2024"
+        assert entry.source == "tushare"
+        assert entry.schema.row_count == 1
+        assert entry.schema.schema_version == "market.stock_daily.v1"
+        assert entry.schema.schema_hash.startswith("schema:sha256:")
+        assert (
+            entry.source_snapshot_id
+            == f"snapshot:tushare:stock_daily:2024-12-27:{result.checksum}"
+        )
 
     def test_ingest_date_success_adj_factor(
         self,
@@ -583,6 +801,72 @@ class TestIngestDate:
         # Assert
         assert result.status == "success"
         mock_source.fetch_macro_indicators.assert_called_once_with("2024-12-27")
+        mock_macro_service.save_indicators.assert_called_once()
+
+    def test_ingest_date_fred_source_uses_fred_macro_fetcher(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+        mocker,
+    ) -> None:
+        """source=fred 摄取 macro_indicators 时使用 FRED macro fetcher."""
+        fred_macro_source = mocker.Mock()
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=fred_macro_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                source_name="fred",
+                ingestion_log_store=mock_ingestion_log_store,
+            ),
+        )
+        mock_ingestion_log_store.get_log.return_value = None
+        fred_macro_source.fetch_macro_indicators.return_value = pl.DataFrame(
+            {
+                "indicator_code": ["FEDFUNDS"],
+                "indicator_name": ["Federal Funds Effective Rate"],
+                "category": ["interest_rate"],
+                "frequency": ["daily"],
+                "need_pit": [False],
+                "date": [date(2024, 12, 27)],
+                "value": [4.33],
+                "knowledge_date": [date(2024, 12, 28)],
+            }
+        )
+        mock_macro_service.save_indicators.return_value = mocker.Mock(records_written=1)
+        mock_ingestion_log_store.save_log.return_value = IngestionLog(
+            dataset="macro_indicators",
+            source="fred",
+            trade_date="2024-12-27",
+            status=IngestionStatus.SUCCESS,
+            checksum="checksum_macro_indicators",
+            rows=1,
+        )
+
+        result = coordinator.ingest_date("macro_indicators", "2024-12-27")
+
+        assert result.status == "success"
+        fred_macro_source.fetch_macro_indicators.assert_called_once_with("2024-12-27")
+        mock_source.fetch_macro_indicators.assert_not_called()
         mock_macro_service.save_indicators.assert_called_once()
 
     def test_ingest_date_success_calendar(
@@ -845,6 +1129,46 @@ class TestIngestDate:
         # Act & Assert
         with pytest.raises(AppProcessError, match="不支持的数据集"):
             coordinator.ingest_date("unsupported_dataset", "2024-12-27")
+
+    def test_ingest_date_rejects_source_not_declared_by_catalog_metadata(
+        self,
+        mock_metadata_service,
+        mock_market_write_service,
+        mock_fundamental_store,
+        mock_capital_store,
+        mock_macro_service,
+        mock_ingestion_log_store,
+        mock_source,
+    ) -> None:
+        """运行期 source 必须被 data-owned catalog metadata 声明支持。"""
+        coordinator = IngestionCoordinator(
+            services=IngestionServices(
+                metadata=mock_metadata_service,
+                market=MarketServices(
+                    query=mock_market_write_service,
+                    write=mock_market_write_service,
+                ),
+                fundamental=mock_fundamental_store,
+                capital=mock_capital_store,
+                macro=mock_macro_service,
+            ),
+            fetchers=SourceFetchers(
+                metadata=mock_source,
+                market=mock_source,
+                fundamental=mock_source,
+                capital=mock_source,
+                macro=mock_source,
+            ),
+            config=IngestionCoordinatorConfig(
+                source_name="fred",
+                ingestion_log_store=mock_ingestion_log_store,
+            ),
+        )
+
+        with pytest.raises(AppProcessError, match="does not support dataset"):
+            coordinator.ingest_date("stock_daily", "2024-12-27")
+
+        mock_source.fetch_stock_daily.assert_not_called()
 
 
 @pytest.mark.unit

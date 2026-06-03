@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import typer
 from ditto_application.config import DEFAULT_INITIAL_CASH
-from ditto_application.processes.execution.backtest_process import BacktestServiceConfig
+from ditto_application.processes.execution.backtest_process import (
+    BacktestServiceConfig,
+    BacktestServiceOptions,
+)
 from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunMode,
     StrategyRunServiceConfig,
@@ -47,6 +50,11 @@ def research(
     trade_date: str = typer.Argument(..., help="交易日期 YYYY-MM-DD"),
     version: int | None = typer.Option(None, "--version", help="策略版本"),
     source: str = typer.Option("tushare", "--source", help="数据源名称"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态运行",
+    ),
 ) -> None:
     """执行 research 模式策略运行。"""
     config = _build_run_config(strategy_id, StrategyRunMode.RESEARCH)
@@ -56,6 +64,7 @@ def research(
             trade_date=trade_date,
             version=version,
             source=source,
+            allow_experimental_data=allow_experimental_data,
         )
     _print_strategy_result(result.run_id, strategy_id, trade_date, "research")
 
@@ -66,6 +75,11 @@ def recommend(
     trade_date: str = typer.Argument(..., help="交易日期 YYYY-MM-DD"),
     version: int | None = typer.Option(None, "--version", help="策略版本"),
     source: str = typer.Option("tushare", "--source", help="数据源名称"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入推荐态运行",
+    ),
 ) -> None:
     """执行 recommendation 模式策略运行。"""
     config = _build_run_config(strategy_id, StrategyRunMode.RECOMMENDATION)
@@ -75,6 +89,7 @@ def recommend(
             trade_date=trade_date,
             version=version,
             source=source,
+            allow_experimental_data=allow_experimental_data,
         )
     _print_strategy_result(result.run_id, strategy_id, trade_date, "recommendation")
 
@@ -91,6 +106,11 @@ def backtest(
         "--initial-cash",
         help="初始资金",
     ),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态回测",
+    ),
 ) -> None:
     """执行完整回测。"""
     config = BacktestServiceConfig(
@@ -100,9 +120,15 @@ def backtest(
         initial_cash=initial_cash,
     )
     with create_strategy_bundle() as bundle:
+        options = (
+            BacktestServiceOptions(allow_experimental_data=True)
+            if allow_experimental_data
+            else None
+        )
         result = bundle.strategy_facade.run_backtest_from_catalog(
             config=config,
             version=version,
             source=source,
+            options=options,
         )
     _print_backtest_result(result.run_id, result.period, result.final_nav)

@@ -128,6 +128,41 @@ class TestRunBacktestFlow:
         assert config.start_date == "2025-01-01"
         assert config.end_date == "2025-06-30"
 
+    def test_passes_resume_provenance_to_config(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow should preserve restored-run checkpoint provenance."""
+        RUNNER(
+            run_id="run-resume",
+            strategy_id="momentum-etf",
+            start_date="2025-02-03",
+            end_date="2025-03-31",
+            resume_from_run_id="run-original",
+            resume_checkpoint_trade_date="2025-01-31",
+            resume_checkpoint_completed_days=21,
+            resume_checkpoint_total_days=60,
+            resume_checkpoint_nav=1_020_000.0,
+            resume_checkpoint_order_count=4,
+            resume_checkpoint_fill_count=4,
+            resume_account_state_hash="sha256:account",
+            resume_settlement_state_hash="sha256:settlement",
+            resume_runtime_state_hash="sha256:runtime",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
+        assert config.resume_from_run_id == "run-original"
+        assert config.resume_checkpoint_trade_date == "2025-01-31"
+        assert config.resume_checkpoint_completed_days == 21
+        assert config.resume_checkpoint_total_days == 60
+        assert config.resume_checkpoint_nav == 1_020_000.0
+        assert config.resume_checkpoint_order_count == 4
+        assert config.resume_checkpoint_fill_count == 4
+        assert config.resume_account_state_hash == "sha256:account"
+        assert config.resume_settlement_state_hash == "sha256:settlement"
+        assert config.resume_runtime_state_hash == "sha256:runtime"
+
     def test_passes_run_service_via_options(
         self,
         mock_facade: Mock,
@@ -145,6 +180,25 @@ class TestRunBacktestFlow:
         options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
         assert options is not None
         assert options.run_service is mock_run_service
+        assert options.allow_experimental_data is False
+
+    def test_passes_experimental_data_opt_in_via_options(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow forwards explicit maturity opt-in through BacktestServiceOptions."""
+        RUNNER(
+            run_id="run-exp",
+            strategy_id="stock-research",
+            start_date="2025-01-01",
+            end_date="2025-01-31",
+            allow_experimental_data=True,
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert options is not None
+        assert options.allow_experimental_data is True
 
     def test_failed_flow_propagates_exception(
         self,

@@ -9,6 +9,8 @@ logic directly without the DI container.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 from ditto_application.commands.universe import (
     CreateCustomUniverseCommand,
@@ -270,6 +272,21 @@ class TestAPIResponseWrapping:
 
 class TestErrorHandlerMapping:
     """Tests for AppCommandError → APIError mapping."""
+
+    @pytest.fixture(autouse=True)
+    def _inline_route_thread_bridge(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        async def run_inline(
+            func: Callable[..., object],
+            /,
+            *args: object,
+            **kwargs: object,
+        ) -> object:
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr(
+            "ditto_apps.api.routes.universe.asyncio.to_thread",
+            run_inline,
+        )
 
     def test_create_duplicate_id_returns_400(self) -> None:
         """创建重复 universe_id → AppCommandError → BadRequestError(400)."""

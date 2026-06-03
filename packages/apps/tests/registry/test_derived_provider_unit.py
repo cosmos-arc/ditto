@@ -25,6 +25,8 @@ from ditto_data.di import (
     QualityProvider,
     RuntimeProvider,
 )
+from ditto_data.lineage import DataLineageRecorder
+from ditto_data.lineage.sqlite_store import SQLiteDataLineage
 from ditto_data.quality.golden import GoldenDatasetSpec
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -254,4 +256,21 @@ class TestAppProviderDerivedWiring:
 
         orchestrator = container.get(DerivedMaterializationOrchestrator)
         assert orchestrator._universe_provider is not None
+        container.close()
+
+    def test_materialization_orchestrator_receives_persistent_lineage_recorder(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        """DerivedMaterializationOrchestrator should persist lineage via DI."""
+        monkeypatch.setenv("ENVIRONMENT", "testing")
+        monkeypatch.setenv("DITTO_DATA_ROOT", tmp_path.as_posix())
+        container = _make_full_container()
+
+        lineage_recorder = container.get(DataLineageRecorder)
+        orchestrator = container.get(DerivedMaterializationOrchestrator)
+
+        assert isinstance(lineage_recorder, SQLiteDataLineage)
+        assert orchestrator._lineage_recorder is lineage_recorder
         container.close()

@@ -6,23 +6,34 @@ PositionRecord)，不依赖 app/engine 包。
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from ditto_execution.models import (
+    AccountSnapshotRecord,
+    BrokerEventRecord,
     FillRecord,
     PositionRecord,
     SignalRecord,
 )
 from ditto_execution.storage.deps import ExecutionReaders, ExecutionWriters
 from ditto_execution.storage.sqlite.trade import (
+    ACCOUNT_SNAPSHOTS_DDL,
+    BROKER_EVENTS_DDL,
     FILLS_DDL,
     INTENTS_DDL,
     POSITIONS_DDL,
+    AccountSnapshotReader,
+    AccountSnapshotWriter,
+    BrokerEventReader,
+    BrokerEventWriter,
     FillReader,
     FillWriter,
     IntentReader,
     IntentWriter,
     PositionReader,
     PositionWriter,
+    ensure_position_schema,
 )
 from ditto_execution.storage.sqlite.trade.service import (
     TradeService,
@@ -32,7 +43,14 @@ from ditto_platform.foundation import SQLiteClient
 
 def _init_db(client: SQLiteClient) -> None:
     """Initialize trade tables (moved from TradeService.init_schema to DI)."""
-    client.executescript(INTENTS_DDL + FILLS_DDL + POSITIONS_DDL)
+    client.executescript(
+        INTENTS_DDL
+        + FILLS_DDL
+        + POSITIONS_DDL
+        + ACCOUNT_SNAPSHOTS_DDL
+        + BROKER_EVENTS_DDL
+    )
+    ensure_position_schema(client)
     client.commit()
 
 
@@ -43,11 +61,15 @@ def _make_service(client: SQLiteClient) -> TradeService:
         intent=IntentReader(client),
         fill=FillReader(client),
         position=PositionReader(client),
+        account=AccountSnapshotReader(client),
+        broker_event=BrokerEventReader(client),
     )
     writers = ExecutionWriters(
         intent=IntentWriter(client),
         fill=FillWriter(client),
         position=PositionWriter(client),
+        account=AccountSnapshotWriter(client),
+        broker_event=BrokerEventWriter(client),
     )
     return TradeService(readers=readers, writers=writers)
 
@@ -117,6 +139,7 @@ def _make_fill(
 
 def _make_position(
     snapshot_id: str = "POS-001",
+    run_id: str = "RUN-001",
     strategy_id: str = "STRAT-A",
     snapshot_date: str = "2026-04-11",
     instrument_id: int = 510300,
@@ -131,6 +154,7 @@ def _make_position(
     """创建测试用 PositionRecord."""
     return PositionRecord(
         snapshot_id=snapshot_id,
+        run_id=run_id,
         strategy_id=strategy_id,
         snapshot_date=snapshot_date,
         instrument_id=instrument_id,
@@ -142,6 +166,68 @@ def _make_position(
         realized_pnl=realized_pnl,
         total_fees=total_fees,
         created_at="2026-04-11T15:00:00Z",
+    )
+
+
+def _make_account_snapshot(
+    snapshot_id: str = "ACCT-001",
+    run_id: str = "RUN-001",
+    strategy_id: str = "STRAT-A",
+    account_id: str = "ACCT-A",
+    snapshot_date: str = "2026-04-11",
+    cash_available: float = 95_000.0,
+    cash_settled: float = 95_000.0,
+    cash_frozen: float = 0.0,
+    total_value: float = 100_000.0,
+    nav: float = 100_000.0,
+    exposure: float = 5_000.0,
+) -> AccountSnapshotRecord:
+    """创建测试用 AccountSnapshotRecord."""
+    return AccountSnapshotRecord(
+        snapshot_id=snapshot_id,
+        run_id=run_id,
+        strategy_id=strategy_id,
+        account_id=account_id,
+        snapshot_date=snapshot_date,
+        cash_available=cash_available,
+        cash_settled=cash_settled,
+        cash_frozen=cash_frozen,
+        total_value=total_value,
+        nav=nav,
+        exposure=exposure,
+        created_at="2026-04-11T15:00:00Z",
+    )
+
+
+def _make_broker_event(
+    event_id: str = "BE-001",
+    run_id: str = "RUN-001",
+    broker: str = "paper",
+    event_type: str = "order_ack",
+    event_time: str = "2026-04-11T09:31:00Z",
+    order_id: str | None = "INT-001",
+    broker_order_id: str | None = "BRK-001",
+    fill_id: str | None = None,
+    instrument_id: int | None = 510300,
+    status: str | None = "accepted",
+    correlation_id: str | None = "INT-001",
+    payload: dict[str, object] | None = None,
+) -> BrokerEventRecord:
+    """创建测试用 BrokerEventRecord."""
+    return BrokerEventRecord(
+        event_id=event_id,
+        run_id=run_id,
+        broker=broker,
+        event_type=event_type,
+        event_time=event_time,
+        order_id=order_id,
+        broker_order_id=broker_order_id,
+        fill_id=fill_id,
+        instrument_id=instrument_id,
+        status=status,
+        correlation_id=correlation_id,
+        payload=payload if payload is not None else {"raw_status": "Accepted"},
+        created_at="2026-04-11T09:31:01Z",
     )
 
 
@@ -185,6 +271,27 @@ class TestInitSchema:
         assert row is not None
         assert row["name"] == "actual_positions"
 
+    def test_creates_account_snapshots_table(self, sqlite_client: SQLiteClient) -> None:
+        """_init_db 应创建 account_snapshots 表."""
+        _init_db(sqlite_client)
+
+        row = sqlite_client.fetchone(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='account_snapshots'"
+        )
+        assert row is not None
+        assert row["name"] == "account_snapshots"
+
+    def test_creates_broker_events_table(self, sqlite_client: SQLiteClient) -> None:
+        """_init_db 应创建 broker_events 表."""
+        _init_db(sqlite_client)
+
+        row = sqlite_client.fetchone(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='broker_events'"
+        )
+        assert row is not None
+        assert row["name"] == "broker_events"
+
     def test_creates_indexes(self, sqlite_client: SQLiteClient) -> None:
         """_init_db 应创建所有索引."""
         _init_db(sqlite_client)
@@ -192,7 +299,8 @@ class TestInitSchema:
         rows = sqlite_client.fetchall(
             "SELECT name FROM sqlite_master WHERE type='index' "
             "AND name LIKE 'idx_trade_%' OR name LIKE 'idx_execution_%' "
-            "OR name LIKE 'idx_actual_%'"
+            "OR name LIKE 'idx_actual_%' OR name LIKE 'idx_account_%' "
+            "OR name LIKE 'idx_broker_%'"
         )
         index_names = {r["name"] for r in rows}
         assert "idx_trade_intents_strategy_date" in index_names
@@ -200,7 +308,12 @@ class TestInitSchema:
         assert "idx_execution_fills_strategy_date" in index_names
         assert "idx_execution_fills_intent" in index_names
         assert "idx_actual_positions_strategy_date" in index_names
-        assert "idx_actual_positions_strategy_instrument_date" in index_names
+        assert "idx_actual_positions_run_date" in index_names
+        assert "idx_actual_positions_run_strategy_instrument_date" in index_names
+        assert "idx_account_snapshots_run_date" in index_names
+        assert "idx_account_snapshots_strategy_account_date" in index_names
+        assert "idx_broker_events_run_time" in index_names
+        assert "idx_broker_events_run_order" in index_names
 
     def test_idempotent(self, sqlite_client: SQLiteClient) -> None:
         """重复调用 _init_db 不应报错."""
@@ -209,6 +322,48 @@ class TestInitSchema:
 
         count = sqlite_client.fetchval("SELECT COUNT(*) FROM trade_intents")
         assert count == 0
+
+    def test_migrates_legacy_positions_without_run_id(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """旧 actual_positions 表应迁移到 run-scoped 唯一键."""
+        sqlite_client.executescript(
+            """
+            CREATE TABLE actual_positions (
+                snapshot_id       TEXT PRIMARY KEY,
+                strategy_id       TEXT    NOT NULL,
+                snapshot_date     TEXT    NOT NULL,
+                instrument_id     INTEGER NOT NULL,
+                quantity          INTEGER NOT NULL,
+                available_quantity INTEGER NOT NULL,
+                average_cost      REAL    NOT NULL,
+                market_value      REAL    NOT NULL,
+                unrealized_pnl    REAL    NOT NULL,
+                realized_pnl      REAL    NOT NULL,
+                total_fees        REAL    NOT NULL,
+                created_at        TEXT    NOT NULL DEFAULT ''
+            );
+            CREATE UNIQUE INDEX idx_actual_positions_strategy_instrument_date
+            ON actual_positions(strategy_id, instrument_id, snapshot_date);
+            """
+        )
+        sqlite_client.commit()
+
+        _init_db(sqlite_client)
+
+        columns = {
+            row["name"]
+            for row in sqlite_client.fetchall("PRAGMA table_info(actual_positions)")
+        }
+        index_names = {
+            row["name"]
+            for row in sqlite_client.fetchall(
+                "SELECT name FROM sqlite_master WHERE type='index'"
+            )
+        }
+        assert "run_id" in columns
+        assert "idx_actual_positions_strategy_instrument_date" not in index_names
+        assert "idx_actual_positions_run_strategy_instrument_date" in index_names
 
 
 # ===========================================================================
@@ -409,6 +564,68 @@ class TestUpdateIntentStatus:
         assert result.status == "cancelled"
 
 
+class TestOrderStatusRepairPort:
+    """Order status repair port backed by trade intents."""
+
+    def test_get_order_status_reads_intent_status(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        svc.save_intent(_make_intent(intent_id="ORD-001", status="submitted"))
+
+        assert svc.get_order_status("ORD-001") == "submitted"
+
+    def test_get_order_status_returns_none_when_missing(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+
+        assert svc.get_order_status("ORD-MISSING") is None
+
+    def test_update_order_status_uses_transition_guard(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        svc.save_intent(_make_intent(intent_id="ORD-001", status="submitted"))
+
+        updated = svc.update_order_status(
+            "ORD-001",
+            "filled",
+            expected_current=("submitted",),
+        )
+
+        assert updated is True
+        assert svc.get_order_status("ORD-001") == "filled"
+
+    def test_update_order_status_conflicting_transition_returns_false(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+        svc.save_intent(_make_intent(intent_id="ORD-001", status="cancelled"))
+
+        updated = svc.update_order_status(
+            "ORD-001",
+            "filled",
+            expected_current=("submitted", "partially_filled"),
+        )
+
+        assert updated is False
+        assert svc.get_order_status("ORD-001") == "cancelled"
+
+    def test_update_order_status_missing_returns_false(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        svc = _make_service(sqlite_client)
+
+        updated = svc.update_order_status(
+            "ORD-MISSING",
+            "filled",
+            expected_current=("submitted",),
+        )
+
+        assert updated is False
+
+
 # ===========================================================================
 # Test: Fill CRUD
 # ===========================================================================
@@ -500,6 +717,38 @@ class TestFindFill:
         assert result.fill_id == "FILL-001"
 
 
+class TestReplaceFill:
+    """replace_fill 测试."""
+
+    def test_replaces_existing_fill_by_id(self, sqlite_client: SQLiteClient) -> None:
+        """替换已有 fill_id 时应覆盖可修正字段并保留主键."""
+        svc = _make_service(sqlite_client)
+        original = _make_fill()
+        amended = replace(
+            original,
+            quantity=1200,
+            fill_price=4.25,
+            fee=6.0,
+            notes="amended by reconciliation repair",
+        )
+        svc.save_fill(original)
+
+        replaced = svc.replace_fill(amended)
+
+        result = svc.get_fill("FILL-001")
+        assert replaced is True
+        assert result == amended
+
+    def test_returns_false_when_fill_missing(self, sqlite_client: SQLiteClient) -> None:
+        """缺失 fill_id 时不应插入新成交."""
+        svc = _make_service(sqlite_client)
+
+        replaced = svc.replace_fill(_make_fill())
+
+        assert replaced is False
+        assert svc.get_fill("FILL-001") is None
+
+
 class TestListFills:
     """list_fills 测试."""
 
@@ -583,6 +832,7 @@ class TestSavePosition:
         result = svc.get_latest_position("STRAT-A", 510300)
         assert result is not None
         assert result.snapshot_id == "POS-001"
+        assert result.run_id == "RUN-001"
         assert result.strategy_id == "STRAT-A"
         assert result.snapshot_date == "2026-04-11"
         assert result.instrument_id == 510300
@@ -641,7 +891,7 @@ class TestSavePosition:
     def test_save_position_upsert_same_unique_key(
         self, sqlite_client: SQLiteClient
     ) -> None:
-        """同一业务键不同 snapshot_id，后写入覆盖先写入."""
+        """同一 run-scoped 业务键不同 snapshot_id，后写入覆盖先写入."""
         svc = _make_service(sqlite_client)
 
         svc.save_position(
@@ -666,6 +916,39 @@ class TestSavePosition:
         assert result.quantity == 2000
         assert result.average_cost == pytest.approx(4.5)
         assert result.snapshot_id == "POS-002"
+
+    def test_same_strategy_instrument_date_can_exist_in_different_runs(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """相同策略/标的/日期在不同 run 下应保留独立快照."""
+        svc = _make_service(sqlite_client)
+
+        svc.save_position(
+            _make_position(
+                snapshot_id="POS-RUN-001",
+                run_id="RUN-001",
+                snapshot_date="2026-04-11",
+                quantity=1000,
+            )
+        )
+        svc.save_position(
+            _make_position(
+                snapshot_id="POS-RUN-002",
+                run_id="RUN-002",
+                snapshot_date="2026-04-11",
+                quantity=2000,
+            )
+        )
+
+        run_1 = svc.get_latest_position("STRAT-A", 510300, run_id="RUN-001")
+        run_2 = svc.get_latest_position("STRAT-A", 510300, run_id="RUN-002")
+
+        assert run_1 is not None
+        assert run_1.snapshot_id == "POS-RUN-001"
+        assert run_1.quantity == 1000
+        assert run_2 is not None
+        assert run_2.snapshot_id == "POS-RUN-002"
+        assert run_2.quantity == 2000
 
 
 class TestListPositions:
@@ -700,6 +983,7 @@ class TestListPositions:
         svc.save_position(
             _make_position(
                 snapshot_id="POS-004",
+                run_id="RUN-002",
                 strategy_id="STRAT-B",
                 snapshot_date="2026-04-10",
                 instrument_id=510300,
@@ -724,12 +1008,275 @@ class TestListPositions:
         assert len(results) == 2
         assert all(r.snapshot_date == "2026-04-10" for r in results)
 
+    def test_list_by_run_strategy_and_date(self, sqlite_client: SQLiteClient) -> None:
+        """按 run_id + strategy_id + snapshot_date 过滤."""
+        svc = _make_service(sqlite_client)
+        self._seed_positions(svc)
+        svc.save_position(
+            _make_position(
+                snapshot_id="POS-005",
+                run_id="RUN-002",
+                strategy_id="STRAT-A",
+                snapshot_date="2026-04-10",
+                instrument_id=510300,
+                quantity=3000,
+            )
+        )
+
+        results = svc.list_positions(
+            "STRAT-A",
+            snapshot_date="2026-04-10",
+            run_id="RUN-001",
+        )
+
+        assert len(results) == 2
+        assert {r.snapshot_id for r in results} == {"POS-001", "POS-002"}
+        assert {r.run_id for r in results} == {"RUN-001"}
+
     def test_list_no_match_returns_empty(self, sqlite_client: SQLiteClient) -> None:
         """无匹配返回空列表."""
         svc = _make_service(sqlite_client)
         self._seed_positions(svc)
 
         assert svc.list_positions("STRAT-NONE") == []
+
+
+# ===========================================================================
+# Test: Account Snapshot CRUD
+# ===========================================================================
+
+
+class TestSaveAccountSnapshot:
+    """save_account_snapshot 测试."""
+
+    def test_saves_and_retrieves_latest_account_snapshot(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """保存后应能按 run_id/account_id 查回最新账户快照."""
+        svc = _make_service(sqlite_client)
+
+        svc.save_account_snapshot(_make_account_snapshot())
+
+        result = svc.get_latest_account_snapshot("RUN-001", "ACCT-A")
+        assert result is not None
+        assert result.snapshot_id == "ACCT-001"
+        assert result.run_id == "RUN-001"
+        assert result.strategy_id == "STRAT-A"
+        assert result.account_id == "ACCT-A"
+        assert result.snapshot_date == "2026-04-11"
+        assert result.cash_available == pytest.approx(95_000.0)
+        assert result.total_value == pytest.approx(100_000.0)
+        assert result.nav == pytest.approx(100_000.0)
+        assert result.exposure == pytest.approx(5_000.0)
+
+    def test_get_latest_account_snapshot_returns_newest_date(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        """多天账户快照应返回最新日期."""
+        svc = _make_service(sqlite_client)
+
+        svc.save_account_snapshot(
+            _make_account_snapshot(snapshot_id="ACCT-001", snapshot_date="2026-04-10")
+        )
+        svc.save_account_snapshot(
+            _make_account_snapshot(snapshot_id="ACCT-002", snapshot_date="2026-04-12")
+        )
+        svc.save_account_snapshot(
+            _make_account_snapshot(snapshot_id="ACCT-003", snapshot_date="2026-04-11")
+        )
+
+        result = svc.get_latest_account_snapshot("RUN-001", "ACCT-A")
+        assert result is not None
+        assert result.snapshot_id == "ACCT-002"
+        assert result.snapshot_date == "2026-04-12"
+
+
+class TestListAccountSnapshots:
+    """list_account_snapshots 测试."""
+
+    def test_lists_by_run_and_strategy(self, sqlite_client: SQLiteClient) -> None:
+        """按 run_id + strategy_id 过滤账户快照."""
+        svc = _make_service(sqlite_client)
+        svc.save_account_snapshot(_make_account_snapshot(snapshot_id="ACCT-001"))
+        svc.save_account_snapshot(
+            _make_account_snapshot(snapshot_id="ACCT-002", account_id="ACCT-B")
+        )
+        svc.save_account_snapshot(
+            _make_account_snapshot(
+                snapshot_id="ACCT-003",
+                run_id="RUN-002",
+                account_id="ACCT-C",
+            )
+        )
+
+        results = svc.list_account_snapshots("RUN-001", strategy_id="STRAT-A")
+
+        assert [r.snapshot_id for r in results] == ["ACCT-001", "ACCT-002"]
+        assert {r.run_id for r in results} == {"RUN-001"}
+        assert {r.strategy_id for r in results} == {"STRAT-A"}
+
+
+# ===========================================================================
+# Test: Broker Event CRUD
+# ===========================================================================
+
+
+class TestSaveBrokerEvent:
+    """save_broker_event 测试."""
+
+    def test_saves_single_event_with_payload(self, sqlite_client: SQLiteClient) -> None:
+        """save_broker_event 应持久化 live/paper broker 标准事件."""
+        svc = _make_service(sqlite_client)
+        event = _make_broker_event(payload={"venue_status": "Accepted", "seq": 42})
+
+        svc.save_broker_event(event)
+
+        result = svc.get_broker_event("BE-001")
+        assert result is not None
+        assert result.run_id == "RUN-001"
+        assert result.order_id == "INT-001"
+        assert result.broker_order_id == "BRK-001"
+        assert result.payload == {"venue_status": "Accepted", "seq": 42}
+
+    def test_duplicate_event_id_preserves_first_callback(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """重复 broker callback 应按 event_id 幂等，不覆盖首次观测事件."""
+        svc = _make_service(sqlite_client)
+        first = _make_broker_event(
+            event_id="BE-DUP",
+            event_time="2026-04-11T09:31:00Z",
+            status="partially_filled",
+            payload={"venue_status": "PartiallyFilled", "seq": 1},
+        )
+        duplicate = _make_broker_event(
+            event_id="BE-DUP",
+            event_time="2026-04-11T09:40:00Z",
+            status="filled",
+            payload={"venue_status": "Filled", "seq": 2},
+        )
+
+        svc.save_broker_event(first)
+        svc.save_broker_event(duplicate)
+
+        result = svc.get_broker_event("BE-DUP")
+        assert result is not None
+        assert result.event_time == "2026-04-11T09:31:00Z"
+        assert result.status == "partially_filled"
+        assert result.payload == {"venue_status": "PartiallyFilled", "seq": 1}
+
+    def test_duplicate_event_id_backfills_missing_broker_order_link(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """乱序 callback 后到的 broker_order_id 应补齐查询 link key."""
+        svc = _make_service(sqlite_client)
+        out_of_order_fill = _make_broker_event(
+            event_id="BE-LATE-LINK",
+            event_type="fill",
+            event_time="2026-04-11T09:31:00Z",
+            broker_order_id=None,
+            fill_id="FILL-001",
+            status="partially_filled",
+            payload={"venue_status": "PartiallyFilled", "seq": 1},
+        )
+        replayed_fill_after_ack = _make_broker_event(
+            event_id="BE-LATE-LINK",
+            event_type="fill",
+            event_time="2026-04-11T09:40:00Z",
+            broker_order_id="BRK-001",
+            fill_id="FILL-001",
+            status="filled",
+            payload={"venue_status": "Filled", "seq": 2},
+        )
+
+        svc.save_broker_event(out_of_order_fill)
+        svc.save_broker_event(replayed_fill_after_ack)
+
+        result = svc.get_broker_event("BE-LATE-LINK")
+        assert result is not None
+        assert result.broker_order_id == "BRK-001"
+        assert result.event_time == "2026-04-11T09:31:00Z"
+        assert result.status == "partially_filled"
+        assert result.payload == {"venue_status": "PartiallyFilled", "seq": 1}
+        by_broker_order = svc.list_broker_events(
+            "RUN-001",
+            broker_order_id="BRK-001",
+        )
+        assert [event.event_id for event in by_broker_order] == ["BE-LATE-LINK"]
+
+    def test_duplicate_event_id_backfills_blank_broker_order_link(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        """历史 blank broker_order_id 也应被后续有效 replay 补齐."""
+        svc = _make_service(sqlite_client)
+        out_of_order_fill = _make_broker_event(
+            event_id="BE-BLANK-LATE-LINK",
+            event_type="fill",
+            event_time="2026-04-11T09:31:00Z",
+            broker_order_id="   ",
+            fill_id="FILL-001",
+            status="partially_filled",
+            payload={"venue_status": "PartiallyFilled", "seq": 1},
+        )
+        replayed_fill_after_ack = _make_broker_event(
+            event_id="BE-BLANK-LATE-LINK",
+            event_type="fill",
+            event_time="2026-04-11T09:40:00Z",
+            broker_order_id="BRK-001",
+            fill_id="FILL-001",
+            status="filled",
+            payload={"venue_status": "Filled", "seq": 2},
+        )
+
+        svc.save_broker_event(out_of_order_fill)
+        svc.save_broker_event(replayed_fill_after_ack)
+
+        result = svc.get_broker_event("BE-BLANK-LATE-LINK")
+        assert result is not None
+        assert result.broker_order_id == "BRK-001"
+        assert result.event_time == "2026-04-11T09:31:00Z"
+        assert result.status == "partially_filled"
+        assert result.payload == {"venue_status": "PartiallyFilled", "seq": 1}
+        by_broker_order = svc.list_broker_events(
+            "RUN-001",
+            broker_order_id="BRK-001",
+        )
+        assert [event.event_id for event in by_broker_order] == ["BE-BLANK-LATE-LINK"]
+
+
+class TestListBrokerEvents:
+    """list_broker_events 测试."""
+
+    def test_list_by_run_order_and_date(self, sqlite_client: SQLiteClient) -> None:
+        """broker_events 应按 run/order/date 过滤，避免跨运行串线."""
+        svc = _make_service(sqlite_client)
+        svc.save_broker_event(_make_broker_event(event_id="BE-001"))
+        svc.save_broker_event(
+            _make_broker_event(
+                event_id="BE-002",
+                run_id="RUN-002",
+                event_time="2026-04-11T09:32:00Z",
+            )
+        )
+        svc.save_broker_event(
+            _make_broker_event(
+                event_id="BE-003",
+                order_id="INT-002",
+                correlation_id="INT-002",
+            )
+        )
+
+        result = svc.list_broker_events(
+            "RUN-001",
+            order_id="INT-001",
+            start_date="2026-04-11",
+            end_date="2026-04-11",
+        )
+
+        assert [event.event_id for event in result] == ["BE-001"]
 
 
 # ===========================================================================
@@ -798,7 +1345,7 @@ class TestBuildWhereClauseWhitelist:
         assert "ORDER BY snapshot_date DESC" in sql
 
     def test_valid_filter_columns(self) -> None:
-        """合法过滤列 'signal_date', 'status', 'snapshot_date' 应正常构建 SQL."""
+        """合法过滤列应正常构建 SQL."""
         from ditto_execution.storage.sqlite.trade._sql import (
             build_where_clause as _build_where_clause,
         )
@@ -829,6 +1376,15 @@ class TestBuildWhereClauseWhitelist:
             "signal_date ASC",
         )
         assert "snapshot_date = ?" in sql
+
+        # run_id
+        sql, _params = _build_where_clause(
+            "SELECT * FROM actual_positions WHERE strategy_id = ?",
+            "STRAT-A",
+            {"run_id": "RUN-001"},
+            "snapshot_date ASC",
+        )
+        assert "run_id = ?" in sql
 
     def test_none_filter_values_skipped(self) -> None:
         """None 值过滤条件应被跳过，不触发白名单校验."""

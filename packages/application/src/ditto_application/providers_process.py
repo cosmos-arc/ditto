@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog import DataCatalogReader
 from ditto_data.config.data_store import DataStoreSettings
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
@@ -47,11 +49,33 @@ from ditto_application.processes.materialization.orchestrator import (
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
 )
+from ditto_application.processes.materialization.source_snapshot_resolver import (
+    CatalogSourceSnapshotResolver,
+    UniverseSourceTickersRequest,
+)
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.providers_builder import get_trading_calendar_range
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.run import RunReadModel
 from ditto_application.settings import TradingSettings
+
+
+def _source_tickers_for_universe(
+    metadata_service: MetadataService,
+    request: UniverseSourceTickersRequest,
+) -> tuple[str, ...]:
+    return tuple(
+        metadata_service.resolve_source_ticker(
+            instrument_id=instrument_id,
+            source=request.source,
+            asof=request.asof,
+        )
+        for instrument_id in metadata_service.get_universe(
+            request.universe_id,
+            request.asof,
+        )
+    )
 
 
 class AppProcessProvider(Provider):
@@ -73,12 +97,16 @@ class AppProcessProvider(Provider):
         derived_catalog_service: DerivedCatalogService,
         market_service: MarketService,
         settings: DataStoreSettings,
+        data_catalog_reader: DataCatalogReader,
+        metadata_service: MetadataService,
     ) -> RuntimeDerivedInputProvider:
         """衍生因子运行时输入提供器."""
         return RuntimeDerivedInputProvider(
             catalog_service=derived_catalog_service,
             market_service=market_service,
             artifact_root=Path(settings.data_root),
+            data_catalog_reader=data_catalog_reader,
+            catalog_coverage_dates_provider=metadata_service.list_trading_days,
         )
 
     @provide
@@ -101,13 +129,15 @@ class AppProcessProvider(Provider):
         return PublicationSafetyRecordService(stores)
 
     @provide
-    def derived_materialization_orchestrator(
+    def derived_materialization_orchestrator(  # noqa: PLR0913
         self,
         derived_catalog_service: DerivedCatalogService,
         compile_cache_service: SQLiteCompileCache,
         derived_input_provider: RuntimeDerivedInputProvider,
         publication_record_service: PublicationSafetyRecordService,
+        data_catalog_reader: DataCatalogReader,
         metadata_service: MetadataService,
+        lineage_recorder: DataLineageRecorder,
         settings: DataStoreSettings,
     ) -> DerivedMaterializationOrchestrator:
         """衍生因子物化编排器."""
@@ -118,8 +148,16 @@ class AppProcessProvider(Provider):
                 artifact_root=Path(settings.data_root),
             ),
             input_provider=derived_input_provider,
+            source_snapshot_resolver=CatalogSourceSnapshotResolver(
+                data_catalog_reader=data_catalog_reader,
+                catalog_coverage_dates_provider=metadata_service.list_trading_days,
+                universe_source_tickers_provider=lambda request: (
+                    _source_tickers_for_universe(metadata_service, request)
+                ),
+            ),
             universe_provider=metadata_service,
             publication_record_service=publication_record_service,
+            lineage_recorder=lineage_recorder,
         )
 
     @provide
@@ -185,11 +223,13 @@ class AppProcessProvider(Provider):
         self,
         strategy_facade: StrategyFacade,
         artifact_service: StrategyArtifactService,
+        run_model: RunReadModel,
     ) -> ReplayProcess:
         """回测重放流程."""
         return ReplayProcess(
             strategy_facade=strategy_facade,
             artifact_service=artifact_service,
+            run_model=run_model,
         )
 
     @provide

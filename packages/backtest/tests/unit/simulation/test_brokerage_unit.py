@@ -4,6 +4,10 @@ from datetime import datetime
 
 import pytest
 from ditto_backtest.brokerage import BacktestBrokerage
+from ditto_backtest.result import (
+    BacktestFrozenQuantitySnapshot,
+    BacktestSettlementStateSnapshot,
+)
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.settlement import (
     AShareSettlementModel,
@@ -136,6 +140,24 @@ class TestConnectGetAccount:
         pending = view.get_pending()
         assert len(pending) == 1
         assert pending[0].order.order_id == "ORD-001"
+
+    def test_restore_settlement_state_rehydrates_frozen_queue(
+        self, brokerage: BacktestBrokerage
+    ) -> None:
+        """checkpoint restore 应回填未来解冻队列。"""
+        snapshot = BacktestSettlementStateSnapshot(
+            frozen_quantities=(
+                BacktestFrozenQuantitySnapshot(
+                    instrument_id=1,
+                    settle_date="2026-03-03",
+                    quantity=1000,
+                ),
+            )
+        )
+
+        brokerage.restore_settlement_state(snapshot)
+
+        assert brokerage.get_settlement_state_snapshot() == snapshot
 
 
 # ---------------------------------------------------------------------------
@@ -699,6 +721,30 @@ class TestT1FreezeBasic:
         pos = view.positions[1]
         assert pos.quantity == 1000
         assert pos.available_quantity == 1000
+
+
+class TestT1SettlementStateSnapshot:
+    """T+1 冻结队列 checkpoint 证据。"""
+
+    def test_snapshot_tracks_future_thaw_queue(
+        self,
+        t1_brokerage: BacktestBrokerage,
+    ) -> None:
+        """T 日买入后 settlement snapshot 应记录未来解冻日和数量。"""
+        order = _order(quantity=1000)
+        t1_brokerage.place_order(order)
+        t1_brokerage.process_pending(_t1_process_input("2026-03-02"))
+
+        snapshot = t1_brokerage.get_settlement_state_snapshot()
+
+        assert isinstance(snapshot, BacktestSettlementStateSnapshot)
+        assert len(snapshot.frozen_quantities) == 1
+        frozen = snapshot.frozen_quantities[0]
+        assert frozen.instrument_id == 1
+        assert frozen.settle_date == "2026-03-03"
+        assert frozen.quantity == 1000
+        assert snapshot.state_hash.startswith("sha256:")
+        assert '"settle_date":"2026-03-03"' in snapshot.to_json()
 
 
 class TestT1FreezeThaw:

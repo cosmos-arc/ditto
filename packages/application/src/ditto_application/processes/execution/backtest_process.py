@@ -24,6 +24,7 @@ from ditto_backtest.engine import (
     EngineResult,
 )
 from ditto_backtest.manifest import RunManifest
+from ditto_backtest.result import BacktestCheckpoint, BacktestRuntimeStateSnapshot
 from ditto_backtest.simulation import SlippageModel
 from ditto_backtest.statistics import (
     BacktestReport,
@@ -31,27 +32,40 @@ from ditto_backtest.statistics import (
 )
 from ditto_backtest.steps import StepContext
 from ditto_backtest.synchronizer import BacktestSynchronizer
+from ditto_data.lineage.contracts import DataLineageRecorder
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.planner import ExecutionPlanner
 from ditto_kernel.clock import SimulatedClock
 from ditto_kernel.events import SimpleEventBus
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
 from ditto_kernel.trading import FeeModel, InstrumentRuleProvider
 from ditto_risk.post_trade import PostTradeRiskGuard
 from ditto_risk.pre_trade import CompositePreTradeCheck
 from ditto_strategy.alpha.pipeline import StrategyInputBundle, StrategyPipeline
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointWriterProtocol,
+)
 
 from ditto_application.config import DEFAULT_INITIAL_CASH
+from ditto_application.exceptions import AppProcessError
 from ditto_application.processes.execution.backtest_audit import (
     ArtifactPersistConfig,
     ArtifactPersistContext,
     persist_artifact,
     persist_audit,
     resolve_run_id,
+)
+from ditto_application.processes.execution.backtest_lineage import (
+    record_backtest_lineage,
+)
+from ditto_application.processes.execution.backtest_process_types import (
+    BacktestLineageConfig,
 )
 from ditto_application.processes.execution.factor_bridge import (
     CompiledExpressions,
@@ -99,6 +113,7 @@ class BacktestServiceConfig:
         engine_version: 引擎版本号
         parent_run_id: 父运行 ID（用于重试/衍生场景）
         execution_delay: 信号延迟执行天数
+        resume_*: checkpoint-backed resume state evidence
 
     """
 
@@ -114,6 +129,19 @@ class BacktestServiceConfig:
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
     execution_delay: int = 0
+    resume_from_run_id: str = ""
+    resume_checkpoint_trade_date: str = ""
+    resume_checkpoint_completed_days: int = 0
+    resume_checkpoint_total_days: int = 0
+    resume_checkpoint_nav: float = 0.0
+    resume_checkpoint_order_count: int = 0
+    resume_checkpoint_fill_count: int = 0
+    resume_account_state_json: str = ""
+    resume_account_state_hash: str = ""
+    resume_settlement_state_json: str = ""
+    resume_settlement_state_hash: str = ""
+    resume_runtime_state_json: str = ""
+    resume_runtime_state_hash: str = ""
 
 
 @dataclass(frozen=True)
@@ -130,7 +158,11 @@ class BacktestServiceOptions:
         artifact_service: 策略产物持久化服务
         artifact_dir: 回测产物序列化输出目录 (None = 使用默认临时目录)
         run_service: 策略运行生命周期服务 (None = 跳过生命周期管理)
+        checkpoint_writer: 策略运行 checkpoint 写入端口 (None = 跳过恢复点持久化)
         compiled_expressions: 编译后的因子表达式 (None = 使用默认信号)
+        lineage_recorder: 数据血缘记录器 (None = 跳过 lineage 记录)
+        allow_experimental_data: 是否显式允许 experimental 数据集进入运行时
+        restore_runtime_state: 已解析的 checkpoint runtime-state
 
     """
 
@@ -143,7 +175,18 @@ class BacktestServiceOptions:
     artifact_dir: str | None = None
     display_map: dict[InstrumentId, str] | None = None
     run_service: RunLifecycleService | None = None
+    checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None
     compiled_expressions: CompiledExpressions | None = None
+    lineage_recorder: DataLineageRecorder | None = None
+    allow_experimental_data: bool = False
+    restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
+
+
+def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
+    """Validate optional checkpoint hash evidence when provided."""
+    if expected and expected != actual:
+        msg = f"{label} mismatch: expected {expected}, got {actual}"
+        raise AppProcessError(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +263,47 @@ class BacktestService:
                         "parameter_overrides": list(self._config.parameter_overrides),
                         "rebalance_freq": self._config.rebalance_freq,
                         "execution_delay": self._config.execution_delay,
+                        "resume_from_run_id": self._config.resume_from_run_id,
+                        "resume_checkpoint_trade_date": (
+                            self._config.resume_checkpoint_trade_date
+                        ),
+                        "resume_checkpoint_completed_days": (
+                            self._config.resume_checkpoint_completed_days
+                        ),
+                        "resume_checkpoint_total_days": (
+                            self._config.resume_checkpoint_total_days
+                        ),
+                        "resume_checkpoint_nav": self._config.resume_checkpoint_nav,
+                        "resume_checkpoint_order_count": (
+                            self._config.resume_checkpoint_order_count
+                        ),
+                        "resume_checkpoint_fill_count": (
+                            self._config.resume_checkpoint_fill_count
+                        ),
+                        "resume_account_state_json": (
+                            self._config.resume_account_state_json
+                        ),
+                        "resume_account_state_hash": (
+                            self._config.resume_account_state_hash
+                        ),
+                        "resume_settlement_state_json": (
+                            self._config.resume_settlement_state_json
+                        ),
+                        "resume_settlement_state_hash": (
+                            self._config.resume_settlement_state_hash
+                        ),
+                        "resume_runtime_state_json": (
+                            self._config.resume_runtime_state_json
+                        ),
+                        "resume_runtime_state_hash": (
+                            self._config.resume_runtime_state_hash
+                        ),
+                        "allow_experimental_data": (
+                            self._options.allow_experimental_data
+                        ),
+                        "pit_policy": PIT_POLICY_FAIL_CLOSED,
+                        "pit_time_column": DEFAULT_PIT_TIME_COLUMN,
+                        "unsafe_time_policy": "",
                     },
                 ).decode()
                 run_svc.create_run(
@@ -336,6 +420,36 @@ class BacktestService:
 
             on_progress = _report_progress
 
+        # checkpoint 持久化 — 引擎保持 storage-free，由 App 层写入运行控制面。
+        checkpoint_writer = self._options.checkpoint_writer
+        on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
+        if checkpoint_writer is not None:
+
+            def _save_checkpoint(checkpoint: BacktestCheckpoint) -> None:
+                checkpoint_writer.save_checkpoint(
+                    StrategyRunCheckpointRecord(
+                        run_id=run_id,
+                        strategy_id=self._config.strategy_id,
+                        strategy_version=self._config.strategy_version,
+                        mode=EngineMode.BACKTEST.value,
+                        completed_trade_date=checkpoint.completed_trade_date,
+                        resume_from=checkpoint.resume_from,
+                        completed_days=checkpoint.completed_days,
+                        total_days=checkpoint.total_days,
+                        nav=checkpoint.nav,
+                        order_count=checkpoint.order_count,
+                        fill_count=checkpoint.fill_count,
+                        account_state_json=checkpoint.account_state_json,
+                        account_state_hash=checkpoint.account_state_hash,
+                        settlement_state_json=checkpoint.settlement_state_json,
+                        settlement_state_hash=checkpoint.settlement_state_hash,
+                        runtime_state_json=checkpoint.runtime_state_json,
+                        runtime_state_hash=checkpoint.runtime_state_hash,
+                    )
+                )
+
+            on_checkpoint = _save_checkpoint
+
         return EngineOptions(
             event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
@@ -345,7 +459,29 @@ class BacktestService:
             input_bundle_builder=input_bundle_builder,
             should_stop=should_stop,
             on_progress=on_progress,
+            on_checkpoint=on_checkpoint,
+            restore_runtime_state=self._restore_runtime_state(),
         )
+
+    def _restore_runtime_state(self) -> BacktestRuntimeStateSnapshot | None:
+        """Load and verify checkpoint runtime-state evidence from config/options."""
+        if self._options.restore_runtime_state is not None:
+            return self._options.restore_runtime_state
+        if not self._config.resume_runtime_state_json:
+            return None
+        try:
+            snapshot = BacktestRuntimeStateSnapshot.from_json(
+                self._config.resume_runtime_state_json,
+            )
+        except ValueError as exc:
+            msg = "Invalid resume_runtime_state_json"
+            raise AppProcessError(msg) from exc
+        _assert_resume_hash(
+            label="resume_runtime_state_hash",
+            expected=self._config.resume_runtime_state_hash,
+            actual=snapshot.state_hash,
+        )
+        return snapshot
 
     def _post_process(
         self,
@@ -356,6 +492,7 @@ class BacktestService:
         """持久化审计/产物 + 更新运行状态。"""
         self._persist_audit(run_id, report)
         self._persist_artifact(run_id, report, manifest=engine_result.manifest)
+        self._record_lineage(run_id, manifest=engine_result.manifest)
 
         run_svc = self._options.run_service
         if run_svc is not None:
@@ -386,6 +523,25 @@ class BacktestService:
             run_id=run_id,
         )
 
+    def _record_lineage(
+        self,
+        run_id: str,
+        *,
+        manifest: RunManifest | None,
+    ) -> None:
+        """Record data lineage for a completed backtest run."""
+        record_backtest_lineage(
+            recorder=self._options.lineage_recorder,
+            run_id=run_id,
+            config=BacktestLineageConfig(
+                strategy_id=self._config.strategy_id,
+                strategy_version=self._config.strategy_version,
+                start_date=self._config.start_date,
+                end_date=self._config.end_date,
+            ),
+            manifest=manifest,
+        )
+
     def _resolve_run_id(self) -> str:
         """在进入生命周期编排前固化 run_id。"""
         return resolve_run_id(self._config.run_id)
@@ -412,6 +568,7 @@ class BacktestService:
                 run_id=run_id,
                 report=report,
                 manifest=manifest,
+                resume_provenance=_resume_provenance_from_config(self._config),
             ),
             ArtifactPersistConfig(
                 strategy_id=self._config.strategy_id,
@@ -423,3 +580,23 @@ class BacktestService:
                 display_map=self._options.display_map,
             ),
         )
+
+
+def _resume_provenance_from_config(
+    config: BacktestServiceConfig,
+) -> dict[str, object] | None:
+    """Build normalized checkpoint provenance for restored child-run artifacts."""
+    if not config.resume_from_run_id:
+        return None
+    return {
+        "from_run_id": config.resume_from_run_id,
+        "checkpoint_trade_date": config.resume_checkpoint_trade_date,
+        "checkpoint_completed_days": config.resume_checkpoint_completed_days,
+        "checkpoint_total_days": config.resume_checkpoint_total_days,
+        "checkpoint_nav": config.resume_checkpoint_nav,
+        "checkpoint_order_count": config.resume_checkpoint_order_count,
+        "checkpoint_fill_count": config.resume_checkpoint_fill_count,
+        "account_state_hash": config.resume_account_state_hash,
+        "settlement_state_hash": config.resume_settlement_state_hash,
+        "runtime_state_hash": config.resume_runtime_state_hash,
+    }

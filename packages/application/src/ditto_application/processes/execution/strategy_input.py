@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import tempfile
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 
@@ -66,6 +67,7 @@ def write_backtest_artifacts(
     display_map: dict[InstrumentId, str] | None = None,
     *,
     rebalance_freq: str = "daily",
+    resume_provenance: Mapping[str, object] | None = None,
 ) -> dict[str, Path]:
     """
     将 BacktestReport 序列化到磁盘，返回产物文件路径映射.
@@ -77,6 +79,7 @@ def write_backtest_artifacts(
         display_map: InstrumentId → standard_ticker 映射，用于在审计日志中注入
             ``instrument_symbol`` 展示字段.
         rebalance_freq: 调仓频率，写入 JSON 供 replay 恢复配置.
+        resume_provenance: 可选 checkpoint 恢复来源证据，写入报告 JSON.
 
     Returns:
         产物类型 → 文件路径的映射，至少包含 ``backtest_report`` 条目.
@@ -91,6 +94,8 @@ def write_backtest_artifacts(
     json_bytes, parquet_tables = serialize_report(
         report,
         rebalance_freq=rebalance_freq,
+        manifest=manifest,
+        resume_provenance=resume_provenance,
     )
     atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
     for name, df in parquet_tables.items():

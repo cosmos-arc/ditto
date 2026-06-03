@@ -26,6 +26,12 @@ app = typer.Typer(help="资本数据查询")
 console = Console()
 
 
+def _experimental_kwargs(allow_experimental_data: bool) -> dict[str, bool]:
+    if allow_experimental_data:
+        return {"allow_experimental_data": True}
+    return {}
+
+
 @contextmanager
 def _get_facades() -> Generator[tuple[CapitalQueryFacade, MetadataQueryFacade]]:
     """获取 CapitalQueryFacade 和 MetadataQueryFacade 实例."""
@@ -43,6 +49,11 @@ def get_margin(
         None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
     ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -66,7 +77,11 @@ def get_margin(
         if resolved_id is None:
             typer.echo("未找到匹配的标的")
             return
-        df = facade.get_margin_trading(resolved_id, as_of)
+        df = facade.get_margin_trading(
+            resolved_id,
+            as_of,
+            **_experimental_kwargs(allow_experimental_data),
+        )
 
         if df.is_empty():
             typer.echo("未找到融资融券数据")
@@ -114,6 +129,11 @@ def get_valuation(
         None, "--standard-ticker", "-s", help="标准代码, 如 000001.XSHE"
     ),
     as_of_date: str = typer.Option(..., "--date", "-d", help="PIT 查询日期"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入研究态查询",
+    ),
     json_output: bool = typer.Option(False, "--json", "-j", help="JSON 格式输出"),
 ) -> None:
     """
@@ -137,7 +157,11 @@ def get_valuation(
         if resolved_id is None:
             typer.echo("未找到匹配的标的")
             return
-        df = facade.get_valuation_metrics(resolved_id, as_of)
+        df = facade.get_valuation_metrics(
+            resolved_id,
+            as_of,
+            **_experimental_kwargs(allow_experimental_data),
+        )
 
         if df.is_empty():
             typer.echo("未找到估值指标数据")

@@ -85,4 +85,5 @@ def build_input_bundle(
         market_data=pl.DataFrame(market_rows),
         signal_values=pl.DataFrame(signal_rows),
         benchmark_close=benchmark_close,
+        require_canonical_target_ids=True,
     )

@@ -22,6 +22,7 @@ class OrderTicket:
     filled_quantity: int = 0
     filled_price: float | None = None
     average_fill_price: float | None = None
+    broker_order_id: str | None = None
     order_events: tuple[OrderEvent, ...] = ()
 
     @property

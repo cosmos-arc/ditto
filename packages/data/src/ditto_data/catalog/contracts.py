@@ -31,6 +31,8 @@ class DataSchemaFingerprint:
     schema_hash: str
     row_count: int | None = None
     created_at: datetime | None = None
+    schema_version: str | None = None
+    columns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -42,6 +44,7 @@ class DataCatalogEntry:
     schema: DataSchemaFingerprint
     source: str
     freshness_at: datetime
+    source_snapshot_id: str | None = None
 
 
 @runtime_checkable

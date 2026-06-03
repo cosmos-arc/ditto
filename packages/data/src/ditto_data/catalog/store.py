@@ -6,6 +6,7 @@ from ditto_data.catalog.contracts import (
     DataAssetRef,
     DataCatalogEntry,
 )
+from ditto_data.catalog.storage_policy import validate_catalog_storage_location
 
 __all__ = ["InMemoryDataCatalog"]
 
@@ -23,6 +24,7 @@ class InMemoryDataCatalog:
 
     def upsert_asset(self, entry: DataCatalogEntry) -> None:
         """Insert or replace a catalog entry."""
+        validate_catalog_storage_location(entry)
         self._entries[entry.asset] = entry
 
     def get_asset(self, asset: DataAssetRef) -> DataCatalogEntry | None:

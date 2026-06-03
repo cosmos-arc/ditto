@@ -28,6 +28,7 @@ from ditto_kernel.strategy import (
 )
 from ditto_kernel.synchronizer import Synchronizer, TimeSlice
 from ditto_kernel.time_context import TimeContext
+from ditto_kernel.time_semantics import DEFAULT_PIT_TIME_COLUMN, PIT_POLICY_FAIL_CLOSED
 from ditto_kernel.tracing import traced
 from ditto_kernel.trading import (
     DEFAULT_COMMISSION_RATE,
@@ -39,6 +40,8 @@ __all__ = [
     "DEFAULT_COMMISSION_RATE",
     "DEFAULT_LOT_SIZE",
     "DEFAULT_MIN_COMMISSION",
+    "DEFAULT_PIT_TIME_COLUMN",
+    "PIT_POLICY_FAIL_CLOSED",
     "AmbiguousTickerError",
     "AssetClass",
     "Clock",

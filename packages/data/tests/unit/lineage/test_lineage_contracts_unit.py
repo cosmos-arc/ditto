@@ -62,6 +62,9 @@ def test_lineage_protocols_accept_structural_in_memory_fake() -> None:
                 or any(ref.asset == asset for ref in event.outputs)
             )
 
+        def list_events_for_run(self, run_id: str) -> tuple[LineageEvent, ...]:
+            return tuple(event for event in self._events if event.run_id == run_id)
+
     raw_asset = DataAssetRef(dataset_id="raw_bars", namespace="market")
     clean_asset = DataAssetRef(dataset_id="clean_bars", namespace="market")
     event = LineageEvent(
@@ -84,6 +87,8 @@ def test_lineage_protocols_accept_structural_in_memory_fake() -> None:
 
     assert reader.list_events_for_asset(raw_asset) == (event,)
     assert reader.list_events_for_asset(clean_asset) == (event,)
+    assert reader.list_events_for_run("run-1") == (event,)
+    assert reader.list_events_for_run("run-2") == ()
     assert (
         reader.list_events_for_asset(
             DataAssetRef(dataset_id="unrelated", namespace="market"),

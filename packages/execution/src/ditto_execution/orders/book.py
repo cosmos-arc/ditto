@@ -62,6 +62,10 @@ class OrderBook:
         if event is not None:
             self._journal.append(event)
 
+    def restore_ticket(self, ticket: OrderTicket) -> None:
+        """从 checkpoint 恢复订单票据，不追加新的 journal 事件。"""
+        self._tickets[ticket.order.client_id.value] = ticket
+
     def cancel(self, client_id: ClientOrderId) -> None:
         """撤销订单。终态订单静默忽略（no-op）。"""
         ticket = self._tickets.get(client_id.value)

@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import re
 
-from ditto_data.helpers.pit.policy import PIT_QUERY_OPERATOR
+from ditto_data.helpers.pit.policy import (
+    PIT_QUERY_OPERATOR,
+    UnsafeResearchTimePolicy,
+    is_trade_date_fallback_allowed,
+)
 
 
 class PitHelper:
@@ -62,10 +66,30 @@ class PitHelper:
             raise ValueError(f"Invalid {name}: {identifier}")
 
     @staticmethod
+    def _validate_pit_time_column(
+        date_column: str,
+        unsafe_time_policy: UnsafeResearchTimePolicy | str | None,
+    ) -> None:
+        """Fail closed when a helper would use trade_date as PIT time."""
+        if date_column.lower() == "trade_date" and not is_trade_date_fallback_allowed(
+            unsafe_time_policy
+        ):
+            msg = " ".join(
+                (
+                    "PIT trade_date fallback is research-only.",
+                    "Pass unsafe_time_policy=UnsafeResearchTimePolicy."
+                    + "ALLOW_TRADE_DATE_FALLBACK to opt in.",
+                )
+            )
+            raise ValueError(msg)
+
+    @staticmethod
     def add_pit_filter(
         query: str,
         knowledge_date: str,
         date_column: str = "knowledge_date",
+        *,
+        unsafe_time_policy: UnsafeResearchTimePolicy | str | None = None,
     ) -> str:
         """
         为查询添加 PIT 过滤条件.
@@ -75,6 +99,7 @@ class PitHelper:
             query: 原始 SQL 查询
             knowledge_date: 知识日期 (PIT 时间点)
             date_column: 日期列名，默认为 "knowledge_date"
+            unsafe_time_policy: 显式研究模式 unsafe 时间策略。
 
         Returns:
         -------
@@ -90,6 +115,7 @@ class PitHelper:
         # 验证日期格式和列名，防止 SQL 注入
         PitHelper._validate_date_string(knowledge_date)
         PitHelper._validate_sql_identifier(date_column, "date_column")
+        PitHelper._validate_pit_time_column(date_column, unsafe_time_policy)
 
         query = query.strip()
 
@@ -118,7 +144,9 @@ class PitHelper:
         right_table: str,
         join_keys: list[str],
         asof_date: str,
-        date_column: str = "trade_date",
+        date_column: str = "knowledge_date",
+        *,
+        unsafe_time_policy: UnsafeResearchTimePolicy | str | None = None,
     ) -> str:
         """
         生成 PIT ASOF JOIN SQL.
@@ -132,7 +160,8 @@ class PitHelper:
             right_table: 右表名称
             join_keys: 连接键列表（不包含时间列）
             asof_date: ASOF 日期
-            date_column: 右表的时间列名，默认 "trade_date"
+            date_column: 右表的时间列名，默认 "knowledge_date"
+            unsafe_time_policy: 显式研究模式 unsafe 时间策略。
 
         Returns:
         -------
@@ -147,7 +176,7 @@ class PitHelper:
             ...     "2024-01-15"
             ... )
             "stock_daily s LEFT JOIN adj_factor a ON s.instrument_id = a.instrument_id "
-            "AND a.trade_date <= '2024-01-15'"
+            "AND a.knowledge_date <= '2024-01-15'"
 
             >>> PitHelper.add_pit_join(
             ...     "stock_daily s",
@@ -163,6 +192,7 @@ class PitHelper:
         # 验证日期格式和列名，防止 SQL 注入
         PitHelper._validate_date_string(asof_date)
         PitHelper._validate_sql_identifier(date_column, "date_column")
+        PitHelper._validate_pit_time_column(date_column, unsafe_time_policy)
 
         # 构建 ON 子句
         on_clause = " AND ".join(join_keys)
@@ -185,6 +215,9 @@ class PitHelper:
         query: str,
         cte_name: str = "pit_data",
         asof_date: str | None = None,
+        date_column: str = "knowledge_date",
+        *,
+        unsafe_time_policy: UnsafeResearchTimePolicy | str | None = None,
     ) -> str:
         """
         将查询包装为 PIT CTE.
@@ -197,6 +230,8 @@ class PitHelper:
             query: 原始 SQL 查询
             cte_name: CTE 名称
             asof_date: 可选的 ASOF 日期（如果需要额外过滤）
+            date_column: PIT 日期列名，默认 "knowledge_date"
+            unsafe_time_policy: 显式研究模式 unsafe 时间策略。
 
         Returns:
         -------
@@ -207,13 +242,15 @@ class PitHelper:
             >>> query = "SELECT instrument_id, close FROM stock_daily"
             >>> PitHelper.wrap_pit_cte(query, "pit_data", "2024-01-15")
             "WITH pit_data AS (SELECT instrument_id, close FROM stock_daily) "
-            "SELECT * FROM pit_data WHERE trade_date <= '2024-01-15'"
+            "SELECT * FROM pit_data WHERE knowledge_date <= '2024-01-15'"
 
         """
         # 验证 CTE 名称和日期格式，防止 SQL 注入
         PitHelper._validate_sql_identifier(cte_name, "cte_name")
         if asof_date:
             PitHelper._validate_date_string(asof_date)
+            PitHelper._validate_sql_identifier(date_column, "date_column")
+            PitHelper._validate_pit_time_column(date_column, unsafe_time_policy)
 
         query = query.strip()
 
@@ -222,16 +259,16 @@ class PitHelper:
 
         # 如果提供了 asof_date，添加 WHERE 子句
         if asof_date:
-            # 假设 CTE 结果中有 trade_date 列
-            # 实际使用时需要根据具体情况调整
-            cte += f" WHERE trade_date {PIT_QUERY_OPERATOR} '{asof_date}'"
+            cte += f" WHERE {date_column} {PIT_QUERY_OPERATOR} '{asof_date}'"
 
         return cte
 
     @staticmethod
     def get_safe_trade_date(
-        base_column: str = "trade_date",
+        base_column: str = "knowledge_date",
         knowledge_date: str = "$asof",
+        *,
+        unsafe_time_policy: UnsafeResearchTimePolicy | str | None = None,
     ) -> str:
         """
         生成安全的 trade_date 过滤条件.
@@ -243,6 +280,7 @@ class PitHelper:
         ----
             base_column: 基础日期列名
             knowledge_date: 知识日期（默认使用 $asof 占位符）
+            unsafe_time_policy: 显式研究模式 unsafe 时间策略。
 
         Returns:
         -------
@@ -251,14 +289,15 @@ class PitHelper:
         Examples:
         --------
             >>> PitHelper.get_safe_trade_date()
-            "trade_date <= $asof"
+            "knowledge_date <= $asof"
 
             >>> PitHelper.get_safe_trade_date(knowledge_date="2024-01-15")
-            "trade_date <= '2024-01-15'"
+            "knowledge_date <= '2024-01-15'"
 
         """
         # 验证列名和日期格式，防止 SQL 注入
         PitHelper._validate_sql_identifier(base_column, "base_column")
+        PitHelper._validate_pit_time_column(base_column, unsafe_time_policy)
         if not knowledge_date.startswith("$"):
             PitHelper._validate_date_string(knowledge_date)
 

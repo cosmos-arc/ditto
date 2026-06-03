@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
@@ -39,6 +40,10 @@ def empty_context() -> StrategyContext:
     return StrategyContext()
 
 
+def _build_stock_id_map(ids: list[str]) -> dict[str, InstrumentId]:
+    return {ticker: InstrumentId(index) for index, ticker in enumerate(ids, start=1)}
+
+
 @pytest.fixture
 def multi_factor_bundle() -> StrategyInputBundle:
     """5 instruments with two factor columns."""
@@ -68,6 +73,8 @@ def multi_factor_bundle() -> StrategyInputBundle:
         instruments=instruments,
         market_data=market_data,
         signal_values=signal_values,
+        instrument_id_map=_build_stock_id_map(ids),
+        require_canonical_target_ids=True,
     )
 
 
@@ -324,8 +331,10 @@ class TestPipelineE2E:
         assert len(target.positions) == 2
         # ascending=False inverts: STK005 (rank 0.2→score 1.0)
         # and STK004 (rank 0.4→score 0.8)
-        assert "STK004" in target.positions
-        assert "STK005" in target.positions
+        assert InstrumentId(4) in target.positions
+        assert InstrumentId(5) in target.positions
+        assert "STK004" not in target.positions
+        assert "STK005" not in target.positions
 
     def test_e2e_trend_filter_excludes_low_rank(
         self,
@@ -360,6 +369,8 @@ class TestPipelineE2E:
             instruments=instruments,
             market_data=market_data,
             signal_values=signal_values,
+            instrument_id_map=_build_stock_id_map(ids),
+            require_canonical_target_ids=True,
         )
 
         config = StockSelectionTrendConfig(
@@ -375,6 +386,7 @@ class TestPipelineE2E:
         # Ranks (descending=False): STK005(-0.10)→0.2, STK004(0.05)→0.4,
         # STK003(0.10)→0.6, STK002(0.15)→0.8, STK001(0.20)→1.0
         # TrendFilter (signal_value >= 0.4): STK001, STK002, STK003, STK004
+        assert InstrumentId(5) not in target.positions
         assert "STK005" not in target.positions
         assert len(target.positions) == 4
 

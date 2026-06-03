@@ -3,6 +3,13 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog.promotion import (
+    DatasetMaturityPromotionReader,
+    DatasetMaturityPromotionRevoker,
+    DatasetMaturityPromotionWriter,
+    DatasetPromotionEvidenceReader,
+    DatasetPromotionEvidenceWriter,
+)
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
 )
@@ -19,13 +26,19 @@ from ditto_strategy.storage.sqlite.services.strategy_catalog_service import (
     StrategyCatalogService,
 )
 from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointStore,
     StrategyRunLifecycleStore,
 )
 
 from ditto_application.commands.backtest import (
     BacktestRunHandler,
     CancelRunHandler,
+    ResumeRunHandler,
     RetryRunHandler,
+)
+from ditto_application.commands.catalog import (
+    ReviewDatasetPromotionEvidenceHandler,
+    RevokeDatasetMaturityPromotionHandler,
 )
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
@@ -81,6 +94,34 @@ class AppCommandProvider(Provider):
             comparison_store=comparison_store,
             instrument_store=instrument_store,
             golden_dataset=golden_dataset,
+        )
+
+    @provide
+    def review_dataset_promotion_evidence_handler(
+        self,
+        promotion_evidence_writer: DatasetPromotionEvidenceWriter,
+        promotion_evidence_reader: DatasetPromotionEvidenceReader,
+        maturity_promotion_writer: DatasetMaturityPromotionWriter,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
+    ) -> ReviewDatasetPromotionEvidenceHandler:
+        """Dataset promotion reviewer evidence handler."""
+        return ReviewDatasetPromotionEvidenceHandler(
+            evidence_writer=promotion_evidence_writer,
+            evidence_reader=promotion_evidence_reader,
+            maturity_promotion_writer=maturity_promotion_writer,
+            maturity_promotion_reader=maturity_promotion_reader,
+        )
+
+    @provide
+    def revoke_dataset_maturity_promotion_handler(
+        self,
+        maturity_promotion_reader: DatasetMaturityPromotionReader,
+        maturity_promotion_revoker: DatasetMaturityPromotionRevoker,
+    ) -> RevokeDatasetMaturityPromotionHandler:
+        """Dataset maturity promotion reversal handler."""
+        return RevokeDatasetMaturityPromotionHandler(
+            maturity_promotion_reader=maturity_promotion_reader,
+            maturity_promotion_revoker=maturity_promotion_revoker,
         )
 
     @provide
@@ -160,6 +201,18 @@ class AppCommandProvider(Provider):
     ) -> RetryRunHandler:
         """回测运行重试 Handler."""
         return RetryRunHandler(run_service=run_service)
+
+    @provide
+    def resume_run_handler(
+        self,
+        run_service: StrategyRunLifecycleStore,
+        checkpoint_store: StrategyRunCheckpointStore,
+    ) -> ResumeRunHandler:
+        """回测运行 checkpoint 恢复 Handler."""
+        return ResumeRunHandler(
+            run_service=run_service,
+            checkpoint_reader=checkpoint_store,
+        )
 
     @provide
     def run_lifecycle_service(

@@ -12,6 +12,7 @@ Execution 是**交易执行平面**，负责：
 **核心原则**：
 - 执行层是交易系统的最后一道门，不依赖回测或分析
 - Broker Gateway 是与外部券商系统的唯一接口
+- 当前后端攻坚范围只定义并验证 `BrokerGateway` Protocol、事件语义、审计/对账 contract 和 conformance fixtures；不实现真实券商 adapter、认证、SDK client 或生产下单连接
 - 执行现实模拟（reality/）封装了 A 股交易规则（T+1、涨跌停、费用等）
 - 审计记录所有交易行为，不可篡改
 
@@ -44,7 +45,7 @@ ditto_execution/
 ├── broker/               # 券商网关抽象
 │   ├── contracts.py      # BrokerGateway Protocol
 │   ├── runtime.py        # PaperRuntimeKernel（继承 BaseRuntimeKernel，RealtimeClock + SimpleEventBus）
-│   └── gateways/         # 具体券商实现
+│   └── gateways/         # 网关实现；真实券商 adapter 暂保留，不在当前范围
 │       └── paper.py      # PaperBrokerGateway（冒烟测试级别模拟网关）
 ├── orders/               # 订单管理（OMS Lite — FSM + Journal + 双 ID）
 │   ├── ids.py            # ClientOrderId / BrokerOrderId 值对象
@@ -155,8 +156,8 @@ from ditto_execution.audit.execution_audit_service import ExecutionAuditService
 
 - **~~OMS Lite（EXEC-P1-01）~~**：✅ 已实现（Phase 2）。`orders/` 包含完整 FSM、Journal、双 ID、OrderBook、OrderTicket。
 - **~~Broker Gateways（EXEC-P1-02）~~**：✅ 已实现（PaperBrokerGateway）。`broker/gateways/paper.py` 提供冒烟测试级别的模拟网关，支持 order submit/fill/account/connect。`BrokerGateway` Protocol 定义在 `broker/contracts.py`。
-- **~~Reconciliation（EXEC-P1-03）~~**：✅ 已实现。`reconciliation/` 导出 `reconcile()` 纯函数（无副作用）+ `plan_repair()` 纯函数（无副作用 repair action planning）+ `RepairActionExecutor`（审批状态门禁、handler dispatch、执行结果落库、audit sink 端口）+ `ReconciliationReport` / `ReconciliationDiff` / `RepairPlan` / `RepairActionRecord` / `RepairExecutionResult` 类型定义。状态字段使用 `Literal["matched", "mismatch", "pending"]` 类型；`SQLiteRepairWorkflowStore` 持久化 action 审批/执行状态并阻止未审批写操作执行；当前默认 handler 只覆盖 read-only broker refresh，真正会修改订单/成交/账户状态的 mutating handler 仍是后续工作。
-- **Audit Spine（EXEC-P1-04）**：存储表（`execution_fills`、`trade_intents`、`actual_positions`、`execution_audit`）缺乏统一关联键（broker order ID、client ID、journal sequence）。
+- **~~Reconciliation（EXEC-P1-03）~~**：✅ 已实现。`reconciliation/` 导出 `reconcile()` 纯函数（无副作用）+ `plan_repair()` 纯函数（无副作用 repair action planning）+ `RepairActionExecutor`（审批状态门禁、handler dispatch、执行结果落库、audit sink 端口）+ `ReconciliationReport` / `ReconciliationDiff` / `RepairPlan` / `RepairActionRecord` / `RepairExecutionResult` 类型定义。状态字段使用 `Literal["matched", "mismatch", "pending"]` 类型；`SQLiteRepairWorkflowStore` 持久化 action 审批/执行状态并阻止未审批写操作执行；当前 handler 覆盖 read-only broker refresh、审批后 broker fill import（通过窄端口解析完整 `FillRecord` 并幂等写入本地 fill store）、审批后 local fill amendment（通过 `replace_fill()` 只替换已存在本地 fill）和审批后 order-status review/update（通过 `trade_intents.status` 的窄端口带 transition guard 更新本地状态）；`ExecutionRepairAuditSink` 可把执行结果写入共享 `execution_audit`，并保留 fill 相关 action 的 `fill_id`。后续重点转向 broker Protocol/conformance、事件 contract 和 protocol-level seams，真实券商接入实现保持 deferred。
+- **Audit Spine（EXEC-P1-04）**：`execution_audit` 已有顶层 `correlation_id` / `order_id` / `fill_id` 关联键和 `query_timeline()` 读模型；`account_snapshots` 已持久化 run-scoped 账户快照；`actual_positions` 已持久化 run-scoped 持仓快照并提供旧表迁移；`broker_events` 已持久化 run-scoped 标准化券商事件；`STANDARD_BROKER_EVENT_TYPES` / `require_standard_broker_event_type(...)` 定义并校验 recording wrapper 可写入的标准 broker event taxonomy；`BrokerEventRecordingGateway` 可在不修改 `BrokerGateway` Protocol 的情况下把 connect/order_ack/fill/fill_query_error/cancel/reject/account_update 写入 normalized broker events，`get_account()` 会写入含 cash/NAV/exposure/position_count 的 deterministic `account_update` snapshot，并在保存前 fail closed 校验 event type，支持可选 broker-order ID lookup，也能在 wrapper 重建后仅从同 run/broker/order 的 recorded `order_ack` 事件恢复 broker-order ID，并在可选 lookup 返回 `None` 或 blank/whitespace 值时回退到 same-broker recorded ack recovery，blank/whitespace `OrderTicket.broker_order_id` 也会先按 missing 处理再进入 lookup/recorded-ack recovery，重复 `order_ack` callbacks 会保留首条 canonical ack ID 并用 deterministic `attempt-N` 后缀保存后续尝试，且 recorded-ack recovery 会跳过历史/外部写入的 blank/whitespace 顶层/payload broker-order ID 继续寻找有效 ack，非 ack broker events 或同 run/order 的其他 broker ack 即使携带 broker-order link 也不会成为 reconnect 恢复权威，以 event-time-scoped connect IDs 保留多次 connect/reconnect lifecycle 证据，并在相同 event_time 碰撞时追加 deterministic attempt suffix，以 attempt-scoped cancel/reject/fill_query_error IDs 保留重复响应尝试并避免相同 event_time 响应折叠，以 order-scoped、cumulative/leaves-progress-aware 且 economics/link-revision-aware 的稳定 fill event ID 支撑 replay 幂等、避免跨订单 fill ID 覆盖、保留同一 fill ID 的后续累计进度，并保存同一进度下价格/费用/滑点或 broker-order link 修正证据；提交后的立即 fill 查询失败会被记录为 `fill_query_error`，不会把已成功提交的 `OrderTicket` 伪装成提交失败，直接 `query_fills(...)` 失败也会记录错误后继续向调用方抛出异常，`cancel_order(...)` / `reject_order(...)` 失败会先记录 `failed` broker event 再原样重抛；SQLite `broker_events` 对重复 `event_id` 保留首次 callback 的 event_time/status/payload，同时允许后续 duplicate 补齐先前为空或空白的顶层 link key（例如乱序 fill 后 ack 才知道的 `broker_order_id`）；`query_operating_timeline()` 已可在同一 SQLite 存储中合并 `execution_audit`、`order_events`、run-scoped `actual_positions`、`account_snapshots` 与 `broker_events`，并按 broker event_time 排列 late replayed callbacks，同时在 payload 中保留本地写入 `created_at`。剩余缺口是更长 callback ordering/replay sequence conformance；不包含真实券商 adapter 实现。
 - **Planner Decomposition（EXEC-P2-01）**：`planner.py` 约 530 LOC 混合 target diff / market precheck / rounding / cost 逻辑，计划拆分为聚焦模块。
 - **A-Share Rules（EXEC-P2-02）**：规则行为散布在 execution、backtest、kernel 中，需要跨包协调收拢。
 

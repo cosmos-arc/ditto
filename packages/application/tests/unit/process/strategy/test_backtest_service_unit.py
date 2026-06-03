@@ -16,10 +16,23 @@ from ditto_application.processes.execution.backtest_process import (
 )
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.engine import EngineConfig, EngineLoop, EngineResult
-from ditto_backtest.manifest import RunManifest, RunMode
+from ditto_backtest.manifest import InputRef, RunManifest, RunMode
+from ditto_backtest.result import (
+    BacktestAccountStateSnapshot,
+    BacktestCheckpoint,
+    BacktestDelayedSignalSnapshot,
+    BacktestFrozenQuantitySnapshot,
+    BacktestPendingOrderSnapshot,
+    BacktestRuntimeStateSnapshot,
+    BacktestSettlementStateSnapshot,
+    BacktestTargetWeightSnapshot,
+)
 from ditto_backtest.statistics import BacktestReport
+from ditto_data.catalog import DataAssetRef
+from ditto_data.lineage import InMemoryDataLineage
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.time_context import TimeContext
+from ditto_strategy.runs.models import StrategyRunCheckpointRecord
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -375,7 +388,19 @@ class TestAuditPersistence:
 class TestArtifactPersistence:
     """测试策略产物持久化。"""
 
-    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch.object(
+        EngineLoop,
+        "run",
+        return_value=_make_engine_result(
+            manifest=RunManifest(
+                run_id="run-001",
+                strategy_id="momentum-etf",
+                strategy_version="2026.03",
+                mode=RunMode.BACKTEST,
+                created_at="2026-03-24T10:00:00Z",
+            ),
+        ),
+    )
     @patch(
         "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
         return_value={
@@ -418,6 +443,80 @@ class TestArtifactPersistence:
         assert call_arg.strategy_id == "momentum-etf"
         assert call_arg.run_id == "run-001"
         assert call_arg.artifact_type == "backtest_report"
+        assert call_arg.metadata["pit_policy"] == "knowledge_date_fail_closed"
+        assert call_arg.metadata["pit_time_column"] == "knowledge_date"
+        assert call_arg.metadata["unsafe_time_policy"] == ""
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch(
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/ditto/run-resume/backtest_report.json"),
+        },
+    )
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_resume_artifact_persists_checkpoint_provenance(
+        self,
+        mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """Restored child-run artifacts should preserve checkpoint provenance."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-resume"
+        fake_report.final_nav = 1_120_000.0
+        fake_report.period = ("2025-02-03", "2025-03-31")
+        fake_report.initial_cash = 1_000_000.0
+        fake_report.aggregated_trade_stats = MagicMock(total_trades=2)
+        fake_report.alpha_stats = MagicMock(
+            sharpe_ratio=1.7,
+            max_drawdown=-2.0,
+        )
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_artifact = MagicMock()
+        config = _make_service_config(
+            strategy_id="momentum-etf",
+            run_id="run-resume",
+            start_date="2025-02-03",
+            end_date="2025-03-31",
+            resume_from_run_id="run-original",
+            resume_checkpoint_trade_date="2025-01-31",
+            resume_checkpoint_completed_days=21,
+            resume_checkpoint_total_days=60,
+            resume_checkpoint_nav=1_020_000.0,
+            resume_checkpoint_order_count=4,
+            resume_checkpoint_fill_count=4,
+            resume_account_state_hash="sha256:account",
+            resume_settlement_state_hash="sha256:settlement",
+            resume_runtime_state_hash="sha256:runtime",
+        )
+        service = _make_minimal_service(
+            config=config,
+            artifact_service=mock_artifact,
+        )
+
+        service.run()
+
+        mock_write_artifacts.assert_called_once()
+        assert mock_write_artifacts.call_args.kwargs["resume_provenance"] == {
+            "from_run_id": "run-original",
+            "checkpoint_trade_date": "2025-01-31",
+            "checkpoint_completed_days": 21,
+            "checkpoint_total_days": 60,
+            "checkpoint_nav": 1_020_000.0,
+            "checkpoint_order_count": 4,
+            "checkpoint_fill_count": 4,
+            "account_state_hash": "sha256:account",
+            "settlement_state_hash": "sha256:settlement",
+            "runtime_state_hash": "sha256:runtime",
+        }
+        artifact = mock_artifact.save_artifact.call_args.args[0]
+        assert artifact.metadata["resume_from_run_id"] == "run-original"
+        assert artifact.metadata["resume_checkpoint_trade_date"] == "2025-01-31"
+        assert artifact.metadata["resume_account_state_hash"] == "sha256:account"
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_application.processes.execution.backtest_process.build_report")
@@ -678,6 +777,92 @@ class TestArtifactPersistence:
 
         call_kwargs = mock_write_artifacts.call_args.kwargs
         assert call_kwargs["manifest"] == manifest
+
+    @patch.object(EngineLoop, "run")
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_records_data_lineage_from_manifest(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """成功回测后记录策略和输入数据到 backtest report 的 lineage."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-001"
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+        manifest = RunManifest(
+            run_id="run-001",
+            strategy_id="momentum-etf",
+            strategy_version="2026.03",
+            mode=RunMode.BACKTEST,
+            created_at="2026-03-24T10:00:00+00:00",
+            input_ref_details=(
+                InputRef(
+                    instrument_id=InstrumentId(510050),
+                    data_hash="sha256:abc123",
+                    date_range=("2026-01-01", "2026-03-01"),
+                    source="tushare",
+                ),
+            ),
+        )
+        mock_engine_run.return_value = _make_engine_result(
+            run_id="run-001",
+            manifest=manifest,
+        )
+        lineage = InMemoryDataLineage()
+        service = _make_minimal_service(
+            config=_make_service_config(
+                strategy_id="momentum-etf",
+                strategy_version="2026.03",
+                run_id="run-001",
+                start_date="2026-01-01",
+                end_date="2026-03-01",
+            ),
+        )
+        service._options = BacktestServiceOptions(lineage_recorder=lineage)  # type: ignore[misc]
+
+        service.run()
+
+        output_asset = DataAssetRef(
+            dataset_id="backtest_report",
+            namespace="backtest",
+            partition_keys=(
+                "run_id=run-001",
+                "strategy_id=momentum-etf",
+                "start_date=2026-01-01",
+                "end_date=2026-03-01",
+            ),
+        )
+        events = lineage.list_events_for_asset(output_asset)
+        assert len(events) == 1
+        event = events[0]
+        assert event.run_id == "run-001"
+        assert event.operation == "backtest"
+        assert tuple(ref.asset for ref in event.inputs) == (
+            DataAssetRef(
+                dataset_id="momentum-etf",
+                namespace="strategy",
+                partition_keys=("version=2026.03",),
+            ),
+            DataAssetRef(
+                dataset_id="market_data",
+                namespace="backtest_input",
+                partition_keys=(
+                    "source=tushare",
+                    "instrument_id=510050",
+                    "start_date=2026-01-01",
+                    "end_date=2026-03-01",
+                    "data_hash=sha256:abc123",
+                ),
+            ),
+        )
+        assert tuple(ref.role for ref in event.inputs) == (
+            "strategy",
+            "market_data",
+        )
+        assert tuple(ref.asset for ref in event.outputs) == (output_asset,)
+        assert tuple(ref.role for ref in event.outputs) == ("backtest_report",)
 
 
 # ---------------------------------------------------------------------------
@@ -1271,6 +1456,48 @@ class TestRunServiceLifecycle:
         assert config_data["end_date"] == "2026-06-30"
         assert config_data["initial_cash"] == 2_000_000.0
         assert config_data["benchmark_id"] == "idx-000300"
+        assert config_data["allow_experimental_data"] is False
+        assert config_data["pit_policy"] == "knowledge_date_fail_closed"
+        assert config_data["pit_time_column"] == "knowledge_date"
+        assert config_data["unsafe_time_policy"] == ""
+
+    @patch.object(EngineLoop, "run", return_value=_make_engine_result())
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_config_records_experimental_data_opt_in(
+        self,
+        mock_build_report: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """BacktestService config_json exposes explicit maturity opt-in."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_run_svc = MagicMock()
+        mock_run_svc.get_run.return_value = None
+        config = _make_service_config(run_id="config-json-exp")
+        options = BacktestServiceOptions(
+            run_service=mock_run_svc,
+            allow_experimental_data=True,
+        )
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=options,
+        )
+
+        service.run()
+
+        import orjson
+
+        call_kwargs = mock_run_svc.create_run.call_args[1]
+        config_data = orjson.loads(call_kwargs["config_json"])
+        assert config_data["allow_experimental_data"] is True
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch("ditto_application.processes.execution.backtest_process.build_report")
@@ -1421,3 +1648,130 @@ class TestRunServiceLifecycle:
 
         call_kwargs = mock_run_svc.create_run.call_args.kwargs
         assert call_kwargs["parent_run_id"] == "original-001"
+
+
+# ---------------------------------------------------------------------------
+# Tests: checkpoint persistence callback
+# ---------------------------------------------------------------------------
+
+
+class TestBacktestCheckpointPersistence:
+    """测试 BacktestService 到 checkpoint writer 的转换边界。"""
+
+    def test_engine_checkpoint_is_persisted_as_strategy_run_checkpoint(self) -> None:
+        """EngineOptions.on_checkpoint 应写入应用层 run checkpoint 记录。"""
+        checkpoint_writer = MagicMock()
+        config = _make_service_config(
+            strategy_id="momentum-etf",
+            strategy_version="4",
+            run_id="run-checkpoint",
+        )
+        service = BacktestService(
+            config=config,
+            pipeline=MagicMock(),
+            planner=MagicMock(),
+            brokerage=MagicMock(),
+            pre_trade_check=MagicMock(),
+            data_feed=MagicMock(),
+            options=BacktestServiceOptions(checkpoint_writer=checkpoint_writer),
+        )
+
+        options = service._build_engine_options(
+            "run-checkpoint",
+            ExecutionAuditCollector(),
+        )
+        assert options.on_checkpoint is not None
+
+        checkpoint = BacktestCheckpoint(
+            run_id="run-checkpoint",
+            strategy_id="momentum-etf",
+            completed_trade_date="2026-03-01",
+            resume_from="2026-03-02",
+            completed_days=42,
+            total_days=60,
+            nav=1_050_000.0,
+            order_count=7,
+            fill_count=6,
+            account_state=BacktestAccountStateSnapshot(
+                cash_available=920_000.0,
+                cash_settled=900_000.0,
+                cash_frozen=20_000.0,
+                total_value=1_050_000.0,
+                nav=1_050_000.0,
+                exposure=130_000.0,
+                positions=(),
+            ),
+            settlement_state=BacktestSettlementStateSnapshot(
+                frozen_quantities=(
+                    BacktestFrozenQuantitySnapshot(
+                        instrument_id=1,
+                        settle_date="2026-03-03",
+                        quantity=1000,
+                    ),
+                ),
+            ),
+            runtime_state=BacktestRuntimeStateSnapshot(
+                pending_orders=(
+                    BacktestPendingOrderSnapshot(
+                        client_order_id="order-001",
+                        instrument_id=1,
+                        order_type="market",
+                        direction="buy",
+                        quantity=300,
+                        price=None,
+                        stop_price=None,
+                        trade_date="2026-03-01",
+                        status="submitted",
+                        filled_quantity=0,
+                        leaves_quantity=300,
+                        filled_price=None,
+                        average_fill_price=None,
+                    ),
+                ),
+                delayed_signals=(
+                    BacktestDelayedSignalSnapshot(
+                        queue_index=0,
+                        trade_date="2026-03-01",
+                        strategy_id="momentum-etf",
+                        run_id="run-checkpoint",
+                        cash_target=0.5,
+                        positions=(
+                            BacktestTargetWeightSnapshot(
+                                instrument_id=1,
+                                target_weight=0.5,
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        options.on_checkpoint(checkpoint)
+
+        checkpoint_writer.save_checkpoint.assert_called_once_with(
+            StrategyRunCheckpointRecord(
+                run_id="run-checkpoint",
+                strategy_id="momentum-etf",
+                strategy_version="4",
+                mode="backtest",
+                completed_trade_date="2026-03-01",
+                resume_from="2026-03-02",
+                completed_days=42,
+                total_days=60,
+                nav=1_050_000.0,
+                order_count=7,
+                fill_count=6,
+                account_state_json=checkpoint.account_state_json,
+                account_state_hash=checkpoint.account_state_hash,
+                settlement_state_json=checkpoint.settlement_state_json,
+                settlement_state_hash=checkpoint.settlement_state_hash,
+                runtime_state_json=checkpoint.runtime_state_json,
+                runtime_state_hash=checkpoint.runtime_state_hash,
+            )
+        )
+
+    def test_checkpoint_callback_absent_without_writer(self) -> None:
+        """未提供 checkpoint writer 时不注册持久化回调。"""
+        service = _make_minimal_service()
+        options = service._build_engine_options("run-no-checkpoint", MagicMock())
+
+        assert options.on_checkpoint is None

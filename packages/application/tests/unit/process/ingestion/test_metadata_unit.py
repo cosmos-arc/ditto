@@ -1,8 +1,16 @@
 """Tests for MetadataManager."""
 
+from datetime import UTC, datetime, timedelta
+
 import polars as pl
 import pytest
 from ditto_application.processes.ingestion.metadata_manager import MetadataManager
+from ditto_data.catalog import (
+    DataAssetRef,
+    DataCatalogEntry,
+    DataSchemaFingerprint,
+    InMemoryDataCatalog,
+)
 from ditto_data.models.ingestion import IngestionLog, IngestionStatus
 from ditto_platform.foundation import (
     ChecksumCompute,
@@ -43,6 +51,33 @@ def setup_observability():
 class TestShouldSkip:
     """测试 should_skip 方法。"""
 
+    def _catalog_with_asset(
+        self,
+        *,
+        dataset: str = "stock_daily",
+        trade_date: str = "2024-12-27",
+        freshness_at: datetime | None = None,
+    ) -> InMemoryDataCatalog:
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id=dataset,
+                    namespace="market",
+                    partition_keys=(f"trade_date={trade_date}",),
+                ),
+                storage_uri=f"{dataset}/2024",
+                schema=DataSchemaFingerprint(
+                    schema_hash=f"schema:{dataset}:v1",
+                    row_count=1000,
+                    created_at=datetime(2024, 12, 27, 18, 0, tzinfo=UTC),
+                ),
+                source="tushare",
+                freshness_at=freshness_at or datetime(2024, 12, 27, 18, 5, tzinfo=UTC),
+            )
+        )
+        return catalog
+
     def test_should_not_skip_when_force_is_true(self, mock_ingestion_log_store) -> None:
         """force=True 时不跳过。"""
         manager = MetadataManager(mock_ingestion_log_store)
@@ -71,6 +106,83 @@ class TestShouldSkip:
         assert should_skip is False
         assert reason is None
         mock_ingestion_log_store.get_log.assert_called_once()
+
+    def test_should_skip_when_catalog_has_exact_trade_date_asset(
+        self,
+        mock_ingestion_log_store,
+    ) -> None:
+        """无 log 历史但 catalog 已有 exact-date 资产时跳过。"""
+        mock_ingestion_log_store.get_log.return_value = None
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=self._catalog_with_asset(
+                freshness_at=datetime.now(UTC),
+            ),
+        )
+
+        should_skip, reason = manager.should_skip(
+            dataset="stock_daily",
+            trade_date="2024-12-27",
+            force=False,
+        )
+
+        assert should_skip is True
+        assert reason is not None
+        assert "catalog" in reason.lower()
+        assert "stock_daily/2024" in reason
+
+    def test_should_not_skip_when_catalog_asset_is_stale(
+        self,
+        mock_ingestion_log_store,
+    ) -> None:
+        """无 log 历史但 catalog 资产超过 freshness SLA 时不跳过。"""
+        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
+        mock_ingestion_log_store.get_log.return_value = None
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=self._catalog_with_asset(
+                freshness_at=now - timedelta(hours=60),
+            ),
+            now=lambda: now,
+        )
+
+        should_skip, reason = manager.should_skip(
+            dataset="stock_daily",
+            trade_date="2024-12-27",
+            force=False,
+        )
+
+        assert should_skip is False
+        assert reason is None
+
+    def test_previous_failure_overrides_catalog_skip(
+        self,
+        mock_ingestion_log_store,
+    ) -> None:
+        """历史失败记录优先重试，不被 catalog entry 直接跳过。"""
+        mock_ingestion_log_store.get_log.return_value = IngestionLog(
+            dataset="stock_daily",
+            source="tushare",
+            trade_date="2024-12-27",
+            status=IngestionStatus.FAIL,
+            error_code="FETCH_ERROR",
+            error_message="Network error",
+        )
+        manager = MetadataManager(
+            mock_ingestion_log_store,
+            data_catalog_reader=self._catalog_with_asset(
+                freshness_at=datetime.now(UTC),
+            ),
+        )
+
+        should_skip, reason = manager.should_skip(
+            dataset="stock_daily",
+            trade_date="2024-12-27",
+            force=False,
+        )
+
+        assert should_skip is False
+        assert reason is None
 
     def test_should_skip_when_previous_success(self, mock_ingestion_log_store) -> None:
         """历史成功时跳过。"""

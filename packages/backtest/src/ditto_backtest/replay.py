@@ -21,6 +21,7 @@ __all__ = [
     "ManifestDiff",
     "NavComparison",
     "ReplayProof",
+    "ReplayStateProof",
     "ReplayValidationResult",
     "ReplayValidator",
 ]
@@ -88,6 +89,21 @@ class NavComparison:
 
 
 # ---------------------------------------------------------------------------
+# ReplayStateProof
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReplayStateProof:
+    """Replay 验证可选状态证据。"""
+
+    original_fills: Sequence[FillEvent] | None = None
+    replay_fills: Sequence[FillEvent] | None = None
+    original_account: AccountView | None = None
+    replay_account: AccountView | None = None
+
+
+# ---------------------------------------------------------------------------
 # ReplayValidationResult
 # ---------------------------------------------------------------------------
 
@@ -98,11 +114,15 @@ class ReplayValidationResult:
     完整复现性验证结果.
 
     Attributes:
-        is_reproducible: 是否可复现（manifest 一致 + NAV 一致）
+        is_reproducible: 是否可复现（manifest 一致 + NAV 一致 + 状态证据一致）
         nav_correlation: NAV 相关系数
         max_nav_diff_bps: 最大 NAV 差异（基点）
         manifest_diff: 分类 manifest 差异
         input_data_match: 输入数据是否匹配
+        fill_match: Fill 序列是否匹配；未提供 fill 证据时为 None
+        account_state_match: Account 状态是否匹配；未提供状态证据时为 None
+        fill_comparison: Fill 序列对比详情
+        account_state_comparison: Account 状态对比详情
 
     """
 
@@ -111,6 +131,10 @@ class ReplayValidationResult:
     max_nav_diff_bps: float
     manifest_diff: ManifestDiff
     input_data_match: bool
+    fill_match: bool | None = None
+    account_state_match: bool | None = None
+    fill_comparison: FillComparison | None = None
+    account_state_comparison: AccountStateComparison | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +274,8 @@ class ReplayValidator:
         replay_manifest: RunManifest,
         original_nav: Sequence[float],
         replay_nav: Sequence[float],
+        *,
+        state_proof: ReplayStateProof | None = None,
     ) -> ReplayValidationResult:
         """
         端到端复现性验证.
@@ -257,6 +283,7 @@ class ReplayValidator:
         判定可复现条件：
         1. manifest 无差异（忽略 run_id / created_at）
         2. NAV 序列完全一致
+        3. 如果提供 fill / account 状态证据，则这些状态也必须一致
 
         """
         manifest_diff = ReplayValidator.compare_manifests(
@@ -265,8 +292,49 @@ class ReplayValidator:
         )
         nav_comp = ReplayValidator.compare_nav_series(original_nav, replay_nav)
 
+        fill_comparison: FillComparison | None = None
+        fill_match: bool | None = None
+        if state_proof is not None and (
+            state_proof.original_fills is not None
+            or state_proof.replay_fills is not None
+        ):
+            original_fill_seq: Sequence[FillEvent] = (
+                state_proof.original_fills
+                if state_proof.original_fills is not None
+                else ()
+            )
+            replay_fill_seq: Sequence[FillEvent] = (
+                state_proof.replay_fills if state_proof.replay_fills is not None else ()
+            )
+            fill_comparison = ReplayProof.compare_fills(
+                original_fill_seq,
+                replay_fill_seq,
+            )
+            fill_match = fill_comparison.identical
+
+        account_state_comparison: AccountStateComparison | None = None
+        account_state_match: bool | None = None
+        if state_proof is not None and (
+            state_proof.original_account is not None
+            or state_proof.replay_account is not None
+        ):
+            if (
+                state_proof.original_account is None
+                or state_proof.replay_account is None
+            ):
+                account_state_match = False
+            else:
+                account_state_comparison = ReplayProof.compare_account_state(
+                    state_proof.original_account,
+                    state_proof.replay_account,
+                )
+                account_state_match = account_state_comparison.identical
+
         input_data_match = len(manifest_diff.data_diffs) == 0
-        is_reproducible = not manifest_diff.has_diff and nav_comp.identical
+        state_match = fill_match is not False and account_state_match is not False
+        is_reproducible = (
+            not manifest_diff.has_diff and nav_comp.identical and state_match
+        )
 
         return ReplayValidationResult(
             is_reproducible=is_reproducible,
@@ -274,6 +342,10 @@ class ReplayValidator:
             max_nav_diff_bps=nav_comp.max_diff_bps,
             manifest_diff=manifest_diff,
             input_data_match=input_data_match,
+            fill_match=fill_match,
+            account_state_match=account_state_match,
+            fill_comparison=fill_comparison,
+            account_state_comparison=account_state_comparison,
         )
 
 
@@ -403,6 +475,12 @@ def _compare_input_ref_details(
         if a_ref.data_hash != b_ref.data_hash:
             diffs.append(
                 f"data_hash mismatch for {iid}: {a_ref.data_hash} vs {b_ref.data_hash}",
+            )
+        if a_ref.source_snapshot_id != b_ref.source_snapshot_id:
+            diffs.append(
+                "source_snapshot_id mismatch for "
+                + f"{iid}: {a_ref.source_snapshot_id} vs "
+                + b_ref.source_snapshot_id,
             )
 
     # 如果只是数量不同但没有具体映射差异（空 input_ref_details 对比场景）

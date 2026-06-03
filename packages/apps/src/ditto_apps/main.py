@@ -38,6 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from ditto_apps.api.maturity import OPENAPI_TAGS, build_maturity_openapi_schema
 from ditto_apps.api.routes import (
     backtest,
     capital,
@@ -188,9 +189,12 @@ app = FastAPI(
     version=ditto_version,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
     default_response_class=ORJSONResponse,  # 使用 orjson 提升性能
 )
+
+app.openapi = lambda: build_maturity_openapi_schema(app)
 
 # 在应用启动前设置 dishka（必须在 lifespan 之外）
 # 这样中间件可以在应用启动前添加

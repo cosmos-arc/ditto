@@ -313,10 +313,12 @@ def build_factor_bundle(
             },
         )
 
-    # 追加历史窗口 — 支持 ts_* 时间序列表达式
+    # 追加历史窗口 — 支持 ts_* 时间序列表达式。
+    # PIT: history uses knowledge_date as the strict as_of boundary; current
+    # trade_date bars are already supplied by the slice above.
     history_df = data_feed.get_history(
         instrument_ids,
-        ctx.time_context.trade_date,
+        ctx.time_context.knowledge_date.isoformat(),
         lookback_days,
     )
     if not history_df.is_empty():

@@ -24,13 +24,21 @@ class TestFindProjectRoot:
         root = find_project_root(start=start_path)
         assert (root / "pixi.toml").exists()
 
-    def test_find_project_root_no_marker_raises(self, tmp_path: Path) -> None:
+    def test_find_project_root_no_marker_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """无 marker 文件时抛出 RuntimeError。"""
-        from ditto_platform.foundation.config.project_root import find_project_root
+        from ditto_platform.foundation.config import project_root
 
-        # tmp_path 下没有任何 marker 文件
+        monkeypatch.setattr(
+            project_root,
+            "_ROOT_MARKERS",
+            ("__ditto_missing_project_root_marker__",),
+        )
+
+        # 使用显式不存在的 marker，避免 /tmp 父链上的环境 marker 影响测试。
         with pytest.raises(RuntimeError, match="Cannot find project root"):
-            find_project_root(start=tmp_path / "nonexistent.py")
+            project_root.find_project_root(start=tmp_path / "nonexistent.py")
 
     def test_find_project_root_prefers_pixi_toml(self, tmp_path: Path) -> None:
         """不同 marker 时，优先选择 pixi.toml 所在目录。"""

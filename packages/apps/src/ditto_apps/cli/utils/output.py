@@ -47,6 +47,17 @@ def output_json_dicts(data: list[dict[str, Any]]) -> None:
     typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
 
 
+def output_json_dict(data: dict[str, Any]) -> None:
+    """
+    输出字典对象的 JSON 格式.
+
+    Args:
+        data: 字典对象
+
+    """
+    typer.echo(orjson.dumps(data, option=orjson.OPT_INDENT_2).decode())
+
+
 def print_truncated_hint(total: int) -> None:
     """
     打印分页提示.

@@ -22,6 +22,7 @@ class TestDatasetMetadataFrozen:
             domain="market",
             maturity="experimental",
             schedule="trading_days",
+            schema_version="market.test.v1",
         )
         with pytest.raises(FrozenInstanceError):
             meta.dataset_id = "changed"  # type: ignore[misc]
@@ -32,6 +33,7 @@ class TestDatasetMetadataFrozen:
             domain="market",
             maturity="experimental",
             schedule="trading_days",
+            schema_version="market.test.v1",
         )
         with pytest.raises(FrozenInstanceError):
             del meta.domain  # type: ignore[misc]
@@ -73,6 +75,7 @@ class TestMetadataFieldValidation:
             domain="market",
             maturity="initial-focus",
             schedule="trading_days",
+            schema_version="market.stock_daily.v1",
         )
         assert meta.dataset_id == "stock_daily"
         assert meta.domain == "market"
@@ -87,8 +90,68 @@ class TestMetadataFieldValidation:
             maturity="experimental",
             schedule="trading_days",
             quality_profile="strict",
+            schema_version="market.test.v1",
         )
         assert meta.quality_profile == "strict"
+
+    def test_default_source_must_be_supported(self) -> None:
+        with pytest.raises(ValueError, match="default_source"):
+            DatasetMetadata(
+                dataset_id="test",
+                domain="market",
+                maturity="experimental",
+                schedule="trading_days",
+                default_source="fred",
+                supported_sources=("tushare",),
+            )
+
+    def test_freshness_sla_must_be_positive(self) -> None:
+        with pytest.raises(ValueError, match="freshness_sla_hours"):
+            DatasetMetadata(
+                dataset_id="test",
+                domain="market",
+                maturity="experimental",
+                schedule="trading_days",
+                freshness_sla_hours=0,
+            )
+
+    def test_schema_version_is_required_for_ingestion_datasets(self) -> None:
+        with pytest.raises(ValueError, match="schema_version"):
+            DatasetMetadata(
+                dataset_id="test",
+                domain="market",
+                maturity="experimental",
+                schedule="trading_days",
+            )
+
+    def test_schema_version_must_be_normalized(self) -> None:
+        with pytest.raises(ValueError, match="Invalid schema_version"):
+            DatasetMetadata(
+                dataset_id="test",
+                domain="market",
+                maturity="experimental",
+                schedule="trading_days",
+                schema_version="Market.Test.V1",
+            )
+
+    def test_ingestion_source_helpers_are_case_insensitive(self) -> None:
+        meta = DatasetMetadata(
+            dataset_id="test",
+            domain="market",
+            maturity="experimental",
+            schedule="trading_days",
+            default_source="tushare",
+            supported_sources=("tushare",),
+            auxiliary_sources=("fred",),
+            ingestion_granularities=("date", "instrument"),
+            schema_version="market.test.v1",
+        )
+
+        assert meta.supports_source("TUSHARE") is True
+        assert meta.supports_source("fred") is False
+        assert meta.uses_auxiliary_source("FRED") is True
+        assert meta.supports_date_ingestion is True
+        assert meta.supports_instrument_ingestion is True
 
 
 class TestDefaultMetadataCoverage:
@@ -145,14 +208,11 @@ class TestDefaultMetadataMaturityAssignments:
 
     INITIAL_FOCUS: ClassVar[frozenset[str]] = frozenset(
         {
-            "stock_basic",
             "etf_basic",
             "index_basic",
             "calendar",
-            "stock_daily",
             "etf_daily",
             "index_daily",
-            "stock_status",
             "adj_factor",
             "fund_adj",
         }
@@ -160,6 +220,9 @@ class TestDefaultMetadataMaturityAssignments:
 
     EXPERIMENTAL: ClassVar[frozenset[str]] = frozenset(
         {
+            "stock_basic",
+            "stock_daily",
+            "stock_status",
             "balance_sheet",
             "income_statement",
             "cash_flow",
@@ -188,6 +251,18 @@ class TestDefaultMetadataMaturityAssignments:
             assert registry[dataset_id].maturity == "experimental", (
                 f"{dataset_id} should be experimental"
             )
+
+    def test_experimental_datasets_have_promotion_criteria(self) -> None:
+        registry = default_dataset_metadata()
+        for dataset_id in self.EXPERIMENTAL:
+            criteria = registry[dataset_id].promotion_criteria
+            assert criteria, f"{dataset_id} should declare promotion criteria"
+            assert all(item.strip() for item in criteria)
+
+    def test_initial_focus_datasets_have_no_promotion_criteria(self) -> None:
+        registry = default_dataset_metadata()
+        for dataset_id in self.INITIAL_FOCUS:
+            assert registry[dataset_id].promotion_criteria == ()
 
     def test_all_datasets_accounted_for(self) -> None:
         registry = default_dataset_metadata()
@@ -255,4 +330,103 @@ class TestDefaultMetadataDomainAssignments:
         for dataset_id in ("macro_indicators", "fx_daily", "commodity_daily"):
             assert registry[dataset_id].domain == "macro", (
                 f"{dataset_id} should be in macro domain"
+            )
+
+
+class TestDefaultMetadataSourceCapabilities:
+    """Verify source capabilities and ingestion granularities are catalog-owned."""
+
+    def test_stock_daily_declares_tushare_date_and_instrument_ingestion(self) -> None:
+        meta = default_dataset_metadata()["stock_daily"]
+
+        assert meta.default_source == "tushare"
+        assert meta.supported_sources == ("tushare",)
+        assert meta.auxiliary_sources == ()
+        assert meta.ingestion_granularities == ("date", "instrument")
+        assert meta.freshness_sla_hours == 36
+        assert meta.schema_version == "market.stock_daily.v1"
+        assert meta.supports_source("tushare") is True
+        assert meta.supports_source("fred") is False
+
+    def test_macro_indicators_declares_tushare_and_fred_runtime_sources(
+        self,
+    ) -> None:
+        meta = default_dataset_metadata()["macro_indicators"]
+
+        assert meta.default_source == "tushare"
+        assert meta.supported_sources == ("tushare", "fred")
+        assert meta.freshness_sla_hours == 72
+        assert meta.supports_source("tushare") is True
+        assert meta.supports_source("fred") is True
+
+    def test_commodity_daily_declares_fred_auxiliary_not_runtime_source(
+        self,
+    ) -> None:
+        meta = default_dataset_metadata()["commodity_daily"]
+
+        assert meta.default_source == "tushare"
+        assert meta.supported_sources == ("tushare",)
+        assert meta.auxiliary_sources == ("fred",)
+        assert meta.supports_source("fred") is False
+        assert meta.uses_auxiliary_source("fred") is True
+
+    def test_index_weight_has_no_runtime_source_or_granularity(self) -> None:
+        meta = default_dataset_metadata()["index_weight"]
+
+        assert meta.default_source is None
+        assert meta.supported_sources == ()
+        assert meta.ingestion_granularities == ()
+        assert meta.freshness_sla_hours is None
+
+
+class TestDefaultMetadataAssetClassPolicy:
+    """Verify dataset asset-class policy is catalog-owned, not enum-owned."""
+
+    def test_stock_daily_declares_stock_asset_class(self) -> None:
+        meta = default_dataset_metadata()["stock_daily"]
+
+        assert meta.asset_class == "stock"
+
+    def test_etf_daily_declares_etf_asset_class(self) -> None:
+        meta = default_dataset_metadata()["etf_daily"]
+
+        assert meta.asset_class == "etf"
+
+    def test_metadata_dataset_has_no_asset_class(self) -> None:
+        meta = default_dataset_metadata()["stock_basic"]
+
+        assert meta.asset_class is None
+
+
+class TestDefaultMetadataStorageLocationPolicy:
+    """Verify runtime storage location policy is owned by dataset metadata."""
+
+    def test_stock_daily_declares_allowed_storage_prefixes(self) -> None:
+        meta = default_dataset_metadata()["stock_daily"]
+
+        assert "stock_daily/" in meta.storage_uri_prefixes
+        assert "market/stock_daily/" in meta.storage_uri_prefixes
+        assert "lake://market/stock_daily/" in meta.storage_uri_prefixes
+        assert "sqlite:///market/stock_daily/" in meta.storage_uri_prefixes
+
+    def test_calendar_declares_calendar_store_prefix(self) -> None:
+        meta = default_dataset_metadata()["calendar"]
+
+        assert "calendar_store:" in meta.storage_uri_prefixes
+
+    def test_basic_metadata_declares_instrument_store_prefixes(self) -> None:
+        meta = default_dataset_metadata()["stock_basic"]
+
+        assert "instrument_reader:stock_basic" in meta.storage_uri_prefixes
+        assert "instrument_store:stock_basic" in meta.storage_uri_prefixes
+
+    def test_storage_prefixes_must_be_normalized(self) -> None:
+        with pytest.raises(ValueError, match="storage_uri_prefixes"):
+            DatasetMetadata(
+                dataset_id="test",
+                domain="market",
+                maturity="experimental",
+                schedule="trading_days",
+                schema_version="market.test.v1",
+                storage_uri_prefixes=(" lake://market/test/",),
             )

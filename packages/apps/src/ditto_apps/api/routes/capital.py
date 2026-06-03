@@ -10,6 +10,7 @@ import asyncio
 from datetime import date
 from typing import Annotated
 
+import polars as pl
 from dishka import FromComponent
 from dishka.integrations.fastapi import inject
 from ditto_application.queries.capital import CapitalQueryFacade
@@ -28,6 +29,40 @@ from ditto_apps.models.common import APIResponse
 router = APIRouter(prefix="/capital", tags=["capital"])
 
 
+def _experimental_kwargs(allow_experimental_data: bool) -> dict[str, bool]:
+    if allow_experimental_data:
+        return {"allow_experimental_data": True}
+    return {}
+
+
+def _fetch_margin(
+    facade: CapitalQueryFacade,
+    *,
+    instrument_id: int,
+    as_of_date: date,
+    allow_experimental_data: bool = False,
+) -> pl.DataFrame:
+    return facade.get_margin_trading(
+        instrument_id,
+        as_of_date,
+        **_experimental_kwargs(allow_experimental_data),
+    )
+
+
+def _fetch_valuation(
+    facade: CapitalQueryFacade,
+    *,
+    instrument_id: int,
+    as_of_date: date,
+    allow_experimental_data: bool = False,
+) -> pl.DataFrame:
+    return facade.get_valuation_metrics(
+        instrument_id,
+        as_of_date,
+        **_experimental_kwargs(allow_experimental_data),
+    )
+
+
 @router.get("/margin", response_model=APIResponse[list[Margin]])
 @inject
 async def get_margin(
@@ -37,6 +72,10 @@ async def get_margin(
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
     as_of_date: date = Query(..., description="时间点查询日期"),
+    allow_experimental_data: bool = Query(
+        False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    ),
 ) -> APIResponse[list[Margin]]:
     """
     获取融资融券数据.
@@ -61,9 +100,11 @@ async def get_margin(
 
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
-        capital_facade.get_margin_trading,
-        resolved_id,
-        as_of_date,
+        _fetch_margin,
+        capital_facade,
+        instrument_id=resolved_id,
+        as_of_date=as_of_date,
+        allow_experimental_data=allow_experimental_data,
     )
 
     # 转换为模型列表
@@ -81,6 +122,10 @@ async def get_valuation(
     ticker: str | None = Query(None, description="裸代码, 如 000001"),
     standard_ticker: str | None = Query(None, description="标准代码, 如 000001.XSHE"),
     as_of_date: date = Query(..., description="时间点查询日期"),
+    allow_experimental_data: bool = Query(
+        False,
+        description="显式允许 experimental 数据集进入研究态查询",
+    ),
 ) -> APIResponse[list[Valuation]]:
     """
     获取估值指标数据.
@@ -105,9 +150,11 @@ async def get_valuation(
 
     # 调用 facade（在线程池中执行，避免阻塞事件循环）
     df = await asyncio.to_thread(
-        capital_facade.get_valuation_metrics,
-        resolved_id,
-        as_of_date,
+        _fetch_valuation,
+        capital_facade,
+        instrument_id=resolved_id,
+        as_of_date=as_of_date,
+        allow_experimental_data=allow_experimental_data,
     )
 
     # 转换为模型列表

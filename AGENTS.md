@@ -33,6 +33,8 @@ T1 全栈量化交易平台（全球全市场定位，初期能力重点为 A �
 ## 关键约束
 
 - Python ≥ 3.13，使用 polars（禁止 pandas），使用 pixi（禁止 pip/poetry/conda）
+- 真实券商接入暂不处理：仅定义/验证 BrokerGateway Protocol、事件 contract、审计/对账 conformance seam，不实现真实 adapter
+- apps 层只处理后端 FastAPI/CLI/jobs/composition root；产品 UI 属于独立前端项目 ditto-app
 - 禁止跨包 re-export、禁止 TYPE_CHECKING 延迟导入解决循环依赖
 - TDD：RED → GREEN → REFACTOR，分支覆盖率 ≥ 80%
 - 验证命令：`pixi run -e dev check`

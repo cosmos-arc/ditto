@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from ditto_application.catalog_maturity import catalog_dataset_asset_class
 from ditto_application.config import get_all_datasets
 from ditto_application.processes.quality import QualityPatrolService
 from ditto_application.queries.market import MarketQueryFacade
@@ -42,10 +43,7 @@ def _asset_class_or_none(dataset: str) -> _AssetClass | None:
         if registered_dataset.value != dataset:
             continue
 
-        asset_class = registered_dataset.get_asset_class(dataset)
-        if asset_class == "other":
-            return None
-        return asset_class
+        return catalog_dataset_asset_class(dataset)
     return None
 
 

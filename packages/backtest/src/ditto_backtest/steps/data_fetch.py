@@ -34,11 +34,13 @@ class DataFetchStep:
         strategy_context: StrategyContext,
         input_instruments: set[InstrumentId],
         bar_fingerprints: dict[InstrumentId, list[tuple[str, float]]],
+        source_snapshot_ids: dict[InstrumentId, set[str]] | None = None,
     ) -> None:
         self._brokerage = brokerage
         self._strategy_context = strategy_context
         self._input_instruments = input_instruments
         self._bar_fingerprints = bar_fingerprints
+        self._source_snapshot_ids = source_snapshot_ids
 
     def execute(self, ctx: StepContext) -> StepResult:
         """获取账户快照并累积数据指纹。"""
@@ -53,6 +55,12 @@ class DataFetchStep:
             if iid not in self._bar_fingerprints:
                 self._bar_fingerprints[iid] = []
             self._bar_fingerprints[iid].append((trade_date, bar.close))
+
+        if self._source_snapshot_ids is not None:
+            for iid, snapshot_id in ctx.source_snapshot_ids.items():
+                if iid not in ctx.bars or snapshot_id == "":
+                    continue
+                self._source_snapshot_ids.setdefault(iid, set()).add(snapshot_id)
 
         # 每日清除到期锁定 -- cooldown 未到期的锁定保留
         self._strategy_context.clear_locks(trade_date)

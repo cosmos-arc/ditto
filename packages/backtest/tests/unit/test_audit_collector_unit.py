@@ -740,12 +740,14 @@ class TestBacktestReport:
         assert report.fill_log == ()
         assert report.risk_log == ()
         assert report.pre_trade_log == ()
+        assert report.final_account_state is None
 
     def test_complete_report(self) -> None:
         """Report contains all dimensions when data is present."""
         collector = ExecutionAuditCollector()
         collector.record_account_view("2026-01-01", _account_view(nav=100_000.0))
-        collector.record_account_view("2026-01-02", _account_view(nav=101_000.0))
+        final_account_state = _account_view(nav=101_000.0)
+        collector.record_account_view("2026-01-02", final_account_state)
         collector.record_closed_trade(
             _closed_trade("t1", gross_pnl=100.0, holding_days=3, return_pct=1.0),
         )
@@ -770,6 +772,7 @@ class TestBacktestReport:
         assert report.fill_log[0].fill_id == "f-1"
         assert report.risk_log == ()
         assert report.pre_trade_log == ()
+        assert report.final_account_state == final_account_state
 
     def test_report_with_benchmark(self) -> None:
         """Report passes benchmark to alpha_stats computation."""

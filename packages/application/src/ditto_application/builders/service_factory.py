@@ -10,19 +10,32 @@ from ditto_backtest.data_feed import (
     DataFeed,
     ProviderBackedDataFeed,
 )
+from ditto_backtest.result import (
+    BacktestAccountStateSnapshot,
+    BacktestPendingOrderSnapshot,
+    BacktestRuntimeStateSnapshot,
+    BacktestSettlementStateSnapshot,
+)
 from ditto_backtest.simulation import BrokerageModel
 from ditto_backtest.simulation.slippage import FixedBpsSlippage, SlippageModel
+from ditto_data.catalog.promotion import DatasetMaturityPromotionReader
+from ditto_data.lineage import DataLineageRecorder
 from ditto_data.provider import DataProvider
 from ditto_data.services.metadata_service import MetadataService
 from ditto_execution.audit import ExecutionAuditService
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.orders.book import OrderBook
+from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.journal import InMemoryOrderEventJournal
+from ditto_execution.orders.model import Order
+from ditto_execution.orders.status import OrderStatus
+from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.planner import ExecutionPlanner, SimpleExecutionPlanner
 from ditto_execution.reality import AShareFeeModel
 from ditto_kernel.identity import InstrumentId
+from ditto_kernel.order import OrderSide, OrderType
 from ditto_kernel.trading import FeeModel
-from ditto_portfolio.accounting import Account, CashBook
+from ditto_portfolio.accounting import Account, CashBook, Position
 from ditto_risk.pre_trade import (
     BuyingPowerCheck,
     CompositePreTradeCheck,
@@ -34,12 +47,16 @@ from ditto_strategy.models import StrategySpecRecord
 from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
+from ditto_strategy.storage.sqlite.services.strategy_run_service import (
+    StrategyRunCheckpointWriterProtocol,
+)
 
 from ditto_application.builders._resolution import (
     resolve_benchmark,
     resolve_instrument_display,
 )
 from ditto_application.builders.runtime_builder import StrategyRuntimeBuilder
+from ditto_application.catalog_maturity import assert_strategy_runtime_data_allowed
 from ditto_application.contracts import REGIME_DEFAULT_LOOKBACK
 from ditto_application.exceptions import AppBuilderError
 from ditto_application.processes.execution.backtest_process import (
@@ -90,6 +107,144 @@ def _shift_back_calendar_days(date_str: str, days: int) -> str:
     return d.isoformat()
 
 
+def _load_account_state(
+    config: BacktestServiceConfig,
+) -> BacktestAccountStateSnapshot | None:
+    """Load verified account-state resume evidence from config."""
+    if not config.resume_account_state_json:
+        return None
+    try:
+        snapshot = BacktestAccountStateSnapshot.from_json(
+            config.resume_account_state_json,
+        )
+    except ValueError as exc:
+        msg = "Invalid resume_account_state_json"
+        raise AppBuilderError(msg) from exc
+    _assert_resume_hash(
+        label="resume_account_state_hash",
+        expected=config.resume_account_state_hash,
+        actual=snapshot.state_hash,
+    )
+    return snapshot
+
+
+def _load_settlement_state(
+    config: BacktestServiceConfig,
+) -> BacktestSettlementStateSnapshot | None:
+    """Load verified settlement-state resume evidence from config."""
+    if not config.resume_settlement_state_json:
+        return None
+    try:
+        snapshot = BacktestSettlementStateSnapshot.from_json(
+            config.resume_settlement_state_json,
+        )
+    except ValueError as exc:
+        msg = "Invalid resume_settlement_state_json"
+        raise AppBuilderError(msg) from exc
+    _assert_resume_hash(
+        label="resume_settlement_state_hash",
+        expected=config.resume_settlement_state_hash,
+        actual=snapshot.state_hash,
+    )
+    return snapshot
+
+
+def _load_runtime_state(
+    config: BacktestServiceConfig,
+) -> BacktestRuntimeStateSnapshot | None:
+    """Load verified runtime-state resume evidence from config."""
+    if not config.resume_runtime_state_json:
+        return None
+    try:
+        snapshot = BacktestRuntimeStateSnapshot.from_json(
+            config.resume_runtime_state_json,
+        )
+    except ValueError as exc:
+        msg = "Invalid resume_runtime_state_json"
+        raise AppBuilderError(msg) from exc
+    _assert_resume_hash(
+        label="resume_runtime_state_hash",
+        expected=config.resume_runtime_state_hash,
+        actual=snapshot.state_hash,
+    )
+    return snapshot
+
+
+def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
+    """Validate optional checkpoint hash evidence when provided."""
+    if expected and expected != actual:
+        msg = f"{label} mismatch: expected {expected}, got {actual}"
+        raise AppBuilderError(msg)
+
+
+def _build_account(
+    *,
+    initial_cash: float,
+    account_state: BacktestAccountStateSnapshot | None,
+) -> Account:
+    """Build a mutable Account from initial cash or checkpoint state."""
+    if account_state is None:
+        return Account(
+            cash=CashBook(
+                available=initial_cash,
+                settled=initial_cash,
+                frozen=0.0,
+            )
+        )
+    return Account(
+        positions={
+            position.instrument_id: Position(
+                instrument_id=position.instrument_id,
+                quantity=position.quantity,
+                available_quantity=position.available_quantity,
+                average_cost=position.average_cost,
+                market_value=position.market_value,
+                unrealized_pnl=position.unrealized_pnl,
+                realized_pnl=position.realized_pnl,
+                total_fees=position.total_fees,
+            )
+            for position in account_state.positions
+        },
+        cash=CashBook(
+            available=account_state.cash_available,
+            settled=account_state.cash_settled,
+            frozen=account_state.cash_frozen,
+        ),
+    )
+
+
+def _build_order_ticket(snapshot: BacktestPendingOrderSnapshot) -> OrderTicket:
+    """Build an execution ticket from checkpoint pending-order state."""
+    return OrderTicket(
+        order=Order(
+            client_id=ClientOrderId(snapshot.client_order_id),
+            instrument_id=snapshot.instrument_id,
+            order_type=OrderType(snapshot.order_type),
+            direction=OrderSide(snapshot.direction),
+            quantity=snapshot.quantity,
+            price=snapshot.price,
+            stop_price=snapshot.stop_price,
+            trade_date=snapshot.trade_date,
+        ),
+        status=OrderStatus(snapshot.status),
+        filled_quantity=snapshot.filled_quantity,
+        filled_price=snapshot.filled_price,
+        average_fill_price=snapshot.average_fill_price,
+    )
+
+
+def _build_order_book(
+    runtime_state: BacktestRuntimeStateSnapshot | None,
+) -> OrderBook:
+    """Build an OrderBook and restore pending tickets when provided."""
+    order_book = OrderBook(journal=InMemoryOrderEventJournal())
+    if runtime_state is None:
+        return order_book
+    for pending_order in runtime_state.pending_orders:
+        order_book.restore_ticket(_build_order_ticket(pending_order))
+    return order_book
+
+
 # ===========================================================================
 # PublishedBacktestRuntime
 # ===========================================================================
@@ -126,10 +281,12 @@ class BacktestRuntimeBuilder:
         strategy_runtime_builder: StrategyRuntimeBuilder,
         metadata_service: MetadataService,
         data_provider: DataProvider,
+        maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
         self._data_provider = data_provider
+        self._maturity_promotion_reader = maturity_promotion_reader
 
     def build_published_runtime(
         self,
@@ -139,28 +296,37 @@ class BacktestRuntimeBuilder:
         source: str = "tushare",
         fee_model: FeeModel | None = None,
         slippage_model: SlippageModel | None = None,
+        allow_experimental_data: bool = False,
     ) -> PublishedBacktestRuntime:
         """从 published strategy catalog 构造回测运行时。"""
         runtime = self._strategy_runtime_builder.build_published_runtime(
             config.strategy_id,
             version,
         )
+        assert_strategy_runtime_data_allowed(
+            runtime.spec,
+            allow_experimental_data=allow_experimental_data,
+            maturity_promotion_reader=self._maturity_promotion_reader,
+            context="catalog-backed backtest",
+        )
         resolved_fee_model = fee_model or AShareFeeModel()
         resolved_slippage = slippage_model or FixedBpsSlippage()
+        account_state = _load_account_state(config)
+        settlement_state = _load_settlement_state(config)
+        runtime_state = _load_runtime_state(config)
         brokerage = BacktestBrokerage(
-            account=Account(
-                cash=CashBook(
-                    available=config.initial_cash,
-                    settled=config.initial_cash,
-                    frozen=0.0,
-                )
+            account=_build_account(
+                initial_cash=config.initial_cash,
+                account_state=account_state,
             ),
-            order_book=OrderBook(journal=InMemoryOrderEventJournal()),
+            order_book=_build_order_book(runtime_state),
             model=BrokerageModel(
                 fee_model=resolved_fee_model,
                 slippage_model=resolved_slippage,
             ),
         )
+        if settlement_state is not None:
+            brokerage.restore_settlement_state(settlement_state)
         benchmark_id = resolve_benchmark(
             runtime.spec.benchmark,
             self._metadata_service,
@@ -230,12 +396,16 @@ class StrategyServiceFactory:
         run_service: RunLifecycleService,
         runtime_builder: StrategyRuntimeBuilder | None = None,
         backtest_runtime_builder: BacktestRuntimeBuilder | None = None,
+        lineage_recorder: DataLineageRecorder | None = None,
+        checkpoint_writer: StrategyRunCheckpointWriterProtocol | None = None,
     ) -> None:
         self._audit_service = audit_service
         self._artifact_service = artifact_service
         self._run_service = run_service
         self._runtime_builder = runtime_builder
         self._backtest_runtime_builder = backtest_runtime_builder
+        self._lineage_recorder = lineage_recorder
+        self._checkpoint_writer = checkpoint_writer
 
     def build_strategy_run_service(
         self,
@@ -328,6 +498,7 @@ class StrategyServiceFactory:
             source=source,
             fee_model=resolved_options.fee_model,
             slippage_model=resolved_options.slippage_model,
+            allow_experimental_data=resolved_options.allow_experimental_data,
         )
         if resolved_options.fee_model is None:
             resolved_options = replace(
@@ -382,6 +553,8 @@ class StrategyServiceFactory:
                 audit_service=self._audit_service,
                 artifact_service=self._artifact_service,
                 run_service=self._run_service,
+                checkpoint_writer=self._checkpoint_writer,
+                lineage_recorder=self._lineage_recorder,
             )
         return BacktestServiceOptions(
             fee_model=options.fee_model,
@@ -394,6 +567,10 @@ class StrategyServiceFactory:
             artifact_dir=options.artifact_dir,
             display_map=options.display_map,
             run_service=options.run_service or self._run_service,
+            checkpoint_writer=options.checkpoint_writer or self._checkpoint_writer,
+            lineage_recorder=options.lineage_recorder or self._lineage_recorder,
+            allow_experimental_data=options.allow_experimental_data,
+            restore_runtime_state=options.restore_runtime_state,
         )
 
     @staticmethod

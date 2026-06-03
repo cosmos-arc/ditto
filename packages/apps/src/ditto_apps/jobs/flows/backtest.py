@@ -35,7 +35,7 @@ def _status_str(status: RunStatus) -> str:
     retries=1,
     retry_delay_seconds=10,
 )
-def run_backtest_flow(
+def run_backtest_flow(  # noqa: PLR0913 - Prefect flow exposes wire parameters.
     *,
     run_id: str,
     strategy_id: str,
@@ -44,6 +44,20 @@ def run_backtest_flow(
     initial_cash: float = DEFAULT_INITIAL_CASH,
     parameter_overrides: tuple[str, ...] = (),
     cost_config: dict[str, object] | None = None,
+    allow_experimental_data: bool = False,
+    resume_from_run_id: str = "",
+    resume_checkpoint_trade_date: str = "",
+    resume_checkpoint_completed_days: int = 0,
+    resume_checkpoint_total_days: int = 0,
+    resume_checkpoint_nav: float = 0.0,
+    resume_checkpoint_order_count: int = 0,
+    resume_checkpoint_fill_count: int = 0,
+    resume_account_state_json: str = "",
+    resume_account_state_hash: str = "",
+    resume_settlement_state_json: str = "",
+    resume_settlement_state_hash: str = "",
+    resume_runtime_state_json: str = "",
+    resume_runtime_state_hash: str = "",
 ) -> dict[str, object]:
     """
     异步执行回测.
@@ -59,6 +73,20 @@ def run_backtest_flow(
         initial_cash: 初始资金.
         parameter_overrides: 参数覆盖列表.
         cost_config: 成本模型配置（序列化为 dict 传递跨进程边界）.
+        allow_experimental_data: 显式允许 experimental 数据集进入研究态回测.
+        resume_from_run_id: source run id for checkpoint-backed resume.
+        resume_checkpoint_trade_date: source checkpoint completed trade date.
+        resume_checkpoint_completed_days: source checkpoint completed day count.
+        resume_checkpoint_total_days: source checkpoint total day count.
+        resume_checkpoint_nav: source checkpoint NAV.
+        resume_checkpoint_order_count: source checkpoint order count.
+        resume_checkpoint_fill_count: source checkpoint fill count.
+        resume_account_state_json: checkpoint account-state JSON evidence.
+        resume_account_state_hash: checkpoint account-state content hash.
+        resume_settlement_state_json: checkpoint settlement-state JSON evidence.
+        resume_settlement_state_hash: checkpoint settlement-state content hash.
+        resume_runtime_state_json: checkpoint runtime-state JSON evidence.
+        resume_runtime_state_hash: checkpoint runtime-state content hash.
 
     Returns:
         包含 run_id, status, total_return 的结果字典.
@@ -75,6 +103,19 @@ def run_backtest_flow(
         end_date=end_date,
         initial_cash=initial_cash,
         parameter_overrides=parameter_overrides,
+        resume_from_run_id=resume_from_run_id,
+        resume_checkpoint_trade_date=resume_checkpoint_trade_date,
+        resume_checkpoint_completed_days=resume_checkpoint_completed_days,
+        resume_checkpoint_total_days=resume_checkpoint_total_days,
+        resume_checkpoint_nav=resume_checkpoint_nav,
+        resume_checkpoint_order_count=resume_checkpoint_order_count,
+        resume_checkpoint_fill_count=resume_checkpoint_fill_count,
+        resume_account_state_json=resume_account_state_json,
+        resume_account_state_hash=resume_account_state_hash,
+        resume_settlement_state_json=resume_settlement_state_json,
+        resume_settlement_state_hash=resume_settlement_state_hash,
+        resume_runtime_state_json=resume_runtime_state_json,
+        resume_runtime_state_hash=resume_runtime_state_hash,
     )
 
     with create_strategy_bundle() as bundle:
@@ -85,6 +126,7 @@ def run_backtest_flow(
                 run_service=bundle.run_service,
                 fee_model=fee_model,
                 slippage_model=slippage_model,
+                allow_experimental_data=allow_experimental_data,
             )
 
             report = bundle.strategy_facade.run_backtest_from_catalog(
