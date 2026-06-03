@@ -71,6 +71,15 @@ pl.col("close").rolling_mean(20, closed="left").over("code")
 pl.col("close").rolling_mean(20).over("code")
 ```
 
+**注意**：Polars Expr 级别 `.rolling_*()` 方法（如 `.rolling_mean()`、`.rolling_sum()`）
+不支持 `closed` 参数（仅 `DataFrame.rolling()` 支持）。在 Expr 上下文中，必须使用
+`shift(1)` 作为替代方案来实现等价的 PIT 安全窗口：
+
+```python
+# ✅ Expr 上下文中的 PIT 安全写法（表达式引擎使用此模式）
+pl.col("close").shift(1).rolling_mean(20).over("code")
+```
+
 | closed | 窗口范围 | 安全 |
 |--------|----------|------|
 | "left" | [T-20, T-1] | ✅ |

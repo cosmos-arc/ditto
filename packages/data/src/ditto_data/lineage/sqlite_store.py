@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
-from typing import Any, cast
+from typing import Any
 
 from ditto_platform.foundation import SQLiteClient
 
@@ -14,32 +13,19 @@ from ditto_data.lineage.contracts import (
     LineageInputRef,
     LineageOutputRef,
 )
+from ditto_data.storage.base.sqlite_helpers import (
+    partition_keys_from_json,
+    partition_keys_json,
+)
 
 __all__ = ["SQLiteDataLineage"]
-
-
-def _partition_keys_json(partition_keys: tuple[str, ...]) -> str:
-    return json.dumps(list(partition_keys), ensure_ascii=True, separators=(",", ":"))
-
-
-def _partition_keys_from_json(value: str) -> tuple[str, ...]:
-    parsed: object = json.loads(value)
-    if not isinstance(parsed, list):
-        raise ValueError("lineage asset partition keys must be a JSON string list")
-    values = cast(list[object], parsed)
-    partition_keys: list[str] = []
-    for item in values:
-        if not isinstance(item, str):
-            raise ValueError("lineage asset partition keys must be a JSON string list")
-        partition_keys.append(item)
-    return tuple(partition_keys)
 
 
 def _asset_params(asset: DataAssetRef) -> tuple[str, str, str]:
     return (
         asset.namespace,
         asset.dataset_id,
-        _partition_keys_json(asset.partition_keys),
+        partition_keys_json(asset.partition_keys),
     )
 
 
@@ -47,7 +33,7 @@ def _asset_from_row(row: dict[str, Any]) -> DataAssetRef:
     return DataAssetRef(
         dataset_id=str(row["asset_dataset_id"]),
         namespace=str(row["asset_namespace"]),
-        partition_keys=_partition_keys_from_json(str(row["asset_partition_keys"])),
+        partition_keys=partition_keys_from_json(str(row["asset_partition_keys"])),
     )
 
 
@@ -158,7 +144,7 @@ class SQLiteDataLineage:
                     position,
                     ref.asset.namespace,
                     ref.asset.dataset_id,
-                    _partition_keys_json(ref.asset.partition_keys),
+                    partition_keys_json(ref.asset.partition_keys),
                     ref.role,
                 )
                 for position, ref in enumerate(inputs)
@@ -188,7 +174,7 @@ class SQLiteDataLineage:
                     position,
                     ref.asset.namespace,
                     ref.asset.dataset_id,
-                    _partition_keys_json(ref.asset.partition_keys),
+                    partition_keys_json(ref.asset.partition_keys),
                     ref.role,
                 )
                 for position, ref in enumerate(outputs)

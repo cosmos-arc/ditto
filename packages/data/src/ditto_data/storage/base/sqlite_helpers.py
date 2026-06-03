@@ -1,7 +1,10 @@
-"""SQLite 写入准备辅助函数."""
+"""SQLite 写入准备与 JSON 序列化辅助函数."""
 
 from __future__ import annotations
 
+from typing import cast
+
+import orjson
 import polars as pl
 
 
@@ -31,3 +34,22 @@ def prepare_for_write(df: pl.DataFrame) -> pl.DataFrame:
 
     # 排序
     return df.sort(["instrument_id", "trade_date"])
+
+
+def partition_keys_json(partition_keys: tuple[str, ...]) -> str:
+    """将分区键元组序列化为 JSON 字符串."""
+    return orjson.dumps(list(partition_keys)).decode()
+
+
+def partition_keys_from_json(value: str) -> tuple[str, ...]:
+    """从 JSON 字符串反序列化分区键元组."""
+    parsed: object = orjson.loads(value)
+    if not isinstance(parsed, list):
+        raise ValueError("partition keys must be a JSON string list")
+    values = cast(list[object], parsed)
+    keys: list[str] = []
+    for item in values:
+        if not isinstance(item, str):
+            raise ValueError("partition keys must be a JSON string list")
+        keys.append(item)
+    return tuple(keys)

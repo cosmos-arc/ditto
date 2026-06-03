@@ -368,8 +368,10 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         path="packages/apps/src/ditto_apps/registry/infra/observability.py",
         allowed_modules=frozenset(
             {
+                "ditto_backtest.observability.metrics",
                 "ditto_data.config.data_store",
                 "ditto_data.observability.metrics",
+                "ditto_execution.observability.metrics",
                 "ditto_features.observability.metrics",
                 "ditto_portfolio.observability",
                 "ditto_risk.observability.metrics",

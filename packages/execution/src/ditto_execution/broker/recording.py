@@ -62,7 +62,7 @@ class _BrokerEventDraft:
     event_id_suffix: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass
 class BrokerEventRecordingGateway:
     """
     Decorate a BrokerGateway and persist normalized broker events.

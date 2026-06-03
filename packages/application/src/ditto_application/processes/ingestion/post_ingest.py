@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Literal, cast
 
 import httpx
+import orjson
 import polars as pl
 from ditto_data.catalog import (
     DataAssetRef,
@@ -360,7 +360,7 @@ def _schema_hash_from_dataframe(df: pl.DataFrame) -> str:
     fields = [
         (name, str(dtype)) for name, dtype in zip(df.columns, df.dtypes, strict=True)
     ]
-    payload = json.dumps(fields, ensure_ascii=True, separators=(",", ":"))
+    payload = orjson.dumps(fields).decode()
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     return f"schema:sha256:{digest}"
 

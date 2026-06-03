@@ -88,8 +88,11 @@ class SQLitePool:
                 str(self._db_path), check_same_thread=False, timeout=30.0
             )
             conn.row_factory = sqlite3.Row
-            # 启用外键约束
+            # 启用外键约束 + WAL 模式（并发读写性能 + 数据安全）
             conn.execute("PRAGMA foreign_keys = ON;")
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+            conn.execute("PRAGMA busy_timeout=5000;")
             self._local.conn = conn
 
             # 追踪所有连接（用于 close_all）

@@ -8,6 +8,7 @@ from ditto_platform.foundation.db import SQLitePool
 
 
 @pytest.mark.unit
+@pytest.mark.serial
 class TestSQLitePoolCloseAll:
     """Tests for SQLitePool.close_all method."""
 

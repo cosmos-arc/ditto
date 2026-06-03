@@ -7,8 +7,14 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 from dishka import Provider, Scope, provide
+from ditto_backtest.observability.metrics import (
+    METRIC_DEFINITIONS as BACKTEST_METRICS,
+)
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.observability.metrics import METRIC_DEFINITIONS as DATA_METRICS
+from ditto_execution.observability.metrics import (
+    METRIC_DEFINITIONS as EXECUTION_METRICS,
+)
 from ditto_features.observability.metrics import METRIC_DEFINITIONS as FEATURE_METRICS
 from ditto_kernel.tracing import install_trace_handler, reset_trace_handler
 from ditto_platform.foundation import (
@@ -110,6 +116,8 @@ def _register_app_metric_definitions() -> None:
         STRATEGY_METRICS,
         PORTFOLIO_METRICS,
         RISK_METRICS,
+        BACKTEST_METRICS,
+        EXECUTION_METRICS,
     ):
         register_metric_definitions(definitions)
 

@@ -16,6 +16,7 @@ EngineOptions / assemble_engine_result 已拆至 engine_steps.py。
 
 from __future__ import annotations
 
+import time
 import uuid
 from collections import deque
 from collections.abc import Callable
@@ -159,6 +160,7 @@ class EngineLoop:
         self._on_progress = options.on_progress
         self._on_checkpoint = options.on_checkpoint
         self._restore_runtime_state = options.restore_runtime_state
+        self._on_step_complete = options.on_step_complete
 
     def _init_state(self, config: EngineConfig) -> None:
         """初始化跨日可变状态。"""
@@ -355,9 +357,15 @@ class EngineLoop:
             self._on_checkpoint(checkpoint)
 
     def _refresh_final_checkpoint(self, account_view: AccountView) -> None:
-        """尾部 flush 后刷新最终 checkpoint 的账户与执行统计。"""
+        """
+        尾部 flush 后刷新最终 checkpoint 的账户与执行统计。
+
+        无论 checkpoint 是否携带 resume_from 边界，都需要在
+        execution_delay 尾部 flush 后刷新 NAV/fill/order/account-state，
+        否则 resume 后的 checkpoint 将反映 flush 前的陈旧状态。
+        """
         checkpoint = self._last_checkpoint
-        if checkpoint is None or checkpoint.resume_from is not None:
+        if checkpoint is None:
             return
 
         refreshed = replace(
@@ -540,10 +548,16 @@ class EngineLoop:
         for step in self._steps:
             if self._process_delayed_signal(step, ctx, delay, deferred_signal):
                 continue
+            t0 = time.monotonic()
             result = step.execute(ctx)
+            elapsed = time.monotonic() - t0
             if not result.success:
                 self._log_step_failure(step, result, trade_date)
+                if self._on_step_complete is not None:
+                    self._on_step_complete(type(step).__name__, elapsed, False)
                 return False
+            if self._on_step_complete is not None:
+                self._on_step_complete(type(step).__name__, elapsed, True)
             self._enqueue_signal(step, ctx, delay)
 
         # 累积跨日结果
@@ -555,15 +569,15 @@ class EngineLoop:
     # -- R3: _step helpers ----------------------------------------------------
 
     def _build_step_context(self, time_slice: TimeSlice) -> StepContext:
-        """构建当日 StepContext。"""
+        """
+        构建当日 StepContext。
+
+        Synchronizer 产出的 TimeSlice 是每步唯一 PIT 可见行情输入源。
+        直接从 TimeSlice 构建 Slice，避免冗余的 DataFeed.get_slice() 调用。
+        """
         trade_date = time_slice.time_context.trade_date
         is_rebalance = self._is_rebalance_day(trade_date)
-        slice_ = self._data_feed.get_slice(trade_date)
-        # The synchronizer owns the PIT-visible market inputs for this step.
-        # The extra slice read is only for fields not carried by TimeSlice, so
-        # keep the strategy/execution-facing fields aligned with TimeSlice.
-        slice_ = replace(
-            slice_,
+        slice_ = Slice(
             trade_date=trade_date,
             step_time=time_slice.time_context.decision_time,
             bars=time_slice.bars,

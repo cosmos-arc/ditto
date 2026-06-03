@@ -61,10 +61,21 @@ def _deserialize_event(json_str: str) -> OrderEvent:
 
 
 class SqliteOrderEventJournal:
-    """SQLite-backed append-only order event journal."""
+    """
+    SQLite-backed append-only order event journal.
+
+    线程不安全：单连接绑定创建线程，仅适用于单线程场景
+    （回测引擎、测试）。多线程场景应使用 SQLitePool。
+    """
+
+    _conn: sqlite3.Connection | None
 
     def __init__(self, db_path: str) -> None:
         self._conn = sqlite3.connect(db_path)
+        # WAL 模式（并发读写性能 + 数据安全）
+        self._conn.execute("PRAGMA journal_mode=WAL;")
+        self._conn.execute("PRAGMA synchronous=NORMAL;")
+        self._conn.execute("PRAGMA busy_timeout=5000;")
         self._conn.execute(_CREATE_TABLE)
         self._conn.execute(_CREATE_INDEX)
         self._conn.commit()
@@ -79,9 +90,17 @@ class SqliteOrderEventJournal:
     )
     _SELECT_ALL = "SELECT event_json FROM order_events ORDER BY event_seq"
 
+    @property
+    def _db(self) -> sqlite3.Connection:
+        """获取活跃连接，关闭后访问抛出异常。"""
+        if self._conn is None:
+            msg = "Journal is closed"
+            raise RuntimeError(msg)
+        return self._conn
+
     def append(self, event: OrderEvent) -> None:
         """追加事件。"""
-        self._conn.execute(
+        self._db.execute(
             self._INSERT_SQL,
             (
                 event.client_id.value,
@@ -90,11 +109,11 @@ class SqliteOrderEventJournal:
                 event.timestamp.isoformat(),
             ),
         )
-        self._conn.commit()
+        self._db.commit()
 
     def events_for(self, client_id: ClientOrderId) -> tuple[OrderEvent, ...]:
         """获取指定订单的全部事件。"""
-        cursor = self._conn.execute(
+        cursor = self._db.execute(
             self._SELECT_BY_CLIENT,
             (client_id.value,),
         )
@@ -102,12 +121,14 @@ class SqliteOrderEventJournal:
 
     def all_events(self) -> tuple[OrderEvent, ...]:
         """获取全部事件。"""
-        cursor = self._conn.execute(self._SELECT_ALL)
+        cursor = self._db.execute(self._SELECT_ALL)
         return tuple(_deserialize_event(row[0]) for row in cursor.fetchall())
 
     def close(self) -> None:
-        """关闭数据库连接。"""
-        self._conn.close()
+        """关闭数据库连接（幂等）。"""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
 
     def __enter__(self) -> SqliteOrderEventJournal:
         """进入上下文管理器。"""

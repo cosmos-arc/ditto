@@ -54,6 +54,8 @@ def _ts_rank(
     source: str,
 ) -> pl.Expr:
     window = read_window_at(raw_arguments, 1, source=source)
+    # PIT safety: shift(1) excludes current row T; Expr.rolling_rank has
+    # no ``closed`` parameter, so shift is the sole defense.
     shifted = arguments[0].shift(1)
     return (
         shifted.rolling_rank(window_size=window, min_samples=window)
@@ -70,6 +72,8 @@ def _ts_argmax(
     source: str,
 ) -> pl.Expr:
     window = read_window_at(raw_arguments, 1, source=source)
+    # PIT safety: shift(1) excludes current row T; Expr.rolling_map has
+    # no ``closed`` parameter, so shift is the sole defense.
     shifted = arguments[0].shift(1)
 
     def _rolling_argmax(s: pl.Series) -> int:
@@ -90,6 +94,8 @@ def _ts_argmin(
     source: str,
 ) -> pl.Expr:
     window = read_window_at(raw_arguments, 1, source=source)
+    # PIT safety: shift(1) excludes current row T; Expr.rolling_map has
+    # no ``closed`` parameter, so shift is the sole defense.
     shifted = arguments[0].shift(1)
 
     def _rolling_argmin(s: pl.Series) -> int:
@@ -110,6 +116,8 @@ def _ts_corr(
     source: str,
 ) -> pl.Expr:
     window = read_window_at(raw_arguments, 2, source=source)
+    # PIT safety: shift(1) excludes current row T; pl.rolling_corr has no
+    # ``closed`` parameter, so shift is the sole defense.
     shifted_x = arguments[0].shift(1)
     shifted_y = arguments[1].shift(1)
     return pl.rolling_corr(
@@ -127,6 +135,8 @@ def _ts_cov(
     source: str,
 ) -> pl.Expr:
     window = read_window_at(raw_arguments, 2, source=source)
+    # PIT safety: shift(1) excludes current row T; pl.rolling_cov has no
+    # ``closed`` parameter, so shift is the sole defense.
     shifted_x = arguments[0].shift(1)
     shifted_y = arguments[1].shift(1)
     return pl.rolling_cov(
@@ -157,6 +167,8 @@ def _ts_decay_linear(
     source: str,
 ) -> pl.Expr:
     window = read_window_at(raw_arguments, 1, source=source)
+    # PIT safety: shift(1) excludes current row T; Expr.rolling_map has
+    # no ``closed`` parameter, so shift is the sole defense.
     shifted = arguments[0].shift(1)
 
     def _wma(s: pl.Series) -> float:

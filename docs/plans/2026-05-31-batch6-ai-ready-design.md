@@ -2,7 +2,7 @@
 
 > 创建：2026-05-31
 > 基线：`docs/plans/2026-05-25-architecture-remediation-roadmap.md` Batch 6
-> 状态：实施中
+> 状态：✅ 全部完成
 
 ---
 

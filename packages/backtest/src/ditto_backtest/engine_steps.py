@@ -75,6 +75,7 @@ class EngineOptions:
         on_progress: 进度回调 (completed_days, total_days)
         on_checkpoint: checkpoint 回调，供外层持久化恢复边界
         restore_runtime_state: checkpoint runtime-state，用于恢复 engine 内部队列
+        on_step_complete: 单步完成回调 (step_name, duration_seconds, success)
 
     """
 
@@ -89,6 +90,7 @@ class EngineOptions:
     on_progress: Callable[[int, int], None] | None = None
     on_checkpoint: Callable[[BacktestCheckpoint], None] | None = None
     restore_runtime_state: BacktestRuntimeStateSnapshot | None = None
+    on_step_complete: Callable[[str, float, bool], None] | None = None
 
 
 @dataclass

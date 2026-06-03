@@ -1334,7 +1334,8 @@ class TestCooperativeCancellation:
 
         assert result.cancelled is True
         # 第 1 天正常执行，第 2 天 should_stop 返回 True → 跳过
-        assert wired.data_feed.get_slice.call_count == 1
+        # _build_step_context 不再调用 data_feed.get_slice()（直接从 TimeSlice 构建）
+        assert wired.data_feed.get_slice.call_count == 0
 
     def test_cancelled_result_carries_resume_checkpoint(self) -> None:
         """取消前最后完成日应产生可恢复 checkpoint，resume_from 指向下一交易日。"""
@@ -1442,13 +1443,12 @@ class TestCooperativeCancellation:
         assert result.last_checkpoint is not None
         runtime_state = result.last_checkpoint.runtime_state
         assert isinstance(runtime_state, BacktestRuntimeStateSnapshot)
+        # flush 后延迟信号已执行完毕，checkpoint 反映刷新后的状态
         assert runtime_state.pending_orders[0].client_order_id == "order-001"
         assert runtime_state.pending_orders[0].leaves_quantity == 300
-        assert runtime_state.delayed_signals[0].trade_date == "2026-03-01"
-        assert runtime_state.delayed_signals[0].positions[0].instrument_id == (
-            InstrumentId(1)
-        )
-        assert runtime_state.delayed_signals[0].positions[0].target_weight == 0.5
+        # _flush_delayed_signals() 已清空信号队列，
+        # _refresh_final_checkpoint 正确刷新为空队列
+        assert runtime_state.delayed_signals == ()
         assert runtime_state.state_hash.startswith("sha256:")
 
     def test_should_stop_never_triggered(self) -> None:
@@ -1457,7 +1457,8 @@ class TestCooperativeCancellation:
         result = wired.loop.run()
 
         assert result.cancelled is False
-        assert wired.data_feed.get_slice.call_count == 3
+        # _build_step_context 不再调用 data_feed.get_slice()
+        assert wired.data_feed.get_slice.call_count == 0
 
     def test_should_stop_none_runs_fully(self) -> None:
         """should_stop=None → 正常执行全部天数."""
@@ -1465,7 +1466,8 @@ class TestCooperativeCancellation:
         result = wired.loop.run()
 
         assert result.cancelled is False
-        assert wired.data_feed.get_slice.call_count == 3
+        # _build_step_context 不再调用 data_feed.get_slice()
+        assert wired.data_feed.get_slice.call_count == 0
 
 
 # ---------------------------------------------------------------------------

@@ -38,6 +38,9 @@ _WINDOW_KIND_BY_NAME = {
     "ts_var": "var",
 }
 
+# PIT safety: Polars Expr-level .rolling_*() methods do NOT expose a
+# ``closed`` parameter (unlike DataFrame.rolling()).  The caller (_rolling)
+# therefore pre-shifts by 1 so the window only sees [T-window, T-1].
 _ROLLING_BUILDERS: dict[str, RollingBuilder] = {
     "count": lambda expr, window: (
         expr.is_not_null()
@@ -101,8 +104,10 @@ def _rolling(
 
     This is equivalent to ``rolling(window, closed="left")`` — both
     approaches yield the same number of data points and neither leaks
-    future information.  The ``shift(1)`` strategy is preferred here
-    because it composes cleanly with polars' ``.over()`` partitioning.
+    future information.  The ``shift(1)`` strategy is required here
+    because Polars Expr-level ``.rolling_*()`` methods do not expose a
+    ``closed`` parameter (only ``DataFrame.rolling()`` does).  ``shift(1)``
+    also composes cleanly with polars' ``.over()`` partitioning.
     """
     window = read_int_literal(raw_arguments, index, source=source)
 

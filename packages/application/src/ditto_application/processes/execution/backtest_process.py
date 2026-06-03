@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -345,7 +346,20 @@ class BacktestService:
             synchronizer=synchronizer,
             options=options,
         )
+        t0 = time.monotonic()
         engine_result = engine_loop.run()
+        elapsed = time.monotonic() - t0
+
+        # 回测指标记录（application 桥接 backtest → platform Metrics）
+        try:
+            from ditto_platform.foundation import Metrics as _Metrics  # noqa: PLC0415
+
+            _Metrics.backtest_duration.record(elapsed)
+            _Metrics.backtest_trading_days.add(
+                engine_result.total_trades + len(engine_result.skipped_dates)
+            )
+        except Exception:  # noqa: S110
+            pass  # 指标记录不阻断主流程
 
         # 构建 BacktestReport
         report = build_report(collector, run_id=run_id)
@@ -450,6 +464,32 @@ class BacktestService:
 
             on_checkpoint = _save_checkpoint
 
+        # Step 完成回调 — 桥接到 platform Metrics
+        on_step_complete: Callable[[str, float, bool], None] | None = None
+        try:
+            from ditto_platform.foundation import (  # noqa: PLC0415
+                Metrics as _StepMetrics,
+            )
+
+            def _on_step_complete(
+                step_name: str,
+                duration: float,
+                success: bool,
+            ) -> None:
+                _StepMetrics.backtest_step_duration.record(
+                    duration,
+                    {"step": step_name},
+                )
+                if not success:
+                    _StepMetrics.backtest_step_failures.add(
+                        1,
+                        {"step": step_name},
+                    )
+
+            on_step_complete = _on_step_complete
+        except Exception:  # noqa: S110
+            pass  # Metrics 不可用时静默跳过
+
         return EngineOptions(
             event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
@@ -461,6 +501,7 @@ class BacktestService:
             on_progress=on_progress,
             on_checkpoint=on_checkpoint,
             restore_runtime_state=self._restore_runtime_state(),
+            on_step_complete=on_step_complete,
         )
 
     def _restore_runtime_state(self) -> BacktestRuntimeStateSnapshot | None:

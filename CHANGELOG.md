@@ -15,6 +15,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `from __future__ import annotations` to `ditto_kernel.runtime` for forward-type compatibility.
 - Missing `__init__` docstrings to several package `__init__.py` files.
 - PIT observation comments in data layer deserialization helpers.
+- **DataCatalog runtime** — `InMemoryCatalogStore` + `SqliteCatalogStore` with metadata tracking and promotion workflows.
+- **DataLineage runtime** — `InMemoryLineageStore` + `SqliteLineageStore` for dataset dependency tracking.
+- **Catalog promotion workflow** — evidence/assessment/override/revoke lifecycle for dataset certification.
+- **PIT fail-closed policy** — `knowledge_date` defaults to today, preventing accidental look-ahead.
+- **BrokerEventRecordingGateway** — decorator gateway that records broker events with structured taxonomy.
+- **Reconciliation repair workflow** — plan/executor/store for automated trade reconciliation repair.
+- **PaperRuntimeKernel** — paper-trading runtime kernel with `RealtimeClock` + `SimpleEventBus`.
+- **BacktestCheckpoint** — checkpoint/resume API for long-running backtests.
+- **KillSwitch** — type-safe kill switch with strict enum states.
+- **CompositeDecisionStage** — score fusion and rank normalization for multi-signal strategy decisions.
+- **Experience Memory (Markdown)** — markdown-based experience store for AI learning loops.
+- **Hypothesis bridge points** — structured hypothesis-to-expression mapping in features layer.
+- **Source health reporting** — health status tracking and summary API for data sources.
+- **Maturity gates** — maturity-level validation across application query facades.
+- **OpenAPI maturity annotations** — API endpoint maturity level documentation.
+- **Expression codegen modularization** — split into cs/ts/scalar operator modules for maintainability.
+- **IC computation/report split** — separated IC calculation from reporting in analysis layer.
+- **Path resolver modularization** — decomposed path resolution into focused resolver modules.
 
 ### Changed
 
