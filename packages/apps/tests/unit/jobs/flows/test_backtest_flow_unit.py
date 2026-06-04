@@ -163,6 +163,24 @@ class TestRunBacktestFlow:
         assert config.resume_settlement_state_hash == "sha256:settlement"
         assert config.resume_runtime_state_hash == "sha256:runtime"
 
+    def test_passes_parent_run_id_to_config(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow passes parent_run_id to BacktestServiceConfig for lineage tracking."""
+        RUNNER(
+            run_id="run-child",
+            strategy_id="momentum-etf",
+            start_date="2025-01-01",
+            end_date="2025-03-31",
+            parent_run_id="run-parent",
+        )
+
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
+        assert config is not None
+        assert config.parent_run_id == "run-parent"
+
     def test_passes_run_service_via_options(
         self,
         mock_facade: Mock,

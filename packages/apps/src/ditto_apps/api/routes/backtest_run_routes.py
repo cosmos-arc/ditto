@@ -275,6 +275,7 @@ async def retry_run(
     flow_params: dict[str, object] = {
         "run_id": new_run_id,
         "strategy_id": record.strategy_id,
+        "parent_run_id": run_id,
     }
     # 从 config_json 恢复回测参数（start_date, end_date, initial_cash 等）
     if record.config_json:
@@ -323,6 +324,7 @@ async def resume_run(
     flow_params: dict[str, object] = {
         "run_id": new_run_id,
         "strategy_id": record.strategy_id,
+        "parent_run_id": run_id,
     }
     if record.config_json:
         flow_params.update(restore_flow_params_from_config(record.config_json))

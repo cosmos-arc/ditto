@@ -45,6 +45,7 @@ def run_backtest_flow(  # noqa: PLR0913 - Prefect flow exposes wire parameters.
     parameter_overrides: tuple[str, ...] = (),
     cost_config: dict[str, object] | None = None,
     allow_experimental_data: bool = False,
+    parent_run_id: str = "",
     resume_from_run_id: str = "",
     resume_checkpoint_trade_date: str = "",
     resume_checkpoint_completed_days: int = 0,
@@ -74,6 +75,7 @@ def run_backtest_flow(  # noqa: PLR0913 - Prefect flow exposes wire parameters.
         parameter_overrides: 参数覆盖列表.
         cost_config: 成本模型配置（序列化为 dict 传递跨进程边界）.
         allow_experimental_data: 显式允许 experimental 数据集进入研究态回测.
+        parent_run_id: 父运行 ID（retry/resume 场景的 lineage 追踪）.
         resume_from_run_id: source run id for checkpoint-backed resume.
         resume_checkpoint_trade_date: source checkpoint completed trade date.
         resume_checkpoint_completed_days: source checkpoint completed day count.
@@ -103,6 +105,7 @@ def run_backtest_flow(  # noqa: PLR0913 - Prefect flow exposes wire parameters.
         end_date=end_date,
         initial_cash=initial_cash,
         parameter_overrides=parameter_overrides,
+        parent_run_id=parent_run_id,
         resume_from_run_id=resume_from_run_id,
         resume_checkpoint_trade_date=resume_checkpoint_trade_date,
         resume_checkpoint_completed_days=resume_checkpoint_completed_days,

@@ -327,6 +327,39 @@ class TestRetryStatusGuard:
         )
         assert response.data.run_id == "run003"
 
+    async def test_retry_passes_parent_run_id_to_flow(
+        self,
+        mock_retry_handler: MagicMock,
+        mock_query_facade: MagicMock,
+        mock_run_service: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """retry 路由应将 parent_run_id 传入 flow_params."""
+        submitted: dict[str, object] = {}
+
+        def capture_submit(*, flow_params, on_failure) -> None:
+            submitted.update(flow_params)
+
+        monkeypatch.setattr(
+            "ditto_apps.api.routes.backtest_run_routes.submit_backtest_flow",
+            capture_submit,
+        )
+        mock_retry_handler.handle.return_value = "run002"
+        mock_query_facade.get_run.return_value = RunSummary(
+            run_id="run002",
+            strategy_id="momentum-etf",
+            config_json='{"start_date":"2025-01-01","end_date":"2025-03-31"}',
+        )
+
+        await _call_retry(
+            "run001",
+            mock_query_facade,
+            mock_retry_handler,
+            mock_run_service,
+        )
+
+        assert submitted["parent_run_id"] == "run001"
+
     async def test_retry_running_rejected(
         self,
         mock_retry_handler: MagicMock,
@@ -479,6 +512,39 @@ class TestResumeStatusGuard:
         assert submitted["resume_checkpoint_nav"] == 1_020_000.0
         assert submitted["resume_account_state_hash"] == "sha256:account"
         assert submitted["resume_runtime_state_hash"] == "sha256:runtime"
+
+    async def test_resume_passes_parent_run_id_to_flow(
+        self,
+        mock_resume_handler: MagicMock,
+        mock_query_facade: MagicMock,
+        mock_run_service: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """resume 路由应将 parent_run_id 传入 flow_params."""
+        submitted: dict[str, object] = {}
+
+        def capture_submit(*, flow_params, on_failure) -> None:
+            submitted.update(flow_params)
+
+        monkeypatch.setattr(
+            "ditto_apps.api.routes.backtest_run_routes.submit_backtest_flow",
+            capture_submit,
+        )
+        mock_resume_handler.handle.return_value = "run-resume"
+        mock_query_facade.get_run.return_value = RunSummary(
+            run_id="run-resume",
+            strategy_id="momentum-etf",
+            config_json='{"start_date":"2025-02-03","end_date":"2025-03-31"}',
+        )
+
+        await _call_resume(
+            "run001",
+            mock_query_facade,
+            mock_resume_handler,
+            mock_run_service,
+        )
+
+        assert submitted["parent_run_id"] == "run001"
 
     async def test_resume_missing_checkpoint_rejected(
         self,

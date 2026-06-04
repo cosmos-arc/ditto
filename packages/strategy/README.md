@@ -34,30 +34,7 @@ Strategy 采用 Pipeline + Stage 架构，市场数据通过 StrategyInputBundle
 
 ## 模块结构
 
-```
-ditto_strategy/
-├── alpha/              # Alpha pipeline
-│   ├── builtins/       # 内置 Stage（Universe/Signal/Scoring/Selection/Filtering/Regime）
-│   ├── templates/      # 策略模板（ETF轮动/趋势摆动/选股/行业轮动）
-│   ├── pipeline.py     # StrategyPipeline + StrategyInputBundle
-│   ├── protocols.py    # DecisionStage Protocol
-│   ├── context.py      # StrategyContext（风险锁/持仓/冷却）
-│   ├── specs.py        # StrategySpec 定义
-│   ├── models.py       # 策略运行模型
-│   ├── frame.py        # FrameCol 常量 + validate_frame
-│   ├── seeds.py        # 预定义 StrategySpec
-│   └── validation.py   # 参数校验
-├── signals/            # 信号契约
-│   ├── store.py        # SignalStore Protocol
-│   └── models.py       # 信号模型
-├── storage/            # 策略持久化（SQLite）
-│   └── sqlite/         # spec/run/artifact 存储 + 服务
-├── runs/               # 策略运行模型
-├── di/                 # 依赖注入
-├── contracts.py        # 包级公共契约
-├── errors.py           # StrategyError 异常层级
-└── models.py           # 策略域模型
-```
+目录结构详见 [CLAUDE.md](CLAUDE.md)。
 
 ## 核心概念
 
@@ -83,15 +60,7 @@ DecisionFrame 通过列名约定流转数据：
 
 ## 依赖规则
 
-| 方向 | 规则 |
-|------|------|
-| strategy → kernel | ✅ 共享类型 |
-| strategy → platform | ✅ SQLite / 日志 / 追踪 |
-| strategy → data | ❌ 市场数据由外部注入 |
-| strategy → features | ❌ |
-| strategy → portfolio/risk/execution | ❌ |
-| strategy → backtest | ❌ |
-| strategy → application/apps | ❌ |
+架构规则和依赖约束详见 [CLAUDE.md](CLAUDE.md)。
 
 ## 策略模板
 
