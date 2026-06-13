@@ -1,12 +1,15 @@
 """对账数据类型 — 差异枚举、差异条目、对账报告。"""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Literal
 
 from ditto_execution.orders.status import OrderStatus
 
 __all__ = [
+    "BrokerOrderLinkIndex",
     "MismatchType",
     "ReconciliationDiff",
     "ReconciliationReport",
@@ -17,6 +20,9 @@ __all__ = [
     "RepairExecutionResult",
     "RepairPlan",
 ]
+
+_EMPTY_BROKER_ORDER_LINKS: Mapping[str, str] = MappingProxyType({})
+_EMPTY_SCOPED_FILL_LINKS: Mapping[tuple[str, str], str] = MappingProxyType({})
 
 
 class MismatchType(StrEnum):
@@ -44,8 +50,18 @@ class RepairActionStatus(StrEnum):
     READY = "ready"
     PENDING_REVIEW = "pending_review"
     APPROVED = "approved"
+    EXECUTING = "executing"
     REJECTED = "rejected"
     EXECUTED = "executed"
+
+
+@dataclass(frozen=True)
+class BrokerOrderLinkIndex:
+    """Broker-order links supplied by backend composition code."""
+
+    by_order: Mapping[str, str] = _EMPTY_BROKER_ORDER_LINKS
+    by_fill: Mapping[str, str] = _EMPTY_BROKER_ORDER_LINKS
+    by_order_fill: Mapping[tuple[str, str], str] = _EMPTY_SCOPED_FILL_LINKS
 
 
 @dataclass(frozen=True)
@@ -130,6 +146,7 @@ class RepairActionRecord:
     review_reason: str | None = None
     reviewed_at: str | None = None
     executor: str | None = None
+    claimed_at: str | None = None
     execution_result: str | None = None
     executed_at: str | None = None
     created_at: str = ""
@@ -148,6 +165,8 @@ class RepairExecutionResult:
     message: str
     effect_count: int = 0
     fill_id: str | None = None
+    client_order_id: str | None = None
+    broker_order_id: str | None = None
 
     @classmethod
     def executed(
@@ -168,6 +187,8 @@ class RepairExecutionResult:
             message=message,
             effect_count=effect_count,
             fill_id=action.fill_id,
+            client_order_id=action.client_order_id,
+            broker_order_id=action.broker_order_id,
         )
 
     @classmethod
@@ -187,6 +208,8 @@ class RepairExecutionResult:
             status="skipped",
             message=message,
             fill_id=action.fill_id,
+            client_order_id=action.client_order_id,
+            broker_order_id=action.broker_order_id,
         )
 
     @classmethod
@@ -206,4 +229,6 @@ class RepairExecutionResult:
             status="failed",
             message=message,
             fill_id=action.fill_id,
+            client_order_id=action.client_order_id,
+            broker_order_id=action.broker_order_id,
         )

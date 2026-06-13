@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal
 
 from ditto_data.catalog import (
     DataAssetRef,
@@ -13,6 +12,7 @@ from ditto_data.catalog import (
     DataCatalogReader,
     default_dataset_metadata,
 )
+from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionEvent,
     DatasetMaturityPromotionHistoryReader,
@@ -20,13 +20,56 @@ from ditto_data.catalog.promotion import (
 )
 
 from ditto_application.catalog_freshness import (
-    CatalogFreshnessStatus,
     assess_catalog_freshness,
     catalog_entry_for_date,
     dataset_namespace,
     select_ingestion_source,
 )
 from ditto_application.exceptions import AppQueryError
+from ditto_application.queries.catalog_source_health import (
+    CatalogSourceFallbackPolicyEffect,
+    CatalogSourceHealth,
+    CatalogSourceHealthAttentionItem,
+    CatalogSourceHealthAttentionReason,
+    CatalogSourceHealthAttentionReasonCount,
+    CatalogSourceHealthAttentionSeverity,
+    CatalogSourceHealthAttentionSeverityCount,
+    CatalogSourceHealthReport,
+    CatalogSourceHealthStatusCount,
+    CatalogSourceHealthSummaryReport,
+    CatalogSourceSelectionBlocker,
+    CatalogSourceSelectionCount,
+    CatalogSourceSelectionStatus,
+    CatalogSourceSelectionStatusCount,
+    attention_reason_counts,
+    attention_required,
+    attention_severity_counts,
+    failover_count,
+    fallback_source_counts,
+    no_fallback_source_count,
+    revoked_promotion_count,
+    selected_source_counts,
+    source_health_attention_reasons,
+    source_health_for_source,
+    source_health_status_counts,
+    source_selection_status_counts,
+    to_source_fallback_policy_effect,
+)
+from ditto_application.queries.catalog_source_health import (
+    source_selection_blockers as build_source_selection_blockers,
+)
+from ditto_application.queries.source_fallback_policy import (
+    CatalogSourceFallbackPolicyAction,
+    CatalogSourceFallbackPolicyActionCount,
+    CatalogSourceFallbackPolicyPreview,
+    CatalogSourceFallbackPolicyStatusCount,
+    CatalogSourceFallbackPolicySummaryReport,
+    build_source_fallback_policy_preview,
+    build_source_fallback_policy_summary,
+)
+from ditto_application.source_fallback_policy_effect import (
+    resolve_active_source_fallback_policy_effect,
+)
 
 __all__ = [
     "CatalogAsset",
@@ -34,24 +77,25 @@ __all__ = [
     "CatalogMaturityPromotionHistoryItem",
     "CatalogQueryFacade",
     "CatalogSchemaFingerprint",
+    "CatalogSourceFallbackPolicyAction",
+    "CatalogSourceFallbackPolicyActionCount",
+    "CatalogSourceFallbackPolicyEffect",
+    "CatalogSourceFallbackPolicyPreview",
+    "CatalogSourceFallbackPolicyStatusCount",
+    "CatalogSourceFallbackPolicySummaryReport",
     "CatalogSourceHealth",
     "CatalogSourceHealthAttentionItem",
     "CatalogSourceHealthAttentionReason",
     "CatalogSourceHealthAttentionReasonCount",
+    "CatalogSourceHealthAttentionSeverity",
+    "CatalogSourceHealthAttentionSeverityCount",
     "CatalogSourceHealthReport",
     "CatalogSourceHealthStatusCount",
     "CatalogSourceHealthSummaryReport",
+    "CatalogSourceSelectionBlocker",
     "CatalogSourceSelectionCount",
-]
-
-type CatalogSourceHealthAttentionReason = Literal[
-    "selected_source_missing",
-    "selected_source_stale",
-    "selected_source_not_applicable",
-    "default_source_failover",
-    "no_fallback_source",
-    "unsupported_sources_present",
-    "latest_maturity_promotion_revoked",
+    "CatalogSourceSelectionStatus",
+    "CatalogSourceSelectionStatusCount",
 ]
 
 
@@ -99,100 +143,6 @@ class CatalogMaturityPromotionHistoryItem:
     notes: str | None = None
 
 
-@dataclass(frozen=True)
-class CatalogSourceHealth:
-    """Per-source catalog freshness evidence for one dataset/date."""
-
-    source: str
-    supported: bool
-    freshness_status: CatalogFreshnessStatus
-    freshness_sla_hours: int | None
-    freshness_at: datetime | None = None
-    storage_uri: str | None = None
-    schema_hash: str | None = None
-    row_count: int | None = None
-
-
-@dataclass(frozen=True)
-class CatalogSourceHealthReport:
-    """Application-facing source health report for `source=auto` decisions."""
-
-    dataset_id: str
-    namespace: str
-    trade_date: str
-    default_source: str
-    selected_source: str
-    selected_freshness_status: CatalogFreshnessStatus
-    attention_reasons: tuple[CatalogSourceHealthAttentionReason, ...]
-    sources: tuple[CatalogSourceHealth, ...]
-    unsupported_sources: tuple[str, ...] = ()
-    failover_from_default: bool = False
-    fallback_sources: tuple[str, ...] = ()
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
-    latest_revoked_by: str | None = None
-    latest_revoked_at: datetime | None = None
-
-
-@dataclass(frozen=True)
-class CatalogSourceHealthStatusCount:
-    """Aggregated freshness status count across source-health reports."""
-
-    status: CatalogFreshnessStatus
-    count: int
-
-
-@dataclass(frozen=True)
-class CatalogSourceSelectionCount:
-    """Aggregated selected-source count across source-health reports."""
-
-    source: str
-    count: int
-
-
-@dataclass(frozen=True)
-class CatalogSourceHealthAttentionReasonCount:
-    """Aggregated attention reason count across source-health reports."""
-
-    reason: CatalogSourceHealthAttentionReason
-    count: int
-
-
-@dataclass(frozen=True)
-class CatalogSourceHealthAttentionItem:
-    """One source-health summary item that needs operator attention."""
-
-    dataset_id: str
-    trade_date: str
-    selected_source: str
-    selected_freshness_status: CatalogFreshnessStatus
-    attention_reasons: tuple[CatalogSourceHealthAttentionReason, ...]
-    unsupported_sources: tuple[str, ...] = ()
-    failover_from_default: bool = False
-    fallback_sources: tuple[str, ...] = ()
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
-    latest_revoked_by: str | None = None
-    latest_revoked_at: datetime | None = None
-
-
-@dataclass(frozen=True)
-class CatalogSourceHealthSummaryReport:
-    """Aggregated source-health report for backend diagnostics."""
-
-    dataset_ids: tuple[str, ...]
-    trade_dates: tuple[str, ...]
-    available_sources: tuple[str, ...]
-    total_reports: int
-    status_counts: tuple[CatalogSourceHealthStatusCount, ...]
-    selected_source_counts: tuple[CatalogSourceSelectionCount, ...]
-    attention_required: tuple[CatalogSourceHealthAttentionItem, ...]
-    reports: tuple[CatalogSourceHealthReport, ...]
-    failover_count: int = 0
-    no_fallback_source_count: int = 0
-    revoked_promotion_count: int = 0
-    fallback_source_counts: tuple[CatalogSourceSelectionCount, ...] = ()
-    attention_reason_counts: tuple[CatalogSourceHealthAttentionReasonCount, ...] = ()
-
-
 class CatalogQueryFacade:
     """Read-only application facade over the data-owned catalog runtime."""
 
@@ -202,10 +152,12 @@ class CatalogQueryFacade:
         maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader
         | None = None,
         *,
+        source_fallback_policy_reader: CatalogSourceFallbackPolicyReader | None = None,
         now: Callable[[], datetime] | None = None,
     ) -> None:
         self._data_catalog_reader = data_catalog_reader
         self._maturity_promotion_history_reader = maturity_promotion_history_reader
+        self._source_fallback_policy_reader = source_fallback_policy_reader
         self._now = now or _utcnow
 
     def list_assets(
@@ -292,12 +244,23 @@ class CatalogQueryFacade:
             if candidate_sources
             else normalized_sources[0]
         )
-        selected_source = select_ingestion_source(
+        catalog_selected_source = select_ingestion_source(
             dataset=dataset_id,
             trade_date=trade_date,
             available_sources=normalized_sources,
             catalog_reader=self._data_catalog_reader,
             now=self._now,
+        )
+        policy_effect = resolve_active_source_fallback_policy_effect(
+            self._source_fallback_policy_reader,
+            dataset=dataset_id,
+            trade_date=trade_date,
+            catalog_selected_source=catalog_selected_source,
+        )
+        selected_source = (
+            policy_effect.effective_source
+            if policy_effect is not None
+            else catalog_selected_source
         )
         source_health = tuple(
             self._to_source_health(
@@ -315,11 +278,18 @@ class CatalogQueryFacade:
             source for source in normalized_sources if source not in candidate_sources
         )
         failover_from_default = selected_source != default_source
-        selected_freshness_status = _source_health_status_for_source(
+        selected_source_health = source_health_for_source(
             source_health,
             selected_source,
         )
-        attention_reasons = _source_health_attention_reasons(
+        selected_freshness_status = selected_source_health.freshness_status
+        source_selection_blockers = build_source_selection_blockers(
+            selected_source_health
+        )
+        source_selection_status: CatalogSourceSelectionStatus = (
+            "blocked" if source_selection_blockers else "ready"
+        )
+        attention_reasons = source_health_attention_reasons(
             selected_freshness_status=selected_freshness_status,
             failover_from_default=failover_from_default,
             fallback_sources=fallback_sources,
@@ -335,8 +305,14 @@ class CatalogQueryFacade:
             default_source=default_source,
             selected_source=selected_source,
             selected_freshness_status=selected_freshness_status,
+            selected_source_health=selected_source_health,
+            source_selection_status=source_selection_status,
+            source_selection_blockers=source_selection_blockers,
             attention_reasons=attention_reasons,
             sources=source_health,
+            source_fallback_policy_effect=to_source_fallback_policy_effect(
+                policy_effect
+            ),
             unsupported_sources=unsupported_sources,
             failover_from_default=failover_from_default,
             fallback_sources=fallback_sources,
@@ -383,9 +359,9 @@ class CatalogQueryFacade:
             for dataset_id in normalized_dataset_ids
             for trade_date in normalized_trade_dates
         )
-        status_counts = _source_health_status_counts(reports)
-        selected_counts = _selected_source_counts(reports)
-        attention_required = _attention_required(reports)
+        status_counts = source_health_status_counts(reports)
+        selected_counts = selected_source_counts(reports)
+        required_attention = attention_required(reports)
         return CatalogSourceHealthSummaryReport(
             dataset_ids=normalized_dataset_ids,
             trade_dates=normalized_trade_dates,
@@ -393,13 +369,54 @@ class CatalogQueryFacade:
             total_reports=len(reports),
             status_counts=status_counts,
             selected_source_counts=selected_counts,
-            attention_required=attention_required,
+            attention_required=required_attention,
             reports=reports,
-            failover_count=_failover_count(reports),
-            no_fallback_source_count=_no_fallback_source_count(reports),
-            revoked_promotion_count=_revoked_promotion_count(reports),
-            fallback_source_counts=_fallback_source_counts(reports),
-            attention_reason_counts=_attention_reason_counts(reports),
+            source_selection_status_counts=source_selection_status_counts(reports),
+            failover_count=failover_count(reports),
+            no_fallback_source_count=no_fallback_source_count(reports),
+            revoked_promotion_count=revoked_promotion_count(reports),
+            fallback_source_counts=fallback_source_counts(reports),
+            attention_reason_counts=attention_reason_counts(reports),
+            attention_severity_counts=attention_severity_counts(required_attention),
+        )
+
+    def get_source_fallback_policy_preview(
+        self,
+        *,
+        dataset_id: str,
+        trade_date: str,
+        available_sources: tuple[str, ...],
+    ) -> CatalogSourceFallbackPolicyPreview:
+        """Return a read-only backend fallback-policy preview for one dataset/date."""
+        report = self.get_source_health_report(
+            dataset_id=dataset_id,
+            trade_date=trade_date,
+            available_sources=available_sources,
+        )
+        return build_source_fallback_policy_preview(report)
+
+    def get_source_fallback_policy_summary(
+        self,
+        *,
+        dataset_ids: tuple[str, ...],
+        trade_dates: tuple[str, ...],
+        available_sources: tuple[str, ...],
+    ) -> CatalogSourceFallbackPolicySummaryReport:
+        """Return aggregated backend fallback-policy previews."""
+        source_health = self.get_source_health_summary(
+            dataset_ids=dataset_ids,
+            trade_dates=trade_dates,
+            available_sources=available_sources,
+        )
+        previews = tuple(
+            build_source_fallback_policy_preview(report)
+            for report in source_health.reports
+        )
+        return build_source_fallback_policy_summary(
+            dataset_ids=source_health.dataset_ids,
+            trade_dates=source_health.trade_dates,
+            available_sources=source_health.available_sources,
+            previews=previews,
         )
 
     def _to_source_health(
@@ -471,143 +488,6 @@ def _catalog_asset_sort_key(asset: CatalogAsset) -> tuple[str, str, tuple[str, .
 
 def _dedupe_tuple(values: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(value for value in values if value))
-
-
-def _source_health_status_counts(
-    reports: tuple[CatalogSourceHealthReport, ...],
-) -> tuple[CatalogSourceHealthStatusCount, ...]:
-    counts: dict[CatalogFreshnessStatus, int] = {
-        "fresh": 0,
-        "stale": 0,
-        "missing": 0,
-        "not_applicable": 0,
-    }
-    for report in reports:
-        for source in report.sources:
-            counts[source.freshness_status] += 1
-    return tuple(
-        CatalogSourceHealthStatusCount(status=status, count=count)
-        for status, count in counts.items()
-    )
-
-
-def _selected_source_counts(
-    reports: tuple[CatalogSourceHealthReport, ...],
-) -> tuple[CatalogSourceSelectionCount, ...]:
-    counts: dict[str, int] = {}
-    for report in reports:
-        counts[report.selected_source] = counts.get(report.selected_source, 0) + 1
-    return tuple(
-        CatalogSourceSelectionCount(source=source, count=counts[source])
-        for source in sorted(counts)
-    )
-
-
-def _attention_required(
-    reports: tuple[CatalogSourceHealthReport, ...],
-) -> tuple[CatalogSourceHealthAttentionItem, ...]:
-    return tuple(
-        CatalogSourceHealthAttentionItem(
-            dataset_id=report.dataset_id,
-            trade_date=report.trade_date,
-            selected_source=report.selected_source,
-            selected_freshness_status=status,
-            attention_reasons=report.attention_reasons,
-            unsupported_sources=report.unsupported_sources,
-            failover_from_default=report.failover_from_default,
-            fallback_sources=report.fallback_sources,
-            latest_revocation_reason=report.latest_revocation_reason,
-            latest_revoked_by=report.latest_revoked_by,
-            latest_revoked_at=report.latest_revoked_at,
-        )
-        for report in reports
-        for status in (_selected_source_status(report),)
-        if report.attention_reasons
-    )
-
-
-def _failover_count(reports: tuple[CatalogSourceHealthReport, ...]) -> int:
-    return sum(1 for report in reports if report.failover_from_default)
-
-
-def _no_fallback_source_count(reports: tuple[CatalogSourceHealthReport, ...]) -> int:
-    return sum(1 for report in reports if not report.fallback_sources)
-
-
-def _revoked_promotion_count(reports: tuple[CatalogSourceHealthReport, ...]) -> int:
-    return sum(1 for report in reports if report.latest_revocation_reason is not None)
-
-
-def _fallback_source_counts(
-    reports: tuple[CatalogSourceHealthReport, ...],
-) -> tuple[CatalogSourceSelectionCount, ...]:
-    counts: dict[str, int] = {}
-    for report in reports:
-        for source in report.fallback_sources:
-            counts[source] = counts.get(source, 0) + 1
-    return tuple(
-        CatalogSourceSelectionCount(source=source, count=counts[source])
-        for source in sorted(counts)
-    )
-
-
-def _attention_reason_counts(
-    reports: tuple[CatalogSourceHealthReport, ...],
-) -> tuple[CatalogSourceHealthAttentionReasonCount, ...]:
-    counts: dict[CatalogSourceHealthAttentionReason, int] = {}
-    for report in reports:
-        for reason in report.attention_reasons:
-            counts[reason] = counts.get(reason, 0) + 1
-    return tuple(
-        CatalogSourceHealthAttentionReasonCount(
-            reason=reason,
-            count=counts[reason],
-        )
-        for reason in sorted(counts)
-    )
-
-
-def _selected_source_status(
-    report: CatalogSourceHealthReport,
-) -> CatalogFreshnessStatus:
-    return _source_health_status_for_source(report.sources, report.selected_source)
-
-
-def _source_health_status_for_source(
-    sources: tuple[CatalogSourceHealth, ...],
-    selected_source: str,
-) -> CatalogFreshnessStatus:
-    for source in sources:
-        if source.source == selected_source:
-            return source.freshness_status
-    return "missing"
-
-
-def _source_health_attention_reasons(
-    *,
-    selected_freshness_status: CatalogFreshnessStatus,
-    failover_from_default: bool,
-    fallback_sources: tuple[str, ...],
-    unsupported_sources: tuple[str, ...],
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None,
-) -> tuple[CatalogSourceHealthAttentionReason, ...]:
-    reasons: list[CatalogSourceHealthAttentionReason] = []
-    if selected_freshness_status == "stale":
-        reasons.append("selected_source_stale")
-    elif selected_freshness_status == "missing":
-        reasons.append("selected_source_missing")
-    elif selected_freshness_status == "not_applicable":
-        reasons.append("selected_source_not_applicable")
-
-    if failover_from_default:
-        reasons.append("default_source_failover")
-    if selected_freshness_status != "fresh" and not fallback_sources:
-        reasons.append("no_fallback_source")
-    if unsupported_sources:
-        reasons.append("unsupported_sources_present")
-    if latest_revocation_reason is not None:
-        reasons.append("latest_maturity_promotion_revoked")
-    return tuple(reasons)
 
 
 def _latest_revoked_promotion_event(

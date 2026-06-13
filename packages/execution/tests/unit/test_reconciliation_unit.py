@@ -7,6 +7,7 @@ from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.reconciliation import (
+    BrokerOrderLinkIndex,
     MismatchType,
     ReconciliationDiff,
     ReconciliationReport,
@@ -248,6 +249,7 @@ class TestReconcileExtraFill:
         assert len(report.diffs) == 1
         assert report.diffs[0].mismatch_type is MismatchType.EXTRA_FILL
         assert report.diffs[0].order_id == "ord-x"
+        assert report.diffs[0].client_order_id == "ord-x"
         assert report.diffs[0].fill_id == "fill-x"
 
 
@@ -268,6 +270,7 @@ class TestReconcileQtyMismatch:
         diff = report.diffs[0]
         assert diff.mismatch_type is MismatchType.QTY_MISMATCH
         assert diff.order_id == "ord-1"
+        assert diff.fill_id == "fill-1"
         assert diff.expected_quantity == 100
         assert diff.actual_quantity == 80
 
@@ -289,6 +292,7 @@ class TestReconcilePriceMismatch:
         assert len(report.diffs) == 1
         diff = report.diffs[0]
         assert diff.mismatch_type is MismatchType.PRICE_MISMATCH
+        assert diff.fill_id == "fill-1"
         assert diff.expected_price == 4.50
         assert diff.actual_price == 4.80
 
@@ -503,3 +507,63 @@ class TestReconciliationDiffAuditLinks:
             actual=[],
         )
         assert report.trade_date == "2026-05-25"
+
+    def test_reconcile_prefers_fill_level_broker_order_id_for_extra_fills(
+        self,
+    ) -> None:
+        fills = [
+            _fill("fill-alpha", "shared-order", 40, 4.50),
+            _fill("fill-beta", "shared-order", 60, 4.50),
+        ]
+        report = reconcile(
+            report_id="r-fill-link-extra",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[],
+            actual=fills,
+            broker_order_links=BrokerOrderLinkIndex(
+                by_order={"shared-order": "broker-order-level"},
+                by_fill={
+                    "fill-alpha": "broker-alpha-fill",
+                    "fill-beta": "broker-beta-fill",
+                },
+            ),
+        )
+
+        broker_order_ids_by_fill = {
+            diff.fill_id: diff.broker_order_id for diff in report.diffs
+        }
+        assert broker_order_ids_by_fill == {
+            "fill-alpha": "broker-alpha-fill",
+            "fill-beta": "broker-beta-fill",
+        }
+
+    def test_reconcile_prefers_order_scoped_fill_broker_order_id_for_extra_fills(
+        self,
+    ) -> None:
+        fills = [
+            _fill("broker-fill-001", "alpha-order", 40, 4.50),
+            _fill("broker-fill-001", "beta-order", 60, 4.50),
+        ]
+        report = reconcile(
+            report_id="r-order-fill-link-extra",
+            account_id="acct-1",
+            trade_date="2026-03-01",
+            expected=[],
+            actual=fills,
+            broker_order_links=BrokerOrderLinkIndex(
+                by_fill={"broker-fill-001": "ambiguous-fill-link"},
+                by_order_fill={
+                    ("alpha-order", "broker-fill-001"): "broker-alpha-order",
+                    ("beta-order", "broker-fill-001"): "broker-beta-order",
+                },
+            ),
+        )
+
+        broker_order_ids_by_order = {
+            diff.order_id: diff.broker_order_id for diff in report.diffs
+        }
+        assert broker_order_ids_by_order == {
+            "alpha-order": "broker-alpha-order",
+            "beta-order": "broker-beta-order",
+        }

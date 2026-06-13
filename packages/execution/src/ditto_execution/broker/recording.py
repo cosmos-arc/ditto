@@ -10,8 +10,14 @@ from typing import Protocol
 from ditto_portfolio.accounting import FillEvent
 from ditto_portfolio.accounting.account import AccountView
 
-from ditto_execution.broker.contracts import BrokerGateway
+from ditto_execution.broker.contracts import (
+    BrokerGateway,
+    BrokerGatewayCapability,
+    BrokerGatewayDescriptor,
+    validate_broker_gateway_descriptor,
+)
 from ditto_execution.models import (
+    STANDARD_BROKER_EVENT_TYPES,
     BrokerEventRecord,
     BrokerEventType,
     require_standard_broker_event_type,
@@ -67,7 +73,7 @@ class BrokerEventRecordingGateway:
     """
     Decorate a BrokerGateway and persist normalized broker events.
 
-    The wrapper keeps the ``BrokerGateway`` protocol unchanged. Any concrete
+    The wrapper keeps broker operations protocol-preserving. Any concrete
     gateway can be wrapped at composition-root time and prove its event
     semantics through the same conformance tests as paper gateways.
     """
@@ -85,6 +91,23 @@ class BrokerEventRecordingGateway:
         compare=False,
         hash=False,
     )
+
+    def describe(self) -> BrokerGatewayDescriptor:
+        """Return the wrapped gateway descriptor plus recording capabilities."""
+        underlying = validate_broker_gateway_descriptor(self.gateway.describe())
+        recording_capabilities: frozenset[BrokerGatewayCapability] = frozenset(
+            {"event_recording", "broker_order_id_recovery"}
+        )
+        return BrokerGatewayDescriptor(
+            gateway_id=f"recording:{underlying.gateway_id}",
+            mode="recording",
+            capabilities=underlying.capabilities | recording_capabilities,
+            supported_event_types=STANDARD_BROKER_EVENT_TYPES,
+            notes=(
+                *underlying.notes,
+                "Records normalized broker events without implementing a real adapter.",
+            ),
+        )
 
     def connect(self) -> None:
         """Connect the underlying gateway and record the connection event."""

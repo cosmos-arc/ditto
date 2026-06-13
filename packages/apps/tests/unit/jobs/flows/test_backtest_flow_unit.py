@@ -12,6 +12,7 @@ from unittest.mock import Mock
 import pytest
 from ditto_application.queries.artifact_utils import compute_total_return
 from ditto_apps.jobs.flows.backtest import (
+    BacktestFlowRequest,
     run_backtest_flow,
 )
 from pytest_mock import MockerFixture
@@ -107,6 +108,29 @@ class TestRunBacktestFlow:
         assert result["run_id"] == "run-001"
         assert result["status"] == "completed"
         assert result["total_return"] == pytest.approx(0.1)
+
+    def test_accepts_backtest_flow_request_object(
+        self,
+        mock_facade: Mock,
+    ) -> None:
+        """Flow accepts a typed request object while preserving config mapping."""
+        result = RUNNER(
+            BacktestFlowRequest(
+                run_id="run-request",
+                strategy_id="momentum-etf",
+                start_date="2025-01-01",
+                end_date="2025-03-31",
+                allow_experimental_data=True,
+            )
+        )
+
+        assert result["run_id"] == "run-request"
+        call_kwargs = mock_facade.run_backtest_from_catalog.call_args
+        config = call_kwargs.kwargs.get("config") or call_kwargs[1].get("config")
+        options = call_kwargs.kwargs.get("options") or call_kwargs[1].get("options")
+        assert config.run_id == "run-request"
+        assert config.strategy_id == "momentum-etf"
+        assert options.allow_experimental_data is True
 
     def test_passes_config_to_facade(
         self,

@@ -20,9 +20,9 @@ import time
 import uuid
 from collections import deque
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import timedelta
-from typing import cast
+from typing import cast, overload
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.orders.model import Order
@@ -50,6 +50,7 @@ from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed, Slice
 from ditto_backtest.engine_steps import (
     EngineOptions,
+    EngineResultAssemblyContext,
     StepDeps,
     assemble_engine_result,
     build_steps,
@@ -79,11 +80,40 @@ from ditto_backtest.steps.input_bundle import build_input_bundle
 __all__ = [
     "EngineConfig",
     "EngineLoop",
+    "EngineLoopDeps",
     "EngineMode",
     "EngineOptions",
     "EngineResult",
     "assemble_engine_result",
 ]
+
+
+@dataclass(frozen=True)
+class EngineLoopDeps:
+    """Runtime collaborators required by EngineLoop."""
+
+    pipeline: StrategyPipeline
+    planner: ExecutionPlanner
+    brokerage: Brokerage
+    pre_trade_check: CompositePreTradeCheck
+    data_feed: DataFeed
+    synchronizer: Synchronizer
+    options: EngineOptions
+
+
+_LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES = (
+    "pipeline",
+    "planner",
+    "brokerage",
+    "pre_trade_check",
+    "data_feed",
+    "synchronizer",
+    "options",
+)
+
+_LEGACY_ENGINE_LOOP_DEPENDENCY_NAME_SET = frozenset(
+    _LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES
+)
 
 
 # ---------------------------------------------------------------------------
@@ -114,25 +144,28 @@ class EngineLoop:
 
     """
 
+    @overload
+    def __init__(self, config: EngineConfig, deps: EngineLoopDeps) -> None: ...
+
+    @overload
+    def __init__(self, config: EngineConfig, **legacy_ports: object) -> None: ...
+
     def __init__(
         self,
         config: EngineConfig,
-        pipeline: StrategyPipeline,
-        planner: ExecutionPlanner,
-        brokerage: Brokerage,
-        pre_trade_check: CompositePreTradeCheck,
-        data_feed: DataFeed,
-        synchronizer: Synchronizer,
-        options: EngineOptions,
+        deps: object | None = None,
+        *legacy_args: object,
+        **legacy_ports: object,
     ) -> None:
+        loop_deps = _normalize_engine_loop_deps(deps, legacy_args, legacy_ports)
         self._config = config
-        self._pipeline = pipeline
-        self._planner = planner
-        self._brokerage = brokerage
-        self._pre_trade_check = pre_trade_check
-        self._data_feed = data_feed
-        self._synchronizer = synchronizer
-        self._init_options(options)
+        self._pipeline = loop_deps.pipeline
+        self._planner = loop_deps.planner
+        self._brokerage = loop_deps.brokerage
+        self._pre_trade_check = loop_deps.pre_trade_check
+        self._data_feed = loop_deps.data_feed
+        self._synchronizer = loop_deps.synchronizer
+        self._init_options(loop_deps.options)
         self._init_state(config)
         self._trade_builder = self._create_trade_builder(config)
         self._recorded_trade_ids: set[str] = set()
@@ -260,16 +293,18 @@ class EngineLoop:
             random_seed=self._random_seed,
         )
         return assemble_engine_result(
-            run_id=run_id,
-            start=start,
-            end=end,
-            account_view=account_view,
-            manifest=manifest,
-            fills=self._fills,
-            orders=self._orders,
-            skipped=skipped,
-            cancelled=cancelled,
-            last_checkpoint=self._last_checkpoint,
+            EngineResultAssemblyContext(
+                run_id=run_id,
+                start=start,
+                end=end,
+                account_view=account_view,
+                manifest=manifest,
+                fills=self._fills,
+                orders=self._orders,
+                skipped=skipped,
+                cancelled=cancelled,
+                last_checkpoint=self._last_checkpoint,
+            )
         )
 
     # -- R2: run helpers ------------------------------------------------------
@@ -646,3 +681,62 @@ class EngineLoop:
             self._trading_days,
             self._trading_day_index,
         )
+
+
+def _normalize_engine_loop_deps(
+    deps: object | None,
+    legacy_args: tuple[object, ...],
+    legacy_ports: dict[str, object],
+) -> EngineLoopDeps:
+    if isinstance(deps, EngineLoopDeps):
+        if legacy_args or legacy_ports:
+            raise TypeError("EngineLoopDeps cannot be combined with legacy ports")
+        return deps
+
+    if deps is None:
+        return _engine_loop_deps_from_legacy(legacy_args, legacy_ports)
+
+    return _engine_loop_deps_from_legacy((deps, *legacy_args), legacy_ports)
+
+
+def _engine_loop_deps_from_legacy(
+    legacy_args: tuple[object, ...],
+    legacy_ports: dict[str, object],
+) -> EngineLoopDeps:
+    if len(legacy_args) > len(_LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES):
+        raise TypeError("EngineLoop received too many positional dependencies")
+
+    ports = dict(legacy_ports)
+    for name, value in zip(
+        _LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES,
+        legacy_args,
+        strict=False,
+    ):
+        if name in ports:
+            raise TypeError(f"EngineLoop got duplicate dependency: {name}")
+        ports[name] = value
+
+    unexpected = sorted(set(ports) - _LEGACY_ENGINE_LOOP_DEPENDENCY_NAME_SET)
+    if unexpected:
+        names = ", ".join(unexpected)
+        raise TypeError(f"EngineLoop got unexpected dependencies: {names}")
+
+    missing = [
+        name for name in _LEGACY_ENGINE_LOOP_DEPENDENCY_NAMES if name not in ports
+    ]
+    if missing:
+        names = ", ".join(missing)
+        raise TypeError(f"EngineLoop missing dependencies: {names}")
+
+    return EngineLoopDeps(
+        pipeline=cast(StrategyPipeline, ports["pipeline"]),
+        planner=cast(ExecutionPlanner, ports["planner"]),
+        brokerage=cast(Brokerage, ports["brokerage"]),
+        pre_trade_check=cast(
+            CompositePreTradeCheck,
+            ports["pre_trade_check"],
+        ),
+        data_feed=cast(DataFeed, ports["data_feed"]),
+        synchronizer=cast(Synchronizer, ports["synchronizer"]),
+        options=cast(EngineOptions, ports["options"]),
+    )

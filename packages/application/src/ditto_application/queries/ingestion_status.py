@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Protocol
 
 from ditto_data.catalog import (
     DataCatalogReader,
@@ -31,6 +32,32 @@ from ditto_application.catalog_freshness import (
     assess_catalog_freshness,
     latest_catalog_entry_for_dataset,
 )
+from ditto_application.queries import _maturity_governance
+from ditto_application.queries.catalog_source_health import (
+    CatalogSourceHealthSummaryReport,
+)
+
+DatasetMaturityGovernanceAttentionItem = (
+    _maturity_governance.DatasetMaturityGovernanceAttentionItem
+)
+DatasetMaturityGovernanceAttentionReason = (
+    _maturity_governance.DatasetMaturityGovernanceAttentionReason
+)
+DatasetMaturityGovernanceAttentionReasonCount = (
+    _maturity_governance.DatasetMaturityGovernanceAttentionReasonCount
+)
+DatasetMaturityGovernanceAttentionSeverity = (
+    _maturity_governance.DatasetMaturityGovernanceAttentionSeverity
+)
+DatasetMaturityGovernanceAttentionSeverityCount = (
+    _maturity_governance.DatasetMaturityGovernanceAttentionSeverityCount
+)
+DatasetMaturityGovernanceSourceFallbackPolicyEffectCount = (
+    _maturity_governance.DatasetMaturityGovernanceSourceFallbackPolicyEffectCount
+)
+DatasetMaturityGovernanceItem = _maturity_governance.DatasetMaturityGovernanceItem
+DatasetMaturityGovernanceReport = _maturity_governance.DatasetMaturityGovernanceReport
+build_maturity_governance_report = _maturity_governance.build_maturity_governance_report
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +120,17 @@ class DatasetPromotionCriterionCount:
 
 
 @dataclass(frozen=True, slots=True)
+class DatasetPromotionReadinessSourceFallbackPolicyEffectCount:
+    """Promotion readiness count by active source fallback policy effect."""
+
+    policy_id: str
+    policy_status: str
+    catalog_selected_source: str
+    effective_selected_source: str
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
 class DatasetPromotionReadinessItem:
     """Dataset-level promotion readiness assessment."""
 
@@ -121,37 +159,9 @@ class DatasetPromotionReadinessReport:
     missing_criteria_counts: tuple[DatasetPromotionCriterionCount, ...]
     rejected_criteria_counts: tuple[DatasetPromotionCriterionCount, ...]
     datasets: tuple[DatasetPromotionReadinessItem, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class DatasetMaturityGovernanceItem:
-    """Unified dataset maturity governance report item."""
-
-    dataset_id: str
-    current_maturity: str | None
-    catalog_freshness_status: CatalogFreshnessStatus | None
-    promotion_status: DatasetPromotionStatus
-    active_maturity_promotion: bool
-    has_maturity_warning: bool
-    missing_criteria: tuple[str, ...]
-    rejected_criteria: tuple[str, ...]
-    latest_revocation_reason: DatasetMaturityPromotionRevocationReason | None = None
-    latest_revoked_by: str | None = None
-    latest_revoked_at: datetime | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class DatasetMaturityGovernanceReport:
-    """Unified backend maturity governance report."""
-
-    dataset_count: int
-    warning_count: int
-    promotable_count: int
-    active_promotion_count: int
-    revoked_promotion_count: int
-    maturity_summary: tuple[DatasetMaturitySummary, ...]
-    promotion_status_counts: tuple[DatasetPromotionStatusCount, ...]
-    datasets: tuple[DatasetMaturityGovernanceItem, ...]
+    source_fallback_policy_effect_counts: tuple[
+        DatasetPromotionReadinessSourceFallbackPolicyEffectCount, ...
+    ] = ()
 
 
 @dataclass(slots=True)
@@ -165,6 +175,18 @@ class _DatasetMaturitySummaryCounts:
     warning_count: int = 0
     promotion_ready_count: int = 0
     promotion_blocked_count: int = 0
+
+
+class _SourceHealthSummaryQuery(Protocol):
+    def get_source_health_summary(
+        self,
+        *,
+        dataset_ids: tuple[str, ...],
+        trade_dates: tuple[str, ...],
+        available_sources: tuple[str, ...],
+    ) -> CatalogSourceHealthSummaryReport:
+        """Return existing source-health summary without duplicating source policy."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -258,6 +280,7 @@ class IngestionStatusQueryFacade:
         maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader
         | None = None,
         *,
+        source_health_summary_query: _SourceHealthSummaryQuery | None = None,
         now: Callable[[], datetime] | None = None,
     ) -> None:
         self._log_service = ingestion_log_store
@@ -270,6 +293,7 @@ class IngestionStatusQueryFacade:
             maturity_promotion_history_reader
             or _NoDatasetMaturityPromotionHistoryReader()
         )
+        self._source_health_summary_query = source_health_summary_query
         self._now = now or _utcnow
 
     def get_status(self, datasets: list[str]) -> list[DatasetStatus]:
@@ -439,6 +463,9 @@ class IngestionStatusQueryFacade:
     def get_promotion_readiness_report(
         self,
         datasets: list[str],
+        *,
+        trade_dates: tuple[str, ...] = (),
+        available_sources: tuple[str, ...] = (),
     ) -> DatasetPromotionReadinessReport:
         """Return promotion readiness governance report for datasets."""
         dataset_ids = list(dict.fromkeys(dataset for dataset in datasets if dataset))
@@ -461,38 +488,82 @@ class IngestionStatusQueryFacade:
                 criterion for item in items for criterion in item.rejected_criteria
             ),
             datasets=items,
+            source_fallback_policy_effect_counts=(
+                self._promotion_source_fallback_policy_effect_counts(
+                    dataset_ids=tuple(dataset_ids),
+                    trade_dates=trade_dates,
+                    available_sources=available_sources,
+                )
+            ),
         )
 
     def get_maturity_governance_report(
         self,
         datasets: list[str],
+        *,
+        trade_dates: tuple[str, ...] = (),
+        available_sources: tuple[str, ...] = (),
     ) -> DatasetMaturityGovernanceReport:
         """Return a unified maturity, readiness and revocation report."""
         dataset_ids = list(dict.fromkeys(dataset for dataset in datasets if dataset))
         statuses = self.get_status(dataset_ids)
         readiness_report = self.get_promotion_readiness_report(dataset_ids)
-        readiness_by_dataset = {
-            item.dataset_id: item for item in readiness_report.datasets
-        }
-        items = tuple(
-            _maturity_governance_item(
-                status,
-                readiness_by_dataset.get(status.dataset),
-            )
-            for status in statuses
-        )
-        return DatasetMaturityGovernanceReport(
-            dataset_count=len(items),
-            warning_count=sum(1 for item in items if item.has_maturity_warning),
-            promotable_count=readiness_report.promotable_count,
-            active_promotion_count=readiness_report.active_promotion_count,
-            revoked_promotion_count=sum(
-                1 for item in items if item.latest_revocation_reason is not None
-            ),
+        return build_maturity_governance_report(
+            statuses=statuses,
+            readiness_report=readiness_report,
             maturity_summary=tuple(summarize_status_by_maturity(statuses)),
-            promotion_status_counts=readiness_report.status_counts,
-            datasets=items,
+            source_fallback_policy_effect_counts=(
+                self._maturity_source_fallback_policy_effect_counts(
+                    dataset_ids=tuple(dataset_ids),
+                    trade_dates=trade_dates,
+                    available_sources=available_sources,
+                )
+            ),
         )
+
+    def _maturity_source_fallback_policy_effect_counts(
+        self,
+        *,
+        dataset_ids: tuple[str, ...],
+        trade_dates: tuple[str, ...],
+        available_sources: tuple[str, ...],
+    ) -> tuple[DatasetMaturityGovernanceSourceFallbackPolicyEffectCount, ...]:
+        source_health_query = self._source_health_summary_query
+        if (
+            source_health_query is None
+            or not dataset_ids
+            or not trade_dates
+            or not available_sources
+        ):
+            return ()
+        source_health = source_health_query.get_source_health_summary(
+            dataset_ids=dataset_ids,
+            trade_dates=trade_dates,
+            available_sources=available_sources,
+        )
+        return _source_fallback_policy_effect_counts(source_health)
+
+    def _promotion_source_fallback_policy_effect_counts(
+        self,
+        *,
+        dataset_ids: tuple[str, ...],
+        trade_dates: tuple[str, ...],
+        available_sources: tuple[str, ...],
+    ) -> tuple[DatasetPromotionReadinessSourceFallbackPolicyEffectCount, ...]:
+        source_health_query = self._source_health_summary_query
+        if (
+            source_health_query is None
+            or not dataset_ids
+            or not trade_dates
+            or not available_sources
+        ):
+            return ()
+        source_health = source_health_query.get_source_health_summary(
+            dataset_ids=dataset_ids,
+            trade_dates=trade_dates,
+            available_sources=available_sources,
+        )
+        return _promotion_source_fallback_policy_effect_counts(source_health)
 
     def _promotion_readiness_item(
         self,
@@ -598,35 +669,6 @@ def _dataset_promotion_assessment(
     )
 
 
-def _maturity_governance_item(
-    status: DatasetStatus,
-    readiness: DatasetPromotionReadinessItem | None,
-) -> DatasetMaturityGovernanceItem:
-    return DatasetMaturityGovernanceItem(
-        dataset_id=status.dataset,
-        current_maturity=readiness.current_maturity
-        if readiness is not None
-        else status.dataset_maturity,
-        catalog_freshness_status=status.catalog_freshness_status,
-        promotion_status=readiness.promotion_status
-        if readiness is not None
-        else "not_applicable",
-        active_maturity_promotion=readiness.active_maturity_promotion
-        if readiness is not None
-        else False,
-        has_maturity_warning=status.dataset_maturity_warning is not None,
-        latest_revocation_reason=status.latest_revocation_reason,
-        latest_revoked_by=status.latest_revoked_by,
-        latest_revoked_at=status.latest_revoked_at,
-        missing_criteria=readiness.missing_criteria
-        if readiness is not None
-        else status.dataset_promotion_missing_criteria,
-        rejected_criteria=readiness.rejected_criteria
-        if readiness is not None
-        else status.dataset_promotion_rejected_criteria,
-    )
-
-
 class _NoDatasetMaturityPromotionReader:
     def get_dataset_maturity_promotion(self, dataset_id: str) -> None:
         return None
@@ -674,4 +716,79 @@ def _criterion_counts(
     return tuple(
         DatasetPromotionCriterionCount(criterion=criterion, count=counts[criterion])
         for criterion in sorted(counts)
+    )
+
+
+def _source_fallback_policy_effect_counts(
+    source_health: CatalogSourceHealthSummaryReport,
+) -> tuple[DatasetMaturityGovernanceSourceFallbackPolicyEffectCount, ...]:
+    return tuple(
+        DatasetMaturityGovernanceSourceFallbackPolicyEffectCount(
+            policy_id=policy_id,
+            policy_status=policy_status,
+            catalog_selected_source=catalog_selected_source,
+            effective_selected_source=effective_selected_source,
+            count=count,
+        )
+        for (
+            policy_id,
+            policy_status,
+            catalog_selected_source,
+            effective_selected_source,
+            count,
+        ) in _source_fallback_policy_effect_count_rows(source_health)
+    )
+
+
+def _promotion_source_fallback_policy_effect_counts(
+    source_health: CatalogSourceHealthSummaryReport,
+) -> tuple[DatasetPromotionReadinessSourceFallbackPolicyEffectCount, ...]:
+    return tuple(
+        DatasetPromotionReadinessSourceFallbackPolicyEffectCount(
+            policy_id=policy_id,
+            policy_status=policy_status,
+            catalog_selected_source=catalog_selected_source,
+            effective_selected_source=effective_selected_source,
+            count=count,
+        )
+        for (
+            policy_id,
+            policy_status,
+            catalog_selected_source,
+            effective_selected_source,
+            count,
+        ) in _source_fallback_policy_effect_count_rows(source_health)
+    )
+
+
+def _source_fallback_policy_effect_count_rows(
+    source_health: CatalogSourceHealthSummaryReport,
+) -> tuple[tuple[str, str, str, str, int], ...]:
+    counts: dict[tuple[str, str, str, str], int] = {}
+    for report in source_health.reports:
+        effect = report.source_fallback_policy_effect
+        if effect is None:
+            continue
+        key = (
+            effect.policy_id,
+            effect.policy_status,
+            effect.catalog_selected_source,
+            effect.effective_selected_source,
+        )
+        counts[key] = counts.get(key, 0) + 1
+    return tuple(
+        (
+            policy_id,
+            policy_status,
+            catalog_selected_source,
+            effective_selected_source,
+            counts[key],
+        )
+        for key in sorted(counts)
+        for (
+            policy_id,
+            policy_status,
+            catalog_selected_source,
+            effective_selected_source,
+        ) in (key,)
     )

@@ -5,6 +5,7 @@ from ditto_features.services.derived import (
     COMPARE_RESULT_COLUMNS,
     LATEST_RESULT_COLUMNS,
     SERIES_RESULT_COLUMNS,
+    DerivedArtifactFrameRequest,
     DerivedArtifactReader,
     DerivedCompareQuery,
     DerivedGarbageCollector,
@@ -24,6 +25,7 @@ from ditto_features.services.derived import (
 # --- derived: artifact persistence ---
 from ditto_features.services.derived.artifact_persistence_service import (
     ArtifactMetadataParams,
+    ArtifactMetadataUpdateParams,
     ArtifactPersistenceService,
 )
 
@@ -66,10 +68,12 @@ __all__ = [
     "LATEST_RESULT_COLUMNS",
     "SERIES_RESULT_COLUMNS",
     "ArtifactMetadataParams",
+    "ArtifactMetadataUpdateParams",
     "ArtifactPersistenceService",
     "CertificationReaderProtocol",
     "CertificationWriterProtocol",
     "ConcurrentMaterializer",
+    "DerivedArtifactFrameRequest",
     "DerivedArtifactReader",
     "DerivedCatalogReaderProtocol",
     "DerivedCatalogService",

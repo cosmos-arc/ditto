@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS reconciliation_repair_actions (
     review_reason          TEXT,
     reviewed_at            TEXT,
     executor               TEXT,
+    claimed_at             TEXT,
     execution_result       TEXT,
     executed_at            TEXT,
     created_at             TEXT    NOT NULL,
@@ -60,10 +61,18 @@ _CREATE_IDX_REPAIR_ACTIONS_STATUS = (
     "ON reconciliation_repair_actions(status, trade_date);"
 )
 
+_CREATE_IDX_REPAIR_ACTIONS_FILL_MUTATION_CLAIM = (
+    "CREATE INDEX IF NOT EXISTS idx_reconciliation_repair_actions_fill_mutation_claim "
+    "ON reconciliation_repair_actions("
+    "action_type, status, account_id, trade_date, fill_id"
+    ");"
+)
+
 REPAIR_WORKFLOW_DDL = (
     _CREATE_REPAIR_ACTIONS_TABLE
     + _CREATE_IDX_REPAIR_ACTIONS_REPORT
     + _CREATE_IDX_REPAIR_ACTIONS_STATUS
+    + _CREATE_IDX_REPAIR_ACTIONS_FILL_MUTATION_CLAIM
 )
 
 _INSERT_REPAIR_ACTION = """
@@ -96,10 +105,95 @@ SET status = ?, reviewer = ?, review_reason = ?, reviewed_at = ?
 WHERE action_id = ? AND status = ?
 """
 
+_CLAIM_FOR_EXECUTION = """
+UPDATE reconciliation_repair_actions
+SET status = ?, executor = ?, claimed_at = ?, execution_result = NULL,
+    executed_at = NULL
+WHERE action_id = ? AND status IN (?, ?)
+  AND (
+    action_type NOT IN (?, ?)
+    OR fill_id IS NULL
+    OR NOT EXISTS (
+      SELECT 1
+      FROM reconciliation_repair_actions AS competing
+      WHERE competing.action_id <> ?
+        AND competing.status = ?
+        AND competing.action_type IN (?, ?)
+        AND competing.account_id = (
+          SELECT target.account_id
+          FROM reconciliation_repair_actions AS target
+          WHERE target.action_id = ?
+        )
+        AND competing.trade_date = (
+          SELECT target.trade_date
+          FROM reconciliation_repair_actions AS target
+          WHERE target.action_id = ?
+        )
+        AND competing.fill_id = (
+          SELECT target.fill_id
+          FROM reconciliation_repair_actions AS target
+          WHERE target.action_id = ?
+        )
+    )
+  )
+"""
+
+_CLAIM_FOR_EXECUTION_OR_RECLAIM_STALE = """
+UPDATE reconciliation_repair_actions
+SET status = ?, executor = ?, claimed_at = ?, execution_result = NULL,
+    executed_at = NULL
+WHERE action_id = ?
+  AND (
+    status IN (?, ?)
+    OR (
+      status = ?
+      AND (claimed_at IS NULL OR claimed_at = '' OR claimed_at < ?)
+    )
+  )
+  AND (
+    action_type NOT IN (?, ?)
+    OR fill_id IS NULL
+    OR NOT EXISTS (
+      SELECT 1
+      FROM reconciliation_repair_actions AS competing
+      WHERE competing.action_id <> ?
+        AND competing.status = ?
+        AND competing.action_type IN (?, ?)
+        AND competing.account_id = (
+          SELECT target.account_id
+          FROM reconciliation_repair_actions AS target
+          WHERE target.action_id = ?
+        )
+        AND competing.trade_date = (
+          SELECT target.trade_date
+          FROM reconciliation_repair_actions AS target
+          WHERE target.action_id = ?
+        )
+        AND competing.fill_id = (
+          SELECT target.fill_id
+          FROM reconciliation_repair_actions AS target
+          WHERE target.action_id = ?
+        )
+    )
+  )
+"""
+
+_RELEASE_EXECUTION_CLAIM = """
+UPDATE reconciliation_repair_actions
+SET status = CASE WHEN requires_manual_review = 1 THEN ? ELSE ? END,
+    executor = NULL,
+    claimed_at = NULL
+WHERE action_id = ? AND status = ? AND executor = ?
+"""
+
 _MARK_EXECUTED = """
 UPDATE reconciliation_repair_actions
 SET status = ?, executor = ?, execution_result = ?, executed_at = ?
-WHERE action_id = ? AND status IN (?, ?)
+WHERE action_id = ?
+  AND (
+    status IN (?, ?)
+    OR (status = ? AND executor = ?)
+  )
 """
 
 
@@ -112,6 +206,7 @@ class SQLiteRepairWorkflowStore:
     def init_schema(self) -> None:
         """Initialize reconciliation repair workflow tables."""
         self._client.executescript(REPAIR_WORKFLOW_DDL)
+        self._ensure_claimed_at_column()
         self._client.commit()
 
     def save_plan(
@@ -204,6 +299,96 @@ class SQLiteRepairWorkflowStore:
         self._client.commit()
         return cursor.rowcount > 0
 
+    def claim_for_execution(
+        self,
+        action_id: str,
+        *,
+        executor: str,
+        claimed_at: str = "",
+        reclaim_before: str | None = None,
+    ) -> RepairActionRecord | None:
+        """Atomically move a claimable action into execution."""
+        if reclaim_before is None:
+            cursor = self._client.execute(
+                _CLAIM_FOR_EXECUTION,
+                (
+                    RepairActionStatus.EXECUTING.value,
+                    executor,
+                    claimed_at,
+                    action_id,
+                    RepairActionStatus.READY.value,
+                    RepairActionStatus.APPROVED.value,
+                    RepairActionType.IMPORT_BROKER_FILL.value,
+                    RepairActionType.AMEND_LOCAL_FILL.value,
+                    action_id,
+                    RepairActionStatus.EXECUTING.value,
+                    RepairActionType.IMPORT_BROKER_FILL.value,
+                    RepairActionType.AMEND_LOCAL_FILL.value,
+                    action_id,
+                    action_id,
+                    action_id,
+                ),
+            )
+        else:
+            cursor = self._client.execute(
+                _CLAIM_FOR_EXECUTION_OR_RECLAIM_STALE,
+                (
+                    RepairActionStatus.EXECUTING.value,
+                    executor,
+                    claimed_at,
+                    action_id,
+                    RepairActionStatus.READY.value,
+                    RepairActionStatus.APPROVED.value,
+                    RepairActionStatus.EXECUTING.value,
+                    reclaim_before,
+                    RepairActionType.IMPORT_BROKER_FILL.value,
+                    RepairActionType.AMEND_LOCAL_FILL.value,
+                    action_id,
+                    RepairActionStatus.EXECUTING.value,
+                    RepairActionType.IMPORT_BROKER_FILL.value,
+                    RepairActionType.AMEND_LOCAL_FILL.value,
+                    action_id,
+                    action_id,
+                    action_id,
+                ),
+            )
+        self._client.commit()
+        if cursor.rowcount == 0:
+            return None
+        return self.get_action(action_id)
+
+    def release_execution_claim(
+        self,
+        action_id: str,
+        *,
+        executor: str,
+    ) -> bool:
+        """Release an in-flight execution claim back to its retriable state."""
+        cursor = self._client.execute(
+            _RELEASE_EXECUTION_CLAIM,
+            (
+                RepairActionStatus.APPROVED.value,
+                RepairActionStatus.READY.value,
+                action_id,
+                RepairActionStatus.EXECUTING.value,
+                executor,
+            ),
+        )
+        self._client.commit()
+        return cursor.rowcount > 0
+
+    def _ensure_claimed_at_column(self) -> None:
+        columns = {
+            str(row["name"])
+            for row in self._client.fetchall(
+                "PRAGMA table_info(reconciliation_repair_actions)"
+            )
+        }
+        if "claimed_at" not in columns:
+            self._client.execute(
+                "ALTER TABLE reconciliation_repair_actions ADD COLUMN claimed_at TEXT"
+            )
+
     def mark_executed(
         self,
         action_id: str,
@@ -212,7 +397,7 @@ class SQLiteRepairWorkflowStore:
         result: str,
         executed_at: str = "",
     ) -> bool:
-        """Record execution result for ready or approved repair actions."""
+        """Record execution result for a claimable or executor-owned action."""
         cursor = self._client.execute(
             _MARK_EXECUTED,
             (
@@ -223,6 +408,8 @@ class SQLiteRepairWorkflowStore:
                 action_id,
                 RepairActionStatus.READY.value,
                 RepairActionStatus.APPROVED.value,
+                RepairActionStatus.EXECUTING.value,
+                executor,
             ),
         )
         self._client.commit()
@@ -254,6 +441,7 @@ def _row_to_record(row: dict[str, Any]) -> RepairActionRecord:
         review_reason=_optional_text(row["review_reason"]),
         reviewed_at=_optional_text(row["reviewed_at"]),
         executor=_optional_text(row["executor"]),
+        claimed_at=_optional_text(row.get("claimed_at")),
         execution_result=_optional_text(row["execution_result"]),
         executed_at=_optional_text(row["executed_at"]),
         created_at=str(row["created_at"]),

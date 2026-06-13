@@ -276,6 +276,7 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         allowed_modules=frozenset(
             {
                 "ditto_data.catalog",
+                "ditto_data.catalog.fallback_policy",
                 "ditto_data.ingestion.freeze_store",
                 "ditto_data.ingestion.ingestion_cursor_store",
                 "ditto_data.ingestion.ingestion_log_store",
@@ -293,8 +294,8 @@ APPS_REGISTRY_COMPOSITION_ALLOWANCES = (
         ),
         owner="apps ingestion registry context",
         reason=(
-            "Ingestion registry context owns data service wiring for application "
-            "ingestion handlers."
+            "Ingestion registry context owns data service and runtime policy "
+            "Protocol wiring for application ingestion handlers."
         ),
     ),
     CompositionImportAllowance(

@@ -329,40 +329,23 @@ def multi_ticker_bars_df() -> pl.DataFrame:
 
 
 @pytest.fixture(scope="session")
-def reporter(golden_spec: GoldenDatasetSpec) -> E2EReporter:
-    """创建 E2E 验收报告生成器。
+def reporter(golden_spec: GoldenDatasetSpec) -> Generator[E2EReporter]:
+    """创建按需 E2E 验收报告生成器。
 
-    Session 级别 fixture，在测试会话期间记录各阶段结果，
-    最终生成 Markdown 格式的验收报告。
+    Session 级别 fixture，在测试会话期间记录各阶段结果，并在
+    使用该 fixture 的测试结束后生成 Markdown 格式的验收报告。
+    未请求 reporter 的纯单元测试不应触发 E2E 数据完整性校验。
 
     Args:
         golden_spec: 黄金数据集配置。
 
-    Returns:
+    Yields:
         E2EReporter: 报告生成器实例。
 
     """
-    return E2EReporter(golden_spec)
+    reporter = E2EReporter(golden_spec)
+    yield reporter
 
-
-@pytest.fixture(scope="session", autouse=True)
-def generate_report(
-    request: pytest.FixtureRequest, reporter: E2EReporter
-) -> Generator[None]:
-    """自动生成 E2E 验收报告。
-
-    Session 级别自动 fixture，在所有测试结束后自动生成报告。
-    报告保存至 packages/apps/tests/reports/e2e_validation_YYYYMMDD.md。
-
-    Args:
-        request: pytest fixture 请求对象。
-        reporter: 报告生成器实例。
-
-    """
-
-    _ = request  # 预留参数，可用于获取测试会话信息
-    yield
-    # 所有测试结束后生成报告
     output_path = Path(
         f"packages/apps/tests/reports/e2e_validation_{date.today():%Y%m%d}.md"
     )

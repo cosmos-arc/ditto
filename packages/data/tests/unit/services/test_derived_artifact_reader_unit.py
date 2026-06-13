@@ -271,6 +271,39 @@ def _make_reader(
 class TestReadFrameAsLazy:
     """Tests for read_frame(as_lazy=True) returning pl.LazyFrame."""
 
+    def test_read_frame_accepts_request_object(
+        self, tmp_path: Path, sqlite_client
+    ) -> None:
+        """read_frame accepts a typed request object."""
+        from ditto_features.services import DerivedArtifactFrameRequest
+
+        catalog_service = _make_catalog_service(sqlite_client)
+        derived_id = "factor.request_object_test"
+        _seed_reader_catalog(catalog_service, derived_id=derived_id)
+
+        version_root = tmp_path / "derived" / "artifacts" / "series" / derived_id / "v1"
+        version_root.mkdir(parents=True, exist_ok=True)
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2],
+                "trade_date": ["2024-01-02", "2024-01-03"],
+                "value": [10.0, 20.0],
+            }
+        )
+        df.write_parquet(version_root / "2024.parquet")
+
+        reader = _make_reader(catalog_service, tmp_path)
+        result = reader.read_frame(
+            DerivedArtifactFrameRequest(
+                derived_id=derived_id,
+                version=1,
+                instrument_ids=(2,),
+            )
+        )
+
+        assert isinstance(result, pl.DataFrame)
+        assert result["instrument_id"].to_list() == [2]
+
     def test_read_frame_as_lazy_returns_lazyframe(
         self, tmp_path: Path, sqlite_client
     ) -> None:

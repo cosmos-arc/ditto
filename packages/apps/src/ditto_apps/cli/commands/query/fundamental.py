@@ -211,7 +211,7 @@ def get_dividend(
 
 
 @app.command("corporate-actions")
-def list_corporate_actions(  # noqa: PLR0913
+def list_corporate_actions(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
     instrument_id: int | None = typer.Option(
         None, "--instrument-id", "-i", help="Canonical 标的 ID"
     ),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from dishka import Provider, Scope, provide
@@ -44,6 +45,7 @@ from ditto_application.processes.materialization.cascade_orchestrator import (
 )
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
+    MaterializationRuntimePorts,
     RuntimeDerivedInputProvider,
 )
 from ditto_application.processes.materialization.publication_facade import (
@@ -76,6 +78,16 @@ def _source_tickers_for_universe(
             request.asof,
         )
     )
+
+
+@dataclass(frozen=True)
+class _MaterializationGovernancePorts:
+    """Optional governance collaborators for materialization runtime wiring."""
+
+    source_snapshot_resolver: CatalogSourceSnapshotResolver
+    universe_provider: MetadataService
+    publication_record_service: PublicationSafetyRecordService
+    lineage_recorder: DataLineageRecorder
 
 
 class AppProcessProvider(Provider):
@@ -129,36 +141,72 @@ class AppProcessProvider(Provider):
         return PublicationSafetyRecordService(stores)
 
     @provide
-    def derived_materialization_orchestrator(  # noqa: PLR0913
+    def derived_artifact_writer(
         self,
-        derived_catalog_service: DerivedCatalogService,
-        compile_cache_service: SQLiteCompileCache,
-        derived_input_provider: RuntimeDerivedInputProvider,
-        publication_record_service: PublicationSafetyRecordService,
+        settings: DataStoreSettings,
+    ) -> ArtifactPersistenceService:
+        """衍生数据 artifact 持久化服务."""
+        return ArtifactPersistenceService(artifact_root=Path(settings.data_root))
+
+    @provide
+    def catalog_source_snapshot_resolver(
+        self,
         data_catalog_reader: DataCatalogReader,
         metadata_service: MetadataService,
+    ) -> CatalogSourceSnapshotResolver:
+        """从 DataCatalog 解析物化输入快照."""
+        return CatalogSourceSnapshotResolver(
+            data_catalog_reader=data_catalog_reader,
+            catalog_coverage_dates_provider=metadata_service.list_trading_days,
+            universe_source_tickers_provider=lambda request: (
+                _source_tickers_for_universe(metadata_service, request)
+            ),
+        )
+
+    @provide
+    def materialization_governance_ports(
+        self,
+        source_snapshot_resolver: CatalogSourceSnapshotResolver,
+        metadata_service: MetadataService,
+        publication_record_service: PublicationSafetyRecordService,
         lineage_recorder: DataLineageRecorder,
-        settings: DataStoreSettings,
-    ) -> DerivedMaterializationOrchestrator:
-        """衍生因子物化编排器."""
-        return DerivedMaterializationOrchestrator(
-            catalog_service=derived_catalog_service,
-            compile_cache_service=compile_cache_service,
-            artifact_writer=ArtifactPersistenceService(
-                artifact_root=Path(settings.data_root),
-            ),
-            input_provider=derived_input_provider,
-            source_snapshot_resolver=CatalogSourceSnapshotResolver(
-                data_catalog_reader=data_catalog_reader,
-                catalog_coverage_dates_provider=metadata_service.list_trading_days,
-                universe_source_tickers_provider=lambda request: (
-                    _source_tickers_for_universe(metadata_service, request)
-                ),
-            ),
+    ) -> _MaterializationGovernancePorts:
+        """衍生物化治理侧运行时 collaborators."""
+        return _MaterializationGovernancePorts(
+            source_snapshot_resolver=source_snapshot_resolver,
             universe_provider=metadata_service,
             publication_record_service=publication_record_service,
             lineage_recorder=lineage_recorder,
         )
+
+    @provide
+    def materialization_runtime_ports(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        compile_cache_service: SQLiteCompileCache,
+        artifact_writer: ArtifactPersistenceService,
+        derived_input_provider: RuntimeDerivedInputProvider,
+        governance_ports: _MaterializationGovernancePorts,
+    ) -> MaterializationRuntimePorts:
+        """组装衍生物化编排器运行时 ports."""
+        return MaterializationRuntimePorts(
+            catalog_service=derived_catalog_service,
+            compile_cache_service=compile_cache_service,
+            artifact_writer=artifact_writer,
+            input_provider=derived_input_provider,
+            source_snapshot_resolver=governance_ports.source_snapshot_resolver,
+            universe_provider=governance_ports.universe_provider,
+            publication_record_service=governance_ports.publication_record_service,
+            lineage_recorder=governance_ports.lineage_recorder,
+        )
+
+    @provide
+    def derived_materialization_orchestrator(
+        self,
+        ports: MaterializationRuntimePorts,
+    ) -> DerivedMaterializationOrchestrator:
+        """衍生因子物化编排器."""
+        return DerivedMaterializationOrchestrator(ports)
 
     @provide
     def derived_invalidation_orchestrator(

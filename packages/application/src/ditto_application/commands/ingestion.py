@@ -61,9 +61,16 @@ class IngestDateHandler:
                 force=command.force,
             )
         except (AppProcessError, ValueError) as exc:
+            details = dict(getattr(exc, "details", {}))
+            details.update(
+                {
+                    "command": "ingest_date",
+                    "dataset": command.dataset,
+                    "trade_date": command.trade_date.isoformat(),
+                    "force": command.force,
+                }
+            )
             raise AppCommandError(
                 str(exc),
-                command="ingest_date",
-                dataset=command.dataset,
-                trade_date=command.trade_date.isoformat(),
+                details=details,
             ) from exc

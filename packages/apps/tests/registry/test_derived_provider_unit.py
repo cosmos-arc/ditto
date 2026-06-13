@@ -6,6 +6,9 @@ from unittest.mock import MagicMock
 
 from dishka import Provider, Scope, make_container, provide
 from ditto_analysis.di import AnalysisStorageProvider
+from ditto_application.commands.catalog_remediation import (
+    CatalogRemediationIngestDatePort,
+)
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
 )
@@ -101,6 +104,12 @@ class _ProtocolAdapterProvider(Provider):
     @provide
     def source_data_port(self) -> SourceDataPort:
         return MagicMock(spec=SourceDataPort)
+
+    @provide
+    def catalog_remediation_ingest_date_port(
+        self,
+    ) -> CatalogRemediationIngestDatePort:
+        return MagicMock()
 
 
 def _make_full_container():

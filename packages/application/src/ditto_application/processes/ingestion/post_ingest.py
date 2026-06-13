@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal, cast
 
@@ -44,6 +45,9 @@ from ditto_application.processes.ingestion.ports import QualityCheckerProtocol
 from ditto_application.processes.ingestion.result_handler import IngestionResultHandler
 
 __all__ = [
+    "CatalogWriteContext",
+    "DataWriteContext",
+    "PostIngestContext",
     "create_freeze_point",
     "handle_fetch_error",
     "process_fetched_data",
@@ -55,6 +59,46 @@ __all__ = [
     "update_ingestion_cursor",
     "write_data_safe",
 ]
+
+
+@dataclass(frozen=True)
+class CatalogWriteContext:
+    """Catalog metadata context for one successful ingestion write."""
+
+    dataset: str
+    trade_date: str
+    source_name: str
+    write_result: WriteResult
+    df: pl.DataFrame
+    source_ticker: str | None = None
+    end_date: str | None = None
+
+
+@dataclass(frozen=True)
+class DataWriteContext:
+    """Data writer context for one ingestion storage operation."""
+
+    dataset: str
+    df: pl.DataFrame
+    trade_date: str
+    on_duplicate: OnDuplicate
+    source_ticker: str | None = None
+    event_suffix: str = ""
+
+
+@dataclass(frozen=True)
+class PostIngestContext:
+    """Runtime dependencies for date-level post-ingest processing."""
+
+    result_handler: IngestionResultHandler
+    data_writer: IngestionDataWriter
+    list_date_inference: ListDateInferenceService
+    source_name: str
+    quality_checker: QualityCheckerProtocol | None = None
+    cursor_store: IngestionCursorStore | None = None
+    freeze_store: FreezeStore | None = None
+    lineage_recorder: DataLineageRecorder | None = None
+    catalog_writer: DataCatalogWriter | None = None
 
 
 def run_list_date_inference(
@@ -118,28 +162,20 @@ def run_list_date_inference(
         )
 
 
-def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在各字段，引入 dataclass 需改动 coordinator + 测试
+def process_fetched_data(
     df: pl.DataFrame,
     dataset: str,
     trade_date: str,
     force: bool,
     *,
-    result_handler: IngestionResultHandler,
-    data_writer: IngestionDataWriter,
-    quality_checker: QualityCheckerProtocol | None,
-    list_date_inference: ListDateInferenceService,
-    cursor_store: IngestionCursorStore | None,
-    freeze_store: FreezeStore | None,
-    lineage_recorder: DataLineageRecorder | None,
-    catalog_writer: DataCatalogWriter | None,
-    source_name: str,
+    ctx: PostIngestContext,
 ) -> IngestionResult:
     """处理获取的数据：DQ 检查 + 写入 + 后置钩子."""
     if df.is_empty():
-        return result_handler.handle_empty_data(dataset, trade_date)
+        return ctx.result_handler.handle_empty_data(dataset, trade_date)
 
-    if quality_checker is not None:
-        checked_df, should_block = quality_checker.handle(
+    if ctx.quality_checker is not None:
+        checked_df, should_block = ctx.quality_checker.handle(
             CheckDataQualityCommand(
                 df=df,
                 dataset=dataset,
@@ -147,7 +183,7 @@ def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在
             ),
         )
         if should_block:
-            return result_handler.handle_dq_blocked(
+            return ctx.result_handler.handle_dq_blocked(
                 dataset,
                 trade_date,
                 WriteResult(
@@ -163,43 +199,47 @@ def process_fetched_data(  # noqa: PLR0913 — 编排函数：DI 服务分散在
     on_duplicate = OnDuplicate.KEEP_LAST if force else OnDuplicate.ERROR
 
     write_result = write_data_safe(
-        dataset,
-        df,
-        trade_date,
-        on_duplicate,
-        result_handler=result_handler,
-        data_writer=data_writer,
+        DataWriteContext(
+            dataset=dataset,
+            df=df,
+            trade_date=trade_date,
+            on_duplicate=on_duplicate,
+        ),
+        result_handler=ctx.result_handler,
+        data_writer=ctx.data_writer,
     )
     if isinstance(write_result, IngestionResult):
         return write_result
 
     if write_result.blocked:
-        return result_handler.handle_dq_blocked(dataset, trade_date, write_result)
+        return ctx.result_handler.handle_dq_blocked(dataset, trade_date, write_result)
 
-    run_list_date_inference(list_date_inference, dataset)
+    run_list_date_inference(ctx.list_date_inference, dataset)
     run_post_ingest_hooks(
         dataset,
         trade_date,
-        cursor_store=cursor_store,
-        freeze_store=freeze_store,
-        source_name=source_name,
+        cursor_store=ctx.cursor_store,
+        freeze_store=ctx.freeze_store,
+        source_name=ctx.source_name,
     )
 
-    result = result_handler.handle_success(dataset, trade_date, df, write_result)
+    result = ctx.result_handler.handle_success(dataset, trade_date, df, write_result)
     record_ingestion_lineage(
         dataset,
         trade_date,
-        source_name=source_name,
-        lineage_recorder=lineage_recorder,
+        source_name=ctx.source_name,
+        lineage_recorder=ctx.lineage_recorder,
         write_result=write_result,
     )
     record_data_catalog_entry(
-        dataset,
-        trade_date,
-        source_name=source_name,
-        catalog_writer=catalog_writer,
-        write_result=write_result,
-        df=df,
+        CatalogWriteContext(
+            dataset=dataset,
+            trade_date=trade_date,
+            source_name=ctx.source_name,
+            write_result=write_result,
+            df=df,
+        ),
+        catalog_writer=ctx.catalog_writer,
     )
     return result
 
@@ -373,55 +413,43 @@ def _dataset_schema_version(dataset: str) -> str:
     return metadata.schema_version
 
 
-def _data_catalog_entry(  # noqa: PLR0913 — asset/source/schema/write context is intentionally explicit
-    dataset: str,
-    trade_date: str,
+def _data_catalog_entry(
+    ctx: CatalogWriteContext,
     *,
-    source_name: str,
-    write_result: WriteResult,
-    df: pl.DataFrame,
     now: datetime,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
 ) -> DataCatalogEntry:
     return DataCatalogEntry(
         asset=_output_asset(
-            dataset,
-            trade_date,
-            source_ticker=source_ticker,
-            end_date=end_date,
+            ctx.dataset,
+            ctx.trade_date,
+            source_ticker=ctx.source_ticker,
+            end_date=ctx.end_date,
         ),
-        storage_uri=write_result.file_path,
+        storage_uri=ctx.write_result.file_path,
         schema=DataSchemaFingerprint(
-            schema_hash=_schema_hash_from_dataframe(df),
-            row_count=write_result.rows_written,
+            schema_hash=_schema_hash_from_dataframe(ctx.df),
+            row_count=ctx.write_result.rows_written,
             created_at=now,
-            schema_version=_dataset_schema_version(dataset),
-            columns=tuple(df.columns),
+            schema_version=_dataset_schema_version(ctx.dataset),
+            columns=tuple(ctx.df.columns),
         ),
-        source=source_name,
+        source=ctx.source_name,
         freshness_at=now,
         source_snapshot_id=_source_snapshot_id(
-            dataset,
-            trade_date,
-            source_name,
-            write_result.checksum,
-            source_ticker=source_ticker,
-            end_date=end_date,
+            ctx.dataset,
+            ctx.trade_date,
+            ctx.source_name,
+            ctx.write_result.checksum,
+            source_ticker=ctx.source_ticker,
+            end_date=ctx.end_date,
         ),
     )
 
 
-def record_data_catalog_entry(  # noqa: PLR0913 — catalog entry 需要同时携带 asset/source/schema/write 上下文
-    dataset: str,
-    trade_date: str,
+def record_data_catalog_entry(
+    ctx: CatalogWriteContext,
     *,
-    source_name: str,
     catalog_writer: DataCatalogWriter | None,
-    write_result: WriteResult,
-    df: pl.DataFrame,
-    source_ticker: str | None = None,
-    end_date: str | None = None,
 ) -> None:
     """记录落库资产 catalog 元数据（失败仅记录警告，不影响摄取成功）。"""
     if catalog_writer is None:
@@ -430,20 +458,14 @@ def record_data_catalog_entry(  # noqa: PLR0913 — catalog entry 需要同时�
     safe_side_effect(
         lambda: writer.upsert_asset(
             _data_catalog_entry(
-                dataset,
-                trade_date,
-                source_name=source_name,
-                write_result=write_result,
-                df=df,
+                ctx,
                 now=datetime.now(UTC),
-                source_ticker=source_ticker,
-                end_date=end_date,
             )
         ),
         log_tag="catalog_upsert_failed",
         event="catalog_upsert_error",
-        dataset=dataset,
-        trade_date=trade_date,
+        dataset=ctx.dataset,
+        trade_date=ctx.trade_date,
     )
 
 
@@ -546,20 +568,20 @@ def create_freeze_point(
     )
 
 
-def write_data_safe(  # noqa: PLR0913 — 统一写入入口：result_handler + data_writer 为 DI 服务，无法进一步收敛
-    dataset: str,
-    df: pl.DataFrame,
-    trade_date: str,
-    on_duplicate: OnDuplicate,
+def write_data_safe(
+    ctx: DataWriteContext,
     *,
     result_handler: IngestionResultHandler,
     data_writer: IngestionDataWriter,
-    source_ticker: str | None = None,
-    event_suffix: str = "",
 ) -> WriteResult | IngestionResult:
     """安全写入数据，统一异常处理。"""
     try:
-        return data_writer.write_data(dataset, df, trade_date, on_duplicate)
+        return data_writer.write_data(
+            ctx.dataset,
+            ctx.df,
+            ctx.trade_date,
+            ctx.on_duplicate,
+        )
     except (
         pl.exceptions.ComputeError,
         pl.exceptions.SchemaError,
@@ -569,25 +591,25 @@ def write_data_safe(  # noqa: PLR0913 — 统一写入入口：result_handler + 
         OSError,
     ) as e:
         logger.warning(
-            f"write_data_failed{event_suffix}",
+            f"write_data_failed{ctx.event_suffix}",
             event="write_data_error",
-            dataset=dataset,
-            trade_date=trade_date,
-            **({"source_ticker": source_ticker} if source_ticker else {}),
+            dataset=ctx.dataset,
+            trade_date=ctx.trade_date,
+            **({"source_ticker": ctx.source_ticker} if ctx.source_ticker else {}),
             error_type=type(e).__name__,
             error=str(e),
         )
-        return result_handler.handle_unknown_error(dataset, trade_date, e)
+        return result_handler.handle_unknown_error(ctx.dataset, ctx.trade_date, e)
     except Exception as e:
         logger.exception(
-            f"write_data_failed{event_suffix}_unexpected",
+            f"write_data_failed{ctx.event_suffix}_unexpected",
             event="write_data_error",
-            dataset=dataset,
-            trade_date=trade_date,
-            **({"source_ticker": source_ticker} if source_ticker else {}),
+            dataset=ctx.dataset,
+            trade_date=ctx.trade_date,
+            **({"source_ticker": ctx.source_ticker} if ctx.source_ticker else {}),
             error_type=type(e).__name__,
         )
-        return result_handler.handle_unknown_error(dataset, trade_date, e)
+        return result_handler.handle_unknown_error(ctx.dataset, ctx.trade_date, e)
 
 
 def handle_fetch_error(

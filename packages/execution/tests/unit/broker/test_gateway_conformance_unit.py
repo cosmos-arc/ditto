@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from typing import get_type_hints
 
-from ditto_execution.broker.contracts import BrokerGateway
+from ditto_execution.broker.contracts import (
+    BROKER_GATEWAY_CONTRACT_VERSION,
+    BrokerGateway,
+    BrokerGatewayDescriptor,
+    validate_broker_gateway_descriptor,
+)
+from ditto_execution.models import STANDARD_BROKER_EVENT_TYPES
 
 
 def assert_gateway_conformance(gateway_cls: type) -> None:
@@ -19,6 +25,7 @@ def assert_gateway_conformance(gateway_cls: type) -> None:
     )
     # Every protocol method must be present as a concrete method.
     required = [
+        "describe",
         "connect",
         "get_account",
         "submit_order",
@@ -68,6 +75,21 @@ def test_paper_gateway_instance_check() -> None:
 
     gw = PaperBrokerGateway()
     assert isinstance(gw, BrokerGateway)
+
+
+def test_paper_gateway_descriptor_declares_protocol_contract() -> None:
+    from ditto_execution.broker.gateways.paper import PaperBrokerGateway
+
+    descriptor = PaperBrokerGateway().describe()
+
+    assert isinstance(descriptor, BrokerGatewayDescriptor)
+    assert validate_broker_gateway_descriptor(descriptor) is descriptor
+    assert descriptor.gateway_id == "paper"
+    assert descriptor.mode == "paper"
+    assert descriptor.contract_version == BROKER_GATEWAY_CONTRACT_VERSION
+    assert descriptor.supported_event_types == STANDARD_BROKER_EVENT_TYPES
+    assert "immediate_fill" in descriptor.capabilities
+    assert "manual_fill_simulation" in descriptor.capabilities
 
 
 # ---------------------------------------------------------------------------

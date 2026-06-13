@@ -301,6 +301,40 @@ def _make_wired_engine_loop(
 # ---------------------------------------------------------------------------
 
 
+def test_engine_loop_accepts_dependency_bundle() -> None:
+    """EngineLoop should accept runtime collaborators as one dependency bundle."""
+    from ditto_backtest.engine import EngineLoopDeps
+
+    config = _make_config()
+    data_feed = Mock()
+    data_feed.trading_days.return_value = []
+
+    synchronizer = Mock(spec=Synchronizer)
+    synchronizer.clock.return_value = _make_clock()
+    synchronizer.stream.return_value = iter(())
+
+    brokerage = Mock()
+    brokerage.get_account.return_value = _make_account_view()
+
+    loop = EngineLoop(
+        config,
+        EngineLoopDeps(
+            pipeline=Mock(),
+            planner=Mock(),
+            brokerage=brokerage,
+            pre_trade_check=Mock(),
+            data_feed=data_feed,
+            synchronizer=synchronizer,
+            options=EngineOptions(),
+        ),
+    )
+
+    result = loop.run()
+
+    assert result.run_id == "run-001"
+    assert result.period == ("2026-03-01", "2026-03-03")
+
+
 class TestThreeDayStep:
     """Scenario 1: 3-day backtest with pipeline + planner + brokerage."""
 

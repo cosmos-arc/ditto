@@ -401,3 +401,51 @@ class TestAuditTimelineLinks:
         ]
         assert broker_events[1].created_at == "2026-06-01T09:31:00+00:00"
         assert broker_events[1].payload["created_at"] == "2026-06-01T10:05:00+00:00"
+
+    def test_operating_timeline_filters_broker_events_by_broker_order_id(
+        self,
+        timeline_db: tuple[ExecutionAuditService, Path],
+    ) -> None:
+        audit_service, _ = timeline_db
+        audit_service.save_pre_trade_log(
+            "run-001",
+            (_pre_trade(order_id="unrelated-local-order"),),
+        )
+        client = SQLiteClient(audit_service._pool)
+        client.executescript(BROKER_EVENTS_DDL)
+        client.commit()
+        writer = BrokerEventWriter(client)
+        writer.save(
+            _broker_event(
+                event_id="broker-alpha-ack",
+                order_id="ord-alpha",
+                broker_order_id="broker-alpha",
+                event_type="order_ack",
+                event_time="2026-06-01T09:30:00+00:00",
+            )
+        )
+        writer.save(
+            _broker_event(
+                event_id="broker-beta-ack",
+                order_id="ord-beta",
+                broker_order_id="broker-beta",
+                event_type="order_ack",
+                event_time="2026-06-01T09:31:00+00:00",
+            )
+        )
+
+        timeline = audit_service.query_operating_timeline(
+            "run-001",
+            broker_order_id="broker-alpha",
+            start_date="2026-06-01",
+            end_date="2026-06-01",
+        )
+
+        broker_events = [
+            entry for entry in timeline if entry.record_type == "broker_event"
+        ]
+        assert [entry.record_type for entry in timeline] == ["broker_event"]
+        assert [entry.order_id for entry in broker_events] == ["ord-alpha"]
+        assert [entry.payload["broker_order_id"] for entry in broker_events] == [
+            "broker-alpha"
+        ]

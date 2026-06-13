@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal, Protocol, overload
+from typing import Literal, Protocol, cast, overload
 
 import polars as pl
 
@@ -18,6 +19,7 @@ from ditto_features.models.derived import (
 from ditto_features.services.derived._pruning import prune_parquet_paths
 
 __all__ = [
+    "DerivedArtifactFrameRequest",
     "DerivedArtifactReader",
     "VersionResolutionStrategy",
 ]
@@ -29,6 +31,21 @@ class VersionResolutionStrategy(StrEnum):
     PRIMARY_ONLINE_ONLY = "primary_online_only"
     FALLBACK_TO_ACTIVE = "fallback_to_active"
     EXPLICIT_VERSION = "explicit_version"
+
+
+@dataclass(frozen=True)
+class DerivedArtifactFrameRequest:
+    """Request object for reading one derived artifact frame slice."""
+
+    derived_id: str
+    version: int
+    instrument_ids: tuple[int, ...] | None = None
+    start: str | None = None
+    end: str | None = None
+    as_of: str | None = None
+    streaming: bool = False
+    max_rows: int | None = None
+    as_lazy: bool = False
 
 
 class _CatalogReader(Protocol):
@@ -122,6 +139,15 @@ class DerivedArtifactReader:
     @overload
     def read_frame(
         self,
+        request: DerivedArtifactFrameRequest,
+        /,
+    ) -> pl.DataFrame | pl.LazyFrame: ...
+
+    @overload
+    def read_frame(
+        self,
+        request: None = None,
+        /,
         *,
         derived_id: str,
         version: int,
@@ -137,6 +163,8 @@ class DerivedArtifactReader:
     @overload
     def read_frame(
         self,
+        request: None = None,
+        /,
         *,
         derived_id: str,
         version: int,
@@ -151,57 +179,44 @@ class DerivedArtifactReader:
 
     def read_frame(
         self,
-        *,
-        derived_id: str,
-        version: int,
-        instrument_ids: tuple[int, ...] | None = None,
-        start: str | None = None,
-        end: str | None = None,
-        as_of: str | None = None,
-        streaming: bool = False,
-        max_rows: int | None = None,
-        as_lazy: bool = False,
+        request: DerivedArtifactFrameRequest | None = None,
+        /,
+        **params: object,
     ) -> pl.DataFrame | pl.LazyFrame:
         """
         Read one artifact slice from parquet partitions.
 
         Args:
-            derived_id: The derived artifact identifier.
-            version: The artifact version.
-            instrument_ids: Optional filter for specific instruments.
-            start: Optional start date filter (inclusive).
-            end: Optional end date filter (inclusive).
-            as_of: Optional point-in-time filter (inclusive).
-            streaming: When True, collect with the streaming engine.
-            max_rows: Optional row limit applied before collection.
-            as_lazy: When True, return a ``pl.LazyFrame`` without collecting.
+            request: Preferred typed request object.
+            params: Legacy keyword parameters used to build the request object.
 
         Returns:
             A ``pl.DataFrame`` by default, or a ``pl.LazyFrame`` when
             ``as_lazy=True``.
 
         """
+        frame_request = _normalize_frame_request(request, params)
         frame = self._build_filtered_lazy_frame(
-            derived_id=derived_id,
-            version=version,
-            instrument_ids=instrument_ids,
-            start=start,
-            end=end,
-            as_of=as_of,
+            derived_id=frame_request.derived_id,
+            version=frame_request.version,
+            instrument_ids=frame_request.instrument_ids,
+            start=frame_request.start,
+            end=frame_request.end,
+            as_of=frame_request.as_of,
         )
 
         if frame is None:
             return pl.DataFrame()
 
-        if as_lazy:
+        if frame_request.as_lazy:
             return frame
 
-        if max_rows is not None:
-            frame = frame.head(max_rows)
+        if frame_request.max_rows is not None:
+            frame = frame.head(frame_request.max_rows)
 
-        time_key = self._time_key(derived_id, version)
+        time_key = self._time_key(frame_request.derived_id, frame_request.version)
 
-        if streaming:
+        if frame_request.streaming:
             collected = frame.collect(engine="streaming").sort(
                 ["instrument_id", time_key]
             )
@@ -304,6 +319,94 @@ def _effective_time_key(spec_record: DerivedSpecRecord) -> str:
         if isinstance(first, str):
             return first
     return "trade_date"
+
+
+def _normalize_frame_request(
+    request: DerivedArtifactFrameRequest | None,
+    params: dict[str, object],
+) -> DerivedArtifactFrameRequest:
+    """Normalize request-object and legacy keyword read inputs."""
+    if request is not None:
+        if params:
+            msg = "DerivedArtifactFrameRequest cannot be combined with keyword params"
+            raise ValueError(msg)
+        return request
+
+    return DerivedArtifactFrameRequest(
+        derived_id=_required_str(params, "derived_id"),
+        version=_required_int(params, "version"),
+        instrument_ids=_instrument_ids_param(params.get("instrument_ids")),
+        start=_optional_str(params.get("start")),
+        end=_optional_str(params.get("end")),
+        as_of=_optional_str(params.get("as_of")),
+        streaming=_bool_param(params.get("streaming")),
+        max_rows=_optional_int(params.get("max_rows")),
+        as_lazy=_bool_param(params.get("as_lazy")),
+    )
+
+
+def _required_str(params: dict[str, object], key: str) -> str:
+    """Read a required string parameter."""
+    value = params[key]
+    if value is None:
+        msg = f"Missing required artifact frame parameter: {key}"
+        raise ValueError(msg)
+    return str(value)
+
+
+def _required_int(params: dict[str, object], key: str) -> int:
+    """Read a required integer parameter."""
+    return _coerce_int(params[key])
+
+
+def _instrument_ids_param(raw: object) -> tuple[int, ...] | None:
+    """Read optional instrument ID filters."""
+    if raw is None:
+        return None
+    if isinstance(raw, list):
+        values = cast(list[object], raw)
+        return tuple(_coerce_int(value) for value in values)
+    if isinstance(raw, tuple):
+        values = cast(tuple[object, ...], raw)
+        return tuple(_coerce_int(value) for value in values)
+    return (_coerce_int(raw),)
+
+
+def _optional_str(raw: object) -> str | None:
+    """Read an optional string parameter."""
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _optional_int(raw: object) -> int | None:
+    """Read an optional integer parameter."""
+    if raw is None:
+        return None
+    return _coerce_int(raw)
+
+
+def _bool_param(raw: object) -> bool:
+    """Read an optional boolean parameter."""
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.lower() in {"1", "true", "yes", "y"}
+    return False
+
+
+def _coerce_int(raw: object) -> int:
+    """Coerce integer-compatible values."""
+    if isinstance(raw, bool):
+        return int(raw)
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        return int(raw)
+    if isinstance(raw, str):
+        return int(raw)
+    msg = f"Expected integer-compatible value, got {type(raw).__name__}"
+    raise TypeError(msg)
 
 
 def _coerce_date(value: str) -> date:

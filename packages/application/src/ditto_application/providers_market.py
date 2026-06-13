@@ -8,6 +8,7 @@ from dishka import Provider, Scope, provide
 from ditto_analysis.research.artifact_service import ResearchArtifactService
 from ditto_analysis.research.catalog_service import ResearchCatalogService
 from ditto_data.catalog import DataCatalogReader
+from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
@@ -120,11 +121,13 @@ class AppMarketQueryProvider(Provider):
         self,
         data_catalog_reader: DataCatalogReader,
         maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
+        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
     ) -> CatalogQueryFacade:
         """DataCatalog 查询 facade — 暴露 storage/schema/freshness 读模型."""
         return CatalogQueryFacade(
             data_catalog_reader=data_catalog_reader,
             maturity_promotion_history_reader=maturity_promotion_history_reader,
+            source_fallback_policy_reader=catalog_source_fallback_policy_reader,
         )
 
     @provide
@@ -203,6 +206,7 @@ class AppMarketQueryProvider(Provider):
         promotion_evidence_reader: DatasetPromotionEvidenceReader,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
         maturity_promotion_history_reader: DatasetMaturityPromotionHistoryReader,
+        catalog_query_facade: CatalogQueryFacade,
     ) -> IngestionStatusQueryFacade:
         """摄取状态查询 facade — 封装 log 与 catalog freshness 读模型."""
         return IngestionStatusQueryFacade(
@@ -211,4 +215,5 @@ class AppMarketQueryProvider(Provider):
             promotion_evidence_reader=promotion_evidence_reader,
             maturity_promotion_reader=maturity_promotion_reader,
             maturity_promotion_history_reader=maturity_promotion_history_reader,
+            source_health_summary_query=catalog_query_facade,
         )

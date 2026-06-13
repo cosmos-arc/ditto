@@ -8,7 +8,16 @@ gap so Dishka can resolve Protocol-typed parameters without structural subtyping
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import AbstractContextManager
+from importlib import import_module
+from typing import Protocol, cast
+
 from dishka import Provider, Scope, provide
+from ditto_application.commands.catalog_remediation import (
+    CatalogRemediationIngestDatePort,
+)
+from ditto_application.contracts import IngestDateCommand
 from ditto_application.queries.source import SourceDataPort
 from ditto_data.quality.protocols import (
     ComparisonStoreProtocol,
@@ -21,6 +30,40 @@ from ditto_data.storage.metadata.instrument import InstrumentReader
 from ditto_data.storage.runtime.quality import ComparisonWriter
 from ditto_features.compile_cache import SQLiteCompileCacheBackend
 from ditto_platform.foundation import SQLiteClient
+
+
+class _IngestionCoordinatorLike(Protocol):
+    def ingest_date(self, dataset: str, trade_date: str, force: bool = False) -> object:
+        """Run one date-level ingestion."""
+        ...
+
+
+class _IngestionBundleLike(Protocol):
+    coordinator: _IngestionCoordinatorLike
+
+
+type _IngestionBundleFactory = Callable[
+    ...,
+    AbstractContextManager[_IngestionBundleLike],
+]
+
+
+def _ingestion_bundle_factory() -> _IngestionBundleFactory:
+    module = import_module("ditto_apps.registry.contexts.ingestion")
+    return cast(_IngestionBundleFactory, module.create_ingestion_bundle)
+
+
+class _CatalogRemediationIngestDateAdapter:
+    """Lazy adapter from remediation execution to the existing ingestion bundle."""
+
+    def handle(self, command: IngestDateCommand) -> object:
+        create_ingestion_bundle = _ingestion_bundle_factory()
+        with create_ingestion_bundle(source="auto") as bundle:
+            return bundle.coordinator.ingest_date(
+                command.dataset,
+                command.trade_date.isoformat(),
+                command.force,
+            )
 
 
 class ProtocolAdapterProvider(Provider):
@@ -61,3 +104,13 @@ class ProtocolAdapterProvider(Provider):
     def source_data_port(self, accessor: SourceAccessor) -> SourceDataPort:
         """SourceAccessor.tushare → SourceDataPort."""
         return accessor.tushare
+
+    @provide
+    def catalog_remediation_ingest_date_port(
+        self,
+    ) -> CatalogRemediationIngestDatePort:
+        """Remediation source-coverage executor → source=auto ingestion bundle."""
+        return cast(
+            CatalogRemediationIngestDatePort,
+            _CatalogRemediationIngestDateAdapter(),
+        )

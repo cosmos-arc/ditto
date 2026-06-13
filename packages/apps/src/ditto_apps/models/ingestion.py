@@ -181,6 +181,22 @@ class PromotionCriterionCountResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class PromotionReadinessSourceFallbackPolicyEffectCountResponse(BaseModel):
+    """Promotion readiness count by source fallback policy effect."""
+
+    policy_id: str = Field(description="触发 source fallback effect 的 policy ID")
+    policy_status: str = Field(description="触发 effect 的 policy lifecycle 状态")
+    catalog_selected_source: str = Field(
+        description="Catalog freshness 策略原本选择的来源",
+    )
+    effective_selected_source: str = Field(
+        description="应用 active fallback policy 后的最终来源",
+    )
+    count: int = Field(description="该 policy effect 影响的 source decision 数量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 class PromotionReadinessItemResponse(BaseModel):
     """Dataset-level promotion readiness report item."""
 
@@ -248,74 +264,16 @@ class PromotionReadinessReportResponse(BaseModel):
         default_factory=list,
         description="按 rejected 晋级条件聚合的数据集数量",
     )
+    source_fallback_policy_effect_counts: list[
+        PromotionReadinessSourceFallbackPolicyEffectCountResponse
+    ] = Field(
+        default_factory=list,
+        description=(
+            "按 active source fallback policy effect 聚合的 source decision 数量"
+        ),
+    )
     datasets: list[PromotionReadinessItemResponse] = Field(
         description="各数据集晋级评估明细",
-    )
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class MaturityGovernanceDatasetResponse(BaseModel):
-    """Unified dataset maturity governance report item."""
-
-    dataset_id: str = Field(description="数据集 ID")
-    current_maturity: str | None = Field(
-        default=None,
-        description="当前有效成熟度",
-    )
-    catalog_freshness_status: str | None = Field(
-        default=None,
-        description="Catalog freshness 状态",
-    )
-    promotion_status: str = Field(description="晋级评估状态")
-    active_maturity_promotion: bool = Field(
-        description="当前是否存在 active maturity promotion override",
-    )
-    has_maturity_warning: bool = Field(description="当前状态是否有 maturity 警告")
-    latest_revocation_reason: MaturityPromotionRevocationReason | None = Field(
-        default=None,
-        description="最近一次晋级撤销原因分类",
-    )
-    latest_revoked_by: str | None = Field(
-        default=None,
-        description="最近一次晋级撤销人或撤销主体",
-    )
-    latest_revoked_at: str | None = Field(
-        default=None,
-        description="最近一次晋级撤销时间",
-    )
-    missing_criteria: list[str] = Field(
-        default_factory=list,
-        description="当前缺失的晋级条件",
-    )
-    rejected_criteria: list[str] = Field(
-        default_factory=list,
-        description="已审核但未通过的晋级条件",
-    )
-
-    model_config = ConfigDict(strict=True, extra="ignore")
-
-
-class MaturityGovernanceReportResponse(BaseModel):
-    """Unified maturity governance backend report."""
-
-    dataset_count: int = Field(description="报告覆盖的数据集数量")
-    warning_count: int = Field(description="带 maturity warning 的数据集数量")
-    promotable_count: int = Field(description="晋级评估 ready 的数据集数量")
-    active_promotion_count: int = Field(
-        description="当前存在 maturity promotion override 的数据集数量",
-    )
-    revoked_promotion_count: int = Field(
-        description="存在最近晋级撤销上下文的数据集数量",
-    )
-    maturity_summary: list[DatasetMaturitySummaryResponse] = Field(
-        description="按当前 maturity 聚合的状态摘要",
-    )
-    promotion_status_counts: list[PromotionStatusCountResponse] = Field(
-        description="按晋级评估状态聚合的数据集数量",
-    )
-    datasets: list[MaturityGovernanceDatasetResponse] = Field(
-        description="各数据集成熟度治理明细",
     )
 
     model_config = ConfigDict(strict=True, extra="ignore")
@@ -472,6 +430,29 @@ class CatalogSourceHealthResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class CatalogSourceFallbackPolicyEffectResponse(BaseModel):
+    """Active source fallback policy effect evidence."""
+
+    policy_id: str = Field(description="触发 source fallback effect 的 policy ID")
+    policy_status: str = Field(description="触发 effect 的 policy lifecycle 状态")
+    catalog_selected_source: str = Field(
+        description="Catalog freshness 策略原本选择的来源",
+    )
+    effective_selected_source: str = Field(
+        description="应用 active fallback policy 后的最终来源",
+    )
+    reason_codes: list[str] = Field(
+        default_factory=list,
+        description="policy 持久化的结构化原因代码",
+    )
+    recommended_actions: list[str] = Field(
+        default_factory=list,
+        description="policy 持久化的建议动作代码",
+    )
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 class CatalogSourceHealthReportResponse(BaseModel):
     """DataCatalog source-selection health report response."""
 
@@ -482,6 +463,22 @@ class CatalogSourceHealthReportResponse(BaseModel):
     selected_source: str = Field(description="source=auto 当前会选择的来源")
     selected_freshness_status: str = Field(
         description="selected_source 在指定交易日的 freshness 状态",
+    )
+    selected_source_health: CatalogSourceHealthResponse = Field(
+        description="source=auto 选中来源的完整 freshness 证据",
+    )
+    source_fallback_policy_effect: CatalogSourceFallbackPolicyEffectResponse | None = (
+        Field(
+            default=None,
+            description="active fallback policy 对 source=auto 选择产生的只读证据",
+        )
+    )
+    source_selection_status: str = Field(
+        description="source=auto 选中来源是否可用于后端编排",
+    )
+    source_selection_blockers: list[str] = Field(
+        default_factory=list,
+        description="阻塞 source=auto 编排的结构化原因代码",
     )
     attention_reasons: list[str] = Field(
         default_factory=list,
@@ -536,6 +533,15 @@ class CatalogSourceSelectionCountResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class CatalogSourceSelectionStatusCountResponse(BaseModel):
+    """Aggregated source-selection readiness count response."""
+
+    status: str = Field(description="source=auto 选中来源是否可用于后端编排")
+    count: int = Field(description="该 source-selection 状态出现次数")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 class CatalogSourceHealthAttentionReasonCountResponse(BaseModel):
     """Aggregated source-health attention reason count response."""
 
@@ -545,16 +551,46 @@ class CatalogSourceHealthAttentionReasonCountResponse(BaseModel):
     model_config = ConfigDict(strict=True, extra="ignore")
 
 
+class CatalogSourceHealthAttentionSeverityCountResponse(BaseModel):
+    """Aggregated source-health attention severity count response."""
+
+    severity: str = Field(description="source-health attention severity")
+    count: int = Field(description="该严重程度覆盖的 attention item 数量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
 class CatalogSourceHealthAttentionItemResponse(BaseModel):
     """Source-health summary item requiring operator attention."""
 
     dataset_id: str = Field(description="数据集 ID")
+    namespace: str = Field(description="Catalog namespace")
     trade_date: str = Field(description="交易日期")
+    default_source: str = Field(description="DatasetMetadata 默认来源")
     selected_source: str = Field(description="source=auto 当前会选择的来源")
     selected_freshness_status: str = Field(description="selected source freshness 状态")
+    selected_source_health: CatalogSourceHealthResponse = Field(
+        description="selected source 的 freshness/storage/schema 证据",
+    )
+    source_fallback_policy_effect: CatalogSourceFallbackPolicyEffectResponse | None = (
+        Field(
+            default=None,
+            description="active fallback policy 对 source=auto 选择产生的只读证据",
+        )
+    )
+    source_selection_status: str = Field(
+        description="source=auto 选中来源是否可用于后端编排",
+    )
+    source_selection_blockers: list[str] = Field(
+        default_factory=list,
+        description="阻塞 source=auto 编排的结构化原因代码",
+    )
     attention_reasons: list[str] = Field(
         default_factory=list,
         description="需要后端消费者关注该 report 的结构化原因代码",
+    )
+    attention_severity: str = Field(
+        description="source-health attention severity (critical/warning/info)",
     )
     unsupported_sources: list[str] = Field(
         default_factory=list,
@@ -609,6 +645,12 @@ class CatalogSourceHealthSummaryReportResponse(BaseModel):
     selected_source_counts: list[CatalogSourceSelectionCountResponse] = Field(
         description="按 selected source 聚合的 report 数量",
     )
+    source_selection_status_counts: list[CatalogSourceSelectionStatusCountResponse] = (
+        Field(
+            default_factory=list,
+            description="按 source=auto 选中来源可编排状态聚合的 report 数量",
+        )
+    )
     fallback_source_counts: list[CatalogSourceSelectionCountResponse] = Field(
         default_factory=list,
         description="按非默认候选来源聚合的 report 覆盖数量",
@@ -619,8 +661,14 @@ class CatalogSourceHealthSummaryReportResponse(BaseModel):
             description="按 source-health attention reason 聚合的 report 数量",
         )
     )
+    attention_severity_counts: list[
+        CatalogSourceHealthAttentionSeverityCountResponse
+    ] = Field(
+        default_factory=list,
+        description="按 source-health attention severity 聚合的 attention item 数量",
+    )
     attention_required: list[CatalogSourceHealthAttentionItemResponse] = Field(
-        description="selected source 非 fresh 的数据集/日期",
+        description="带有结构化 attention reason 的数据集/日期",
     )
     reports: list[CatalogSourceHealthReportResponse] = Field(
         description="明细 source-health reports",

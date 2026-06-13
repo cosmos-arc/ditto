@@ -7,6 +7,8 @@ MarketService - Market 域统一查询入口（Facade）.
 
 from __future__ import annotations
 
+from typing import cast
+
 import polars as pl
 from ditto_platform.foundation import Metrics, logger, traced
 
@@ -64,42 +66,22 @@ class MarketService:
     @traced("market.list_bars")
     def list_bars(
         self,
-        instrument_ids: list[int],
-        start: str | None = None,
-        end: str | None = None,
-        adj: AdjType = AdjType.NONE,
-        with_ticker: bool = False,
-        with_status: bool = False,
-        asset_class: str | None = None,
-        limit: int | None = None,
+        request: MarketBarsQuery | list[int] | None = None,
+        **params: object,
     ) -> pl.DataFrame:
         """
         便利方法：批量查询K线数据.
 
         Args:
-            instrument_ids: Instrument ID 列表.
-            start: 开始日期 (YYYY-MM-DD).
-            end: 结束日期 (YYYY-MM-DD).
-            adj: 复权类型（仅对 stock 数据有效）.
-            with_ticker: 是否在结果中添加 ticker 列.
-            with_status: 是否添加股票状态信息（仅对股票数据有效）.
-            asset_class: 资产类别（显式指定可跳过自动检测）.
-            limit: 返回数量限制（在 DataFrame 层应用）.
+            request: Preferred ``MarketBarsQuery`` request object. A positional
+                instrument-id list is still accepted for legacy callers.
+            params: Legacy keyword parameters used to build ``MarketBarsQuery``.
 
         Returns:
             K线数据 DataFrame.
 
         """
-        query = MarketBarsQuery(
-            instrument_ids=instrument_ids,
-            start=start,
-            end=end,
-            adj=adj,
-            with_ticker=with_ticker,
-            with_status=with_status,
-            asset_class=asset_class,
-            limit=limit,
-        )
+        query = _normalize_list_bars_request(request, params)
         return query_bars(query, self._read_ports)
 
     @traced("market.get_constituents")
@@ -280,3 +262,91 @@ class MarketService:
         )
 
         return df
+
+
+def _normalize_list_bars_request(
+    request: MarketBarsQuery | list[int] | None,
+    params: dict[str, object],
+) -> MarketBarsQuery:
+    """Normalize query-object and legacy list_bars inputs."""
+    if isinstance(request, MarketBarsQuery):
+        if params:
+            msg = "MarketBarsQuery cannot be combined with list_bars keyword params"
+            raise ValueError(msg)
+        return request
+
+    if request is not None:
+        if "instrument_ids" in params:
+            msg = "instrument_ids cannot be supplied both positionally and by keyword"
+            raise ValueError(msg)
+        params = {**params, "instrument_ids": request}
+
+    return MarketBarsQuery(
+        instrument_ids=_instrument_ids_param(params.get("instrument_ids")),
+        start=_optional_str_param(params.get("start")),
+        end=_optional_str_param(params.get("end")),
+        adj=_adj_param(params.get("adj")),
+        with_ticker=_bool_param(params.get("with_ticker")),
+        with_status=_bool_param(params.get("with_status")),
+        asset_class=_optional_str_param(params.get("asset_class")),
+        limit=_optional_int_param(params.get("limit")),
+    )
+
+
+def _instrument_ids_param(raw: object) -> list[int] | None:
+    """Read legacy instrument ID values."""
+    if raw is None:
+        return None
+    if isinstance(raw, list):
+        values = cast(list[object], raw)
+        return [_coerce_int_param(value) for value in values]
+    if isinstance(raw, tuple):
+        values = cast(tuple[object, ...], raw)
+        return [_coerce_int_param(value) for value in values]
+    return [_coerce_int_param(raw)]
+
+
+def _optional_str_param(raw: object) -> str | None:
+    """Read an optional string parameter."""
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _optional_int_param(raw: object) -> int | None:
+    """Read an optional integer parameter."""
+    if raw is None:
+        return None
+    return _coerce_int_param(raw)
+
+
+def _coerce_int_param(raw: object) -> int:
+    """Coerce one legacy integer parameter."""
+    if isinstance(raw, bool):
+        return int(raw)
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        return int(raw)
+    if isinstance(raw, str):
+        return int(raw)
+    msg = f"Expected integer-compatible value, got {type(raw).__name__}"
+    raise TypeError(msg)
+
+
+def _bool_param(raw: object) -> bool:
+    """Read a legacy bool parameter."""
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.lower() in {"1", "true", "yes", "y"}
+    return False
+
+
+def _adj_param(raw: object) -> AdjType:
+    """Read a legacy adjustment parameter."""
+    if isinstance(raw, AdjType):
+        return raw
+    if isinstance(raw, str):
+        return AdjType(raw)
+    return AdjType.NONE

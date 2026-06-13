@@ -14,6 +14,13 @@ from ditto_platform.foundation import (
 )
 
 from ditto_data.catalog.contracts import DataCatalogReader, DataCatalogWriter
+from ditto_data.catalog.fallback_policy import (
+    CatalogSourceFallbackPolicyReader,
+    CatalogSourceFallbackPolicyWriter,
+)
+from ditto_data.catalog.fallback_policy_store import (
+    SQLiteCatalogSourceFallbackPolicyStore,
+)
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionHistoryReader,
     DatasetMaturityPromotionReader,
@@ -26,6 +33,11 @@ from ditto_data.catalog.promotion_store import (
     SQLiteDatasetMaturityPromotionStore,
     SQLiteDatasetPromotionEvidenceStore,
 )
+from ditto_data.catalog.remediation import (
+    CatalogRemediationApprovalReader,
+    CatalogRemediationApprovalWriter,
+)
+from ditto_data.catalog.remediation_store import SQLiteCatalogRemediationApprovalStore
 from ditto_data.catalog.sqlite_store import SQLiteDataCatalog
 from ditto_data.config.data_store import DataStoreSettings
 from ditto_data.ingestion.freeze_store import (
@@ -177,6 +189,54 @@ class RuntimeProvider(Provider):
     ) -> DatasetMaturityPromotionRevoker:
         """Dataset maturity promotion revoke port."""
         return dataset_maturity_promotion_store
+
+    @provide
+    def catalog_remediation_approval_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCatalogRemediationApprovalStore:
+        """SQLite catalog remediation approval state store."""
+        return SQLiteCatalogRemediationApprovalStore(sqlite_client)
+
+    @provide
+    def catalog_remediation_approval_writer(
+        self,
+        catalog_remediation_approval_store: SQLiteCatalogRemediationApprovalStore,
+    ) -> CatalogRemediationApprovalWriter:
+        """Catalog remediation approval write port."""
+        return catalog_remediation_approval_store
+
+    @provide
+    def catalog_remediation_approval_reader(
+        self,
+        catalog_remediation_approval_store: SQLiteCatalogRemediationApprovalStore,
+    ) -> CatalogRemediationApprovalReader:
+        """Catalog remediation approval read port."""
+        return catalog_remediation_approval_store
+
+    @provide
+    def catalog_source_fallback_policy_store(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> SQLiteCatalogSourceFallbackPolicyStore:
+        """SQLite catalog source fallback policy state store."""
+        return SQLiteCatalogSourceFallbackPolicyStore(sqlite_client)
+
+    @provide
+    def catalog_source_fallback_policy_writer(
+        self,
+        catalog_source_fallback_policy_store: SQLiteCatalogSourceFallbackPolicyStore,
+    ) -> CatalogSourceFallbackPolicyWriter:
+        """Catalog source fallback policy write port."""
+        return catalog_source_fallback_policy_store
+
+    @provide
+    def catalog_source_fallback_policy_reader(
+        self,
+        catalog_source_fallback_policy_store: SQLiteCatalogSourceFallbackPolicyStore,
+    ) -> CatalogSourceFallbackPolicyReader:
+        """Catalog source fallback policy read port."""
+        return catalog_source_fallback_policy_store
 
     @provide
     def data_lineage_store(self, sqlite_client: SQLiteClient) -> SQLiteDataLineage:

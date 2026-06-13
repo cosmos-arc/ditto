@@ -23,20 +23,18 @@ from ditto_application.queries.catalog import (
     CatalogAsset,
     CatalogMaturityPromotionHistoryItem,
     CatalogQueryFacade,
-    CatalogSourceHealth,
-    CatalogSourceHealthAttentionItem,
-    CatalogSourceHealthAttentionReasonCount,
-    CatalogSourceHealthReport,
-    CatalogSourceHealthStatusCount,
-    CatalogSourceHealthSummaryReport,
-    CatalogSourceSelectionCount,
 )
 from ditto_application.queries.ingestion_status import (
+    DatasetMaturityGovernanceAttentionItem,
+    DatasetMaturityGovernanceAttentionReasonCount,
+    DatasetMaturityGovernanceAttentionSeverityCount,
     DatasetMaturityGovernanceItem,
     DatasetMaturityGovernanceReport,
+    DatasetMaturityGovernanceSourceFallbackPolicyEffectCount,
     DatasetPromotionCriterionCount,
     DatasetPromotionReadinessItem,
     DatasetPromotionReadinessReport,
+    DatasetPromotionReadinessSourceFallbackPolicyEffectCount,
     DatasetPromotionStatusCount,
     IngestionStatusQueryFacade,
     summarize_status_by_maturity,
@@ -45,25 +43,28 @@ from fastapi import APIRouter, Depends, Query
 
 from ditto_apps.api.deps import paginate, pagination_params
 from ditto_apps.api.errors import NotFoundError
+from ditto_apps.api.routes.ingestion_remediation import router as _remediation_router
+from ditto_apps.api.routes.ingestion_source_fallback_policy import (
+    router as _source_fallback_policy_router,
+)
+from ditto_apps.api.routes.ingestion_source_health_mapping import (
+    to_catalog_source_fallback_policy_preview_response,
+    to_catalog_source_fallback_policy_summary_response,
+    to_catalog_source_health_report_response,
+    to_catalog_source_health_summary_report_response,
+)
 from ditto_apps.models.common import APIResponse, PaginationRequest
 from ditto_apps.models.ingestion import (
     CatalogAssetRefResponse,
     CatalogAssetResponse,
     CatalogSchemaResponse,
-    CatalogSourceHealthAttentionItemResponse,
-    CatalogSourceHealthAttentionReasonCountResponse,
     CatalogSourceHealthReportResponse,
-    CatalogSourceHealthResponse,
-    CatalogSourceHealthStatusCountResponse,
     CatalogSourceHealthSummaryReportResponse,
-    CatalogSourceSelectionCountResponse,
     DatasetMaturitySummaryResponse,
     DatasetStatusResponse,
     DQSummaryResponse,
     IngestionHistoryItem,
     IngestionStatusResponse,
-    MaturityGovernanceDatasetResponse,
-    MaturityGovernanceReportResponse,
     MaturityPromotionHistoryItem,
     MaturityPromotionRevokeRequest,
     MaturityPromotionRevokeResponse,
@@ -72,10 +73,25 @@ from ditto_apps.models.ingestion import (
     PromotionEvidenceReviewResponse,
     PromotionReadinessItemResponse,
     PromotionReadinessReportResponse,
+    PromotionReadinessSourceFallbackPolicyEffectCountResponse,
     PromotionStatusCountResponse,
+)
+from ditto_apps.models.maturity_governance import (
+    MaturityGovernanceAttentionItemResponse,
+    MaturityGovernanceAttentionReasonCountResponse,
+    MaturityGovernanceAttentionSeverityCountResponse,
+    MaturityGovernanceDatasetResponse,
+    MaturityGovernanceReportResponse,
+    MaturityGovernanceSourceFallbackPolicyEffectCountResponse,
+)
+from ditto_apps.models.source_fallback import (
+    CatalogSourceFallbackPolicyPreviewResponse,
+    CatalogSourceFallbackPolicySummaryResponse,
 )
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"])
+router.include_router(_remediation_router)
+router.include_router(_source_fallback_policy_router)
 
 
 async def run_blocking[**P, R](
@@ -110,139 +126,6 @@ def to_catalog_asset_response(asset: CatalogAsset) -> CatalogAssetResponse:
     )
 
 
-def to_catalog_source_health_response(
-    item: CatalogSourceHealth,
-) -> CatalogSourceHealthResponse:
-    """Map application source-health DTO to API response model."""
-    return CatalogSourceHealthResponse(
-        source=item.source,
-        supported=item.supported,
-        freshness_status=item.freshness_status,
-        freshness_sla_hours=item.freshness_sla_hours,
-        freshness_at=item.freshness_at.isoformat()
-        if item.freshness_at is not None
-        else None,
-        storage_uri=item.storage_uri,
-        schema_hash=item.schema_hash,
-        row_count=item.row_count,
-    )
-
-
-def to_catalog_source_health_report_response(
-    report: CatalogSourceHealthReport,
-) -> CatalogSourceHealthReportResponse:
-    """Map application source-health report DTO to API response model."""
-    return CatalogSourceHealthReportResponse(
-        dataset_id=report.dataset_id,
-        namespace=report.namespace,
-        trade_date=report.trade_date,
-        default_source=report.default_source,
-        selected_source=report.selected_source,
-        selected_freshness_status=report.selected_freshness_status,
-        attention_reasons=list(report.attention_reasons),
-        sources=[
-            to_catalog_source_health_response(source) for source in report.sources
-        ],
-        unsupported_sources=list(report.unsupported_sources),
-        failover_from_default=report.failover_from_default,
-        fallback_sources=list(report.fallback_sources),
-        latest_revocation_reason=report.latest_revocation_reason,
-        latest_revoked_by=report.latest_revoked_by,
-        latest_revoked_at=report.latest_revoked_at.isoformat()
-        if report.latest_revoked_at is not None
-        else None,
-    )
-
-
-def to_catalog_source_health_status_count_response(
-    item: CatalogSourceHealthStatusCount,
-) -> CatalogSourceHealthStatusCountResponse:
-    """Map application source-health status count DTO to API response model."""
-    return CatalogSourceHealthStatusCountResponse(
-        status=item.status,
-        count=item.count,
-    )
-
-
-def to_catalog_source_selection_count_response(
-    item: CatalogSourceSelectionCount,
-) -> CatalogSourceSelectionCountResponse:
-    """Map application selected-source count DTO to API response model."""
-    return CatalogSourceSelectionCountResponse(
-        source=item.source,
-        count=item.count,
-    )
-
-
-def to_catalog_source_health_attention_reason_count_response(
-    item: CatalogSourceHealthAttentionReasonCount,
-) -> CatalogSourceHealthAttentionReasonCountResponse:
-    """Map application source-health attention reason count DTO to API response."""
-    return CatalogSourceHealthAttentionReasonCountResponse(
-        reason=item.reason,
-        count=item.count,
-    )
-
-
-def to_catalog_source_health_attention_response(
-    item: CatalogSourceHealthAttentionItem,
-) -> CatalogSourceHealthAttentionItemResponse:
-    """Map application source-health attention DTO to API response model."""
-    return CatalogSourceHealthAttentionItemResponse(
-        dataset_id=item.dataset_id,
-        trade_date=item.trade_date,
-        selected_source=item.selected_source,
-        selected_freshness_status=item.selected_freshness_status,
-        attention_reasons=list(item.attention_reasons),
-        unsupported_sources=list(item.unsupported_sources),
-        failover_from_default=item.failover_from_default,
-        fallback_sources=list(item.fallback_sources),
-        latest_revocation_reason=item.latest_revocation_reason,
-        latest_revoked_by=item.latest_revoked_by,
-        latest_revoked_at=item.latest_revoked_at.isoformat()
-        if item.latest_revoked_at is not None
-        else None,
-    )
-
-
-def to_catalog_source_health_summary_report_response(
-    report: CatalogSourceHealthSummaryReport,
-) -> CatalogSourceHealthSummaryReportResponse:
-    """Map application source-health summary DTO to API response model."""
-    return CatalogSourceHealthSummaryReportResponse(
-        dataset_ids=list(report.dataset_ids),
-        trade_dates=list(report.trade_dates),
-        available_sources=list(report.available_sources),
-        total_reports=report.total_reports,
-        failover_count=report.failover_count,
-        no_fallback_source_count=report.no_fallback_source_count,
-        revoked_promotion_count=report.revoked_promotion_count,
-        status_counts=[
-            to_catalog_source_health_status_count_response(item)
-            for item in report.status_counts
-        ],
-        selected_source_counts=[
-            to_catalog_source_selection_count_response(item)
-            for item in report.selected_source_counts
-        ],
-        fallback_source_counts=[
-            to_catalog_source_selection_count_response(item)
-            for item in report.fallback_source_counts
-        ],
-        attention_reason_counts=[
-            to_catalog_source_health_attention_reason_count_response(item)
-            for item in report.attention_reason_counts
-        ],
-        attention_required=[
-            to_catalog_source_health_attention_response(item)
-            for item in report.attention_required
-        ],
-        reports=[
-            to_catalog_source_health_report_response(item) for item in report.reports
-        ],
-    )
-
-
 def to_maturity_promotion_history_response(
     item: CatalogMaturityPromotionHistoryItem,
 ) -> MaturityPromotionHistoryItem:
@@ -273,6 +156,19 @@ def to_promotion_criterion_count_response(
     """Map application promotion criterion count DTO to API response model."""
     return PromotionCriterionCountResponse(
         criterion=item.criterion,
+        count=item.count,
+    )
+
+
+def to_promotion_readiness_source_fallback_policy_effect_count_response(
+    item: DatasetPromotionReadinessSourceFallbackPolicyEffectCount,
+) -> PromotionReadinessSourceFallbackPolicyEffectCountResponse:
+    """Map promotion readiness source policy effect count to API response."""
+    return PromotionReadinessSourceFallbackPolicyEffectCountResponse(
+        policy_id=item.policy_id,
+        policy_status=item.policy_status,
+        catalog_selected_source=item.catalog_selected_source,
+        effective_selected_source=item.effective_selected_source,
         count=item.count,
     )
 
@@ -318,6 +214,10 @@ def to_promotion_readiness_report_response(
             to_promotion_criterion_count_response(item)
             for item in report.rejected_criteria_counts
         ],
+        source_fallback_policy_effect_counts=[
+            to_promotion_readiness_source_fallback_policy_effect_count_response(item)
+            for item in report.source_fallback_policy_effect_counts
+        ],
         datasets=[
             to_promotion_readiness_item_response(item) for item in report.datasets
         ],
@@ -335,6 +235,8 @@ def to_maturity_governance_dataset_response(
         promotion_status=item.promotion_status,
         active_maturity_promotion=item.active_maturity_promotion,
         has_maturity_warning=item.has_maturity_warning,
+        required_criteria=list(item.required_criteria),
+        satisfied_criteria=list(item.satisfied_criteria),
         latest_revocation_reason=item.latest_revocation_reason,
         latest_revoked_by=item.latest_revoked_by,
         latest_revoked_at=item.latest_revoked_at.isoformat()
@@ -342,6 +244,51 @@ def to_maturity_governance_dataset_response(
         else None,
         missing_criteria=list(item.missing_criteria),
         rejected_criteria=list(item.rejected_criteria),
+    )
+
+
+def to_maturity_governance_attention_item_response(
+    item: DatasetMaturityGovernanceAttentionItem,
+) -> MaturityGovernanceAttentionItemResponse:
+    """Map application maturity governance attention item to API response."""
+    return MaturityGovernanceAttentionItemResponse(
+        dataset_id=item.dataset_id,
+        attention_reasons=list(item.attention_reasons),
+        attention_severity=item.attention_severity,
+        dataset=to_maturity_governance_dataset_response(item.dataset),
+    )
+
+
+def to_maturity_governance_attention_reason_count_response(
+    item: DatasetMaturityGovernanceAttentionReasonCount,
+) -> MaturityGovernanceAttentionReasonCountResponse:
+    """Map maturity governance attention reason count to API response."""
+    return MaturityGovernanceAttentionReasonCountResponse(
+        reason=item.reason,
+        count=item.count,
+    )
+
+
+def to_maturity_governance_attention_severity_count_response(
+    item: DatasetMaturityGovernanceAttentionSeverityCount,
+) -> MaturityGovernanceAttentionSeverityCountResponse:
+    """Map maturity governance attention severity count to API response."""
+    return MaturityGovernanceAttentionSeverityCountResponse(
+        severity=item.severity,
+        count=item.count,
+    )
+
+
+def to_maturity_governance_source_fallback_policy_effect_count_response(
+    item: DatasetMaturityGovernanceSourceFallbackPolicyEffectCount,
+) -> MaturityGovernanceSourceFallbackPolicyEffectCountResponse:
+    """Map maturity governance source policy effect count to API response."""
+    return MaturityGovernanceSourceFallbackPolicyEffectCountResponse(
+        policy_id=item.policy_id,
+        policy_status=item.policy_status,
+        catalog_selected_source=item.catalog_selected_source,
+        effective_selected_source=item.effective_selected_source,
+        count=item.count,
     )
 
 
@@ -374,8 +321,32 @@ def to_maturity_governance_report_response(
             to_promotion_status_count_response(item)
             for item in report.promotion_status_counts
         ],
+        missing_criteria_counts=[
+            to_promotion_criterion_count_response(item)
+            for item in report.missing_criteria_counts
+        ],
+        rejected_criteria_counts=[
+            to_promotion_criterion_count_response(item)
+            for item in report.rejected_criteria_counts
+        ],
         datasets=[
             to_maturity_governance_dataset_response(item) for item in report.datasets
+        ],
+        attention_reason_counts=[
+            to_maturity_governance_attention_reason_count_response(item)
+            for item in report.attention_reason_counts
+        ],
+        attention_severity_counts=[
+            to_maturity_governance_attention_severity_count_response(item)
+            for item in report.attention_severity_counts
+        ],
+        source_fallback_policy_effect_counts=[
+            to_maturity_governance_source_fallback_policy_effect_count_response(item)
+            for item in report.source_fallback_policy_effect_counts
+        ],
+        attention_required=[
+            to_maturity_governance_attention_item_response(item)
+            for item in report.attention_required
         ],
     )
 
@@ -533,11 +504,28 @@ async def get_catalog_promotion_readiness_report(
         None,
         description="数据集 ID 列表; 缺省使用当前后端已知数据集集合",
     ),
+    trade_dates: list[str] | None = Query(
+        None,
+        description="可选交易日期列表; 提供后聚合 active source fallback policy effect",
+    ),
+    available_sources: list[str] | None = Query(
+        None,
+        description=(
+            "可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合"
+        ),
+    ),
 ) -> APIResponse[PromotionReadinessReportResponse]:
     """Return aggregated dataset promotion readiness governance report."""
+    report_kwargs: dict[str, tuple[str, ...]] = {}
+    if trade_dates is not None or available_sources is not None:
+        report_kwargs = {
+            "trade_dates": tuple(trade_dates or ()),
+            "available_sources": tuple(available_sources or ()),
+        }
     report = await run_blocking(
         facade.get_promotion_readiness_report,
         dataset_ids or _KNOWN_DATASETS,
+        **report_kwargs,
     )
     return APIResponse(data=to_promotion_readiness_report_response(report))
 
@@ -553,11 +541,28 @@ async def get_catalog_maturity_governance_report(
         None,
         description="数据集 ID 列表; 缺省使用当前后端已知数据集集合",
     ),
+    trade_dates: list[str] | None = Query(
+        None,
+        description="可选交易日期列表; 提供后聚合 active source fallback policy effect",
+    ),
+    available_sources: list[str] | None = Query(
+        None,
+        description=(
+            "可选 source=auto 来源列表; 与 trade_dates 一起用于 policy effect 聚合"
+        ),
+    ),
 ) -> APIResponse[MaturityGovernanceReportResponse]:
     """Return unified maturity, readiness and revocation governance report."""
+    report_kwargs: dict[str, tuple[str, ...]] = {}
+    if trade_dates is not None or available_sources is not None:
+        report_kwargs = {
+            "trade_dates": tuple(trade_dates or ()),
+            "available_sources": tuple(available_sources or ()),
+        }
     report = await run_blocking(
         facade.get_maturity_governance_report,
         dataset_ids or _KNOWN_DATASETS,
+        **report_kwargs,
     )
     return APIResponse(data=to_maturity_governance_report_response(report))
 
@@ -679,6 +684,54 @@ async def get_catalog_source_health_report(
         available_sources=tuple(available_sources or ("tushare", "fred")),
     )
     return APIResponse(data=to_catalog_source_health_report_response(report))
+
+
+@router.get(
+    "/catalog/source-fallback/preview",
+    response_model=APIResponse[CatalogSourceFallbackPolicyPreviewResponse],
+)
+@inject
+async def get_catalog_source_fallback_policy_preview(
+    facade: Annotated[CatalogQueryFacade, FromComponent()],
+    dataset_id: str = Query(..., description="数据集 ID"),
+    trade_date: str = Query(..., description="交易日期"),
+    available_sources: list[str] | None = Query(
+        None,
+        description="source=auto 可用来源列表; 缺省使用当前后端默认数据源集合",
+    ),
+) -> APIResponse[CatalogSourceFallbackPolicyPreviewResponse]:
+    """Return read-only backend fallback policy preview for source=auto."""
+    preview = await run_blocking(
+        facade.get_source_fallback_policy_preview,
+        dataset_id=dataset_id,
+        trade_date=trade_date,
+        available_sources=tuple(available_sources or ("tushare", "fred")),
+    )
+    return APIResponse(data=to_catalog_source_fallback_policy_preview_response(preview))
+
+
+@router.get(
+    "/catalog/source-fallback/summary",
+    response_model=APIResponse[CatalogSourceFallbackPolicySummaryResponse],
+)
+@inject
+async def get_catalog_source_fallback_policy_summary(
+    facade: Annotated[CatalogQueryFacade, FromComponent()],
+    dataset_ids: list[str] = Query(..., description="数据集 ID 列表"),
+    trade_dates: list[str] = Query(..., description="交易日期列表"),
+    available_sources: list[str] | None = Query(
+        None,
+        description="source=auto 可用来源列表; 缺省使用当前后端默认数据源集合",
+    ),
+) -> APIResponse[CatalogSourceFallbackPolicySummaryResponse]:
+    """Return aggregated backend fallback policy previews."""
+    report = await run_blocking(
+        facade.get_source_fallback_policy_summary,
+        dataset_ids=tuple(dataset_ids),
+        trade_dates=tuple(trade_dates),
+        available_sources=tuple(available_sources or ("tushare", "fred")),
+    )
+    return APIResponse(data=to_catalog_source_fallback_policy_summary_response(report))
 
 
 @router.get(

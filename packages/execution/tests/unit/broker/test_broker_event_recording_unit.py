@@ -2,17 +2,49 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from typing import cast
 
+import orjson
 import pytest
+from ditto_execution.audit import ExecutionAuditService, ExecutionRepairAuditSink
+from ditto_execution.broker.contracts import (
+    REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+    BrokerGatewayDescriptor,
+    validate_broker_gateway_descriptor,
+)
 from ditto_execution.broker.recording import BrokerEventRecordingGateway
-from ditto_execution.models import BrokerEventRecord
+from ditto_execution.models import (
+    STANDARD_BROKER_EVENT_TYPES,
+    BrokerEventRecord,
+    FillRecord,
+)
 from ditto_execution.orders.ids import ClientOrderId
 from ditto_execution.orders.model import Order
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
+from ditto_execution.reconciliation import (
+    AmendLocalFillRepairHandler,
+    BrokerOrderLinkIndex,
+    ImportBrokerFillRepairHandler,
+    MismatchType,
+    ReconciliationReport,
+    RepairActionRecord,
+    RepairActionStatus,
+    RepairActionType,
+    plan_repair,
+    reconcile,
+)
+from ditto_execution.reconciliation.executor import (
+    BrokerRefreshRepairHandler,
+    RepairActionExecutor,
+    ReviewOrderStatusRepairHandler,
+)
+from ditto_execution.storage.sqlite.reconciliation import SQLiteRepairWorkflowStore
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_platform.foundation import SQLiteClient, SQLitePool
 from ditto_portfolio.accounting import FillEvent
 from ditto_portfolio.accounting.account import Account, AccountView
 
@@ -22,9 +54,30 @@ class InMemoryBrokerEventSink:
 
     def __init__(self) -> None:
         self._records: dict[str, BrokerEventRecord] = {}
+        self._sequence: dict[str, int] = {}
+        self._next_sequence = 0
 
     def save_broker_event(self, record: BrokerEventRecord) -> None:
-        self._records[record.event_id] = record
+        existing = self._records.get(record.event_id)
+        if existing is None:
+            self._sequence[record.event_id] = self._next_sequence
+            self._next_sequence += 1
+            self._records[record.event_id] = record
+            return
+        self._records[record.event_id] = replace(
+            existing,
+            order_id=self._backfill_text(existing.order_id, record.order_id),
+            broker_order_id=self._backfill_text(
+                existing.broker_order_id,
+                record.broker_order_id,
+            ),
+            fill_id=self._backfill_text(existing.fill_id, record.fill_id),
+            instrument_id=existing.instrument_id or record.instrument_id,
+            correlation_id=self._backfill_text(
+                existing.correlation_id,
+                record.correlation_id,
+            ),
+        )
 
     def list_broker_events(
         self,
@@ -37,7 +90,7 @@ class InMemoryBrokerEventSink:
         start_date: str | None = None,
         end_date: str | None = None,
     ) -> list[BrokerEventRecord]:
-        del broker_order_id, start_date, end_date
+        del start_date, end_date
         records = [
             record for record in self._records.values() if record.run_id == run_id
         ]
@@ -45,9 +98,77 @@ class InMemoryBrokerEventSink:
             records = [record for record in records if record.event_type == event_type]
         if order_id is not None:
             records = [record for record in records if record.order_id == order_id]
+        if broker_order_id is not None:
+            records = [
+                record
+                for record in records
+                if record.broker_order_id == broker_order_id
+                or record.payload.get("broker_order_id") == broker_order_id
+            ]
         if fill_id is not None:
             records = [record for record in records if record.fill_id == fill_id]
-        return sorted(records, key=lambda record: (record.event_time, record.event_id))
+        return sorted(
+            records,
+            key=lambda record: (
+                record.event_time,
+                self._sequence[record.event_id],
+            ),
+        )
+
+    @staticmethod
+    def _backfill_text(current: str | None, candidate: str | None) -> str | None:
+        if current is not None and current.strip():
+            return current
+        if candidate is None or not candidate.strip():
+            return current
+        return candidate
+
+
+def test_in_memory_broker_event_sink_preserves_first_duplicate_callback() -> None:
+    sink = InMemoryBrokerEventSink()
+    sink.save_broker_event(
+        BrokerEventRecord(
+            event_id="BE-DUP",
+            run_id="RUN-001",
+            broker="live-sim",
+            event_type="fill",
+            event_time="2026-06-01T09:31:00+00:00",
+            order_id="ORD-001",
+            broker_order_id=None,
+            fill_id="FILL-001",
+            instrument_id=510300,
+            status="partially_filled",
+            correlation_id="ORD-001",
+            payload={"seq": 1, "venue_status": "PartiallyFilled"},
+            created_at="2026-06-01T10:00:00+00:00",
+        )
+    )
+    sink.save_broker_event(
+        BrokerEventRecord(
+            event_id="BE-DUP",
+            run_id="RUN-001",
+            broker="live-sim",
+            event_type="fill",
+            event_time="2026-06-01T09:40:00+00:00",
+            order_id="ORD-001",
+            broker_order_id="BRK-001",
+            fill_id="FILL-001",
+            instrument_id=510300,
+            status="filled",
+            correlation_id="ORD-001",
+            payload={"seq": 2, "venue_status": "Filled"},
+            created_at="2026-06-01T10:05:00+00:00",
+        )
+    )
+
+    events = sink.list_broker_events("RUN-001")
+
+    assert len(events) == 1
+    assert events[0].broker_order_id == "BRK-001"
+    assert events[0].event_time == "2026-06-01T09:31:00+00:00"
+    assert events[0].status == "partially_filled"
+    assert events[0].payload == {"seq": 1, "venue_status": "PartiallyFilled"}
+    assert events[0].created_at == "2026-06-01T10:00:00+00:00"
 
 
 class ManualBrokerGateway:
@@ -55,6 +176,14 @@ class ManualBrokerGateway:
 
     def __init__(self) -> None:
         self.connected = False
+
+    def describe(self) -> BrokerGatewayDescriptor:
+        return BrokerGatewayDescriptor(
+            gateway_id="manual",
+            mode="paper",
+            capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+            supported_event_types=STANDARD_BROKER_EVENT_TYPES,
+        )
 
     def connect(self) -> None:
         self.connected = True
@@ -121,6 +250,76 @@ class BrokerAckIdGateway(ReplayBrokerGateway):
             order=order,
             status=OrderStatus.SUBMITTED,
             broker_order_id=f"broker-{order.order_id}",
+        )
+
+
+class UniqueFillIdBrokerGateway(ManualBrokerGateway):
+    """Gateway fixture that returns order-unique broker fill IDs."""
+
+    def __init__(self, fill_quantity: int = 40) -> None:
+        super().__init__()
+        self._fill_quantity = fill_quantity
+        self._orders: dict[str, Order] = {}
+
+    def submit_order(self, order: Order) -> OrderTicket:
+        self._orders[order.order_id] = order
+        return OrderTicket(
+            order=order,
+            status=OrderStatus.SUBMITTED,
+            broker_order_id=f"broker-{order.order_id}",
+        )
+
+    def query_fills(self, order_id: str) -> tuple[FillEvent, ...]:
+        order = self._orders[order_id]
+        filled_quantity = min(self._fill_quantity, order.quantity)
+        leaves_quantity = order.quantity - filled_quantity
+        status_time = datetime(2026, 6, 1, 9, 31, tzinfo=UTC)
+        return (
+            FillEvent(
+                fill_id=f"broker-fill-{order_id}",
+                order_id=order_id,
+                instrument_id=InstrumentId(510300),
+                direction=OrderSide.BUY,
+                filled_quantity=filled_quantity,
+                fill_price=10.0,
+                fee=0.0,
+                slippage=0.0,
+                event_time=status_time,
+                cumulative_quantity=filled_quantity,
+                leaves_quantity=leaves_quantity,
+            ),
+        )
+
+
+class SingleSharedFillIdBrokerGateway(ManualBrokerGateway):
+    """Gateway fixture whose broker fill ID is reused across different orders."""
+
+    def submit_order(self, order: Order) -> OrderTicket:
+        return OrderTicket(
+            order=order,
+            status=OrderStatus.SUBMITTED,
+            broker_order_id=f"broker-{order.order_id}",
+        )
+
+    def cancel_order(self, order_id: str) -> bool:
+        del order_id
+        return True
+
+    def query_fills(self, order_id: str) -> tuple[FillEvent, ...]:
+        return (
+            FillEvent(
+                fill_id="broker-fill-001",
+                order_id=order_id,
+                instrument_id=InstrumentId(510300),
+                direction=OrderSide.BUY,
+                filled_quantity=40,
+                fill_price=10.0,
+                fee=0.0,
+                slippage=0.0,
+                event_time=datetime(2026, 6, 1, 9, 31, tzinfo=UTC),
+                cumulative_quantity=40,
+                leaves_quantity=60,
+            ),
         )
 
 
@@ -338,6 +537,19 @@ class SequenceClock:
         return self._values.pop(0)
 
 
+@dataclass(frozen=True)
+class _AllMismatchCallbackScenario:
+    qty_order: Order
+    price_order: Order
+    status_order: Order
+    missing_order: Order
+    extra_order: Order
+    missing_gateway: BrokerEventRecordingGateway
+    fill_events: list[BrokerEventRecord]
+    broker_order_ids_by_order: dict[str, str]
+    broker_order_ids_by_order_fill: dict[tuple[str, str], str]
+
+
 def _order(
     cid: str = "ord-001",
     *,
@@ -352,6 +564,447 @@ def _order(
         quantity=quantity,
         price=price,
     )
+
+
+def _submit_all_mismatch_callback_scenario(
+    *,
+    run_id: str,
+    sink: InMemoryBrokerEventSink,
+) -> _AllMismatchCallbackScenario:
+    clock = SequenceClock(
+        *(datetime(2026, 6, 1, 9, 30, second, tzinfo=UTC) for second in range(20))
+    )
+    qty_gateway = BrokerEventRecordingGateway(
+        gateway=UniqueFillIdBrokerGateway(fill_quantity=40),
+        event_sink=sink,
+        run_id=run_id,
+        broker="alpha",
+        now=clock,
+    )
+    price_gateway = BrokerEventRecordingGateway(
+        gateway=UniqueFillIdBrokerGateway(fill_quantity=40),
+        event_sink=sink,
+        run_id=run_id,
+        broker="beta",
+        now=clock,
+    )
+    status_gateway = BrokerEventRecordingGateway(
+        gateway=UniqueFillIdBrokerGateway(fill_quantity=40),
+        event_sink=sink,
+        run_id=run_id,
+        broker="gamma",
+        now=clock,
+    )
+    missing_gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckNoFillGateway(),
+        event_sink=sink,
+        run_id=run_id,
+        broker="delta",
+        now=clock,
+    )
+    extra_gateway = BrokerEventRecordingGateway(
+        gateway=UniqueFillIdBrokerGateway(fill_quantity=40),
+        event_sink=sink,
+        run_id=run_id,
+        broker="epsilon",
+        now=clock,
+    )
+    qty_order = _order("callback-all-sequence-qty-001", quantity=100, price=10.0)
+    price_order = _order("callback-all-sequence-price-001", quantity=40, price=10.25)
+    status_order = _order("callback-all-sequence-status-001", quantity=40, price=10.0)
+    missing_order = _order("callback-all-sequence-missing-001", quantity=100)
+    extra_order = _order("callback-all-sequence-extra-001", quantity=40)
+
+    qty_gateway.submit_order(qty_order)
+    price_gateway.submit_order(price_order)
+    status_gateway.submit_order(status_order)
+    missing_gateway.submit_order(missing_order)
+    extra_gateway.submit_order(extra_order)
+
+    ack_events = sink.list_broker_events(run_id, event_type="order_ack")
+    fill_events = sink.list_broker_events(run_id, event_type="fill")
+    broker_order_ids_by_order = {
+        cast(str, event.order_id): cast(str, event.broker_order_id)
+        for event in ack_events
+        if event.order_id is not None and event.broker_order_id is not None
+    }
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    return _AllMismatchCallbackScenario(
+        qty_order=qty_order,
+        price_order=price_order,
+        status_order=status_order,
+        missing_order=missing_order,
+        extra_order=extra_order,
+        missing_gateway=missing_gateway,
+        fill_events=fill_events,
+        broker_order_ids_by_order=broker_order_ids_by_order,
+        broker_order_ids_by_order_fill=broker_order_ids_by_order_fill,
+    )
+
+
+def _all_mismatch_report(
+    *,
+    report_id: str,
+    scenario: _AllMismatchCallbackScenario,
+) -> ReconciliationReport:
+    return reconcile(
+        report_id=report_id,
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=scenario.qty_order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+            OrderTicket(
+                order=scenario.price_order,
+                status=OrderStatus.FILLED,
+                filled_quantity=40,
+                filled_price=10.25,
+                average_fill_price=10.25,
+            ),
+            OrderTicket(
+                order=scenario.status_order,
+                status=OrderStatus.SUBMITTED,
+                filled_quantity=40,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+            OrderTicket(
+                order=scenario.missing_order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+        ],
+        actual=[_fill_from_broker_event(event) for event in scenario.fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order=scenario.broker_order_ids_by_order,
+            by_order_fill=scenario.broker_order_ids_by_order_fill,
+        ),
+    )
+
+
+def _current_all_mismatch_fill_records() -> tuple[FillRecord, FillRecord]:
+    return (
+        FillRecord(
+            fill_id="broker-fill-callback-all-sequence-qty-001",
+            intent_id="callback-all-sequence-qty-001",
+            strategy_id="strategy-live-sim",
+            trade_date="2026-06-01",
+            instrument_id=510300,
+            direction="buy",
+            quantity=40,
+            fill_price=10.0,
+            fee=0.0,
+            slippage=0.0,
+            notes="imported partial broker fill before repair",
+            created_at="2026-06-01T09:31:00Z",
+        ),
+        FillRecord(
+            fill_id="broker-fill-callback-all-sequence-price-001",
+            intent_id="callback-all-sequence-price-001",
+            strategy_id="strategy-live-sim",
+            trade_date="2026-06-01",
+            instrument_id=510300,
+            direction="buy",
+            quantity=40,
+            fill_price=10.25,
+            fee=0.0,
+            slippage=0.0,
+            notes="imported expected-price fill before repair",
+            created_at="2026-06-01T09:31:00Z",
+        ),
+    )
+
+
+def _fill_from_broker_event(event: BrokerEventRecord) -> FillEvent:
+    return FillEvent(
+        fill_id=event.fill_id or "",
+        order_id=event.order_id or "",
+        instrument_id=InstrumentId(cast(int, event.instrument_id)),
+        direction=OrderSide(cast(str, event.payload["direction"])),
+        filled_quantity=cast(int, event.payload["filled_quantity"]),
+        fill_price=cast(float, event.payload["fill_price"]),
+        fee=cast(float, event.payload["fee"]),
+        slippage=cast(float, event.payload["slippage"]),
+        event_time=datetime.fromisoformat(event.event_time),
+        cumulative_quantity=cast(int, event.payload["cumulative_quantity"]),
+        leaves_quantity=cast(int, event.payload["leaves_quantity"]),
+    )
+
+
+class _BrokerEventFillImportSource:
+    def __init__(self, events: dict[tuple[str, str], BrokerEventRecord]) -> None:
+        self._events = events
+
+    def get_fill_record(self, action: RepairActionRecord) -> FillRecord | None:
+        if action.fill_id is None:
+            return None
+        event = self._events.get((action.order_id, action.fill_id))
+        if event is None:
+            return None
+        return FillRecord(
+            fill_id=action.fill_id,
+            intent_id=action.client_order_id or action.order_id,
+            strategy_id="strategy-live-sim",
+            trade_date=action.trade_date,
+            instrument_id=cast(int, event.instrument_id),
+            direction=cast(str, event.payload["direction"]),
+            quantity=cast(int, event.payload["filled_quantity"]),
+            fill_price=cast(float, event.payload["fill_price"]),
+            fee=cast(float, event.payload["fee"]),
+            slippage=cast(float, event.payload["slippage"]),
+            notes="imported from recorded broker event",
+            created_at=event.event_time,
+        )
+
+
+def _approve_all_mismatch_manual_actions(
+    workflow_store: SQLiteRepairWorkflowStore,
+    report_id: str,
+) -> None:
+    for index, reason in (
+        (0, "amend reviewed partial broker fill"),
+        (1, "amend reviewed broker fill price"),
+        (2, "OMS and broker status reviewed"),
+        (4, "import reviewed extra broker fill"),
+    ):
+        workflow_store.approve_action(
+            f"{report_id}:{index:04d}",
+            reviewer="ops",
+            reason=reason,
+            reviewed_at="2026-06-01T09:33:00Z",
+        )
+
+
+def _all_mismatch_fill_import_source(
+    scenario: _AllMismatchCallbackScenario,
+) -> _BrokerEventFillImportSource:
+    return _BrokerEventFillImportSource(
+        {
+            (cast(str, event.order_id), cast(str, event.fill_id)): event
+            for event in scenario.fill_events
+            if event.order_id is not None and event.fill_id is not None
+        }
+    )
+
+
+class _BrokerEventFillAmendmentSource:
+    def __init__(self, amended_fills: dict[str, FillRecord]) -> None:
+        self._amended_fills = amended_fills
+        self.requested_action_ids: list[str] = []
+        self.requested_fill_ids: list[str] = []
+
+    def get_amended_fill_record(
+        self,
+        action: RepairActionRecord,
+        current: FillRecord,
+    ) -> FillRecord | None:
+        del current
+        if action.fill_id is None:
+            return None
+        self.requested_action_ids.append(action.action_id)
+        self.requested_fill_ids.append(action.fill_id)
+        return self._amended_fills.get(action.fill_id)
+
+
+class _BrokerEventOrderStatusReviewSource:
+    def __init__(self, reviewed_statuses: dict[str, str]) -> None:
+        self._reviewed_statuses = reviewed_statuses
+        self.requested_action_ids: list[str] = []
+        self.observed_current_statuses: list[str] = []
+
+    def get_reviewed_order_status(
+        self,
+        action: RepairActionRecord,
+        current_status: str,
+    ) -> str | None:
+        self.requested_action_ids.append(action.action_id)
+        self.observed_current_statuses.append(current_status)
+        return self._reviewed_statuses.get(action.action_id)
+
+
+class _InMemoryLocalFillStore:
+    def __init__(self) -> None:
+        self.records: dict[str, FillRecord] = {}
+
+    def get_fill(self, fill_id: str) -> FillRecord | None:
+        return self.records.get(fill_id)
+
+    def save_fill(self, record: FillRecord) -> None:
+        self.records[record.fill_id] = record
+
+    def replace_fill(self, record: FillRecord) -> bool:
+        if record.fill_id not in self.records:
+            return False
+        self.records[record.fill_id] = record
+        return True
+
+
+class _InMemoryLocalOrderStatusStore:
+    def __init__(self, statuses: dict[str, str]) -> None:
+        self.statuses = statuses
+        self.updated: list[tuple[str, str, tuple[str, ...]]] = []
+
+    def get_order_status(self, order_id: str) -> str | None:
+        return self.statuses.get(order_id)
+
+    def update_order_status(
+        self,
+        order_id: str,
+        status: str,
+        *,
+        expected_current: tuple[str, ...],
+    ) -> bool:
+        if self.statuses.get(order_id) not in expected_current:
+            return False
+        self.updated.append((order_id, status, expected_current))
+        self.statuses[order_id] = status
+        return True
+
+
+@dataclass(frozen=True)
+class _AllMismatchRetryReplayFixture:
+    run_id: str
+    report_id: str
+    scenario: _AllMismatchCallbackScenario
+    workflow_store: SQLiteRepairWorkflowStore
+    qty_fill_id: str
+    price_fill_id: str
+    extra_fill_id: str
+    current_price_fill: FillRecord
+    amended_qty_fill: FillRecord
+    amended_price_fill: FillRecord
+    local_fills: _InMemoryLocalFillStore
+    local_orders: _InMemoryLocalOrderStatusStore
+    audit_service: ExecutionAuditService
+
+
+def _prepare_all_mismatch_retry_replay_fixture(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> _AllMismatchRetryReplayFixture:
+    run_id = "run-callback-all-mismatch-retry-replay-001"
+    report_id = "rec-callback-all-mismatch-retry-replay-001"
+    sink = InMemoryBrokerEventSink()
+    scenario = _submit_all_mismatch_callback_scenario(run_id=run_id, sink=sink)
+    report = _all_mismatch_report(report_id=report_id, scenario=scenario)
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    _approve_all_mismatch_manual_actions(workflow_store, report_id)
+    qty_fill_id = "broker-fill-callback-all-sequence-qty-001"
+    price_fill_id = "broker-fill-callback-all-sequence-price-001"
+    extra_fill_id = "broker-fill-callback-all-sequence-extra-001"
+    current_qty_fill, current_price_fill = _current_all_mismatch_fill_records()
+    amended_qty_fill = replace(
+        current_qty_fill,
+        quantity=100,
+        notes="amended from callback-derived retry sequence",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    amended_price_fill = replace(
+        current_price_fill,
+        fill_price=10.0,
+        notes="amended from callback-derived retry replay",
+        created_at="2026-06-01T09:36:00Z",
+    )
+    local_fills = _InMemoryLocalFillStore()
+    local_fills.save_fill(current_qty_fill)
+    local_fills.save_fill(current_price_fill)
+    local_orders = _InMemoryLocalOrderStatusStore(
+        {"callback-all-sequence-status-001": "submitted"}
+    )
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    return _AllMismatchRetryReplayFixture(
+        run_id=run_id,
+        report_id=report_id,
+        scenario=scenario,
+        workflow_store=workflow_store,
+        qty_fill_id=qty_fill_id,
+        price_fill_id=price_fill_id,
+        extra_fill_id=extra_fill_id,
+        current_price_fill=current_price_fill,
+        amended_qty_fill=amended_qty_fill,
+        amended_price_fill=amended_price_fill,
+        local_fills=local_fills,
+        local_orders=local_orders,
+        audit_service=audit_service,
+    )
+
+
+def _all_mismatch_repair_executor(
+    *,
+    workflow_store: SQLiteRepairWorkflowStore,
+    amendment_source: _BrokerEventFillAmendmentSource,
+    review_source: _BrokerEventOrderStatusReviewSource,
+    local_fills: _InMemoryLocalFillStore,
+    local_orders: _InMemoryLocalOrderStatusStore,
+    scenario: _AllMismatchCallbackScenario,
+    audit_service: ExecutionAuditService,
+    run_id: str,
+) -> RepairActionExecutor:
+    return RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            RepairActionType.AMEND_LOCAL_FILL: AmendLocalFillRepairHandler(
+                amendment_source=amendment_source,
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REFRESH_BROKER_ORDER: BrokerRefreshRepairHandler(
+                scenario.missing_gateway
+            ),
+            RepairActionType.IMPORT_BROKER_FILL: ImportBrokerFillRepairHandler(
+                broker_fill_source=_all_mismatch_fill_import_source(scenario),
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REVIEW_ORDER_STATUS: ReviewOrderStatusRepairHandler(
+                review_source=review_source,
+                local_order_store=local_orders,
+            ),
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id=run_id,
+        ),
+        executor_id="repair-worker",
+    )
+
+
+def test_recording_gateway_descriptor_adds_recording_capabilities() -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=ManualBrokerGateway(),
+        event_sink=sink,
+        run_id="run-descriptor-001",
+        broker="manual",
+        now=_fixed_now,
+    )
+
+    descriptor = gateway.describe()
+
+    assert validate_broker_gateway_descriptor(descriptor) is descriptor
+    assert descriptor.gateway_id == "recording:manual"
+    assert descriptor.mode == "recording"
+    assert "event_recording" in descriptor.capabilities
+    assert "broker_order_id_recovery" in descriptor.capabilities
+    assert descriptor.supported_event_types == STANDARD_BROKER_EVENT_TYPES
 
 
 def test_submit_records_ack_and_immediate_fill_events() -> None:
@@ -469,13 +1122,13 @@ def test_connect_cancel_and_reject_results_are_recorded() -> None:
 
     events = sink.list_broker_events("run-002")
     assert [(event.event_type, event.order_id, event.status) for event in events] == [
-        ("cancel", "cancel-missing", "rejected"),
-        ("cancel", "cancel-ok", "accepted"),
         ("connect", None, "connected"),
+        ("cancel", "cancel-ok", "accepted"),
+        ("cancel", "cancel-missing", "rejected"),
         ("reject", "reject-ok", "rejected"),
     ]
-    assert events[0].payload["accepted"] is False
     assert events[1].payload["accepted"] is True
+    assert events[2].payload["accepted"] is False
     assert events[3].payload["reason"] == "risk limit"
 
 
@@ -725,6 +1378,47 @@ def test_ticket_broker_order_id_links_follow_up_fill_and_cancel_events() -> None
     assert by_type["fill"].payload["broker_order_id"] == "broker-live-ack-002"
     assert by_type["cancel"].broker_order_id == "broker-live-ack-002"
     assert by_type["cancel"].payload["broker_order_id"] == "broker-live-ack-002"
+
+
+def test_broker_order_id_query_filters_across_brokers() -> None:
+    sink = InMemoryBrokerEventSink()
+    alpha = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-broker-order-filter-001",
+        broker="alpha",
+        now=SequenceClock(
+            datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 30, 1, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 30, 2, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 30, 3, tzinfo=UTC),
+        ),
+    )
+    beta = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-broker-order-filter-001",
+        broker="beta",
+        now=SequenceClock(
+            datetime(2026, 6, 1, 9, 31, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 31, 1, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 31, 2, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 31, 3, tzinfo=UTC),
+        ),
+    )
+
+    alpha.submit_order(_order("multi-alpha-001"))
+    beta.submit_order(_order("multi-beta-001"))
+
+    events = sink.list_broker_events(
+        "run-broker-order-filter-001",
+        broker_order_id="broker-multi-alpha-001",
+    )
+
+    assert [(event.broker, event.event_type, event.order_id) for event in events] == [
+        ("alpha", "order_ack", "multi-alpha-001"),
+        ("alpha", "fill", "multi-alpha-001"),
+    ]
 
 
 def test_repeated_order_ack_callbacks_are_recorded_as_distinct_attempts() -> None:
@@ -1085,6 +1779,1657 @@ def test_reconnected_wrapper_recovers_broker_order_id_only_from_same_broker_ack(
     )
 
 
+def test_reconnected_long_callback_sequence_preserves_recovered_links() -> None:
+    sink = InMemoryBrokerEventSink()
+    clock = SequenceClock(
+        datetime(2026, 6, 1, 9, 29, 50, tzinfo=UTC),
+        datetime(2026, 6, 1, 9, 29, 51, tzinfo=UTC),
+        datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
+        datetime(2026, 6, 1, 9, 30, 1, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 5, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 5, 1, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 5, 2, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 5, 3, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 5, 4, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 5, 5, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 6, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 6, 1, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 7, tzinfo=UTC),
+        datetime(2026, 6, 1, 10, 7, 1, tzinfo=UTC),
+    )
+    first_session = BrokerEventRecordingGateway(
+        gateway=BrokerAckNoFillGateway(),
+        event_sink=sink,
+        run_id="run-reconnect-long-sequence-001",
+        broker="live-sim",
+        now=clock,
+    )
+
+    first_session.connect()
+    first_session.submit_order(_order("live-reconnect-001"))
+
+    reconnected_session = BrokerEventRecordingGateway(
+        gateway=ReconnectedReplayBrokerGateway(),
+        event_sink=sink,
+        run_id="run-reconnect-long-sequence-001",
+        broker="live-sim",
+        now=clock,
+    )
+    reconnected_session.connect()
+    reconnected_session.query_fills("live-reconnect-001")
+    reconnected_session.query_fills("live-reconnect-001")
+    reconnected_session.cancel_order("live-reconnect-001")
+    reconnected_session.get_account()
+
+    events = sink.list_broker_events("run-reconnect-long-sequence-001")
+    assert [(event.event_type, event.order_id, event.status) for event in events] == [
+        ("connect", None, "connected"),
+        ("order_ack", "live-reconnect-001", "submitted"),
+        ("fill", "live-reconnect-001", "partially_filled"),
+        ("connect", None, "connected"),
+        ("cancel", "live-reconnect-001", "accepted"),
+        ("account_update", None, "snapshot"),
+    ]
+
+    order_linked_events = [
+        event for event in events if event.event_type in {"order_ack", "fill", "cancel"}
+    ]
+    assert [event.broker_order_id for event in order_linked_events] == [
+        "broker-live-reconnect-001",
+        "broker-live-reconnect-001",
+        "broker-live-reconnect-001",
+    ]
+    assert [event.payload["broker_order_id"] for event in order_linked_events] == [
+        "broker-live-reconnect-001",
+        "broker-live-reconnect-001",
+        "broker-live-reconnect-001",
+    ]
+
+    fill_events = [event for event in events if event.event_type == "fill"]
+    assert [event.event_id for event in fill_events] == [
+        "run-reconnect-long-sequence-001:live-sim:fill:"
+        "live-reconnect-001:broker-fill-001:40:60"
+    ]
+    assert fill_events[0].created_at == "2026-06-01T10:05:02+00:00"
+
+    connect_events = [event for event in events if event.event_type == "connect"]
+    assert [event.event_id for event in connect_events] == [
+        "run-reconnect-long-sequence-001:live-sim:connect:2026-06-01T09:29:50+00:00",
+        "run-reconnect-long-sequence-001:live-sim:connect:2026-06-01T10:05:00+00:00",
+    ]
+
+
+def test_recorded_fill_link_survives_reconciliation_repair_plan() -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-repair-001",
+        broker="live-sim",
+        now=_fixed_now,
+    )
+    order = _order("callback-repair-001", quantity=100, price=10.0)
+
+    gateway.submit_order(order)
+
+    broker_fill_events = sink.list_broker_events(
+        "run-callback-repair-001",
+        event_type="fill",
+    )
+    broker_order_ids_by_order = {
+        cast(str, event.order_id): cast(str, event.broker_order_id)
+        for event in broker_fill_events
+        if event.order_id is not None and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-repair-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            )
+        ],
+        actual=[_fill_from_broker_event(event) for event in broker_fill_events],
+        broker_order_links=BrokerOrderLinkIndex(by_order=broker_order_ids_by_order),
+    )
+    plan = plan_repair(report)
+
+    qty_action = next(
+        action
+        for action in plan.actions
+        if action.mismatch_type is MismatchType.QTY_MISMATCH
+    )
+    assert qty_action.order_id == "callback-repair-001"
+    assert qty_action.broker_order_id == "broker-callback-repair-001"
+
+
+def test_recorded_ack_link_survives_missing_fill_repair_execution_audit(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckNoFillGateway(),
+        event_sink=sink,
+        run_id="run-callback-refresh-audit-001",
+        broker="live-sim",
+        now=_fixed_now,
+    )
+    order = _order("callback-refresh-audit-001", quantity=100, price=10.0)
+
+    gateway.submit_order(order)
+
+    ack_events = sink.list_broker_events(
+        "run-callback-refresh-audit-001",
+        event_type="order_ack",
+    )
+    broker_order_ids_by_order = {
+        cast(str, event.order_id): cast(str, event.broker_order_id)
+        for event in ack_events
+        if event.order_id is not None and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-refresh-audit-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            )
+        ],
+        actual=[],
+        broker_order_links=BrokerOrderLinkIndex(by_order=broker_order_ids_by_order),
+    )
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={"refresh_broker_order": BrokerRefreshRepairHandler(gateway)},
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id="run-callback-refresh-audit-001",
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        "rec-callback-refresh-audit-001",
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(
+        "run-callback-refresh-audit-001",
+        record_type="repair_execution",
+    )
+    assert len(rows) == 1
+    payload = orjson.loads(rows[0]["payload"])
+    assert [result.status for result in results] == ["executed"]
+    assert payload["action_type"] == "refresh_broker_order"
+    assert payload["client_order_id"] == "callback-refresh-audit-001"
+    assert payload["broker_order_id"] == "broker-callback-refresh-audit-001"
+
+
+def test_recorded_extra_fill_import_execution_audit_preserves_client_order_link(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-extra-import-audit-001",
+        broker="live-sim",
+        now=_fixed_now,
+    )
+    order = _order("callback-extra-import-audit-001", quantity=100, price=10.0)
+
+    gateway.submit_order(order)
+
+    fill_events = sink.list_broker_events(
+        "run-callback-extra-import-audit-001",
+        event_type="fill",
+    )
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-extra-import-audit-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    workflow_store.approve_action(
+        "rec-callback-extra-import-audit-001:0000",
+        reviewer="ops",
+        reason="import reviewed broker fill",
+        reviewed_at="2026-06-01T09:33:00Z",
+    )
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    local_fills = _InMemoryLocalFillStore()
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            "import_broker_fill": ImportBrokerFillRepairHandler(
+                broker_fill_source=_BrokerEventFillImportSource(
+                    {
+                        (cast(str, event.order_id), cast(str, event.fill_id)): event
+                        for event in fill_events
+                        if event.order_id is not None and event.fill_id is not None
+                    }
+                ),
+                local_fill_store=local_fills,
+            )
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id="run-callback-extra-import-audit-001",
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        "rec-callback-extra-import-audit-001",
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(
+        "run-callback-extra-import-audit-001",
+        record_type="repair_execution",
+    )
+    assert [result.status for result in results] == ["executed"]
+    assert local_fills.get_fill("broker-fill-001") is not None
+    assert len(rows) == 1
+    payload = orjson.loads(rows[0]["payload"])
+    assert payload["action_type"] == "import_broker_fill"
+    assert payload["fill_id"] == "broker-fill-001"
+    assert payload["client_order_id"] == "callback-extra-import-audit-001"
+    assert payload["broker_order_id"] == "broker-callback-extra-import-audit-001"
+
+
+def test_recorded_qty_mismatch_amend_execution_audit_preserves_fill_link(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-qty-amend-audit-001",
+        broker="live-sim",
+        now=_fixed_now,
+    )
+    order = _order("callback-qty-amend-audit-001", quantity=100, price=10.0)
+
+    gateway.submit_order(order)
+
+    fill_events = sink.list_broker_events(
+        "run-callback-qty-amend-audit-001",
+        event_type="fill",
+    )
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-qty-amend-audit-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            )
+        ],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    workflow_store.approve_action(
+        "rec-callback-qty-amend-audit-001:0000",
+        reviewer="ops",
+        reason="amend reviewed broker fill",
+        reviewed_at="2026-06-01T09:33:00Z",
+    )
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    current_fill = FillRecord(
+        fill_id="broker-fill-001",
+        intent_id="callback-qty-amend-audit-001",
+        strategy_id="strategy-live-sim",
+        trade_date="2026-06-01",
+        instrument_id=510300,
+        direction="buy",
+        quantity=40,
+        fill_price=10.0,
+        fee=0.0,
+        slippage=0.0,
+        notes="imported from recorded broker event",
+        created_at="2026-06-01T09:31:00Z",
+    )
+    amended_fill = FillRecord(
+        fill_id="broker-fill-001",
+        intent_id="callback-qty-amend-audit-001",
+        strategy_id="strategy-live-sim",
+        trade_date="2026-06-01",
+        instrument_id=510300,
+        direction="buy",
+        quantity=100,
+        fill_price=10.0,
+        fee=0.0,
+        slippage=0.0,
+        notes="amended from recorded broker event",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    local_fills = _InMemoryLocalFillStore()
+    local_fills.save_fill(current_fill)
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            "amend_local_fill": AmendLocalFillRepairHandler(
+                amendment_source=_BrokerEventFillAmendmentSource(
+                    {"broker-fill-001": amended_fill}
+                ),
+                local_fill_store=local_fills,
+            )
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id="run-callback-qty-amend-audit-001",
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        "rec-callback-qty-amend-audit-001",
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(
+        "run-callback-qty-amend-audit-001",
+        record_type="repair_execution",
+    )
+    assert [result.status for result in results] == ["executed"]
+    assert local_fills.get_fill("broker-fill-001") == amended_fill
+    assert len(rows) == 1
+    payload = orjson.loads(rows[0]["payload"])
+    assert payload["action_type"] == "amend_local_fill"
+    assert payload["fill_id"] == "broker-fill-001"
+    assert payload["client_order_id"] == "callback-qty-amend-audit-001"
+    assert payload["broker_order_id"] == "broker-callback-qty-amend-audit-001"
+
+
+def test_recorded_price_mismatch_amend_execution_audit_preserves_fill_link(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-price-amend-audit-001",
+        broker="live-sim",
+        now=_fixed_now,
+    )
+    order = _order("callback-price-amend-audit-001", quantity=40, price=10.25)
+
+    gateway.submit_order(order)
+
+    fill_events = sink.list_broker_events(
+        "run-callback-price-amend-audit-001",
+        event_type="fill",
+    )
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-price-amend-audit-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=order,
+                status=OrderStatus.FILLED,
+                filled_quantity=40,
+                filled_price=10.25,
+                average_fill_price=10.25,
+            )
+        ],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    workflow_store.approve_action(
+        "rec-callback-price-amend-audit-001:0000",
+        reviewer="ops",
+        reason="amend reviewed broker fill price",
+        reviewed_at="2026-06-01T09:33:00Z",
+    )
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    current_fill = FillRecord(
+        fill_id="broker-fill-001",
+        intent_id="callback-price-amend-audit-001",
+        strategy_id="strategy-live-sim",
+        trade_date="2026-06-01",
+        instrument_id=510300,
+        direction="buy",
+        quantity=40,
+        fill_price=10.25,
+        fee=0.0,
+        slippage=0.0,
+        notes="imported from expected local price",
+        created_at="2026-06-01T09:31:00Z",
+    )
+    amended_fill = FillRecord(
+        fill_id="broker-fill-001",
+        intent_id="callback-price-amend-audit-001",
+        strategy_id="strategy-live-sim",
+        trade_date="2026-06-01",
+        instrument_id=510300,
+        direction="buy",
+        quantity=40,
+        fill_price=10.0,
+        fee=0.0,
+        slippage=0.0,
+        notes="amended from recorded broker event price",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    local_fills = _InMemoryLocalFillStore()
+    local_fills.save_fill(current_fill)
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            "amend_local_fill": AmendLocalFillRepairHandler(
+                amendment_source=_BrokerEventFillAmendmentSource(
+                    {"broker-fill-001": amended_fill}
+                ),
+                local_fill_store=local_fills,
+            )
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id="run-callback-price-amend-audit-001",
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        "rec-callback-price-amend-audit-001",
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(
+        "run-callback-price-amend-audit-001",
+        record_type="repair_execution",
+    )
+    assert [action.mismatch_type for action in plan.actions] == [
+        MismatchType.PRICE_MISMATCH
+    ]
+    assert [result.status for result in results] == ["executed"]
+    assert local_fills.get_fill("broker-fill-001") == amended_fill
+    assert len(rows) == 1
+    payload = orjson.loads(rows[0]["payload"])
+    assert payload["action_type"] == "amend_local_fill"
+    assert payload["fill_id"] == "broker-fill-001"
+    assert payload["client_order_id"] == "callback-price-amend-audit-001"
+    assert payload["broker_order_id"] == "broker-callback-price-amend-audit-001"
+
+
+def test_recorded_status_mismatch_review_execution_audit_preserves_order_link(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    sink = InMemoryBrokerEventSink()
+    gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-status-review-audit-001",
+        broker="live-sim",
+        now=_fixed_now,
+    )
+    order = _order("callback-status-review-audit-001", quantity=40, price=10.0)
+
+    gateway.submit_order(order)
+
+    fill_events = sink.list_broker_events(
+        "run-callback-status-review-audit-001",
+        event_type="fill",
+    )
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-status-review-audit-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=order,
+                status=OrderStatus.SUBMITTED,
+                filled_quantity=40,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            )
+        ],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    workflow_store.approve_action(
+        "rec-callback-status-review-audit-001:0000",
+        reviewer="ops",
+        reason="OMS and broker status reviewed",
+        reviewed_at="2026-06-01T09:33:00Z",
+    )
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    local_orders = _InMemoryLocalOrderStatusStore(
+        {"callback-status-review-audit-001": "submitted"}
+    )
+    review_source = _BrokerEventOrderStatusReviewSource(
+        {"rec-callback-status-review-audit-001:0000": "filled"}
+    )
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            "review_order_status": ReviewOrderStatusRepairHandler(
+                review_source=review_source,
+                local_order_store=local_orders,
+            )
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id="run-callback-status-review-audit-001",
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        "rec-callback-status-review-audit-001",
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(
+        "run-callback-status-review-audit-001",
+        record_type="repair_execution",
+    )
+    assert [action.mismatch_type for action in plan.actions] == [
+        MismatchType.STATUS_MISMATCH
+    ]
+    assert plan.actions[0].broker_order_id == "broker-callback-status-review-audit-001"
+    assert review_source.requested_action_ids == [
+        "rec-callback-status-review-audit-001:0000"
+    ]
+    assert review_source.observed_current_statuses == ["submitted"]
+    assert local_orders.updated == [
+        ("callback-status-review-audit-001", "filled", ("submitted",))
+    ]
+    assert local_orders.get_order_status("callback-status-review-audit-001") == "filled"
+    assert [result.status for result in results] == ["executed"]
+    assert len(rows) == 1
+    payload = orjson.loads(rows[0]["payload"])
+    assert payload["action_type"] == "review_order_status"
+    assert payload["client_order_id"] == "callback-status-review-audit-001"
+    assert payload["broker_order_id"] == "broker-callback-status-review-audit-001"
+
+
+def test_callback_derived_mixed_repair_sequence_execution_audit_preserves_links(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    run_id = "run-callback-mixed-sequence-audit-001"
+    report_id = "rec-callback-mixed-sequence-audit-001"
+    sink = InMemoryBrokerEventSink()
+    clock = SequenceClock(
+        *(datetime(2026, 6, 1, 9, 30, second, tzinfo=UTC) for second in range(12))
+    )
+    amend_gateway = BrokerEventRecordingGateway(
+        gateway=UniqueFillIdBrokerGateway(fill_quantity=40),
+        event_sink=sink,
+        run_id=run_id,
+        broker="alpha",
+        now=clock,
+    )
+    missing_gateway = BrokerEventRecordingGateway(
+        gateway=BrokerAckNoFillGateway(),
+        event_sink=sink,
+        run_id=run_id,
+        broker="beta",
+        now=clock,
+    )
+    extra_gateway = BrokerEventRecordingGateway(
+        gateway=UniqueFillIdBrokerGateway(fill_quantity=40),
+        event_sink=sink,
+        run_id=run_id,
+        broker="gamma",
+        now=clock,
+    )
+    amend_order = _order("callback-sequence-amend-001", quantity=100, price=10.0)
+    missing_order = _order("callback-sequence-missing-001", quantity=100, price=10.0)
+    extra_order = _order("callback-sequence-extra-001", quantity=40, price=10.0)
+
+    amend_gateway.submit_order(amend_order)
+    missing_gateway.submit_order(missing_order)
+    extra_gateway.submit_order(extra_order)
+
+    ack_events = sink.list_broker_events(run_id, event_type="order_ack")
+    fill_events = sink.list_broker_events(run_id, event_type="fill")
+    broker_order_ids_by_order = {
+        cast(str, event.order_id): cast(str, event.broker_order_id)
+        for event in ack_events
+        if event.order_id is not None and event.broker_order_id is not None
+    }
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id=report_id,
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=amend_order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+            OrderTicket(
+                order=missing_order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+        ],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order=broker_order_ids_by_order,
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    workflow_store.approve_action(
+        f"{report_id}:0000",
+        reviewer="ops",
+        reason="amend reviewed partial broker fill",
+        reviewed_at="2026-06-01T09:33:00Z",
+    )
+    workflow_store.approve_action(
+        f"{report_id}:0002",
+        reviewer="ops",
+        reason="import reviewed extra broker fill",
+        reviewed_at="2026-06-01T09:34:00Z",
+    )
+    amend_fill_id = "broker-fill-callback-sequence-amend-001"
+    extra_fill_id = "broker-fill-callback-sequence-extra-001"
+    current_amend_fill = FillRecord(
+        fill_id=amend_fill_id,
+        intent_id="callback-sequence-amend-001",
+        strategy_id="strategy-live-sim",
+        trade_date="2026-06-01",
+        instrument_id=510300,
+        direction="buy",
+        quantity=40,
+        fill_price=10.0,
+        fee=0.0,
+        slippage=0.0,
+        notes="imported partial broker fill before repair",
+        created_at="2026-06-01T09:31:00Z",
+    )
+    amended_fill = replace(
+        current_amend_fill,
+        quantity=100,
+        notes="amended from callback-derived sequence",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    local_fills = _InMemoryLocalFillStore()
+    local_fills.save_fill(current_amend_fill)
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            RepairActionType.AMEND_LOCAL_FILL: AmendLocalFillRepairHandler(
+                amendment_source=_BrokerEventFillAmendmentSource(
+                    {amend_fill_id: amended_fill}
+                ),
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REFRESH_BROKER_ORDER: BrokerRefreshRepairHandler(
+                missing_gateway
+            ),
+            RepairActionType.IMPORT_BROKER_FILL: ImportBrokerFillRepairHandler(
+                broker_fill_source=_BrokerEventFillImportSource(
+                    {
+                        (cast(str, event.order_id), cast(str, event.fill_id)): event
+                        for event in fill_events
+                        if event.order_id is not None and event.fill_id is not None
+                    }
+                ),
+                local_fill_store=local_fills,
+            ),
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id=run_id,
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        report_id,
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(run_id, record_type="repair_execution")
+    payloads = [orjson.loads(row["payload"]) for row in rows]
+    assert [
+        (
+            action.mismatch_type,
+            action.action_type,
+            action.order_id,
+            action.fill_id,
+            action.broker_order_id,
+        )
+        for action in plan.actions
+    ] == [
+        (
+            MismatchType.QTY_MISMATCH,
+            RepairActionType.AMEND_LOCAL_FILL,
+            "callback-sequence-amend-001",
+            amend_fill_id,
+            "broker-callback-sequence-amend-001",
+        ),
+        (
+            MismatchType.MISSING_FILL,
+            RepairActionType.REFRESH_BROKER_ORDER,
+            "callback-sequence-missing-001",
+            None,
+            "broker-callback-sequence-missing-001",
+        ),
+        (
+            MismatchType.EXTRA_FILL,
+            RepairActionType.IMPORT_BROKER_FILL,
+            "callback-sequence-extra-001",
+            extra_fill_id,
+            "broker-callback-sequence-extra-001",
+        ),
+    ]
+    assert [result.status for result in results] == [
+        "executed",
+        "executed",
+        "executed",
+    ]
+    assert [result.action_type for result in results] == [
+        RepairActionType.AMEND_LOCAL_FILL,
+        RepairActionType.REFRESH_BROKER_ORDER,
+        RepairActionType.IMPORT_BROKER_FILL,
+    ]
+    assert local_fills.get_fill(amend_fill_id) == amended_fill
+    imported_extra_fill = local_fills.get_fill(extra_fill_id)
+    assert imported_extra_fill is not None
+    assert imported_extra_fill.intent_id == "callback-sequence-extra-001"
+    assert len(rows) == 3
+    assert [
+        (
+            payload["action_type"],
+            payload["client_order_id"],
+            payload["broker_order_id"],
+            payload.get("fill_id"),
+        )
+        for payload in payloads
+    ] == [
+        (
+            "amend_local_fill",
+            "callback-sequence-amend-001",
+            "broker-callback-sequence-amend-001",
+            amend_fill_id,
+        ),
+        (
+            "refresh_broker_order",
+            "callback-sequence-missing-001",
+            "broker-callback-sequence-missing-001",
+            None,
+        ),
+        (
+            "import_broker_fill",
+            "callback-sequence-extra-001",
+            "broker-callback-sequence-extra-001",
+            extra_fill_id,
+        ),
+    ]
+
+
+def test_callback_derived_all_mismatch_repair_sequence_execution_audit_preserves_links(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    run_id = "run-callback-all-mismatch-sequence-audit-001"
+    report_id = "rec-callback-all-mismatch-sequence-audit-001"
+    sink = InMemoryBrokerEventSink()
+    scenario = _submit_all_mismatch_callback_scenario(run_id=run_id, sink=sink)
+    report = _all_mismatch_report(report_id=report_id, scenario=scenario)
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    _approve_all_mismatch_manual_actions(workflow_store, report_id)
+    qty_fill_id = "broker-fill-callback-all-sequence-qty-001"
+    price_fill_id = "broker-fill-callback-all-sequence-price-001"
+    extra_fill_id = "broker-fill-callback-all-sequence-extra-001"
+    current_qty_fill, current_price_fill = _current_all_mismatch_fill_records()
+    amended_qty_fill = replace(
+        current_qty_fill,
+        quantity=100,
+        notes="amended from callback-derived all-mismatch sequence",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    amended_price_fill = replace(
+        current_price_fill,
+        fill_price=10.0,
+        notes="amended from callback-derived all-mismatch sequence",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    local_fills = _InMemoryLocalFillStore()
+    local_fills.save_fill(current_qty_fill)
+    local_fills.save_fill(current_price_fill)
+    local_orders = _InMemoryLocalOrderStatusStore(
+        {"callback-all-sequence-status-001": "submitted"}
+    )
+    review_source = _BrokerEventOrderStatusReviewSource({f"{report_id}:0002": "filled"})
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            RepairActionType.AMEND_LOCAL_FILL: AmendLocalFillRepairHandler(
+                amendment_source=_BrokerEventFillAmendmentSource(
+                    {
+                        qty_fill_id: amended_qty_fill,
+                        price_fill_id: amended_price_fill,
+                    }
+                ),
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REFRESH_BROKER_ORDER: BrokerRefreshRepairHandler(
+                scenario.missing_gateway
+            ),
+            RepairActionType.IMPORT_BROKER_FILL: ImportBrokerFillRepairHandler(
+                broker_fill_source=_all_mismatch_fill_import_source(scenario),
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REVIEW_ORDER_STATUS: ReviewOrderStatusRepairHandler(
+                review_source=review_source,
+                local_order_store=local_orders,
+            ),
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id=run_id,
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        report_id,
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(run_id, record_type="repair_execution")
+    payloads = [orjson.loads(row["payload"]) for row in rows]
+    assert [
+        (
+            action.mismatch_type,
+            action.action_type,
+            action.order_id,
+            action.fill_id,
+            action.broker_order_id,
+        )
+        for action in plan.actions
+    ] == [
+        (
+            MismatchType.QTY_MISMATCH,
+            RepairActionType.AMEND_LOCAL_FILL,
+            "callback-all-sequence-qty-001",
+            qty_fill_id,
+            "broker-callback-all-sequence-qty-001",
+        ),
+        (
+            MismatchType.PRICE_MISMATCH,
+            RepairActionType.AMEND_LOCAL_FILL,
+            "callback-all-sequence-price-001",
+            price_fill_id,
+            "broker-callback-all-sequence-price-001",
+        ),
+        (
+            MismatchType.STATUS_MISMATCH,
+            RepairActionType.REVIEW_ORDER_STATUS,
+            "callback-all-sequence-status-001",
+            None,
+            "broker-callback-all-sequence-status-001",
+        ),
+        (
+            MismatchType.MISSING_FILL,
+            RepairActionType.REFRESH_BROKER_ORDER,
+            "callback-all-sequence-missing-001",
+            None,
+            "broker-callback-all-sequence-missing-001",
+        ),
+        (
+            MismatchType.EXTRA_FILL,
+            RepairActionType.IMPORT_BROKER_FILL,
+            "callback-all-sequence-extra-001",
+            extra_fill_id,
+            "broker-callback-all-sequence-extra-001",
+        ),
+    ]
+    assert [result.status for result in results] == [
+        "executed",
+        "executed",
+        "executed",
+        "executed",
+        "executed",
+    ]
+    assert [result.action_type for result in results] == [
+        RepairActionType.AMEND_LOCAL_FILL,
+        RepairActionType.AMEND_LOCAL_FILL,
+        RepairActionType.REVIEW_ORDER_STATUS,
+        RepairActionType.REFRESH_BROKER_ORDER,
+        RepairActionType.IMPORT_BROKER_FILL,
+    ]
+    assert local_fills.get_fill(qty_fill_id) == amended_qty_fill
+    assert local_fills.get_fill(price_fill_id) == amended_price_fill
+    imported_extra_fill = local_fills.get_fill(extra_fill_id)
+    assert imported_extra_fill is not None
+    assert imported_extra_fill.intent_id == "callback-all-sequence-extra-001"
+    assert local_orders.updated == [
+        ("callback-all-sequence-status-001", "filled", ("submitted",))
+    ]
+    assert len(rows) == 5
+    assert [
+        (
+            payload["action_type"],
+            payload["client_order_id"],
+            payload["broker_order_id"],
+            payload.get("fill_id"),
+        )
+        for payload in payloads
+    ] == [
+        (
+            "amend_local_fill",
+            "callback-all-sequence-qty-001",
+            "broker-callback-all-sequence-qty-001",
+            qty_fill_id,
+        ),
+        (
+            "amend_local_fill",
+            "callback-all-sequence-price-001",
+            "broker-callback-all-sequence-price-001",
+            price_fill_id,
+        ),
+        (
+            "review_order_status",
+            "callback-all-sequence-status-001",
+            "broker-callback-all-sequence-status-001",
+            None,
+        ),
+        (
+            "refresh_broker_order",
+            "callback-all-sequence-missing-001",
+            "broker-callback-all-sequence-missing-001",
+            None,
+        ),
+        (
+            "import_broker_fill",
+            "callback-all-sequence-extra-001",
+            "broker-callback-all-sequence-extra-001",
+            extra_fill_id,
+        ),
+    ]
+
+
+def test_callback_derived_failed_amendment_sequence_keeps_unrelated_repairs_executing(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    run_id = "run-callback-all-mismatch-failed-amendment-001"
+    report_id = "rec-callback-all-mismatch-failed-amendment-001"
+    sink = InMemoryBrokerEventSink()
+    scenario = _submit_all_mismatch_callback_scenario(run_id=run_id, sink=sink)
+    report = _all_mismatch_report(report_id=report_id, scenario=scenario)
+    plan = plan_repair(report)
+    workflow_store = SQLiteRepairWorkflowStore(sqlite_client)
+    workflow_store.init_schema()
+    workflow_store.save_plan(plan, created_at="2026-06-01T09:32:00Z")
+    _approve_all_mismatch_manual_actions(workflow_store, report_id)
+    qty_fill_id = "broker-fill-callback-all-sequence-qty-001"
+    price_fill_id = "broker-fill-callback-all-sequence-price-001"
+    extra_fill_id = "broker-fill-callback-all-sequence-extra-001"
+    current_qty_fill, current_price_fill = _current_all_mismatch_fill_records()
+    amended_qty_fill = replace(
+        current_qty_fill,
+        quantity=100,
+        notes="amended from callback-derived retry sequence",
+        created_at="2026-06-01T09:35:00Z",
+    )
+    local_fills = _InMemoryLocalFillStore()
+    local_fills.save_fill(current_qty_fill)
+    local_fills.save_fill(current_price_fill)
+    local_orders = _InMemoryLocalOrderStatusStore(
+        {"callback-all-sequence-status-001": "submitted"}
+    )
+    review_source = _BrokerEventOrderStatusReviewSource({f"{report_id}:0002": "filled"})
+    audit_service = ExecutionAuditService(sqlite_pool)
+    audit_service.init_schema()
+    executor = RepairActionExecutor(
+        workflow_store=workflow_store,
+        handlers={
+            RepairActionType.AMEND_LOCAL_FILL: AmendLocalFillRepairHandler(
+                amendment_source=_BrokerEventFillAmendmentSource(
+                    {qty_fill_id: amended_qty_fill}
+                ),
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REFRESH_BROKER_ORDER: BrokerRefreshRepairHandler(
+                scenario.missing_gateway
+            ),
+            RepairActionType.IMPORT_BROKER_FILL: ImportBrokerFillRepairHandler(
+                broker_fill_source=_all_mismatch_fill_import_source(scenario),
+                local_fill_store=local_fills,
+            ),
+            RepairActionType.REVIEW_ORDER_STATUS: ReviewOrderStatusRepairHandler(
+                review_source=review_source,
+                local_order_store=local_orders,
+            ),
+        },
+        audit_sink=ExecutionRepairAuditSink(
+            audit_service=audit_service,
+            run_id=run_id,
+        ),
+        executor_id="repair-worker",
+    )
+
+    results = executor.execute_report_actions(
+        report_id,
+        executed_at="2026-06-01T09:35:00Z",
+    )
+
+    rows = audit_service.query(run_id, record_type="repair_execution")
+    payloads = [orjson.loads(row["payload"]) for row in rows]
+    failed_message = f"amended fill {price_fill_id} was not found"
+    assert [result.action_id for result in results] == [
+        f"{report_id}:{index:04d}" for index in range(len(plan.actions))
+    ]
+    assert [result.status for result in results] == [
+        "executed",
+        "failed",
+        "executed",
+        "executed",
+        "executed",
+    ]
+    assert results[1].message == failed_message
+    assert [action.status for action in workflow_store.list_actions(report_id)] == [
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.APPROVED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+    ]
+    assert local_fills.get_fill(qty_fill_id) == amended_qty_fill
+    assert local_fills.get_fill(price_fill_id) == current_price_fill
+    imported_extra_fill = local_fills.get_fill(extra_fill_id)
+    assert imported_extra_fill is not None
+    assert imported_extra_fill.intent_id == "callback-all-sequence-extra-001"
+    assert local_orders.updated == [
+        ("callback-all-sequence-status-001", "filled", ("submitted",))
+    ]
+    assert len(rows) == 5
+    assert [
+        (
+            payload["action_type"],
+            payload["client_order_id"],
+            payload["broker_order_id"],
+            payload.get("fill_id"),
+            payload["status"],
+            payload["message"],
+        )
+        for payload in payloads
+    ] == [
+        (
+            "amend_local_fill",
+            "callback-all-sequence-qty-001",
+            "broker-callback-all-sequence-qty-001",
+            qty_fill_id,
+            "executed",
+            f"amended local fill {qty_fill_id}",
+        ),
+        (
+            "amend_local_fill",
+            "callback-all-sequence-price-001",
+            "broker-callback-all-sequence-price-001",
+            price_fill_id,
+            "failed",
+            failed_message,
+        ),
+        (
+            "review_order_status",
+            "callback-all-sequence-status-001",
+            "broker-callback-all-sequence-status-001",
+            None,
+            "executed",
+            "updated local order callback-all-sequence-status-001 status to filled",
+        ),
+        (
+            "refresh_broker_order",
+            "callback-all-sequence-missing-001",
+            "broker-callback-all-sequence-missing-001",
+            None,
+            "executed",
+            "queried 0 broker fills",
+        ),
+        (
+            "import_broker_fill",
+            "callback-all-sequence-extra-001",
+            "broker-callback-all-sequence-extra-001",
+            extra_fill_id,
+            "executed",
+            f"imported broker fill {extra_fill_id}",
+        ),
+    ]
+
+
+def test_callback_derived_failed_amendment_retry_replays_only_unfinished_repair(
+    sqlite_client: SQLiteClient,
+    sqlite_pool: SQLitePool,
+) -> None:
+    fixture = _prepare_all_mismatch_retry_replay_fixture(sqlite_client, sqlite_pool)
+    first_review_source = _BrokerEventOrderStatusReviewSource(
+        {f"{fixture.report_id}:0002": "filled"}
+    )
+    first_amend_source = _BrokerEventFillAmendmentSource(
+        {fixture.qty_fill_id: fixture.amended_qty_fill}
+    )
+    first_executor = _all_mismatch_repair_executor(
+        workflow_store=fixture.workflow_store,
+        amendment_source=first_amend_source,
+        review_source=first_review_source,
+        local_fills=fixture.local_fills,
+        local_orders=fixture.local_orders,
+        scenario=fixture.scenario,
+        audit_service=fixture.audit_service,
+        run_id=fixture.run_id,
+    )
+
+    first_results = first_executor.execute_report_actions(
+        fixture.report_id,
+        executed_at="2026-06-01T09:35:00Z",
+    )
+    rows_after_first = fixture.audit_service.query(
+        fixture.run_id,
+        record_type="repair_execution",
+    )
+    first_payloads = [orjson.loads(row["payload"]) for row in rows_after_first]
+    first_local_order_updates = list(fixture.local_orders.updated)
+
+    assert [result.status for result in first_results] == [
+        "executed",
+        "failed",
+        "executed",
+        "executed",
+        "executed",
+    ]
+    assert [
+        action.status
+        for action in fixture.workflow_store.list_actions(fixture.report_id)
+    ] == [
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.APPROVED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+    ]
+    assert first_amend_source.requested_fill_ids == [
+        fixture.qty_fill_id,
+        fixture.price_fill_id,
+    ]
+    assert first_review_source.requested_action_ids == [f"{fixture.report_id}:0002"]
+    assert first_local_order_updates == [
+        ("callback-all-sequence-status-001", "filled", ("submitted",))
+    ]
+    assert fixture.local_fills.get_fill(fixture.qty_fill_id) == fixture.amended_qty_fill
+    assert (
+        fixture.local_fills.get_fill(fixture.price_fill_id)
+        == fixture.current_price_fill
+    )
+    assert len(rows_after_first) == 5
+    assert [
+        (payload["action_id"], payload["status"], payload["message"])
+        for payload in first_payloads
+    ] == [
+        (
+            f"{fixture.report_id}:0000",
+            "executed",
+            f"amended local fill {fixture.qty_fill_id}",
+        ),
+        (
+            f"{fixture.report_id}:0001",
+            "failed",
+            f"amended fill {fixture.price_fill_id} was not found",
+        ),
+        (
+            f"{fixture.report_id}:0002",
+            "executed",
+            "updated local order callback-all-sequence-status-001 status to filled",
+        ),
+        (f"{fixture.report_id}:0003", "executed", "queried 0 broker fills"),
+        (
+            f"{fixture.report_id}:0004",
+            "executed",
+            f"imported broker fill {fixture.extra_fill_id}",
+        ),
+    ]
+
+    second_review_source = _BrokerEventOrderStatusReviewSource(
+        {f"{fixture.report_id}:0002": "filled"}
+    )
+    second_amend_source = _BrokerEventFillAmendmentSource(
+        {fixture.price_fill_id: fixture.amended_price_fill}
+    )
+    second_executor = _all_mismatch_repair_executor(
+        workflow_store=fixture.workflow_store,
+        amendment_source=second_amend_source,
+        review_source=second_review_source,
+        local_fills=fixture.local_fills,
+        local_orders=fixture.local_orders,
+        scenario=fixture.scenario,
+        audit_service=fixture.audit_service,
+        run_id=fixture.run_id,
+    )
+
+    second_results = second_executor.execute_report_actions(
+        fixture.report_id,
+        executed_at="2026-06-01T09:36:00Z",
+    )
+    rows_after_second = fixture.audit_service.query(
+        fixture.run_id,
+        record_type="repair_execution",
+    )
+    new_rows = rows_after_second[len(rows_after_first) :]
+    second_payloads = [orjson.loads(row["payload"]) for row in new_rows]
+
+    assert [result.status for result in second_results] == [
+        "skipped",
+        "executed",
+        "skipped",
+        "skipped",
+        "skipped",
+    ]
+    assert [
+        action.status
+        for action in fixture.workflow_store.list_actions(fixture.report_id)
+    ] == [
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+        RepairActionStatus.EXECUTED,
+    ]
+    assert second_amend_source.requested_fill_ids == [fixture.price_fill_id]
+    assert second_review_source.requested_action_ids == []
+    assert fixture.local_orders.updated == first_local_order_updates
+    assert fixture.local_fills.get_fill(fixture.qty_fill_id) == fixture.amended_qty_fill
+    assert (
+        fixture.local_fills.get_fill(fixture.price_fill_id)
+        == fixture.amended_price_fill
+    )
+    imported_extra_fill = fixture.local_fills.get_fill(fixture.extra_fill_id)
+    assert imported_extra_fill is not None
+    assert imported_extra_fill.intent_id == "callback-all-sequence-extra-001"
+    assert len(rows_after_second) == 10
+    assert [
+        (
+            payload["action_type"],
+            payload["client_order_id"],
+            payload["broker_order_id"],
+            payload.get("fill_id"),
+            payload["status"],
+            payload["message"],
+        )
+        for payload in second_payloads
+    ] == [
+        (
+            "amend_local_fill",
+            "callback-all-sequence-qty-001",
+            "broker-callback-all-sequence-qty-001",
+            fixture.qty_fill_id,
+            "skipped",
+            "repair action is executed",
+        ),
+        (
+            "amend_local_fill",
+            "callback-all-sequence-price-001",
+            "broker-callback-all-sequence-price-001",
+            fixture.price_fill_id,
+            "executed",
+            f"amended local fill {fixture.price_fill_id}",
+        ),
+        (
+            "review_order_status",
+            "callback-all-sequence-status-001",
+            "broker-callback-all-sequence-status-001",
+            None,
+            "skipped",
+            "repair action is executed",
+        ),
+        (
+            "refresh_broker_order",
+            "callback-all-sequence-missing-001",
+            "broker-callback-all-sequence-missing-001",
+            None,
+            "skipped",
+            "repair action is executed",
+        ),
+        (
+            "import_broker_fill",
+            "callback-all-sequence-extra-001",
+            "broker-callback-all-sequence-extra-001",
+            fixture.extra_fill_id,
+            "skipped",
+            "repair action is executed",
+        ),
+    ]
+
+
+def test_multi_broker_recorded_fill_links_survive_reconciliation_repair_plan() -> None:
+    sink = InMemoryBrokerEventSink()
+    alpha = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-repair-matrix-001",
+        broker="alpha",
+        now=SequenceClock(
+            datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 30, 1, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 30, 2, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 30, 3, tzinfo=UTC),
+        ),
+    )
+    beta = BrokerEventRecordingGateway(
+        gateway=BrokerAckIdGateway(),
+        event_sink=sink,
+        run_id="run-callback-repair-matrix-001",
+        broker="beta",
+        now=SequenceClock(
+            datetime(2026, 6, 1, 9, 31, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 31, 1, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 31, 2, tzinfo=UTC),
+            datetime(2026, 6, 1, 9, 31, 3, tzinfo=UTC),
+        ),
+    )
+    alpha_order = _order("callback-alpha-001", quantity=100, price=10.0)
+    beta_order = _order("callback-beta-001", quantity=100, price=10.0)
+
+    alpha.submit_order(alpha_order)
+    beta.submit_order(beta_order)
+
+    fill_events = sink.list_broker_events(
+        "run-callback-repair-matrix-001",
+        event_type="fill",
+    )
+    broker_order_ids_by_order = {
+        cast(str, event.order_id): cast(str, event.broker_order_id)
+        for event in fill_events
+        if event.order_id == "callback-alpha-001" and event.broker_order_id is not None
+    }
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-repair-matrix-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=alpha_order,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            )
+        ],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order=broker_order_ids_by_order,
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+
+    assert {
+        (
+            action.mismatch_type,
+            action.order_id,
+            action.fill_id,
+            action.broker_order_id,
+        )
+        for action in plan.actions
+    } == {
+        (
+            MismatchType.QTY_MISMATCH,
+            "callback-alpha-001",
+            None,
+            "broker-callback-alpha-001",
+        ),
+        (
+            MismatchType.EXTRA_FILL,
+            "callback-beta-001",
+            "broker-fill-001",
+            "broker-callback-beta-001",
+        ),
+    }
+
+
+def test_interleaved_multi_broker_scoped_fill_links_drive_repair_plan() -> None:
+    sink = InMemoryBrokerEventSink()
+    clock = SequenceClock(
+        *(datetime(2026, 6, 1, 9, 30, second, tzinfo=UTC) for second in range(20))
+    )
+    alpha = BrokerEventRecordingGateway(
+        gateway=SingleSharedFillIdBrokerGateway(),
+        event_sink=sink,
+        run_id="run-callback-repair-interleaved-001",
+        broker="alpha",
+        now=clock,
+    )
+    beta = BrokerEventRecordingGateway(
+        gateway=SingleSharedFillIdBrokerGateway(),
+        event_sink=sink,
+        run_id="run-callback-repair-interleaved-001",
+        broker="beta",
+        now=clock,
+    )
+    alpha_main = _order("callback-alpha-main-001", quantity=100, price=10.0)
+    beta_main = _order("callback-beta-main-001", quantity=100, price=10.0)
+    alpha_extra = _order("callback-alpha-extra-001", quantity=100, price=10.0)
+
+    alpha.connect()
+    beta.connect()
+    alpha.submit_order(alpha_main)
+    beta.submit_order(beta_main)
+    alpha.submit_order(alpha_extra)
+    beta.cancel_order(beta_main.order_id)
+    beta.get_account()
+
+    events = sink.list_broker_events("run-callback-repair-interleaved-001")
+    assert {
+        (event.broker, event.event_type, event.order_id, event.status)
+        for event in events
+    } == {
+        ("alpha", "connect", None, "connected"),
+        ("beta", "connect", None, "connected"),
+        ("alpha", "order_ack", "callback-alpha-main-001", "submitted"),
+        ("alpha", "fill", "callback-alpha-main-001", "partially_filled"),
+        ("beta", "order_ack", "callback-beta-main-001", "submitted"),
+        ("beta", "fill", "callback-beta-main-001", "partially_filled"),
+        ("alpha", "order_ack", "callback-alpha-extra-001", "submitted"),
+        ("alpha", "fill", "callback-alpha-extra-001", "partially_filled"),
+        ("beta", "cancel", "callback-beta-main-001", "accepted"),
+        ("beta", "account_update", None, "snapshot"),
+    }
+
+    fill_events = [event for event in events if event.event_type == "fill"]
+    broker_order_ids_by_order_fill = {
+        (cast(str, event.order_id), cast(str, event.fill_id)): cast(
+            str,
+            event.broker_order_id,
+        )
+        for event in fill_events
+        if event.order_id is not None
+        and event.fill_id is not None
+        and event.broker_order_id is not None
+    }
+    report = reconcile(
+        report_id="rec-callback-repair-interleaved-001",
+        account_id="acct-live-sim",
+        trade_date="2026-06-01",
+        expected=[
+            OrderTicket(
+                order=alpha_main,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+            OrderTicket(
+                order=beta_main,
+                status=OrderStatus.FILLED,
+                filled_quantity=100,
+                filled_price=10.0,
+                average_fill_price=10.0,
+            ),
+        ],
+        actual=[_fill_from_broker_event(event) for event in fill_events],
+        broker_order_links=BrokerOrderLinkIndex(
+            by_order_fill=broker_order_ids_by_order_fill,
+        ),
+    )
+    plan = plan_repair(report)
+
+    assert {
+        (
+            action.mismatch_type,
+            action.order_id,
+            action.fill_id,
+            action.broker_order_id,
+        )
+        for action in plan.actions
+    } == {
+        (
+            MismatchType.QTY_MISMATCH,
+            "callback-alpha-main-001",
+            None,
+            "broker-callback-alpha-main-001",
+        ),
+        (
+            MismatchType.QTY_MISMATCH,
+            "callback-beta-main-001",
+            None,
+            "broker-callback-beta-main-001",
+        ),
+        (
+            MismatchType.EXTRA_FILL,
+            "callback-alpha-extra-001",
+            "broker-fill-001",
+            "broker-callback-alpha-extra-001",
+        ),
+    }
+
+
 def test_fill_event_ids_are_order_scoped_to_avoid_cross_order_collisions() -> None:
     sink = InMemoryBrokerEventSink()
     gateway = BrokerEventRecordingGateway(
@@ -1244,8 +3589,8 @@ def test_submit_records_ack_when_immediate_fill_query_fails() -> None:
     assert ticket.status is OrderStatus.SUBMITTED
     events = sink.list_broker_events("run-live-003")
     assert [(event.event_type, event.order_id, event.status) for event in events] == [
-        ("fill_query_error", "live-003", "failed"),
         ("order_ack", "live-003", "submitted"),
+        ("fill_query_error", "live-003", "failed"),
     ]
     error = next(event for event in events if event.event_type == "fill_query_error")
     assert error.event_id == (

@@ -159,6 +159,8 @@ class RepairExecutionPayload:
     effect_count: int
     fill_id: str | None = None
     correlation_id: str | None = None
+    client_order_id: str | None = None
+    broker_order_id: str | None = None
 
 
 @dataclass(frozen=True)

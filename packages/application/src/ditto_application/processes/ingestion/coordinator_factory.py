@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol, cast
 
 from ditto_data.catalog import DataCatalogReader, DataCatalogWriter
+from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.ingestion.freeze_store import FreezeStore
 from ditto_data.ingestion.ingestion_cursor_store import (
     IngestionCursorStore,
@@ -69,6 +70,19 @@ class CoordinatorServices:
     source_accessor: SourceAccessor
     ingestion_log_store: IngestionLogStore
     source_registry: SourceRegistryLike | None = None
+
+
+@dataclass(frozen=True)
+class CoordinatorRuntimeContext:
+    """Optional runtime ports for ingestion coordinator composition."""
+
+    ingestion_cursor_store: IngestionCursorStore | None = None
+    quality_checker: QualityCheckerProtocol | None = None
+    freeze_store: FreezeStore | None = None
+    lineage_recorder: DataLineageRecorder | None = None
+    catalog_reader: DataCatalogReader | None = None
+    catalog_writer: DataCatalogWriter | None = None
+    source_fallback_policy_reader: CatalogSourceFallbackPolicyReader | None = None
 
 
 def _registered_source_or_default[FetcherT](
@@ -193,16 +207,11 @@ def _source_fetchers_for(
     )
 
 
-def _build_coordinator(  # noqa: PLR0913 — internal composition helper mirrors runtime ports.
+def _build_coordinator(
     services: CoordinatorServices,
     source_key: Source,
     *,
-    ingestion_cursor_store: IngestionCursorStore | None = None,
-    quality_checker: QualityCheckerProtocol | None = None,
-    freeze_store: FreezeStore | None = None,
-    lineage_recorder: DataLineageRecorder | None = None,
-    catalog_reader: DataCatalogReader | None = None,
-    catalog_writer: DataCatalogWriter | None = None,
+    runtime: CoordinatorRuntimeContext,
 ) -> IngestionCoordinator:
     """Build one source-consistent ingestion coordinator."""
     fred_source = services.source_accessor.fred
@@ -225,27 +234,22 @@ def _build_coordinator(  # noqa: PLR0913 — internal composition helper mirrors
         config=IngestionCoordinatorConfig(
             source_name=source_key.value,
             ingestion_log_store=services.ingestion_log_store,
-            ingestion_cursor_store=ingestion_cursor_store,
-            quality_checker=quality_checker,
-            freeze_store=freeze_store,
-            lineage_recorder=lineage_recorder,
-            catalog_reader=catalog_reader,
-            catalog_writer=catalog_writer,
+            ingestion_cursor_store=runtime.ingestion_cursor_store,
+            quality_checker=runtime.quality_checker,
+            freeze_store=runtime.freeze_store,
+            lineage_recorder=runtime.lineage_recorder,
+            catalog_reader=runtime.catalog_reader,
+            catalog_writer=runtime.catalog_writer,
         ),
     )
 
 
 @contextmanager
-def create_coordinator(  # noqa: PLR0913 — composition factory forwards optional runtime ports into coordinator config
+def create_coordinator(
     services: CoordinatorServices,
     source_name: str | Source,
     *,
-    ingestion_cursor_store: IngestionCursorStore | None = None,
-    quality_checker: QualityCheckerProtocol | None = None,
-    freeze_store: FreezeStore | None = None,
-    lineage_recorder: DataLineageRecorder | None = None,
-    catalog_reader: DataCatalogReader | None = None,
-    catalog_writer: DataCatalogWriter | None = None,
+    runtime: CoordinatorRuntimeContext | None = None,
 ) -> Generator[IngestionCoordinatorLike]:
     """
     创建 IngestionCoordinator 实例.
@@ -253,17 +257,13 @@ def create_coordinator(  # noqa: PLR0913 — composition factory forwards option
     Args:
         services: 协调器所需服务依赖.
         source_name: 数据源名称.
-        ingestion_cursor_store: IngestionCursorStore 实例（可选）.
-        quality_checker: QualityCheckerProtocol 实例（可选）.
-        freeze_store: FreezeStore 实例（可选）.
-        lineage_recorder: DataLineageRecorder 实例（可选）.
-        catalog_reader: DataCatalogReader 实例（可选）.
-        catalog_writer: DataCatalogWriter 实例（可选）.
+        runtime: 运行期可选 port 聚合.
 
     Yields:
         IngestionCoordinatorLike: 协调器实例
 
     """
+    runtime_ctx = runtime or CoordinatorRuntimeContext()
     if isinstance(source_name, Source):
         source_key = source_name
     else:
@@ -273,12 +273,7 @@ def create_coordinator(  # noqa: PLR0913 — composition factory forwards option
                 source_key.value: _build_coordinator(
                     services,
                     source_key,
-                    ingestion_cursor_store=ingestion_cursor_store,
-                    quality_checker=quality_checker,
-                    freeze_store=freeze_store,
-                    lineage_recorder=lineage_recorder,
-                    catalog_reader=catalog_reader,
-                    catalog_writer=catalog_writer,
+                    runtime=runtime_ctx,
                 )
                 for source_key in _auto_source_keys(services)
             }
@@ -297,7 +292,8 @@ def create_coordinator(  # noqa: PLR0913 — composition factory forwards option
 
             yield AutoSourceIngestionCoordinator(
                 coordinators,
-                catalog_reader=catalog_reader,
+                catalog_reader=runtime_ctx.catalog_reader,
+                source_fallback_policy_reader=runtime_ctx.source_fallback_policy_reader,
                 date_range_lister=date_range_lister,
                 default_source=Source.TUSHARE.value,
             )
@@ -316,18 +312,14 @@ def create_coordinator(  # noqa: PLR0913 — composition factory forwards option
     coordinator = _build_coordinator(
         services,
         source_key,
-        ingestion_cursor_store=ingestion_cursor_store,
-        quality_checker=quality_checker,
-        freeze_store=freeze_store,
-        lineage_recorder=lineage_recorder,
-        catalog_reader=catalog_reader,
-        catalog_writer=catalog_writer,
+        runtime=runtime_ctx,
     )
 
     yield coordinator
 
 
 __all__ = [
+    "CoordinatorRuntimeContext",
     "CoordinatorServices",
     "create_coordinator",
 ]

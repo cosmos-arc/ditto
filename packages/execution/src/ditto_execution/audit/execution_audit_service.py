@@ -472,6 +472,7 @@ class ExecutionAuditService:
         start_date: str | None = None,
         end_date: str | None = None,
         order_id: str | None = None,
+        broker_order_id: str | None = None,
     ) -> tuple[ExecutionTimelineEntry, ...]:
         """
         Return a merged execution operating timeline from known SQLite stores.
@@ -481,42 +482,56 @@ class ExecutionAuditService:
         strategy-owned storage rows.
         """
         conn = self._pool.get_connection()
-        entries = [
-            *self.query_timeline(
-                run_id,
-                start_date=start_date,
-                end_date=end_date,
-                order_id=order_id,
-            ),
-            *query_order_event_entries(
+        include_local_order_entries = broker_order_id is None or order_id is not None
+        include_broad_runtime_entries = broker_order_id is None or order_id is not None
+        entries: list[ExecutionTimelineEntry] = []
+        if include_local_order_entries:
+            entries.extend(
+                self.query_timeline(
+                    run_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    order_id=order_id,
+                )
+            )
+            entries.extend(
+                query_order_event_entries(
+                    conn,
+                    run_id=run_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    order_id=order_id,
+                )
+            )
+        entries.extend(
+            query_broker_event_entries(
                 conn,
                 run_id=run_id,
                 start_date=start_date,
                 end_date=end_date,
                 order_id=order_id,
-            ),
-            *query_broker_event_entries(
-                conn,
-                run_id=run_id,
-                start_date=start_date,
-                end_date=end_date,
-                order_id=order_id,
-            ),
-            *query_position_entries(
-                conn,
-                run_id=run_id,
-                strategy_id=strategy_id,
-                start_date=start_date,
-                end_date=end_date,
-            ),
-            *query_account_snapshot_entries(
-                conn,
-                run_id=run_id,
-                strategy_id=strategy_id,
-                start_date=start_date,
-                end_date=end_date,
-            ),
-        ]
+                broker_order_id=broker_order_id,
+            )
+        )
+        if include_broad_runtime_entries:
+            entries.extend(
+                query_position_entries(
+                    conn,
+                    run_id=run_id,
+                    strategy_id=strategy_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            )
+            entries.extend(
+                query_account_snapshot_entries(
+                    conn,
+                    run_id=run_id,
+                    strategy_id=strategy_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            )
         return tuple(sorted(entries, key=timeline_sort_key))
 
     # ------------------------------------------------------------------

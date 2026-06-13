@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Protocol
 
 from ditto_data.catalog import DataAssetRef
 from ditto_data.catalog.contracts import DataCatalogEntry, DataCatalogReader
@@ -15,14 +15,29 @@ from ditto_strategy.storage.sqlite.services.strategy_run_service import (
     StrategyRunLifecycleStore,
 )
 
+from ditto_application.catalog_freshness import (
+    CatalogFreshnessStatus,
+    assess_catalog_freshness,
+)
 from ditto_application.exceptions import AppQueryError
 from ditto_application.queries.backtest import RunSummary, to_run_summary
+from ditto_application.queries.catalog_source_health import (
+    CatalogSourceHealthSummaryReport,
+)
 
 __all__ = [
     "DataLineageAsset",
     "DataLineageCatalogAsset",
+    "DataLineageCatalogAttentionAsset",
+    "DataLineageCatalogAttentionReason",
+    "DataLineageCatalogAttentionReasonCount",
+    "DataLineageCatalogAttentionSeverity",
+    "DataLineageCatalogAttentionSeverityCount",
+    "DataLineageCatalogFreshnessStatusCount",
     "DataLineageCatalogRunReport",
+    "DataLineageCatalogSourceFallbackPolicyEffectCount",
     "DataLineageCatalogStatus",
+    "DataLineageCatalogStatusCount",
     "DataLineageEvent",
     "DataLineageGraph",
     "DataLineageGraphEdge",
@@ -35,6 +50,25 @@ __all__ = [
 _ALLOWED_GRAPH_DIRECTIONS = frozenset({"upstream", "downstream", "both"})
 
 type DataLineageCatalogStatus = Literal["found", "missing", "not_configured"]
+type DataLineageCatalogSide = Literal["input", "output"]
+type DataLineageCatalogAttentionReason = Literal[
+    "catalog_missing",
+    "catalog_not_configured",
+    "catalog_stale",
+]
+type DataLineageCatalogAttentionSeverity = Literal["critical", "warning", "info"]
+
+
+class _SourceHealthSummaryQuery(Protocol):
+    def get_source_health_summary(
+        self,
+        *,
+        dataset_ids: tuple[str, ...],
+        trade_dates: tuple[str, ...],
+        available_sources: tuple[str, ...],
+    ) -> CatalogSourceHealthSummaryReport:
+        """Return source-health summary evidence for active fallback policy effects."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -102,6 +136,61 @@ class DataLineageCatalogAsset:
     row_count: int | None = None
     schema_created_at: datetime | None = None
     freshness_at: datetime | None = None
+    freshness_status: CatalogFreshnessStatus | None = None
+    freshness_sla_hours: int | None = None
+
+
+@dataclass(frozen=True)
+class DataLineageCatalogStatusCount:
+    """Catalog status count across run-level lineage assets."""
+
+    status: DataLineageCatalogStatus
+    count: int
+
+
+@dataclass(frozen=True)
+class DataLineageCatalogFreshnessStatusCount:
+    """Catalog freshness status count across run-level lineage assets."""
+
+    status: CatalogFreshnessStatus
+    count: int
+
+
+@dataclass(frozen=True)
+class DataLineageCatalogAttentionReasonCount:
+    """Lineage catalog attention reason count across run assets."""
+
+    reason: DataLineageCatalogAttentionReason
+    count: int
+
+
+@dataclass(frozen=True)
+class DataLineageCatalogAttentionSeverityCount:
+    """Lineage catalog attention severity count across run assets."""
+
+    severity: DataLineageCatalogAttentionSeverity
+    count: int
+
+
+@dataclass(frozen=True)
+class DataLineageCatalogSourceFallbackPolicyEffectCount:
+    """Active source fallback policy effect count across run source inputs."""
+
+    policy_id: str
+    policy_status: str
+    catalog_selected_source: str
+    effective_selected_source: str
+    count: int
+
+
+@dataclass(frozen=True)
+class DataLineageCatalogAttentionAsset:
+    """Run lineage catalog asset requiring operator attention."""
+
+    side: DataLineageCatalogSide
+    asset: DataLineageCatalogAsset
+    attention_reasons: tuple[DataLineageCatalogAttentionReason, ...]
+    attention_severity: DataLineageCatalogAttentionSeverity
 
 
 @dataclass(frozen=True)
@@ -112,6 +201,14 @@ class DataLineageCatalogRunReport:
     events: tuple[DataLineageEvent, ...]
     input_assets: tuple[DataLineageCatalogAsset, ...]
     output_assets: tuple[DataLineageCatalogAsset, ...]
+    catalog_status_counts: tuple[DataLineageCatalogStatusCount, ...] = ()
+    freshness_status_counts: tuple[DataLineageCatalogFreshnessStatusCount, ...] = ()
+    attention_reason_counts: tuple[DataLineageCatalogAttentionReasonCount, ...] = ()
+    attention_severity_counts: tuple[DataLineageCatalogAttentionSeverityCount, ...] = ()
+    source_fallback_policy_effect_counts: tuple[
+        DataLineageCatalogSourceFallbackPolicyEffectCount, ...
+    ] = ()
+    attention_required: tuple[DataLineageCatalogAttentionAsset, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -143,10 +240,15 @@ class LineageQueryFacade:
         run_service: StrategyRunLifecycleStore,
         data_lineage_reader: DataLineageReader | None = None,
         data_catalog_reader: DataCatalogReader | None = None,
+        *,
+        source_health_summary_query: _SourceHealthSummaryQuery | None = None,
+        now: Callable[[], datetime] | None = None,
     ) -> None:
         self._service = run_service
         self._data_lineage_reader = data_lineage_reader
         self._data_catalog_reader = data_catalog_reader
+        self._source_health_summary_query = source_health_summary_query
+        self._now = now
 
     def get_lineage(self, run_id: str) -> LineageChain | None:
         """获取运行血统链."""
@@ -206,19 +308,70 @@ class LineageQueryFacade:
     def get_data_lineage_catalog_report_for_run(
         self,
         run_id: str,
+        *,
+        trade_dates: tuple[str, ...] = (),
+        available_sources: tuple[str, ...] = (),
     ) -> DataLineageCatalogRunReport:
         """Return run-level data lineage enriched with exact catalog metadata."""
         summary = self.get_data_lineage_for_run(run_id)
+        input_assets = tuple(
+            self._to_catalog_asset_report(asset) for asset in summary.input_assets
+        )
+        output_assets = tuple(
+            self._to_catalog_asset_report(asset) for asset in summary.output_assets
+        )
+        attention_required = _catalog_attention_required(
+            input_assets=input_assets,
+            output_assets=output_assets,
+        )
         return DataLineageCatalogRunReport(
             run_id=summary.run_id,
             events=summary.events,
-            input_assets=tuple(
-                self._to_catalog_asset_report(asset) for asset in summary.input_assets
+            input_assets=input_assets,
+            output_assets=output_assets,
+            catalog_status_counts=_catalog_status_counts(
+                (*input_assets, *output_assets)
             ),
-            output_assets=tuple(
-                self._to_catalog_asset_report(asset) for asset in summary.output_assets
+            freshness_status_counts=_catalog_freshness_status_counts(
+                (*input_assets, *output_assets)
             ),
+            attention_reason_counts=_catalog_attention_reason_counts(
+                attention_required
+            ),
+            attention_severity_counts=_catalog_attention_severity_counts(
+                attention_required
+            ),
+            source_fallback_policy_effect_counts=(
+                self._source_fallback_policy_effect_counts(
+                    dataset_ids=tuple(asset.asset.dataset_id for asset in input_assets),
+                    trade_dates=trade_dates,
+                    available_sources=available_sources,
+                )
+            ),
+            attention_required=attention_required,
         )
+
+    def _source_fallback_policy_effect_counts(
+        self,
+        *,
+        dataset_ids: tuple[str, ...],
+        trade_dates: tuple[str, ...],
+        available_sources: tuple[str, ...],
+    ) -> tuple[DataLineageCatalogSourceFallbackPolicyEffectCount, ...]:
+        source_health_query = self._source_health_summary_query
+        if (
+            source_health_query is None
+            or not dataset_ids
+            or not trade_dates
+            or not available_sources
+        ):
+            return ()
+        source_health = source_health_query.get_source_health_summary(
+            dataset_ids=_unique_dataset_ids(dataset_ids),
+            trade_dates=trade_dates,
+            available_sources=available_sources,
+        )
+        return _source_fallback_policy_effect_counts(source_health)
 
     def get_data_lineage_graph_for_asset(
         self,
@@ -273,11 +426,22 @@ class LineageQueryFacade:
 
         entry = reader.get_asset(_to_data_asset_ref(asset))
         if entry is None:
+            freshness = assess_catalog_freshness(
+                dataset=asset.dataset_id,
+                catalog_entry=None,
+                now=self._now,
+            )
             return DataLineageCatalogAsset(
                 asset=asset,
                 catalog_status="missing",
+                freshness_status=freshness.status,
+                freshness_sla_hours=freshness.sla_hours,
             )
-        return _to_data_lineage_catalog_asset(asset=asset, entry=entry)
+        return _to_data_lineage_catalog_asset(
+            asset=asset,
+            entry=entry,
+            now=self._now,
+        )
 
 
 def _to_data_lineage_asset(asset: DataAssetRef) -> DataLineageAsset:
@@ -300,7 +464,13 @@ def _to_data_lineage_catalog_asset(
     *,
     asset: DataLineageAsset,
     entry: DataCatalogEntry,
+    now: Callable[[], datetime] | None,
 ) -> DataLineageCatalogAsset:
+    freshness = assess_catalog_freshness(
+        dataset=asset.dataset_id,
+        catalog_entry=entry,
+        now=now,
+    )
     return DataLineageCatalogAsset(
         asset=asset,
         catalog_status="found",
@@ -310,6 +480,164 @@ def _to_data_lineage_catalog_asset(
         row_count=entry.schema.row_count,
         schema_created_at=entry.schema.created_at,
         freshness_at=entry.freshness_at,
+        freshness_status=freshness.status,
+        freshness_sla_hours=freshness.sla_hours,
+    )
+
+
+def _catalog_status_counts(
+    assets: tuple[DataLineageCatalogAsset, ...],
+) -> tuple[DataLineageCatalogStatusCount, ...]:
+    counts: dict[DataLineageCatalogStatus, int] = {
+        "found": 0,
+        "missing": 0,
+        "not_configured": 0,
+    }
+    for asset in assets:
+        counts[asset.catalog_status] += 1
+    return tuple(
+        DataLineageCatalogStatusCount(status=status, count=counts[status])
+        for status in counts
+    )
+
+
+def _catalog_freshness_status_counts(
+    assets: tuple[DataLineageCatalogAsset, ...],
+) -> tuple[DataLineageCatalogFreshnessStatusCount, ...]:
+    counts: dict[CatalogFreshnessStatus, int] = {
+        "fresh": 0,
+        "stale": 0,
+        "missing": 0,
+        "not_applicable": 0,
+    }
+    for asset in assets:
+        if asset.freshness_status is not None:
+            counts[asset.freshness_status] += 1
+    return tuple(
+        DataLineageCatalogFreshnessStatusCount(status=status, count=counts[status])
+        for status in counts
+    )
+
+
+def _catalog_attention_required(
+    *,
+    input_assets: tuple[DataLineageCatalogAsset, ...],
+    output_assets: tuple[DataLineageCatalogAsset, ...],
+) -> tuple[DataLineageCatalogAttentionAsset, ...]:
+    attention: list[DataLineageCatalogAttentionAsset] = []
+    side_assets: tuple[
+        tuple[DataLineageCatalogSide, tuple[DataLineageCatalogAsset, ...]],
+        ...,
+    ] = (("input", input_assets), ("output", output_assets))
+    for side, assets in side_assets:
+        for asset in assets:
+            reasons = _catalog_attention_reasons(asset)
+            if not reasons:
+                continue
+            attention.append(
+                DataLineageCatalogAttentionAsset(
+                    side=side,
+                    asset=asset,
+                    attention_reasons=reasons,
+                    attention_severity=_catalog_attention_severity(reasons),
+                )
+            )
+    return tuple(attention)
+
+
+def _catalog_attention_reasons(
+    asset: DataLineageCatalogAsset,
+) -> tuple[DataLineageCatalogAttentionReason, ...]:
+    if asset.catalog_status == "missing":
+        return ("catalog_missing",)
+    if asset.catalog_status == "not_configured":
+        return ("catalog_not_configured",)
+    if asset.freshness_status == "stale":
+        return ("catalog_stale",)
+    return ()
+
+
+def _catalog_attention_reason_counts(
+    attention_required: tuple[DataLineageCatalogAttentionAsset, ...],
+) -> tuple[DataLineageCatalogAttentionReasonCount, ...]:
+    counts: dict[DataLineageCatalogAttentionReason, int] = {}
+    for item in attention_required:
+        for reason in item.attention_reasons:
+            counts[reason] = counts.get(reason, 0) + 1
+    return tuple(
+        DataLineageCatalogAttentionReasonCount(
+            reason=reason,
+            count=counts[reason],
+        )
+        for reason in sorted(counts)
+    )
+
+
+def _catalog_attention_severity_counts(
+    attention_required: tuple[DataLineageCatalogAttentionAsset, ...],
+) -> tuple[DataLineageCatalogAttentionSeverityCount, ...]:
+    severity_order: tuple[DataLineageCatalogAttentionSeverity, ...] = (
+        "critical",
+        "warning",
+        "info",
+    )
+    counts: dict[DataLineageCatalogAttentionSeverity, int] = dict.fromkeys(
+        severity_order,
+        0,
+    )
+    for item in attention_required:
+        counts[item.attention_severity] += 1
+    return tuple(
+        DataLineageCatalogAttentionSeverityCount(
+            severity=severity,
+            count=counts[severity],
+        )
+        for severity in severity_order
+    )
+
+
+def _catalog_attention_severity(
+    reasons: tuple[DataLineageCatalogAttentionReason, ...],
+) -> DataLineageCatalogAttentionSeverity:
+    critical_reasons: frozenset[DataLineageCatalogAttentionReason] = frozenset(
+        {"catalog_missing", "catalog_not_configured"}
+    )
+    if any(reason in critical_reasons for reason in reasons):
+        return "critical"
+    if "catalog_stale" in reasons:
+        return "warning"
+    return "info"
+
+
+def _source_fallback_policy_effect_counts(
+    source_health: CatalogSourceHealthSummaryReport,
+) -> tuple[DataLineageCatalogSourceFallbackPolicyEffectCount, ...]:
+    counts: dict[tuple[str, str, str, str], int] = {}
+    for report in source_health.reports:
+        effect = report.source_fallback_policy_effect
+        if effect is None:
+            continue
+        key = (
+            effect.policy_id,
+            effect.policy_status,
+            effect.catalog_selected_source,
+            effect.effective_selected_source,
+        )
+        counts[key] = counts.get(key, 0) + 1
+    return tuple(
+        DataLineageCatalogSourceFallbackPolicyEffectCount(
+            policy_id=policy_id,
+            policy_status=policy_status,
+            catalog_selected_source=catalog_selected_source,
+            effective_selected_source=effective_selected_source,
+            count=count,
+        )
+        for (
+            policy_id,
+            policy_status,
+            catalog_selected_source,
+            effective_selected_source,
+        ), count in sorted(counts.items())
     )
 
 
@@ -336,6 +664,14 @@ def _unique_assets(
     for asset in assets:
         if asset not in unique:
             unique.append(asset)
+    return tuple(unique)
+
+
+def _unique_dataset_ids(dataset_ids: Iterable[str]) -> tuple[str, ...]:
+    unique: list[str] = []
+    for dataset_id in dataset_ids:
+        if dataset_id not in unique:
+            unique.append(dataset_id)
     return tuple(unique)
 
 

@@ -23,6 +23,7 @@ from ditto_features.publication_safety_records import (
 )
 from ditto_features.storage.derived_artifact_writer import (
     ArtifactMetadataParams,
+    ArtifactMetadataUpdateParams,
 )
 
 _TIME_KEY = "trade_date"
@@ -95,6 +96,42 @@ def _make_frame(*, years: tuple[str, ...] = ("2024", "2025")) -> pl.DataFrame:
             }
         )
     return pl.DataFrame(rows)
+
+
+def _make_partitions() -> tuple[PartitionInfo, ...]:
+    return (
+        PartitionInfo(
+            partition_key="2024",
+            partition_path="derived/artifacts/series/factor.test_factor/v1/2024.parquet",
+            row_count=1,
+            checksum="sha-2024",
+        ),
+    )
+
+
+def _make_manifest_record() -> CompatibilityManifestRecord:
+    return CompatibilityManifestRecord(
+        derived_id="factor.test_factor",
+        version=1,
+        manifest_hash="manifest-hash-001",
+        payload={"engine_codegen_version": "v1"},
+        created_at="2026-03-17T00:00:00+00:00",
+    )
+
+
+def _make_minimal_dq_record(
+    *,
+    run_id: str = "drv-test",
+) -> DerivedMinimalDQSummaryRecord:
+    return DerivedMinimalDQSummaryRecord(
+        derived_id="factor.test_factor",
+        version=1,
+        run_id=run_id,
+        passed=True,
+        error_count=0,
+        payload={"row_count": 10},
+        created_at="2026-03-17T00:00:00+00:00",
+    )
 
 
 class TestWriteEphemeralResult:
@@ -385,13 +422,15 @@ class TestUpdateArtifactMetadata:
         )
 
         writer.update_artifact_metadata(
-            spec=spec_record,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            partitions=partitions,
-            source_snapshot_id="snap-002",
-            manifest_record=manifest_record,
-            minimal_dq_record=minimal_dq_record,
+            ArtifactMetadataUpdateParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                partitions=partitions,
+                source_snapshot_id="snap-002",
+                manifest_record=manifest_record,
+                minimal_dq_record=minimal_dq_record,
+            )
         )
 
         metadata_path = (
@@ -467,13 +506,15 @@ class TestUpdateArtifactMetadata:
         )
 
         writer.update_artifact_metadata(
-            spec=spec_record,
-            run_id=run_id,
-            compile_identity=compile_identity,
-            partitions=(),
-            source_snapshot_id=None,
-            manifest_record=manifest_record,
-            minimal_dq_record=minimal_dq_record,
+            ArtifactMetadataUpdateParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                partitions=(),
+                source_snapshot_id=None,
+                manifest_record=manifest_record,
+                minimal_dq_record=minimal_dq_record,
+            )
         )
 
         metadata_path = (
@@ -489,6 +530,60 @@ class TestUpdateArtifactMetadata:
         )
         payload = orjson.loads(metadata_path.read_bytes())
         assert payload["input_snapshots"] == []
+
+    def test_update_artifact_metadata_accepts_params_object(
+        self, tmp_path: Path
+    ) -> None:
+        """update_artifact_metadata should accept one context-shaped object."""
+        from ditto_features.storage.derived_artifact_writer import (
+            DerivedArtifactWriter,
+        )
+
+        writer = DerivedArtifactWriter(artifact_root=tmp_path)
+        spec_record = _make_spec_record()
+        run_id = "drv-test-run-params"
+        compile_identity = _make_compile_identity_dict()
+        partitions = _make_partitions()
+
+        writer.write_artifact_metadata(
+            ArtifactMetadataParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                analysis=_make_analysis_dict(),
+                partitions=partitions,
+                request_start="2024-01-01",
+                request_end="2024-12-31",
+                source_snapshot_id="snap-old",
+            ),
+        )
+
+        writer.update_artifact_metadata(
+            ArtifactMetadataUpdateParams(
+                spec=spec_record,
+                run_id=run_id,
+                compile_identity=compile_identity,
+                partitions=partitions,
+                source_snapshot_id="snap-params",
+                manifest_record=_make_manifest_record(),
+                minimal_dq_record=_make_minimal_dq_record(run_id=run_id),
+            )
+        )
+
+        metadata_path = (
+            tmp_path
+            / "derived"
+            / "artifacts"
+            / "series"
+            / "factor.test_factor"
+            / "v1"
+            / "_runs"
+            / run_id
+            / "artifact_metadata.json"
+        )
+        payload = orjson.loads(metadata_path.read_bytes())
+        assert payload["input_snapshots"] == ["snap-params"]
+        assert payload["publication"]["manifest_hash"] == "manifest-hash-001"
 
 
 class TestExtractPartitionKeys:
@@ -794,13 +889,15 @@ class TestMetadataAtomicWrite:
             "ditto_features.storage.derived_artifact_writer.atomic_bytes_write"
         ) as mock_atomic:
             writer.update_artifact_metadata(
-                spec=spec_record,
-                run_id=run_id,
-                compile_identity=compile_identity,
-                partitions=partitions,
-                source_snapshot_id="snap-002",
-                manifest_record=manifest_record,
-                minimal_dq_record=minimal_dq_record,
+                ArtifactMetadataUpdateParams(
+                    spec=spec_record,
+                    run_id=run_id,
+                    compile_identity=compile_identity,
+                    partitions=partitions,
+                    source_snapshot_id="snap-002",
+                    manifest_record=manifest_record,
+                    minimal_dq_record=minimal_dq_record,
+                )
             )
             mock_atomic.assert_called_once()
             call_args = mock_atomic.call_args

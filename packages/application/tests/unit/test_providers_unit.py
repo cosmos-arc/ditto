@@ -1,7 +1,8 @@
 """Tests for App 层 DI Provider 结构和容器集成."""
 
+import inspect
 from pathlib import Path
-from typing import Any
+from typing import Any, get_type_hints
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,6 +17,10 @@ from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
     RevokeDatasetMaturityPromotionHandler,
 )
+from ditto_application.commands.catalog_remediation import (
+    CatalogRemediationIngestDatePort,
+    ExecuteCatalogRemediationApprovalHandler,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.materialization.cascade_orchestrator import (
@@ -23,6 +28,7 @@ from ditto_application.processes.materialization.cascade_orchestrator import (
 )
 from ditto_application.processes.materialization.orchestrator import (
     DerivedMaterializationOrchestrator,
+    MaterializationRuntimePorts,
 )
 from ditto_application.processes.materialization.publication_facade import (
     DerivedPublicationFacade,
@@ -41,6 +47,7 @@ from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
 from ditto_application.queries.ingestion_status import IngestionStatusQueryFacade
 from ditto_application.queries.lineage import LineageQueryFacade
+from ditto_application.queries.remediation import CatalogRemediationQueryFacade
 from ditto_application.queries.source import SourceDataPort
 from ditto_application.settings import TradingSettings
 from ditto_data.catalog import InMemoryDataCatalog
@@ -216,6 +223,12 @@ class _ProtocolAdapterProvider(Provider):
     def source_data_port(self) -> SourceDataPort:
         return MagicMock(spec=SourceDataPort)
 
+    @provide
+    def catalog_remediation_ingest_date_port(
+        self,
+    ) -> CatalogRemediationIngestDatePort:
+        return MagicMock()
+
 
 # ---------------------------------------------------------------------------
 # 结构测试:验证 Provider 类拥有正确的 provide 方法
@@ -270,6 +283,7 @@ class TestAppProviderStructure:
             "run_read_model",
             "strategy_query_facade",
             "lineage_query_facade",
+            "catalog_remediation_query_facade",
             "comparison_query_facade",
         }
         assert expected.issubset(method_names)
@@ -308,6 +322,22 @@ class TestAppProviderStructure:
         }
         assert expected.issubset(method_names)
 
+    def test_materialization_orchestrator_provider_accepts_runtime_ports(self) -> None:
+        """Materialization orchestrator provider should consume assembled ports."""
+        provider_source = AppProcessProvider.__dict__[
+            "derived_materialization_orchestrator"
+        ]
+        provider_origin = provider_source.origin
+        signature = inspect.signature(provider_origin)
+        public_params = [
+            param for param in signature.parameters.values() if param.name != "self"
+        ]
+        hints = get_type_hints(provider_origin)
+
+        assert [param.name for param in public_params] == ["ports"]
+        assert hints["ports"] is MaterializationRuntimePorts
+        assert hints["return"] is DerivedMaterializationOrchestrator
+
     def test_app_builder_factory_methods(self) -> None:
         """AppBuilderFactory 应包含 5 个 provide 方法."""
         provider = AppBuilderFactory()
@@ -322,33 +352,39 @@ class TestAppProviderStructure:
         assert expected.issubset(method_names)
 
     def test_lineage_query_facade_receives_data_readers(self) -> None:
-        """LineageQueryFacade 应接收 data runtime 提供的 lineage/catalog reader。"""
+        """LineageQueryFacade 应接收 data runtime 和 source-health read ports。"""
         provider = AppStrategyQueryProvider()
         lineage_reader = InMemoryDataLineage()
         catalog_reader = InMemoryDataCatalog()
+        catalog_query_facade = MagicMock()
         facade = provider.lineage_query_facade(
             run_service=MagicMock(),
             data_lineage_reader=lineage_reader,
             data_catalog_reader=catalog_reader,
+            catalog_query_facade=catalog_query_facade,
         )
 
         assert isinstance(facade, LineageQueryFacade)
         assert facade._data_lineage_reader is lineage_reader
         assert facade._data_catalog_reader is catalog_reader
+        assert facade._source_health_summary_query is catalog_query_facade
 
     def test_catalog_query_facade_receives_data_catalog_reader(self) -> None:
         """CatalogQueryFacade 应接收 data runtime 提供的 catalog reader。"""
         provider = AppMarketQueryProvider()
         reader = InMemoryDataCatalog()
         history_reader = MagicMock()
+        fallback_policy_reader = MagicMock()
         facade = provider.catalog_query_facade(
             data_catalog_reader=reader,
             maturity_promotion_history_reader=history_reader,
+            catalog_source_fallback_policy_reader=fallback_policy_reader,
         )
 
         assert isinstance(facade, CatalogQueryFacade)
         assert facade._data_catalog_reader is reader
         assert facade._maturity_promotion_history_reader is history_reader
+        assert facade._source_fallback_policy_reader is fallback_policy_reader
 
     def test_market_query_facade_receives_maturity_promotion_reader(self) -> None:
         """MarketQueryFacade 应接收 maturity promotion reader 以执行 read gate。"""
@@ -430,12 +466,14 @@ class TestAppProviderStructure:
         promotion_reader = MagicMock()
         maturity_promotion_reader = MagicMock()
         maturity_promotion_history_reader = MagicMock()
+        catalog_query_facade = MagicMock()
         facade = provider.ingestion_status_query_facade(
             ingestion_log_store=MagicMock(),
             data_catalog_reader=reader,
             promotion_evidence_reader=promotion_reader,
             maturity_promotion_reader=maturity_promotion_reader,
             maturity_promotion_history_reader=maturity_promotion_history_reader,
+            catalog_query_facade=catalog_query_facade,
         )
 
         assert isinstance(facade, IngestionStatusQueryFacade)
@@ -445,6 +483,27 @@ class TestAppProviderStructure:
         assert facade._maturity_promotion_history_reader is (
             maturity_promotion_history_reader
         )
+        assert facade._source_health_summary_query is catalog_query_facade
+
+    def test_catalog_remediation_query_facade_composes_existing_query_facades(
+        self,
+    ) -> None:
+        """Remediation backlog facade should compose existing backend reports."""
+        provider = AppStrategyQueryProvider()
+        catalog_facade = MagicMock()
+        ingestion_status_facade = MagicMock()
+        lineage_facade = MagicMock()
+
+        facade = provider.catalog_remediation_query_facade(
+            catalog_query_facade=catalog_facade,
+            ingestion_status_query_facade=ingestion_status_facade,
+            lineage_query_facade=lineage_facade,
+        )
+
+        assert isinstance(facade, CatalogRemediationQueryFacade)
+        assert facade._catalog_facade is catalog_facade
+        assert facade._ingestion_status_facade is ingestion_status_facade
+        assert facade._lineage_facade is lineage_facade
 
     def test_review_dataset_promotion_handler_receives_evidence_ports(self) -> None:
         """Promotion review handler 应接收 data-owned evidence 读写端口。"""
@@ -481,6 +540,38 @@ class TestAppProviderStructure:
         assert isinstance(handler, RevokeDatasetMaturityPromotionHandler)
         assert handler._maturity_promotion_reader is maturity_promotion_reader
         assert handler._maturity_promotion_revoker is maturity_promotion_revoker
+
+    def test_execute_remediation_approval_handler_wires_promotion_executor(
+        self,
+    ) -> None:
+        """Remediation execution handler 应通过 application executor registry 编排。"""
+        provider = AppCommandProvider()
+        approval_reader = MagicMock()
+        approval_writer = MagicMock()
+        review_handler = MagicMock(spec=ReviewDatasetPromotionEvidenceHandler)
+        ingest_date_port = MagicMock()
+
+        handler = provider.execute_catalog_remediation_approval_handler(
+            catalog_remediation_approval_reader=approval_reader,
+            catalog_remediation_approval_writer=approval_writer,
+            promotion_review_handler=review_handler,
+            catalog_remediation_ingest_date_port=ingest_date_port,
+        )
+
+        assert isinstance(handler, ExecuteCatalogRemediationApprovalHandler)
+        assert handler._approval_reader is approval_reader
+        assert handler._approval_writer is approval_writer
+        assert (
+            handler._executor_registry.get("submit_or_fix_promotion_evidence")
+            is not None
+        )
+        assert (
+            handler._executor_registry.get("repair_catalog_source_coverage") is not None
+        )
+        assert handler._executor_registry.get("repair_catalog_freshness") is not None
+        assert (
+            handler._executor_registry.get("repair_lineage_catalog_asset") is not None
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -530,6 +621,10 @@ class TestAppProviderIntegration:
         """AppMarketQueryProvider 的服务应可从容器解析."""
         assert isinstance(app_container.get(DerivedQueryFacade), DerivedQueryFacade)
         assert isinstance(app_container.get(CatalogQueryFacade), CatalogQueryFacade)
+        assert isinstance(
+            app_container.get(CatalogRemediationQueryFacade),
+            CatalogRemediationQueryFacade,
+        )
 
     def test_process_services_resolved(self, app_container) -> None:
         """AppProcessProvider 的服务应可从容器解析."""
@@ -572,6 +667,10 @@ class TestAppProviderIntegration:
         assert isinstance(
             app_container.get(CheckDataQualityHandler),
             CheckDataQualityHandler,
+        )
+        assert isinstance(
+            app_container.get(ExecuteCatalogRemediationApprovalHandler),
+            ExecuteCatalogRemediationApprovalHandler,
         )
 
     def test_manual_tracker_receives_trading_calendar(self, app_container) -> None:

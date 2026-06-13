@@ -71,6 +71,80 @@ class DataLineageCatalogAssetResponse(BaseModel):
         default=None,
         description="Catalog freshness 时间",
     )
+    freshness_status: str | None = Field(
+        default=None,
+        description="Catalog freshness/SLA 状态",
+    )
+    freshness_sla_hours: int | None = Field(
+        default=None,
+        description="Catalog freshness SLA 小时数",
+    )
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataLineageCatalogStatusCountResponse(BaseModel):
+    """运行级 lineage catalog status 计数响应."""
+
+    status: str = Field(description="Catalog 精确资产匹配状态")
+    count: int = Field(description="该状态的资产数量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataLineageCatalogFreshnessStatusCountResponse(BaseModel):
+    """运行级 lineage catalog freshness status 计数响应."""
+
+    status: str = Field(description="Catalog freshness/SLA 状态")
+    count: int = Field(description="该状态的资产数量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataLineageCatalogAttentionReasonCountResponse(BaseModel):
+    """运行级 lineage catalog attention reason 计数响应."""
+
+    reason: str = Field(description="lineage catalog attention reason")
+    count: int = Field(description="该 attention reason 的资产数量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataLineageCatalogAttentionSeverityCountResponse(BaseModel):
+    """运行级 lineage catalog attention severity 计数响应."""
+
+    severity: str = Field(description="lineage catalog attention severity")
+    count: int = Field(description="该 attention severity 的资产数量")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataLineageCatalogSourceFallbackPolicyEffectCountResponse(BaseModel):
+    """运行级 lineage source fallback policy effect 计数响应."""
+
+    policy_id: str = Field(description="Source fallback policy ID")
+    policy_status: str = Field(description="Source fallback policy status")
+    catalog_selected_source: str = Field(description="Catalog 原始选源")
+    effective_selected_source: str = Field(description="Policy 生效后的选源")
+    count: int = Field(description="该 policy effect 出现次数")
+
+    model_config = ConfigDict(strict=True, extra="ignore")
+
+
+class DataLineageCatalogAttentionAssetResponse(BaseModel):
+    """运行级 lineage catalog attention 资产响应."""
+
+    side: str = Field(description="资产位于 run lineage input 或 output")
+    attention_reasons: list[str] = Field(
+        default_factory=list,
+        description="lineage catalog attention reason codes",
+    )
+    attention_severity: str = Field(
+        description="lineage catalog attention severity (critical/warning/info)",
+    )
+    asset: DataLineageCatalogAssetResponse = Field(
+        description="需要关注的 lineage catalog 资产",
+    )
 
     model_config = ConfigDict(strict=True, extra="ignore")
 
@@ -85,6 +159,38 @@ class DataLineageCatalogRunReportResponse(BaseModel):
     )
     output_assets: list[DataLineageCatalogAssetResponse] = Field(
         description="去重输出资产及其 Catalog 证据",
+    )
+    catalog_status_counts: list[DataLineageCatalogStatusCountResponse] = Field(
+        default_factory=list,
+        description="按 Catalog 精确资产匹配状态聚合的资产数量",
+    )
+    freshness_status_counts: list[DataLineageCatalogFreshnessStatusCountResponse] = (
+        Field(
+            default_factory=list,
+            description="按 Catalog freshness/SLA 状态聚合的资产数量",
+        )
+    )
+    attention_required: list[DataLineageCatalogAttentionAssetResponse] = Field(
+        default_factory=list,
+        description="需要后端治理关注的 input/output 资产",
+    )
+    attention_reason_counts: list[DataLineageCatalogAttentionReasonCountResponse] = (
+        Field(
+            default_factory=list,
+            description="按 lineage catalog attention reason 聚合的资产数量",
+        )
+    )
+    attention_severity_counts: list[
+        DataLineageCatalogAttentionSeverityCountResponse
+    ] = Field(
+        default_factory=list,
+        description="按 lineage catalog attention severity 聚合的资产数量",
+    )
+    source_fallback_policy_effect_counts: list[
+        DataLineageCatalogSourceFallbackPolicyEffectCountResponse
+    ] = Field(
+        default_factory=list,
+        description="按 active source fallback policy effect 聚合的 run input 数量",
     )
 
     model_config = ConfigDict(strict=True, extra="ignore")
@@ -240,7 +346,12 @@ __all__ = [
     "AccountStateComparisonResponse",
     "DataLineageAssetResponse",
     "DataLineageCatalogAssetResponse",
+    "DataLineageCatalogAttentionAssetResponse",
+    "DataLineageCatalogAttentionReasonCountResponse",
+    "DataLineageCatalogAttentionSeverityCountResponse",
+    "DataLineageCatalogFreshnessStatusCountResponse",
     "DataLineageCatalogRunReportResponse",
+    "DataLineageCatalogStatusCountResponse",
     "DataLineageEventResponse",
     "DataLineageGraphEdgeResponse",
     "DataLineageGraphResponse",

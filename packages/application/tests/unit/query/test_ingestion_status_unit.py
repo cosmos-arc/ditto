@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import ditto_application.queries.ingestion_status as ingestion_status_module
+from ditto_application.queries.catalog import CatalogSourceFallbackPolicyEffect
 from ditto_application.queries.ingestion_status import (
     DatasetStatus,
     IngestionStatusQueryFacade,
@@ -414,6 +416,66 @@ class TestIngestionStatusMaturitySummary:
 
 
 class TestPromotionReadinessReport:
+    def test_summarizes_source_fallback_policy_effect_counts(self) -> None:
+        """Promotion readiness can carry source-policy impact context."""
+        source_health = MagicMock()
+        source_health.get_source_health_summary.return_value = SimpleNamespace(
+            reports=(
+                SimpleNamespace(
+                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
+                        policy_id="fallback-policy-001",
+                        policy_status="active",
+                        catalog_selected_source="tushare",
+                        effective_selected_source="fred",
+                        reason_codes=("selected_source_missing",),
+                        recommended_actions=("repair_catalog_source_coverage",),
+                    )
+                ),
+                SimpleNamespace(
+                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
+                        policy_id="fallback-policy-001",
+                        policy_status="active",
+                        catalog_selected_source="tushare",
+                        effective_selected_source="fred",
+                        reason_codes=("selected_source_missing",),
+                        recommended_actions=("repair_catalog_source_coverage",),
+                    )
+                ),
+                SimpleNamespace(source_fallback_policy_effect=None),
+            )
+        )
+        facade = IngestionStatusQueryFacade(
+            ingestion_log_store=_log_store(),
+            data_catalog_reader=InMemoryDataCatalog(),
+            promotion_evidence_reader=_PromotionEvidenceReader(),
+            source_health_summary_query=source_health,
+            now=lambda: datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
+        )
+
+        report = facade.get_promotion_readiness_report(
+            ["stock_daily"],
+            trade_dates=("2026-06-01",),
+            available_sources=("tushare", "fred"),
+        )
+
+        assert [
+            (
+                item.policy_id,
+                item.policy_status,
+                item.catalog_selected_source,
+                item.effective_selected_source,
+                item.count,
+            )
+            for item in report.source_fallback_policy_effect_counts
+        ] == [
+            ("fallback-policy-001", "active", "tushare", "fred", 2),
+        ]
+        source_health.get_source_health_summary.assert_called_once_with(
+            dataset_ids=("stock_daily",),
+            trade_dates=("2026-06-01",),
+            available_sources=("tushare", "fred"),
+        )
+
     def test_reports_latest_revocation_context_for_revoked_promotions(self) -> None:
         """Readiness report composes current readiness with last revoke context."""
         revoked_at = datetime(2026, 6, 2, 9, 30, tzinfo=UTC)
@@ -553,6 +615,55 @@ class TestPromotionReadinessReport:
 
 
 class TestMaturityGovernanceReport:
+    def test_summarizes_source_fallback_policy_effect_counts(self) -> None:
+        """Maturity governance can carry source-policy impact context."""
+        source_health = MagicMock()
+        source_health.get_source_health_summary.return_value = SimpleNamespace(
+            reports=(
+                SimpleNamespace(
+                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
+                        policy_id="fallback-policy-001",
+                        policy_status="active",
+                        catalog_selected_source="tushare",
+                        effective_selected_source="fred",
+                        reason_codes=("selected_source_missing",),
+                        recommended_actions=("repair_catalog_source_coverage",),
+                    )
+                ),
+            )
+        )
+        facade = IngestionStatusQueryFacade(
+            ingestion_log_store=_log_store(),
+            data_catalog_reader=InMemoryDataCatalog(),
+            promotion_evidence_reader=_PromotionEvidenceReader(),
+            source_health_summary_query=source_health,
+            now=lambda: datetime(2026, 6, 2, 9, 0, tzinfo=UTC),
+        )
+
+        report = facade.get_maturity_governance_report(
+            ["stock_daily"],
+            trade_dates=("2026-06-01",),
+            available_sources=("tushare", "fred"),
+        )
+
+        assert [
+            (
+                item.policy_id,
+                item.policy_status,
+                item.catalog_selected_source,
+                item.effective_selected_source,
+                item.count,
+            )
+            for item in report.source_fallback_policy_effect_counts
+        ] == [
+            ("fallback-policy-001", "active", "tushare", "fred", 1),
+        ]
+        source_health.get_source_health_summary.assert_called_once_with(
+            dataset_ids=("stock_daily",),
+            trade_dates=("2026-06-01",),
+            available_sources=("tushare", "fred"),
+        )
+
     def test_unifies_status_readiness_and_revocation_context(self) -> None:
         metadata = ingestion_status_module.default_dataset_metadata()
         stock_criteria = metadata["stock_daily"].promotion_criteria
@@ -642,6 +753,70 @@ class TestMaturityGovernanceReport:
             ("blocked", 1),
             ("not_applicable", 1),
         ]
+        assert report.missing_criteria_counts == (
+            ingestion_status_module.DatasetPromotionCriterionCount(
+                criterion=stock_criteria[2],
+                count=1,
+            ),
+        )
+        assert report.rejected_criteria_counts == (
+            ingestion_status_module.DatasetPromotionCriterionCount(
+                criterion=stock_criteria[1],
+                count=1,
+            ),
+        )
+        assert report.attention_reason_counts == (
+            ingestion_status_module.DatasetMaturityGovernanceAttentionReasonCount(
+                reason="catalog_missing",
+                count=2,
+            ),
+            ingestion_status_module.DatasetMaturityGovernanceAttentionReasonCount(
+                reason="maturity_warning",
+                count=1,
+            ),
+            ingestion_status_module.DatasetMaturityGovernanceAttentionReasonCount(
+                reason="promotion_blocked",
+                count=1,
+            ),
+            ingestion_status_module.DatasetMaturityGovernanceAttentionReasonCount(
+                reason="promotion_revoked",
+                count=1,
+            ),
+        )
+        assert report.attention_severity_counts == (
+            ingestion_status_module.DatasetMaturityGovernanceAttentionSeverityCount(
+                severity="critical",
+                count=3,
+            ),
+            ingestion_status_module.DatasetMaturityGovernanceAttentionSeverityCount(
+                severity="warning",
+                count=0,
+            ),
+            ingestion_status_module.DatasetMaturityGovernanceAttentionSeverityCount(
+                severity="info",
+                count=0,
+            ),
+        )
+        attention_by_dataset = {
+            item.dataset_id: item for item in report.attention_required
+        }
+        assert attention_by_dataset["stock_daily"].attention_reasons == (
+            "maturity_warning",
+            "promotion_blocked",
+            "promotion_revoked",
+        )
+        assert attention_by_dataset["stock_daily"].attention_severity == "critical"
+        assert attention_by_dataset["stock_daily"].dataset.missing_criteria == (
+            stock_criteria[2],
+        )
+        assert attention_by_dataset["macro_indicators"].attention_reasons == (
+            "catalog_missing",
+        )
+        assert attention_by_dataset["macro_indicators"].attention_severity == "critical"
+        assert attention_by_dataset["etf_daily"].attention_reasons == (
+            "catalog_missing",
+        )
+        assert attention_by_dataset["etf_daily"].attention_severity == "critical"
         assert [
             (item.maturity, item.dataset_count) for item in report.maturity_summary
         ] == [
@@ -658,6 +833,8 @@ class TestMaturityGovernanceReport:
         assert stock.latest_revocation_reason == "failed_revalidation"
         assert stock.latest_revoked_by == "data-governance"
         assert stock.latest_revoked_at == revoked_at
+        assert stock.required_criteria == stock_criteria
+        assert stock.satisfied_criteria == (stock_criteria[0],)
         assert stock.missing_criteria == (stock_criteria[2],)
         assert stock.rejected_criteria == (stock_criteria[1],)
         macro = report.datasets[1]
@@ -665,3 +842,5 @@ class TestMaturityGovernanceReport:
         assert macro.promotion_status == "ready"
         assert macro.active_maturity_promotion is True
         assert macro.has_maturity_warning is False
+        assert macro.required_criteria == macro_criteria
+        assert macro.satisfied_criteria == macro_criteria

@@ -18,11 +18,14 @@ ADR: Recovery Policy
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from ditto_portfolio.accounting.fills import FillEvent
 
 from ditto_execution.orders.status import OrderStatus
 from ditto_execution.orders.ticket import OrderTicket
 from ditto_execution.reconciliation.types import (
+    BrokerOrderLinkIndex,
     MismatchType,
     ReconciliationDiff,
     ReconciliationReport,
@@ -40,6 +43,7 @@ def reconcile(
     expected: list[OrderTicket],
     actual: list[FillEvent],
     price_tolerance: float = _DEFAULT_PRICE_TOLERANCE,
+    broker_order_links: BrokerOrderLinkIndex | None = None,
 ) -> ReconciliationReport:
     """
     比较期望订单与实际成交，返回对账报告。
@@ -54,15 +58,30 @@ def reconcile(
     """
     diffs: list[ReconciliationDiff] = []
 
+    link_index = broker_order_links or BrokerOrderLinkIndex()
+    broker_order_ids = link_index.by_order
+    broker_order_ids_for_order_fills = link_index.by_order_fill
+    broker_order_ids_for_fills = link_index.by_fill
     fills_by_order: dict[str, list[FillEvent]] = {}
+    fill_id_counts: dict[str, int] = {}
     for fill in actual:
         fills_by_order.setdefault(fill.order_id, []).append(fill)
+        fill_id_counts[fill.fill_id] = fill_id_counts.get(fill.fill_id, 0) + 1
 
     matched_order_ids: set[str] = set()
 
     for ticket in expected:
         order_id = ticket.order.order_id
         client_order_id = ticket.order.client_id.value
+        ticket_broker_order_id = _clean_broker_order_id(ticket.broker_order_id)
+        broker_order_id = (
+            _broker_order_id_for(order_id, broker_order_ids)
+            or ticket_broker_order_id
+            or _broker_order_id_for_order_fills(
+                order_id,
+                broker_order_ids_for_order_fills,
+            )
+        )
         matched_order_ids.add(order_id)
         matched_fills = fills_by_order.get(order_id, [])
 
@@ -72,6 +91,7 @@ def reconcile(
                     mismatch_type=MismatchType.MISSING_FILL,
                     order_id=order_id,
                     client_order_id=client_order_id,
+                    broker_order_id=broker_order_id,
                     expected_quantity=ticket.order.quantity,
                     expected_status=ticket.status,
                 )
@@ -90,6 +110,7 @@ def reconcile(
                     mismatch_type=MismatchType.STATUS_MISMATCH,
                     order_id=order_id,
                     client_order_id=client_order_id,
+                    broker_order_id=broker_order_id,
                     expected_status=OrderStatus.FILLED,
                     actual_status=ticket.status,
                 )
@@ -101,7 +122,9 @@ def reconcile(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.QTY_MISMATCH,
                     order_id=order_id,
+                    fill_id=_single_unique_fill_id(matched_fills, fill_id_counts),
                     client_order_id=client_order_id,
+                    broker_order_id=broker_order_id,
                     expected_quantity=ticket.order.quantity,
                     actual_quantity=total_qty,
                 )
@@ -116,7 +139,9 @@ def reconcile(
                 ReconciliationDiff(
                     mismatch_type=MismatchType.PRICE_MISMATCH,
                     order_id=order_id,
+                    fill_id=_single_unique_fill_id(matched_fills, fill_id_counts),
                     client_order_id=client_order_id,
+                    broker_order_id=broker_order_id,
                     expected_price=expected_price,
                     actual_price=avg_price,
                 )
@@ -131,6 +156,22 @@ def reconcile(
                         mismatch_type=MismatchType.EXTRA_FILL,
                         order_id=order_id,
                         fill_id=fill.fill_id,
+                        client_order_id=order_id,
+                        broker_order_id=(
+                            _broker_order_id_for_order_fill(
+                                order_id,
+                                fill.fill_id,
+                                broker_order_ids_for_order_fills,
+                            )
+                            or _broker_order_id_for_fill(
+                                fill.fill_id,
+                                broker_order_ids_for_fills,
+                            )
+                            or _broker_order_id_for(
+                                order_id,
+                                broker_order_ids,
+                            )
+                        ),
                         actual_quantity=fill.filled_quantity,
                         actual_price=fill.fill_price,
                     )
@@ -149,3 +190,65 @@ def reconcile(
         status=status,
         diffs=tuple(diffs),
     )
+
+
+def _broker_order_id_for(
+    order_id: str,
+    broker_order_ids_by_order: Mapping[str, str],
+) -> str | None:
+    return _clean_broker_order_id(broker_order_ids_by_order.get(order_id))
+
+
+def _broker_order_id_for_fill(
+    fill_id: str,
+    broker_order_ids_by_fill: Mapping[str, str],
+) -> str | None:
+    return _clean_broker_order_id(broker_order_ids_by_fill.get(fill_id))
+
+
+def _broker_order_id_for_order_fill(
+    order_id: str,
+    fill_id: str,
+    broker_order_ids_by_order_fill: Mapping[tuple[str, str], str],
+) -> str | None:
+    return _clean_broker_order_id(
+        broker_order_ids_by_order_fill.get((order_id, fill_id))
+    )
+
+
+def _broker_order_id_for_order_fills(
+    order_id: str,
+    broker_order_ids_by_order_fill: Mapping[tuple[str, str], str],
+) -> str | None:
+    broker_order_ids: set[str] = set()
+    for (
+        link_order_id,
+        _fill_id,
+    ), broker_order_id in broker_order_ids_by_order_fill.items():
+        if link_order_id != order_id:
+            continue
+        cleaned = _clean_broker_order_id(broker_order_id)
+        if cleaned is not None:
+            broker_order_ids.add(cleaned)
+        if len(broker_order_ids) > 1:
+            return None
+    return next(iter(broker_order_ids), None)
+
+
+def _single_unique_fill_id(
+    fills: list[FillEvent],
+    fill_id_counts: Mapping[str, int],
+) -> str | None:
+    if len(fills) != 1:
+        return None
+    fill_id = fills[0].fill_id
+    if fill_id_counts.get(fill_id) != 1:
+        return None
+    return fill_id
+
+
+def _clean_broker_order_id(value: str | None) -> str | None:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None

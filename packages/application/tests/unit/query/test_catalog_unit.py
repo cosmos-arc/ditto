@@ -6,12 +6,21 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from ditto_application.exceptions import AppQueryError
-from ditto_application.queries.catalog import CatalogQueryFacade
+from ditto_application.queries.catalog import (
+    CatalogQueryFacade,
+    CatalogSourceHealthAttentionItem,
+    CatalogSourceHealthSummaryReport,
+)
 from ditto_data.catalog import (
     DataAssetRef,
     DataCatalogEntry,
     DataSchemaFingerprint,
     InMemoryDataCatalog,
+)
+from ditto_data.catalog.fallback_policy import (
+    CatalogSourceFallbackPolicy,
+    CatalogSourceFallbackPolicyEvent,
+    CatalogSourceFallbackPolicyStatus,
 )
 from ditto_data.catalog.promotion import DatasetMaturityPromotionEvent
 
@@ -155,6 +164,71 @@ class _MaturityPromotionHistoryReader:
         return self._events_by_dataset.get(dataset_id, ())
 
 
+class _SourceFallbackPolicyReader:
+    def __init__(
+        self,
+        policies: tuple[CatalogSourceFallbackPolicy, ...],
+    ) -> None:
+        self._policies = policies
+
+    def get_source_fallback_policy(
+        self,
+        policy_id: str,
+    ) -> CatalogSourceFallbackPolicy | None:
+        return next(
+            (policy for policy in self._policies if policy.policy_id == policy_id),
+            None,
+        )
+
+    def list_source_fallback_policies(
+        self,
+        *,
+        dataset_id: str | None = None,
+        status: CatalogSourceFallbackPolicyStatus | None = None,
+    ) -> tuple[CatalogSourceFallbackPolicy, ...]:
+        return tuple(
+            policy
+            for policy in self._policies
+            if (dataset_id is None or policy.dataset_id == dataset_id)
+            and (status is None or policy.status == status)
+        )
+
+    def list_source_fallback_policy_events(
+        self,
+        policy_id: str,
+    ) -> tuple[CatalogSourceFallbackPolicyEvent, ...]:
+        return ()
+
+
+def _active_source_fallback_policy(
+    *,
+    recommended_source: str,
+) -> CatalogSourceFallbackPolicy:
+    return CatalogSourceFallbackPolicy(
+        policy_id="fallback-policy-001",
+        dataset_id="macro_indicators",
+        namespace="macro",
+        trade_date="2024-12-27",
+        default_source="tushare",
+        selected_source="tushare",
+        recommended_source=recommended_source,
+        status="active",
+        created_by="data-governance",
+        created_at=datetime(2026, 6, 1, 10, tzinfo=UTC),
+        recommended_actions=("review_source_failover",),
+        reason_codes=("manual_source_override",),
+        fallback_sources=(recommended_source,),
+        unsupported_sources=(),
+        source_selection_status="ready",
+        source_selection_blockers=(),
+        approval_required=False,
+        execution_allowed=True,
+        decided_by="data-governance",
+        decided_at=datetime(2026, 6, 1, 11, tzinfo=UTC),
+        decision_notes="approved active fallback for this dataset/date",
+    )
+
+
 class TestCatalogQueryFacadePromotionHistory:
     def test_lists_dataset_maturity_promotion_history(self) -> None:
         promoted = DatasetMaturityPromotionEvent(
@@ -246,6 +320,59 @@ class TestCatalogQueryFacadeSourceHealth:
         assert fred.storage_uri is None
         assert fred.schema_hash is None
         assert report.unsupported_sources == ()
+        assert report.selected_source_health.source == "fred"
+        assert report.selected_source_health.supported is True
+        assert report.selected_source_health.freshness_status == "missing"
+        assert report.source_selection_status == "ready"
+        assert report.source_selection_blockers == ()
+
+    def test_reports_active_source_fallback_policy_effect(self) -> None:
+        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="macro_indicators",
+                    namespace="macro",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="macro/macro_indicators/2024-12-27",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:macro:v1",
+                    row_count=1,
+                ),
+                source="tushare",
+                freshness_at=now - timedelta(hours=1),
+            )
+        )
+        facade = CatalogQueryFacade(
+            catalog,
+            source_fallback_policy_reader=_SourceFallbackPolicyReader(
+                (_active_source_fallback_policy(recommended_source="fred"),)
+            ),
+            now=lambda: now,
+        )
+
+        report = facade.get_source_health_report(
+            dataset_id="macro_indicators",
+            trade_date="2024-12-27",
+            available_sources=("tushare", "fred"),
+        )
+
+        assert report.selected_source == "fred"
+        assert report.selected_freshness_status == "missing"
+        assert report.failover_from_default is True
+        assert report.source_fallback_policy_effect is not None
+        assert report.source_fallback_policy_effect.policy_id == "fallback-policy-001"
+        assert report.source_fallback_policy_effect.policy_status == "active"
+        assert report.source_fallback_policy_effect.catalog_selected_source == "tushare"
+        assert report.source_fallback_policy_effect.effective_selected_source == "fred"
+        assert report.source_fallback_policy_effect.reason_codes == (
+            "manual_source_override",
+        )
+        assert report.source_fallback_policy_effect.recommended_actions == (
+            "review_source_failover",
+        )
 
     def test_reports_latest_revocation_context_with_source_health(self) -> None:
         now = datetime(2026, 6, 1, 12, tzinfo=UTC)
@@ -383,6 +510,25 @@ class TestCatalogQueryFacadeSourceHealth:
         assert report.sources[0].freshness_status == "missing"
         assert report.unsupported_sources == ("fred",)
 
+    def test_marks_selected_source_blocked_when_no_supported_source_is_available(
+        self,
+    ) -> None:
+        facade = CatalogQueryFacade(InMemoryDataCatalog())
+
+        report = facade.get_source_health_report(
+            dataset_id="stock_daily",
+            trade_date="2024-12-27",
+            available_sources=("fred",),
+        )
+
+        assert report.selected_source == "fred"
+        assert report.sources == ()
+        assert report.selected_source_health.source == "fred"
+        assert report.selected_source_health.supported is False
+        assert report.selected_source_health.freshness_status == "missing"
+        assert report.source_selection_status == "blocked"
+        assert report.source_selection_blockers == ("selected_source_unsupported",)
+
     def test_rejects_empty_available_sources(self) -> None:
         facade = CatalogQueryFacade(InMemoryDataCatalog())
 
@@ -392,6 +538,248 @@ class TestCatalogQueryFacadeSourceHealth:
                 trade_date="2024-12-27",
                 available_sources=(),
             )
+
+
+class TestCatalogQueryFacadeSourceFallbackPolicyPreview:
+    def test_previews_review_required_policy_for_failover_with_missing_selected_source(
+        self,
+    ) -> None:
+        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="macro_indicators",
+                    namespace="macro",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="macro/macro_indicators/2024-12-27",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:macro:v1",
+                    row_count=1,
+                ),
+                source="tushare",
+                freshness_at=now - timedelta(hours=100),
+            )
+        )
+        facade = CatalogQueryFacade(catalog, now=lambda: now)
+
+        preview = facade.get_source_fallback_policy_preview(
+            dataset_id="macro_indicators",
+            trade_date="2024-12-27",
+            available_sources=("tushare", "fred"),
+        )
+
+        assert preview.dataset_id == "macro_indicators"
+        assert preview.namespace == "macro"
+        assert preview.trade_date == "2024-12-27"
+        assert preview.default_source == "tushare"
+        assert preview.selected_source == "fred"
+        assert preview.recommended_source == "fred"
+        assert preview.policy_status == "review_required"
+        assert preview.recommended_actions == (
+            "repair_catalog_source_coverage",
+            "review_source_failover",
+        )
+        assert preview.approval_required is True
+        assert preview.execution_allowed is True
+        assert preview.reason_codes == (
+            "selected_source_missing",
+            "default_source_failover",
+        )
+        assert preview.fallback_sources == ("fred",)
+        assert preview.source_selection_status == "ready"
+        assert preview.source_selection_blockers == ()
+
+    def test_previews_blocked_policy_when_selected_source_is_unsupported(self) -> None:
+        facade = CatalogQueryFacade(InMemoryDataCatalog())
+
+        preview = facade.get_source_fallback_policy_preview(
+            dataset_id="stock_daily",
+            trade_date="2024-12-27",
+            available_sources=("fred",),
+        )
+
+        assert preview.policy_status == "blocked"
+        assert preview.recommended_source is None
+        assert preview.recommended_actions == (
+            "configure_fallback_source",
+            "review_source_request",
+        )
+        assert preview.approval_required is True
+        assert preview.execution_allowed is False
+        assert preview.source_selection_status == "blocked"
+        assert preview.source_selection_blockers == ("selected_source_unsupported",)
+        assert "selected_source_unsupported" in preview.reason_codes
+
+
+class TestCatalogQueryFacadeSourceFallbackPolicySummary:
+    def test_summarizes_fallback_policy_previews_across_datasets_and_dates(
+        self,
+    ) -> None:
+        now = datetime(2026, 6, 1, 12, tzinfo=UTC)
+        catalog = InMemoryDataCatalog()
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="macro_indicators",
+                    namespace="macro",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="macro/macro_indicators/2024-12-27",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:macro:v1",
+                    row_count=1,
+                ),
+                source="tushare",
+                freshness_at=now - timedelta(hours=100),
+            )
+        )
+        catalog.upsert_asset(
+            DataCatalogEntry(
+                asset=DataAssetRef(
+                    dataset_id="stock_daily",
+                    namespace="market",
+                    partition_keys=("trade_date=2024-12-27",),
+                ),
+                storage_uri="market/stock_daily/2024-12-27",
+                schema=DataSchemaFingerprint(
+                    schema_hash="schema:stock_daily:v1",
+                    row_count=2300,
+                ),
+                source="tushare",
+                freshness_at=now - timedelta(hours=1),
+            )
+        )
+        facade = CatalogQueryFacade(catalog, now=lambda: now)
+
+        summary = facade.get_source_fallback_policy_summary(
+            dataset_ids=("macro_indicators", "stock_daily"),
+            trade_dates=("2024-12-27",),
+            available_sources=("tushare", "fred"),
+        )
+
+        assert summary.dataset_ids == ("macro_indicators", "stock_daily")
+        assert summary.trade_dates == ("2024-12-27",)
+        assert summary.available_sources == ("tushare", "fred")
+        assert summary.total_previews == 2
+        assert summary.approval_required_count == 2
+        assert summary.execution_allowed_count == 2
+        assert [(item.status, item.count) for item in summary.policy_status_counts] == [
+            ("ready", 0),
+            ("review_required", 2),
+            ("blocked", 0),
+        ]
+        assert [
+            (item.action, item.count) for item in summary.recommended_action_counts
+        ] == [
+            ("repair_catalog_source_coverage", 1),
+            ("review_source_failover", 1),
+            ("review_source_request", 1),
+        ]
+        assert [preview.dataset_id for preview in summary.previews] == [
+            "macro_indicators",
+            "stock_daily",
+        ]
+        assert summary.previews[0].policy_status == "review_required"
+        assert summary.previews[1].recommended_actions == ("review_source_request",)
+
+    def test_rejects_empty_fallback_policy_summary_inputs(self) -> None:
+        facade = CatalogQueryFacade(InMemoryDataCatalog())
+
+        with pytest.raises(AppQueryError, match="dataset_ids"):
+            facade.get_source_fallback_policy_summary(
+                dataset_ids=(),
+                trade_dates=("2024-12-27",),
+                available_sources=("tushare",),
+            )
+
+        with pytest.raises(AppQueryError, match="trade_dates"):
+            facade.get_source_fallback_policy_summary(
+                dataset_ids=("stock_daily",),
+                trade_dates=(),
+                available_sources=("tushare",),
+            )
+
+
+def _assert_source_health_summary_rollups(
+    summary: CatalogSourceHealthSummaryReport,
+) -> None:
+    assert summary.dataset_ids == ("macro_indicators", "stock_daily")
+    assert summary.trade_dates == ("2024-12-27",)
+    assert summary.available_sources == ("tushare", "fred")
+    assert summary.total_reports == 2
+    assert summary.failover_count == 1
+    assert summary.no_fallback_source_count == 1
+    assert [(item.source, item.count) for item in summary.fallback_source_counts] == [
+        ("fred", 1),
+    ]
+    assert [(item.status, item.count) for item in summary.status_counts] == [
+        ("fresh", 1),
+        ("stale", 1),
+        ("missing", 1),
+        ("not_applicable", 0),
+    ]
+    assert [(item.source, item.count) for item in summary.selected_source_counts] == [
+        ("fred", 1),
+        ("tushare", 1),
+    ]
+    assert [(item.reason, item.count) for item in summary.attention_reason_counts] == [
+        ("default_source_failover", 1),
+        ("selected_source_missing", 1),
+        ("unsupported_sources_present", 1),
+    ]
+    assert [
+        (item.severity, item.count) for item in summary.attention_severity_counts
+    ] == [
+        ("critical", 1),
+        ("warning", 0),
+        ("info", 1),
+    ]
+
+
+def _assert_macro_missing_attention(
+    attention: CatalogSourceHealthAttentionItem,
+) -> None:
+    assert attention.dataset_id == "macro_indicators"
+    assert attention.namespace == "macro"
+    assert attention.trade_date == "2024-12-27"
+    assert attention.default_source == "tushare"
+    assert attention.selected_source == "fred"
+    assert attention.selected_freshness_status == "missing"
+    assert attention.selected_source_health.source == "fred"
+    assert attention.selected_source_health.freshness_status == "missing"
+    assert attention.selected_source_health.freshness_sla_hours == 72
+    assert attention.selected_source_health.storage_uri is None
+    assert attention.attention_reasons == (
+        "selected_source_missing",
+        "default_source_failover",
+    )
+    assert attention.attention_severity == "critical"
+    assert attention.failover_from_default is True
+    assert attention.fallback_sources == ("fred",)
+    assert attention.latest_revocation_reason is None
+
+
+def _assert_stock_unsupported_attention(
+    attention: CatalogSourceHealthAttentionItem,
+) -> None:
+    assert attention.dataset_id == "stock_daily"
+    assert attention.namespace == "market"
+    assert attention.trade_date == "2024-12-27"
+    assert attention.default_source == "tushare"
+    assert attention.selected_source == "tushare"
+    assert attention.selected_freshness_status == "fresh"
+    assert attention.selected_source_health.source == "tushare"
+    assert attention.selected_source_health.freshness_status == "fresh"
+    assert attention.selected_source_health.storage_uri == (
+        "market/stock_daily/2024-12-27"
+    )
+    assert attention.selected_source_health.schema_hash == "schema:stock_daily:v1"
+    assert attention.selected_source_health.row_count == 2300
+    assert attention.attention_reasons == ("unsupported_sources_present",)
+    assert attention.attention_severity == "info"
+    assert attention.unsupported_sources == ("fred",)
 
 
 class TestCatalogQueryFacadeSourceHealthSummary:
@@ -437,62 +825,34 @@ class TestCatalogQueryFacadeSourceHealthSummary:
             available_sources=("tushare", "fred"),
         )
 
-        assert summary.dataset_ids == ("macro_indicators", "stock_daily")
-        assert summary.trade_dates == ("2024-12-27",)
-        assert summary.available_sources == ("tushare", "fred")
-        assert summary.total_reports == 2
-        assert summary.failover_count == 1
-        assert summary.no_fallback_source_count == 1
-        assert [
-            (item.source, item.count) for item in summary.fallback_source_counts
-        ] == [
-            ("fred", 1),
-        ]
-        assert [(item.status, item.count) for item in summary.status_counts] == [
-            ("fresh", 1),
-            ("stale", 1),
-            ("missing", 1),
-            ("not_applicable", 0),
-        ]
-        assert [
-            (item.source, item.count) for item in summary.selected_source_counts
-        ] == [
-            ("fred", 1),
-            ("tushare", 1),
-        ]
-        assert [
-            (item.reason, item.count) for item in summary.attention_reason_counts
-        ] == [
-            ("default_source_failover", 1),
-            ("selected_source_missing", 1),
-            ("unsupported_sources_present", 1),
-        ]
+        _assert_source_health_summary_rollups(summary)
         assert len(summary.attention_required) == 2
-        attention = summary.attention_required[0]
-        assert attention.dataset_id == "macro_indicators"
-        assert attention.trade_date == "2024-12-27"
-        assert attention.selected_source == "fred"
-        assert attention.selected_freshness_status == "missing"
-        assert attention.attention_reasons == (
-            "selected_source_missing",
-            "default_source_failover",
-        )
-        assert attention.failover_from_default is True
-        assert attention.fallback_sources == ("fred",)
-        assert attention.latest_revocation_reason is None
-        unsupported_attention = summary.attention_required[1]
-        assert unsupported_attention.dataset_id == "stock_daily"
-        assert unsupported_attention.trade_date == "2024-12-27"
-        assert unsupported_attention.selected_source == "tushare"
-        assert unsupported_attention.selected_freshness_status == "fresh"
-        assert unsupported_attention.attention_reasons == (
-            "unsupported_sources_present",
-        )
-        assert unsupported_attention.unsupported_sources == ("fred",)
+        _assert_macro_missing_attention(summary.attention_required[0])
+        _assert_stock_unsupported_attention(summary.attention_required[1])
         assert summary.reports[0].failover_from_default is True
         assert summary.reports[0].fallback_sources == ("fred",)
         assert summary.reports[1].failover_from_default is False
         assert summary.reports[1].fallback_sources == ()
+
+    def test_summary_surfaces_blocked_source_selection_context(self) -> None:
+        facade = CatalogQueryFacade(InMemoryDataCatalog())
+
+        summary = facade.get_source_health_summary(
+            dataset_ids=("stock_daily",),
+            trade_dates=("2024-12-27",),
+            available_sources=("fred",),
+        )
+
+        assert [
+            (item.status, item.count) for item in summary.source_selection_status_counts
+        ] == [
+            ("ready", 0),
+            ("blocked", 1),
+        ]
+        assert len(summary.attention_required) == 1
+        attention = summary.attention_required[0]
+        assert attention.source_selection_status == "blocked"
+        assert attention.source_selection_blockers == ("selected_source_unsupported",)
 
     def test_summary_carries_latest_revocation_context_for_attention_items(
         self,

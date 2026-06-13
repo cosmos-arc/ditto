@@ -41,6 +41,30 @@ class RepairWorkflowStore(Protocol):
         """Return one persisted repair action."""
         ...
 
+    def list_actions(self, report_id: str) -> tuple[RepairActionRecord, ...]:
+        """Return persisted repair actions for a report in execution order."""
+        ...
+
+    def claim_for_execution(
+        self,
+        action_id: str,
+        *,
+        executor: str,
+        claimed_at: str = "",
+        reclaim_before: str | None = None,
+    ) -> RepairActionRecord | None:
+        """Atomically claim one ready or approved action for execution."""
+        ...
+
+    def release_execution_claim(
+        self,
+        action_id: str,
+        *,
+        executor: str,
+    ) -> bool:
+        """Release an executor-owned in-flight claim."""
+        ...
+
     def mark_executed(
         self,
         action_id: str,
@@ -390,6 +414,7 @@ class RepairActionExecutor:
         action_id: str,
         *,
         executed_at: str = "",
+        reclaim_before: str | None = None,
     ) -> RepairExecutionResult:
         """Execute one ready or approved repair action."""
         action = self._workflow_store.get_action(action_id)
@@ -398,10 +423,14 @@ class RepairActionExecutor:
                 "repair action not found",
                 action_id=action_id,
             )
-        if action.status not in (
+        can_claim = action.status in (
             RepairActionStatus.READY,
             RepairActionStatus.APPROVED,
-        ):
+        )
+        can_reclaim = (
+            action.status is RepairActionStatus.EXECUTING and reclaim_before is not None
+        )
+        if not can_claim and not can_reclaim:
             result = RepairExecutionResult.skipped(
                 action,
                 message=f"repair action is {action.status.value}",
@@ -420,23 +449,157 @@ class RepairActionExecutor:
             self._record_audit(result)
             return result
 
-        result = handler.execute(action)
-        if result.status == "executed":
-            marked = self._workflow_store.mark_executed(
-                action.action_id,
-                executor=self._executor_id,
-                result=result.message,
-                executed_at=executed_at,
-            )
-            if not marked:
+        claimed_action = self._workflow_store.claim_for_execution(
+            action.action_id,
+            executor=self._executor_id,
+            claimed_at=executed_at,
+            reclaim_before=reclaim_before,
+        )
+        if claimed_action is None:
+            latest = self._workflow_store.get_action(action_id)
+            if latest is None:
                 raise ReconciliationError(
-                    "repair action execution state could not be recorded",
-                    action_id=action.action_id,
-                    action_status=action.status.value,
+                    "repair action not found",
+                    action_id=action_id,
                 )
+            message = (
+                "repair action is blocked by another in-flight claim"
+                if latest.status
+                in (RepairActionStatus.READY, RepairActionStatus.APPROVED)
+                else f"repair action is {latest.status.value}"
+            )
+            result = RepairExecutionResult.skipped(
+                latest,
+                message=message,
+            )
+            self._record_audit(result)
+            return result
+
+        try:
+            result = handler.execute(claimed_action)
+        except Exception:
+            self._release_execution_claim(claimed_action)
+            raise
+        if result.status == "executed":
+            self._mark_executed(claimed_action, result, executed_at=executed_at)
+        else:
+            self._release_execution_claim(claimed_action)
         self._record_audit(result)
         return result
+
+    def execute_report_actions(
+        self,
+        report_id: str,
+        *,
+        executed_at: str = "",
+        reclaim_before: str | None = None,
+    ) -> tuple[RepairExecutionResult, ...]:
+        """Execute all persisted actions for one report in workflow order."""
+        results: list[RepairExecutionResult] = []
+        amended_fill_ids: set[str] = set()
+        failed_amendment_fill_ids: set[str] = set()
+        in_flight_amendment_fill_ids: set[str] = set()
+        for action in self._workflow_store.list_actions(report_id):
+            fill_id = _local_fill_amendment_target(action)
+            if action.status is RepairActionStatus.EXECUTED and fill_id is not None:
+                amended_fill_ids.add(fill_id)
+            if action.status is RepairActionStatus.EXECUTING and fill_id is not None:
+                in_flight_amendment_fill_ids.add(fill_id)
+            if (
+                action.status in (RepairActionStatus.READY, RepairActionStatus.APPROVED)
+                and fill_id is not None
+                and fill_id in amended_fill_ids
+            ):
+                result = RepairExecutionResult.executed(
+                    action,
+                    message=f"local fill {fill_id} already amended earlier in report",
+                    effect_count=0,
+                )
+                self._mark_executed(action, result, executed_at=executed_at)
+                self._record_audit(result)
+            elif (
+                action.status in (RepairActionStatus.READY, RepairActionStatus.APPROVED)
+                and fill_id is not None
+                and fill_id in failed_amendment_fill_ids
+            ):
+                result = RepairExecutionResult.skipped(
+                    action,
+                    message=(
+                        f"local fill {fill_id} blocked by earlier failed amendment "
+                        "in report"
+                    ),
+                )
+                self._record_audit(result)
+            elif (
+                action.status in (RepairActionStatus.READY, RepairActionStatus.APPROVED)
+                and fill_id is not None
+                and fill_id in in_flight_amendment_fill_ids
+            ):
+                result = RepairExecutionResult.skipped(
+                    action,
+                    message=(
+                        f"local fill {fill_id} blocked by earlier in-flight amendment "
+                        "in report"
+                    ),
+                )
+                self._record_audit(result)
+            else:
+                result = self.execute_action(
+                    action.action_id,
+                    executed_at=executed_at,
+                    reclaim_before=reclaim_before,
+                )
+            if result.status == "executed" and fill_id is not None:
+                amended_fill_ids.add(fill_id)
+            if result.status == "failed" and fill_id is not None:
+                failed_amendment_fill_ids.add(fill_id)
+            if (
+                result.status == "skipped"
+                and fill_id is not None
+                and result.message == "repair action is executing"
+            ):
+                in_flight_amendment_fill_ids.add(fill_id)
+            results.append(result)
+        return tuple(results)
+
+    def _mark_executed(
+        self,
+        action: RepairActionRecord,
+        result: RepairExecutionResult,
+        *,
+        executed_at: str,
+    ) -> None:
+        marked = self._workflow_store.mark_executed(
+            action.action_id,
+            executor=self._executor_id,
+            result=result.message,
+            executed_at=executed_at,
+        )
+        if not marked:
+            raise ReconciliationError(
+                "repair action execution state could not be recorded",
+                action_id=action.action_id,
+                action_status=action.status.value,
+            )
+
+    def _release_execution_claim(self, action: RepairActionRecord) -> None:
+        released = self._workflow_store.release_execution_claim(
+            action.action_id,
+            executor=self._executor_id,
+        )
+        if not released:
+            raise ReconciliationError(
+                "repair action execution claim could not be released",
+                action_id=action.action_id,
+                action_status=action.status.value,
+            )
 
     def _record_audit(self, result: RepairExecutionResult) -> None:
         if self._audit_sink is not None:
             self._audit_sink.record_repair_execution(result)
+
+
+def _local_fill_amendment_target(action: RepairActionRecord) -> str | None:
+    if action.action_type is not RepairActionType.AMEND_LOCAL_FILL:
+        return None
+    return action.fill_id

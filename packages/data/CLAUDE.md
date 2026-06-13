@@ -27,6 +27,8 @@ ditto_data/
 ├── catalog/             # DataCatalog 运行时（Protocol contracts / metadata / in-memory/SQLite store）
 │   ├── contracts.py     # DataCatalog Protocol
 │   ├── metadata.py      # 目录元数据
+│   ├── fallback_policy.py # source fallback policy current-state/audit Protocol
+│   ├── fallback_policy_store.py # SQLite source fallback policy state store
 │   ├── promotion.py     # 数据集晋级 evidence/assessment policy
 │   ├── promotion_store.py # SQLite promotion evidence store
 │   ├── store.py         # in-memory 目录存储

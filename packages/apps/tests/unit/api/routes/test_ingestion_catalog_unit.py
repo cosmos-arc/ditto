@@ -15,13 +15,20 @@ from ditto_application.queries.catalog import (
     CatalogMaturityPromotionHistoryItem,
     CatalogQueryFacade,
     CatalogSchemaFingerprint,
+    CatalogSourceFallbackPolicyActionCount,
+    CatalogSourceFallbackPolicyEffect,
+    CatalogSourceFallbackPolicyPreview,
+    CatalogSourceFallbackPolicyStatusCount,
+    CatalogSourceFallbackPolicySummaryReport,
     CatalogSourceHealth,
     CatalogSourceHealthAttentionItem,
     CatalogSourceHealthAttentionReasonCount,
+    CatalogSourceHealthAttentionSeverityCount,
     CatalogSourceHealthReport,
     CatalogSourceHealthStatusCount,
     CatalogSourceHealthSummaryReport,
     CatalogSourceSelectionCount,
+    CatalogSourceSelectionStatusCount,
 )
 from ditto_apps.api.routes import ingestion
 from ditto_apps.models.common import APIResponse, PaginationRequest
@@ -30,6 +37,10 @@ from ditto_apps.models.ingestion import (
     CatalogSourceHealthReportResponse,
     CatalogSourceHealthSummaryReportResponse,
     MaturityPromotionHistoryItem,
+)
+from ditto_apps.models.source_fallback import (
+    CatalogSourceFallbackPolicyPreviewResponse,
+    CatalogSourceFallbackPolicySummaryResponse,
 )
 from fastapi.params import Query
 
@@ -42,6 +53,14 @@ _PromotionHistoryRoute = Callable[
 _SourceHealthRoute = Callable[
     ...,
     Awaitable[APIResponse[CatalogSourceHealthReportResponse]],
+]
+_SourceFallbackPolicyPreviewRoute = Callable[
+    ...,
+    Awaitable[APIResponse[CatalogSourceFallbackPolicyPreviewResponse]],
+]
+_SourceFallbackPolicySummaryRoute = Callable[
+    ...,
+    Awaitable[APIResponse[CatalogSourceFallbackPolicySummaryResponse]],
 ]
 _SourceHealthSummaryRoute = Callable[
     ...,
@@ -160,6 +179,52 @@ async def _call_source_health_report(
         facade=facade,
         dataset_id=dataset_id,
         trade_date=trade_date,
+        available_sources=available_sources,
+    )
+
+
+async def _call_source_fallback_policy_preview(
+    facade: CatalogQueryFacade,
+    *,
+    dataset_id: str,
+    trade_date: str,
+    available_sources: list[str] | None = None,
+) -> APIResponse[CatalogSourceFallbackPolicyPreviewResponse]:
+    route = cast(
+        _SourceFallbackPolicyPreviewRoute,
+        getattr(
+            ingestion.get_catalog_source_fallback_policy_preview,
+            "__dishka_orig_func__",
+            ingestion.get_catalog_source_fallback_policy_preview,
+        ),
+    )
+    return await route(
+        facade=facade,
+        dataset_id=dataset_id,
+        trade_date=trade_date,
+        available_sources=available_sources,
+    )
+
+
+async def _call_source_fallback_policy_summary(
+    facade: CatalogQueryFacade,
+    *,
+    dataset_ids: list[str],
+    trade_dates: list[str],
+    available_sources: list[str] | None = None,
+) -> APIResponse[CatalogSourceFallbackPolicySummaryResponse]:
+    route = cast(
+        _SourceFallbackPolicySummaryRoute,
+        getattr(
+            ingestion.get_catalog_source_fallback_policy_summary,
+            "__dishka_orig_func__",
+            ingestion.get_catalog_source_fallback_policy_summary,
+        ),
+    )
+    return await route(
+        facade=facade,
+        dataset_ids=dataset_ids,
+        trade_dates=trade_dates,
         available_sources=available_sources,
     )
 
@@ -297,6 +362,22 @@ class TestGetCatalogSourceHealthReport:
             default_source="tushare",
             selected_source="fred",
             selected_freshness_status="missing",
+            source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
+                policy_id="fallback-policy-001",
+                policy_status="active",
+                catalog_selected_source="tushare",
+                effective_selected_source="fred",
+                reason_codes=("manual_source_override",),
+                recommended_actions=("review_source_failover",),
+            ),
+            selected_source_health=CatalogSourceHealth(
+                source="fred",
+                supported=True,
+                freshness_status="missing",
+                freshness_sla_hours=72,
+            ),
+            source_selection_status="ready",
+            source_selection_blockers=(),
             attention_reasons=(
                 "selected_source_missing",
                 "default_source_failover",
@@ -337,6 +418,29 @@ class TestGetCatalogSourceHealthReport:
         assert response.data.dataset_id == "macro_indicators"
         assert response.data.selected_source == "fred"
         assert response.data.selected_freshness_status == "missing"
+        assert response.data.source_fallback_policy_effect is not None
+        assert response.data.source_fallback_policy_effect.policy_id == (
+            "fallback-policy-001"
+        )
+        assert response.data.source_fallback_policy_effect.policy_status == "active"
+        assert response.data.source_fallback_policy_effect.catalog_selected_source == (
+            "tushare"
+        )
+        assert (
+            response.data.source_fallback_policy_effect.effective_selected_source
+            == "fred"
+        )
+        assert response.data.source_fallback_policy_effect.reason_codes == [
+            "manual_source_override",
+        ]
+        assert response.data.source_fallback_policy_effect.recommended_actions == [
+            "review_source_failover",
+        ]
+        assert response.data.selected_source_health.source == "fred"
+        assert response.data.selected_source_health.supported is True
+        assert response.data.selected_source_health.freshness_status == "missing"
+        assert response.data.source_selection_status == "ready"
+        assert response.data.source_selection_blockers == []
         assert response.data.attention_reasons == [
             "selected_source_missing",
             "default_source_failover",
@@ -360,6 +464,189 @@ class TestGetCatalogSourceHealthReport:
         )
 
 
+class TestGetCatalogSourceFallbackPolicyPreview:
+    async def test_returns_backend_fallback_policy_preview(self) -> None:
+        facade = MagicMock(spec=CatalogQueryFacade)
+        facade.get_source_fallback_policy_preview.return_value = (
+            CatalogSourceFallbackPolicyPreview(
+                dataset_id="macro_indicators",
+                namespace="macro",
+                trade_date="2024-12-27",
+                default_source="tushare",
+                selected_source="fred",
+                recommended_source="fred",
+                selected_freshness_status="missing",
+                policy_status="review_required",
+                recommended_actions=(
+                    "repair_catalog_source_coverage",
+                    "review_source_failover",
+                ),
+                approval_required=True,
+                execution_allowed=True,
+                reason_codes=(
+                    "selected_source_missing",
+                    "default_source_failover",
+                ),
+                fallback_sources=("fred",),
+                unsupported_sources=(),
+                source_selection_status="ready",
+                source_selection_blockers=(),
+                latest_revocation_reason="policy_regression",
+            )
+        )
+
+        response = await _call_source_fallback_policy_preview(
+            facade,
+            dataset_id="macro_indicators",
+            trade_date="2024-12-27",
+            available_sources=["tushare", "fred"],
+        )
+
+        assert response.data.dataset_id == "macro_indicators"
+        assert response.data.namespace == "macro"
+        assert response.data.default_source == "tushare"
+        assert response.data.selected_source == "fred"
+        assert response.data.recommended_source == "fred"
+        assert response.data.policy_status == "review_required"
+        assert response.data.recommended_actions == [
+            "repair_catalog_source_coverage",
+            "review_source_failover",
+        ]
+        assert response.data.approval_required is True
+        assert response.data.execution_allowed is True
+        assert response.data.reason_codes == [
+            "selected_source_missing",
+            "default_source_failover",
+        ]
+        assert response.data.fallback_sources == ["fred"]
+        assert response.data.source_selection_status == "ready"
+        assert response.data.source_selection_blockers == []
+        assert response.data.latest_revocation_reason == "policy_regression"
+        facade.get_source_fallback_policy_preview.assert_called_once_with(
+            dataset_id="macro_indicators",
+            trade_date="2024-12-27",
+            available_sources=("tushare", "fred"),
+        )
+
+
+class TestGetCatalogSourceFallbackPolicySummary:
+    async def test_returns_backend_fallback_policy_summary(self) -> None:
+        facade = MagicMock(spec=CatalogQueryFacade)
+        macro_preview = CatalogSourceFallbackPolicyPreview(
+            dataset_id="macro_indicators",
+            namespace="macro",
+            trade_date="2024-12-27",
+            default_source="tushare",
+            selected_source="fred",
+            recommended_source="fred",
+            selected_freshness_status="missing",
+            policy_status="review_required",
+            recommended_actions=(
+                "repair_catalog_source_coverage",
+                "review_source_failover",
+            ),
+            approval_required=True,
+            execution_allowed=True,
+            reason_codes=("selected_source_missing", "default_source_failover"),
+            fallback_sources=("fred",),
+            unsupported_sources=(),
+            source_selection_status="ready",
+            source_selection_blockers=(),
+        )
+        stock_preview = CatalogSourceFallbackPolicyPreview(
+            dataset_id="stock_daily",
+            namespace="market",
+            trade_date="2024-12-27",
+            default_source="tushare",
+            selected_source="tushare",
+            recommended_source="tushare",
+            selected_freshness_status="fresh",
+            policy_status="review_required",
+            recommended_actions=("review_source_request",),
+            approval_required=True,
+            execution_allowed=True,
+            reason_codes=("unsupported_sources_present",),
+            fallback_sources=(),
+            unsupported_sources=("fred",),
+            source_selection_status="ready",
+            source_selection_blockers=(),
+        )
+        facade.get_source_fallback_policy_summary.return_value = (
+            CatalogSourceFallbackPolicySummaryReport(
+                dataset_ids=("macro_indicators", "stock_daily"),
+                trade_dates=("2024-12-27",),
+                available_sources=("tushare", "fred"),
+                total_previews=2,
+                approval_required_count=2,
+                execution_allowed_count=2,
+                policy_status_counts=(
+                    CatalogSourceFallbackPolicyStatusCount(
+                        status="ready",
+                        count=0,
+                    ),
+                    CatalogSourceFallbackPolicyStatusCount(
+                        status="review_required",
+                        count=2,
+                    ),
+                    CatalogSourceFallbackPolicyStatusCount(
+                        status="blocked",
+                        count=0,
+                    ),
+                ),
+                recommended_action_counts=(
+                    CatalogSourceFallbackPolicyActionCount(
+                        action="repair_catalog_source_coverage",
+                        count=1,
+                    ),
+                    CatalogSourceFallbackPolicyActionCount(
+                        action="review_source_failover",
+                        count=1,
+                    ),
+                    CatalogSourceFallbackPolicyActionCount(
+                        action="review_source_request",
+                        count=1,
+                    ),
+                ),
+                previews=(macro_preview, stock_preview),
+            )
+        )
+
+        response = await _call_source_fallback_policy_summary(
+            facade,
+            dataset_ids=["macro_indicators", "stock_daily"],
+            trade_dates=["2024-12-27"],
+            available_sources=["tushare", "fred"],
+        )
+
+        assert response.data.total_previews == 2
+        assert response.data.approval_required_count == 2
+        assert response.data.execution_allowed_count == 2
+        assert [
+            (item.status, item.count) for item in response.data.policy_status_counts
+        ] == [
+            ("ready", 0),
+            ("review_required", 2),
+            ("blocked", 0),
+        ]
+        assert [
+            (item.action, item.count)
+            for item in response.data.recommended_action_counts
+        ] == [
+            ("repair_catalog_source_coverage", 1),
+            ("review_source_failover", 1),
+            ("review_source_request", 1),
+        ]
+        assert [preview.dataset_id for preview in response.data.previews] == [
+            "macro_indicators",
+            "stock_daily",
+        ]
+        facade.get_source_fallback_policy_summary.assert_called_once_with(
+            dataset_ids=("macro_indicators", "stock_daily"),
+            trade_dates=("2024-12-27",),
+            available_sources=("tushare", "fred"),
+        )
+
+
 class TestGetCatalogSourceHealthSummaryReport:
     async def test_returns_aggregated_source_health_report(self) -> None:
         facade = MagicMock(spec=CatalogQueryFacade)
@@ -370,6 +657,14 @@ class TestGetCatalogSourceHealthSummaryReport:
             default_source="tushare",
             selected_source="fred",
             selected_freshness_status="missing",
+            selected_source_health=CatalogSourceHealth(
+                source="fred",
+                supported=True,
+                freshness_status="missing",
+                freshness_sla_hours=72,
+            ),
+            source_selection_status="ready",
+            source_selection_blockers=(),
             attention_reasons=(
                 "selected_source_missing",
                 "default_source_failover",
@@ -411,16 +706,31 @@ class TestGetCatalogSourceHealthSummaryReport:
                     CatalogSourceSelectionCount(source="fred", count=1),
                     CatalogSourceSelectionCount(source="tushare", count=1),
                 ),
+                source_selection_status_counts=(
+                    CatalogSourceSelectionStatusCount(status="ready", count=1),
+                    CatalogSourceSelectionStatusCount(status="blocked", count=1),
+                ),
                 attention_required=(
                     CatalogSourceHealthAttentionItem(
                         dataset_id="macro_indicators",
+                        namespace="macro",
                         trade_date="2024-12-27",
+                        default_source="tushare",
                         selected_source="fred",
                         selected_freshness_status="missing",
+                        selected_source_health=CatalogSourceHealth(
+                            source="fred",
+                            supported=True,
+                            freshness_status="missing",
+                            freshness_sla_hours=72,
+                        ),
                         attention_reasons=(
                             "selected_source_missing",
                             "default_source_failover",
                         ),
+                        attention_severity="critical",
+                        source_selection_status="ready",
+                        source_selection_blockers=(),
                         failover_from_default=True,
                         fallback_sources=("fred",),
                         latest_revocation_reason="policy_regression",
@@ -445,6 +755,20 @@ class TestGetCatalogSourceHealthSummaryReport:
                         count=1,
                     ),
                 ),
+                attention_severity_counts=(
+                    CatalogSourceHealthAttentionSeverityCount(
+                        severity="critical",
+                        count=1,
+                    ),
+                    CatalogSourceHealthAttentionSeverityCount(
+                        severity="warning",
+                        count=0,
+                    ),
+                    CatalogSourceHealthAttentionSeverityCount(
+                        severity="info",
+                        count=0,
+                    ),
+                ),
             )
         )
 
@@ -466,6 +790,14 @@ class TestGetCatalogSourceHealthSummaryReport:
             ("default_source_failover", 1),
             ("selected_source_missing", 1),
         ]
+        assert [
+            (item.severity, item.count)
+            for item in response.data.attention_severity_counts
+        ] == [
+            ("critical", 1),
+            ("warning", 0),
+            ("info", 0),
+        ]
         assert [item.status for item in response.data.status_counts] == [
             "fresh",
             "stale",
@@ -474,14 +806,36 @@ class TestGetCatalogSourceHealthSummaryReport:
         ]
         assert response.data.status_counts[2].count == 1
         assert response.data.selected_source_counts[0].source == "fred"
+        assert [
+            (item.status, item.count)
+            for item in response.data.source_selection_status_counts
+        ] == [
+            ("ready", 1),
+            ("blocked", 1),
+        ]
         assert response.data.attention_required[0].dataset_id == "macro_indicators"
+        assert response.data.attention_required[0].namespace == "macro"
+        assert response.data.attention_required[0].default_source == "tushare"
         assert response.data.attention_required[0].selected_freshness_status == (
             "missing"
+        )
+        assert response.data.attention_required[0].selected_source_health.source == (
+            "fred"
+        )
+        assert response.data.attention_required[
+            0
+        ].selected_source_health.freshness_status == ("missing")
+        assert (
+            response.data.attention_required[0].selected_source_health.storage_uri
+            is None
         )
         assert response.data.attention_required[0].attention_reasons == [
             "selected_source_missing",
             "default_source_failover",
         ]
+        assert response.data.attention_required[0].attention_severity == "critical"
+        assert response.data.attention_required[0].source_selection_status == "ready"
+        assert response.data.attention_required[0].source_selection_blockers == []
         assert response.data.attention_required[0].failover_from_default is True
         assert response.data.attention_required[0].fallback_sources == ["fred"]
         assert response.data.attention_required[0].latest_revocation_reason == (
@@ -495,6 +849,9 @@ class TestGetCatalogSourceHealthSummaryReport:
         )
         assert response.data.reports[0].selected_source == "fred"
         assert response.data.reports[0].selected_freshness_status == "missing"
+        assert response.data.reports[0].selected_source_health.source == "fred"
+        assert response.data.reports[0].source_selection_status == "ready"
+        assert response.data.reports[0].source_selection_blockers == []
         assert response.data.reports[0].attention_reasons == [
             "selected_source_missing",
             "default_source_failover",

@@ -19,6 +19,7 @@ from ditto_execution.reconciliation.executor import (
 from ditto_execution.reconciliation.reconciler import reconcile
 from ditto_execution.reconciliation.repair import plan_repair
 from ditto_execution.reconciliation.types import (
+    BrokerOrderLinkIndex,
     MismatchType,
     ReconciliationDiff,
     ReconciliationReport,
@@ -34,6 +35,7 @@ __all__ = [
     "AmendLocalFillRepairHandler",
     "BrokerFillImportSource",
     "BrokerFillQueryPort",
+    "BrokerOrderLinkIndex",
     "BrokerRefreshRepairHandler",
     "FillAmendmentSource",
     "ImportBrokerFillRepairHandler",

@@ -7,6 +7,7 @@ from typing import cast
 from unittest.mock import MagicMock
 
 from ditto_application.processes.ingestion.coordinator_factory import (
+    CoordinatorRuntimeContext,
     CoordinatorServices,
 )
 from ditto_apps.registry.contexts import ingestion as ingestion_context
@@ -15,6 +16,7 @@ from ditto_data.catalog import (
     DataCatalogWriter,
     InMemoryDataCatalog,
 )
+from ditto_data.catalog.fallback_policy import CatalogSourceFallbackPolicyReader
 from ditto_data.lineage import DataLineageRecorder, InMemoryDataLineage
 from ditto_data.sources.registry import SourceRegistry
 
@@ -35,6 +37,7 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
     """Composition root should wire persistent lineage into ingestion coordinator."""
     lineage = InMemoryDataLineage()
     catalog = InMemoryDataCatalog()
+    source_fallback_policy_reader = MagicMock()
     source_registry = SourceRegistry()
     services = {
         ingestion_context.MetadataService: MagicMock(),
@@ -53,6 +56,7 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
         DataLineageRecorder: lineage,
         DataCatalogReader: catalog,
         DataCatalogWriter: catalog,
+        CatalogSourceFallbackPolicyReader: source_fallback_policy_reader,
     }
     container = _FakeContainer(services)
     coordinator = MagicMock()
@@ -92,8 +96,10 @@ def test_create_ingestion_bundle_passes_lineage_recorder(mocker) -> None:
 
     coordinator_services = cast(CoordinatorServices, captured_services["services"])
     assert coordinator_services.source_registry is source_registry
-    assert captured_kwargs["lineage_recorder"] is lineage
-    assert captured_kwargs["catalog_reader"] is catalog
-    assert captured_kwargs["catalog_writer"] is catalog
+    runtime = cast(CoordinatorRuntimeContext, captured_kwargs["runtime"])
+    assert runtime.lineage_recorder is lineage
+    assert runtime.catalog_reader is catalog
+    assert runtime.catalog_writer is catalog
+    assert runtime.source_fallback_policy_reader is source_fallback_policy_reader
     assert retry_manager_cls.call_args.kwargs["data_catalog_reader"] is catalog
     assert container.closed

@@ -14,7 +14,13 @@ from ditto_portfolio.accounting import FillEvent
 from ditto_portfolio.accounting.account import Account, AccountView
 from ditto_portfolio.accounting.cash import CashBook
 
+from ditto_execution.broker.contracts import (
+    REQUIRED_BROKER_GATEWAY_CAPABILITIES,
+    BrokerGatewayCapability,
+    BrokerGatewayDescriptor,
+)
 from ditto_execution.errors import InsufficientFundsError
+from ditto_execution.models import STANDARD_BROKER_EVENT_TYPES
 from ditto_execution.orders.book import OrderBook
 from ditto_execution.orders.event import OrderEvent
 from ditto_execution.orders.ids import ClientOrderId
@@ -74,6 +80,19 @@ class PaperBrokerGateway:
         self._risk_check = risk_check
 
     # -- BrokerGateway Protocol ------------------------------------------------
+
+    def describe(self) -> BrokerGatewayDescriptor:
+        """Return the paper gateway protocol and capability descriptor."""
+        paper_capabilities: frozenset[BrokerGatewayCapability] = frozenset(
+            {"immediate_fill", "manual_fill_simulation"}
+        )
+        return BrokerGatewayDescriptor(
+            gateway_id="paper",
+            mode="paper",
+            capabilities=REQUIRED_BROKER_GATEWAY_CAPABILITIES | paper_capabilities,
+            supported_event_types=STANDARD_BROKER_EVENT_TYPES,
+            notes=("Simulated paper gateway; no real broker adapter is implemented.",),
+        )
 
     def connect(self) -> None:
         """No-op — paper gateway has no external connection."""

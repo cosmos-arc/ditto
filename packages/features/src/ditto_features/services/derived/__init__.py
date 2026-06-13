@@ -4,6 +4,7 @@ from ditto_features.services.derived.artifact_persistence_service import (
     ArtifactPersistenceService,
 )
 from ditto_features.services.derived.artifact_reader import (
+    DerivedArtifactFrameRequest,
     DerivedArtifactReader,
     VersionResolutionStrategy,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "LATEST_RESULT_COLUMNS",
     "SERIES_RESULT_COLUMNS",
     "ArtifactPersistenceService",
+    "DerivedArtifactFrameRequest",
     "DerivedArtifactReader",
     "DerivedCompareQuery",
     "DerivedGarbageCollector",

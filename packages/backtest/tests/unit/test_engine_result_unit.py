@@ -358,7 +358,10 @@ class TestAssembleEngineResult:
     """assemble_engine_result 应返回 frozen EngineResult。"""
 
     def test_returns_frozen_result(self) -> None:
-        from ditto_backtest.engine_steps import assemble_engine_result
+        from ditto_backtest.engine_steps import (
+            EngineResultAssemblyContext,
+            assemble_engine_result,
+        )
 
         account_view = _sample_account_view()
         manifest = RunManifest(
@@ -369,21 +372,65 @@ class TestAssembleEngineResult:
             created_at="2026-01-01T00:00:00Z",
         )
         result = assemble_engine_result(
-            run_id="run-001",
-            start="2026-01-01",
-            end="2026-01-31",
-            account_view=account_view,
-            manifest=manifest,
-            fills=[],
-            orders=[],
-            skipped=[],
-            cancelled=False,
+            EngineResultAssemblyContext(
+                run_id="run-001",
+                start="2026-01-01",
+                end="2026-01-31",
+                account_view=account_view,
+                manifest=manifest,
+                fills=[],
+                orders=[],
+                skipped=[],
+                cancelled=False,
+            )
         )
         with pytest.raises(FrozenInstanceError):
             result.final_nav = 0.0  # type: ignore[misc]
 
+    def test_accepts_assembly_context_object(self) -> None:
+        from ditto_backtest.engine_steps import (
+            EngineResultAssemblyContext,
+            assemble_engine_result,
+        )
+
+        account_view = _sample_account_view()
+        manifest = RunManifest(
+            run_id="run-context",
+            strategy_id="test-strategy",
+            strategy_version="1.0",
+            mode=RunMode.BACKTEST,
+            created_at="2026-01-01T00:00:00Z",
+        )
+        order = _sample_order()
+        fill = _sample_fill()
+
+        result = assemble_engine_result(
+            EngineResultAssemblyContext(
+                run_id="run-context",
+                start="2026-01-01",
+                end="2026-01-31",
+                account_view=account_view,
+                manifest=manifest,
+                fills=[fill],
+                orders=[order],
+                skipped=["2026-01-05"],
+                cancelled=True,
+            )
+        )
+
+        assert result.run_id == "run-context"
+        assert result.period == ("2026-01-01", "2026-01-31")
+        assert result.final_nav == account_view.nav
+        assert result.orders == (order,)
+        assert result.fills == (fill,)
+        assert result.skipped_dates == ("2026-01-05",)
+        assert result.cancelled is True
+
     def test_orders_and_fills_are_tuples(self) -> None:
-        from ditto_backtest.engine_steps import assemble_engine_result
+        from ditto_backtest.engine_steps import (
+            EngineResultAssemblyContext,
+            assemble_engine_result,
+        )
 
         order = _sample_order()
         fill = _sample_fill()
@@ -396,15 +443,17 @@ class TestAssembleEngineResult:
             created_at="2026-01-01T00:00:00Z",
         )
         result = assemble_engine_result(
-            run_id="run-001",
-            start="2026-01-01",
-            end="2026-01-31",
-            account_view=account_view,
-            manifest=manifest,
-            fills=[fill],
-            orders=[order],
-            skipped=["2026-01-05"],
-            cancelled=False,
+            EngineResultAssemblyContext(
+                run_id="run-001",
+                start="2026-01-01",
+                end="2026-01-31",
+                account_view=account_view,
+                manifest=manifest,
+                fills=[fill],
+                orders=[order],
+                skipped=["2026-01-05"],
+                cancelled=False,
+            )
         )
         assert isinstance(result.orders, tuple)
         assert isinstance(result.fills, tuple)

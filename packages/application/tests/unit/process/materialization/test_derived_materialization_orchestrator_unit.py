@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import ditto_application.processes.materialization.orchestrator as orchestrator_module
 import orjson
 import polars as pl
 from ditto_application.processes.materialization.orchestrator import (
@@ -28,9 +29,18 @@ from ditto_features.derived_types import (
     DerivedSpec,
     MaterializationProfile,
 )
-from ditto_features.materialization import DerivedMaterializationRequest
+from ditto_features.expression import (
+    Analysis,
+    CompiledDerivedExpression,
+    CompileIdentity,
+)
+from ditto_features.materialization import (
+    DerivedExecutionPlan,
+    DerivedMaterializationRequest,
+)
 from ditto_features.materialization.models import (
     DerivedRunMode,
+    DerivedRunStatus,
     DerivedRunTrigger,
     DerivedVersionStatus,
 )
@@ -39,8 +49,10 @@ from ditto_features.models.derived import (
     DerivedSpecRecord,
     DerivedStateRecord,
     DerivedVersionRecord,
+    PartitionInfo,
 )
 from ditto_features.publication_safety import CompatibilityManifest
+from ditto_features.publication_safety_records import DerivedMinimalDQSummaryRecord
 from ditto_features.services import (
     ArtifactPersistenceService,
     DerivedCatalogService,
@@ -90,6 +102,31 @@ def _input_frame() -> pl.DataFrame:
             ],
             "close": [10.0, 11.0, 20.0, 18.0],
         }
+    )
+
+
+def _compiled_expression(spec: DerivedSpec) -> CompiledDerivedExpression:
+    return CompiledDerivedExpression(
+        derived_id=spec.id,
+        version=spec.version,
+        expr=pl.col("close"),
+        analysis=Analysis(
+            dependencies=("market.close",),
+            operator_names=("identity",),
+            lookback=0,
+            requires_full_day=False,
+            scope="cross_section",
+        ),
+        compile_identity=CompileIdentity(
+            compile_input_hash="hash-input",
+            operator_fingerprint="ops",
+            compiler_fingerprint="compiler",
+            cache_key="cache-key",
+            engine_codegen_version="expr-v1",
+            analysis_version="analysis-v1",
+            polars_version=pl.__version__,
+            expr_serialization_format="repr",
+        ),
     )
 
 
@@ -219,6 +256,211 @@ class _StaticSourceSnapshotResolver:
         return SourceSnapshotProvenance.from_ids(self._snapshot_ids)
 
 
+def test_make_run_record_accepts_context_object() -> None:
+    """Run record assembly should expose a single context-shaped API."""
+    spec = _spec(MaterializationProfile.SERIES)
+    request = DerivedMaterializationRequest(
+        derived_id=spec.id,
+        version=spec.version,
+        mode=DerivedRunMode.INCREMENTAL,
+        request_start="2026-03-10",
+        request_end="2026-03-11",
+        trigger=DerivedRunTrigger.SCHEDULED,
+        source_snapshot_id="snapshot-main",
+    )
+    plan = DerivedExecutionPlan(
+        derived_id=spec.id,
+        version=spec.version,
+        profile=spec.materialization_profile,
+        mode=request.mode,
+        request_start=request.request_start,
+        request_end=request.request_end,
+        compute_start="2026-03-09",
+        compute_end="2026-03-11",
+        partitions=("2026",),
+        lookback=1,
+        requires_full_day=False,
+    )
+    ctx = orchestrator_module.MaterializationRunRecordContext(
+        run_id="drv-test",
+        spec=spec,
+        request=request,
+        plan=plan,
+        status=DerivedRunStatus.SUCCESS,
+        rows_written=12,
+        partitions_written=("2026",),
+        created_at="2026-03-13T10:00:00+08:00",
+        started_at="2026-03-13T10:00:00+08:00",
+        finished_at="2026-03-13T10:01:00+08:00",
+    )
+
+    record = orchestrator_module._make_run_record(ctx)
+
+    assert record.run_id == "drv-test"
+    assert record.derived_id == spec.id
+    assert record.mode == DerivedRunMode.INCREMENTAL.value
+    assert record.trigger == DerivedRunTrigger.SCHEDULED.value
+    assert record.compute_start == "2026-03-09"
+    assert record.source_snapshot_id == "snapshot-main"
+    assert record.status == DerivedRunStatus.SUCCESS.value
+    assert record.rows_written == 12
+    assert record.partitions_written == ("2026",)
+
+
+def test_persist_materialized_data_accepts_context_object() -> None:
+    """Materialized data persistence should expose one context-shaped API."""
+    spec = _spec(MaterializationProfile.DERIVE)
+    spec_record = DerivedSpecRecord(
+        derived_id=spec.id,
+        version=spec.version,
+        role=spec.role.value,
+        materialization_profile=spec.materialization_profile.value,
+        spec_hash="hash",
+        spec_json=asdict(spec),
+        created_at="2026-03-13T10:00:00+08:00",
+    )
+    request = DerivedMaterializationRequest(
+        derived_id=spec.id,
+        version=spec.version,
+        mode=DerivedRunMode.INCREMENTAL,
+        request_start="2026-03-10",
+        request_end="2026-03-11",
+        trigger=DerivedRunTrigger.MANUAL,
+        source_snapshot_id="snapshot-main",
+    )
+    plan = DerivedExecutionPlan(
+        derived_id=spec.id,
+        version=spec.version,
+        profile=spec.materialization_profile,
+        mode=request.mode,
+        request_start=request.request_start,
+        request_end=request.request_end,
+        compute_start="2026-03-10",
+        compute_end="2026-03-11",
+        partitions=(),
+        lookback=0,
+        requires_full_day=False,
+    )
+    artifact_writer = MagicMock()
+    service = DerivedMaterializationOrchestrator(
+        orchestrator_module.MaterializationRuntimePorts(
+            catalog_service=MagicMock(),
+            compile_cache_service=MagicMock(),
+            artifact_writer=artifact_writer,
+            input_provider=MagicMock(),
+        )
+    )
+    ctx = orchestrator_module.MaterializedDataPersistenceContext(
+        spec=spec,
+        spec_record=spec_record,
+        request=request,
+        plan=plan,
+        compiled=_compiled_expression(spec),
+        run=orchestrator_module._RunIdentity(
+            "drv-test",
+            "2026-03-13T10:00:00+08:00",
+        ),
+        materialized_frame=_input_frame(),
+        source_snapshot_ids=("snapshot-main",),
+    )
+
+    result = service._persist_materialized_data(ctx)
+
+    artifact_writer.write_ephemeral_result.assert_called_once()
+    assert result.run_id == "drv-test"
+    assert result.status == DerivedRunStatus.SUCCESS
+    assert result.rows_written == 4
+
+
+def test_persist_publication_safety_records_accepts_context_object() -> None:
+    """Publication safety persistence should expose one context-shaped API."""
+    spec = _spec(MaterializationProfile.SERIES)
+    spec_record = DerivedSpecRecord(
+        derived_id=spec.id,
+        version=spec.version,
+        role=spec.role.value,
+        materialization_profile=spec.materialization_profile.value,
+        spec_hash="hash",
+        spec_json=asdict(spec),
+        created_at="2026-03-13T10:00:00+08:00",
+    )
+    request = DerivedMaterializationRequest(
+        derived_id=spec.id,
+        version=spec.version,
+        mode=DerivedRunMode.INCREMENTAL,
+        request_start="2026-03-10",
+        request_end="2026-03-11",
+        trigger=DerivedRunTrigger.MANUAL,
+        source_snapshot_id="snapshot-main",
+    )
+    compiled = _compiled_expression(spec)
+    partition = PartitionInfo(
+        partition_key="2026",
+        partition_path="derived/artifacts/series/x/v3/2026.parquet",
+        row_count=4,
+        checksum="checksum",
+    )
+    minimal_dq_record = DerivedMinimalDQSummaryRecord(
+        derived_id=spec.id,
+        version=spec.version,
+        run_id="drv-test",
+        passed=True,
+        error_count=0,
+        payload={"row_count": 4},
+        created_at="2026-03-13T10:00:00+08:00",
+    )
+    publication_record_service = MagicMock()
+    artifact_writer = MagicMock()
+    service = DerivedMaterializationOrchestrator(
+        orchestrator_module.MaterializationRuntimePorts(
+            catalog_service=MagicMock(),
+            compile_cache_service=MagicMock(),
+            artifact_writer=artifact_writer,
+            input_provider=MagicMock(),
+            publication_record_service=publication_record_service,
+        )
+    )
+    ctx = orchestrator_module.PublicationSafetyPersistenceContext(
+        spec=spec,
+        spec_record=spec_record,
+        run_id="drv-test",
+        request=request,
+        compile_identity=compiled.compile_identity,
+        partitions=(partition,),
+        minimal_dq_record=minimal_dq_record,
+        source_snapshot_ids=("snapshot-main",),
+    )
+
+    service._persist_publication_safety_records(ctx)
+
+    publication_record_service.save_manifest.assert_called_once()
+    publication_record_service.save_minimal_dq_summary.assert_called_once_with(
+        minimal_dq_record
+    )
+    artifact_writer.update_artifact_metadata.assert_called_once()
+
+
+def test_orchestrator_accepts_runtime_ports_context() -> None:
+    """Orchestrator construction should expose one runtime ports object."""
+    catalog_service = MagicMock()
+    compile_cache_service = MagicMock()
+    artifact_writer = MagicMock()
+    input_provider = MagicMock()
+    ports = orchestrator_module.MaterializationRuntimePorts(
+        catalog_service=catalog_service,
+        compile_cache_service=compile_cache_service,
+        artifact_writer=artifact_writer,
+        input_provider=input_provider,
+    )
+
+    service = DerivedMaterializationOrchestrator(ports)
+
+    assert service._catalog_service is catalog_service
+    assert service._compile_cache_service is compile_cache_service
+    assert service._artifact_writer is artifact_writer
+    assert service._input_provider is input_provider
+
+
 class TestDerivedMaterializationOrchestrator:
     """Tests for unified derived materialization."""
 
@@ -232,10 +474,12 @@ class TestDerivedMaterializationOrchestrator:
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
         )
 
         result = service.materialize(
@@ -276,10 +520,12 @@ class TestDerivedMaterializationOrchestrator:
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
         )
 
         result = service.materialize(
@@ -315,10 +561,12 @@ class TestDerivedMaterializationOrchestrator:
         catalog_service = _catalog_service(sqlite_client, tmp_path)
         _seed_spec(catalog_service, spec)
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
         )
 
         result = service.materialize(
@@ -404,14 +652,16 @@ class TestDerivedMaterializationOrchestrator:
             }
         )
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=RuntimeDerivedInputProvider(
+            orchestrator_module.MaterializationRuntimePorts(
                 catalog_service=catalog_service,
-                market_service=mock_market,
-                artifact_root=tmp_path,
-            ),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=RuntimeDerivedInputProvider(
+                    catalog_service=catalog_service,
+                    market_service=mock_market,
+                    artifact_root=tmp_path,
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
         )
 
         result = service.materialize(
@@ -496,15 +746,17 @@ class TestDerivedMaterializationOrchestrator:
             }
         )
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=RuntimeDerivedInputProvider(
+            orchestrator_module.MaterializationRuntimePorts(
                 catalog_service=catalog_service,
-                market_service=mock_market,
-                artifact_root=tmp_path,
-            ),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
-            lineage_recorder=lineage,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=RuntimeDerivedInputProvider(
+                    catalog_service=catalog_service,
+                    market_service=mock_market,
+                    artifact_root=tmp_path,
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                lineage_recorder=lineage,
+            )
         )
 
         result = service.materialize(
@@ -586,14 +838,16 @@ class TestDerivedMaterializationOrchestrator:
         )
         mock_market = MagicMock()
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=RuntimeDerivedInputProvider(
+            orchestrator_module.MaterializationRuntimePorts(
                 catalog_service=catalog_service,
-                market_service=mock_market,
-                artifact_root=tmp_path,
-            ),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=RuntimeDerivedInputProvider(
+                    catalog_service=catalog_service,
+                    market_service=mock_market,
+                    artifact_root=tmp_path,
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+            )
         )
 
         result = service.materialize(
@@ -647,11 +901,15 @@ class TestDerivedMaterializationOrchestrator:
         )
         publication_record_service = _publication_record_service(tmp_path)
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({candidate.id: _input_frame()}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
-            publication_record_service=publication_record_service,
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider(
+                    {candidate.id: _input_frame()}
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                publication_record_service=publication_record_service,
+            )
         )
 
         result = service.materialize(
@@ -722,12 +980,18 @@ class TestDerivedMaterializationOrchestrator:
             "snapshot:tushare:stock_daily:2026-03-11:b",
         )
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({candidate.id: _input_frame()}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
-            publication_record_service=publication_record_service,
-            source_snapshot_resolver=_StaticSourceSnapshotResolver(source_snapshot_ids),
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider(
+                    {candidate.id: _input_frame()}
+                ),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                publication_record_service=publication_record_service,
+                source_snapshot_resolver=_StaticSourceSnapshotResolver(
+                    source_snapshot_ids
+                ),
+            )
         )
 
         result = service.materialize(
@@ -784,11 +1048,13 @@ class TestDerivedMaterializationOrchestrator:
         _seed_spec(catalog_service, spec)
         publication_record_service = _publication_record_service(tmp_path)
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
-            publication_record_service=publication_record_service,
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: _input_frame()}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                publication_record_service=publication_record_service,
+            )
         )
 
         result = service.materialize(
@@ -862,11 +1128,13 @@ class TestDerivedMaterializationOrchestrator:
         _seed_spec(catalog_service, spec)
         publication_record_service = _publication_record_service(tmp_path)
         service = DerivedMaterializationOrchestrator(
-            catalog_service=catalog_service,
-            compile_cache_service=SQLiteCompileCache(sqlite_client),
-            input_provider=InMemoryDerivedInputProvider({spec.id: invalid_frame}),
-            artifact_writer=ArtifactPersistenceService(tmp_path),
-            publication_record_service=publication_record_service,
+            orchestrator_module.MaterializationRuntimePorts(
+                catalog_service=catalog_service,
+                compile_cache_service=SQLiteCompileCache(sqlite_client),
+                input_provider=InMemoryDerivedInputProvider({spec.id: invalid_frame}),
+                artifact_writer=ArtifactPersistenceService(tmp_path),
+                publication_record_service=publication_record_service,
+            )
         )
 
         result = service.materialize(

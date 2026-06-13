@@ -98,6 +98,47 @@ class TestIngestDateHandler:
             "command": "ingest_date",
             "dataset": "bad",
             "trade_date": "2025-01-01",
+            "force": False,
+        }
+
+    def test_handle_preserves_process_error_details(self) -> None:
+        """Handler 映射 process error 时应保留底层结构化诊断上下文."""
+        import pytest
+        from ditto_application.exceptions import AppCommandError, AppProcessError
+
+        coordinator = create_autospec(IngestionCoordinator, instance=True)
+        coordinator.ingest_date.side_effect = AppProcessError(
+            "Data source 'fred' does not support dataset stock_daily",
+            field="source_name",
+            value="fred",
+            dataset="stock_daily",
+            supported=["tushare"],
+            operation="ingest_date",
+            selection_date="2026-06-01",
+        )
+
+        from ditto_application.commands.ingestion import IngestDateHandler
+
+        handler = IngestDateHandler(coordinator)
+        cmd = IngestDateCommand(
+            dataset="stock_daily",
+            trade_date=date(2026, 6, 1),
+            force=True,
+        )
+
+        with pytest.raises(AppCommandError, match="does not support dataset") as exc:
+            handler.handle(cmd)
+
+        assert exc.value.details == {
+            "field": "source_name",
+            "value": "fred",
+            "dataset": "stock_daily",
+            "supported": ["tushare"],
+            "operation": "ingest_date",
+            "selection_date": "2026-06-01",
+            "command": "ingest_date",
+            "trade_date": "2026-06-01",
+            "force": True,
         }
 
     def test_satisfies_command_handler_protocol(self) -> None:

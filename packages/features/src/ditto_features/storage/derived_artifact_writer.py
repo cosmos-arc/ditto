@@ -22,7 +22,12 @@ from ditto_features.publication_safety_records import (
     DerivedMinimalDQSummaryRecord,
 )
 
-__all__ = ["ArtifactMetadataParams", "DerivedArtifactWriter", "extract_partition_keys"]
+__all__ = [
+    "ArtifactMetadataParams",
+    "ArtifactMetadataUpdateParams",
+    "DerivedArtifactWriter",
+    "extract_partition_keys",
+]
 
 
 @dataclass(frozen=True)
@@ -51,6 +56,25 @@ class ArtifactMetadataParams:
     request_start: str
     request_end: str
     source_snapshot_id: str | None
+    source_snapshot_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ArtifactMetadataUpdateParams:
+    """
+    制品元数据发布安全更新参数.
+
+    Groups the publication safety fields injected after the base artifact
+    metadata has already been written.
+    """
+
+    spec: DerivedSpecRecord
+    run_id: str
+    compile_identity: dict[str, Any]
+    partitions: tuple[PartitionInfo, ...]
+    source_snapshot_id: str | None
+    manifest_record: CompatibilityManifestRecord
+    minimal_dq_record: DerivedMinimalDQSummaryRecord
     source_snapshot_ids: tuple[str, ...] = ()
 
 
@@ -307,45 +331,37 @@ class DerivedArtifactWriter:
             metadata_path,
         )
 
-    def update_artifact_metadata(  # noqa: PLR0913
+    def update_artifact_metadata(
         self,
-        *,
-        spec: DerivedSpecRecord,
-        run_id: str,
-        compile_identity: dict[str, Any],
-        partitions: tuple[PartitionInfo, ...],
-        source_snapshot_id: str | None,
-        manifest_record: CompatibilityManifestRecord,
-        minimal_dq_record: DerivedMinimalDQSummaryRecord,
-        source_snapshot_ids: tuple[str, ...] = (),
+        params: ArtifactMetadataUpdateParams,
     ) -> None:
         """Read existing metadata JSON, inject publication safety, write atomically."""
         metadata_path = (
             self._artifact_root
             / "derived"
             / "artifacts"
-            / spec.materialization_profile.lower()
-            / spec.derived_id
-            / f"v{spec.version}"
+            / params.spec.materialization_profile.lower()
+            / params.spec.derived_id
+            / f"v{params.spec.version}"
             / "_runs"
-            / run_id
+            / params.run_id
             / "artifact_metadata.json"
         )
         payload = orjson.loads(metadata_path.read_bytes())
         payload["publication"] = {
-            "manifest_hash": manifest_record.manifest_hash,
-            "compatibility_manifest": manifest_record.payload,
+            "manifest_hash": params.manifest_record.manifest_hash,
+            "compatibility_manifest": params.manifest_record.payload,
             "minimal_dq_summary": {
-                "run_id": minimal_dq_record.run_id,
-                "passed": minimal_dq_record.passed,
-                "error_count": minimal_dq_record.error_count,
-                **minimal_dq_record.payload,
+                "run_id": params.minimal_dq_record.run_id,
+                "passed": params.minimal_dq_record.passed,
+                "error_count": params.minimal_dq_record.error_count,
+                **params.minimal_dq_record.payload,
             },
         }
-        payload["compile_identity"] = compile_identity
+        payload["compile_identity"] = params.compile_identity
         payload["input_snapshots"] = _input_snapshots(
-            source_snapshot_id=source_snapshot_id,
-            source_snapshot_ids=source_snapshot_ids,
+            source_snapshot_id=params.source_snapshot_id,
+            source_snapshot_ids=params.source_snapshot_ids,
         )
         payload["partitions_written"] = [
             {
@@ -354,7 +370,7 @@ class DerivedArtifactWriter:
                 "row_count": p.row_count,
                 "checksum": p.checksum,
             }
-            for p in partitions
+            for p in params.partitions
         ]
         atomic_bytes_write(
             orjson.dumps(payload, option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS),

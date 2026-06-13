@@ -48,6 +48,7 @@ from ditto_backtest.steps import (
 
 __all__ = [
     "EngineOptions",
+    "EngineResultAssemblyContext",
     "StepDeps",
     "assemble_engine_result",
     "build_steps",
@@ -119,32 +120,38 @@ class StepDeps:
     build_input_bundle_fn: Callable[[str, Slice], StrategyInputBundle]
 
 
-def assemble_engine_result(  # noqa: PLR0913
-    *,
-    run_id: str,
-    start: str,
-    end: str,
-    account_view: AccountView,
-    manifest: RunManifest,
-    fills: list[FillEvent],
-    orders: list[Order],
-    skipped: list[str],
-    cancelled: bool,
-    last_checkpoint: BacktestCheckpoint | None = None,
+@dataclass(frozen=True)
+class EngineResultAssemblyContext:
+    """Final state required to assemble one immutable EngineResult."""
+
+    run_id: str
+    start: str
+    end: str
+    account_view: AccountView
+    manifest: RunManifest
+    fills: list[FillEvent]
+    orders: list[Order]
+    skipped: list[str]
+    cancelled: bool
+    last_checkpoint: BacktestCheckpoint | None = None
+
+
+def assemble_engine_result(
+    ctx: EngineResultAssemblyContext,
 ) -> EngineResult:
     """组装 EngineResult — 汇总账户、成交、订单等最终状态."""
     return EngineResult(
-        run_id=run_id,
-        period=(start, end),
-        final_nav=account_view.nav,
-        total_trades=len(fills),
-        orders=tuple(orders),
-        fills=tuple(fills),
-        account_view=account_view,
-        manifest=manifest,
-        skipped_dates=tuple(skipped),
-        last_checkpoint=last_checkpoint,
-        cancelled=cancelled,
+        run_id=ctx.run_id,
+        period=(ctx.start, ctx.end),
+        final_nav=ctx.account_view.nav,
+        total_trades=len(ctx.fills),
+        orders=tuple(ctx.orders),
+        fills=tuple(ctx.fills),
+        account_view=ctx.account_view,
+        manifest=ctx.manifest,
+        skipped_dates=tuple(ctx.skipped),
+        last_checkpoint=ctx.last_checkpoint,
+        cancelled=ctx.cancelled,
     )
 
 

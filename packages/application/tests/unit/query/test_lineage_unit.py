@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from ditto_application.queries.catalog import CatalogSourceFallbackPolicyEffect
 from ditto_application.queries.lineage import LineageQueryFacade
 from ditto_data.catalog import (
     DataAssetRef,
@@ -270,7 +272,7 @@ class TestGetDataLineageCatalogReportForRun:
     """LineageQueryFacade.get_data_lineage_catalog_report_for_run."""
 
     def test_enriches_run_assets_with_exact_catalog_metadata(self) -> None:
-        """Run lineage catalog report should show found and missing catalog assets."""
+        """Run lineage catalog report should triage stale and missing assets."""
         service = _make_service()
         lineage = InMemoryDataLineage()
         catalog = InMemoryDataCatalog()
@@ -310,6 +312,7 @@ class TestGetDataLineageCatalogReportForRun:
             run_service=service,
             data_lineage_reader=lineage,
             data_catalog_reader=catalog,
+            now=lambda: datetime(2026, 1, 7, 10, 0, tzinfo=UTC),
         )
 
         result = facade.get_data_lineage_catalog_report_for_run("run-001")
@@ -322,9 +325,50 @@ class TestGetDataLineageCatalogReportForRun:
         assert result.input_assets[0].schema_hash == "schema:stock_daily:v1"
         assert result.input_assets[0].row_count == 128
         assert result.input_assets[0].source == "tushare"
+        assert result.input_assets[0].freshness_status == "stale"
+        assert result.input_assets[0].freshness_sla_hours == 36
         assert result.output_assets[0].asset.dataset_id == "backtest_report"
         assert result.output_assets[0].catalog_status == "missing"
         assert result.output_assets[0].storage_uri is None
+        assert result.output_assets[0].freshness_status == "not_applicable"
+        assert result.output_assets[0].freshness_sla_hours is None
+        assert [(item.status, item.count) for item in result.catalog_status_counts] == [
+            ("found", 1),
+            ("missing", 1),
+            ("not_configured", 0),
+        ]
+        assert [
+            (item.status, item.count) for item in result.freshness_status_counts
+        ] == [
+            ("fresh", 0),
+            ("stale", 1),
+            ("missing", 0),
+            ("not_applicable", 1),
+        ]
+        assert [
+            (item.side, item.asset.asset.dataset_id, item.attention_reasons)
+            for item in result.attention_required
+        ] == [
+            ("input", "stock_daily", ("catalog_stale",)),
+            ("output", "backtest_report", ("catalog_missing",)),
+        ]
+        assert [item.attention_severity for item in result.attention_required] == [
+            "warning",
+            "critical",
+        ]
+        assert [
+            (item.reason, item.count) for item in result.attention_reason_counts
+        ] == [
+            ("catalog_missing", 1),
+            ("catalog_stale", 1),
+        ]
+        assert [
+            (item.severity, item.count) for item in result.attention_severity_counts
+        ] == [
+            ("critical", 1),
+            ("warning", 1),
+            ("info", 0),
+        ]
 
     def test_marks_assets_not_configured_when_catalog_reader_is_missing(self) -> None:
         """Missing catalog reader should be visible rather than silently empty."""
@@ -352,6 +396,96 @@ class TestGetDataLineageCatalogReportForRun:
         result = facade.get_data_lineage_catalog_report_for_run("run-001")
 
         assert result.input_assets[0].catalog_status == "not_configured"
+        assert [(item.status, item.count) for item in result.catalog_status_counts] == [
+            ("found", 0),
+            ("missing", 0),
+            ("not_configured", 1),
+        ]
+        assert result.attention_required[0].side == "input"
+        assert result.attention_required[0].asset.catalog_status == "not_configured"
+        assert result.attention_required[0].attention_reasons == (
+            "catalog_not_configured",
+        )
+        assert result.attention_required[0].attention_severity == "critical"
+        assert [
+            (item.reason, item.count) for item in result.attention_reason_counts
+        ] == [
+            ("catalog_not_configured", 1),
+        ]
+
+    def test_summarizes_source_fallback_policy_effect_counts(self) -> None:
+        """Source context should expose policy-effect counts."""
+        service = _make_service()
+        lineage = InMemoryDataLineage()
+        source_health = MagicMock()
+        source_health.get_source_health_summary.return_value = SimpleNamespace(
+            reports=(
+                SimpleNamespace(
+                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
+                        policy_id="fallback-policy-001",
+                        policy_status="active",
+                        catalog_selected_source="tushare",
+                        effective_selected_source="fred",
+                        reason_codes=("selected_source_missing",),
+                        recommended_actions=("repair_catalog_source_coverage",),
+                    )
+                ),
+                SimpleNamespace(
+                    source_fallback_policy_effect=CatalogSourceFallbackPolicyEffect(
+                        policy_id="fallback-policy-001",
+                        policy_status="active",
+                        catalog_selected_source="tushare",
+                        effective_selected_source="fred",
+                        reason_codes=("selected_source_missing",),
+                        recommended_actions=("repair_catalog_source_coverage",),
+                    )
+                ),
+                SimpleNamespace(source_fallback_policy_effect=None),
+            )
+        )
+        input_asset = DataAssetRef(
+            dataset_id="stock_daily",
+            namespace="market",
+            partition_keys=("trade_date=2026-06-01",),
+        )
+        lineage.record_event(
+            LineageEvent(
+                run_id="run-001",
+                operation="backtest",
+                inputs=(LineageInputRef(asset=input_asset, role="market_data"),),
+                outputs=(),
+                timestamp=datetime(2026, 6, 1, 9, 30, tzinfo=UTC),
+            )
+        )
+        facade = LineageQueryFacade(
+            run_service=service,
+            data_lineage_reader=lineage,
+            source_health_summary_query=source_health,
+        )
+
+        result = facade.get_data_lineage_catalog_report_for_run(
+            "run-001",
+            trade_dates=("2026-06-01",),
+            available_sources=("tushare", "fred"),
+        )
+
+        assert [
+            (
+                item.policy_id,
+                item.policy_status,
+                item.catalog_selected_source,
+                item.effective_selected_source,
+                item.count,
+            )
+            for item in result.source_fallback_policy_effect_counts
+        ] == [
+            ("fallback-policy-001", "active", "tushare", "fred", 2),
+        ]
+        source_health.get_source_health_summary.assert_called_once_with(
+            dataset_ids=("stock_daily",),
+            trade_dates=("2026-06-01",),
+            available_sources=("tushare", "fred"),
+        )
 
 
 # ========== get_data_lineage_graph_for_asset ==========

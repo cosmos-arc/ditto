@@ -8,6 +8,7 @@ from ditto_execution.brokerage import Brokerage
 
 
 def test_broker_protocols_have_non_overlapping_documented_responsibilities() -> None:
+    assert hasattr(BrokerGateway, "describe")
     assert hasattr(BrokerGateway, "submit_order")
     assert not hasattr(BrokerGateway, "process_pending")
     assert hasattr(Brokerage, "place_order")
@@ -17,6 +18,7 @@ def test_broker_protocols_have_non_overlapping_documented_responsibilities() -> 
         (
             BrokerGateway.__module__,
             BrokerGateway.__doc__ or "",
+            BrokerGateway.describe.__doc__ or "",
             BrokerGateway.submit_order.__doc__ or "",
             BrokerGateway.query_fills.__doc__ or "",
         )
@@ -35,6 +37,8 @@ def test_broker_protocols_have_non_overlapping_documented_responsibilities() -> 
 
     assert "broker-system gateway port" in gateway_words
     assert "does not implement real broker adapters" in gateway_words
+    assert "capability descriptor" in gateway_words
+    assert "contract version" in gateway_words
     assert "submit_order" in gateway_docs
     assert "query_fills" in gateway_docs
     assert "runtime-facing" in brokerage_docs

@@ -71,6 +71,31 @@ def service(
     )
 
 
+def test_metadata_service_accepts_dependency_bundle(
+    mock_dependencies: dict[str, MagicMock],
+    exchange_transformers: ExchangeTransformers,
+) -> None:
+    """MetadataService should accept one dependency bundle as its primary API."""
+    from ditto_data.services.metadata_service import MetadataServiceDeps
+
+    mock_dependencies["calendar_reader"].get_range.return_value = ["2024-01-02"]
+
+    service = MetadataService(
+        MetadataServiceDeps(
+            **mock_dependencies,
+            exchange_transformers=exchange_transformers,
+        )
+    )
+
+    result = service.list_trading_days("2024-01-01", "2024-01-05")
+
+    assert result == ["2024-01-02"]
+    mock_dependencies["calendar_reader"].get_range.assert_called_once_with(
+        "2024-01-01",
+        "2024-01-05",
+    )
+
+
 # ============ compute_calendar_enrichment 纯函数测试 ============
 
 

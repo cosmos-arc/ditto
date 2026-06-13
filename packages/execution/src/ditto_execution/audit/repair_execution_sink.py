@@ -31,5 +31,7 @@ class ExecutionRepairAuditSink:
             effect_count=result.effect_count,
             fill_id=result.fill_id,
             correlation_id=result.action_id,
+            client_order_id=result.client_order_id,
+            broker_order_id=result.broker_order_id,
         )
         self.audit_service.save_repair_execution_log(self.run_id, (payload,))

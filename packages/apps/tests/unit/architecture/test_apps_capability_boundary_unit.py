@@ -80,6 +80,7 @@ def test_apps_registry_composition_allowances_are_owned_and_reasoned() -> None:
     ] == frozenset(
         {
             "ditto_data.catalog",
+            "ditto_data.catalog.fallback_policy",
             "ditto_data.ingestion.freeze_store",
             "ditto_data.ingestion.ingestion_cursor_store",
             "ditto_data.ingestion.ingestion_log_store",

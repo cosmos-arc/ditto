@@ -91,6 +91,7 @@ def query_broker_event_entries(
     start_date: str | None,
     end_date: str | None,
     order_id: str | None,
+    broker_order_id: str | None = None,
 ) -> tuple[ExecutionTimelineEntry, ...]:
     """Return normalized entries from broker gateway events."""
     if not _table_exists(conn, "broker_events"):
@@ -102,11 +103,22 @@ def query_broker_event_entries(
         FROM broker_events
         WHERE run_id = ?
           AND (? IS NULL OR order_id = ?)
+          AND (? IS NULL OR broker_order_id = ?)
           AND (? IS NULL OR substr(event_time, 1, 10) >= ?)
           AND (? IS NULL OR substr(event_time, 1, 10) <= ?)
         ORDER BY event_time ASC, broker_event_seq ASC
         """,
-        (run_id, order_id, order_id, start_date, start_date, end_date, end_date),
+        (
+            run_id,
+            order_id,
+            order_id,
+            broker_order_id,
+            broker_order_id,
+            start_date,
+            start_date,
+            end_date,
+            end_date,
+        ),
     )
     return tuple(_broker_event_row_to_entry(row=dict(row)) for row in cursor.fetchall())
 

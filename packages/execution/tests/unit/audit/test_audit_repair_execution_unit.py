@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 
 import orjson
 import pytest
@@ -46,6 +46,8 @@ def _payload(
         message=message,
         effect_count=1,
         correlation_id="rec-001:0",
+        client_order_id="client-001",
+        broker_order_id="broker-001",
     )
 
 
@@ -61,6 +63,7 @@ def _action() -> RepairActionRecord:
         status=RepairActionStatus.APPROVED,
         order_id="ord-001",
         fill_id="fill-001",
+        client_order_id="client-001",
         broker_order_id="broker-001",
     )
 
@@ -75,6 +78,60 @@ class _OneActionWorkflowStore:
             return self.action
         return None
 
+    def list_actions(self, report_id: str) -> tuple[RepairActionRecord, ...]:
+        if report_id == self.action.report_id:
+            return (self.action,)
+        return ()
+
+    def claim_for_execution(
+        self,
+        action_id: str,
+        *,
+        executor: str,
+        claimed_at: str = "",
+        reclaim_before: str | None = None,
+    ) -> RepairActionRecord | None:
+        del reclaim_before
+        if action_id != self.action.action_id:
+            return None
+        if self.action.status not in (
+            RepairActionStatus.READY,
+            RepairActionStatus.APPROVED,
+        ):
+            return None
+        self.action = replace(
+            self.action,
+            status=RepairActionStatus.EXECUTING,
+            executor=executor,
+            claimed_at=claimed_at,
+        )
+        return self.action
+
+    def release_execution_claim(
+        self,
+        action_id: str,
+        *,
+        executor: str,
+    ) -> bool:
+        if (
+            action_id != self.action.action_id
+            or self.action.status is not RepairActionStatus.EXECUTING
+            or self.action.executor != executor
+        ):
+            return False
+        restored_status = (
+            RepairActionStatus.APPROVED
+            if self.action.requires_manual_review
+            else RepairActionStatus.READY
+        )
+        self.action = replace(
+            self.action,
+            status=restored_status,
+            executor=None,
+            claimed_at=None,
+        )
+        return True
+
     def mark_executed(
         self,
         action_id: str,
@@ -84,6 +141,13 @@ class _OneActionWorkflowStore:
         executed_at: str = "",
     ) -> bool:
         self.marked.append((action_id, executor, result))
+        self.action = replace(
+            self.action,
+            status=RepairActionStatus.EXECUTED,
+            executor=executor,
+            execution_result=result,
+            executed_at=executed_at,
+        )
         return True
 
 
@@ -131,6 +195,8 @@ class TestSaveRepairExecutionLog:
         assert payload["action_type"] == "import_broker_fill"
         assert payload["order_id"] == "ord-001"
         assert payload["fill_id"] == "fill-001"
+        assert payload["client_order_id"] == "client-001"
+        assert payload["broker_order_id"] == "broker-001"
         assert payload["status"] == "executed"
         assert payload["effect_count"] == 1
         assert payload["correlation_id"] == "rec-001:0"
@@ -169,6 +235,8 @@ class TestExecutionRepairAuditSink:
         assert payload["action_type"] == "import_broker_fill"
         assert payload["order_id"] == "ord-001"
         assert payload["fill_id"] == "fill-001"
+        assert payload["client_order_id"] == "client-001"
+        assert payload["broker_order_id"] == "broker-001"
         assert payload["status"] == "executed"
         assert payload["message"] == "imported broker fill fill-001"
         assert payload["effect_count"] == 1
@@ -202,5 +270,7 @@ class TestExecutionRepairAuditSink:
         payload = orjson.loads(rows[0]["payload"])
         assert payload["action_id"] == "rec-001:0"
         assert payload["fill_id"] == "fill-001"
+        assert payload["client_order_id"] == "client-001"
+        assert payload["broker_order_id"] == "broker-001"
         assert payload["status"] == "executed"
         assert payload["message"] == "imported broker fill fill-001"

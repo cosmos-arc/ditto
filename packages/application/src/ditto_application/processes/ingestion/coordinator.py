@@ -36,6 +36,10 @@ from ditto_application.processes.ingestion.fetch_handlers import (
     build_daily_fetch_handlers,
 )
 from ditto_application.processes.ingestion.instrument_ingestion import (
+    InstrumentBackfillContext,
+    InstrumentIngestContext,
+)
+from ditto_application.processes.ingestion.instrument_ingestion import (
     backfill_adj_factor as _backfill_adj_factor_impl,
 )
 from ditto_application.processes.ingestion.instrument_ingestion import (
@@ -45,6 +49,10 @@ from ditto_application.processes.ingestion.list_date_inference import (
     ListDateInferenceService,
 )
 from ditto_application.processes.ingestion.metadata_manager import MetadataManager
+from ditto_application.processes.ingestion.post_ingest import (
+    DataWriteContext,
+    PostIngestContext,
+)
 from ditto_application.processes.ingestion.post_ingest import (
     handle_fetch_error as _handle_fetch_error,
 )
@@ -273,15 +281,17 @@ class IngestionCoordinator:
             dataset,
             trade_date,
             force,
-            result_handler=self._result_handler,
-            data_writer=self._data_writer,
-            quality_checker=self._quality_checker,
-            list_date_inference=self._list_date_inference,
-            cursor_store=self._ingestion_cursor_store,
-            freeze_store=self._freeze_store,
-            lineage_recorder=self._lineage_recorder,
-            catalog_writer=self._catalog_writer,
-            source_name=self._source_name,
+            ctx=PostIngestContext(
+                result_handler=self._result_handler,
+                data_writer=self._data_writer,
+                quality_checker=self._quality_checker,
+                list_date_inference=self._list_date_inference,
+                cursor_store=self._ingestion_cursor_store,
+                freeze_store=self._freeze_store,
+                lineage_recorder=self._lineage_recorder,
+                catalog_writer=self._catalog_writer,
+                source_name=self._source_name,
+            ),
         )
 
     def _try_fetch_data(
@@ -313,14 +323,16 @@ class IngestionCoordinator:
     ) -> WriteResult | IngestionResult:
         """安全写入数据，统一异常处理。委托至 post_ingest.write_data_safe。"""
         return _write_data_safe(
-            dataset,
-            df,
-            trade_date,
-            on_duplicate,
+            DataWriteContext(
+                dataset=dataset,
+                df=df,
+                trade_date=trade_date,
+                on_duplicate=on_duplicate,
+                source_ticker=source_ticker,
+                event_suffix=event_suffix,
+            ),
             result_handler=self._result_handler,
             data_writer=self._data_writer,
-            source_ticker=source_ticker,
-            event_suffix=event_suffix,
         )
 
     def _handle_fetch_error(
@@ -387,13 +399,15 @@ class IngestionCoordinator:
             dataset,
             params,
             force,
-            fetchers=self._fetchers,
-            metadata_service=self._metadata_service,
-            source_name=self._source_name,
-            result_handler=self._result_handler,
-            data_writer=self._data_writer,
-            lineage_recorder=self._lineage_recorder,
-            catalog_writer=self._catalog_writer,
+            ctx=InstrumentIngestContext(
+                fetchers=self._fetchers,
+                metadata_service=self._metadata_service,
+                source_name=self._source_name,
+                result_handler=self._result_handler,
+                data_writer=self._data_writer,
+                lineage_recorder=self._lineage_recorder,
+                catalog_writer=self._catalog_writer,
+            ),
         )
 
     def _fetch_data(self, dataset: str, trade_date: str) -> pl.DataFrame:
@@ -427,10 +441,12 @@ class IngestionCoordinator:
             instrument_id=instrument_id,
             start=start,
             end=end,
-            metadata_service=self._metadata_service,
-            market_service=self._market_service,
-            fetchers=self._fetchers,
-            source_name=self._source_name,
-            data_writer=self._data_writer,
-            lineage_recorder=self._lineage_recorder,
+            ctx=InstrumentBackfillContext(
+                metadata_service=self._metadata_service,
+                market_service=self._market_service,
+                fetchers=self._fetchers,
+                source_name=self._source_name,
+                data_writer=self._data_writer,
+                lineage_recorder=self._lineage_recorder,
+            ),
         )

@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 from dishka import Provider, Scope, provide
+from ditto_data.catalog.fallback_policy import (
+    CatalogSourceFallbackPolicyReader,
+    CatalogSourceFallbackPolicyWriter,
+)
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionReader,
     DatasetMaturityPromotionRevoker,
     DatasetMaturityPromotionWriter,
     DatasetPromotionEvidenceReader,
     DatasetPromotionEvidenceWriter,
+)
+from ditto_data.catalog.remediation import (
+    CatalogRemediationApprovalReader,
+    CatalogRemediationApprovalWriter,
 )
 from ditto_data.ingestion.quality_record_store import (
     QualityRecordStore,
@@ -40,8 +48,25 @@ from ditto_application.commands.catalog import (
     ReviewDatasetPromotionEvidenceHandler,
     RevokeDatasetMaturityPromotionHandler,
 )
+from ditto_application.commands.catalog_remediation import (
+    CatalogFreshnessRemediationExecutor,
+    CatalogRemediationActionExecutorRegistry,
+    CatalogRemediationIngestDatePort,
+    CatalogSourceCoverageRemediationExecutor,
+    DatasetPromotionEvidenceRemediationExecutor,
+    DecideCatalogRemediationApprovalHandler,
+    ExecuteCatalogRemediationApprovalHandler,
+    LineageCatalogAssetRemediationExecutor,
+    RequestCatalogRemediationApprovalHandler,
+)
 from ditto_application.commands.quality_check import CheckDataQualityHandler
 from ditto_application.commands.quality_reconciliation import ReconcileSourcesHandler
+from ditto_application.commands.source_fallback_policy import (
+    ActivateCatalogSourceFallbackPolicyHandler,
+    ApproveCatalogSourceFallbackPolicyHandler,
+    DraftCatalogSourceFallbackPolicyHandler,
+    RetireCatalogSourceFallbackPolicyHandler,
+)
 from ditto_application.commands.strategy import (
     CreateStrategyHandler,
     PublishStrategyHandler,
@@ -122,6 +147,104 @@ class AppCommandProvider(Provider):
         return RevokeDatasetMaturityPromotionHandler(
             maturity_promotion_reader=maturity_promotion_reader,
             maturity_promotion_revoker=maturity_promotion_revoker,
+        )
+
+    @provide
+    def request_catalog_remediation_approval_handler(
+        self,
+        catalog_remediation_approval_writer: CatalogRemediationApprovalWriter,
+    ) -> RequestCatalogRemediationApprovalHandler:
+        """Catalog remediation approval request handler."""
+        return RequestCatalogRemediationApprovalHandler(
+            approval_writer=catalog_remediation_approval_writer,
+        )
+
+    @provide
+    def draft_catalog_source_fallback_policy_handler(
+        self,
+        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
+    ) -> DraftCatalogSourceFallbackPolicyHandler:
+        """Catalog source fallback policy draft handler."""
+        return DraftCatalogSourceFallbackPolicyHandler(
+            policy_writer=catalog_source_fallback_policy_writer,
+        )
+
+    @provide
+    def approve_catalog_source_fallback_policy_handler(
+        self,
+        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
+        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
+    ) -> ApproveCatalogSourceFallbackPolicyHandler:
+        """Catalog source fallback policy approval handler."""
+        return ApproveCatalogSourceFallbackPolicyHandler(
+            policy_reader=catalog_source_fallback_policy_reader,
+            policy_writer=catalog_source_fallback_policy_writer,
+        )
+
+    @provide
+    def activate_catalog_source_fallback_policy_handler(
+        self,
+        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
+        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
+    ) -> ActivateCatalogSourceFallbackPolicyHandler:
+        """Catalog source fallback policy activation handler."""
+        return ActivateCatalogSourceFallbackPolicyHandler(
+            policy_reader=catalog_source_fallback_policy_reader,
+            policy_writer=catalog_source_fallback_policy_writer,
+        )
+
+    @provide
+    def retire_catalog_source_fallback_policy_handler(
+        self,
+        catalog_source_fallback_policy_reader: CatalogSourceFallbackPolicyReader,
+        catalog_source_fallback_policy_writer: CatalogSourceFallbackPolicyWriter,
+    ) -> RetireCatalogSourceFallbackPolicyHandler:
+        """Catalog source fallback policy retirement handler."""
+        return RetireCatalogSourceFallbackPolicyHandler(
+            policy_reader=catalog_source_fallback_policy_reader,
+            policy_writer=catalog_source_fallback_policy_writer,
+        )
+
+    @provide
+    def decide_catalog_remediation_approval_handler(
+        self,
+        catalog_remediation_approval_reader: CatalogRemediationApprovalReader,
+        catalog_remediation_approval_writer: CatalogRemediationApprovalWriter,
+    ) -> DecideCatalogRemediationApprovalHandler:
+        """Catalog remediation approval decision handler."""
+        return DecideCatalogRemediationApprovalHandler(
+            approval_reader=catalog_remediation_approval_reader,
+            approval_writer=catalog_remediation_approval_writer,
+        )
+
+    @provide
+    def execute_catalog_remediation_approval_handler(
+        self,
+        catalog_remediation_approval_reader: CatalogRemediationApprovalReader,
+        catalog_remediation_approval_writer: CatalogRemediationApprovalWriter,
+        promotion_review_handler: ReviewDatasetPromotionEvidenceHandler,
+        catalog_remediation_ingest_date_port: CatalogRemediationIngestDatePort,
+    ) -> ExecuteCatalogRemediationApprovalHandler:
+        """Catalog remediation approval-backed execution handler."""
+        return ExecuteCatalogRemediationApprovalHandler(
+            approval_reader=catalog_remediation_approval_reader,
+            approval_writer=catalog_remediation_approval_writer,
+            executor_registry=CatalogRemediationActionExecutorRegistry(
+                (
+                    DatasetPromotionEvidenceRemediationExecutor(
+                        promotion_review_handler
+                    ),
+                    CatalogSourceCoverageRemediationExecutor(
+                        catalog_remediation_ingest_date_port
+                    ),
+                    CatalogFreshnessRemediationExecutor(
+                        catalog_remediation_ingest_date_port
+                    ),
+                    LineageCatalogAssetRemediationExecutor(
+                        catalog_remediation_ingest_date_port
+                    ),
+                )
+            ),
         )
 
     @provide

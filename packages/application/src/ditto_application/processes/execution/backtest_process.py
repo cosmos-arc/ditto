@@ -21,6 +21,7 @@ from ditto_backtest.config import EngineConfig, EngineMode
 from ditto_backtest.data_feed import DataFeed
 from ditto_backtest.engine import (
     EngineLoop,
+    EngineLoopDeps,
     EngineOptions,
     EngineResult,
 )
@@ -338,13 +339,15 @@ class BacktestService:
         )
         engine_loop = EngineLoop(
             config=engine_config,
-            pipeline=self._pipeline,
-            planner=self._planner,
-            brokerage=self._brokerage,
-            pre_trade_check=self._pre_trade_check,
-            data_feed=self._data_feed,
-            synchronizer=synchronizer,
-            options=options,
+            deps=EngineLoopDeps(
+                pipeline=self._pipeline,
+                planner=self._planner,
+                brokerage=self._brokerage,
+                pre_trade_check=self._pre_trade_check,
+                data_feed=self._data_feed,
+                synchronizer=synchronizer,
+                options=options,
+            ),
         )
         t0 = time.monotonic()
         engine_result = engine_loop.run()
