@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 from dataclasses import replace
 
+from ditto_kernel import traced
+
 from ditto_backtest._statistics_types import PortfolioStatistics
 from ditto_backtest.audit import ExecutionAuditCollector
 
@@ -49,6 +51,7 @@ def total_return(navs: list[float]) -> float:
 # ---------------------------------------------------------------------------
 
 
+@traced("backtest.statistics.portfolio")
 def compute_portfolio_statistics(
     collector: ExecutionAuditCollector,
 ) -> tuple[PortfolioStatistics, ...]:

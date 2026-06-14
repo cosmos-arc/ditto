@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from ditto_kernel.tracing import traced
+
 from ditto_execution.orders.event import OrderEvent
 from ditto_execution.orders.fsm import transition
 from ditto_execution.orders.model import Order
@@ -30,6 +32,7 @@ class OrderTicket:
         """剩余未成交数量。"""
         return self.order.quantity - self.filled_quantity
 
+    @traced("execution.order.with_fill")
     def with_fill(self, quantity: int, price: float, event: OrderEvent) -> OrderTicket:
         """记录成交，返回新 OrderTicket。"""
         if quantity <= 0:
@@ -56,10 +59,12 @@ class OrderTicket:
             order_events=(*self.order_events, event),
         )
 
+    @traced("execution.order.with_cancel")
     def with_cancel(self, event: OrderEvent) -> OrderTicket:
         """撤销订单。"""
         return self._apply_trigger(OrderTrigger.CANCEL, event)
 
+    @traced("execution.order.with_reject")
     def with_reject(self, event: OrderEvent) -> OrderTicket:
         """拒绝订单。"""
         return self._apply_trigger(OrderTrigger.REJECT, event)

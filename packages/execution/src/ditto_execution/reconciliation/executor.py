@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol
 
+from ditto_kernel.tracing import traced
 from ditto_portfolio.accounting import FillEvent
 
 from ditto_execution.errors import ReconciliationError
@@ -409,6 +410,7 @@ class RepairActionExecutor:
         self._audit_sink = audit_sink
         self._executor_id = executor_id
 
+    @traced("execution.repair.execute_action")
     def execute_action(
         self,
         action_id: str,
@@ -487,6 +489,7 @@ class RepairActionExecutor:
         self._record_audit(result)
         return result
 
+    @traced("execution.repair.execute_report_actions")
     def execute_report_actions(
         self,
         report_id: str,

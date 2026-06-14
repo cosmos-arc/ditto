@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotionRevocationReason,
@@ -12,17 +12,14 @@ from ditto_data.catalog.promotion import (
 )
 
 from ditto_application.catalog_freshness import CatalogFreshnessStatus
-
-if TYPE_CHECKING:
-    from ditto_application.queries.ingestion_status import (
-        DatasetMaturitySummary,
-        DatasetPromotionCriterionCount,
-        DatasetPromotionReadinessItem,
-        DatasetPromotionReadinessReport,
-        DatasetPromotionStatusCount,
-        DatasetStatus,
-    )
-
+from ditto_application.queries._maturity_types import (
+    DatasetMaturitySummary,
+    DatasetPromotionCriterionCount,
+    DatasetPromotionReadinessItem,
+    DatasetPromotionReadinessReport,
+    DatasetPromotionStatusCount,
+    DatasetStatus,
+)
 
 type DatasetMaturityGovernanceAttentionReason = Literal[
     "maturity_warning",

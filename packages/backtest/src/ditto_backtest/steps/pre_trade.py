@@ -18,6 +18,7 @@ from typing import ClassVar
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.events import OrderSubmitted
 from ditto_execution.orders.model import Order
+from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.trading import FeeModel
@@ -58,6 +59,7 @@ class PreTradeStep:
         self._event_bus = event_bus
         self._clock = clock
 
+    @traced("backtest.step.pre_trade")
     def execute(self, ctx: StepContext) -> StepResult:
         """执行 PreTrade 校验循环。"""
         if not ctx.is_rebalance_day:

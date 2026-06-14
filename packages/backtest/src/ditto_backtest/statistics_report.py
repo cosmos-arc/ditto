@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from ditto_kernel import traced
+
 from ditto_backtest._statistics_types import BacktestReport
 from ditto_backtest.audit import ExecutionAuditCollector
 from ditto_backtest.statistics_alpha import compute_alpha_statistics
@@ -18,6 +20,7 @@ from ditto_backtest.statistics_trades import (
 __all__ = ["build_report"]
 
 
+@traced("backtest.statistics.report")
 def build_report(
     collector: ExecutionAuditCollector,
     run_id: str = "",

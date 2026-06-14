@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from ditto_kernel.tracing import traced
+
 from ditto_execution.reconciliation.types import (
     MismatchType,
     ReconciliationDiff,
@@ -16,6 +18,7 @@ from ditto_execution.reconciliation.types import (
 __all__ = ["plan_repair"]
 
 
+@traced("execution.plan_repair")
 def plan_repair(report: ReconciliationReport) -> RepairPlan:
     """
     Convert reconciliation diffs into deterministic repair actions.

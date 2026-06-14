@@ -9,6 +9,7 @@ from __future__ import annotations
 import statistics as stats_module
 from dataclasses import dataclass
 
+from ditto_kernel import traced
 from ditto_portfolio.accounting import FillEvent
 
 from ditto_backtest._statistics_types import AggregatedTradeStatistics, TradeStatistics
@@ -32,6 +33,7 @@ class CostMetrics:
     cost_drag: float
 
 
+@traced("backtest.statistics.trade")
 def compute_trade_statistics(
     collector: ExecutionAuditCollector,
 ) -> tuple[TradeStatistics, ...]:

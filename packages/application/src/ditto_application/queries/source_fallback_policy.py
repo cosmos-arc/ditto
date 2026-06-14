@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-if TYPE_CHECKING:
-    from ditto_application.queries.catalog import CatalogSourceHealthReport
+from ditto_application.queries.catalog_source_health import CatalogSourceHealthReport
 
 type CatalogSourceFallbackPolicyStatus = Literal[
     "ready",

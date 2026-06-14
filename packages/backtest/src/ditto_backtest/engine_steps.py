@@ -14,6 +14,7 @@ from ditto_execution.brokerage import Brokerage
 from ditto_execution.orders.model import Order
 from ditto_execution.planner import ExecutionPlanner
 from ditto_execution.trade_builder import TradeBuilder
+from ditto_kernel import traced
 from ditto_kernel.clock import Clock
 from ditto_kernel.events import EventBus
 from ditto_kernel.identity import InstrumentId
@@ -136,6 +137,7 @@ class EngineResultAssemblyContext:
     last_checkpoint: BacktestCheckpoint | None = None
 
 
+@traced("backtest.assemble_result")
 def assemble_engine_result(
     ctx: EngineResultAssemblyContext,
 ) -> EngineResult:

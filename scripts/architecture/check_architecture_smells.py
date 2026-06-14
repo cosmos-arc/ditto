@@ -20,6 +20,7 @@ Checks only stable, low-noise smells that are already agreed upon and cleaned up
 15. Active architecture docs must not imply reserved analysis capabilities exist
 16. Application providers must not read environment variables directly
 17. Generic helpers/utils source paths must have owned architecture allowances
+18. Every src __init__.py must declare an explicit __all__
 
 Usage:
     python scripts/architecture/check_architecture_smells.py
@@ -778,6 +779,29 @@ def check_missing_init_py() -> list[str]:
                         errors.append(
                             f"{py_dir.relative_to(ROOT)}: missing __init__.py"
                         )
+    return errors
+
+
+def check_missing_dunder_all(root: Path = ROOT) -> list[str]:
+    """Check that every src ``__init__.py`` declares an explicit ``__all__``.
+
+    Forces package surface to be explicit (CLAUDE.md: consumers must import from
+    leaf modules; an ``__init__.py`` must not mix re-export with inline
+    definitions). Both ``__all__ = [...]`` and ``__all__: list[str] = [...]``
+    satisfy this check.
+    """
+    errors: list[str] = []
+    for src_dir in (root / "packages").glob("**/src"):
+        for init_file in src_dir.rglob("__init__.py"):
+            try:
+                tree = ast.parse(init_file.read_text(encoding="utf-8"))
+            except SyntaxError:
+                errors.append(f"{init_file.relative_to(root)}: cannot parse module")
+                continue
+            if not any(_is_all_assignment(node) for node in tree.body):
+                errors.append(
+                    f"{init_file.relative_to(root)}: missing __all__ declaration"
+                )
     return errors
 
 
@@ -2046,6 +2070,14 @@ def main() -> int:
         errors,
         check_missing_init_py(),
         "[OK] All package directories have __init__.py",
+        args.verbose,
+    )
+
+    # Check 2: src __init__.py must declare an explicit __all__
+    _collect(
+        errors,
+        check_missing_dunder_all(ROOT),
+        "[OK] All src __init__.py declare an explicit __all__",
         args.verbose,
     )
 

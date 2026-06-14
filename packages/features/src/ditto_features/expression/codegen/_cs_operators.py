@@ -29,6 +29,16 @@ def compile_cross_section(
     time_keys: list[str],
 ) -> pl.Expr | None:
     if name == "cs_rank":
+        # NOTE(D7 cross-check): the *correct* cross-section semantics would rank
+        # within each trade_date group: ``rank(method="ordinal").over(time_keys)
+        # / pl.len().over(time_keys)``. That fix is blocked by a polars limit:
+        # nested ``.over()`` with different group keys (cs over trade_date wrapping
+        # a ts over entity) yields all-null without intermediate materialization,
+        # and codegen emits one inlined expression. Every ``cs(ts(...))`` factor
+        # (e.g. alpha.py ``cs_rank(ts_mean(...))``) would silently go null. The
+        # real fix belongs in codegen (materialize ts results before cs ops), not
+        # here. Until then cs_rank ranks across the whole frame; see the
+        # xfail test in test_expression_cross_section_crosscheck_unit.py.
         return arguments[0].rank(method="ordinal").cast(pl.Float64) / pl.len().cast(
             pl.Float64
         )

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from ditto_kernel.tracing import traced
 from ditto_portfolio.accounting.fills import FillEvent
 
 from ditto_execution.orders.status import OrderStatus
@@ -36,6 +37,7 @@ __all__ = ["reconcile"]
 _DEFAULT_PRICE_TOLERANCE: float = 0.001
 
 
+@traced("execution.reconcile")
 def reconcile(
     report_id: str,
     account_id: str,

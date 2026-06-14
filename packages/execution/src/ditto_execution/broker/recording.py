@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol
 
+from ditto_kernel.tracing import traced
 from ditto_portfolio.accounting import FillEvent
 from ditto_portfolio.accounting.account import AccountView
 
@@ -109,6 +110,7 @@ class BrokerEventRecordingGateway:
             ),
         )
 
+    @traced("execution.broker.connect")
     def connect(self) -> None:
         """Connect the underlying gateway and record the connection event."""
         self.gateway.connect()
@@ -127,12 +129,14 @@ class BrokerEventRecordingGateway:
             )
         )
 
+    @traced("execution.broker.get_account")
     def get_account(self) -> AccountView:
         """Return the underlying gateway account snapshot."""
         account = self.gateway.get_account()
         self._record_account_update(account)
         return account
 
+    @traced("execution.broker.submit_order")
     def submit_order(self, order: Order) -> OrderTicket:
         """Submit an order and record acknowledgement plus opportunistic fills."""
         ticket = self.gateway.submit_order(order)
@@ -145,6 +149,7 @@ class BrokerEventRecordingGateway:
             self._record_fills(fills)
         return ticket
 
+    @traced("execution.broker.cancel_order")
     def cancel_order(self, order_id: str) -> bool:
         """Cancel an order and record the broker response."""
         try:
@@ -222,6 +227,7 @@ class BrokerEventRecordingGateway:
         )
         return accepted
 
+    @traced("execution.broker.query_fills")
     def query_fills(self, order_id: str) -> tuple[FillEvent, ...]:
         """Query broker fills and record deterministic fill events."""
         try:

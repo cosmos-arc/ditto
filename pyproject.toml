@@ -325,7 +325,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=xml",
     "--cov-branch",
-    "--cov-fail-under=80",
+    "--cov-fail-under=85",
     "--durations=10",       # 报告最慢的 10 个测试
 ]
 

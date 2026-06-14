@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from ditto_execution.brokerage import Brokerage
 from ditto_execution.trade_builder import TradeBuilder
+from ditto_kernel import traced
 
 from ditto_backtest.audit.collector import ExecutionAuditCollector
 from ditto_backtest.steps.types import StepContext, StepResult
@@ -34,6 +35,7 @@ class AuditStep:
         self._trade_builder = trade_builder
         self._recorded_trade_ids = recorded_trade_ids
 
+    @traced("backtest.step.audit")
     def execute(self, ctx: StepContext) -> StepResult:
         """记录审计数据。"""
         if self._audit_collector is None:

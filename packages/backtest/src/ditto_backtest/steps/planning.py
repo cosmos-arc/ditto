@@ -11,6 +11,7 @@ PlanningStep -- 获取规则 + 调用 planner.plan().
 from __future__ import annotations
 
 from ditto_execution.planner import ExecutionPlanner
+from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import InstrumentRuleProvider, InstrumentRules
 from ditto_strategy.alpha.context import StrategyContext
@@ -36,6 +37,7 @@ class PlanningStep:
         self._rule_ref_collector = rule_ref_collector
         self._strategy_context = strategy_context
 
+    @traced("backtest.step.planning")
     def execute(self, ctx: StepContext) -> StepResult:
         """生成执行计划。"""
         if not ctx.is_rebalance_day:

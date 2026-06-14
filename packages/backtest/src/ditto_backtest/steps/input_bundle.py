@@ -11,6 +11,7 @@ extra_instrument_columns 来注入额外列（如 sector_id / is_sector）。
 from __future__ import annotations
 
 import polars as pl
+from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.trading import MarketSnapshot
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
@@ -18,6 +19,7 @@ from ditto_strategy.alpha.pipeline import StrategyInputBundle
 __all__ = ["build_input_bundle"]
 
 
+@traced("backtest.input_bundle.build")
 def build_input_bundle(
     trade_date: str,
     strategy_id: str,

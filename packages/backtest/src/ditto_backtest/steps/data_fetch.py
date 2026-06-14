@@ -12,6 +12,7 @@ Synchronizer 提供的 bars 已通过 StepContext.bars 传入，
 from __future__ import annotations
 
 from ditto_execution.brokerage import Brokerage
+from ditto_kernel import traced
 from ditto_kernel.identity import InstrumentId
 from ditto_strategy.alpha.context import StrategyContext
 
@@ -42,6 +43,7 @@ class DataFetchStep:
         self._bar_fingerprints = bar_fingerprints
         self._source_snapshot_ids = source_snapshot_ids
 
+    @traced("backtest.step.data_fetch")
     def execute(self, ctx: StepContext) -> StepResult:
         """获取账户快照并累积数据指纹。"""
         account_view = self._brokerage.get_account()

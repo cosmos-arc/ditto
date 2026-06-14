@@ -1,3 +1,5 @@
+"""API 层包."""
+
 from __future__ import annotations
 
-"""API 层包."""
+__all__: list[str] = []

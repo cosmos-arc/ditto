@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from ditto_kernel.identity import InstrumentId
 from ditto_kernel.order import OrderSide, OrderType
+from ditto_kernel.tracing import traced
 from ditto_portfolio.accounting import FillEvent
 from ditto_portfolio.accounting.account import Account, AccountView
 from ditto_portfolio.accounting.cash import CashBook
@@ -94,13 +95,16 @@ class PaperBrokerGateway:
             notes=("Simulated paper gateway; no real broker adapter is implemented.",),
         )
 
+    @traced("execution.broker.connect")
     def connect(self) -> None:
         """No-op — paper gateway has no external connection."""
 
+    @traced("execution.broker.get_account")
     def get_account(self) -> AccountView:
         """Return a snapshot of the paper account state."""
         return self._account.get_view()
 
+    @traced("execution.broker.submit_order")
     def submit_order(self, order: Order) -> OrderTicket:
         """Submit order, fill immediately at resolved price, return ticket."""
         # Pre-submit risk check
@@ -146,6 +150,7 @@ class PaperBrokerGateway:
 
         return filled_ticket
 
+    @traced("execution.broker.cancel_order")
     def cancel_order(self, order_id: str) -> bool:
         """Cancel an open order. Returns False for nonexistent or terminal orders."""
         cid = ClientOrderId(value=order_id)
@@ -175,6 +180,7 @@ class PaperBrokerGateway:
         self._book.update(rejected, event=event)
         return True
 
+    @traced("execution.broker.query_fills")
     def query_fills(self, order_id: str) -> tuple[FillEvent, ...]:
         """Return gateway-reported fills for an order."""
         return tuple(self._fills.get(order_id, ()))
