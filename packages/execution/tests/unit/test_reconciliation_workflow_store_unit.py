@@ -157,7 +157,7 @@ class TestSQLiteRepairWorkflowStore:
         assert record is not None
         assert record.status is RepairActionStatus.PENDING_REVIEW
 
-    def test_approved_manual_action_records_execution_result(
+    def test_claimed_manual_action_records_execution_result(
         self, sqlite_client: SQLiteClient
     ) -> None:
         store = SQLiteRepairWorkflowStore(sqlite_client)
@@ -169,6 +169,11 @@ class TestSQLiteRepairWorkflowStore:
             reason="approved import",
             reviewed_at="2026-05-31T09:35:00Z",
         )
+        claimed = store.claim_for_execution(
+            "rec-001:0001",
+            executor="repair-worker",
+            claimed_at="2026-05-31T09:44:00Z",
+        )
 
         executed = store.mark_executed(
             "rec-001:0001",
@@ -178,6 +183,7 @@ class TestSQLiteRepairWorkflowStore:
         )
 
         record = store.get_action("rec-001:0001")
+        assert claimed is not None
         assert executed is True
         assert record is not None
         assert record.status is RepairActionStatus.EXECUTED
@@ -376,6 +382,64 @@ class TestSQLiteRepairWorkflowStore:
         assert blocked_record is not None
         assert blocked_record.status is RepairActionStatus.EXECUTING
         assert blocked_record.executor == "repair-worker-b"
+
+    def test_stale_same_fill_import_claim_can_be_replaced_by_amend_claim(
+        self, sqlite_client: SQLiteClient
+    ) -> None:
+        store = SQLiteRepairWorkflowStore(sqlite_client)
+        store.init_schema()
+        store.save_plan(
+            _same_fill_import_plan("rec-import-a", "ord-import-a"),
+            created_at="2026-05-31T09:30:00Z",
+        )
+        store.save_plan(
+            _same_fill_amendment_plan(
+                "rec-amend-b",
+                "ord-amend-b",
+                fill_id="fill-shared-mutation",
+            ),
+            created_at="2026-05-31T09:31:00Z",
+        )
+        for action_id in ("rec-import-a:0000", "rec-amend-b:0000"):
+            store.approve_action(
+                action_id,
+                reviewer="ops",
+                reason="broker statement checked",
+                reviewed_at="2026-05-31T09:40:00Z",
+            )
+        first_claim = store.claim_for_execution(
+            "rec-import-a:0000",
+            executor="stalled-repair-worker",
+            claimed_at="2026-05-31T09:45:00Z",
+        )
+
+        replacement_claim = store.claim_for_execution(
+            "rec-amend-b:0000",
+            executor="repair-worker-b",
+            claimed_at="2026-05-31T09:50:00Z",
+            reclaim_before="2026-05-31T09:46:00Z",
+        )
+        stale_owner_mark = store.mark_executed(
+            "rec-import-a:0000",
+            executor="stalled-repair-worker",
+            result="late stale import",
+            executed_at="2026-05-31T09:51:00Z",
+        )
+
+        stale_record = store.get_action("rec-import-a:0000")
+        replacement_record = store.get_action("rec-amend-b:0000")
+        assert first_claim is not None
+        assert replacement_claim is not None
+        assert replacement_claim.status is RepairActionStatus.EXECUTING
+        assert replacement_claim.executor == "repair-worker-b"
+        assert stale_owner_mark is False
+        assert stale_record is not None
+        assert stale_record.status is RepairActionStatus.APPROVED
+        assert stale_record.executor is None
+        assert stale_record.claimed_at is None
+        assert replacement_record is not None
+        assert replacement_record.status is RepairActionStatus.EXECUTING
+        assert replacement_record.executor == "repair-worker-b"
 
     def test_same_fill_amendment_blocks_import_claim_across_reports_while_in_flight(
         self, sqlite_client: SQLiteClient

@@ -178,6 +178,38 @@ WHERE action_id = ?
   )
 """
 
+_RELEASE_STALE_COMPETING_FILL_MUTATION_CLAIMS = """
+UPDATE reconciliation_repair_actions
+SET status = CASE WHEN requires_manual_review = 1 THEN ? ELSE ? END,
+    executor = NULL,
+    claimed_at = NULL
+WHERE action_id <> ?
+  AND status = ?
+  AND action_type IN (?, ?)
+  AND (claimed_at IS NULL OR claimed_at = '' OR claimed_at < ?)
+  AND EXISTS (
+    SELECT 1
+    FROM reconciliation_repair_actions AS target
+    WHERE target.action_id = ?
+      AND target.action_type IN (?, ?)
+      AND target.fill_id IS NOT NULL
+      AND target.account_id = reconciliation_repair_actions.account_id
+      AND target.trade_date = reconciliation_repair_actions.trade_date
+      AND target.fill_id = reconciliation_repair_actions.fill_id
+      AND (
+        target.status IN (?, ?)
+        OR (
+          target.status = ?
+          AND (
+            target.claimed_at IS NULL
+            OR target.claimed_at = ''
+            OR target.claimed_at < ?
+          )
+        )
+      )
+  )
+"""
+
 _RELEASE_EXECUTION_CLAIM = """
 UPDATE reconciliation_repair_actions
 SET status = CASE WHEN requires_manual_review = 1 THEN ? ELSE ? END,
@@ -190,10 +222,8 @@ _MARK_EXECUTED = """
 UPDATE reconciliation_repair_actions
 SET status = ?, executor = ?, execution_result = ?, executed_at = ?
 WHERE action_id = ?
-  AND (
-    status IN (?, ?)
-    OR (status = ? AND executor = ?)
-  )
+  AND status = ?
+  AND executor = ?
 """
 
 
@@ -330,6 +360,10 @@ class SQLiteRepairWorkflowStore:
                 ),
             )
         else:
+            self._release_stale_competing_fill_mutation_claims(
+                action_id,
+                reclaim_before=reclaim_before,
+            )
             cursor = self._client.execute(
                 _CLAIM_FOR_EXECUTION_OR_RECLAIM_STALE,
                 (
@@ -356,6 +390,32 @@ class SQLiteRepairWorkflowStore:
         if cursor.rowcount == 0:
             return None
         return self.get_action(action_id)
+
+    def _release_stale_competing_fill_mutation_claims(
+        self,
+        action_id: str,
+        *,
+        reclaim_before: str,
+    ) -> None:
+        self._client.execute(
+            _RELEASE_STALE_COMPETING_FILL_MUTATION_CLAIMS,
+            (
+                RepairActionStatus.APPROVED.value,
+                RepairActionStatus.READY.value,
+                action_id,
+                RepairActionStatus.EXECUTING.value,
+                RepairActionType.IMPORT_BROKER_FILL.value,
+                RepairActionType.AMEND_LOCAL_FILL.value,
+                reclaim_before,
+                action_id,
+                RepairActionType.IMPORT_BROKER_FILL.value,
+                RepairActionType.AMEND_LOCAL_FILL.value,
+                RepairActionStatus.READY.value,
+                RepairActionStatus.APPROVED.value,
+                RepairActionStatus.EXECUTING.value,
+                reclaim_before,
+            ),
+        )
 
     def release_execution_claim(
         self,
@@ -397,7 +457,7 @@ class SQLiteRepairWorkflowStore:
         result: str,
         executed_at: str = "",
     ) -> bool:
-        """Record execution result for a claimable or executor-owned action."""
+        """Record execution result for an executor-owned in-flight action."""
         cursor = self._client.execute(
             _MARK_EXECUTED,
             (
@@ -406,8 +466,6 @@ class SQLiteRepairWorkflowStore:
                 result,
                 executed_at,
                 action_id,
-                RepairActionStatus.READY.value,
-                RepairActionStatus.APPROVED.value,
                 RepairActionStatus.EXECUTING.value,
                 executor,
             ),

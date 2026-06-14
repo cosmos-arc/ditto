@@ -265,6 +265,91 @@ class TestRepairActionExecutorClaim:
         assert record.status is RepairActionStatus.APPROVED
         assert record.executor is None
 
+    def test_stale_cross_action_same_fill_claim_can_be_replaced_and_executed(
+        self,
+        sqlite_client: SQLiteClient,
+    ) -> None:
+        store = SQLiteRepairWorkflowStore(sqlite_client)
+        store.init_schema()
+        store.save_plan(
+            _same_fill_import_plan("rec-import-a", "ord-import-a"),
+            created_at="2026-05-31T09:30:00Z",
+        )
+        store.save_plan(
+            _same_fill_amendment_plan(
+                "rec-amend-b",
+                "ord-amend-b",
+                fill_id="fill-shared-mutation",
+            ),
+            created_at="2026-05-31T09:31:00Z",
+        )
+        for action_id in ("rec-import-a:0000", "rec-amend-b:0000"):
+            store.approve_action(
+                action_id,
+                reviewer="ops",
+                reason="broker statement checked",
+                reviewed_at="2026-05-31T09:40:00Z",
+            )
+        store.claim_for_execution(
+            "rec-import-a:0000",
+            executor="stalled-repair-worker",
+            claimed_at="2026-05-31T09:45:00Z",
+        )
+        current = _fill_record(
+            fill_id="fill-shared-mutation",
+            intent_id="ord-amend-b",
+            quantity=80,
+            fill_price=4.2,
+        )
+        amended = replace(current, quantity=100)
+        local_fills = _FakeLocalFillStore()
+        local_fills.save_fill(current)
+        local_fills.saved_fill_ids.clear()
+        source = _FakeFillAmendmentSource({"fill-shared-mutation": amended})
+        audit = _FakeAuditSink()
+        executor = RepairActionExecutor(
+            workflow_store=store,
+            handlers={
+                "amend_local_fill": AmendLocalFillRepairHandler(
+                    amendment_source=source,
+                    local_fill_store=local_fills,
+                )
+            },
+            audit_sink=audit,
+            executor_id="repair-worker-b",
+        )
+
+        result = executor.execute_action(
+            "rec-amend-b:0000",
+            executed_at="2026-05-31T09:50:00Z",
+            reclaim_before="2026-05-31T09:46:00Z",
+        )
+        stale_owner_mark = store.mark_executed(
+            "rec-import-a:0000",
+            executor="stalled-repair-worker",
+            result="late stale import",
+            executed_at="2026-05-31T09:51:00Z",
+        )
+
+        stale_record = store.get_action("rec-import-a:0000")
+        record = store.get_action("rec-amend-b:0000")
+        assert result.status == "executed"
+        assert result.message == "amended local fill fill-shared-mutation"
+        assert source.requested_action_ids == ["rec-amend-b:0000"]
+        assert source.observed_current_records == [current]
+        assert local_fills.replaced_fill_ids == ["fill-shared-mutation"]
+        assert local_fills.get_fill("fill-shared-mutation") == amended
+        assert audit.results == [result]
+        assert stale_owner_mark is False
+        assert stale_record is not None
+        assert stale_record.status is RepairActionStatus.APPROVED
+        assert stale_record.executor is None
+        assert record is not None
+        assert record.status is RepairActionStatus.EXECUTED
+        assert record.executor == "repair-worker-b"
+        assert record.claimed_at == "2026-05-31T09:50:00Z"
+        assert record.execution_result == "amended local fill fill-shared-mutation"
+
     def test_cross_action_same_fill_amendment_blocks_import_dispatch(
         self,
         sqlite_client: SQLiteClient,
