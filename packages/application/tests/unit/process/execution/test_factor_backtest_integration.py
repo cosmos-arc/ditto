@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import MagicMock
 
 import polars as pl
+import pytest
 from ditto_application.processes.execution.backtest_process import (
     BacktestService,
     BacktestServiceConfig,
@@ -13,6 +15,7 @@ from ditto_application.processes.execution.backtest_process import (
 )
 from ditto_application.processes.execution.factor_bridge import (
     FactorBridge,
+    build_factor_bundle,
 )
 from ditto_backtest.data_feed import Slice
 from ditto_backtest.steps import StepContext
@@ -70,6 +73,12 @@ class _StrictHistoryDataFeed:
         self._history = pl.DataFrame(rows)
         self.requested_as_of_dates: list[str] = []
 
+    def trading_days(self) -> list[str]:
+        return []
+
+    def get_slice(self, date: str) -> Slice:
+        raise NotImplementedError
+
     def get_history(
         self,
         instrument_ids: list[InstrumentId],
@@ -87,6 +96,22 @@ class _StrictHistoryDataFeed:
             .group_by("instrument_id", maintain_order=True)
             .tail(lookback_days)
         )
+
+    def get_fundamental_snapshot(
+        self,
+        instrument_ids: Sequence[InstrumentId],
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """Stub: 该 fake 不提供基本面数据，返回空 DataFrame（is_empty 触发跳过注入）."""
+        return pl.DataFrame()
+
+    def get_classification_snapshot(
+        self,
+        instrument_ids: Sequence[InstrumentId],
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """Stub: 不提供行业分类数据，返回空 DataFrame（is_empty 触发跳过）."""
+        return pl.DataFrame()
 
 
 class TestFactorAwareBundleBuilder:
@@ -181,6 +206,7 @@ class TestFactorAwareBundleBuilder:
         ctx = _make_step_context("2024-01-02", mock_slice)
 
         bundle = builder(ctx)
+        assert bundle.signal_values is not None
 
         signal_values = bundle.signal_values["signal_value"].to_list()
         for v in signal_values:
@@ -278,3 +304,143 @@ class TestFactorAwareBundleBuilder:
         """默认 BacktestServiceOptions 的 compiled_expressions 为 None."""
         options = BacktestServiceOptions()
         assert options.compiled_expressions is None
+
+
+class TestFactorBundleFundamentalInjection:
+    """RED-4: build_factor_bundle 注入基本面截面 + 补算 pe_ratio."""
+
+    def test_injects_roe_and_pe_ratio_to_today_rows(self) -> None:
+        """注入后当日 market_data 含 roe/pe_ratio 列，pe_ratio = close / eps."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("quality_roe",),
+            weights=(1.0,),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "roe": [0.15, 0.10, 0.20],
+                "net_margin": [0.12, 0.08, 0.18],
+                "eps": [1.5, 2.0, 2.5],
+            },
+        )
+
+        ctx = _make_step_context("2024-01-02", _make_slice_with_bars())
+        bundle = build_factor_bundle(
+            ctx=ctx,
+            strategy_id="t",
+            run_id="t",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+        assert bundle.signal_values is not None
+
+        today = bundle.market_data.filter(pl.col("trade_date") == "2024-01-02")
+        assert "roe" in today.columns
+        assert "pe_ratio" in today.columns
+        # bar1 close=10.5, eps=1.5 → pe_ratio ≈ 7.0
+        today_sorted = today.sort("instrument_id")
+        assert today_sorted["pe_ratio"][0] == pytest.approx(7.0)
+        # quality_roe → roe 列 → signal_value 产出（不再 ColumnNotFoundError）
+        assert bundle.signal_values.height == 3
+        assert "signal_value" in bundle.signal_values.columns
+
+    def test_fundamental_snapshot_uses_knowledge_date(self) -> None:
+        """get_fundamental_snapshot 的 as_of = knowledge_date（PIT，非 trade_date）."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("quality_roe",),
+            weights=(1.0,),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "roe": [0.15, 0.10, 0.20],
+                "net_margin": [0.12, 0.08, 0.18],
+                "eps": [1.5, 2.0, 2.5],
+            },
+        )
+
+        ctx = _make_step_context("2024-01-02", _make_slice_with_bars())
+        # _make_step_context: knowledge_date=2024-01-01, trade_date=2024-01-02
+        build_factor_bundle(
+            ctx=ctx,
+            strategy_id="t",
+            run_id="t",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+
+        # PIT: as_of 必须是 knowledge_date（2024-01-01），不是 trade_date（2024-01-02）
+        call = data_feed.get_fundamental_snapshot.call_args
+        assert call.args[1] == date(2024, 1, 1)
+
+    def test_empty_fundamental_skips_injection(self) -> None:
+        """无基本面数据时 market_data 不含基本面列，纯市场因子仍工作."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("close",),
+            weights=(1.0,),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame()
+
+        ctx = _make_step_context("2024-01-02", _make_slice_with_bars())
+        bundle = build_factor_bundle(
+            ctx=ctx,
+            strategy_id="t",
+            run_id="t",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+        assert bundle.signal_values is not None
+
+        assert "roe" not in bundle.market_data.columns
+        assert "pe_ratio" not in bundle.market_data.columns
+        assert bundle.signal_values.height == 3
+
+    def test_quality_roe_and_value_pe_run_without_column_not_found(self) -> None:
+        """seed quality_roe + value_pe 注入后不报 ColumnNotFoundError."""
+        bridge = FactorBridge()
+        compiled = bridge.compile_and_validate(
+            expressions=("quality_roe", "value_pe"),
+            weights=(0.5, 0.5),
+        )
+        data_feed = MagicMock()
+        data_feed.get_history.return_value = pl.DataFrame()
+        data_feed.get_fundamental_snapshot.return_value = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "roe": [0.15, 0.10, 0.20],
+                "net_margin": [0.12, 0.08, 0.18],
+                "eps": [1.5, 2.0, 2.5],
+            },
+        )
+
+        ctx = _make_step_context("2024-01-02", _make_slice_with_bars())
+        bundle = build_factor_bundle(
+            ctx=ctx,
+            strategy_id="t",
+            run_id="t",
+            bridge=bridge,
+            compiled=compiled,
+            data_feed=data_feed,
+            lookback_days=20,
+        )
+        assert bundle.signal_values is not None
+
+        # quality_roe→roe, value_pe→-pe_ratio 两因子都能计算
+        assert bundle.signal_values.height == 3
+        values = bundle.signal_values["signal_value"].to_list()
+        assert all(isinstance(v, float) for v in values)

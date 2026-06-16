@@ -9,6 +9,7 @@ from ditto_backtest.brokerage import BacktestBrokerage
 from ditto_backtest.data_feed import (
     DataFeed,
     ProviderBackedDataFeed,
+    SnapshotProviders,
 )
 from ditto_backtest.result import (
     BacktestAccountStateSnapshot,
@@ -64,7 +65,15 @@ from ditto_application.processes.execution.backtest_process import (
     BacktestServiceConfig,
     BacktestServiceOptions,
 )
+from ditto_application.processes.execution.classification_snapshot import (
+    ClassificationReadFacade,
+    build_classification_snapshot_fn,
+)
 from ditto_application.processes.execution.factor_bridge import CompiledExpressions
+from ditto_application.processes.execution.fundamental_snapshot import (
+    FundamentalReadFacade,
+    build_fundamental_snapshot_fn,
+)
 from ditto_application.processes.execution.strategy_input import StrategyInputAssembler
 from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunService,
@@ -282,11 +291,15 @@ class BacktestRuntimeBuilder:
         metadata_service: MetadataService,
         data_provider: DataProvider,
         maturity_promotion_reader: DatasetMaturityPromotionReader | None = None,
+        fundamental_read_facade: FundamentalReadFacade | None = None,
+        classification_read_facade: ClassificationReadFacade | None = None,
     ) -> None:
         self._strategy_runtime_builder = strategy_runtime_builder
         self._metadata_service = metadata_service
         self._data_provider = data_provider
         self._maturity_promotion_reader = maturity_promotion_reader
+        self._fundamental_read_facade = fundamental_read_facade
+        self._classification_read_facade = classification_read_facade
 
     def build_published_runtime(
         self,
@@ -354,6 +367,26 @@ class BacktestRuntimeBuilder:
         max_lookback = _compute_max_lookback(runtime.compiled_expressions)
         data_start_date = _shift_back_calendar_days(config.start_date, max_lookback * 2)
 
+        # 基本面快照闭包：注入 DataFeed 数据通道，供 quality_roe / value_pe 等因子引用。
+        # maturity gate 经 facade 的 allow_experimental_data 生效。
+        fundamental_snapshot_fn = None
+        if self._fundamental_read_facade is not None:
+            fundamental_snapshot_fn = build_fundamental_snapshot_fn(
+                self._fundamental_read_facade,
+                allow_experimental_data=allow_experimental_data,
+            )
+        # 分类快照闭包:注入 DataFeed 数据通道,供 sector_id 列(stock_sector_rotation
+        # 结构列校验 + 因子中性化 neutralize_by="sector_id")使用。industry 数据未进
+        # catalog maturity,无需 allow_experimental_data gate。
+        classification_snapshot_fn = None
+        if self._classification_read_facade is not None:
+            classification_snapshot_fn = build_classification_snapshot_fn(
+                self._classification_read_facade,
+            )
+        snapshot_providers = SnapshotProviders(
+            fundamental=fundamental_snapshot_fn,
+            classification=classification_snapshot_fn,
+        )
         data_feed = ProviderBackedDataFeed(
             self._data_provider,
             tickers=tickers,
@@ -361,6 +394,7 @@ class BacktestRuntimeBuilder:
             end_date=config.end_date,
             id_map=id_map,
             benchmark_id=resolved_config.benchmark_id,
+            snapshot_providers=snapshot_providers,
         )
 
         return PublishedBacktestRuntime(

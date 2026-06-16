@@ -28,6 +28,7 @@ from ditto_application.builders import (
 )
 from ditto_application.builders.data_provider import ServiceBackedDataProvider
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
+from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_application.settings import TradingSettings
 
 
@@ -75,6 +76,7 @@ class AppBuilderFactory(Provider):
         metadata_service: MetadataService,
         data_provider: ServiceBackedDataProvider,
         maturity_promotion_reader: DatasetMaturityPromotionReader,
+        fundamental_query_facade: FundamentalQueryFacade,
     ) -> BacktestRuntimeBuilder:
         """回测运行时构建器."""
         return BacktestRuntimeBuilder(
@@ -82,6 +84,10 @@ class AppBuilderFactory(Provider):
             metadata_service=metadata_service,
             data_provider=data_provider,
             maturity_promotion_reader=maturity_promotion_reader,
+            fundamental_read_facade=fundamental_query_facade,
+            # InstrumentService 满足 ClassificationReadFacade Protocol(其
+            # get_stock_industry 委托 IndustryMappingReader 做 PIT 行业查询)。
+            classification_read_facade=metadata_service.instrument,
         )
 
     @provide

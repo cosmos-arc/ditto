@@ -10,8 +10,9 @@ FactorBridge 将声明式因子表达式字符串桥接到回测引擎的信号�
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import date
 
 import polars as pl
 from ditto_backtest.data_feed import DataFeed
@@ -24,6 +25,9 @@ from ditto_features.derived_types import (
 from ditto_features.expression.compiler import ExpressionCompiler
 from ditto_features.expression.contracts import CompiledDerivedExpression
 from ditto_features.expression.diagnostics import ExpressionCompileError
+from ditto_features.factors.factor_specs import ALL_FACTOR_SPECS
+from ditto_features.factors.spec import FactorSpec
+from ditto_kernel.identity import InstrumentId
 from ditto_kernel.strategy import ExecutionPolicy
 from ditto_strategy.alpha.pipeline import StrategyInputBundle
 
@@ -78,8 +82,24 @@ class CompiledExpressions:
 class FactorBridge:
     """因子桥接 — 字符串表达式 → 编译 → 信号计算."""
 
-    def __init__(self, compiler: ExpressionCompiler | None = None) -> None:
+    def __init__(
+        self,
+        compiler: ExpressionCompiler | None = None,
+        *,
+        factor_registry: Mapping[str, FactorSpec] | None = None,
+    ) -> None:
         self._compiler = compiler or ExpressionCompiler()
+        # 因子 ID → 真实表达式的解析 registry。默认用 ALL_FACTOR_SPECS，
+        # 使 seed 的 signal_expressions（如 quality_roe）解析为底层表达式（如 roe）。
+        # 未命中项原样返回，兼容直接传表达式字符串（如 "close"）。
+        self._registry: Mapping[str, FactorSpec] = (
+            factor_registry if factor_registry is not None else ALL_FACTOR_SPECS
+        )
+
+    def _resolve_expression(self, expr_or_id: str) -> str:
+        """因子 ID → 真实表达式；未命中原样返回（兼容直接表达式字符串）."""
+        spec = self._registry.get(expr_or_id)
+        return spec.expression if spec is not None else expr_or_id
 
     def compile_and_validate(
         self,
@@ -115,7 +135,8 @@ class FactorBridge:
 
         compiled: list[CompiledDerivedExpression] = []
         for i, expr_str in enumerate(expressions):
-            spec = build_signal_spec(expr_str, index=i)
+            resolved = self._resolve_expression(expr_str)
+            spec = build_signal_spec(resolved, index=i)
             try:
                 result = self._compiler.compile(spec)
             except ExpressionCompileError as exc:
@@ -338,6 +359,25 @@ def build_factor_bundle(
     if "trade_date" in market_data.columns:
         market_data = market_data.sort("trade_date")
 
+    # 注入基本面截面（PIT as_of = knowledge_date），供 quality_roe / value_pe 等
+    # 基本面因子引用底层列（roe / pe_ratio）。截面只 merge 到当日行。
+    market_data = _enrich_with_fundamentals(
+        market_data,
+        data_feed=data_feed,
+        instrument_ids=instrument_ids,
+        knowledge_date=ctx.time_context.knowledge_date,
+        trade_date=ctx.time_context.trade_date,
+    )
+    # 注入行业分类截面(sector_id),供 stock_sector_rotation 结构列校验与
+    # 因子中性化(neutralize_by="sector_id")使用。PIT as_of = knowledge_date。
+    market_data = _enrich_with_classification(
+        market_data,
+        data_feed=data_feed,
+        instrument_ids=instrument_ids,
+        knowledge_date=ctx.time_context.knowledge_date,
+        trade_date=ctx.time_context.trade_date,
+    )
+
     signal_values = bridge.compute_signals(market_data, compiled)
 
     return StrategyInputBundle(
@@ -349,3 +389,91 @@ def build_factor_bundle(
         signal_values=signal_values,
         benchmark_close=getattr(slice_, "benchmark_close", None),
     )
+
+
+def _enrich_with_fundamentals(
+    market_data: pl.DataFrame,
+    *,
+    data_feed: DataFeed,
+    instrument_ids: list[InstrumentId],
+    knowledge_date: date,
+    trade_date: str,
+) -> pl.DataFrame:
+    """
+    注入基本面截面到当日行并补算 pe_ratio.
+
+    基本面是截面快照（1 行/instrument），仅 merge 到当日行（trade_date 匹配），
+    历史行补 null。pe_ratio 依赖当日 close + 基本面 eps，在 merge 后补算。
+    PIT as_of = knowledge_date（严格，非 trade_date），由 data_feed 透传。
+
+    无基本面数据或无当日行时原样返回。
+    """
+    if market_data.is_empty() or not instrument_ids:
+        return market_data
+
+    fundamental_df = data_feed.get_fundamental_snapshot(instrument_ids, knowledge_date)
+    if fundamental_df.is_empty():
+        return market_data
+
+    today_mask = market_data["trade_date"] == trade_date
+    today_rows = market_data.filter(today_mask)
+    if today_rows.is_empty():
+        return market_data
+
+    history_rows = market_data.filter(~today_mask)
+    today_rows = today_rows.join(fundamental_df, on="instrument_id", how="left")
+
+    # 补算 pe_ratio（当日 close / 基本面 eps）；pb_ratio 暂无数据源（无 total_shares）。
+    if "eps" in today_rows.columns and "close" in today_rows.columns:
+        today_rows = today_rows.with_columns(
+            pl.when(pl.col("eps") != 0)
+            .then(pl.col("close") / pl.col("eps"))
+            .otherwise(None)
+            .cast(pl.Float64)
+            .alias("pe_ratio"),
+        )
+
+    enriched = pl.concat([today_rows, history_rows], how="diagonal_relaxed")
+    if "trade_date" in enriched.columns:
+        enriched = enriched.sort("trade_date")
+    return enriched
+
+
+def _enrich_with_classification(
+    market_data: pl.DataFrame,
+    *,
+    data_feed: DataFeed,
+    instrument_ids: list[InstrumentId],
+    knowledge_date: date,
+    trade_date: str,
+) -> pl.DataFrame:
+    """
+    注入行业分类截面(sector_id)到当日行.
+
+    分类是截面快照(1 行/instrument),仅 merge 到当日行(trade_date 匹配),
+    历史行补 null。PIT as_of = knowledge_date(严格,非 trade_date),由 data_feed 透传。
+
+    无分类数据或无当日行时原样返回。
+    """
+    if market_data.is_empty() or not instrument_ids:
+        return market_data
+
+    classification_df = data_feed.get_classification_snapshot(
+        instrument_ids,
+        knowledge_date,
+    )
+    if classification_df.is_empty():
+        return market_data
+
+    today_mask = market_data["trade_date"] == trade_date
+    today_rows = market_data.filter(today_mask)
+    if today_rows.is_empty():
+        return market_data
+
+    history_rows = market_data.filter(~today_mask)
+    today_rows = today_rows.join(classification_df, on="instrument_id", how="left")
+
+    enriched = pl.concat([today_rows, history_rows], how="diagonal_relaxed")
+    if "trade_date" in enriched.columns:
+        enriched = enriched.sort("trade_date")
+    return enriched

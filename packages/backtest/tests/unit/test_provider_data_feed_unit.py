@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 import polars as pl
-from ditto_backtest.data_feed import ProviderBackedDataFeed
+from ditto_backtest.data_feed import ProviderBackedDataFeed, SnapshotProviders
 from ditto_data.provider import BarQuery
 from ditto_kernel.identity import InstrumentId
 
@@ -323,3 +325,141 @@ class TestProviderBackedDataFeedSourceSnapshots:
 
         snapshot_id = feed.source_snapshot_ids()[InstrumentId(1)]
         assert snapshot_id.startswith("snapshot-set:sha256:")
+
+
+class TestProviderBackedDataFeedFundamentalSnapshot:
+    """get_fundamental_snapshot — 委托注入的 fundamental_snapshot_fn（纯数据通道）."""
+
+    def test_no_fn_returns_empty_with_schema(self) -> None:
+        """未注入 fn 时返回空 DataFrame（含正确 schema），不抛错."""
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-31",
+            id_map={"000001.SZ": InstrumentId(1)},
+        )
+        df = feed.get_fundamental_snapshot([InstrumentId(1)], date(2024, 1, 2))
+        assert df.is_empty()
+        assert set(df.columns) == {"instrument_id", "roe", "net_margin", "eps"}
+
+    def test_delegates_to_injected_fn_with_correct_args(self) -> None:
+        """注入 fn 时委托调用，instrument_ids 与 as_of_date 正确透传."""
+        captured: dict[str, object] = {}
+
+        def fn(
+            instrument_ids: Sequence[InstrumentId],
+            as_of_date: date,
+        ) -> pl.DataFrame:
+            captured["instrument_ids"] = list(instrument_ids)
+            captured["as_of"] = as_of_date
+            return pl.DataFrame({"instrument_id": [1], "roe": [0.1]})
+
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-31",
+            id_map={"000001.SZ": InstrumentId(1)},
+            snapshot_providers=SnapshotProviders(fundamental=fn),
+        )
+        df = feed.get_fundamental_snapshot([InstrumentId(1)], date(2024, 6, 1))
+
+        assert df.height == 1
+        assert df["roe"][0] == 0.1
+        assert captured["as_of"] == date(2024, 6, 1)
+        assert captured["instrument_ids"] == [InstrumentId(1)]
+
+    def test_empty_instrument_ids_delegates_to_fn(self) -> None:
+        """空标的列表也委托给 fn（由 fn 决定返回空 schema）."""
+        called = {"count": 0}
+
+        def fn(
+            instrument_ids: Sequence[InstrumentId],
+            as_of_date: date,
+        ) -> pl.DataFrame:
+            called["count"] += 1
+            return pl.DataFrame(schema={"instrument_id": pl.Int64, "roe": pl.Float64})
+
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-31",
+            id_map={"000001.SZ": InstrumentId(1)},
+            snapshot_providers=SnapshotProviders(fundamental=fn),
+        )
+        df = feed.get_fundamental_snapshot([], date(2024, 6, 1))
+
+        assert df.is_empty()
+        assert called["count"] == 1
+
+
+class TestProviderBackedDataFeedClassificationSnapshot:
+    """get_classification_snapshot — 委托注入的 classification_snapshot_fn."""
+
+    def test_no_fn_returns_empty_with_schema(self) -> None:
+        """未注入 fn 时返回空 DataFrame（含 sector_id schema），不抛错."""
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-31",
+            id_map={"000001.SZ": InstrumentId(1)},
+        )
+        df = feed.get_classification_snapshot([InstrumentId(1)], date(2024, 1, 2))
+        assert df.is_empty()
+        assert set(df.columns) == {"instrument_id", "sector_id"}
+
+    def test_delegates_to_injected_fn_with_correct_args(self) -> None:
+        """注入 fn 时委托调用，instrument_ids 与 as_of_date 正确透传."""
+        captured: dict[str, object] = {}
+
+        def fn(
+            instrument_ids: Sequence[InstrumentId],
+            as_of_date: date,
+        ) -> pl.DataFrame:
+            captured["instrument_ids"] = list(instrument_ids)
+            captured["as_of"] = as_of_date
+            return pl.DataFrame({"instrument_id": [1], "sector_id": ["801010"]})
+
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-31",
+            id_map={"000001.SZ": InstrumentId(1)},
+            snapshot_providers=SnapshotProviders(classification=fn),
+        )
+        df = feed.get_classification_snapshot([InstrumentId(1)], date(2024, 6, 1))
+
+        assert df.height == 1
+        assert df["sector_id"][0] == "801010"
+        assert captured["as_of"] == date(2024, 6, 1)
+        assert captured["instrument_ids"] == [InstrumentId(1)]
+
+    def test_empty_instrument_ids_delegates_to_fn(self) -> None:
+        """空标的列表也委托给 fn（由 fn 决定返回空 schema）."""
+        called = {"count": 0}
+
+        def fn(
+            instrument_ids: Sequence[InstrumentId],
+            as_of_date: date,
+        ) -> pl.DataFrame:
+            called["count"] += 1
+            return pl.DataFrame(
+                schema={"instrument_id": pl.Int64, "sector_id": pl.Utf8},
+            )
+
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-31",
+            id_map={"000001.SZ": InstrumentId(1)},
+            snapshot_providers=SnapshotProviders(classification=fn),
+        )
+        df = feed.get_classification_snapshot([], date(2024, 6, 1))
+
+        assert df.is_empty()
+        assert called["count"] == 1

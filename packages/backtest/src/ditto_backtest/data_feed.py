@@ -8,8 +8,9 @@ ProviderBackedDataFeed 通过 DataProvider Protocol 获取数据.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
 import polars as pl
@@ -20,12 +21,53 @@ from ditto_kernel.trading import MarketSnapshot as _MarketSnapshot
 from ditto_backtest.provenance import aggregate_source_snapshot_id
 
 __all__ = [
+    "ClassificationSnapshotFn",
     "DataFeed",
+    "FundamentalSnapshotFn",
     "ProviderBackedDataFeed",
     "Slice",
+    "SnapshotProviders",
 ]
 
 _SOURCE_SNAPSHOT_ID_COLUMN = "source_snapshot_id"
+
+# 基本面快照函数类型 — backtest 只委托；PIT 查询/因子计算由 application 层闭包提供。
+# 与 ditto_application.processes.execution.fundamental_snapshot 同型（结构相等）。
+FundamentalSnapshotFn = Callable[[Sequence[InstrumentId], date], pl.DataFrame]
+
+# 分类快照函数类型 — backtest 只委托；PIT 行业查询由 application 层闭包提供。
+# 与 ditto_application.processes.execution.classification_snapshot 同型（结构相等）。
+ClassificationSnapshotFn = Callable[[Sequence[InstrumentId], date], pl.DataFrame]
+
+
+@dataclass(frozen=True)
+class SnapshotProviders:
+    """
+    ProviderBackedDataFeed 的截面快照数据通道集合.
+
+    backtest 只做数据通道委托;PIT 查询与因子/分类列预计算由 application 层
+    注入的闭包负责。各快照语义独立(基本面 vs 行业分类),分别命名。
+    """
+
+    fundamental: FundamentalSnapshotFn | None = None
+    classification: ClassificationSnapshotFn | None = None
+
+
+# get_fundamental_snapshot 无注入 fn 或无数据时返回的空 schema。
+_EMPTY_FUNDAMENTAL_SCHEMA: dict[str, type[pl.DataType]] = {
+    "instrument_id": pl.Int64,
+    "roe": pl.Float64,
+    "net_margin": pl.Float64,
+    "eps": pl.Float64,
+}
+
+# get_classification_snapshot 无注入 fn 或无数据时返回的空 schema。
+# sector_id 是行业分类代码（如申万 "801010"），供 stock_sector_rotation 结构列
+# 校验与因子中性化（neutralize_by="sector_id"）使用。
+_EMPTY_CLASSIFICATION_SCHEMA: dict[str, type[pl.DataType]] = {
+    "instrument_id": pl.Int64,
+    "sector_id": pl.Utf8,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -81,6 +123,35 @@ class DataFeed(Protocol):
 
         返回 as_of_date 之前 lookback_days 个交易日的 OHLCV 数据，
         包含 trade_date 和 instrument_id 列用于分组和排序。
+        """
+        ...
+
+    def get_fundamental_snapshot(
+        self,
+        instrument_ids: Sequence[InstrumentId],
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        获取指定标的在 as_of_date 的基本面截面快照（PIT）。
+
+        返回 schema: instrument_id, roe, net_margin, eps。
+        无数据返回空 schema DataFrame。backtest 只委托注入的 fn，
+        不含 PIT 查询/因子计算业务逻辑（由 application 层闭包提供）。
+        """
+        ...
+
+    def get_classification_snapshot(
+        self,
+        instrument_ids: Sequence[InstrumentId],
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        获取指定标的在 as_of_date 的行业分类截面快照（PIT）。
+
+        返回 schema: instrument_id, sector_id。
+        无数据返回空 schema DataFrame。backtest 只委托注入的 fn，
+        PIT 行业查询（industry_mapping）由 application 层闭包提供。
+        sector_id 供 stock_sector_rotation 结构列校验与因子中性化使用。
         """
         ...
 
@@ -194,6 +265,7 @@ class ProviderBackedDataFeed:
         end_date: str,
         id_map: dict[str, InstrumentId],
         benchmark_id: InstrumentId | None = None,
+        snapshot_providers: SnapshotProviders | None = None,
     ) -> None:
         self._provider = provider
         self._tickers = tickers
@@ -201,6 +273,7 @@ class ProviderBackedDataFeed:
         self._end_date = end_date
         self._id_map = id_map
         self._benchmark_id = benchmark_id
+        self._snapshots = snapshot_providers or SnapshotProviders()
         # Lazy-loaded caches
         self._bars_df: pl.DataFrame | None = None
         self._trading_days_cache: list[str] | None = None
@@ -343,3 +416,35 @@ class ProviderBackedDataFeed:
         )
 
         return result
+
+    def get_fundamental_snapshot(
+        self,
+        instrument_ids: Sequence[InstrumentId],
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        委托注入的 fundamental_snapshot_fn；未注入返回空 schema DataFrame.
+
+        backtest 只做数据通道委托，PIT 查询与因子列预计算由 application 层
+        注入的闭包（build_fundamental_snapshot_fn）负责。
+        """
+        fn = self._snapshots.fundamental
+        if fn is None:
+            return pl.DataFrame(schema=_EMPTY_FUNDAMENTAL_SCHEMA)
+        return fn(instrument_ids, as_of_date)
+
+    def get_classification_snapshot(
+        self,
+        instrument_ids: Sequence[InstrumentId],
+        as_of_date: date,
+    ) -> pl.DataFrame:
+        """
+        委托注入的 classification_snapshot_fn；未注入返回空 schema DataFrame.
+
+        backtest 只做数据通道委托，PIT 行业查询由 application 层注入的闭包
+        （build_classification_snapshot_fn）负责。
+        """
+        fn = self._snapshots.classification
+        if fn is None:
+            return pl.DataFrame(schema=_EMPTY_CLASSIFICATION_SCHEMA)
+        return fn(instrument_ids, as_of_date)
