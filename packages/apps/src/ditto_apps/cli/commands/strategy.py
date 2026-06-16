@@ -44,6 +44,22 @@ def _print_backtest_result(
     typer.echo(f"run_id={run_id} period={period[0]}:{period[1]} final_nav={final_nav}")
 
 
+def _parse_dataset_snapshots(items: list[str] | None) -> dict[str, str]:
+    snapshots: dict[str, str] = {}
+    for item in items or []:
+        if "=" not in item:
+            raise typer.BadParameter(
+                f"dataset snapshot must be DATASET=CHECKSUM, got {item!r}"
+            )
+        dataset, checksum = item.split("=", 1)
+        if not dataset or not checksum:
+            raise typer.BadParameter(
+                f"dataset snapshot must be DATASET=CHECKSUM, got {item!r}"
+            )
+        snapshots[dataset] = checksum
+    return snapshots
+
+
 @app.command()
 def research(
     strategy_id: str = typer.Argument(..., help="策略 ID"),
@@ -92,6 +108,61 @@ def recommend(
             allow_experimental_data=allow_experimental_data,
         )
     _print_strategy_result(result.run_id, strategy_id, trade_date, "recommendation")
+
+
+@app.command("publish-signals")
+def publish_signals(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
+    strategy_id: str = typer.Argument(..., help="策略 ID"),
+    trade_date: str = typer.Argument(..., help="交易日期 YYYY-MM-DD"),
+    version: int | None = typer.Option(None, "--version", help="策略版本"),
+    source: str = typer.Option("tushare", "--source", help="数据源名称"),
+    dataset_snapshot: list[str] | None = typer.Option(
+        None,
+        "--dataset-snapshot",
+        help="数据快照校验, 格式 DATASET=CHECKSUM, 可重复",
+    ),
+    factor: list[str] | None = typer.Option(
+        None,
+        "--factor",
+        help="信号解释中的因子 ID, 可重复",
+    ),
+    threshold: float = typer.Option(0.01, "--threshold", help="最小调仓权重"),
+    allow_experimental_data: bool = typer.Option(
+        False,
+        "--allow-experimental-data",
+        help="显式允许 experimental 数据集进入推荐态运行",
+    ),
+) -> None:
+    """运行推荐态策略并发布人工交易信号包。"""
+    config = _build_run_config(strategy_id, StrategyRunMode.RECOMMENDATION)
+    snapshots = _parse_dataset_snapshots(dataset_snapshot)
+    with create_strategy_bundle() as bundle:
+        if bundle.signal_package_publisher is None:
+            raise typer.BadParameter("SignalPackagePublisher 未配置")
+        result = bundle.strategy_facade.run_strategy_for_date_from_catalog(
+            config=config,
+            trade_date=trade_date,
+            version=version,
+            source=source,
+            allow_experimental_data=allow_experimental_data,
+        )
+        package = bundle.signal_package_publisher.publish(
+            target=result.target,
+            dataset_snapshot_ids=snapshots,
+            factor_ids=tuple(factor or ()),
+            threshold=threshold,
+        )
+    typer.echo(
+        " ".join(
+            [
+                f"run_id={package.run_id}",
+                f"strategy_id={package.strategy_id}",
+                f"signal_date={package.signal_date}",
+                f"intents={len(package.intents)}",
+                f"checksum={package.checksum}",
+            ]
+        )
+    )
 
 
 @app.command()

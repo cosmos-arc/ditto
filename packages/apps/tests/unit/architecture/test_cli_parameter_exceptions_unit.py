@@ -15,6 +15,10 @@ _APPROVED_PLR0913_NOQA_LINES: tuple[tuple[str, str], ...] = (
         "packages/apps/src/ditto_apps/cli/commands/query/fundamental.py",
         (f"def list_corporate_actions(  # noqa: PLR0913 — {_TYPER_INJECTION_REASON}"),
     ),
+    (
+        "packages/apps/src/ditto_apps/cli/commands/strategy.py",
+        f"def publish_signals(  # noqa: PLR0913 — {_TYPER_INJECTION_REASON}",
+    ),
 )
 
 
