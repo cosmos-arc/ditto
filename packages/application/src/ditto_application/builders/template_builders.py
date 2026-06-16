@@ -127,7 +127,7 @@ def build_alpha_stages(spec: StrategySpec) -> list[DecisionStage]:
         return build_etf_trend_swing_pipeline(
             build_etf_trend_swing_config(spec),
         )
-    if spec.template == "stock_selection_trend":
+    if spec.template == "stock_selection":
         config = build_stock_selection_trend_config(spec)
         validate_stock_selection_config(config)
         return build_stock_selection_trend_pipeline(config)
@@ -302,6 +302,16 @@ def build_stock_selection_trend_config(
         ),
         rebalance_freq=read_optional_str(params.get("rebalance_freq"))
         or resolve_rebalance_frequency(spec.execution.frequency),
+        winsorize_sigma=read_optional_float(
+            params.get("winsorize_sigma"),
+            field_name="params.winsorize_sigma",
+        ),
+        zscore=read_bool(
+            params.get("zscore", False),
+            field_name="params.zscore",
+        ),
+        neutralize_by=read_optional_str(params.get("neutralize_by")),
+        fusion=read_optional_str(params.get("fusion")) or "simple",
         regime_config=deserialize_regime_config(params.get("regime_config")),
     )
 

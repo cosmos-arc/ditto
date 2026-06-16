@@ -22,6 +22,7 @@ from ditto_application.processes.execution.strategy_run_process import (
     StrategyRunService,
     StrategyRunServiceConfig,
 )
+from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_apps.registry import ConfigProvider
 from ditto_backtest.data_feed import DataFeed, ProviderBackedDataFeed
 from ditto_data.di import RuntimeProvider
@@ -74,6 +75,10 @@ def _strategy_runtime_deps_provider() -> Provider:
         @provide
         def derived_query_service(self) -> DerivedQueryService:
             return MagicMock(spec=DerivedQueryService)
+
+        @provide
+        def fundamental_query_facade(self) -> FundamentalQueryFacade:
+            return MagicMock(spec=FundamentalQueryFacade)
 
     return StrategyRuntimeDepsProvider()
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import polars as pl
 import pytest
 from ditto_kernel.identity import InstrumentId
+from ditto_strategy.alpha.builtins.composite import CompositeDecisionStage
 from ditto_strategy.alpha.builtins.filtering import (
     RiskLockFilter,
     TrendFilterStage,
@@ -26,6 +27,7 @@ from ditto_strategy.alpha.templates.stock_selection_trend import (
     StockSelectionTrendConfig,
     build_stock_selection_trend_pipeline,
     get_param_constraints,
+    preprocess_factor_column,
     validate_config,
 )
 from ditto_strategy.errors import StrategySpecError
@@ -410,3 +412,377 @@ class TestPipelineE2E:
             i for i, s in enumerate(stages) if isinstance(s, RegimeAwareAllocationStage)
         )
         assert scoring_idx < aware_idx
+
+
+# ---------------------------------------------------------------------------
+# F1-#1 因子预处理增强
+# ---------------------------------------------------------------------------
+
+
+class TestPreprocessFactorColumn:
+    """preprocess_factor_column 纯函数 — winsorize/zscore/neutralize 数学性质.
+
+    语义对齐 ditto_features.expression.codegen._cs_operators(横截面算子),
+    但无 .over(time_keys):stage frame 是单日横截面,全 frame 即一个截面。
+    """
+
+    def test_no_preprocess_is_identity(self) -> None:
+        """全开关关闭时,预处理是恒等变换(值不变)."""
+        df = pl.DataFrame({"factor": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        result = df.with_columns(
+            preprocess_factor_column(
+                pl.col("factor"),
+                winsorize_sigma=None,
+                zscore=False,
+                neutralize_by=None,
+            ).alias("prepped"),
+        )
+        assert result["prepped"].to_list() == [1.0, 2.0, 3.0, 4.0, 5.0]
+
+    def test_winsorize_clips_outlier_to_sigma_bounds(self) -> None:
+        """winsorize(sigma) 将超出 mean±sigma·std 的极值截断到边界.
+
+        factor=[1,2,3,4,100], mean=22, std(ddof=1)=sqrt(1902.5)≈43.6174,
+        sigma=1 → bounds=[-21.6174, 65.6174]; 100 clipped to 65.6174。
+        """
+        df = pl.DataFrame({"factor": [1.0, 2.0, 3.0, 4.0, 100.0]})
+        result = df.with_columns(
+            preprocess_factor_column(
+                pl.col("factor"),
+                winsorize_sigma=1.0,
+                zscore=False,
+                neutralize_by=None,
+            ).alias("prepped"),
+        )
+        values = result["prepped"].to_list()
+        assert values[:4] == [1.0, 2.0, 3.0, 4.0]
+        assert values[4] == pytest.approx(65.6174, rel=1e-3)
+
+    def test_zscore_standardizes_mean_zero_std_one(self) -> None:
+        """zscore 后 mean≈0, std≈1; 中间值标准化为 0."""
+        df = pl.DataFrame({"factor": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        result = df.with_columns(
+            preprocess_factor_column(
+                pl.col("factor"),
+                winsorize_sigma=None,
+                zscore=True,
+                neutralize_by=None,
+            ).alias("prepped"),
+        )
+        prepped = result["prepped"]
+        assert prepped.mean() == pytest.approx(0.0, abs=1e-9)
+        assert prepped.std() == pytest.approx(1.0, abs=1e-9)
+        assert prepped.to_list()[2] == pytest.approx(0.0, abs=1e-9)
+
+    def test_zscore_zero_std_returns_zero(self) -> None:
+        """常数列 std=0 → zscore 返回 0.0(对齐 cs_zscore 语义)."""
+        df = pl.DataFrame({"factor": [5.0, 5.0, 5.0]})
+        result = df.with_columns(
+            preprocess_factor_column(
+                pl.col("factor"),
+                winsorize_sigma=None,
+                zscore=True,
+                neutralize_by=None,
+            ).alias("prepped"),
+        )
+        assert result["prepped"].to_list() == [0.0, 0.0, 0.0]
+
+    def test_neutralize_centers_each_group_to_zero_mean(self) -> None:
+        """按组中性化: 每组 demean 后组内均值=0.
+
+        factor=[1,3,10,20], group=["A","A","B","B"]
+        A mean=2 → [-1, 1]; B mean=15 → [-5, 5]。
+        """
+        df = pl.DataFrame(
+            {
+                "factor": [1.0, 3.0, 10.0, 20.0],
+                "industry": ["A", "A", "B", "B"],
+            },
+        )
+        result = df.with_columns(
+            preprocess_factor_column(
+                pl.col("factor"),
+                winsorize_sigma=None,
+                zscore=False,
+                neutralize_by="industry",
+            ).alias("prepped"),
+        )
+        assert result["prepped"].to_list() == [-1.0, 1.0, -5.0, 5.0]
+
+    def test_chain_winsorize_then_zscore(self) -> None:
+        """组合 winsorize+zscore: 极值先截断再标准化, std≈1."""
+        df = pl.DataFrame({"factor": [1.0, 2.0, 3.0, 4.0, 100.0]})
+        result = df.with_columns(
+            preprocess_factor_column(
+                pl.col("factor"),
+                winsorize_sigma=1.0,
+                zscore=True,
+                neutralize_by=None,
+            ).alias("prepped"),
+        )
+        prepped = result["prepped"]
+        assert prepped.std() == pytest.approx(1.0, abs=1e-9)
+        assert prepped.mean() == pytest.approx(0.0, abs=1e-9)
+
+
+class TestMultiFactorSignalStagePreprocess:
+    """MultiFactorSignalStage 预处理端到端行为."""
+
+    def test_neutralize_changes_rank_order(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """按组中性化改变横截面 rank 排序(只有非单调变换影响 rank).
+
+        factor=[10,20,1,2], group=["A","A","B","B"]
+        无中性化: rank(asc)=[3,4,1,2] → pct=[0.75,1.0,0.25,0.5]
+        中性化后: demean=[-5,5,-0.5,0.5] → rank(asc)=[1,4,2,3] → pct=[0.25,1.0,0.5,0.75]
+        """
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A1", "A2", "B1", "B2"],
+                "factor": [10.0, 20.0, 1.0, 2.0],
+                "industry": ["A", "A", "B", "B"],
+            },
+        )
+        stage_plain = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+        )
+        plain = stage_plain.process(frame, empty_context)["signal_value"].to_list()
+        assert plain == pytest.approx([0.75, 1.0, 0.25, 0.5])
+
+        stage_neutral = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+            neutralize_by="industry",
+        )
+        neutral = stage_neutral.process(frame, empty_context)["signal_value"].to_list()
+        assert neutral == pytest.approx([0.25, 1.0, 0.5, 0.75])
+
+    def test_neutralize_missing_column_raises_strategy_spec_error(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """neutralize_by 列缺失 → StrategySpecError(fail-closed)."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A", "B", "C"],
+                "factor": [10.0, 20.0, 30.0],
+            },
+        )
+        stage = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+            neutralize_by="industry",
+        )
+        with pytest.raises(StrategySpecError, match="industry"):
+            stage.process(frame, empty_context)
+
+    def test_preprocess_off_by_default_preserves_behavior(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """默认配置(无预处理)与现有 rank+加权行为一致(向后兼容)."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A", "B", "C"],
+                "factor": [10.0, 20.0, 30.0],
+            },
+        )
+        stage = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+        )
+        result = stage.process(frame, empty_context)["signal_value"].to_list()
+        assert result == pytest.approx([1.0 / 3, 2.0 / 3, 3.0 / 3])
+
+    def test_full_preprocess_chain_runs_without_leaking_temp_columns(
+        self,
+        empty_context: StrategyContext,
+    ) -> None:
+        """winsorize+zscore+neutralize 全链不报错; 临时预处理列不污染输出."""
+        frame = pl.DataFrame(
+            {
+                "instrument_id": ["A1", "A2", "B1", "B2", "B3"],
+                "factor": [1.0, 2.0, 3.0, 4.0, 100.0],
+                "industry": ["A", "A", "B", "B", "B"],
+            },
+        )
+        stage = MultiFactorSignalStage(
+            signal_factors=("factor",),
+            signal_weights=(1.0,),
+            output_column="signal_value",
+            winsorize_sigma=2.0,
+            zscore=True,
+            neutralize_by="industry",
+        )
+        result = stage.process(frame, empty_context)
+        assert "signal_value" in result.columns
+        assert result["signal_value"].dtype == pl.Float64
+        assert "_prepped_factor" not in result.columns
+
+
+class TestStockSelectionTrendConfigPreprocess:
+    """StockSelectionTrendConfig 预处理字段默认值."""
+
+    def test_default_preprocess_off(self) -> None:
+        config = StockSelectionTrendConfig()
+        assert config.winsorize_sigma is None
+        assert config.zscore is False
+        assert config.neutralize_by is None
+
+    def test_preprocess_fields_settable(self) -> None:
+        config = StockSelectionTrendConfig(
+            winsorize_sigma=3.0,
+            zscore=True,
+            neutralize_by="industry",
+        )
+        assert config.winsorize_sigma == 3.0
+        assert config.zscore is True
+        assert config.neutralize_by == "industry"
+
+
+class TestValidateConfigPreprocess:
+    """validate_config 预处理字段校验."""
+
+    def test_valid_winsorize_sigma_passes(self) -> None:
+        validate_config(StockSelectionTrendConfig(winsorize_sigma=3.0))  # no raise
+
+    def test_zero_winsorize_sigma_raises(self) -> None:
+        with pytest.raises(StrategySpecError, match="winsorize_sigma"):
+            validate_config(StockSelectionTrendConfig(winsorize_sigma=0.0))
+
+    def test_negative_winsorize_sigma_raises(self) -> None:
+        with pytest.raises(StrategySpecError, match="winsorize_sigma"):
+            validate_config(StockSelectionTrendConfig(winsorize_sigma=-1.0))
+
+    def test_empty_neutralize_by_raises(self) -> None:
+        with pytest.raises(StrategySpecError, match="neutralize_by"):
+            validate_config(StockSelectionTrendConfig(neutralize_by=""))
+
+    def test_valid_neutralize_by_passes(self) -> None:
+        validate_config(StockSelectionTrendConfig(neutralize_by="industry"))  # no raise
+
+
+class TestBuildStockSelectionTrendPipelinePreprocess:
+    """build_stock_selection_trend_pipeline 透传预处理参数到首 stage."""
+
+    def test_pipeline_passes_preprocess_to_first_stage(self) -> None:
+        config = StockSelectionTrendConfig(
+            winsorize_sigma=3.0,
+            zscore=True,
+            neutralize_by="industry",
+        )
+        stages = build_stock_selection_trend_pipeline(config)
+        assert isinstance(stages[0], MultiFactorSignalStage)
+        assert stages[0].winsorize_sigma == 3.0
+        assert stages[0].zscore is True
+        assert stages[0].neutralize_by == "industry"
+
+    def test_default_pipeline_stage_has_no_preprocess(self) -> None:
+        config = StockSelectionTrendConfig()
+        stages = build_stock_selection_trend_pipeline(config)
+        assert isinstance(stages[0], MultiFactorSignalStage)
+        assert stages[0].winsorize_sigma is None
+        assert stages[0].zscore is False
+        assert stages[0].neutralize_by is None
+
+
+# ---------------------------------------------------------------------------
+# F1-#3 多因子融合增强(simple / composite)
+# ---------------------------------------------------------------------------
+
+
+class TestStockSelectionTrendConfigFusion:
+    """StockSelectionTrendConfig fusion 字段."""
+
+    def test_default_fusion_is_simple(self) -> None:
+        assert StockSelectionTrendConfig().fusion == "simple"
+
+    def test_fusion_settable_composite(self) -> None:
+        config = StockSelectionTrendConfig(fusion="composite")
+        assert config.fusion == "composite"
+
+
+class TestValidateConfigFusion:
+    """validate_config fusion 枚举校验."""
+
+    def test_invalid_fusion_raises(self) -> None:
+        with pytest.raises(StrategySpecError, match="fusion"):
+            validate_config(StockSelectionTrendConfig(fusion="invalid"))
+
+    def test_valid_simple_passes(self) -> None:
+        validate_config(StockSelectionTrendConfig(fusion="simple"))  # no raise
+
+    def test_valid_composite_passes(self) -> None:
+        validate_config(StockSelectionTrendConfig(fusion="composite"))  # no raise
+
+
+class TestBuildStockSelectionTrendPipelineFusion:
+    """build_stock_selection_trend_pipeline fusion 分支与列命名桥接."""
+
+    def test_simple_uses_multi_factor_stage(self) -> None:
+        config = StockSelectionTrendConfig(fusion="simple")
+        stages = build_stock_selection_trend_pipeline(config)
+        assert isinstance(stages[0], MultiFactorSignalStage)
+
+    def test_composite_uses_composite_decision_stage(self) -> None:
+        config = StockSelectionTrendConfig(
+            signal_factors=("momentum", "volatility"),
+            signal_weights=(0.6, 0.4),
+            fusion="composite",
+        )
+        stages = build_stock_selection_trend_pipeline(config)
+        assert isinstance(stages[0], CompositeDecisionStage)
+
+    def test_composite_skips_scoring_stage(self) -> None:
+        """composite 已产 score,跳过 ScoringStage(列命名桥接)."""
+        config = StockSelectionTrendConfig(fusion="composite")
+        stages = build_stock_selection_trend_pipeline(config)
+        # Composite + TrendFilter + RiskLock + Select = 4(simple 是 5,多一个 Scoring)
+        assert len(stages) == 4
+        assert not any(isinstance(s, ScoringStage) for s in stages)
+
+    def test_composite_trend_filter_reads_score_column(self) -> None:
+        """composite 模式 TrendFilter 读 score(非 signal_value,桥接列命名)."""
+        config = StockSelectionTrendConfig(fusion="composite")
+        stages = build_stock_selection_trend_pipeline(config)
+        trend = next(s for s in stages if isinstance(s, TrendFilterStage))
+        assert trend.signal_column == "score"
+
+    def test_composite_sub_stages_one_per_factor_with_weights(self) -> None:
+        config = StockSelectionTrendConfig(
+            signal_factors=("momentum", "volatility", "quality"),
+            signal_weights=(0.4, 0.3, 0.3),
+            fusion="composite",
+        )
+        stages = build_stock_selection_trend_pipeline(config)
+        composite = stages[0]
+        assert isinstance(composite, CompositeDecisionStage)
+        assert len(composite.stages) == 3
+        assert composite.weights == (0.4, 0.3, 0.3)
+        for sub in composite.stages:
+            assert isinstance(sub, MultiFactorSignalStage)
+
+    def test_composite_pipeline_e2e_selects_top_k(
+        self,
+        empty_context: StrategyContext,
+        multi_factor_bundle: StrategyInputBundle,
+    ) -> None:
+        """composite 模式端到端: 融合后选 top_k,产出合法 positions."""
+        config = StockSelectionTrendConfig(
+            signal_factors=("momentum", "volatility"),
+            signal_weights=(0.6, 0.4),
+            top_k=2,
+            trend_threshold=0.0,
+            fusion="composite",
+        )
+        stages = build_stock_selection_trend_pipeline(config)
+        pipeline = StrategyPipeline(stages)
+        target = pipeline.run(empty_context, multi_factor_bundle)
+        assert len(target.positions) <= 2
