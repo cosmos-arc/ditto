@@ -12,6 +12,7 @@ from ditto_data.lineage import DataLineageRecorder
 from ditto_data.quality import QualityEngine
 from ditto_data.services.market_service import MarketService
 from ditto_data.services.metadata_service import MetadataService
+from ditto_execution.contracts import IntentDataPort, PositionDataPort
 from ditto_features.compile_cache import SQLiteCompileCache, SQLiteCompileCacheBackend
 from ditto_features.services import (
     ArtifactPersistenceService,
@@ -38,7 +39,10 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
 
 from ditto_application.processes.execution.factor_bridge import FactorBridge
 from ditto_application.processes.execution.manual_tracker import ManualTracker
+from ditto_application.processes.execution.position_reader import StoredPositionReader
 from ditto_application.processes.execution.replay_process import ReplayProcess
+from ditto_application.processes.execution.signal_package import SignalPackagePublisher
+from ditto_application.processes.execution.signal_snapshot import SignalSnapshotProcess
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.materialization.cascade_orchestrator import (
     InvalidationCascadeOrchestrator,
@@ -265,6 +269,34 @@ class AppProcessProvider(Provider):
         start_date, end_date = get_trading_calendar_range(trading_settings)
         trading_days = metadata_service.list_trading_days(start_date, end_date)
         return ManualTracker(trading_calendar=tuple(trading_days))
+
+    @provide
+    def stored_position_reader(
+        self,
+        position_port: PositionDataPort,
+    ) -> StoredPositionReader:
+        """Stored position adapter for signal package generation."""
+        return StoredPositionReader(position_port=position_port)
+
+    @provide
+    def signal_snapshot_process(
+        self,
+        position_reader: StoredPositionReader,
+    ) -> SignalSnapshotProcess:
+        """Signal snapshot process using stored manual positions."""
+        return SignalSnapshotProcess(position_reader=position_reader)
+
+    @provide
+    def signal_package_publisher(
+        self,
+        position_reader: StoredPositionReader,
+        intent_port: IntentDataPort,
+    ) -> SignalPackagePublisher:
+        """Signal package publisher backed by execution intent storage."""
+        return SignalPackagePublisher(
+            position_reader=position_reader,
+            intent_port=intent_port,
+        )
 
     @provide
     def replay_process(

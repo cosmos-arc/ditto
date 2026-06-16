@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from ditto_application.processes.execution.signal_package import SignalPackagePublisher
 from ditto_application.processes.execution.strategy_run_process import StrategyFacade
 from ditto_application.processes.execution.strategy_types import RunLifecycleService
 from ditto_application.processes.ingestion.backfill_manager import BackfillManager
@@ -61,3 +62,4 @@ class StrategyBundle:
     catalog_service: StrategyCatalogReader | None = None
     run_service: RunLifecycleService | None = None
     run_writer: StrategyRunStatusWriter | None = None
+    signal_package_publisher: SignalPackagePublisher | None = None
