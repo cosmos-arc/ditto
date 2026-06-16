@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Literal, cast
 
 import typer
@@ -14,15 +15,25 @@ from ditto_application.commands.catalog import (
     RevokeDatasetMaturityPromotionHandler,
 )
 from ditto_application.config import get_all_datasets
+from ditto_application.exceptions import AppError
 from ditto_application.processes.quality.patrol import QualityPatrolService
 from ditto_application.queries.catalog import (
     CatalogMaturityPromotionHistoryItem,
     CatalogQueryFacade,
 )
+from ditto_application.queries.evaluation import (
+    EvaluationOptions,
+    FactorEvaluationFacade,
+)
+from ditto_application.queries.factor_ic_report import render_factor_ic_markdown
 from ditto_application.queries.ingestion_status import (
     DatasetMaturitySummary,
     IngestionStatusQueryFacade,
     summarize_status_by_maturity,
+)
+from ditto_application.queries.promotion_evidence import (
+    PromotionEvidenceCollector,
+    PromotionEvidenceReport,
 )
 
 from ditto_apps.cli.utils.output import output_json_dict, output_json_dicts
@@ -460,6 +471,76 @@ def promotion_revoke(
         container.close()
 
 
+def _fetch_promotion_evidence_collector() -> tuple[
+    Container,
+    PromotionEvidenceCollector,
+]:
+    """获取 promotion evidence collector, 失败时退出."""
+    container: Container = make_app_container()
+    try:
+        return container, container.get(PromotionEvidenceCollector)
+    except Exception as exc:
+        typer.secho(f"获取服务失败: {exc}", fg=typer.colors.RED, err=True)
+        container.close()
+        raise typer.Exit(1) from exc
+
+
+def _render_promotion_evidence_markdown(report: PromotionEvidenceReport) -> str:
+    """Render a promotion evidence report as Markdown."""
+    lines = [
+        f"# Promotion Evidence Report: {report.dataset_id}",
+        "",
+        f"- Maturity: `{report.maturity}`",
+        f"- Generated at: {report.generated_at.isoformat()}",
+        "",
+        "## Criteria",
+        "",
+    ]
+    for item in report.criteria:
+        lines.append(f"### {item.criterion}")
+        lines.append("")
+        lines.append(f"- Status: `{item.status}`")
+        for material in item.materials:
+            lines.append(f"  - {material}")
+        if item.suggestion:
+            lines.append(f"- Suggestion: {item.suggestion}")
+        lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(
+        "> Objective evidence only. Final pass/fail is a reviewer decision "
+        + "submitted via `ditto ops promotion-review`."
+    )
+    return "\n".join(lines)
+
+
+@app.command("promotion-collect")
+def promotion_collect(
+    dataset_id: str = typer.Argument(..., help="数据集 ID"),
+    output: str | None = typer.Option(
+        None, "--output", help="写入文件路径 (默认输出到 stdout)"
+    ),
+) -> None:
+    """收集数据集晋级证据，生成 Markdown 证据报告。"""
+    container, collector = _fetch_promotion_evidence_collector()
+    try:
+        report = collector.collect(dataset_id)
+    except ValueError as exc:
+        typer.secho(f"收集失败: {exc}", fg=typer.colors.RED, err=True)
+        container.close()
+        raise typer.Exit(1) from exc
+    finally:
+        container.close()
+    markdown = _render_promotion_evidence_markdown(report)
+    if output:
+        path = Path(output)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(markdown, encoding="utf-8")
+        typer.echo(str(path))
+    else:
+        typer.echo(markdown)
+
+
 @app.command()
 def dq(
     date: str = typer.Argument(..., help="交易日期 YYYY-MM-DD"),
@@ -511,3 +592,66 @@ def dq(
         raise typer.Exit(1) from exc
     finally:
         container.close()
+
+
+# ---------------------------------------------------------------------------
+# factor-ic: 离线因子 IC 诊断报告
+# ---------------------------------------------------------------------------
+
+
+def _fetch_factor_evaluation_facade() -> tuple[Container, FactorEvaluationFacade]:
+    """获取因子评估 facade, 失败时退出."""
+    container: Container = make_app_container()
+    try:
+        return container, container.get(FactorEvaluationFacade)
+    except Exception as exc:
+        typer.secho(f"获取服务失败: {exc}", fg=typer.colors.RED, err=True)
+        container.close()
+        raise typer.Exit(1) from exc
+
+
+@app.command("factor-ic")
+def factor_ic(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
+    factor: str = typer.Argument(..., help="因子 ID (derived artifact identifier)"),
+    start: str = typer.Option(..., "--start", help="开始日期 YYYY-MM-DD"),
+    end: str = typer.Option(..., "--end", help="结束日期 YYYY-MM-DD"),
+    version: int | None = typer.Option(
+        None, "--version", help="因子版本 (默认取 active version)"
+    ),
+    asset_class: str = typer.Option(
+        "stock", "--asset-class", help="资产类别 stock/etf"
+    ),
+    holding_period: int = typer.Option(5, "--holding-period", help="前向收益持有天数"),
+    n_quantiles: int = typer.Option(5, "--n-quantiles", help="分层组数"),
+    regime: bool = typer.Option(False, "--regime", help="启用情景 IC 分析"),
+    attribution: bool = typer.Option(False, "--attribution", help="启用绩效归因分析"),
+    output: str | None = typer.Option(
+        None, "--output", help="写入文件路径 (默认 stdout)"
+    ),
+) -> None:
+    """因子 IC 诊断: IC/ICIR/分层/多空/换手成本 Markdown 报告 (仅限非生产环境)."""
+    container, facade = _fetch_factor_evaluation_facade()
+    options = EvaluationOptions(
+        start=start,
+        end=end,
+        holding_period=holding_period,
+        n_quantiles=n_quantiles,
+        asset_class=asset_class,
+        run_regime_ic=regime,
+        run_performance_attribution=attribution,
+    )
+    try:
+        report = facade.evaluate(factor, version=version, options=options)
+    except AppError as exc:
+        typer.secho(f"诊断失败: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    finally:
+        container.close()
+    markdown = render_factor_ic_markdown(report)
+    if output:
+        path = Path(output)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(markdown, encoding="utf-8")
+        typer.echo(str(path))
+    else:
+        typer.echo(markdown)

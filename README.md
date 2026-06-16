@@ -13,7 +13,7 @@
 - **执行层** — ExecutionPlanner + BacktestBrokerage + TradeBuilder + Reality Model（佣金/滑点/结算）
 - **组合构建** — WeightAllocator（等权/评分/波动率倒数）+ ConstraintChecker
 - **Expression DSL** — Pratt Parser 编译器，44 算子，Polars 向量化执行
-- **因子评估** — IC / ICIR / Fama-MacBeth / Regime IC / Performance Attribution
+- **因子评估** — IC / ICIR / Fama-MacBeth / Regime IC / Performance Attribution（`ditto ops factor-ic` 诊断 CLI）
 - **数据质量** — 多源校验、PIT 安全、L1-L4 检查器
 - **衍生数据** — 物化编排 + 发布安全（Shadow Diff / Certification）
 - **任务调度** — Prefect 3（摄取/回填/修补/物化/发布）

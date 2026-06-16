@@ -33,6 +33,7 @@ from ditto_application.queries.capital import CapitalQueryFacade
 from ditto_application.queries.catalog import CatalogQueryFacade
 from ditto_application.queries.commodity import CommodityQueryFacade
 from ditto_application.queries.derived import DerivedQueryFacade
+from ditto_application.queries.evaluation import FactorEvaluationFacade
 from ditto_application.queries.forward_return_service import ForwardReturnService
 from ditto_application.queries.fundamental import FundamentalQueryFacade
 from ditto_application.queries.fx import FXQueryFacade
@@ -40,6 +41,7 @@ from ditto_application.queries.ingestion_status import IngestionStatusQueryFacad
 from ditto_application.queries.macro import MacroQueryFacade
 from ditto_application.queries.market import MarketQueryFacade
 from ditto_application.queries.metadata import MetadataQueryFacade
+from ditto_application.queries.promotion_evidence import PromotionEvidenceCollector
 from ditto_application.queries.research import ResearchDatasetFacade
 from ditto_application.queries.source import SourceDataPort, SourceQueryFacade
 from ditto_application.queries.universe import UniverseQueryFacade
@@ -59,6 +61,22 @@ class AppMarketQueryProvider(Provider):
     ) -> ForwardReturnService:
         """前向收益率计算服务."""
         return ForwardReturnService(market_service=market_service)
+
+    @provide
+    def factor_evaluation_facade(
+        self,
+        derived_catalog_service: DerivedCatalogService,
+        forward_return_service: ForwardReturnService,
+        settings: DataStoreSettings,
+    ) -> FactorEvaluationFacade:
+        """因子 IC 评估 facade — 物化 artifact 读取 + 前向收益 + 评估编排."""
+        return FactorEvaluationFacade(
+            artifact_reader=DerivedArtifactReader(
+                catalog_service=derived_catalog_service,
+                artifact_root=Path(settings.data_root),
+            ),
+            forward_return_service=forward_return_service,
+        )
 
     @provide
     def derived_query_facade(
@@ -129,6 +147,14 @@ class AppMarketQueryProvider(Provider):
             maturity_promotion_history_reader=maturity_promotion_history_reader,
             source_fallback_policy_reader=catalog_source_fallback_policy_reader,
         )
+
+    @provide
+    def promotion_evidence_collector(
+        self,
+        data_catalog_reader: DataCatalogReader,
+    ) -> PromotionEvidenceCollector:
+        """Promotion evidence collector — measures dataset coverage via catalog."""
+        return PromotionEvidenceCollector(catalog_reader=data_catalog_reader)
 
     @provide
     def metadata_query_facade(

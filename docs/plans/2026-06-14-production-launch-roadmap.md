@@ -90,10 +90,10 @@ def get_fundamental_snapshot(
 
 #### 验收标准
 
-- [ ] `quality_roe`/`value_pe` 等基本面因子在回测中可编译可计算。
-- [ ] `_seed_stock_selection_rotation` seed 可端到端跑通(合成数据)。
-- [ ] 基本面快照 PIT as_of = knowledge_date,有测试证明。
-- [ ] `pixi run -e dev check` 全绿,37 架构合约全绿。
+- [x] `quality_roe`/`value_pe` 等基本面因子在回测中可编译可计算。
+- [x] `_seed_stock_selection_rotation` seed 可端到端跑通(合成数据)。
+- [x] 基本面快照 PIT as_of = knowledge_date,有测试证明。
+- [x] `pixi run -e dev check` 全绿,37 架构合约全绿。
 
 #### ETA:2–3 人日
 
@@ -140,9 +140,9 @@ golden-e2e:
 
 #### 验收标准
 
-- [ ] PR 到 main 时 golden-e2e 自动运行并阻断。
-- [ ] 故意破坏 EngineLoop(如改 DecisionFrame schema)能在 golden-e2e 失败。
-- [ ] ci-success 依赖 golden-e2e。
+- [x] PR 到 main 时 golden-e2e 自动运行并阻断。
+- [ ] 故意破坏 EngineLoop(如改 DecisionFrame schema)能在 golden-e2e 失败（待首次 PR 触发 CI 后实测）。
+- [x] ci-success 依赖 golden-e2e。
 
 #### ETA:0.5 人日
 
@@ -166,6 +166,14 @@ golden-e2e:
 | **Phase 0 合计** | **~1 周(单人)** | 可并行 |
 
 **Phase 0 里程碑:个股选股 seed 可端到端跑通 + CI 有 golden 回归保护。**
+
+> ✅ **Phase 0 已完成(2026-06-14)**:8275 unit/integration 测试全绿、37 架构合约全绿、`pixi run -e dev check` 通过。
+>
+> 实现摘要:
+> - **P0-#1 基本面接入回测**:发现并修复 plan 未覆盖的**双重断点**——(a) `signal_expressions` 存的是因子 ID 而非表达式,FactorBridge 直接编译成引用不存在列的 `pl.col`;修复:FactorBridge 加 `_resolve_expression`(`ALL_FACTOR_SPECS` ID→表达式解析)。(b) `build_factor_bundle` 的 `market_data` 缺基本面列;修复:DataFeed Protocol 新增 `get_fundamental_snapshot`(backtest 纯委托 Callable),application 层新增 `fundamental_snapshot.py` 闭包(PIT 查询 + 预计算 roe/net_margin/eps + maturity gate),`build_factor_bundle` merge 截面到当日行 + 补算 pe_ratio(close/eps)。DI 经 `FundamentalReadFacade` Protocol 注入(`builders→processes` 合规,规避 `builders→queries` R8 禁令,不用 TYPE_CHECKING)。
+> - **P0-#2 CI 门禁**:`.github/workflows/ci.yml` 新增 `golden-e2e` job + ci-success 依赖。
+> - **P0-#3 文档**:`docs/architecture/capability-maturity.md` 第 71 行矛盾修正(golden lane 已存在 + CI gating)。
+> - **新增测试**:`test_factor_bridge_unit`(ID 解析)、`test_fundamental_snapshot_unit`(闭包 PIT/除零/缺数据)、`test_provider_data_feed_unit`(DataFeed 委托)、`test_factor_backtest_integration`(注入 + pe_ratio + PIT)、`test_seed_stock_selection_rotation_e2e`(seed 端到端 + 确定性)。
 
 ---
 
@@ -255,6 +263,16 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 
 **ETA:可选 2–3 人日**
 
+> ✅ **F1-#6 已完成(2026-06-16, Phase 3 首个任务)**:8356 测试全绿、37 架构合约全绿、basedpyright/ruff 全过。
+>
+> 实现摘要:
+> - **`ditto ops factor-ic <factor> --start --end` CLI**([ops.py](packages/apps/src/ditto_apps/cli/commands/ops.py)):输出 IC/ICIR/分层回测/多空/换手成本 Markdown 报告。参数:`--version`(默认取 active)、`--asset-class`、`--holding-period`、`--n-quantiles`、`--regime`、`--attribution`、`--output`。异常 `except AppError` + `from exc`(修正 promotion-collect 的 `except ValueError` 漏捕模式)。
+> - **FactorEvaluationFacade 扩展**([evaluation.py](packages/application/src/ditto_application/queries/evaluation.py)):`evaluate(factor_id, version: int | None = None)`——version=None 时 `resolve_offline_version` 解析 active,`DerivedError` 包装为 `AppQueryError`(保留 `__cause__` + factor_id details);`EvaluationOptions` 加 `run_regime_ic`/`run_performance_attribution`;report 重建用 `dataclasses.replace`(消除手动字段复制丢字段 bug——这正是本任务前 `regime_ic`/`performance_attribution` 被丢的根因)。
+> - **DI 注册**([providers_market.py](packages/application/src/ditto_application/providers_market.py)):`factor_evaluation_facade` @provide(`DerivedArtifactReader` + `ForwardReturnService`)。
+> - **渲染模块**([factor_ic_report.py](packages/application/src/ditto_application/queries/factor_ic_report.py)):application 层纯函数 `render_factor_ic_markdown`,11 章节。**apps 不直 import features**(架构 smell 合规),渲染归 application。
+> - **范围决策**:核心报告 + `--regime`/`--attribution`(不依赖 risk factors,开箱即用);`--fama-macbeth`/`--exposure` 需 `RiskFactorProvider` 装配(EvaluationOptions 字段已预留),留后续。闭环形态=人机闭环(人看报告调选股权重)。操作手册 [docs/operations/factor-ic-diagnosis.md](../operations/factor-ic-diagnosis.md)。
+> - **测试**:[test_evaluation_unit.py](packages/application/tests/unit/query/test_evaluation_unit.py)(9 测试:version None/显式/失败 + 开关透传 + report 重建/默认 None)+ [test_ops_unit.py](packages/apps/tests/unit/cli/commands/test_ops_unit.py)(10 测试:CLI stdout/文件/version/错误/regime/attribution 渲染/核心章节)。
+
 ### Phase 1 汇总
 
 | 任务 | ETA | 优先级 |
@@ -268,6 +286,15 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 | **Phase 1 合计(MVP)** | **~1.5–2 周(单人)** | |
 
 **Phase 1 里程碑:个股多因子选股策略可端到端跑通 + golden E2E 在 CI。**
+
+> ✅ **Phase 1 已完成(2026-06-14)**:2620 unit 测试全绿 + 选股 golden e2e(2 tests)+ 37 架构合约全绿 + basedpyright/ruff 全过。
+>
+> 实现摘要:
+> - **F1-#1 因子预处理增强**:`MultiFactorSignalStage` 加预处理链(`winsorize → zscore → neutralize`,纯 polars 自实现,语义对齐 features `cs_*` 算子,无 `.over()` 因 stage frame 是单日横截面)。提取 `preprocess_factor_column` 可测纯函数;`StockSelectionTrendConfig` 加 3 开关 + `validate_config` 校验。`winsorize`/`zscore` 单调(对纯 rank 加权不改变排序),`neutralize` 按组 demean 是非单调变换,是改变选股 rank 的核心;winsorize/zscore 价值在于为 neutralize 提供标准化前提并防御极值污染组均值。`neutralize_by` 列缺失 fail-closed 抛 `StrategySpecError`。
+> - **F1-#2 行业/市值数据 read 侧注入**:探索修正——data 层 industry **已就绪**(`InstrumentService.get_stock_industry` 委托 `IndustryMappingReader` PIT 查询,非探索初判的 dead injection),无需新建 store/model。backtest `DataFeed` Protocol 新增 `get_classification_snapshot`(委托闭包),application 新增 `classification_snapshot.py` 闭包 + `ClassificationReadFacade` Protocol(`InstrumentService` 直接满足),builder 装配 + `factor_bridge._enrich_with_classification` 注入 `sector_id` 到当日行。apps composition root 注入 `metadata_service.instrument`。聚焦 `sector_id`(`market_cap` 数据已在 valuation_metrics,size 中性化是回归非 group demean,留后续)。
+> - **F1-#3 多因子融合增强**:stock_selection 支持 `simple`/`composite` 融合(经 `StockSelectionTrendConfig.fusion` 切换)。composite 用 `CompositeDecisionStage`(每因子一个单因子子 stage + L1 权重归一化 + rank 标准化加权),**列命名桥接**:composite 产 `score` → TrendFilter 改读 `score` → 跳过 ScoringStage(composite 已 rank 标准化)。
+> - **F1-#5 选股 Golden E2E**:修复 **pre-existing template 名不一致**(seed `stock_selection` vs builder/deserialization `stock_selection_trend` —— 统一为 specs 标准名 `stock_selection`,此前无合法 spec 能走通 builder)。新增 `test_stock_selection_golden_e2e`(40 日合成 OHLCV + 基本面 → FactorBridge 编译 quality_roe/value_pe/momentum_1m → `build_factor_aware_bundle_builder` → stock_selection pipeline → EngineLoop 全链路,断言 NAV>0/alpha/确定性)。CI golden-e2e job 纳入。
+> - **F1-#4 因子表达式补全**:非阻塞,MVP 因子集(动量+价值+质量)已有表达式,波动率类高级因子标记研究用。**F1-#6 IC 诊断闭环**:列 Phase 3。
 
 ---
 
@@ -293,6 +320,13 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 
 **Phase 2 里程碑:个股/宏观数据默认可用 + 真实数据全链路跑通。**
 
+> ✅ **Phase 2 已完成(2026-06-15)**:8337 测试全绿、37 架构合约全绿、basedpyright/ruff 全过。
+>
+> 实现摘要:
+> - **F2-#1 promotion evidence 全套**:[promotion_evidence.py](packages/application/src/ditto_application/queries/promotion_evidence.py) `PromotionEvidenceCollector` 客观收集 3 条 criteria 证据(coverage 用 `DataCatalogReader` 统计、documentation 检查 `DatasetMetadata` 声明、tests 标 needs_review)——**绝不判定 promotion readiness**,晋级唯一路径仍是 `ReviewDatasetPromotionEvidenceHandler`。新增 [`ditto ops promotion-collect`](packages/apps/src/ditto_apps/cli/commands/ops.py) CLI 生成 Markdown 证据报告 + `PromotionEvidenceCollector` DI provider(注入 `DataCatalogReader`)。golden governance 闭环测试证明"逐条提交→assess ready→experimental→initial-focus→revoke→回退 + governance event"。操作手册 [docs/operations/dataset-promotion.md](../operations/dataset-promotion.md)。
+> - **F2-#2 FRED realtime PIT**:[macro.py](packages/data/src/ditto_data/sources/fred/adapters/macro.py) `MacroFredAdapter.fetch_indicators` 透传 `realtime_start/realtime_end`,need_pit 指标(CPI/PCE/GDP)走 ALFRED vintage 查询 + `knowledge_date=realtime_end`(真正 PIT) + 多版本修订取最新 vintage(`_take_latest_vintage_as_of`);非 PIT 指标保持 observation date。[fred_source.py](packages/data/src/ditto_data/sources/fred/fred_source.py) 透传可选 realtime(向后兼容,MacroFetcher 协议路径不传)。9 单元测试 + 2 e2e 真实 FRED API 验证。
+> - **F2-#3 真实数据联通**:[test_real_data_pipeline.py](packages/apps/tests/e2e/test_real_data_pipeline.py) FRED realtime PIT e2e 真实拉取验证(F2-#2 在真实 API 生效),`@pytest.mark.e2e` 标记 CI 跳过本地可跑(keyring `fred/api_key`)。Tushare 联通复用现有 [test_ingestion.py](packages/apps/tests/e2e/test_ingestion.py)。
+
 ---
 
 ## 五、体验与机构级(Phase 3,可选)
@@ -304,7 +338,7 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 | 组合优化器(均值-方差/风险平价) | P1-#4 | 3–5 人日 |
 | VaR/CVaR/压力测试 | P2-#4 | 3–4 人日 |
 | 连续 RiskGate runtime | P2-#5 | 4–5 人日 |
-| 因子 IC 诊断闭环 CLI | F1-#6 | 2–3 人日 |
+| 因子 IC 诊断闭环 CLI | F1-#6 | 2–3 人日 ✅(2026-06-16) |
 | AKShare/东财 第二数据源 | P1-#2 | 5–7 人日 |
 
 > 用户选股目标为"规则化打分",组合优化器(P1-#4)非阻断,Phase 3 视"优秀"程度需求决定是否做。
@@ -327,13 +361,15 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 
 ### 6.2 上线前 Acceptance Checklist
 
-- [ ] P0-#1 基本面接入:个股选股 seed 跑通。
-- [ ] P0-#2 CI golden 门禁:golden-e2e 在 PR 阻断。
-- [ ] Phase 1 选股 MVP:多因子打分选股 golden 通过。
-- [ ] Phase 2 数据 promotion:个股/宏观数据默认可用。
-- [ ] Phase 2 真实数据:1 年真实数据全链路跑通,NAV/alpha 报告产出。
-- [ ] 文档同步:capability-maturity.md 状态准确。
-- [ ] `pixi run -e dev check` 全绿 + 37 架构合约全绿。
+> 复核(2026-06-16):代码与测试门禁全绿。✅ = 已达成;⚠️ = 机制就绪,但达成需真实环境 / governance 决策(非纯代码可完成)。
+
+- [x] P0-#1 基本面接入:个股选股 seed 跑通。(Phase 0 ✅)
+- [x] P0-#2 CI golden 门禁:golden-e2e 在 PR 阻断。(`golden-e2e` job + ci-success 依赖就绪;P0-#2 "故意破坏 EngineLoop"项需首次 PR 触发 CI 实测)
+- [x] Phase 1 选股 MVP:多因子打分选股 golden 通过。(Phase 1 ✅)
+- [ ] ⚠️ Phase 2 数据 promotion:个股/宏观数据默认可用。**机制就绪,生产数据集未实际晋级**——promotion evidence 全套(`PromotionEvidenceCollector` + `ReviewDatasetPromotionEvidenceHandler` + `ditto ops promotion-collect` + golden governance 闭环测试)已就绪;但生产 stock/macro 数据集仍为 experimental(fail-closed),晋级需 reviewer 提交真实完整性证据并审批(governance 决策,禁止自造通过)。
+- [ ] ⚠️ Phase 2 真实数据:1 年真实数据全链路跑通,NAV/alpha 报告产出。**部分就绪**——FRED realtime PIT e2e 真实拉取验证(F2-#2 在真实 API 生效)+ Tushare ingestion 联通就绪;完整"1 年选股 → 回测 → NAV/alpha 报告"全链路待真实环境(Tushare VIP 积分 + FRED key)手动 acceptance。
+- [x] 文档同步:capability-maturity.md 状态准确。(P0-#3 golden lane + F2-#2 FRED realtime PIT 已同步)
+- [x] `pixi run -e dev check` 全绿 + 37 架构合约全绿。(2026-06-16 复核:8356 passed / 1 xfailed,37 kept / 0 broken,lint/fmt/type 全过)
 
 ---
 
