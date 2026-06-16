@@ -16,6 +16,7 @@ from ditto_data.catalog.metadata import default_dataset_metadata
 from ditto_data.catalog.promotion import (
     DatasetMaturityPromotion,
     DatasetMaturityPromotionEvent,
+    DatasetMaturityPromotionRevocationReason,
     DatasetPromotionEvidence,
 )
 
@@ -77,7 +78,7 @@ class _MaturityPromotionStore:
         *,
         revoked_by: str,
         revoked_at: datetime,
-        revocation_reason: str,
+        revocation_reason: DatasetMaturityPromotionRevocationReason,
         notes: str | None = None,
     ) -> DatasetMaturityPromotionEvent:
         current = self._promotions_by_dataset.pop(dataset_id)
@@ -305,6 +306,102 @@ class TestRevokeDatasetMaturityPromotionHandler:
 
         assert store.writes == []
         assert maturity_store.writes == []
+
+
+def _review_command(
+    criterion: str,
+    index: int,
+    *,
+    passed: bool = True,
+) -> DatasetPromotionReviewCommand:
+    """Build a review command for stock_daily criterion ``index``."""
+    return DatasetPromotionReviewCommand(
+        dataset_id="stock_daily",
+        criterion=criterion,
+        evidence_uri=f"ditto://evidence/stock_daily/{index}",
+        reviewed_by="architecture-review",
+        passed=passed,
+    )
+
+
+class TestPromotionGovernanceGolden:
+    """End-to-end governance: review criteria one-by-one → promote → revoke.
+
+    Golden coverage proving the full collect→submit→assess→promote→revoke
+    loop works for a real experimental dataset's data-owned criteria.
+    """
+
+    def _build_handler(
+        self,
+        evidence_store: _PromotionEvidenceStore,
+        maturity_store: _MaturityPromotionStore,
+    ) -> ReviewDatasetPromotionEvidenceHandler:
+        return ReviewDatasetPromotionEvidenceHandler(
+            evidence_writer=evidence_store,
+            evidence_reader=evidence_store,
+            maturity_promotion_writer=maturity_store,
+            maturity_promotion_reader=maturity_store,
+            now=_now,
+        )
+
+    def test_full_lifecycle_blocked_until_all_pass_then_revokes(self) -> None:
+        metadata = default_dataset_metadata()["stock_daily"]
+        evidence_store = _PromotionEvidenceStore()
+        maturity_store = _MaturityPromotionStore()
+        handler = self._build_handler(evidence_store, maturity_store)
+        criteria = metadata.promotion_criteria
+
+        # First criterion: blocked, 2 missing, no promotion
+        first = handler.handle(_review_command(criteria[0], 0))
+        assert first.promotion_status == "blocked"
+        assert first.metadata_promoted is False
+        assert len(first.missing_criteria) == 2
+
+        # Second criterion: still blocked, 1 missing
+        second = handler.handle(_review_command(criteria[1], 1))
+        assert second.promotion_status == "blocked"
+        assert second.metadata_promoted is False
+        assert len(second.missing_criteria) == 1
+
+        # Third criterion: ready → promoted experimental→initial-focus
+        third = handler.handle(_review_command(criteria[2], 2))
+        assert third.promotion_status == "ready"
+        assert third.metadata_promoted is True
+        assert third.dataset_maturity_before == "experimental"
+        assert third.dataset_maturity_after == "initial-focus"
+        assert maturity_store.get_dataset_maturity_promotion("stock_daily") is not None
+
+        # Revoke: maturity override removed, reverts to experimental
+        revoke_handler = RevokeDatasetMaturityPromotionHandler(
+            maturity_promotion_reader=maturity_store,
+            maturity_promotion_revoker=maturity_store,
+            now=_now,
+        )
+        revoke_result = revoke_handler.handle(
+            DatasetMaturityPromotionRevokeCommand(
+                dataset_id="stock_daily",
+                revoked_by="architecture-review",
+                revocation_reason="failed_revalidation",
+            )
+        )
+        assert revoke_result.dataset_maturity_after == "experimental"
+        assert maturity_store.get_dataset_maturity_promotion("stock_daily") is None
+
+    def test_rejected_criterion_blocks_promotion(self) -> None:
+        metadata = default_dataset_metadata()["stock_daily"]
+        evidence_store = _PromotionEvidenceStore()
+        maturity_store = _MaturityPromotionStore()
+        handler = self._build_handler(evidence_store, maturity_store)
+        criteria = metadata.promotion_criteria
+
+        handler.handle(_review_command(criteria[0], 0))
+        handler.handle(_review_command(criteria[1], 1))
+        result = handler.handle(_review_command(criteria[2], 2, passed=False))
+
+        assert result.promotion_status == "blocked"
+        assert result.metadata_promoted is False
+        assert criteria[2] in result.rejected_criteria
+        assert maturity_store.get_dataset_maturity_promotion("stock_daily") is None
 
     def test_review_rejects_initial_focus_dataset_without_promotion_criteria(
         self,

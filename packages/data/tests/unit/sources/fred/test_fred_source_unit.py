@@ -98,6 +98,59 @@ class TestFredSourceMacroMethods:
         )
         assert result.height == 0
 
+    def test_fetch_macro_indicators_passes_realtime_end(self) -> None:
+        """fetch_macro_indicators 透传 realtime_end 给 adapter（启用 PIT）."""
+        mock_adapter = MagicMock()
+        mock_adapter.fetch_indicators.return_value = pl.DataFrame(
+            {"indicator_code": [], "date": []}
+        )
+
+        with patch(
+            "ditto_data.sources.fred.fred_source.MacroFredAdapter",
+            return_value=mock_adapter,
+        ):
+            source = FredSource(api_key="test_key")
+            source.fetch_macro_indicators(
+                trade_date="2024-01-15",
+                codes=["US_CPI_YOY"],
+                realtime_end="2024-01-15",
+            )
+
+        mock_adapter.fetch_indicators.assert_called_once_with(
+            codes=["US_CPI_YOY"],
+            start_date="2024-01-15",
+            end_date="2024-01-15",
+            realtime_end="2024-01-15",
+        )
+
+    def test_fetch_macro_indicators_range_passes_realtime(self) -> None:
+        """fetch_macro_indicators_range 透传 realtime_start/realtime_end."""
+        mock_adapter = MagicMock()
+        mock_adapter.fetch_indicators.return_value = pl.DataFrame(
+            {"indicator_code": [], "date": []}
+        )
+
+        with patch(
+            "ditto_data.sources.fred.fred_source.MacroFredAdapter",
+            return_value=mock_adapter,
+        ):
+            source = FredSource(api_key="test_key")
+            source.fetch_macro_indicators_range(
+                codes=["US_CPI_YOY"],
+                start_date="2024-01-01",
+                end_date="2024-01-31",
+                realtime_start="2024-01-01",
+                realtime_end="2024-01-31",
+            )
+
+        mock_adapter.fetch_indicators.assert_called_once_with(
+            codes=["US_CPI_YOY"],
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            realtime_start="2024-01-01",
+            realtime_end="2024-01-31",
+        )
+
 
 class TestFredSourceCommodityMethods:
     """Tests for FredSource commodity methods."""
