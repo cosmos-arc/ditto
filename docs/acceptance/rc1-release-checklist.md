@@ -24,6 +24,12 @@
 pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py --real-data --require-promoted --output artifacts/acceptance/rc1-report.json
 ```
 
+## Latest Evidence
+
+- Report: `artifacts/acceptance/rc1-report.json`
+- Generated at: `2026-06-17T08:05:35Z`
+- Status: `"passed": true`
+
 ## Go Criteria
 
 - The release command exits with code 0.
