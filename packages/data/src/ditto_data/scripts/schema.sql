@@ -280,8 +280,8 @@ CREATE INDEX IF NOT EXISTS idx_strategy_run_strategy_id
     ON strategy_run(strategy_id);
 CREATE INDEX IF NOT EXISTS idx_strategy_run_status
     ON strategy_run(status);
-CREATE INDEX IF NOT EXISTS idx_strategy_run_parent_run_id
-    ON strategy_run(parent_run_id);
+-- parent_run_id index is created by strategy storage migrations after
+-- legacy strategy_run tables have been upgraded with the parent_run_id column.
 
 CREATE TABLE IF NOT EXISTS strategy_run_checkpoint (
     run_id               TEXT PRIMARY KEY,

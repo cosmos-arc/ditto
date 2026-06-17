@@ -191,6 +191,34 @@ def _assert_resume_hash(*, label: str, expected: str, actual: str) -> None:
         raise AppProcessError(msg)
 
 
+def _build_step_metrics_callback() -> Callable[[str, float, bool], None] | None:
+    """Build optional Engine step metrics callback."""
+    try:
+        from ditto_platform.foundation import Metrics  # noqa: PLC0415
+    except Exception:
+        return None
+
+    def _on_step_complete(
+        step_name: str,
+        duration: float,
+        success: bool,
+    ) -> None:
+        try:
+            Metrics.backtest_step_duration.record(
+                duration,
+                {"step": step_name},
+            )
+            if not success:
+                Metrics.backtest_step_failures.add(
+                    1,
+                    {"step": step_name},
+                )
+        except AttributeError:
+            return
+
+    return _on_step_complete
+
+
 # ---------------------------------------------------------------------------
 # BacktestService
 # ---------------------------------------------------------------------------
@@ -467,32 +495,6 @@ class BacktestService:
 
             on_checkpoint = _save_checkpoint
 
-        # Step 完成回调 — 桥接到 platform Metrics
-        on_step_complete: Callable[[str, float, bool], None] | None = None
-        try:
-            from ditto_platform.foundation import (  # noqa: PLC0415
-                Metrics as _StepMetrics,
-            )
-
-            def _on_step_complete(
-                step_name: str,
-                duration: float,
-                success: bool,
-            ) -> None:
-                _StepMetrics.backtest_step_duration.record(
-                    duration,
-                    {"step": step_name},
-                )
-                if not success:
-                    _StepMetrics.backtest_step_failures.add(
-                        1,
-                        {"step": step_name},
-                    )
-
-            on_step_complete = _on_step_complete
-        except Exception:  # noqa: S110
-            pass  # Metrics 不可用时静默跳过
-
         return EngineOptions(
             event_bus=SimpleEventBus(),
             fee_model=self._options.fee_model,
@@ -504,7 +506,7 @@ class BacktestService:
             on_progress=on_progress,
             on_checkpoint=on_checkpoint,
             restore_runtime_state=self._restore_runtime_state(),
-            on_step_complete=on_step_complete,
+            on_step_complete=_build_step_metrics_callback(),
         )
 
     def _restore_runtime_state(self) -> BacktestRuntimeStateSnapshot | None:

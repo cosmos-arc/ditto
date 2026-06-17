@@ -1775,3 +1775,34 @@ class TestBacktestCheckpointPersistence:
         options = service._build_engine_options("run-no-checkpoint", MagicMock())
 
         assert options.on_checkpoint is None
+
+
+# ---------------------------------------------------------------------------
+# Tests: step metrics callback
+# ---------------------------------------------------------------------------
+
+
+class TestBacktestStepMetricsCallback:
+    """测试 BacktestService 到 platform Metrics 的可选桥接。"""
+
+    def test_step_callback_skips_unregistered_backtest_metrics(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """领域指标未注册时，step 完成回调不应影响回放/回测执行。"""
+        from ditto_platform import foundation
+
+        class MissingBacktestMetrics:
+            pass
+
+        monkeypatch.setattr(foundation, "Metrics", MissingBacktestMetrics)
+        service = _make_minimal_service()
+
+        options = service._build_engine_options(
+            "run-missing-step-metrics",
+            ExecutionAuditCollector(),
+        )
+
+        assert options.on_step_complete is not None
+        options.on_step_complete("DelayedSignalStep", 0.125, True)
+        options.on_step_complete("DelayedSignalStep", 0.125, False)

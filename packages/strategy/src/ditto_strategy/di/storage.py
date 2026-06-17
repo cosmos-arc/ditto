@@ -79,6 +79,7 @@ class StrategyStorageProvider(Provider):
         sqlite_pool: SQLitePool,
     ) -> SQLiteStrategyRunReader:
         """提供策略运行读取器."""
+        SQLiteStrategyRunWriter(sqlite_pool).init_schema()
         return SQLiteStrategyRunReader(sqlite_pool)
 
     @provide
@@ -87,6 +88,7 @@ class StrategyStorageProvider(Provider):
         sqlite_pool: SQLitePool,
     ) -> SQLiteStrategyRunCheckpointReader:
         """提供策略运行 checkpoint 读取器."""
+        SQLiteStrategyRunCheckpointWriter(sqlite_pool).init_schema()
         return SQLiteStrategyRunCheckpointReader(sqlite_pool)
 
     @provide
@@ -95,7 +97,9 @@ class StrategyStorageProvider(Provider):
         sqlite_pool: SQLitePool,
     ) -> StrategyRunWriterProtocol:
         """提供策略运行写入器."""
-        return SQLiteStrategyRunWriter(sqlite_pool)
+        writer = SQLiteStrategyRunWriter(sqlite_pool)
+        writer.init_schema()
+        return writer
 
     @provide
     def strategy_run_checkpoint_writer(
@@ -103,7 +107,9 @@ class StrategyStorageProvider(Provider):
         sqlite_pool: SQLitePool,
     ) -> StrategyRunCheckpointWriterProtocol:
         """提供策略运行 checkpoint 写入器."""
-        return SQLiteStrategyRunCheckpointWriter(sqlite_pool)
+        writer = SQLiteStrategyRunCheckpointWriter(sqlite_pool)
+        writer.init_schema()
+        return writer
 
     @provide
     def strategy_catalog_service(

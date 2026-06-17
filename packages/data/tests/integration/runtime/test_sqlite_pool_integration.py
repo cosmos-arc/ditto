@@ -105,6 +105,28 @@ class TestSQLitePool:
         ).fetchall()
         assert len(tables) > 0
 
+    def test_init_schema_tolerates_legacy_strategy_run_table(self) -> None:
+        """Shared schema init should not fail before strategy migrations run."""
+        self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
+        conn = self.pool.get_connection()
+        conn.executescript(
+            """
+            CREATE TABLE strategy_run (
+                run_id            TEXT PRIMARY KEY,
+                strategy_id       TEXT NOT NULL,
+                strategy_version  TEXT NOT NULL DEFAULT '',
+                mode              TEXT NOT NULL DEFAULT 'backtest',
+                status            TEXT NOT NULL DEFAULT 'pending',
+                started_at        TEXT NOT NULL DEFAULT '',
+                completed_at      TEXT NOT NULL DEFAULT '',
+                error_message     TEXT NOT NULL DEFAULT ''
+            );
+            """
+        )
+        conn.commit()
+
+        self.pool.init_schema()
+
     def test_init_schema_initializes_instrument_id_sequence(self) -> None:
         """Test init_schema initializes Instrument ID sequence values."""
         self.pool = SQLitePool(str(self.db_path), schema_path=self.schema_path)
