@@ -359,6 +359,12 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 | L3 真实数据联通 | Tushare 真实数据全链路 | @pytest.mark.e2e,上线前手动跑 |
 | L4 完整合成 golden | ingest→materialize→strategy→backtest | CI golden-e2e(Phase 1 目标) |
 
+### RC-1 Acceptance Gate
+
+RC-1 is the current release target for research/backtest production readiness without real broker live trading. The executable checklist lives in [RC-1 Release Checklist](../acceptance/rc1-release-checklist.md).
+
+The release is not accepted until `scripts/acceptance/rc1_real_data_acceptance.py --real-data --require-promoted` exits with code 0 and writes a passing acceptance report.
+
 ### 6.2 上线前 Acceptance Checklist
 
 > 复核(2026-06-16):代码与测试门禁全绿。✅ = 已达成;⚠️ = 机制就绪,但达成需真实环境 / governance 决策(非纯代码可完成)。
