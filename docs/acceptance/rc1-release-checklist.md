@@ -27,7 +27,7 @@ pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py --real-dat
 ## Latest Evidence
 
 - Report: `artifacts/acceptance/rc1-report.json`
-- Generated at: `2026-06-17T08:05:35Z`
+- Generated at: `2026-06-17T11:55:03Z`
 - Status: `"passed": true`
 
 ## Go Criteria
