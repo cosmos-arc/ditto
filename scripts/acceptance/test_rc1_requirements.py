@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+
 from scripts.acceptance.rc1_requirements import (
     LAUNCH_DATASETS,
     validate_maturity_status,
+    validate_maturity_status_from_stdout,
 )
 
 
@@ -56,3 +60,26 @@ def test_validate_maturity_status_accepts_promoted_fresh_dataset() -> None:
 
     assert result.ok
     assert result.failures == ()
+
+
+def test_validate_maturity_status_from_stdout_rejects_invalid_json() -> None:
+    result = validate_maturity_status_from_stdout("not json")
+
+    assert not result.ok
+    assert result.failures == ("maturity status stdout is not valid JSON",)
+
+
+def test_rc1_acceptance_script_help_runs_when_executed_directly() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/acceptance/rc1_real_data_acceptance.py",
+            "--help",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "--require-promoted" in result.stdout

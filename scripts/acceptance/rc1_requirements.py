@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import orjson
+
 LAUNCH_DATASETS: tuple[str, ...] = (
     "stock_basic",
     "stock_daily",
@@ -83,3 +85,19 @@ def validate_maturity_status(
             failures.append(f"{dataset} freshness is {freshness or 'missing'}")
 
     return RequirementValidation(ok=not failures, failures=tuple(failures))
+
+
+def validate_maturity_status_from_stdout(stdout: str) -> RequirementValidation:
+    try:
+        payload = orjson.loads(stdout)
+    except orjson.JSONDecodeError:
+        return RequirementValidation(
+            ok=False,
+            failures=("maturity status stdout is not valid JSON",),
+        )
+    if not isinstance(payload, dict):
+        return RequirementValidation(
+            ok=False,
+            failures=("maturity status stdout JSON is not an object",),
+        )
+    return validate_maturity_status(payload)
