@@ -1,6 +1,6 @@
-"""F2-#3: 真实数据联通 e2e — Tushare + FRED realtime PIT。
+"""FRED realtime PIT real-data e2e.
 
-验证生产数据源联通 + F2-#2 的 FRED realtime PIT 在真实 FRED API 生效。
+验证 FRED macro realtime PIT 语义在真实 FRED API 生效。
 
 CI 默认跳过（无 key/网络标记）；本地运行：
     pixi run -e dev pytest packages/apps/tests/e2e/test_real_data_pipeline.py -m e2e
