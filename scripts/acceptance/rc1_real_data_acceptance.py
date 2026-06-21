@@ -72,6 +72,7 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
                 "packages/apps/tests/integration/test_golden_e2e.py",
                 "packages/apps/tests/integration/test_stock_selection_golden_e2e.py",
                 "packages/apps/tests/integration/test_stock_selection_signal_package_e2e.py",
+                "packages/application/tests/integration/test_manual_signal_fill_deviation_e2e.py",
                 "-q",
                 "--no-cov",
             ],
