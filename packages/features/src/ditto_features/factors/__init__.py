@@ -16,6 +16,10 @@ from ditto_features.factors.growth import GROWTHS
 from ditto_features.factors.liquidity import LIQUIDITIES
 from ditto_features.factors.momentum import MOMENTUMS
 from ditto_features.factors.primitives import PRIMITIVES
+from ditto_features.factors.production_guard import (
+    UnsafeProductionFactorExpressionError,
+    validate_production_factor_expression,
+)
 from ditto_features.factors.quality import QUALITIES
 from ditto_features.factors.size import SIZES
 from ditto_features.factors.spec import FactorContext, FactorSpec
@@ -40,5 +44,7 @@ __all__ = [
     "VOLATILITIES",
     "FactorContext",
     "FactorSpec",
+    "UnsafeProductionFactorExpressionError",
     "validate_factor_specs",
+    "validate_production_factor_expression",
 ]

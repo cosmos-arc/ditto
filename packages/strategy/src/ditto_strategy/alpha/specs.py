@@ -9,8 +9,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import NoReturn
+from typing import NoReturn, cast
 
+from ditto_features.factors.production_guard import (
+    UnsafeProductionFactorExpressionError,
+    validate_production_factor_expression,
+)
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
@@ -292,3 +296,54 @@ class StrategySpec:
                 signal_expression_count=len(self.signal_expressions),
                 signal_weight_count=len(self.signal_weights),
             )
+
+        _validate_production_signal_expressions(
+            tags=self.tags,
+            params=self.params,
+            signal_expressions=self.signal_expressions,
+        )
+
+
+def _validate_production_signal_expressions(
+    *,
+    tags: tuple[str, ...],
+    params: dict[str, object],
+    signal_expressions: tuple[str, ...],
+) -> None:
+    if "production" not in tags:
+        return
+    materialized_columns = _materialized_factor_columns(params)
+    for expression in signal_expressions:
+        try:
+            validate_production_factor_expression(
+                expression,
+                materialized_columns=materialized_columns,
+            )
+        except UnsafeProductionFactorExpressionError as exc:
+            _raise_spec_error(
+                f"StrategySpec production factor expression is unsafe: {exc}",
+                field_name="signal_expressions",
+                reason="unsafe_production_factor_expression",
+                expression=expression,
+            )
+
+
+def _materialized_factor_columns(params: dict[str, object]) -> frozenset[str]:
+    raw = params.get("materialized_factor_columns", ())
+    if isinstance(raw, str):
+        return frozenset((raw,))
+    if isinstance(raw, tuple):
+        return _stringified_columns(cast(tuple[object, ...], raw))
+    if isinstance(raw, list):
+        return _stringified_columns(cast(list[object], raw))
+    if isinstance(raw, set):
+        return _stringified_columns(cast(set[object], raw))
+    if isinstance(raw, frozenset):
+        return _stringified_columns(cast(frozenset[object], raw))
+    return frozenset()
+
+
+def _stringified_columns(
+    values: tuple[object, ...] | list[object] | set[object] | frozenset[object],
+) -> frozenset[str]:
+    return frozenset(str(item) for item in values)

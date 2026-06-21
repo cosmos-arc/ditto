@@ -483,3 +483,37 @@ class TestStrategySpecValidation:
             signal_weights=(0.6, 0.4),
         )
         assert len(spec.signal_expressions) == len(spec.signal_weights)
+
+    def test_production_strategy_rejects_inline_nested_factor_expression(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.specs import StrategySpec
+
+        with pytest.raises(StrategySpecError, match="production factor expression"):
+            StrategySpec(
+                strategy_id="prod-stock",
+                name="Production Stock",
+                template="stock_selection",
+                universe="csi_300",
+                asset_class="stock",
+                tags=("production",),
+                signal_expressions=("cs_rank(ts_mean(market.close, 20))",),
+            )
+
+    def test_production_strategy_allows_materialized_time_series_intermediate(
+        self,
+    ) -> None:
+        from ditto_strategy.alpha.specs import StrategySpec
+
+        spec = StrategySpec(
+            strategy_id="prod-stock",
+            name="Production Stock",
+            template="stock_selection",
+            universe="csi_300",
+            asset_class="stock",
+            tags=("production",),
+            signal_expressions=("cs_rank(ts_mean_close_20)",),
+            params={"materialized_factor_columns": ("ts_mean_close_20",)},
+        )
+
+        assert spec.signal_expressions == ("cs_rank(ts_mean_close_20)",)
