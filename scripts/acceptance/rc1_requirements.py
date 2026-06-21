@@ -69,7 +69,10 @@ def validate_maturity_status(
         schema_hash = row.get("catalog_schema_hash")
         row_count = row.get("catalog_row_count")
 
-        if promotion_status not in ACCEPTED_PROMOTION_STATUSES:
+        promotion_accepted = promotion_status in ACCEPTED_PROMOTION_STATUSES or (
+            promotion_status == "not_applicable" and maturity in ACCEPTED_MATURITIES
+        )
+        if not promotion_accepted:
             failures.append(
                 f"{dataset} promotion status is {promotion_status or 'missing'}"
             )

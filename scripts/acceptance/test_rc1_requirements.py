@@ -63,6 +63,29 @@ def test_validate_maturity_status_accepts_promoted_fresh_dataset() -> None:
     assert result.failures == ()
 
 
+def test_validate_maturity_status_accepts_initial_focus_without_promotion_review() -> (
+    None
+):
+    payload = {
+        "datasets": [
+            {
+                "dataset": "etf_daily",
+                "dataset_maturity": "initial-focus",
+                "dataset_promotion_status": "not_applicable",
+                "catalog_storage_uri": "sqlite:///market.db",
+                "catalog_schema_hash": "abc",
+                "catalog_row_count": 10,
+                "catalog_freshness_status": "fresh",
+            }
+        ]
+    }
+
+    result = validate_maturity_status(payload, required_datasets=("etf_daily",))
+
+    assert result.ok
+    assert result.failures == ()
+
+
 def test_validate_maturity_status_from_stdout_rejects_invalid_json() -> None:
     result = validate_maturity_status_from_stdout("not json")
 

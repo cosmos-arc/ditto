@@ -214,7 +214,6 @@ def process_fetched_data(
     if write_result.blocked:
         return ctx.result_handler.handle_dq_blocked(dataset, trade_date, write_result)
 
-    run_list_date_inference(ctx.list_date_inference, dataset)
     run_post_ingest_hooks(
         dataset,
         trade_date,
@@ -241,6 +240,7 @@ def process_fetched_data(
         ),
         catalog_writer=ctx.catalog_writer,
     )
+    run_list_date_inference(ctx.list_date_inference, dataset)
     return result
 
 

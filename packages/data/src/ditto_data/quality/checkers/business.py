@@ -7,6 +7,21 @@ from ditto_platform.foundation import logger
 
 from ditto_data.quality.quality_types import DQIssue, DQLevel, DQSeverity
 
+RangeBound = int | float | str | None
+
+
+def _coerce_range_bound(value: object, dtype: pl.DataType) -> RangeBound:
+    if value is None or isinstance(value, int | float):
+        return value
+    if not isinstance(value, str):
+        return str(value)
+    if not dtype.is_numeric():
+        return value
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
 
 class BusinessChecker:
     """L2 business rule checker."""
@@ -140,8 +155,9 @@ class BusinessChecker:
         if not column or column not in df.columns:
             return None
 
-        min_val = rule.get("min")
-        max_val = rule.get("max")
+        dtype = df.schema[column]
+        min_val = _coerce_range_bound(rule.get("min"), dtype)
+        max_val = _coerce_range_bound(rule.get("max"), dtype)
 
         conditions: list[pl.Expr] = []
         if min_val is not None:

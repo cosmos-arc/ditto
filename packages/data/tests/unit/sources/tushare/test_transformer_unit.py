@@ -309,6 +309,52 @@ class TestTushareDataTransformer:
             },
         ]
 
+    def test_transform_fills_missing_declared_numeric_columns(self) -> None:
+        """Tushare may omit requested optional numeric columns for some issuers."""
+        input_df = pl.DataFrame(
+            {
+                "ts_code": ["000001.SZ"],
+                "end_date": ["20241231"],
+                "ann_date": ["20250315"],
+                "total_assets": [1_000.0],
+            }
+        )
+        mapping = ColumnMapping(
+            rename={"ts_code": "source_ticker"},
+            date_columns={"end_date": "%Y%m%d", "ann_date": "%Y%m%d"},
+            float_columns=["total_assets", "short_term_debt"],
+            computed_columns={
+                "report_date": pl.col("end_date"),
+                "knowledge_date": pl.col("ann_date"),
+            },
+            output_columns=(
+                "source_ticker",
+                "report_date",
+                "knowledge_date",
+                "total_assets",
+                "short_term_debt",
+            ),
+        )
+
+        result = TushareDataTransformer.transform(input_df, "balance_sheet", mapping)
+
+        assert dict(result.schema) == {
+            "source_ticker": pl.String,
+            "report_date": pl.Date,
+            "knowledge_date": pl.Date,
+            "total_assets": pl.Float64,
+            "short_term_debt": pl.Float64,
+        }
+        assert result.to_dicts() == [
+            {
+                "source_ticker": "000001.SZ",
+                "report_date": date(2024, 12, 31),
+                "knowledge_date": date(2025, 3, 15),
+                "total_assets": 1_000.0,
+                "short_term_debt": None,
+            }
+        ]
+
     def test_transform_calendar_empty(self) -> None:
         """Test transform with empty calendar DataFrame."""
         # [REVIEW] DataFrame，但有正确的 schema

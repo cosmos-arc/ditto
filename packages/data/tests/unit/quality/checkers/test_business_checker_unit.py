@@ -161,6 +161,31 @@ class TestBusinessChecker:
         assert issues[0].rule_name == "range_check"
         assert issues[0].affected_rows == 2
 
+    def test_check_range_accepts_string_numeric_bounds(self) -> None:
+        """Range bounds may arrive as strings from config/runtime payloads."""
+        df = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "value": [1.0, 2e15, -2e15],
+            }
+        )
+
+        rules = [
+            {
+                "rule": "range_check",
+                "column": "value",
+                "min": "-1e15",
+                "max": "1e15",
+                "message": "Value out of range",
+            }
+        ]
+
+        issues = self.checker.check(df, rules)
+
+        assert len(issues) == 1
+        assert issues[0].rule_name == "range_check"
+        assert issues[0].affected_rows == 2
+
     def test_check_no_zero_volume_pass(self) -> None:
         """Test no zero volume check with valid data."""
         df = pl.DataFrame(
