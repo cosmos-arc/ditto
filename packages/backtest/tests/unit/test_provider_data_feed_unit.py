@@ -157,6 +157,25 @@ class TestProviderBackedDataFeedGetSlice:
         assert bar.close == 10.2
         assert bar.is_suspended is False
 
+    def test_get_slice_accepts_date_typed_trade_date(self) -> None:
+        """Parquet 读出的 Date 型 trade_date 应可用字符串日期切片。"""
+        bars = _make_bars_df(instrument_id=1, dates=["2026-03-01"]).with_columns(
+            pl.col("trade_date").str.to_date()
+        )
+        schedule = _make_schedule_df(["2026-03-01"])
+        feed = ProviderBackedDataFeed(
+            provider=_StubProvider(bars_df=bars, schedule_df=schedule),
+            tickers=("000001.SZ",),
+            start_date="2026-03-01",
+            end_date="2026-03-01",
+            id_map={"000001.SZ": InstrumentId(1)},
+        )
+
+        result = feed.get_slice("2026-03-01")
+
+        assert InstrumentId(1) in result.bars
+        assert result.bars[InstrumentId(1)].close == 10.2
+
     def test_get_slice_multi_instrument(self) -> None:
         """多标的切片."""
         bars1 = _make_bars_df(instrument_id=1, dates=["2026-03-01"])
