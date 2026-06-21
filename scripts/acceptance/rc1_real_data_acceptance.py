@@ -103,6 +103,7 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
                     "dev",
                     "pytest",
                     "packages/apps/tests/e2e/test_real_data_pipeline.py",
+                    "packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py",
                     "-m",
                     "e2e",
                     "--no-cov",
