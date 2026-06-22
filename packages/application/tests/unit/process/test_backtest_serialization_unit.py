@@ -269,6 +269,25 @@ class TestSerializeReportMinimal:
 
         assert data["strategy_promotion"] == promotion
 
+    def test_json_contains_risk_report_when_provided(self) -> None:
+        report = _make_report(with_trades=False, with_fills=False)
+        risk_report = {
+            "concentration": {"max_weight": 0.40, "top_5_weight": 1.0},
+            "industry_exposure": {"technology": 0.65, "finance": 0.35},
+            "benchmark_active_weight": {
+                "total_abs_active_weight": 0.80,
+                "active_weights": {"1": 0.10, "2": 0.05, "4": -0.40},
+            },
+            "drawdown": {"max_drawdown": -0.0975},
+            "tail_risk": {"var_95": -0.05, "cvar_95": -0.05},
+            "stress_scenario_returns": {"market_down": -0.10, "sector_down": -0.13},
+        }
+
+        json_bytes, _ = serialize_report(report, risk_report=risk_report)
+        data = orjson.loads(json_bytes)
+
+        assert data["risk_report"] == risk_report
+
     def test_returns_nav_and_portfolio_stats_parquet(self) -> None:
         report = _make_report(with_trades=False, with_fills=False)
         _, parquet_tables = serialize_report(report)

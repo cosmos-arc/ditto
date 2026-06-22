@@ -194,6 +194,25 @@ class TestWriteBacktestArtifacts:
         assert result["backtest_report"].name == "backtest_report.json"
 
     @patch("ditto_application.processes.execution.strategy_input.serialize_report")
+    def test_passes_risk_report_to_serializer(
+        self,
+        mock_serialize_report: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """risk_report block is forwarded into the report JSON serializer."""
+        report = _make_report()
+        risk_report = {"concentration": {"max_weight": 0.4}}
+        mock_serialize_report.return_value = _mock_serialize_report()
+
+        write_backtest_artifacts(
+            report,
+            output_dir=tmp_path / "run-001",
+            risk_report=risk_report,
+        )
+
+        assert mock_serialize_report.call_args.kwargs["risk_report"] == risk_report
+
+    @patch("ditto_application.processes.execution.strategy_input.serialize_report")
     def test_creates_output_dir_when_specified(
         self,
         mock_serialize_report: MagicMock,

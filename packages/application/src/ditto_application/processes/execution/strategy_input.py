@@ -60,7 +60,7 @@ def enrich_record_with_symbol(
     return d
 
 
-def write_backtest_artifacts(
+def write_backtest_artifacts(  # noqa: PLR0913
     report: BacktestReport,
     output_dir: Path | None = None,
     manifest: RunManifest | None = None,
@@ -69,6 +69,7 @@ def write_backtest_artifacts(
     rebalance_freq: str = "daily",
     resume_provenance: Mapping[str, object] | None = None,
     strategy_promotion: Mapping[str, object] | None = None,
+    risk_report: Mapping[str, object] | None = None,
 ) -> dict[str, Path]:
     """
     将 BacktestReport 序列化到磁盘，返回产物文件路径映射.
@@ -82,6 +83,7 @@ def write_backtest_artifacts(
         rebalance_freq: 调仓频率，写入 JSON 供 replay 恢复配置.
         resume_provenance: 可选 checkpoint 恢复来源证据，写入报告 JSON.
         strategy_promotion: 可选策略晋级证据 block，写入报告 JSON.
+        risk_report: 可选最小 launch risk report block，写入报告 JSON.
 
     Returns:
         产物类型 → 文件路径的映射，至少包含 ``backtest_report`` 条目.
@@ -99,6 +101,7 @@ def write_backtest_artifacts(
         manifest=manifest,
         resume_provenance=resume_provenance,
         strategy_promotion=strategy_promotion,
+        risk_report=risk_report,
     )
     atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
     for name, df in parquet_tables.items():
