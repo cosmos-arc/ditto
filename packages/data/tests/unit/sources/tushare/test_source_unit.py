@@ -414,6 +414,109 @@ class TestTushareSourceStockBasic:
             },
         ]
 
+    def test_fetch_stock_basic_normalizes_mixed_delist_date_types(
+        self,
+        respx_mock,
+    ) -> None:
+        """Mixed null/string delist dates from status batches should concat cleanly."""
+        responses = [
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": [
+                            [
+                                "000001.SZ",
+                                "000001",
+                                "平安银行",
+                                "SZSE",
+                                "19910403",
+                                None,
+                                "L",
+                            ]
+                        ],
+                    },
+                },
+            ),
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": [
+                            [
+                                "000002.SZ",
+                                "000002",
+                                "万科A",
+                                "SZSE",
+                                "19910129",
+                                "20240101",
+                                "D",
+                            ]
+                        ],
+                    },
+                },
+            ),
+            httpx.Response(
+                200,
+                json={
+                    "code": 0,
+                    "msg": None,
+                    "data": {
+                        "fields": [
+                            "ts_code",
+                            "symbol",
+                            "name",
+                            "exchange",
+                            "list_date",
+                            "delist_date",
+                            "list_status",
+                        ],
+                        "items": [],
+                    },
+                },
+            ),
+        ]
+        respx_mock.post("http://api.tushare.pro").mock(side_effect=responses)
+
+        source = TushareSource(settings=_settings())
+        result = source.fetch_stock_basic()
+
+        assert dict(result.schema) == {
+            "source_ticker": pl.String,
+            "ticker": pl.String,
+            "name": pl.String,
+            "exchange": pl.String,
+            "list_date": pl.Date,
+            "delist_date": pl.Date,
+            "list_status": pl.String,
+        }
+        assert result.select("source_ticker", "delist_date").to_dicts() == [
+            {"source_ticker": "000001.SZ", "delist_date": None},
+            {"source_ticker": "000002.SZ", "delist_date": date(2024, 1, 1)},
+        ]
+
     def test_fetch_stock_basic_empty_response(self, respx_mock) -> None:
         """Test fetch_stock_basic handles empty response."""
 
