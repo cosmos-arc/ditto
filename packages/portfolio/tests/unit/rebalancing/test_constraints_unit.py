@@ -7,9 +7,13 @@ import pytest
 from ditto_portfolio.rebalancing.constraints import (
     ConstraintChecker,
     ConstraintStage,
+    IndustryMaxWeightConstraint,
+    LiquidityConstraint,
     MaxPositionsConstraint,
+    MaxTurnoverConstraint,
     MaxWeightConstraint,
     MinWeightConstraint,
+    TradabilityConstraint,
 )
 
 # ---------------------------------------------------------------------------
@@ -135,6 +139,121 @@ class TestConstraintChecker:
         reason_text = " ".join(reasons)
         assert "max_w" in reason_text
         assert "max_pos" in reason_text
+
+
+# ---------------------------------------------------------------------------
+# Launch portfolio controls
+# ---------------------------------------------------------------------------
+
+
+class TestLaunchPortfolioControls:
+    def test_industry_max_weight_caps_available_industry_exposure(self) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3, 4],
+                "industry": ["tech", "tech", "finance", None],
+                "weight": [0.30, 0.25, 0.20, 0.10],
+            },
+        )
+
+        checker = ConstraintChecker(
+            constraints=[
+                IndustryMaxWeightConstraint(
+                    max_industry_weight=0.40,
+                    industry_column="industry",
+                ),
+            ],
+        )
+
+        result = checker.check(frame)
+        weights = _weights_dict(result)
+
+        assert weights[1] == pytest.approx(0.30 / 0.55 * 0.40)
+        assert weights[2] == pytest.approx(0.25 / 0.55 * 0.40)
+        assert weights[3] == pytest.approx(0.20)
+        assert weights[4] == pytest.approx(0.10)
+        tech_weight = result.filter(pl.col("industry") == "tech")["weight"].sum()
+        assert tech_weight == pytest.approx(0.40)
+        assert "max_industry_weight" in " ".join(result["reason_codes"][0])
+
+    def test_minimum_liquidity_filter_zeros_illiquid_positions(self) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "weight": [0.40, 0.35, 0.25],
+                "avg_daily_turnover": [20_000_000.0, 4_000_000.0, None],
+            },
+        )
+
+        checker = ConstraintChecker(
+            constraints=[
+                LiquidityConstraint(
+                    min_liquidity=5_000_000.0,
+                    liquidity_column="avg_daily_turnover",
+                ),
+            ],
+        )
+
+        result = checker.check(frame)
+        weights = _weights_dict(result)
+
+        assert weights[1] == pytest.approx(0.40)
+        assert weights[2] == pytest.approx(0.0)
+        assert weights[3] == pytest.approx(0.0)
+        assert "min_liquidity" in " ".join(result["reason_codes"][0])
+
+    def test_tradability_excludes_st_and_suspended_instruments(self) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3, 4],
+                "weight": [0.30, 0.25, 0.20, 0.15],
+                "is_st": [False, True, False, False],
+                "is_suspended": [False, False, True, False],
+            },
+        )
+
+        checker = ConstraintChecker(constraints=[TradabilityConstraint()])
+
+        result = checker.check(frame)
+        weights = _weights_dict(result)
+
+        assert weights[1] == pytest.approx(0.30)
+        assert weights[2] == pytest.approx(0.0)
+        assert weights[3] == pytest.approx(0.0)
+        assert weights[4] == pytest.approx(0.15)
+        reason_text = " ".join(result["reason_codes"][0])
+        assert "st_exclusion" in reason_text
+        assert "suspended_exclusion" in reason_text
+
+    def test_max_turnover_limits_changes_from_previous_holdings(self) -> None:
+        frame = pl.DataFrame(
+            {
+                "instrument_id": [1, 2, 3],
+                "weight": [0.50, 0.20, 0.30],
+            },
+        )
+
+        checker = ConstraintChecker(
+            constraints=[
+                MaxTurnoverConstraint(
+                    max_turnover=0.20,
+                    previous_weights={1: 0.20, 2: 0.40, 3: 0.40},
+                ),
+            ],
+        )
+
+        result = checker.check(frame)
+        weights = _weights_dict(result)
+
+        assert weights[1] == pytest.approx(0.30)
+        assert weights[2] == pytest.approx(0.3333333333333333)
+        assert weights[3] == pytest.approx(0.3666666666666667)
+        turnover = sum(
+            abs(weights[iid] - previous)
+            for iid, previous in {1: 0.20, 2: 0.40, 3: 0.40}.items()
+        )
+        assert turnover == pytest.approx(0.20)
+        assert "max_turnover" in " ".join(result["reason_codes"][0])
 
 
 # ---------------------------------------------------------------------------
