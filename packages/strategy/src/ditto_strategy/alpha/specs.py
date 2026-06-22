@@ -11,14 +11,14 @@ import re
 from dataclasses import dataclass, field
 from typing import NoReturn, cast
 
-from ditto_features.factors.production_guard import (
-    UnsafeProductionFactorExpressionError,
-    validate_production_factor_expression,
-)
 from ditto_kernel.order import OrderType
 from ditto_kernel.strategy import ImpactModel
 from ditto_kernel.trading import DEFAULT_COMMISSION_RATE
 
+from ditto_strategy.alpha.production_guard import (
+    UnsafeProductionFactorExpressionError,
+    validate_production_factor_expression,
+)
 from ditto_strategy.errors import StrategySpecError
 
 __all__ = [
