@@ -24,6 +24,11 @@
   → 报告(NAV + alpha + 交易明细)
 ```
 
+> **2026-06-21 hard-gate 更新**:最终上线定义已收紧为 RC acceptance
+> `--real-data --require-promoted` 通过。2026-06-14/2026-06-16 的
+> `pixi run -e dev check`、synthetic golden 与单项真实数据联通结果保留为历史工程证据,
+> 但已被硬门禁验收口径取代,不得再描述为最终发布证明。
+
 ### 1.2 核心原则
 
 1. **先解阻、后增强、再体验**——P0 阻断不解决,后续都是空中楼阁。
@@ -361,15 +366,23 @@ raw_factor → cs_winsorize(3σ) → cs_zscore → (中性化,可选) → rank �
 
 ### 6.2 上线前 Acceptance Checklist
 
-> 复核(2026-06-16):代码与测试门禁全绿。✅ = 已达成;⚠️ = 机制就绪,但达成需真实环境 / governance 决策(非纯代码可完成)。
+> 复核(2026-06-21):2026-06-16 的代码与测试门禁全绿记录保留为历史证据;
+> 最终上线以 hard-gate RC acceptance 为准。✅ = 已达成;⚠️ = 机制就绪,
+> 但达成需真实环境 / governance 决策(非纯代码可完成);🔒 = 发布硬门禁。
 
 - [x] P0-#1 基本面接入:个股选股 seed 跑通。(Phase 0 ✅)
 - [x] P0-#2 CI golden 门禁:golden-e2e 在 PR 阻断。(`golden-e2e` job + ci-success 依赖就绪;P0-#2 "故意破坏 EngineLoop"项需首次 PR 触发 CI 实测)
 - [x] Phase 1 选股 MVP:多因子打分选股 golden 通过。(Phase 1 ✅)
-- [ ] ⚠️ Phase 2 数据 promotion:个股/宏观数据默认可用。**机制就绪,生产数据集未实际晋级**——promotion evidence 全套(`PromotionEvidenceCollector` + `ReviewDatasetPromotionEvidenceHandler` + `ditto ops promotion-collect` + golden governance 闭环测试)已就绪;但生产 stock/macro 数据集仍为 experimental(fail-closed),晋级需 reviewer 提交真实完整性证据并审批(governance 决策,禁止自造通过)。
-- [ ] ⚠️ Phase 2 真实数据:1 年真实数据全链路跑通,NAV/alpha 报告产出。**部分就绪**——FRED realtime PIT e2e 真实拉取验证(F2-#2 在真实 API 生效)+ Tushare ingestion 联通就绪;完整"1 年选股 → 回测 → NAV/alpha 报告"全链路待真实环境(Tushare VIP 积分 + FRED key)手动 acceptance。
+- [ ] 🔒 Launch dataset hard gate:14 个必需数据集(`stock_basic`/`stock_daily`/`stock_status`/`balance_sheet`/`income_statement`/`cash_flow`/`valuation_metrics`/`etf_basic`/`etf_daily`/`index_basic`/`index_daily`/`adj_factor`/`fund_adj`/`macro_indicators`)必须 maturity 达 `initial-focus` 或 `stable`,promotion status 达 `ready`/`promoted` 或合规 `not_applicable`,并具备 catalog storage URI、schema hash、row count、fresh freshness。
+- [ ] 🔒 Phase 2 数据 promotion:production stock/macro launch 数据集不得以 experimental/blocked 状态发布。promotion evidence 全套(`PromotionEvidenceCollector` + `ReviewDatasetPromotionEvidenceHandler` + `ditto ops promotion-collect` + golden governance 闭环测试)已就绪;最终通过需 reviewer 提交真实完整性证据并审批(governance 决策,禁止自造通过)。
+- [ ] 🔒 Phase 2 真实数据:真实环境必须跑通 `packages/apps/tests/e2e/test_real_data_pipeline.py` 与 `packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py`,覆盖 FRED macro PIT 与 Tushare stock/ETF/fundamental/valuation/industry ingestion。凭证不可用的本地 skip 结果不得作为发布证明。
+- [ ] 🔒 手工信号闭环:catalog-backed stock selection 必须产出 ranked candidates、target weights、reason payload 和可读取 signal package;手工 fill 后必须重算 position 并产出 deviation report。
+- [ ] 🔒 生产因子 guard:production stock-selection factors 必须经 `packages/features/tests/unit/test_production_factor_guard_unit.py` 覆盖;unsafe cross-sectional/time-series nesting 必须 fail closed,研究因子不得绕过 production guard。
 - [x] 文档同步:capability-maturity.md 状态准确。(P0-#3 golden lane + F2-#2 FRED realtime PIT 已同步)
-- [x] `pixi run -e dev check` 全绿 + 37 架构合约全绿。(2026-06-16 复核:8356 passed / 1 xfailed,37 kept / 0 broken,lint/fmt/type 全过)
+- [x] 历史工程门禁:`pixi run -e dev check` 全绿 + 37 架构合约全绿。(2026-06-16 复核:8356 passed / 1 xfailed,37 kept / 0 broken,lint/fmt/type 全过;已被 2026-06-21 hard-gate acceptance 取代为最终发布口径)
+- [ ] 🔒 最终 RC acceptance:
+  `pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py --real-data --require-promoted --output artifacts/acceptance/rc1-report.json`
+  必须返回 0,且报告中 `passed == true`、`business_failures == []`。
 
 ---
 
