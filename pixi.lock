@@ -2580,9 +2580,8 @@ packages:
 - pypi: ./packages/strategy
   name: ditto-strategy
   version: 0.1.0
-  sha256: 2ce8a938e6acf6ccf026405133c29a4e00f523a884f14534f0681fdf76ef393f
+  sha256: 2a88e864d8eca02b1a9da5a78f3d320a68bfcc6375dde8502b07d4a1740f5de6
   requires_dist:
-  - ditto-features
   - ditto-kernel
   - ditto-platform
   - dishka
