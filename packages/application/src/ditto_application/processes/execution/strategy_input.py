@@ -68,6 +68,7 @@ def write_backtest_artifacts(
     *,
     rebalance_freq: str = "daily",
     resume_provenance: Mapping[str, object] | None = None,
+    strategy_promotion: Mapping[str, object] | None = None,
 ) -> dict[str, Path]:
     """
     将 BacktestReport 序列化到磁盘，返回产物文件路径映射.
@@ -80,6 +81,7 @@ def write_backtest_artifacts(
             ``instrument_symbol`` 展示字段.
         rebalance_freq: 调仓频率，写入 JSON 供 replay 恢复配置.
         resume_provenance: 可选 checkpoint 恢复来源证据，写入报告 JSON.
+        strategy_promotion: 可选策略晋级证据 block，写入报告 JSON.
 
     Returns:
         产物类型 → 文件路径的映射，至少包含 ``backtest_report`` 条目.
@@ -96,6 +98,7 @@ def write_backtest_artifacts(
         rebalance_freq=rebalance_freq,
         manifest=manifest,
         resume_provenance=resume_provenance,
+        strategy_promotion=strategy_promotion,
     )
     atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
     for name, df in parquet_tables.items():

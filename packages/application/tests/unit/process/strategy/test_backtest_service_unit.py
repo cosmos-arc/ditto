@@ -447,6 +447,105 @@ class TestArtifactPersistence:
         assert call_arg.metadata["pit_time_column"] == "knowledge_date"
         assert call_arg.metadata["unsafe_time_policy"] == ""
 
+    @patch.object(
+        EngineLoop,
+        "run",
+        return_value=_make_engine_result(
+            manifest=RunManifest(
+                run_id="run-candidate",
+                strategy_id="stock-selector",
+                strategy_version="2026.06",
+                mode=RunMode.BACKTEST,
+                created_at="2026-06-21T10:00:00Z",
+                input_ref_details=(
+                    InputRef(
+                        instrument_id=InstrumentId(510300),
+                        data_hash="sha256:stock-daily",
+                        date_range=("2026-01-01", "2026-06-21"),
+                        source="catalog://stock_daily",
+                        source_snapshot_id="catalog-snap-20260621",
+                    ),
+                ),
+                parameter_overrides=("top_k=20", "max_weight=0.08"),
+                config_hash="config-sha",
+                engine_version="0.2.0",
+                spec_hash="spec-sha",
+            ),
+        ),
+    )
+    @patch(
+        "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
+        return_value={
+            "backtest_report": Path("/tmp/ditto/run-candidate/backtest_report.json"),
+        },
+    )
+    @patch("ditto_application.processes.execution.backtest_process.build_report")
+    def test_run_persists_strategy_promotion_artifact_contract(
+        self,
+        mock_build_report: MagicMock,
+        mock_write_artifacts: MagicMock,
+        mock_engine_run: MagicMock,
+    ) -> None:
+        """Production-candidate reports should carry promotion artifact evidence."""
+        fake_report = MagicMock(spec=BacktestReport)
+        fake_report.run_id = "run-candidate"
+        fake_report.final_nav = 1_230_000.0
+        fake_report.period = ("2026-01-01", "2026-06-21")
+        fake_report.initial_cash = 1_000_000.0
+        fake_report.aggregated_trade_stats = MagicMock(total_trades=15)
+        fake_report.alpha_stats = MagicMock(
+            sharpe_ratio=1.8,
+            max_drawdown=-0.04,
+            annualized_return=0.23,
+            net_return_after_cost=0.21,
+            total_fees=128.0,
+            cost_drag=0.02,
+        )
+        fake_report.risk_log = ()
+        fake_report.pre_trade_log = ()
+        mock_build_report.return_value = fake_report
+
+        mock_artifact = MagicMock()
+        config = _make_service_config(
+            strategy_id="stock-selector",
+            strategy_version="2026.06",
+            run_id="run-candidate",
+            benchmark_id=InstrumentId(3_000_001),
+            code_version="git:abc123",
+            factor_report_refs=("factor://quality_roe/v3",),
+            recommendation_status="candidate",
+        )
+        service = _make_minimal_service(
+            config=config,
+            artifact_service=mock_artifact,
+        )
+
+        service.run()
+
+        artifact = mock_artifact.save_artifact.call_args.args[0]
+        promotion = artifact.metadata["strategy_promotion"]
+        assert promotion["strategy_id"] == "stock-selector"
+        assert promotion["strategy_version"] == "2026.06"
+        assert promotion["code_version"] == "git:abc123"
+        assert promotion["data_catalog_identities"] == [
+            {
+                "instrument_id": 510300,
+                "source": "catalog://stock_daily",
+                "source_snapshot_id": "catalog-snap-20260621",
+                "data_hash": "sha256:stock-daily",
+                "date_range": ["2026-01-01", "2026-06-21"],
+            }
+        ]
+        assert promotion["parameter_hash"].startswith("sha256:")
+        assert promotion["benchmark"] == 3_000_001
+        assert promotion["cost_model"]["total_fees"] == 128.0
+        assert promotion["cost_model"]["cost_drag"] == 0.02
+        assert promotion["backtest_metrics"]["final_nav"] == 1_230_000.0
+        assert promotion["backtest_metrics"]["sharpe_ratio"] == 1.8
+        assert promotion["factor_report_refs"] == ["factor://quality_roe/v3"]
+        assert promotion["recommendation_status"] == "candidate"
+        assert mock_write_artifacts.call_args.kwargs["strategy_promotion"] == promotion
+
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
         "ditto_application.processes.execution.backtest_process.write_backtest_artifacts",
