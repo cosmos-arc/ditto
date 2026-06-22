@@ -164,7 +164,7 @@ class BacktestServiceConfig:
                 "recommendation_status must be one of "
                 f"{sorted(_ALLOWED_RECOMMENDATION_STATUSES)}"
             )
-            raise ValueError(msg)
+            raise AppProcessError(msg)
 
 
 @dataclass(frozen=True)

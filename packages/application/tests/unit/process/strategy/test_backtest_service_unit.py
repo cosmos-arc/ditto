@@ -544,7 +544,10 @@ class TestArtifactPersistence:
         assert promotion["backtest_metrics"]["sharpe_ratio"] == 1.8
         assert promotion["factor_report_refs"] == ["factor://quality_roe/v3"]
         assert promotion["recommendation_status"] == "candidate"
-        assert mock_write_artifacts.call_args.kwargs["strategy_promotion"] == promotion
+        assert (
+            mock_write_artifacts.call_args.kwargs["options"].strategy_promotion
+            == promotion
+        )
 
     @patch.object(EngineLoop, "run", return_value=_make_engine_result())
     @patch(
@@ -600,7 +603,7 @@ class TestArtifactPersistence:
         service.run()
 
         mock_write_artifacts.assert_called_once()
-        assert mock_write_artifacts.call_args.kwargs["resume_provenance"] == {
+        assert mock_write_artifacts.call_args.kwargs["options"].resume_provenance == {
             "from_run_id": "run-original",
             "checkpoint_trade_date": "2025-01-31",
             "checkpoint_completed_days": 21,

@@ -10,7 +10,7 @@ from __future__ import annotations
 import dataclasses
 import tempfile
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import orjson
@@ -31,6 +31,7 @@ from ditto_application.processes.execution.backtest_serialization import (
 )
 
 __all__ = [
+    "BacktestArtifactWriteOptions",
     "StrategyInputAssembler",
     "enrich_record_with_symbol",
     "write_backtest_artifacts",
@@ -43,6 +44,16 @@ __all__ = [
 
 
 _AuditRecord = RiskScanRecord | PreTradeDecisionRecord
+
+
+@dataclass(frozen=True)
+class BacktestArtifactWriteOptions:
+    """Optional report blocks and serialization settings for backtest artifacts."""
+
+    rebalance_freq: str = "daily"
+    resume_provenance: Mapping[str, object] | None = None
+    strategy_promotion: Mapping[str, object] | None = None
+    risk_report: Mapping[str, object] | None = None
 
 
 def enrich_record_with_symbol(
@@ -60,16 +71,13 @@ def enrich_record_with_symbol(
     return d
 
 
-def write_backtest_artifacts(  # noqa: PLR0913
+def write_backtest_artifacts(
     report: BacktestReport,
     output_dir: Path | None = None,
     manifest: RunManifest | None = None,
     display_map: dict[InstrumentId, str] | None = None,
     *,
-    rebalance_freq: str = "daily",
-    resume_provenance: Mapping[str, object] | None = None,
-    strategy_promotion: Mapping[str, object] | None = None,
-    risk_report: Mapping[str, object] | None = None,
+    options: BacktestArtifactWriteOptions | None = None,
 ) -> dict[str, Path]:
     """
     将 BacktestReport 序列化到磁盘，返回产物文件路径映射.
@@ -80,10 +88,7 @@ def write_backtest_artifacts(  # noqa: PLR0913
         manifest: 运行清单（如提供则写出 manifest.json 并回填 artifacts）.
         display_map: InstrumentId → standard_ticker 映射，用于在审计日志中注入
             ``instrument_symbol`` 展示字段.
-        rebalance_freq: 调仓频率，写入 JSON 供 replay 恢复配置.
-        resume_provenance: 可选 checkpoint 恢复来源证据，写入报告 JSON.
-        strategy_promotion: 可选策略晋级证据 block，写入报告 JSON.
-        risk_report: 可选最小 launch risk report block，写入报告 JSON.
+        options: 可选报告扩展块与序列化设置，写入报告 JSON.
 
     Returns:
         产物类型 → 文件路径的映射，至少包含 ``backtest_report`` 条目.
@@ -93,15 +98,16 @@ def write_backtest_artifacts(  # noqa: PLR0913
         output_dir = Path(tempfile.gettempdir()) / "ditto" / report.run_id
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    write_options = options or BacktestArtifactWriteOptions()
 
     # 序列化报告（纯计算在 Engine）+ 文件写入（App 层职责）
     json_bytes, parquet_tables = serialize_report(
         report,
-        rebalance_freq=rebalance_freq,
+        rebalance_freq=write_options.rebalance_freq,
         manifest=manifest,
-        resume_provenance=resume_provenance,
-        strategy_promotion=strategy_promotion,
-        risk_report=risk_report,
+        resume_provenance=write_options.resume_provenance,
+        strategy_promotion=write_options.strategy_promotion,
+        risk_report=write_options.risk_report,
     )
     atomic_bytes_write(json_bytes, output_dir / "backtest_report.json")
     for name, df in parquet_tables.items():

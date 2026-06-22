@@ -28,6 +28,10 @@ from ditto_strategy.storage.sqlite.services.strategy_artifact_service import (
     StrategyArtifactService,
 )
 
+from ditto_application.processes.execution.strategy_input import (
+    BacktestArtifactWriteOptions,
+)
+
 __all__ = [
     "ArtifactPersistConfig",
     "ArtifactPersistContext",
@@ -159,9 +163,11 @@ def persist_artifact(
         output_dir=output_dir,
         manifest=ctx.manifest,
         display_map=config.display_map,
-        rebalance_freq=config.rebalance_freq,
-        resume_provenance=ctx.resume_provenance,
-        strategy_promotion=strategy_promotion,
+        options=BacktestArtifactWriteOptions(
+            rebalance_freq=config.rebalance_freq,
+            resume_provenance=ctx.resume_provenance,
+            strategy_promotion=strategy_promotion,
+        ),
     )
     # file_path 存储目录路径，匹配读取侧 _build_path 契约（Path(base) / filename）
     # 从返回值推导实际目录（artifact_dir=None 时内部解析到系统临时目录）

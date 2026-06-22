@@ -9,6 +9,7 @@ import orjson
 import polars as pl
 import pytest
 from ditto_application.processes.execution.strategy_input import (
+    BacktestArtifactWriteOptions,
     enrich_record_with_symbol,
     write_backtest_artifacts,
 )
@@ -207,7 +208,7 @@ class TestWriteBacktestArtifacts:
         write_backtest_artifacts(
             report,
             output_dir=tmp_path / "run-001",
-            risk_report=risk_report,
+            options=BacktestArtifactWriteOptions(risk_report=risk_report),
         )
 
         assert mock_serialize_report.call_args.kwargs["risk_report"] == risk_report
