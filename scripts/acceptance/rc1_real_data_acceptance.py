@@ -3,14 +3,26 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import os
 import subprocess
+import sys
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 import orjson
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+validate_maturity_status_from_stdout = importlib.import_module(
+    "scripts.acceptance.rc1_requirements"
+).validate_maturity_status_from_stdout
+
+COMMAND_OUTPUT_LIMIT = 8000
 
 
 @dataclass(frozen=True)
@@ -42,12 +54,17 @@ def _run(
         capture_output=True,
         env=env,
     )
+    stdout = (
+        completed.stdout
+        if name == "maturity-status"
+        else completed.stdout[-COMMAND_OUTPUT_LIMIT:]
+    )
     return CommandResult(
         name=name,
         command=command,
         returncode=completed.returncode,
-        stdout=completed.stdout[-8000:],
-        stderr=completed.stderr[-8000:],
+        stdout=stdout,
+        stderr=completed.stderr[-COMMAND_OUTPUT_LIMIT:],
     )
 
 
@@ -65,6 +82,7 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
                 "packages/apps/tests/integration/test_golden_e2e.py",
                 "packages/apps/tests/integration/test_stock_selection_golden_e2e.py",
                 "packages/apps/tests/integration/test_stock_selection_signal_package_e2e.py",
+                "packages/application/tests/integration/test_manual_signal_fill_deviation_e2e.py",
                 "-q",
                 "--no-cov",
             ],
@@ -96,6 +114,7 @@ def _commands(real_data: bool, require_promoted: bool) -> list[tuple[str, list[s
                     "dev",
                     "pytest",
                     "packages/apps/tests/e2e/test_real_data_pipeline.py",
+                    "packages/apps/tests/e2e/test_real_data_stock_selection_pipeline.py",
                     "-m",
                     "e2e",
                     "--no-cov",
@@ -154,9 +173,16 @@ def main() -> int:
         )
         for name, command in _commands(args.real_data, args.require_promoted)
     ]
+    business_failures: list[str] = []
+    if args.require_promoted:
+        for result in results:
+            if result.name == "maturity-status":
+                validation = validate_maturity_status_from_stdout(result.stdout)
+                business_failures.extend(validation.failures)
     payload = {
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "passed": all(result.passed for result in results),
+        "business_failures": business_failures,
+        "passed": all(result.passed for result in results) and not business_failures,
         "results": [asdict(result) | {"passed": result.passed} for result in results],
     }
     output.parent.mkdir(parents=True, exist_ok=True)

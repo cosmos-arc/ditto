@@ -625,6 +625,12 @@ def factor_ic(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
     n_quantiles: int = typer.Option(5, "--n-quantiles", help="分层组数"),
     regime: bool = typer.Option(False, "--regime", help="启用情景 IC 分析"),
     attribution: bool = typer.Option(False, "--attribution", help="启用绩效归因分析"),
+    dataset_id: str = typer.Option("", "--dataset-id", help="评估使用的数据集 ID"),
+    catalog_snapshot_id: str = typer.Option(
+        "", "--catalog-snapshot-id", help="评估绑定的目录快照或证据 ID"
+    ),
+    universe: str = typer.Option("", "--universe", help="评估使用的 universe ID"),
+    cost_bps: float = typer.Option(0.0, "--cost-bps", help="交易成本 (bps)"),
     output: str | None = typer.Option(
         None, "--output", help="写入文件路径 (默认 stdout)"
     ),
@@ -639,6 +645,10 @@ def factor_ic(  # noqa: PLR0913 — CLI 命令回调，参数由 Typer 注入
         asset_class=asset_class,
         run_regime_ic=regime,
         run_performance_attribution=attribution,
+        dataset_id=dataset_id,
+        catalog_snapshot_id=catalog_snapshot_id,
+        universe=universe,
+        cost_bps=cost_bps,
     )
     try:
         report = facade.evaluate(factor, version=version, options=options)

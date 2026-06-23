@@ -70,18 +70,77 @@ pixi run -e dev ditto ops promotion-revoke stock_daily \
 
 撤销当前 override，回退 `initial-focus→experimental`，并追加 append-only governance event。`--reason` ∈ {`policy_regression`, `failed_revalidation`, `manual_override`, `evidence_invalidated`}。
 
-## 四、目标数据集（Phase 2）
+## 四、Production Launch Closure 目标数据集
 
-| 数据集 | 域 | 当前 maturity | 晋级后 |
-|---|---|---|---|
-| `stock_daily` | market | experimental | initial-focus |
-| `balance_sheet` | fundamental | experimental | initial-focus |
-| `valuation_metrics` | capital | experimental | initial-focus |
-| `macro_indicators` | macro | experimental | initial-focus |
+2026-06-21 production launch gate 要求以下 14 个数据集全部具备 catalog
+storage URI、schema hash、row count、fresh freshness，并通过 maturity gate。
 
-每个数据集按上述流程：collect → 审阅 → review（3 条）→ 自动晋级。
+| 数据集 | 域 | Launch 处理 |
+|---|---|---|
+| `stock_basic` | metadata | experimental → promotion review → initial-focus |
+| `stock_daily` | market | experimental → promotion review → initial-focus |
+| `stock_status` | market | experimental → promotion review → initial-focus |
+| `balance_sheet` | fundamental | experimental → promotion review → initial-focus |
+| `income_statement` | fundamental | experimental → promotion review → initial-focus |
+| `cash_flow` | fundamental | experimental → promotion review → initial-focus |
+| `valuation_metrics` | capital | experimental → promotion review → initial-focus |
+| `etf_basic` | metadata | initial-focus；无需 promotion review，但必须有 catalog evidence |
+| `etf_daily` | market | initial-focus；无需 promotion review，但必须有 catalog evidence |
+| `index_basic` | metadata | initial-focus；无需 promotion review，但必须有 catalog evidence |
+| `index_daily` | market | initial-focus；无需 promotion review，但必须有 catalog evidence |
+| `adj_factor` | market | initial-focus；无需 promotion review，但必须有 catalog evidence |
+| `fund_adj` | market | initial-focus；无需 promotion review，但必须有 catalog evidence |
+| `macro_indicators` | macro | experimental → promotion review → initial-focus |
 
-## 五、典型工作流
+experimental 数据集按上述流程：collect → 审阅 → review（3 条）→ 自动晋级。
+initial-focus 数据集没有 promotion criteria，但 RC acceptance 仍要求 catalog evidence
+完整且 freshness 未过期。
+
+## 五、Launch evidence 工作流
+
+Production launch closure 使用固定 evidence 目录，便于 RC acceptance 和人工审阅复查：
+
+```bash
+# 1. 确认 launch 数据集 catalog/freshness/read-model 状态
+pixi run -e dev python -m ditto_apps.cli.main ops status --json
+
+# 2. 为 14 个 launch 数据集生成 promotion evidence report
+for dataset in \
+  stock_basic stock_daily stock_status balance_sheet income_statement cash_flow \
+  valuation_metrics etf_basic etf_daily index_basic index_daily adj_factor \
+  fund_adj macro_indicators; do
+  pixi run -e dev python -m ditto_apps.cli.main ops promotion-collect "$dataset" \
+    --output "artifacts/promotion/${dataset}/2026-06-21.md"
+done
+
+# 3. 对 experimental 数据集逐条提交 reviewer evidence
+for dataset in \
+  stock_basic stock_daily stock_status balance_sheet income_statement cash_flow \
+  valuation_metrics macro_indicators; do
+  for criterion in \
+    "complete PIT/replay coverage for the dataset" \
+    "document runtime owner, freshness SLA, and source failover policy" \
+    "pass catalog-backed runtime/read-model tests without research opt-in"; do
+    pixi run -e dev python -m ditto_apps.cli.main ops promotion-review "$dataset" \
+      --criterion "$criterion" \
+      --evidence-uri "artifacts/promotion/${dataset}/2026-06-21.md" \
+      --reviewed-by codex-rc1-launch \
+      --passed
+  done
+done
+
+# 4. 保存 launch dataset status 快照
+pixi run -e dev python scripts/acceptance/rc1_real_data_acceptance.py \
+  --real-data --require-promoted \
+  --output artifacts/acceptance/rc1-report.json
+```
+
+`artifacts/acceptance/launch-dataset-status.json` 应保存 14 个 launch 数据集的
+最终状态快照：maturity、promotion status、catalog storage URI、schema hash、row
+count、freshness status。该 artifact 是发布检查证据，不属于代码提交范围，除非发布
+流程明确要求归档。
+
+## 六、典型单数据集工作流
 
 ```bash
 # 1. 收集 stock_daily 证据

@@ -26,6 +26,8 @@ def serialize_report(
     rebalance_freq: str = "daily",
     manifest: RunManifest | None = None,
     resume_provenance: Mapping[str, object] | None = None,
+    strategy_promotion: Mapping[str, object] | None = None,
+    risk_report: Mapping[str, object] | None = None,
 ) -> tuple[bytes, dict[str, pl.DataFrame]]:
     """
     将 BacktestReport 序列化为 JSON bytes + Parquet DataFrame 字典.
@@ -36,6 +38,8 @@ def serialize_report(
             写入 JSON 供 replay 反序列化时恢复配置，默认 "daily".
         manifest: 可选运行清单，用于将 PIT policy 等审计字段写入报告 JSON。
         resume_provenance: 可选 checkpoint 恢复来源证据。
+        strategy_promotion: 可选策略晋级证据 block，写入报告 JSON。
+        risk_report: 可选最小 launch risk report block，写入报告 JSON。
 
     Returns:
         (json_bytes, parquet_tables) 二元组.
@@ -66,6 +70,10 @@ def serialize_report(
         }
     if resume_provenance is not None:
         json_data["resume_provenance"] = dict(resume_provenance)
+    if strategy_promotion is not None:
+        json_data["strategy_promotion"] = dict(strategy_promotion)
+    if risk_report is not None:
+        json_data["risk_report"] = dict(risk_report)
     if report.final_account_state is not None:
         json_data["final_account_state"] = (
             BacktestAccountStateSnapshot.from_account_view(

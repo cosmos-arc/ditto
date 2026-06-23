@@ -32,6 +32,10 @@ class EvaluationOptions:
         adj: 复权类型（``"none"``、``"qfq"``、``"hfq"``）。
         run_regime_ic: 是否计算情景调整 IC（默认关闭）。
         run_performance_attribution: 是否计算绩效归因（默认关闭）。
+        dataset_id: 评估使用的数据集标识。
+        catalog_snapshot_id: 评估绑定的目录快照或证据标识。
+        universe: 评估使用的 universe 标识。
+        cost_bps: 成本后收益指标使用的换手成本（bps）。
 
     """
 
@@ -43,6 +47,10 @@ class EvaluationOptions:
     adj: str = "none"
     run_regime_ic: bool = False
     run_performance_attribution: bool = False
+    dataset_id: str = ""
+    catalog_snapshot_id: str = ""
+    universe: str = ""
+    cost_bps: float = 0.0
 
 
 _DEFAULT_OPTIONS = EvaluationOptions()
@@ -120,13 +128,16 @@ class FactorEvaluationFacade:
             end=options.end,
         )
 
-        # The evaluator defaults to factor_id="unknown".  Stamp the actual
-        # identity via dataclasses.replace so callers can trace the result
-        # (and future report fields propagate automatically — no manual copy).
+        # The evaluator defaults to factor_id="unknown". Stamp request-level
+        # identity and launch contract context so the report is auditable.
         return replace(
             report,
             factor_id=factor_id,
             factor_version=resolved_version,
+            dataset_id=options.dataset_id,
+            catalog_snapshot_id=options.catalog_snapshot_id,
+            universe=options.universe,
+            cost_bps=options.cost_bps,
         )
 
     def _resolve_version(

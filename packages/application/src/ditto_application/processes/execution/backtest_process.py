@@ -96,6 +96,10 @@ __all__ = [
 # BacktestServiceConfig
 # ---------------------------------------------------------------------------
 
+_ALLOWED_RECOMMENDATION_STATUSES = frozenset(
+    {"research", "candidate", "paper", "production"}
+)
+
 
 @dataclass(frozen=True)
 class BacktestServiceConfig:
@@ -115,6 +119,10 @@ class BacktestServiceConfig:
         engine_version: 引擎版本号
         parent_run_id: 父运行 ID（用于重试/衍生场景）
         execution_delay: 信号延迟执行天数
+        code_version: 策略代码版本或 git SHA（如可用）
+        data_catalog_identities: 补充数据目录身份（manifest 不可用时使用）
+        factor_report_refs: 因子评估报告引用
+        recommendation_status: 研究晋级建议状态
         resume_*: checkpoint-backed resume state evidence
 
     """
@@ -131,6 +139,10 @@ class BacktestServiceConfig:
     rebalance_freq: str = "daily"
     engine_version: str = "0.1.0"
     execution_delay: int = 0
+    code_version: str = ""
+    data_catalog_identities: tuple[str, ...] = ()
+    factor_report_refs: tuple[str, ...] = ()
+    recommendation_status: str = "research"
     resume_from_run_id: str = ""
     resume_checkpoint_trade_date: str = ""
     resume_checkpoint_completed_days: int = 0
@@ -144,6 +156,15 @@ class BacktestServiceConfig:
     resume_settlement_state_hash: str = ""
     resume_runtime_state_json: str = ""
     resume_runtime_state_hash: str = ""
+
+    def __post_init__(self) -> None:
+        """Validate launch promotion recommendation status."""
+        if self.recommendation_status not in _ALLOWED_RECOMMENDATION_STATUSES:
+            msg = (
+                "recommendation_status must be one of "
+                f"{sorted(_ALLOWED_RECOMMENDATION_STATUSES)}"
+            )
+            raise AppProcessError(msg)
 
 
 @dataclass(frozen=True)
@@ -618,12 +639,21 @@ class BacktestService:
             ),
             ArtifactPersistConfig(
                 strategy_id=self._config.strategy_id,
+                strategy_version=self._config.strategy_version,
                 initial_cash=self._config.initial_cash,
                 rebalance_freq=self._config.rebalance_freq,
                 artifact_service=self._options.artifact_service,
                 write_fn=write_backtest_artifacts,
                 artifact_dir=self._options.artifact_dir,
                 display_map=self._options.display_map,
+                benchmark_id=self._config.benchmark_id,
+                parameter_overrides=self._config.parameter_overrides,
+                code_version=self._config.code_version,
+                data_catalog_identities=self._config.data_catalog_identities,
+                factor_report_refs=self._config.factor_report_refs,
+                recommendation_status=self._config.recommendation_status,
+                fee_model_name=_model_name(self._options.fee_model),
+                slippage_model_name=_model_name(self._options.slippage_model),
             ),
         )
 
@@ -646,3 +676,10 @@ def _resume_provenance_from_config(
         "settlement_state_hash": config.resume_settlement_state_hash,
         "runtime_state_hash": config.resume_runtime_state_hash,
     }
+
+
+def _model_name(model: object | None) -> str:
+    """Return a stable model class name for artifact metadata."""
+    if model is None:
+        return ""
+    return type(model).__name__

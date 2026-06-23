@@ -81,6 +81,16 @@ def test_stock_selection_target_publishes_readable_manual_trade_signals() -> Non
             "income_statement": "sha256:synthetic-income",
         },
         factor_ids=("quality_roe", "value_pe", "momentum_1m"),
+        factor_values={
+            3: {"quality_roe": 0.8, "value_pe": -0.2, "momentum_1m": 0.4},
+            4: {"quality_roe": 0.6, "value_pe": -0.4, "momentum_1m": 0.3},
+            5: {"quality_roe": 0.7, "value_pe": -0.1, "momentum_1m": 0.5},
+        },
+        industry_by_instrument={
+            3: "consumer",
+            4: "technology",
+            5: "healthcare",
+        },
         risk_flags=("buying_power_checked", "lot_size_checked"),
     )
 
@@ -91,3 +101,19 @@ def test_stock_selection_target_publishes_readable_manual_trade_signals() -> Non
     assert len(port.list_intents(strategy_id=STRATEGY_ID, signal_date=SIGNAL_DATE)) == 3
     assert {row.instrument_id for row in port.rows} == {3, 4, 5}
     assert all(row.direction == "buy" for row in port.rows)
+
+    assert set(package.selection_reasons) == {3, 4, 5}
+    for instrument_id, reason in package.selection_reasons.items():
+        assert reason.target_weight == pytest.approx(1 / 3)
+        assert reason.composite_score is not None
+        assert reason.rank in {1, 2, 3}
+        assert reason.positive_contributors
+        assert reason.negative_contributors
+        assert (
+            reason.industry
+            == {
+                3: "consumer",
+                4: "technology",
+                5: "healthcare",
+            }[instrument_id]
+        )

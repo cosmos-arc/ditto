@@ -68,7 +68,12 @@ class StrategySliceBuilder:
             runtime.spec.universe,
             asof=trade_date,
         )
-        resolution = resolve_instrument_display(universe_ids, self._metadata_service)
+        resolution = resolve_instrument_display(
+            universe_ids,
+            self._metadata_service,
+            source=source,
+            as_of=trade_date,
+        )
         tickers = resolution.tickers
         id_map = resolution.id_map
 

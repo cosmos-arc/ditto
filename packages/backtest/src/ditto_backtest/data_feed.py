@@ -338,7 +338,7 @@ class ProviderBackedDataFeed:
             tzinfo=UTC,
         )
 
-        day_df = df.filter(pl.col("trade_date") == date)
+        day_df = df.filter(pl.col("trade_date").cast(pl.String) == date)
         day_source_snapshot_ids = _aggregate_source_snapshot_ids_by_instrument(
             day_df,
             exclude_instrument_id=self._benchmark_id,

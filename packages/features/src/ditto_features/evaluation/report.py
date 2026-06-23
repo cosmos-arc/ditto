@@ -224,6 +224,10 @@ class FactorEvaluationReport:
         n_observations: Total number of cross-section observations.
         n_dates: Number of trading dates in the evaluation window.
         computed_at: ISO timestamp of when the report was generated.
+        dataset_id: Source dataset identifier used for the evaluation.
+        catalog_snapshot_id: Catalog snapshot or evidence identifier.
+        universe: Universe identifier used for the evaluation.
+        cost_bps: Turnover cost in basis points used for net-return metrics.
 
     """
 
@@ -261,6 +265,10 @@ class FactorEvaluationReport:
     n_observations: int
     n_dates: int
     computed_at: str
+    dataset_id: str = ""
+    catalog_snapshot_id: str = ""
+    universe: str = ""
+    cost_bps: float = 0.0
 
     # Fama-MacBeth and factor exposure (optional)
     fama_macbeth: FamaMacBethResult | None = None

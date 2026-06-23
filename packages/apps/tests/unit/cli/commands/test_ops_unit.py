@@ -704,6 +704,10 @@ def _make_factor_evaluation_report(
         n_observations=100,
         n_dates=120,
         computed_at="2024-07-01T00:00:00Z",
+        dataset_id="stock_daily",
+        catalog_snapshot_id="catalog-snap-001",
+        universe="csi_300",
+        cost_bps=5.0,
         regime_ic=regime_ic,
         performance_attribution=performance_attribution,
     )
@@ -973,6 +977,7 @@ class TestFactorIcCommand:
 
         assert result.exit_code == 0
         for section in (
+            "Contract",
             "IC Summary",
             "IC Decay",
             "Quantile Returns",
@@ -1041,3 +1046,46 @@ class TestFactorIcCommand:
 
         assert result.exit_code == 0
         assert "Performance Attribution" in result.output
+
+    def test_factor_ic_contract_options_propagated(
+        self,
+        runner: CliRunner,
+        mocker: MockerFixture,
+    ) -> None:
+        """C11: dataset/catalog/universe/cost options are passed to facade."""
+        mock_facade = MagicMock()
+        mock_facade.evaluate.return_value = _make_factor_evaluation_report()
+        container = _mock_container_for_ops_object(mock_facade)
+        mocker.patch(CONTAINER_PATH, return_value=container)
+
+        result = runner.invoke(
+            app,
+            [
+                "ops",
+                "factor-ic",
+                "fx.momentum",
+                "--start",
+                "2024-01-02",
+                "--end",
+                "2024-06-30",
+                "--dataset-id",
+                "stock_daily",
+                "--catalog-snapshot-id",
+                "catalog-snap-20240630",
+                "--universe",
+                "csi_300",
+                "--cost-bps",
+                "7.5",
+            ],
+        )
+
+        assert result.exit_code == 0
+        options = mock_facade.evaluate.call_args.kwargs["options"]
+        assert isinstance(options, EvaluationOptions)
+        assert options.dataset_id == "stock_daily"
+        assert options.catalog_snapshot_id == "catalog-snap-20240630"
+        assert options.universe == "csi_300"
+        assert options.cost_bps == 7.5
+        assert "stock_daily" in result.output
+        assert "catalog-snap-001" in result.output
+        assert "csi_300" in result.output

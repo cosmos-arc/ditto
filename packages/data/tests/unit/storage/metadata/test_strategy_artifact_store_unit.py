@@ -86,6 +86,29 @@ class TestSQLiteStrategyArtifactWriter:
         assert result is not None
         assert result.file_path == "new/path.parquet"
 
+    def test_save_accepts_signal_metadata_with_integer_position_keys(
+        self,
+        writer: SQLiteStrategyArtifactWriter,
+        reader: SQLiteStrategyArtifactReader,
+    ) -> None:
+        """Signal artifacts may carry integer instrument ids as position keys."""
+        writer.init_schema()
+        writer.save(
+            _make_artifact(
+                artifact_type=ArtifactKind.SIGNAL_SNAPSHOT,
+                metadata={"positions": {1000001: 0.6, 1000002: 0.4}},
+            )
+        )
+
+        result = reader.get("art-001")
+        assert result is not None
+        assert result.metadata == {
+            "positions": {
+                "1000001": 0.6,
+                "1000002": 0.4,
+            }
+        }
+
 
 class TestSQLiteStrategyArtifactReader:
     """Tests for SQLiteStrategyArtifactReader."""

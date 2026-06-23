@@ -23,7 +23,31 @@ def _fmt_pct(value: float) -> str:
     return f"{value * 100:.2f}%"
 
 
+def _fmt_contract_value(value: str) -> str:
+    """格式化报告契约字段, 空值显式标记为 unknown."""
+    return value if value else "unknown"
+
+
 _FOOTER = "> 离线因子评估报告. 结合 IC/分层/换手综合判断, 权重调整由人工决策."
+
+
+def _contract_section(report: FactorEvaluationReport) -> list[str]:
+    """渲染报告契约字段, 便于人工复核数据与样本上下文."""
+    start, end = report.evaluation_period
+    return [
+        "## Contract",
+        "",
+        "| 字段 | 值 |",
+        "|------|----|",
+        f"| Factor | `{report.factor_id}` |",
+        f"| Version | `{report.factor_version}` |",
+        f"| Dataset | `{_fmt_contract_value(report.dataset_id)}` |",
+        f"| Catalog Snapshot | `{_fmt_contract_value(report.catalog_snapshot_id)}` |",
+        f"| Sample Period | `{start}` ~ `{end}` |",
+        f"| Universe | `{_fmt_contract_value(report.universe)}` |",
+        f"| Cost Bps | `{report.cost_bps:.2f}` |",
+        "",
+    ]
 
 
 def _ic_summary_section(report: FactorEvaluationReport) -> list[str]:
@@ -232,6 +256,7 @@ def render_factor_ic_markdown(report: FactorEvaluationReport) -> str:
         f"- 分层数: {report.n_quantiles}",
         "",
     ]
+    lines += _contract_section(report)
     lines += _ic_summary_section(report)
     lines += _ic_decay_section(report)
     lines += _sub_period_section(report)

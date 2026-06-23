@@ -20,8 +20,11 @@ class ResolutionResult:
 def resolve_instrument_display(
     instrument_ids: list[int],
     metadata_service: MetadataService,
+    *,
+    source: str | None = None,
+    as_of: str | None = None,
 ) -> ResolutionResult:
-    """将 instrument_id 列表解析为 tickers + id_map + display_map（单次遍历）."""
+    """将 instrument_id 列表解析为 provider tickers + id_map + display_map。"""
     tickers: list[str] = []
     id_map: dict[str, InstrumentId] = {}
     display_map: dict[InstrumentId, str] = {}
@@ -32,12 +35,18 @@ def resolve_instrument_display(
         if instrument is not None:
             ticker = instrument.get("ticker", str(iid))
             exchange = instrument.get("exchange", "")
-            key = f"{ticker}.{exchange}" if exchange else str(iid)
+            display_key = f"{ticker}.{exchange}" if exchange else str(iid)
         else:
-            key = str(iid)
+            display_key = str(iid)
+        source_ticker = (
+            metadata_service.instrument.get_source_ticker(iid, source, as_of)
+            if source is not None
+            else None
+        )
+        key = source_ticker or display_key
         tickers.append(key)
         id_map[key] = instrument_id
-        display_map[instrument_id] = key
+        display_map[instrument_id] = display_key
 
     return ResolutionResult(
         tickers=tuple(tickers),

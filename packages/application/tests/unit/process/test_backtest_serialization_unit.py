@@ -242,6 +242,52 @@ class TestSerializeReportMinimal:
         assert agg["win_rate"] == 0.0
         assert data["alpha_stats"]["sharpe_ratio"] == 0.5
 
+    def test_json_contains_strategy_promotion_artifact_when_provided(self) -> None:
+        report = _make_report(with_trades=False, with_fills=False)
+        promotion = {
+            "strategy_id": "stock-selector",
+            "code_version": "git:abc123",
+            "data_catalog_identities": [
+                {
+                    "instrument_id": 510300,
+                    "source": "catalog://stock_daily",
+                    "source_snapshot_id": "catalog-snap-20260621",
+                    "data_hash": "sha256:stock-daily",
+                    "date_range": ["2026-01-01", "2026-06-21"],
+                }
+            ],
+            "parameter_hash": "sha256:params",
+            "benchmark": 3_000_001,
+            "cost_model": {"total_fees": 128.0, "cost_drag": 0.02},
+            "backtest_metrics": {"final_nav": 1_230_000.0},
+            "factor_report_refs": ["factor://quality_roe/v3"],
+            "recommendation_status": "candidate",
+        }
+
+        json_bytes, _ = serialize_report(report, strategy_promotion=promotion)
+        data = orjson.loads(json_bytes)
+
+        assert data["strategy_promotion"] == promotion
+
+    def test_json_contains_risk_report_when_provided(self) -> None:
+        report = _make_report(with_trades=False, with_fills=False)
+        risk_report = {
+            "concentration": {"max_weight": 0.40, "top_5_weight": 1.0},
+            "industry_exposure": {"technology": 0.65, "finance": 0.35},
+            "benchmark_active_weight": {
+                "total_abs_active_weight": 0.80,
+                "active_weights": {"1": 0.10, "2": 0.05, "4": -0.40},
+            },
+            "drawdown": {"max_drawdown": -0.0975},
+            "tail_risk": {"var_95": -0.05, "cvar_95": -0.05},
+            "stress_scenario_returns": {"market_down": -0.10, "sector_down": -0.13},
+        }
+
+        json_bytes, _ = serialize_report(report, risk_report=risk_report)
+        data = orjson.loads(json_bytes)
+
+        assert data["risk_report"] == risk_report
+
     def test_returns_nav_and_portfolio_stats_parquet(self) -> None:
         report = _make_report(with_trades=False, with_fills=False)
         _, parquet_tables = serialize_report(report)

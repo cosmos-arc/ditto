@@ -59,6 +59,10 @@ def _make_report(**overrides: object) -> FactorEvaluationReport:
         "n_observations": 1000,
         "n_dates": 120,
         "computed_at": "2024-07-01T00:00:00Z",
+        "dataset_id": "stock_daily",
+        "catalog_snapshot_id": "catalog-snap-001",
+        "universe": "csi_300",
+        "cost_bps": 5.0,
     }
     defaults.update(overrides)
     return FactorEvaluationReport(**defaults)  # type: ignore[arg-type]
@@ -123,3 +127,39 @@ class TestFactorEvaluationFacadeEvaluate:
         assert result.holding_period == inner_report.holding_period
         assert result.rank_ic_summary == inner_report.rank_ic_summary
         assert result.n_observations == inner_report.n_observations
+
+    @patch("ditto_application.queries.evaluation.FactorEvaluator")
+    def test_stamps_report_contract_context(
+        self,
+        mock_evaluator_cls: MagicMock,
+    ) -> None:
+        """Facade should stamp catalog/universe/cost context into the report."""
+        factor_df = pl.DataFrame(
+            {"instrument_id": [1], "trade_date": ["2024-01-01"], "value": [0.5]}
+        )
+        artifact_reader = MagicMock(spec=["read_frame"])
+        artifact_reader.read_frame.return_value = factor_df
+        mock_evaluator_instance = MagicMock(spec=["evaluate"])
+        mock_evaluator_instance.evaluate.return_value = _make_report()
+        mock_evaluator_cls.return_value = mock_evaluator_instance
+
+        facade = FactorEvaluationFacade(
+            artifact_reader=artifact_reader,
+            forward_return_service=MagicMock(spec=["get_forward_returns"]),
+        )
+
+        result = facade.evaluate(
+            "quality_roe",
+            version=3,
+            options=EvaluationOptions(
+                dataset_id="stock_daily",
+                catalog_snapshot_id="catalog-snap-20240630",
+                universe="csi_300",
+                cost_bps=8.0,
+            ),
+        )
+
+        assert result.dataset_id == "stock_daily"
+        assert result.catalog_snapshot_id == "catalog-snap-20240630"
+        assert result.universe == "csi_300"
+        assert result.cost_bps == 8.0

@@ -139,7 +139,7 @@ class SQLiteStrategyArtifactWriter:
                 record.run_id,
                 record.artifact_type.value,
                 record.file_path,
-                orjson.dumps(record.metadata).decode(),
+                orjson.dumps(record.metadata, option=orjson.OPT_NON_STR_KEYS).decode(),
                 record.status,
                 record.created_at,
             ),
