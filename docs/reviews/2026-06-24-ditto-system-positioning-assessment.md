@@ -323,3 +323,109 @@ The architecture should now serve one sentence:
 > Every trading day, Ditto should tell the user whether data is ready, what changed, what to hold, why, what risk changed, what to do manually or in paper mode, and how yesterday's decision behaved.
 
 If a module, abstraction, or workflow does not make that sentence easier to execute, it should be deferred.
+
+## Recommended Positioning and Stage Boundaries
+
+### Final Positioning
+
+Ditto should keep the long-term ambition of a full-stack quant platform, but its product story should be staged:
+
+> Ditto is a local-first, A-share-aware, evidence-governed personal quant platform. Its near-term product is a daily ETF and stock-research decision cockpit backed by PIT-safe data, deterministic backtests, signal packages, portfolio/risk construction, manual or paper execution tracking, attribution, and read-only AI assistance.
+
+The words "full-stack" should describe the long-term architecture, not the current usable promise. The current promise should be: daily research, decision support, and audited manual or paper operations. Live trading and autonomous agents remain reserved.
+
+### Stage Boundary Table
+
+| Stage | Product Name | User-Ready Promise | Must Not Claim Yet |
+|---|---|---|---|
+| V0 Current Backend Foundation | Governed backend platform | The backend has strong package boundaries, PIT/maturity governance, deterministic backtest/signal infrastructure, execution primitives, and acceptance evidence | It is not yet a simple end-user product, live platform, or AI-native operating system |
+| V1 Daily ETF Decision Cockpit | First usable product | A daily ETF workflow can answer data readiness, signals, reasons, target weights, launch risk, manual fills, current positions, and target-vs-actual deviation | It is not yet full stock alpha, autonomous execution, or broad portfolio optimization |
+| V1.5 Stock Selection Research Beta | Experimental research expansion | Stock/fundamental/valuation datasets can be used with explicit maturity evidence, PIT snapshots, factor IC reports, and stock-selection signal packages | It is not yet production stock selection unless launch datasets are promoted and repeatedly validated |
+| V2 Portfolio and Attribution Layer | Decision-quality upgrade | Signals become constrained target portfolios with optimizer explanation, risk deltas, cost assumptions, and factor/portfolio attribution | It is not yet live trading or institutional optimizer breadth |
+| V3 Paper Trading Operating Loop | Semi-automated operations | Paper account lifecycle, staged orders, fills, reconciliation, repair approvals, P&L, deviation, and daily review are one loop | It is not yet real broker live trading |
+| V4 AI-Assisted Quant Workflow | Read-only and supervised agents | Copilot explains artifacts, research agent drafts experiments, operations agent triages issues, all with citations and scoped approvals | It is not autonomous trading or self-promoting alpha |
+| V5 Live Trading Platform | Long-term reserved | Real broker adapters, credential isolation, live risk, kill switches, disaster recovery, and audit replay are proven | No date should be promised until V1-V3 are boringly reliable |
+
+### The Minimum Lovable Version
+
+The next usable version should be V1, not V5. It should feel small, sharp, and daily.
+
+V1 should have one backend entry point or small API family that returns:
+
+1. Data readiness: launch datasets, source freshness, maturity status, missing evidence, and blocking reasons.
+2. Today's signal package: instruments, scores, factor values, selection reasons, risk flags, dataset snapshots, checksum.
+3. Portfolio proposal: current holdings, target weights, proposed trades, turnover, cost/slippage assumptions, constraint hits.
+4. Risk review: concentration, active weights, drawdown context, VaR/CVaR or simple tail risk, stress scenarios, and warnings.
+5. Manual execution tracking: approved intents, fills, positions, target-vs-actual deviation, unfilled targets.
+6. Review memo: what changed from yesterday, what failed, what needs operator action, and where to inspect evidence.
+
+If V1 does only this for ETF strategies, it will be more valuable than a broader system that exposes twenty unrelated backend endpoints.
+
+### Roadmap
+
+| Priority | Workstream | Deliverable | Why It Comes First |
+|---|---|---|---|
+| P0 | Daily readiness contract | One DTO/API/CLI report that merges source-health, catalog freshness, maturity governance, promotion evidence, and lineage attention into `ready / blocked / review` | Without this, the user cannot trust the daily run |
+| P0 | Daily signal review contract | One contract that wraps latest signal package, reasons, factor values, dataset snapshots, checksums, and prior signal diff | This turns strategy output into a usable decision artifact |
+| P0 | ETF V1 acceptance lane | Repeatable ETF daily run with synthetic and real-data evidence, no experimental opt-in for launch datasets, and a stable report artifact | This is the smallest credible product boundary |
+| P1 | Portfolio optimizer v1 | Long-only constrained optimizer or robust min-vol/mean-variance module with inverse-vol fallback and explanation | This closes the biggest L2 gap against top systems |
+| P1 | Target-vs-actual review | Unified current holdings, target weights, fills, unfilled intents, deviation bps, P&L and cost drag | This makes manual execution measurable |
+| P1 | Factor and portfolio attribution | Factor contribution, cost attribution, holdings attribution, and actual-vs-backtest explanation | This creates the learning loop |
+| P1 | Stock-selection beta promotion | Promote a small stock/fundamental/valuation dataset set with repeated evidence and PIT tests | This prevents stock alpha from remaining permanently experimental |
+| P2 | Paper trading operating loop | Staged paper orders, fill simulation, account snapshots, reconciliation, repair approvals, and daily review | This turns execution primitives into an operator workflow |
+| P2 | Read-only AI copilot | Artifact-citing copilot for data readiness, signals, risk, deviations, and remediation explanations | This directly improves usability without adding trading risk |
+| P3 | Research agent | Supervised hypothesis -> expression -> factor eval -> backtest -> report loop | This is the right AI expansion after read-only answers are reliable |
+| P4 | Live broker adapters | Real adapter, credential isolation, live risk, kill switch, disaster recovery, and audit replay | This should wait until paper mode is mature |
+
+### Acceptance Criteria By Boundary
+
+| Boundary | Acceptance Evidence |
+|---|---|
+| V1 ETF daily cockpit | One command/API run produces readiness, signal package, risk report, target portfolio, manual fill/deviation report, and review memo for the same trade date |
+| Launch data readiness | Required ETF datasets are `initial-focus` or `stable`; promotion status is `ready`, `promoted`, or not applicable; blocked datasets explain exact missing evidence |
+| Signal credibility | Signal package includes factor IDs, factor values, selection reasons, risk flags, dataset snapshots, checksum, and deterministic replay proof |
+| Portfolio credibility | Proposed weights satisfy max weight, max positions, tradability/liquidity, turnover, and one optimizer objective or fallback path |
+| Risk credibility | Risk report shows concentration, active weights, drawdown, tail risk or stress proxy, and explicit blocking/warning flags |
+| Manual execution credibility | Fills and positions persist; deviation report links target, actual, unfilled targets, and current weights |
+| Stock-selection beta | Stock/fundamental/valuation datasets have PIT evidence, real-data E2E, promotion history, and at least one end-to-end signal package without hidden experimental bypass |
+| Paper trading | Account snapshot, order state, fills, reconciliation report, repair approval state, and audit events are visible in one workflow |
+| AI read-only copilot | Answers cite Ditto artifact IDs, refuse missing evidence, separate experimental from promoted data, and perform no writes |
+| AI research agent | Every generated hypothesis has data scope, PIT check, expression diff, factor report, backtest report, and human promotion gate |
+
+### Defer List
+
+These should be intentionally deferred until the earlier boundary is real:
+
+- Real broker live trading adapters and live order submission.
+- Autonomous trading agents.
+- Multi-asset global coverage beyond A-share ETF/stock focus.
+- Intraday execution algorithms unless V3 paper operations require them.
+- Deep RL, broad model zoo, or large-scale AutoML before the factor/backtest loop is productized.
+- Full OpenBB-style workspace clone inside this backend repo.
+- Multi-user SaaS permissions beyond the minimum needed for API safety.
+- More execution/reconciliation edge cases unless they improve the paper daily loop.
+- Additional data-source abstractions without concrete launch-dataset evidence.
+- New architecture layers that do not feed the Daily Quant Operating Loop.
+
+### How To Decide Future Work
+
+Future issues should answer four questions before implementation:
+
+1. Which stage boundary does this improve?
+2. Which daily loop artifact does it change?
+3. What evidence will prove it is usable, not just implemented?
+4. What should now be removed, deferred, or hidden from the user?
+
+This is the simplest way to keep the long-term full-stack ambition without letting the platform become a museum of unfinished capability.
+
+## Final Recommendation
+
+Ditto should not shrink its ambition. It should shrink its next promise.
+
+The source-level evidence supports a confident but staged positioning. The platform foundation is strong enough to sustain a top personal quant system over time. The industry gap is not primarily "bad architecture" or "not enough code." It is functional closure: portfolio construction, attribution, daily workflow ergonomics, real-data promotion, paper-account operations, and AI/Agent productization.
+
+The most important strategic move is to declare V1 as the target:
+
+> A daily ETF decision cockpit with governed data readiness, deterministic signals, constrained target portfolio, risk review, manual execution tracking, deviation reporting, and artifact-citing read-only AI explanations.
+
+Once that version is genuinely pleasant to use, stock-selection beta, optimizer depth, paper trading, and supervised AI research can compound naturally. Until then, more long-tail platform features will make the system more impressive in source code while not making it more useful in daily life.
