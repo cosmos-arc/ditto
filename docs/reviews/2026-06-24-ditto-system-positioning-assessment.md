@@ -142,3 +142,49 @@ The third gap is daily decision ergonomics. Signal packages already persist targ
 The fourth gap is operational closure for paper mode. Paper trading should not be judged by gateway conformance alone. It needs an operator-facing lifecycle: run EOD, generate signals, stage paper orders, run/inspect fills, reconcile, approve repair actions, and persist a daily account snapshot. Current primitives are impressive, but the loop is not yet compact.
 
 The fifth gap is AI/Agent-native functionality. Ditto already has useful safety primitives for agents: explicit maturity states, approval-backed remediation, deterministic artifacts, typed DTOs, and audit events. But those are not yet organized as agent tools with scopes, permissions, dry-runs, memory, and evaluation. This should become a first-class platform layer rather than an afterthought.
+
+## Industry Benchmark
+
+### Benchmark Sources Reviewed
+
+This section uses official or primary project sources reviewed on 2026-06-24:
+
+- [QuantConnect Algorithm Framework](https://www.quantconnect.com/docs/v2/writing-algorithms/algorithm-framework/overview), [portfolio construction](https://www.quantconnect.com/docs/v1/algorithm-framework/portfolio-construction), and [risk management](https://www.quantconnect.com/docs/v2/writing-algorithms/algorithm-framework/risk-management/key-concepts)
+- [NautilusTrader live trading](https://nautilustrader.io/docs/latest/concepts/live/), [backtesting](https://nautilustrader.io/docs/latest/concepts/backtesting/), and [architecture](https://nautilustrader.io/docs/latest/concepts/architecture/)
+- [Microsoft Qlib GitHub](https://github.com/microsoft/qlib) and [Qlib introduction](https://qlib.readthedocs.io/en/v0.8.5/introduction/introduction.html)
+- [PyPortfolioOpt documentation](https://pyportfolioopt.readthedocs.io/en/latest/)
+- [VectorBT documentation](https://vectorbt.dev/)
+- [VeighNa/vn.py README](https://github.com/vnpy/vnpy/blob/master/README_ENG.md)
+- [RQAlpha GitHub](https://github.com/ricequant/rqalpha)
+- [OpenBB Copilot docs](https://docs.openbb.co/workspace/analysts/ai-features/copilot-basics), [Agents Integration](https://docs.openbb.co/workspace/developers/agents-integration), [OpenBB AI SDK](https://docs.openbb.co/workspace/developers/openbb-ai-sdk), and [OpenBB Workspace](https://openbb.co/products/workspace/)
+
+### Benchmark Table
+
+| Reference System | What It Represents | Where Ditto Is Competitive | Where Ditto Trails |
+|---|---|---|---|
+| QuantConnect / LEAN | Mature full-stack algorithmic platform with universe -> alpha -> portfolio construction -> risk -> execution flow | Ditto's package boundaries and TargetPortfolio/signal/risk/execution separation are philosophically aligned; Ditto has stronger local A-share ETF specificity and explicit dataset maturity governance | QuantConnect is far ahead in integrated portfolio construction, reusable risk/execution models, live trading workflow, broker/data ecosystem, research UI, and community modules |
+| NautilusTrader | Production-grade event-driven trading engine with backtest/live parity and strong runtime architecture | Ditto has an unusually disciplined backend boundary model and good paper/reconciliation primitives; its A-share daily simulator has domain-specific fee, settlement, limit and suspension handling | NautilusTrader is far ahead in live runtime maturity, node operations, execution adapters, high-performance core, backtest-live code parity, and operational deployment readiness |
+| Qlib | AI-oriented quantitative research platform covering data, models, workflow, signals, decision generation and execution environment concepts | Ditto is stronger as a typed, multi-domain backend with governance, data maturity gates, execution/reconciliation and A-share operational semantics | Qlib is far ahead in ML-first research workflow, model zoo, supervised/RL paradigms, factor/model experimentation, and AI research automation ecosystem |
+| PyPortfolioOpt | Focused portfolio optimization library with efficient frontier, Black-Litterman, shrinkage, HRP and related optimizers | Ditto has the broader platform context where an optimizer could be embedded into data/risk/execution workflows | PyPortfolioOpt is far ahead in portfolio optimizer breadth, optimizer API maturity, covariance/expected-return utilities, and practitioner ergonomics |
+| VectorBT | High-speed vectorized research/backtesting for large strategy grids and parameter exploration | Ditto is stronger in event-driven realism, PIT governance, lineage, and execution semantics | VectorBT is far ahead in fast exploratory iteration, large parameter sweeps, notebook/research ergonomics, and interactive analysis scale |
+| VeighNa/vn.py | China-oriented full-stack quant trading framework with backtesting, live trading, modules, and AI-powered multi-factor direction | Ditto has cleaner modern package boundaries, stricter test/gate culture, and deeper data-governance language | vn.py is far ahead in domestic broker ecosystem, live trading, user community, GUI/module completeness, and practical trader adoption |
+| RQAlpha | Extendable, replaceable Python algorithmic backtest/trading framework for multiple securities | Ditto has a more ambitious governance and full-stack backend design | RQAlpha is more mature as a compact backtest/trading framework and has simpler adoption for users who want a direct algorithm runtime |
+| OpenBB Workspace | Financial data workspace with Copilot, custom agent integration, type-safe AI SDK, dashboards, access control and audit trail positioning | Ditto has proprietary quant-domain backend artifacts that could become excellent agent tools | OpenBB is far ahead in user-facing workspace, dashboard composition, agent integration contracts, agent streaming, governed AI UX, and analyst workflow polish |
+
+### Strategic Reading
+
+Ditto should not try to become all of these systems at once. Its plausible winning position is narrower and sharper:
+
+> A local-first, A-share-aware, evidence-governed quant backend that turns daily data into explainable ETF/stock decisions, with AI agents operating through audited, permissioned workflows.
+
+This positioning avoids competing head-on with QuantConnect's global cloud ecosystem, NautilusTrader's live trading engine focus, Qlib's ML research breadth, OpenBB's workspace product, or PyPortfolioOpt/vectorbt's specialized ergonomics. Instead, Ditto can use its existing strengths: strict maturity gates, PIT safety, A-share simulation semantics, deterministic artifacts, backend DTO contracts, and execution auditability.
+
+The strategic gap is that the current codebase has not yet converted those strengths into a single obvious product surface. Top systems are recognizable because their core loop is explicit: QuantConnect has algorithm modules; Nautilus has one runtime model across backtest/live; Qlib has an AI quant workflow; OpenBB has workspace + agents. Ditto's equivalent should be the Daily Quant Operating Loop:
+
+1. Data readiness and promotion evidence.
+2. Factor/strategy signal generation.
+3. Portfolio/risk construction.
+4. Manual or paper execution.
+5. Deviation, attribution, and next-day learning.
+
+Every near-term feature should strengthen this loop. Features that do not improve this loop should be deferred, even if they are technically elegant.
