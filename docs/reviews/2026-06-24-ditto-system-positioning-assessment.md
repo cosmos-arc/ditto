@@ -247,3 +247,79 @@ The strongest near-term path is A0 plus a narrow A1. A0 would immediately make t
 The AI layer should sit above `application`, not inside data, strategy, portfolio, or execution packages. It should call stable application queries/commands, carry a session/run ID, persist prompts and tool results, cite artifact IDs, and distinguish `read`, `draft`, `request_approval`, and `execute_approved` scopes. Any write path must reuse existing command handlers or approval workflows; agents should never write directly to data stores, broker adapters, or package internals.
 
 For trading specifically, the first durable rule should be simple: an agent may explain, compare, and propose, but it may not place live orders. That keeps Ditto's long-term AI ambition aligned with the current maturity boundary instead of letting an impressive demo create false operational confidence.
+
+## Architecture, Extensibility, and Engineering Quality
+
+### Overall Judgment
+
+Ditto's architecture is not the weak point. The source tree shows a rare level of discipline for a personal quant platform: package boundaries are explicit, import contracts are executable, API maturity is surfaced, PIT and maturity rules fail closed, tests are broad, and acceptance artifacts record full lint/type/test/import checks passing.
+
+The main architecture risk is different: the system is now powerful enough that more backend abstraction can reduce product clarity. The next phase should measure architecture by how quickly it lets the user complete the Daily Quant Operating Loop, not by how many additional seams, DTOs, and governance contracts it can add.
+
+### Architecture Strengths
+
+| Dimension | Current Assessment | Evidence |
+|---|---|---|
+| Package boundaries | Strong | `CLAUDE.md` and `docs/architecture/agent-context-pack.md` define `apps -> application -> capability packages -> kernel`, with `platform` as horizontal infrastructure |
+| Machine-enforced architecture | Strong | `.importlinter` contains broad layer contracts plus explicit forbidden contracts for data, features, strategy, portfolio, risk, execution, backtest, analysis, apps, and application |
+| Architecture smell checks | Strong | `scripts/architecture/check_architecture_smells.py` checks low-noise smells including oversized files, cross-package re-export, platform business leakage, app capability imports, generic helper namespaces, route maturity annotations, and explicit `__all__` |
+| CQRS and composition | Strong | Application separates `queries`, `commands`, `processes`, `builders`, and providers; apps registry acts as composition root |
+| Data and maturity governance | Strong | Dataset maturity gates, promotion evidence, source-health, fallback policy effects, lineage reports, and remediation approvals all have typed contracts |
+| Test and static quality | Strong | Historical RC1 evidence records lint, format, type, fast tests, import-linter, and architecture smell checks passing; quality reports note zero production `TYPE_CHECKING`, zero pandas imports, and strict pyright/ruff gates |
+| Domain safety | Strong | PIT rules, explicit `allow_experimental_data`, deterministic signal package checksums, replay/checkpoint evidence, A-share simulation semantics, and manual fill/deviation tests reduce silent failure risk |
+
+This is above the architecture baseline of most open-source personal quant projects. Ditto is not a notebook collection, not a single backtest engine, and not a tangled app. It is a governed backend platform.
+
+### Architecture Gaps Versus Top Systems
+
+| Gap | Why It Matters | Recommended Direction |
+|---|---|---|
+| Product workflow is less explicit than architecture workflow | Top systems have an obvious entry point: QuantConnect has algorithm framework modules, Nautilus has one backtest/live runtime model, Qlib has workflow/data/model loops, OpenBB has workspace plus copilot | Define one primary backend contract for the daily decision cockpit and make every near-term capability feed it |
+| Application and apps layers carry high cognitive load | Many use cases are correctly placed, but the user must understand many facades, DTOs, maturity reports, and remediation paths to operate the system | Introduce thin, curated "daily loop" facades that compose existing contracts without weakening package boundaries |
+| Governance is stronger than operational UX | Maturity, source-health, lineage, promotion and remediation are well-modeled, but they are not yet compressed into an operator-ready readiness narrative | Create a daily data readiness report as the first screen/API of the product |
+| Portfolio/risk abstractions lag data/execution abstractions | Portfolio has simple allocators and constraints; risk has useful reports, but not a mature optimizer/attribution/control loop | Build one constrained optimizer plus attribution report before adding more execution infrastructure |
+| Observability infrastructure is ahead of business instrumentation | Prior quality review found logging/config foundations strong, while business metrics and tracing were not broadly instrumented | Add spans and metrics for ingestion, materialization, strategy run, portfolio construction, paper execution, and reconciliation |
+| Security and permissions are not yet product-grade | API routes and future agent tools need authentication, authorization, action scopes, and audit controls before multi-user or live usage | Add API auth for product deployment and design agent/action scopes before AI writes are introduced |
+| Quantitative technical-debt tooling is incomplete | Current gates are strong, but duplication, maintainability index, dead code, and SQALE-style debt are not fully measured | Add radon/vulture/jscpd or equivalent baselines, but avoid blocking product progress on vanity metrics |
+
+### Extensibility Assessment
+
+Ditto is structurally extensible in three important ways.
+
+First, capability packages are peer domains. Adding a factor expression, strategy template, portfolio allocator, risk checker, broker protocol implementation, or data source has a predictable home. This is the kind of extensibility a long-lived quant system needs.
+
+Second, application-owned ports prevent many dependencies from leaking in the wrong direction. The fundamental and factor bridge work is a good pattern: the backtest path receives prepared snapshots and closures from application orchestration instead of importing data query details directly.
+
+Third, the maturity and approval systems can support safe expansion. Experimental data, fallback policy, remediation actions, and approval workflows already have states and evidence. This creates a useful platform for future AI agents, real-data promotion, and paper-trading operations.
+
+The extensibility weakness is that the system has many "where to put it" answers and fewer "what user workflow does it improve" answers. Extensibility should now be constrained by a product rule: a new extension point is justified only if it improves data readiness, signal quality, portfolio decisioning, paper execution, attribution, or AI-assisted review.
+
+### Engineering Quality Rating
+
+| Area | Rating | Why |
+|---|---|---|
+| Code quality | High | Typed Python, strict lint/type gates, package ownership, low reliance on ignores, no pandas dependency, clear naming standards |
+| Architecture quality | Very high | Executable import contracts, smell checks, CQRS conventions, package-level manuals, and explicit maturity metadata |
+| Test quality | High | Large unit/integration/e2e surface, deterministic and golden lanes, real-data gated tests, and acceptance artifact evidence |
+| Domain correctness | High for ETF daily, partial for stock/fundamental/macro | A-share costs/settlement/fill rules and PIT discipline are strong; non-ETF launch datasets still require promotion evidence |
+| Operations quality | Medium | EOD/Paper/reconciliation primitives exist, but observability, status UX, account lifecycle, security, and incident practices are incomplete |
+| Product usability | Medium-low | The backend is deep, but the default user path is not yet a compact daily product loop |
+| AI readiness | Medium substrate, low product | Strong artifacts and approval paths, but no agent runtime, memory, tools, evals, or UI |
+
+### Clean Architecture Risks To Watch
+
+The biggest near-term risk is "DTO gravity." As the system adds more query facades and API response models, apps and application can become a mapping-heavy shell around scattered capability contracts. The correct fix is not to collapse layers. It is to introduce product-specific orchestration contracts that are intentionally small: daily readiness, daily signals, daily portfolio decision, daily paper account, and daily review.
+
+The second risk is "governance inflation." Maturity gates, source fallback, remediation and approval are valuable, but they can make the system feel like a compliance engine before it feels like a quant platform. The next iterations should make governance disappear into a clear operator answer: ready, blocked, needs review, or safe to proceed.
+
+The third risk is "execution overhang." Execution/reconciliation work is sophisticated, but live trading remains reserved and paper trading is not yet a complete daily account product. More broker-edge work should wait until L1/L2 workflows produce stable decisions and L3 paper operations are useful every day.
+
+The fourth risk is "AI demo temptation." Because Ditto has structured artifacts, it would be easy to wrap an LLM around the API and call it an agent. That would be strategically weak. The AI layer needs scoped tools, citations, approvals, memory, and evaluation from the start.
+
+### Engineering North Star
+
+The architecture should now serve one sentence:
+
+> Every trading day, Ditto should tell the user whether data is ready, what changed, what to hold, why, what risk changed, what to do manually or in paper mode, and how yesterday's decision behaved.
+
+If a module, abstraction, or workflow does not make that sentence easier to execute, it should be deferred.
