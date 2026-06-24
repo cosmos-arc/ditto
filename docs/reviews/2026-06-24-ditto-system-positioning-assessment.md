@@ -98,3 +98,47 @@ This is strong backend infrastructure. The product gap is the missing operating 
 L4 should stay explicitly out of the current usable boundary. The maturity manifest says live trading adapters are `reserved`, and the backend scope explicitly excludes real broker adapter implementation and product UI. That is a good constraint. It prevents protocol work from being mistaken for live-trading readiness.
 
 For a long-term full-stack platform, L4 will eventually require broker-specific adapters, credential isolation, kill switches, continuous risk gates, reconciliation against broker truth, outage recovery, audit trails, and operator controls. For an AI/Agent-native platform, it will also require agent-safe tool contracts, permissioned action scopes, explainable recommendations, dry-run/approval gates, memory over runs, and benchmarked research automation. Current Ditto has many of the ingredients for audited backend actions, but not yet the AI/Agent layer itself.
+
+## Functional Completeness Gap Matrix
+
+### Capability Heatmap
+
+| Capability Area | What Exists Now | Current Gap Versus a Top Personal Quant Platform | Stage |
+|---|---|---|---|
+| Data ingestion and catalog governance | Date/instrument ingestion, DataCatalog runtime, lineage, freshness/schema/source-health reports, dataset maturity gates, source fallback policy state | Launch datasets still need repeated real-data promotion evidence and a user-visible daily data readiness workflow | L1 |
+| PIT and research safety | `knowledge_date` PIT gates, unsafe trade-date fallback controls, source snapshots, factor-history leakage fixtures, fundamental/classification snapshot injection | Broader real-data PIT regression coverage and clearer operator proof surfaces are still needed | L1 |
+| Feature/factor research | Factor expression/materialization, production guard, IC/ICIR, IC decay, turnover-adjusted IR, long-short, CVaR/tail risk, optional regime and attribution reports | Factor library and diagnostics are strong, but experiment management, comparison history, and research notebook/product ergonomics are not yet first-class | L1 |
+| Strategy templates | ETF rotation and ETF trend/swing initial-focus; stock-selection and sector-rotation experimental with canonical ID and snapshot evidence | Strategy breadth is still narrow; stock/fundamental strategies depend on experimental datasets and need promotion-grade evidence | L1-L2 |
+| Portfolio allocation | Equal weight, score weight, inverse-vol allocators; max weight, max positions, industry cap, liquidity, tradability, max turnover constraints | No production mean-variance, HRP/risk parity, Black-Litterman, robust covariance, objective/constraint optimizer, or optimizer explainability | L2 |
+| Risk | Buying-power/lot-size/no-short/price-validity/concentration/daily-turnover pre-checks; max-drawdown and concentration post-trade guards; kill-switch model; launch risk report with concentration, active weight, drawdown, VaR/CVaR and simple stress scenarios | Continuous risk runtime, persistent risk state recovery, richer stress library, scenario attribution, and risk-review UX are incomplete | L2-L3 |
+| Backtest and simulation | Deterministic engine, replay/checkpoint/resume, A-share fees/slippage/settlement, limit-up/down/suspension behavior, partial fill via participation, report/audit artifacts | Real-data coverage and strategy/template promotion are the bottleneck; parameter sweeps, walk-forward, experiment registry, and result comparison UX are limited | L1-L2 |
+| Signal and manual decision loop | Deterministic signal packages, selection reasons, factor values, dataset snapshots, persisted trade intents, manual fill -> position -> deviation test | The daily user loop needs a cohesive review surface: "new signals, why, risk, current holdings, proposed orders, expected tracking error" | L2 |
+| Actual portfolio and comparison | Trade/position/P&L query routes; backtest-vs-actual comparison metrics; application deviation facade computes position-weight deviation | Portfolio-level attribution, factor/cost attribution, and polished actual-vs-target reporting are not yet user-ready | L2-L3 |
+| EOD operations | Prefect EOD flow chains ingestion -> materialization -> strategy, with cron deployment scaffolding and failure alerts | EOD is backend orchestration, not yet a full operating console with approvals, retries, readiness summaries, and paper/account review | L1-L3 |
+| Paper trading and reconciliation | PaperTradingRuntime, PaperBrokerGateway, broker-event recording, reconciliation/repair/audit primitives and conformance fixtures | Paper mode lacks a compact account lifecycle workflow and a daily operator experience; real broker adapters remain reserved | L3-L4 |
+| Product/API/UI boundary | FastAPI routes, CLI, OpenAPI maturity metadata, DTO-heavy backend surfaces | The current repo intentionally has no product UI; usability depends on `ditto-app` or another client consuming the contracts | Cross-cutting |
+| AI/Agent-native operation | Some agent-friendly ingredients exist: typed DTOs, audit trails, maturity gates, explicit approvals, deterministic artifacts | There is no dedicated quant agent layer, no tool permission model, no research planner/evaluator agent, no agent memory over runs, and no safe autonomous action loop | Cross-cutting |
+
+### Most Important Functional Conclusion
+
+Ditto's functional center of gravity is stronger in governed infrastructure than in daily user productivity. The system has many pieces that top platforms need: lineage, PIT safety, maturity gates, deterministic backtests, signal packages, risk checks, paper gateway conformance, and EOD orchestration. But top systems become useful because they compress these pieces into a short path:
+
+1. Data is ready or the system says exactly what is missing.
+2. Strategies produce candidate trades with explanations.
+3. Portfolio/risk converts candidates into a constrained target.
+4. The user approves, executes manually or in paper mode, and sees deviations.
+5. The next day the system compares expected versus actual behavior.
+
+Ditto has parts of all five steps, but the steps are not yet one product-grade loop. That is why the system can feel heavily built yet still "not especially usable": the backend depth is real, but the daily workflow boundary is under-defined.
+
+### Priority Functional Gaps
+
+The highest-leverage functional gap is portfolio construction. Current allocation is simple and transparent, which is good for an early boundary, but a top personal quant platform needs at least one robust allocation module that jointly solves weights under constraints. A pragmatic first version should support long-only mean-variance/min-vol or risk-budget allocation, max weight, industry cap, turnover cap, and fallback to inverse-vol when the covariance problem is ill-conditioned. This would make L2 feel materially better without pretending to be institutional-grade from day one.
+
+The second gap is launch-grade real-data evidence. Stock selection, valuation, fundamental, macro, and source fallback are architecturally present, but current maturity still says experimental for most non-ETF datasets. The next usable boundary should define a small launch dataset set, collect freshness/schema/storage/PIT evidence repeatedly, promote it through the existing data-owned mechanism, and make the readiness report the first page of the daily workflow.
+
+The third gap is daily decision ergonomics. Signal packages already persist target weights, factor IDs, risk flags, selection reasons, and checksums. That is a strong substrate. The missing layer is a single review contract that merges signal package, current position, risk report, expected orders, cost/slippage assumptions, and historical actual-vs-backtest comparison. This should be implemented as backend DTO/API first, then consumed by the frontend.
+
+The fourth gap is operational closure for paper mode. Paper trading should not be judged by gateway conformance alone. It needs an operator-facing lifecycle: run EOD, generate signals, stage paper orders, run/inspect fills, reconcile, approve repair actions, and persist a daily account snapshot. Current primitives are impressive, but the loop is not yet compact.
+
+The fifth gap is AI/Agent-native functionality. Ditto already has useful safety primitives for agents: explicit maturity states, approval-backed remediation, deterministic artifacts, typed DTOs, and audit events. But those are not yet organized as agent tools with scopes, permissions, dry-runs, memory, and evaluation. This should become a first-class platform layer rather than an afterthought.
