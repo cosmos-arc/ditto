@@ -188,3 +188,62 @@ The strategic gap is that the current codebase has not yet converted those stren
 5. Deviation, attribution, and next-day learning.
 
 Every near-term feature should strengthen this loop. Features that do not improve this loop should be deferred, even if they are technically elegant.
+
+## AI/Agent-Native Gap Assessment
+
+### Agent Benchmark Sources Reviewed
+
+This section uses official or primary project sources reviewed on 2026-06-24:
+
+- [OpenBB Copilot Basics](https://docs.openbb.co/workspace/analysts/ai-features/copilot-basics), [OpenBB Agents Integration](https://docs.openbb.co/workspace/developers/agents-integration), and [OpenBB AI SDK](https://docs.openbb.co/workspace/developers/openbb-ai-sdk)
+- [RD-Agent Finance Quant Agent](https://rdagent.readthedocs.io/en/latest/scens/quant_agent_fin.html)
+- [TradingAgents GitHub](https://github.com/tauricresearch/tradingagents)
+- [FinRobot GitHub](https://github.com/AI4Finance-Foundation/FinRobot)
+
+### Current AI-Ready Assets In Ditto
+
+Ditto does not yet have a real AI/Agent layer, but it has unusually good ingredients for one. The most important asset is not a model wrapper. It is the amount of structured, auditable backend state that an agent could safely read and cite.
+
+The existing system already exposes data readiness, maturity, source-health, lineage, promotion evidence, signal packages, factor diagnostics, risk reports, execution audit, reconciliation, and remediation approval state as typed backend contracts. `packages/application/src/ditto_application/queries/catalog_source_health.py` is especially agent-friendly because it returns fixed reason codes, status counts, attention severity counts, selected source evidence, fallback policy effects, and blockers. `packages/apps/src/ditto_apps/models/remediation.py` exposes remediation backlog, evidence requirements, approval intents, approval requests, decisions, executions, and append-only audit events as explicit API models. `packages/application/src/ditto_application/commands/catalog_remediation.py` already uses an action-code executor registry and fails closed for unsupported or unsafe remediation actions. `packages/execution/src/ditto_execution/reconciliation/repair.py` separates side-effect-free repair planning from state-changing actions that require manual review.
+
+Those traits matter because a quant agent must not just "answer questions." It must know what evidence it is using, what maturity boundary applies, what action is allowed, what requires approval, and what was actually executed. Ditto is closer to that safety substrate than many personal quant projects.
+
+The only direct AI-specific source hook found in production code is `packages/features/src/ditto_features/expression/hypothesis.py`. It defines an `Hypothesis` object and a `hypothesis_to_expression(...)` bridge, but the implementation is intentionally only a placeholder that passes through `expression_draft`. That file is a useful marker of intent, not an AI research loop.
+
+### What Is Actually Missing
+
+The gap is clear: Ditto has agent-readable artifacts, but not agent behavior.
+
+There is no first-class LLM runtime, no agent service, no tool registry, no tool permission model, no scoped read/write action contract, no streaming response protocol, no durable agent memory, no research-plan state machine, no hypothesis-to-experiment automation, no role-based multi-agent debate, no agent evaluation harness, no prompt/version governance, no citation policy over internal artifacts, and no AI UI contract. There is also no explicit trade authorization boundary that says which agent can propose, stage, approve, submit, cancel, repair, or only explain an order.
+
+This distinction is important for positioning. Ditto should not claim to be AI-native today. It should claim to be AI-ready at the backend artifact and governance level. The next AI milestone should be a read-only copilot over daily quant artifacts, not autonomous trading.
+
+### AI/Agent Benchmark Table
+
+| Reference | What The Frontier Looks Like | Ditto Current State | Concrete Gap |
+|---|---|---|---|
+| OpenBB Workspace Copilot and Agents | Integrated financial copilot, workspace context, dashboard data access, streaming agent protocol through `/agents.json` and `/query`, step-by-step reasoning, citations, artifacts, and custom agent integration | Ditto has typed backend artifacts that could feed a copilot, but no copilot surface or agent HTTP/SSE contract | Build a read-only `ditto-agent` service with artifact citation, streaming output, and explicit tool scopes |
+| RD-Agent / Finance Quant Agent | Multi-agent quant R&D that automates factor/model co-optimization, hypothesis generation, experiment execution, coding, running, and feedback | Ditto has factor expressions, IC reports, backtests, materialization, and a placeholder hypothesis bridge | Add a research-agent loop: hypothesis -> candidate expression -> validation -> backtest -> report -> human promotion decision |
+| TradingAgents | Role-specialized LLM trading framework with analysts, researchers, traders, risk review, debate rounds, and a final decision process | Ditto has risk reports and signal packages, but no role-specific agents or adversarial review | Add separate read-only analyst, portfolio, and risk reviewer roles before any execution-adjacent agent |
+| FinRobot | Locally deployable financial assistant that fetches financial data, runs multi-agent analysis, and generates professional equity research reports | Ditto has stronger internal quant artifacts than generic market-data assistants, but no report-generation agent | Generate daily ETF/stock decision memos from Ditto artifacts with citations, uncertainty, and follow-up actions |
+| General agent platforms | Tool calling, memory, workflow orchestration, human-in-the-loop controls, observability, and evaluation | Ditto has human approval and audit concepts in remediation/reconciliation, but not generalized for agents | Generalize approval/action semantics into an agent-safe tool and policy layer |
+
+### Recommended AI Layer
+
+AI should be introduced as staged product capability, not sprinkled into individual modules.
+
+| AI Stage | Scope | Allowed Actions | Promotion Criteria |
+|---|---|---|---|
+| A0 Read-Only Copilot | Explain data readiness, latest signals, factor values, risk flags, backtest artifacts, fills, positions, and deviations | Read-only queries; cite exact artifacts; no writes | Answers are reproducible, cite internal object IDs, and refuse missing or experimental evidence |
+| A1 Research Agent | Generate factor/strategy hypotheses, compile expressions, run offline evaluations, compare experiments, and draft promotion reports | Create research artifacts only; no production promotion | Every proposal includes data scope, PIT status, leakage checks, IC/backtest evidence, and failure cases |
+| A2 Decision Assistant | Combine signal package, current holdings, risk report, cost/slippage assumptions, and proposed target portfolio into a daily decision memo | Stage proposed intents only; human approval required | Memo explains sizing, constraints, risk deltas, and actual-vs-backtest context |
+| A3 Operations Agent | Triage source-health, lineage, freshness, promotion, reconciliation, and remediation backlog | Draft approval requests and execute only pre-approved non-trading remediation actions | All writes pass existing approval/audit paths and fail closed on blocked source-selection evidence |
+| A4 Live Trading Agent | Long-term reserved scope for broker-connected trading assistance | No autonomous live order submission in current roadmap | Requires real broker adapter maturity, permissions, kill switch, DR plan, audit replay, and human override |
+
+The strongest near-term path is A0 plus a narrow A1. A0 would immediately make the current backend more usable by answering questions like "what changed today?", "why was 510300 selected?", "which data source is stale?", and "how far is the actual portfolio from target?" A1 would turn the placeholder `Hypothesis` bridge into a supervised research loop, while keeping all promotion and execution decisions human-controlled.
+
+### AI Design Boundary
+
+The AI layer should sit above `application`, not inside data, strategy, portfolio, or execution packages. It should call stable application queries/commands, carry a session/run ID, persist prompts and tool results, cite artifact IDs, and distinguish `read`, `draft`, `request_approval`, and `execute_approved` scopes. Any write path must reuse existing command handlers or approval workflows; agents should never write directly to data stores, broker adapters, or package internals.
+
+For trading specifically, the first durable rule should be simple: an agent may explain, compare, and propose, but it may not place live orders. That keeps Ditto's long-term AI ambition aligned with the current maturity boundary instead of letting an impressive demo create false operational confidence.
