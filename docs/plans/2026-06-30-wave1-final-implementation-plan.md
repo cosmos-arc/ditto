@@ -512,6 +512,16 @@ Defer risk parity, Black-Litterman, and broad industry constraints unless V1b re
 
 - User can answer at least "which positions/factors drove the result" without relying on hard-coded residual attribution.
 
+**Implementation Evidence (2026-07-01):**
+
+- Replaced residual-style timing attribution with conservative semantics: `timing_return=0.0` and `interaction_return=0.0` unless a dedicated model is implemented.
+- Added `AttributionContribution` and `PerformanceAttributionResult.contributions` for quantile/factor-sleeve contribution reporting. Contributions are annualized, observation-weighted, sorted by absolute impact, and sum back to `total_return`.
+- RED observed: `pixi run -e dev pytest packages/features/tests/unit/evaluation/test_evaluation_attribution_unit.py -q --no-cov` failed on missing `contributions` and old residual `timing_return`.
+- GREEN verification:
+  - `pixi run -e dev pytest packages/features/tests/unit/evaluation/test_evaluation_attribution_unit.py packages/features/tests/unit/evaluation/test_report_builder_unit.py packages/features/tests/unit/evaluation/test_derived_types_and_fama_boundary_unit.py -q --no-cov` -> 76 passed.
+  - `pixi run -e dev type packages/features/src` -> 0 errors.
+- Scope note: v1 explains factor/quantile sleeves in the existing factor evaluation pipeline. Position-level Brinson/Barra-style attribution remains deferred.
+
 ## 7. Wave 2: AI and Paper Operating Loop
 
 Wave 2 is not part of first real use.

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 __all__ = [
+    "AttributionContribution",
     "FactorEvaluationReport",
     "FactorExposureResult",
     "FamaMacBethResult",
@@ -169,6 +170,27 @@ class RegimeICResult:
 
 
 @dataclass(frozen=True)
+class AttributionContribution:
+    """
+    Conservative contribution item for performance attribution.
+
+    Attributes:
+        label: Human-readable bucket label, for example ``quantile_5``.
+        contribution_return: Annualized return contribution of this bucket.
+        contribution_share: Contribution divided by total_return when defined.
+        mean_return: Average per-period return for the bucket.
+        observation_count: Number of return observations in the bucket.
+
+    """
+
+    label: str
+    contribution_return: float
+    contribution_share: float
+    mean_return: float
+    observation_count: int
+
+
+@dataclass(frozen=True)
 class PerformanceAttributionResult:
     """
     Performance attribution decomposition.
@@ -182,6 +204,7 @@ class PerformanceAttributionResult:
         tracking_error: Annualized daily std of LS return.
         information_ratio: alpha / tracking_error (0.0 if tracking_error is 0).
         win_rate_by_quantile: Fraction of days with positive return per quantile.
+        contributions: Annualized return contribution items by attribution bucket.
 
     """
 
@@ -193,6 +216,7 @@ class PerformanceAttributionResult:
     tracking_error: float
     information_ratio: float
     win_rate_by_quantile: dict[int, float]
+    contributions: tuple[AttributionContribution, ...] = ()
 
 
 @dataclass(frozen=True)

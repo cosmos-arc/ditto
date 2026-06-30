@@ -6,6 +6,7 @@ from ditto_features.evaluation.contracts import (
     RiskFactorProvider,
 )
 from ditto_features.evaluation.report import (
+    AttributionContribution,
     FactorEvaluationReport,
     FactorExposureResult,
     FamaMacBethResult,
@@ -17,6 +18,7 @@ from ditto_features.evaluation.report import (
 )
 
 __all__ = [
+    "AttributionContribution",
     "ClosePriceProvider",
     "FactorEvaluationReport",
     "FactorExposureResult",
